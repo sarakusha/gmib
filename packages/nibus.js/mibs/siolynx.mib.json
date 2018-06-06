@@ -1,0 +1,290 @@
+{
+  "device": "SioLynx",
+  "subroutines": {
+    "clear_stat": {
+      "annotation": "Обнулить статистику",
+      "appinfo": {
+        "nms_id": "4"
+      }
+    },
+    "clear_log": {
+      "annotation": "Обнулить журнал",
+      "appinfo": {
+        "nms_id": "5"
+      }
+    }
+  },
+  "types": {
+    "SioLynx": {
+      "annotation": "Трансивер SioLynx",
+      "appinfo": {
+        "mib_version": "2.0",
+        "oid": "1.3.6.1.4.1.27797.3.2.1.1\n1.3.6.1.4.1.27797.3.4.1",
+        "index": "2\nRS232 interface\nRS485 interface\n33\n54"
+      },
+      "properties": {
+        "version": {
+          "type": "versionType",
+          "annotation": "Версия устройства",
+          "appinfo": {
+            "access": "r",
+            "nms_id": "2",
+            "oid": "1.3"
+          }
+        },
+        "uptime": {
+          "type": "seconds",
+          "annotation": "Время с момента старта",
+          "appinfo": {
+            "access": "r",
+            "nms_id": "3",
+            "oid": "1.8"
+          }
+        },
+        "post_result": {
+          "type": "xs:unsignedShort",
+          "annotation": "Результат POST",
+          "appinfo": {
+            "access": "r",
+            "nms_id": "0x7f",
+            "oid": "1.6"
+          }
+        },
+        "rs485_collisions": {
+          "type": "xs:unsignedInt",
+          "annotation": "Коллизий при передаче дейтаграмм в rs485-интерфейсе",
+          "appinfo": {
+            "access": "r",
+            "nms_id": "0x100",
+            "oid": "1.12"
+          }
+        },
+        "rs485_bytes_received": {
+          "type": "xs:unsignedInt",
+          "annotation": "Принято байт по rs485-интерфейсу",
+          "appinfo": {
+            "access": "r",
+            "nms_id": "0x101",
+            "oid": "1.6"
+          }
+        },
+        "rs485_tx_datagrams": {
+          "type": "xs:unsignedInt",
+          "annotation": "Передано дейтаграмм в rs485-интерфейс",
+          "appinfo": {
+            "access": "r",
+            "nms_id": "0x102",
+            "oid": "1.11"
+          }
+        },
+        "rs485_tx_failed": {
+          "type": "xs:unsignedInt",
+          "annotation": "Не отправлено дейтаграмм в rs485-интерфейс",
+          "appinfo": {
+            "access": "r",
+            "nms_id": "0x10a",
+            "oid": "1.13"
+          }
+        },
+        "nibus_takeover_markers": {
+          "type": "xs:unsignedInt",
+          "annotation": "Обнаружено маркеров захвата шины",
+          "appinfo": {
+            "access": "r",
+            "nms_id": "0x103",
+            "oid": "1.14"
+          }
+        },
+        "nibus_free_markers": {
+          "type": "xs:unsignedInt",
+          "annotation": "Обнаружено маркеров освобождения шины",
+          "appinfo": {
+            "access": "r",
+            "nms_id": "0x104",
+            "oid": "1.15"
+          }
+        },
+        "nibus_free_timeouts": {
+          "type": "xs:unsignedInt",
+          "annotation": "Таймаутов освобождения шины",
+          "appinfo": {
+            "access": "r",
+            "nms_id": "0x105",
+            "oid": "1.16"
+          }
+        },
+        "rs485_framing_errors": {
+          "type": "xs:unsignedInt",
+          "annotation": "Ошибок синхронизации на rs485 интерфейсе",
+          "appinfo": {
+            "access": "r",
+            "nms_id": "0x106",
+            "oid": "1.8"
+          }
+        },
+        "rs485_false_startbits": {
+          "type": "xs:unsignedInt",
+          "annotation": "Игнорировано старт-битов на rs485 интерфейсе",
+          "appinfo": {
+            "access": "r",
+            "nms_id": "0x10b"
+          }
+        },
+        "rs232_framing_errors": {
+          "type": "xs:unsignedInt",
+          "annotation": "Ошибок синхронизации на rs232 интерфейсе",
+          "appinfo": {
+            "access": "r",
+            "nms_id": "0x107",
+            "oid": "1.8"
+          }
+        },
+        "rs232_errors": {
+          "type": "xs:unsignedInt",
+          "annotation": "Ошибок контрольной суммы в rs232 интерфейсе",
+          "appinfo": {
+            "access": "r",
+            "nms_id": "0x108",
+            "oid": "1.9"
+          }
+        },
+        "rs232_rx_datagrams": {
+          "type": "xs:unsignedInt",
+          "annotation": "Принято дейтаграмм по rs232 интерфейсу",
+          "appinfo": {
+            "access": "r",
+            "nms_id": "0x109",
+            "oid": "1.7"
+          }
+        },
+        "fifo_overruns": {
+          "type": "xs:unsignedShort",
+          "annotation": "Переполнений фифо",
+          "appinfo": {
+            "access": "r",
+            "nms_id": "0x10c"
+          }
+        },
+        "log_size": {
+          "type": "xs:unsignedShort",
+          "annotation": "Записей в журнале событий",
+          "appinfo": {
+            "access": "r",
+            "nms_id": "0x10d"
+          }
+        },
+        "miso_pin": {
+          "type": "xs:boolean",
+          "annotation": "MISO",
+          "appinfo": {
+            "access": "w",
+            "nms_id": "0x10e"
+          }
+        },
+        "cdata": {
+          "type": "xs:unsignedByte",
+          "annotation": "Converter data",
+          "appinfo": {
+            "access": "w",
+            "nms_id": "0x10f"
+          }
+        }
+      }
+    },
+    "versionType": {
+      "base": "xs:unsignedInt"
+    },
+    "seconds": {
+      "appinfo": {
+        "units": "с"
+      },
+      "base": "xs:unsignedInt"
+    },
+    "subroutine": {
+      "annotation": "Подпрограмма",
+      "properties": {
+        "id": {
+          "type": "xs:unsignedShort",
+          "annotation": "Идентификатор подпрограммы"
+        }
+      }
+    },
+    "errorType": {
+      "base": "xs:NMTOKEN",
+      "enumeration": {
+        "0": {
+          "annotation": "Успешное завершение"
+        },
+        "-1": {
+          "annotation": "i2c-шина заблокирована другим устройством"
+        },
+        "-2": {
+          "annotation": "Адресуемое i2c-устройство не обнаружено"
+        },
+        "-3": {
+          "annotation": "Транзакция остановлена адресуемым устройством"
+        },
+        "-4": {
+          "annotation": "Арбитраж проигран"
+        },
+        "-5": {
+          "annotation": "Таймаут ожидания"
+        },
+        "-6": {
+          "annotation": "Недопустимый аргумент или данные"
+        },
+        "-7": {
+          "annotation": "Неспецифируемая ошибка"
+        },
+        "-9": {
+          "annotation": "Требуемый ресурс не обнаружен"
+        },
+        "-10": {
+          "annotation": "Ошибка в файловой системе"
+        },
+        "-11": {
+          "annotation": "Отсутствует MAC-адрес"
+        },
+        "-12": {
+          "annotation": "Не совместимое устройство"
+        },
+        "-19": {
+          "annotation": "Ошибка в памяти устройства"
+        },
+        "-20": {
+          "annotation": "Требуемый файл не обнаружен в файловой системе"
+        },
+        "-22": {
+          "annotation": "Недостаточный размер буфера"
+        },
+        "-23": {
+          "annotation": "Недостаточно памяти"
+        },
+        "-24": {
+          "annotation": "Ошибка контрольной суммы"
+        },
+        "-25": {
+          "annotation": "Доступ запрещен"
+        },
+        "-30": {
+          "annotation": "Несовместимая конфигурация"
+        },
+        "-31": {
+          "annotation": "В конфигурационном файле обнаружена ошибка"
+        },
+        "-50": {
+          "annotation": "Недопустимая дейтаграмма"
+        },
+        "-51": {
+          "annotation": "Переполнение буфера дейтаграмм"
+        },
+        "-52": {
+          "annotation": "Обнаружена коллизия на последовательной шине"
+        },
+        "-53": {
+          "annotation": "Трансивером обнаружена коллизия на шине"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,823 @@
+{
+  "device": "uconsole",
+  "subroutines": {
+    "clear_stat": {
+      "annotation": "Обнулить статистику",
+      "appinfo": {
+        "nms_id": "4"
+      }
+    }
+  },
+  "types": {
+    "uconsole": {
+      "annotation": "Пульт универсальный (Хоккей)",
+      "appinfo": {
+        "mib_version": "1.7",
+        "device_type": "0x27",
+        "loader_type": "0x27",
+        "firmware": "uconsole.hex"
+      },
+      "properties": {
+        "version": {
+          "type": "versionType",
+          "annotation": "Версия загрузчика",
+          "appinfo": {
+            "nms_id": "2",
+            "access": "r",
+            "category": "Загрузчик"
+          }
+        },
+        "firmware_version": {
+          "type": "versionType",
+          "annotation": "Версия firmware",
+          "appinfo": {
+            "nms_id": "0x85",
+            "access": "r",
+            "category": "Загрузчик"
+          }
+        },
+        "serno": {
+          "type": "xs:unsignedLong",
+          "annotation": "Серийный номер",
+          "appinfo": {
+            "nms_id": "11",
+            "access": "r",
+            "representation": "%X",
+            "category": "Загрузчик"
+          }
+        },
+        "uptime": {
+          "type": "seconds",
+          "annotation": "Время с момента старта",
+          "appinfo": {
+            "nms_id": "3",
+            "access": "r",
+            "category": "Загрузчик"
+          }
+        },
+        "last_error": {
+          "type": "xs:short",
+          "annotation": "Последний код ошибки",
+          "appinfo": {
+            "nms_id": "0x84",
+            "access": "r",
+            "category": "Загрузчик"
+          }
+        },
+        "pcb_ver": {
+          "type": "xs:unsignedByte",
+          "annotation": "Версия PCB",
+          "appinfo": {
+            "nms_id": "0x111",
+            "access": "r",
+            "category": "PCB"
+          }
+        },
+        "domain": {
+          "type": "xs:unsignedByte",
+          "annotation": "Домен",
+          "appinfo": {
+            "nms_id": "0x81",
+            "access": "r\nw",
+            "category": "PCB"
+          }
+        },
+        "subnet": {
+          "type": "xs:unsignedByte",
+          "annotation": "Подсеть",
+          "appinfo": {
+            "nms_id": "0x86",
+            "access": "r\nw",
+            "category": "PCB"
+          }
+        },
+        "did": {
+          "type": "xs:unsignedShort",
+          "annotation": "Устройство",
+          "appinfo": {
+            "nms_id": "0x83",
+            "access": "r\nw",
+            "category": "PCB"
+          }
+        },
+        "group": {
+          "type": "xs:unsignedByte",
+          "annotation": "Группа",
+          "appinfo": {
+            "nms_id": "0x82",
+            "access": "r\nw",
+            "category": "PCB"
+          }
+        },
+        "persist_error": {
+          "type": "xs:byte",
+          "annotation": "Ошибки при сохранении конфигурации",
+          "appinfo": {
+            "nms_id": "0x112",
+            "access": "r",
+            "category": "PCB"
+          }
+        },
+        "post_result": {
+          "type": "xs:unsignedShort",
+          "annotation": "Результат POST",
+          "appinfo": {
+            "nms_id": "0x11f",
+            "representation": "%X",
+            "access": "r",
+            "category": "Загрузчик"
+          }
+        },
+        "upost_result": {
+          "type": "xs:byte",
+          "annotation": "Результат POST firmware",
+          "appinfo": {
+            "nms_id": "0x120",
+            "access": "r",
+            "category": "Загрузчик"
+          }
+        },
+        "sarp_retries": {
+          "type": "xs:unsignedInt",
+          "annotation": "Коллизий при ответе на SARP-запрос",
+          "appinfo": {
+            "nms_id": "0x113",
+            "access": "r",
+            "category": "SARP"
+          }
+        },
+        "sarp_failed_resp": {
+          "type": "xs:unsignedInt",
+          "annotation": "Ошибок при ответе на SARP-запрос",
+          "appinfo": {
+            "nms_id": "0x114",
+            "access": "r",
+            "category": "SARP"
+          }
+        },
+        "sarp_requests": {
+          "type": "xs:unsignedInt",
+          "annotation": "SARP-запросов",
+          "appinfo": {
+            "nms_id": "0x115",
+            "access": "r",
+            "category": "SARP"
+          }
+        },
+        "sarp_resp": {
+          "type": "xs:unsignedInt",
+          "annotation": "SARP-ответов",
+          "appinfo": {
+            "nms_id": "0x116",
+            "access": "r",
+            "category": "SARP"
+          }
+        },
+        "rs232_framing_errors": {
+          "type": "xs:unsignedInt",
+          "annotation": "Ошибок синхронизации на rs232 интерфейсе",
+          "appinfo": {
+            "nms_id": "0x161",
+            "access": "r",
+            "category": "RS232"
+          }
+        },
+        "rs232_errors": {
+          "type": "xs:unsignedInt",
+          "annotation": "Ошибок контрольной суммы в rs232 интерфейсе",
+          "appinfo": {
+            "nms_id": "0x162",
+            "access": "r",
+            "category": "RS232"
+          }
+        },
+        "rs232_rx_datagrams": {
+          "type": "xs:unsignedInt",
+          "annotation": "Принято дейтаграмм по rs232 интерфейсу",
+          "appinfo": {
+            "nms_id": "0x163",
+            "access": "r",
+            "category": "RS232"
+          }
+        },
+        "rs232_tx_datagrams": {
+          "type": "xs:unsignedInt",
+          "annotation": "Отослано дейтаграмм по rs232 интерфейсу",
+          "appinfo": {
+            "nms_id": "0x166",
+            "access": "r",
+            "category": "RS232"
+          }
+        },
+        "rs232_txfaileddatagrams": {
+          "type": "xs:unsignedInt",
+          "annotation": "Не отправленных дейтаграмм по rs232 интерфейсу",
+          "appinfo": {
+            "nms_id": "0x167",
+            "access": "r",
+            "category": "RS232"
+          }
+        },
+        "rs232_fifo_overruns": {
+          "type": "xs:unsignedShort",
+          "annotation": "Переполнений фифо",
+          "appinfo": {
+            "nms_id": "0x164",
+            "access": "r",
+            "category": "RS232"
+          }
+        },
+        "T1_direction": {
+          "type": "xs:boolean",
+          "annotation": "Возрастание времени",
+          "appinfo": {
+            "nms_id": "0x130",
+            "access": "r\nw",
+            "category": "Время1 (игровое время)"
+          }
+        },
+        "T1_min": {
+          "type": "minType",
+          "annotation": "Минуты",
+          "appinfo": {
+            "nms_id": "0x131",
+            "access": "r\nw",
+            "category": "Время1 (игровое время)"
+          }
+        },
+        "T1_sec": {
+          "type": "secType",
+          "annotation": "Секунды",
+          "appinfo": {
+            "nms_id": "0x132",
+            "access": "r\nw",
+            "category": "Время1 (игровое время)"
+          }
+        },
+        "T1_showMs": {
+          "type": "showMsType",
+          "annotation": "Милисекунды",
+          "appinfo": {
+            "nms_id": "0x133",
+            "access": "r\nw",
+            "category": "Время1 (игровое время)"
+          }
+        },
+        "T1_represent": {
+          "type": "representType",
+          "annotation": "Представление",
+          "appinfo": {
+            "nms_id": "0x134",
+            "access": "r\nw",
+            "category": "Время1 (игровое время)"
+          }
+        },
+        "T2_direction": {
+          "type": "xs:boolean",
+          "annotation": "Возрастание времени",
+          "appinfo": {
+            "nms_id": "0x135",
+            "access": "r\nw",
+            "category": "Время2 (перерыв)"
+          }
+        },
+        "T2_min": {
+          "type": "minType",
+          "annotation": "Минуты",
+          "appinfo": {
+            "nms_id": "0x136",
+            "access": "r\nw",
+            "category": "Время2 (перерыв)"
+          }
+        },
+        "T2_sec": {
+          "type": "secType",
+          "annotation": "Секунды",
+          "appinfo": {
+            "nms_id": "0x137",
+            "access": "r\nw",
+            "category": "Время2 (перерыв)"
+          }
+        },
+        "T2_showMs": {
+          "type": "showMsType",
+          "annotation": "Милисекунды",
+          "appinfo": {
+            "nms_id": "0x138",
+            "access": "r\nw",
+            "category": "Время2 (перерыв)"
+          }
+        },
+        "T2_represent": {
+          "type": "representType",
+          "annotation": "Представление",
+          "appinfo": {
+            "nms_id": "0x139",
+            "access": "r\nw",
+            "category": "Время2 (перерыв)"
+          }
+        },
+        "T3_direction": {
+          "type": "xs:boolean",
+          "annotation": "Возрастание времени",
+          "appinfo": {
+            "nms_id": "0x13a",
+            "access": "r\nw",
+            "category": "Время3 (время до начала игры)"
+          }
+        },
+        "T3_min": {
+          "type": "minType",
+          "annotation": "Минуты",
+          "appinfo": {
+            "nms_id": "0x13b",
+            "access": "r\nw",
+            "category": "Время3 (время до начала игры)"
+          }
+        },
+        "T3_sec": {
+          "type": "secType",
+          "annotation": "Секунды",
+          "appinfo": {
+            "nms_id": "0x13c",
+            "access": "r\nw",
+            "category": "Время3 (время до начала игры)"
+          }
+        },
+        "T3_showMs": {
+          "type": "showMsType",
+          "annotation": "Милисекунды",
+          "appinfo": {
+            "nms_id": "0x13d",
+            "access": "r\nw",
+            "category": "Время3 (время до начала игры)"
+          }
+        },
+        "T3_represent": {
+          "type": "representType",
+          "annotation": "Представление",
+          "appinfo": {
+            "nms_id": "0x13e",
+            "access": "r\nw",
+            "category": "Время3 (время до начала игры)"
+          }
+        },
+        "T4_direction": {
+          "type": "xs:boolean",
+          "annotation": "Возрастание времени",
+          "appinfo": {
+            "nms_id": "0x13f",
+            "access": "r\nw",
+            "category": "Время4 (тайм-аут)"
+          }
+        },
+        "T4_min": {
+          "type": "minType",
+          "annotation": "Минуты",
+          "appinfo": {
+            "nms_id": "0x140",
+            "access": "r\nw",
+            "category": "Время4 (тайм-аут)"
+          }
+        },
+        "T4_sec": {
+          "type": "secType",
+          "annotation": "Секунды",
+          "appinfo": {
+            "nms_id": "0x141",
+            "access": "r\nw",
+            "category": "Время4 (тайм-аут)"
+          }
+        },
+        "T4_showMs": {
+          "type": "showMsType",
+          "annotation": "Милисекунды",
+          "appinfo": {
+            "nms_id": "0x142",
+            "access": "r\nw",
+            "category": "Время4 (тайм-аут)"
+          }
+        },
+        "T4_represent": {
+          "type": "representType",
+          "annotation": "Представление",
+          "appinfo": {
+            "nms_id": "0x143",
+            "access": "r\nw",
+            "category": "Время4 (тайм-аут)"
+          }
+        },
+        "T5_direction": {
+          "type": "xs:boolean",
+          "annotation": "Возрастание времени",
+          "appinfo": {
+            "nms_id": "0x144",
+            "access": "r\nw",
+            "category": "Время5 (овертайм)"
+          }
+        },
+        "T5_min": {
+          "type": "minType",
+          "annotation": "Минуты",
+          "appinfo": {
+            "nms_id": "0x145",
+            "access": "r\nw",
+            "category": "Время5 (овертайм)"
+          }
+        },
+        "T5_sec": {
+          "type": "secType",
+          "annotation": "Секунды",
+          "appinfo": {
+            "nms_id": "0x146",
+            "access": "r\nw",
+            "category": "Время5 (овертайм)"
+          }
+        },
+        "T5_showMs": {
+          "type": "showMsType",
+          "annotation": "Милисекунды",
+          "appinfo": {
+            "nms_id": "0x147",
+            "access": "r\nw",
+            "category": "Время5 (овертайм)"
+          }
+        },
+        "T5_represent": {
+          "type": "representType",
+          "annotation": "Представление",
+          "appinfo": {
+            "nms_id": "0x148",
+            "access": "r\nw",
+            "category": "Время5 (овертайм)"
+          }
+        },
+        "T6_direction": {
+          "type": "xs:boolean",
+          "annotation": "Возрастание времени",
+          "appinfo": {
+            "nms_id": "0x149",
+            "access": "r\nw",
+            "category": "Время6 (перерыв до овертайма)"
+          }
+        },
+        "T6_min": {
+          "type": "minType",
+          "annotation": "Минуты",
+          "appinfo": {
+            "nms_id": "0x14a",
+            "access": "r\nw",
+            "category": "Время6 (перерыв до овертайма)"
+          }
+        },
+        "T6_sec": {
+          "type": "secType",
+          "annotation": "Секунды",
+          "appinfo": {
+            "nms_id": "0x14b",
+            "access": "r\nw",
+            "category": "Время6 (перерыв до овертайма)"
+          }
+        },
+        "T6_showMs": {
+          "type": "showMsType",
+          "annotation": "Милисекунды",
+          "appinfo": {
+            "nms_id": "0x14c",
+            "access": "r\nw",
+            "category": "Время6 (перерыв до овертайма)"
+          }
+        },
+        "T6_represent": {
+          "type": "representType",
+          "annotation": "Представление",
+          "appinfo": {
+            "nms_id": "0x14d",
+            "access": "r\nw",
+            "category": "Время6 (перерыв до овертайма)"
+          }
+        },
+        "PtyRows": {
+          "type": "ptyRows",
+          "annotation": "Кол-во строк для штрафов",
+          "appinfo": {
+            "nms_id": "0x15a",
+            "access": "r\nw",
+            "category": "Штрафы"
+          }
+        },
+        "Pty1": {
+          "type": "ptyType",
+          "annotation": "Время штрафа №1 (мин.)",
+          "appinfo": {
+            "nms_id": "0x155",
+            "access": "r\nw",
+            "category": "Штрафы"
+          }
+        },
+        "Pty2": {
+          "type": "ptyType",
+          "annotation": "Время штрафа №2 (мин.)",
+          "appinfo": {
+            "nms_id": "0x156",
+            "access": "r\nw",
+            "category": "Штрафы"
+          }
+        },
+        "Pty3": {
+          "type": "ptyType",
+          "annotation": "Время штрафа №3 (мин.)",
+          "appinfo": {
+            "nms_id": "0x157",
+            "access": "r\nw",
+            "category": "Штрафы"
+          }
+        },
+        "SignalBeforeGame": {
+          "type": "xs:boolean",
+          "annotation": "Сигналы при отсчете времени до игры",
+          "appinfo": {
+            "nms_id": "0x158",
+            "access": "r\nw",
+            "category": "Сигналы при отсчете времени"
+          }
+        },
+        "SignalRest": {
+          "type": "xs:boolean",
+          "annotation": "Сигналы при отсчете времени перерыва",
+          "appinfo": {
+            "nms_id": "0x159",
+            "access": "r\nw",
+            "category": "Сигналы при отсчете времени"
+          }
+        },
+        "IncPeriod": {
+          "type": "xs:boolean",
+          "annotation": "Автоматическое увеличение периода",
+          "appinfo": {
+            "nms_id": "0x150",
+            "access": "r\nw",
+            "category": "Игровая логика"
+          }
+        },
+        "AutoStartRest": {
+          "type": "xs:boolean",
+          "annotation": "Автоматический запуск перерыва(овертайма)",
+          "appinfo": {
+            "nms_id": "0x14e",
+            "access": "r\nw",
+            "category": "Игровая логика"
+          }
+        },
+        "DelayStartRest": {
+          "type": "n0_10Type",
+          "annotation": "Задержка запуска перерыва(овертайма) (сек.)",
+          "appinfo": {
+            "nms_id": "0x14f",
+            "access": "r\nw",
+            "category": "Игровая логика"
+          }
+        },
+        "MaxRest": {
+          "type": "n0_10Type",
+          "annotation": "Кол-во тайм-аутов в периоде",
+          "appinfo": {
+            "nms_id": "0x152",
+            "access": "r\nw",
+            "category": "Игровая логика"
+          }
+        },
+        "StartBeforeGame": {
+          "type": "bmcdType",
+          "annotation": "Запуск времени до игры",
+          "appinfo": {
+            "nms_id": "0x151",
+            "access": "r\nw",
+            "category": "Игровая логика"
+          }
+        },
+        "StopOnStart": {
+          "type": "xs:boolean",
+          "annotation": "Старт/Стоп на кнопке \"старт\"",
+          "appinfo": {
+            "nms_id": "0x153",
+            "access": "r\nw",
+            "category": "Игровая логика"
+          }
+        },
+        "EnableOvertime": {
+          "type": "xs:boolean",
+          "annotation": "Игра с овертаймом",
+          "appinfo": {
+            "nms_id": "0x154",
+            "access": "r\nw",
+            "category": "Игровая логика"
+          }
+        },
+        "MaxPeriod": {
+          "type": "n1_9Type",
+          "annotation": "Кол-во периодов",
+          "appinfo": {
+            "nms_id": "0x165",
+            "access": "r\nw",
+            "category": "Игровая логика"
+          }
+        },
+        "UsePtyDelay": {
+          "type": "xs:boolean",
+          "annotation": "Использовать задержку штрафов",
+          "appinfo": {
+            "nms_id": "0x16b",
+            "access": "r\nw",
+            "category": "Игровая логика"
+          }
+        },
+        "PtyInSeconds": {
+          "type": "xs:boolean",
+          "annotation": "Время удаления в секундах",
+          "appinfo": {
+            "nms_id": "0x16c",
+            "access": "r\nw",
+            "category": "Игровая логика"
+          }
+        },
+        "ResetTimeout": {
+          "type": "xs:boolean",
+          "annotation": "Обнулять взятые таймауты каждый период",
+          "appinfo": {
+            "nms_id": "0x16d",
+            "access": "r\nw",
+            "category": "Игровая логика"
+          }
+        },
+        "MaxOvertime": {
+          "type": "n0_10Type",
+          "annotation": "Кол-во овертаймов",
+          "appinfo": {
+            "nms_id": "0x16e",
+            "access": "r\nw",
+            "category": "Игровая логика"
+          }
+        }
+      }
+    },
+    "versionType": {
+      "base": "xs:unsignedInt"
+    },
+    "seconds": {
+      "appinfo": {
+        "units": "с"
+      },
+      "base": "xs:unsignedInt"
+    },
+    "subroutine": {
+      "annotation": "Подпрограмма",
+      "properties": {
+        "id": {
+          "type": "xs:unsignedShort",
+          "annotation": "Идентификатор подпрограммы"
+        }
+      }
+    },
+    "minType": {
+      "appinfo": {},
+      "base": "xs:unsignedByte",
+      "minInclusive": "0",
+      "maxInclusive": "99"
+    },
+    "secType": {
+      "appinfo": {},
+      "base": "xs:unsignedByte",
+      "minInclusive": "0",
+      "maxInclusive": "59"
+    },
+    "showMsType": {
+      "base": "xs:NMTOKEN",
+      "enumeration": {
+        "0": {
+          "annotation": "Не показывать"
+        },
+        "1": {
+          "annotation": "На последней минуте"
+        },
+        "2": {
+          "annotation": "Всегда"
+        }
+      }
+    },
+    "representType": {
+      "appinfo": {},
+      "base": "xs:unsignedByte"
+    },
+    "ptyType": {
+      "appinfo": {},
+      "base": "xs:unsignedByte",
+      "minInclusive": "0",
+      "maxInclusive": "99"
+    },
+    "ptyRows": {
+      "appinfo": {},
+      "base": "xs:unsignedByte",
+      "minInclusive": "3",
+      "maxInclusive": "5"
+    },
+    "n0_10Type": {
+      "appinfo": {},
+      "base": "xs:unsignedByte",
+      "minInclusive": "0",
+      "maxInclusive": "10"
+    },
+    "n1_9Type": {
+      "appinfo": {},
+      "base": "xs:unsignedByte",
+      "minInclusive": "1",
+      "maxInclusive": "9"
+    },
+    "bmcdType": {
+      "appinfo": {},
+      "base": "xs:unsignedByte",
+      "minInclusive": "0",
+      "maxInclusive": "2"
+    },
+    "errorType": {
+      "base": "xs:NMTOKEN",
+      "enumeration": {
+        "0": {
+          "annotation": "Успешное завершение"
+        },
+        "-1": {
+          "annotation": "i2c-шина заблокирована другим устройством"
+        },
+        "-2": {
+          "annotation": "Адресуемое i2c-устройство не обнаружено"
+        },
+        "-3": {
+          "annotation": "Транзакция остановлена адресуемым устройством"
+        },
+        "-4": {
+          "annotation": "Арбитраж проигран"
+        },
+        "-5": {
+          "annotation": "Таймаут ожидания"
+        },
+        "-6": {
+          "annotation": "Недопустимый аргумент или данные"
+        },
+        "-7": {
+          "annotation": "Неспецифируемая ошибка"
+        },
+        "-9": {
+          "annotation": "Требуемый ресурс не обнаружен"
+        },
+        "-10": {
+          "annotation": "Ошибка в файловой системе"
+        },
+        "-11": {
+          "annotation": "Отсутствует MAC-адрес"
+        },
+        "-12": {
+          "annotation": "Не совместимое устройство"
+        },
+        "-19": {
+          "annotation": "Ошибка в памяти устройства"
+        },
+        "-20": {
+          "annotation": "Требуемый файл не обнаружен в файловой системе"
+        },
+        "-22": {
+          "annotation": "Недостаточный размер буфера"
+        },
+        "-23": {
+          "annotation": "Недостаточно памяти"
+        },
+        "-24": {
+          "annotation": "Ошибка контрольной суммы"
+        },
+        "-25": {
+          "annotation": "Доступ запрещен"
+        },
+        "-26": {
+          "annotation": "Регистр имеет недопустимое значение"
+        },
+        "-30": {
+          "annotation": "Несовместимая конфигурация"
+        },
+        "-31": {
+          "annotation": "В конфигурационном файле обнаружена ошибка"
+        },
+        "-50": {
+          "annotation": "Недопустимая дейтаграмма"
+        },
+        "-51": {
+          "annotation": "Переполнение буфера дейтаграмм"
+        },
+        "-52": {
+          "annotation": "Обнаружена коллизия на последовательной шине"
+        },
+        "-53": {
+          "annotation": "Трансивером обнаружена коллизия на шине"
+        }
+      }
+    }
+  }
+}

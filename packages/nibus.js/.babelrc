@@ -1,0 +1,23 @@
+{
+  "env": {
+    "development": {
+      "sourceMaps": "inline",
+      "plugins": [
+        "source-map-support"
+      ]
+    }
+  },
+  "presets": [
+    [
+      "@babel/env",
+      {
+        "targets": {
+          "node": "current"
+        }
+      }
+    ]
+  ],
+  "plugins": [
+    "@babel/plugin-proposal-class-properties"
+  ]
+}
