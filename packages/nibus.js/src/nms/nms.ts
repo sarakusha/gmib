@@ -1,17 +1,13 @@
-/* eslint-disable no-bitwise */
 import { decode, encode } from 'iconv-lite';
-import NmsValueType from './valuetype';
 import { MibError } from '../errors';
 import { NMS_MAX_DATA_LENGTH } from '../nbconst';
+import NmsValueType from './NmsValueType';
 
-export { default as NmsServiceType } from './servicetype';
-export { NmsValueType };
+const packByte = (b: number) => (((b % 100) / 10) * 16) + (b % 10);
+const unpackByte = (byte: number) => (byte & 0x0f) + (((byte >> 4) & 0x0f) * 10);
 
-const packByte = b => (((b % 100) / 10) * 16) + (b % 10);
-const unpackByte = byte => (byte & 0x0f) + (((byte >> 4) & 0x0f) * 10);
-
-function getDateTime(buffer, offset) {
-  const day = unpackByte(buffer.readUInt8(0 + offset));
+function getDateTime(buffer: Buffer, offset: number = 0) {
+  const day = unpackByte(buffer.readUInt8(offset));
   const month = unpackByte(buffer.readUInt8(1 + offset));
   const year = unpackByte(buffer.readUInt8(3 + offset))
     + (100 * unpackByte(buffer.readUInt8(2 + offset)));
@@ -23,8 +19,10 @@ function getDateTime(buffer, offset) {
   return new Date(year, month, day, hour, minute, second, ms);
 }
 
-export function getSizeOf(valueType, value) {
+export function getSizeOf(valueType?: NmsValueType, value?: string): number {
   switch (valueType) {
+    case undefined:
+      return 0;
     case NmsValueType.Boolean:
     case NmsValueType.Int8:
     case NmsValueType.UInt8:
@@ -43,9 +41,7 @@ export function getSizeOf(valueType, value) {
     case NmsValueType.DateTime:
       return 10;
     case NmsValueType.String:
-      return value.length + 1;
-    default:
-      break;
+      return value ? (value.length + 1) : 0;
   }
 
   if ((valueType & NmsValueType.Array) === 0) {
@@ -53,15 +49,16 @@ export function getSizeOf(valueType, value) {
   }
 
   const arrayType = valueType & (NmsValueType.Array - 1);
-  const itemSize = getSizeOf(arrayType);
+  const itemSize = getSizeOf(arrayType) || 0;
 
   return value ? value.length * itemSize : itemSize;
 }
 
-export function decodeValue(valueType, buffer, offset) {
-  // if (buffer.length < offset + getSizeOf(valueType)) {
-  //   return undefined;
-  // }
+export function decodeValue(valueType: NmsValueType, buffer: Buffer, offset = 0): any {
+  console.assert(
+    buffer.length <= offset + getSizeOf(valueType),
+    `Buffer is too small ${buffer.length} < ${offset} + ${getSizeOf(valueType)}`,
+  );
   switch (valueType) {
     case NmsValueType.Boolean:
       return !!buffer[offset];
@@ -86,7 +83,7 @@ export function decodeValue(valueType, buffer, offset) {
       return buffer.readDoubleLE(offset);
     case NmsValueType.String: {
       const nil = buffer.indexOf(0, offset);
-      return decode(buffer.slice(offset, nil !== -1 ? nil : undefined));
+      return decode(buffer.slice(offset, nil !== -1 ? nil : undefined), 'win1251');
     }
     case NmsValueType.DateTime:
       return getDateTime(buffer, offset);
@@ -112,20 +109,20 @@ export function decodeValue(valueType, buffer, offset) {
   return array;
 }
 
-function writeValue(valueType, value, buffer, offset) {
-  let pos;
+function writeValue(valueType: NmsValueType, value: any, buffer: Buffer, offset = 0): number {
+  let pos = offset;
   switch (valueType && 0xFF) {
     case NmsValueType.Boolean:
-      pos = buffer.writeUInt8(value ? 1 : 0, offset);
+      pos = buffer.writeUInt8(value ? 1 : 0, pos);
       break;
     case NmsValueType.Int8:
-      pos = buffer.writeInt8(value, offset);
+      pos = buffer.writeInt8(value, pos);
       break;
     case NmsValueType.Int16:
-      pos = buffer.writeInt16LE(value, offset);
+      pos = buffer.writeInt16LE(value, pos);
       break;
     case NmsValueType.Int32:
-      pos = buffer.writeInt32LE(value, offset);
+      pos = buffer.writeInt32LE(value, pos);
       break;
     case NmsValueType.UInt64:
     case NmsValueType.Int64:
@@ -133,35 +130,35 @@ function writeValue(valueType, value, buffer, offset) {
         const int = Math.floor(value);
         const low = int & 0xFFFFFFFF;
         const hi = int >>> 32;
-        pos = buffer.writeUInt32LE(low, offset);
+        pos = buffer.writeUInt32LE(low, pos);
         pos = buffer.writeUInt32LE(hi, pos);
       }
       if (typeof value === 'string') {
-        pos = buffer.write(value, offset, 'hex');
+        pos = buffer.write(value, pos, value.length, 'hex');
       }
       break;
     case NmsValueType.UInt8:
-      pos = buffer.writeUInt8(value, offset);
+      pos = buffer.writeUInt8(value, pos);
       break;
     case NmsValueType.UInt16:
-      pos = buffer.writeUInt16LE(value, offset);
+      pos = buffer.writeUInt16LE(value, pos);
       break;
     case NmsValueType.UInt32:
-      pos = buffer.writeUInt32LE(value, offset);
+      pos = buffer.writeUInt32LE(value, pos);
       break;
     case NmsValueType.Real32:
-      pos = buffer.writeFloatLE(value, offset);
+      pos = buffer.writeFloatLE(value, pos);
       break;
     case NmsValueType.Real64:
-      pos = buffer.writeDoubleLE(value, offset);
+      pos = buffer.writeDoubleLE(value, pos);
       break;
     case NmsValueType.String: {
       let src = encode(value, 'win1251');
       if (src.length > NMS_MAX_DATA_LENGTH - 2) {
         src = src.slice(0, NMS_MAX_DATA_LENGTH - 2);
       }
-      pos += src.copy(buffer, offset);
-      pos = buffer.writeUInt8(0, pos);
+      pos = src.copy(buffer, pos);
+      pos = buffer.writeUInt8(0, pos + offset);
       break;
     }
     case NmsValueType.DateTime: {
@@ -177,11 +174,10 @@ function writeValue(valueType, value, buffer, offset) {
         packByte(value.getMilliseconds() % 100),
         packByte(value.getDay() + 1),
       ]);
-      pos = offset + dtbuffer.copy(buffer, offset);
+      pos = offset + dtbuffer.copy(buffer, pos);
       break;
     }
     default:
-      pos = offset;
       break;
   }
 
@@ -189,17 +185,48 @@ function writeValue(valueType, value, buffer, offset) {
     // TODO: Проверить запись массивов
     const arrayType = valueType & (NmsValueType.Array - 1);
 
-    for (let i = 0; i < value.length; i += 1) {
-      pos = writeValue(arrayType, value[i], buffer, pos);
+    for (const item of value) {
+      pos = writeValue(arrayType, item, buffer, pos);
     }
   }
 
   return pos;
 }
 
-export function encodeValue(valueType, value) {
+export function encodeValue(valueType: NmsValueType, value: any) {
   const buffer = Buffer.alloc(1 + getSizeOf(valueType, value));
   buffer[0] = valueType & 0xFF;
   writeValue(valueType, value, buffer, 1);
   return buffer;
+}
+
+export function getNmsType(simpleType: string) {
+  switch (simpleType) {
+    case 'xs:boolean':
+      return NmsValueType.Boolean;
+    case 'xs:unsignedByte':
+      return NmsValueType.UInt8;
+    case 'xs:byte':
+      return NmsValueType.Int8;
+    case 'xs:short':
+      return NmsValueType.Int16;
+    case 'xs:unsignedShort':
+      return NmsValueType.UInt16;
+    case 'xs:int':
+      return NmsValueType.Int32;
+    case 'xs:unsignedInt':
+      return NmsValueType.UInt32;
+    case 'xs:long':
+      return NmsValueType.Int64;
+    case 'xs:unsignedLong':
+      return NmsValueType.UInt64;
+    case 'xs:float':
+      return NmsValueType.Real32;
+    case 'xs:NMTOKEN':
+      return NmsValueType.UInt8;
+    case 'xs:string':
+      return NmsValueType.String;
+    default:
+      return NmsValueType.Unknown;
+  }
 }

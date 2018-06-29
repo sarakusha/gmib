@@ -1,0 +1,46 @@
+mibCategories:
+  siolynx:
+    link: true
+  minihost:
+    mib: minihost_v2.06b
+  fancontrol:
+    mib: fan_control
+  c22:
+    link: true
+    baudRate: 57600
+knownDevices:
+  - device: Siolynx2
+    vid: '0403' # 1027
+    pid: '6001' # 24577
+    manufacturer: NATA
+    category: siolynx
+  - device: FT232R USB UART
+    vid: '0403'
+    pid: '6001'
+    manufacturer: FTDI
+    category: siolynx
+  - device: FanControl
+    vid: '0403'
+    pid: '6001'
+    manufacturer: NATA
+    category: fancontrol
+  - device: C22 USB to RS422 Converter
+    vid: '0403'
+    pid: '6001'
+    manufacturer: NATA
+    category: c22
+  - device: MiniHost_alfa
+    vid: '0403'
+    pid: '6015' # 24597
+    manufacturer: 'Nata-Info'
+    category: minihost
+  - device: FT230X Basic UART
+    vid: '0403'
+    pid: '6015'
+    manufacturer: FTDI
+    category: minihost
+  - device: 'Ke-USB24R'
+    vid: 1240
+    pid: 10
+    serialNumber: 'K_Ke-USB24R'
+    category: relay

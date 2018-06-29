@@ -1,10 +1,12 @@
+export class MibError extends Error {
+}
+
 export class NibusError extends Error {
-  constructor(errcode, msg = 'Nibus error') {
+  constructor(public errcode: number, msg = 'Nibus error') {
     super(msg);
-    this.errorcode = errcode;
   }
 
-  updateErrorMessage(errEnum) {
+  public updateErrorMessage(errEnum: string[]) {
     if (this.errcode && errEnum[this.errcode]) {
       this.message = errEnum[this.errcode];
     }
@@ -16,7 +18,4 @@ export class TimeoutError extends Error {
   constructor(msg = 'Timeout error') {
     super(msg);
   }
-}
-
-export class MibError extends Error {
 }

@@ -1,17 +1,18 @@
-import Address from './address';
+import Address, { AddressType } from './Address';
 
 describe('Address', () => {
   describe('constructor', () => {
     test('should be empty', () => {
       const empty = new Address();
-      expect(empty).toHaveProperty('type', 'empty');
+      expect(empty).toHaveProperty('type', AddressType.empty);
       expect(empty.isEmpty).toBe(true);
       expect(new Address(empty.toString())).toHaveProperty('isEmpty', true);
+      expect(new Address([0, 0, 0, 0, 0, 0])).toHaveProperty('isEmpty', true);
     });
 
-    test('should be hex net', () => {
+    test('should be net', () => {
       const net = expect(new Address('FE.56.34'));
-      net.toHaveProperty('type', 'net');
+      net.toHaveProperty('type', AddressType.net);
       net.toHaveProperty('domain', 0xFE);
       net.toHaveProperty('subnet', 0x56);
       net.toHaveProperty('device', 0x34);
@@ -21,24 +22,25 @@ describe('Address', () => {
       const group = expect(new Address('255.128'));
       group.toHaveProperty('domain', 255);
       group.toHaveProperty('group', 128);
-      group.toHaveProperty('type', 'group');
+      group.toHaveProperty('type', AddressType.group);
     });
 
     test('should be string mac', () => {
       const address = new Address('01::FF:23');
-      expect(address).toHaveProperty('type', 'mac');
-      expect(address.mac.equals(Buffer.from([1, 0, 0, 0, 255, 0x23]))).toBeTruthy();
-      expect(new Address('::45:77').mac.equals(Buffer.from([0, 0, 0, 0, 0x45, 0x77]))).toBeTruthy();
-      expect(new Address('::0')).toHaveProperty('type', 'empty');
+      const address2 = new Address('::45:77');
+      const empty = new Address('::0');
+      expect(address).toHaveProperty('type', AddressType.mac);
+      expect(address.mac && address.mac.equals(Buffer.from([1, 0, 0, 0, 255, 0x23]))).toBe(true);
+      expect(address2.mac && address2.mac.equals(Buffer.from([0, 0, 0, 0, 0x45, 0x77]))).toBe(true);
+      expect(empty).toHaveProperty('type', AddressType.empty);
     });
 
     test('should be array mac', () => {
       const array = [1, 2, 3, 4, 5, 6];
       const mac = new Uint8Array(array);
       const address = new Address(mac);
-      expect(address.mac.equals(mac)).toBe(true);
-      expect(address).toHaveProperty('type', 'mac');
-      expect(new Address(array).mac.equals(mac)).toBe(true);
+      expect(address.mac && address.mac.equals(mac)).toBe(true);
+      expect(address).toHaveProperty('type', AddressType.mac);
     });
   });
 
@@ -48,14 +50,14 @@ describe('Address', () => {
     const c = new Address();
     const d = new Address('::45:79');
     test('should be equal', () => {
-      expect(a.isEqual(b)).toBe(true);
-      expect(a.isEqual(a)).toBe(true);
-      expect(c.isEqual(Address.empty)).toBe(true);
-      expect(a.isEqual(new Address(a))).toBe(true);
+      expect(a.equals(b)).toBe(true);
+      expect(a.equals(a)).toBe(true);
+      expect(c.equals(Address.empty)).toBe(true);
+      expect(a.equals(new Address(a))).toBe(true);
     });
     test('shouldn\'t be equal', () => {
-      expect(a.isEqual(c)).toBe(false);
-      expect(a.isEqual(d)).toBe(false);
+      expect(a.equals(c)).toBe(false);
+      expect(a.equals(d)).toBe(false);
     });
   });
 
@@ -68,4 +70,3 @@ describe('Address', () => {
     expect(new Address('12.34').toString()).toBe('12.34');
   });
 });
-
