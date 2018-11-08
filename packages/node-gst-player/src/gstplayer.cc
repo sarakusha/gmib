@@ -26,8 +26,7 @@ using namespace X11;
 using namespace X11;
 #endif
 
-static Glib::RefPtr<Gst::VideoOverlay> find_overlay(Glib::RefPtr<Gst::Element> element)
-{
+static Glib::RefPtr<Gst::VideoOverlay> find_overlay(Glib::RefPtr<Gst::Element> element) {
   g_debug("find2 vo in %s", element->get_name().c_str());
   auto overlay = Glib::RefPtr<Gst::VideoOverlay>::cast_dynamic(element);
 
@@ -39,8 +38,7 @@ static Glib::RefPtr<Gst::VideoOverlay> find_overlay(Glib::RefPtr<Gst::Element> e
   if (!bin)
     return overlay;
 
-  for (auto e : bin->get_children())
-  {
+  for (auto e : bin->get_children()) {
     overlay = find_overlay(e);
     if (overlay)
       break;
@@ -52,8 +50,10 @@ static Glib::RefPtr<Gst::VideoOverlay> find_overlay(Glib::RefPtr<Gst::Element> e
 Napi::FunctionReference GstPlayer::constructor;
 
 bool onBlackDraw(const Cairo::RefPtr<Cairo::Context> &context) {
-  g_debug("onBlackDraw");
-  if (context) context->set_source_rgba(0, 0, 0, 1);
+  if (context) {
+    g_debug("onBlackDraw");
+    context->set_source_rgba(1.0, 0, 0, 0.5);
+  }
   return false;
 }
 
@@ -68,7 +68,9 @@ Napi::Object GstPlayer::Init(Napi::Env env, Napi::Object exports) {
       InstanceAccessor("left", &GstPlayer::GetLeft, &GstPlayer::SetLeft),
       InstanceAccessor("top", &GstPlayer::GetTop, &GstPlayer::SetTop),
       InstanceAccessor("output", &GstPlayer::GetOutput, &GstPlayer::SetOutput),
-      InstanceAccessor("preferredOutputModel", &GstPlayer::GetPreferredOutputModel, &GstPlayer::SetPreferredOutputModel),
+      InstanceAccessor("preferredOutputModel",
+                       &GstPlayer::GetPreferredOutputModel,
+                       &GstPlayer::SetPreferredOutputModel),
       InstanceAccessor("current", &GstPlayer::GetCurrent, &GstPlayer::SetCurrent),
       InstanceMethod("show", &GstPlayer::Show),
       InstanceMethod("hide", &GstPlayer::Hide),
@@ -110,7 +112,7 @@ GstPlayer::GstPlayer(const Napi::CallbackInfo &info) :
   }
   auto emptyArray = Napi::Array::New(env, 0);
   _playlistRef.Reset(emptyArray);
-  auto playbin = Gst::ElementFactory::create_element("playbin");
+  auto playbin = Gst::ElementFactory::create_element("playbin3");
   _playbin = Glib::RefPtr<Gst::Pipeline>::cast_static(playbin);
   if (!playbin) {
     Napi::Error::New(env, "Cannot find playbin element").ThrowAsJavaScriptException();
@@ -145,9 +147,9 @@ GstPlayer::GstPlayer(const Napi::CallbackInfo &info) :
   auto bus = _playbin->get_bus();
   bus->enable_sync_message_emission();
   bus->signal_sync_message().connect(sigc::mem_fun(*this, &GstPlayer::OnBusMessageSync));
+  busWatchId = bus->add_watch(sigc::mem_fun(*this, &GstPlayer::OnBusMessage));
 
-
-  GContextInvoke([this]() {
+  GtkContextInvoke([this]() {
     video = Gtk::manage(new Gtk::DrawingArea());
     video->set_sensitive(false);
     video->set_can_focus(false);
@@ -201,10 +203,13 @@ void GstPlayer::SetPlaylist(const Napi::CallbackInfo &info, const Napi::Value &v
       g_warning("error while discover %s: %s", info->get_uri().c_str(), error.what().c_str());
       return;
     }
-    g_debug("%s has duration %llus", info->get_uri().c_str(), info->get_duration() / Gst::SECOND);
+    g_debug("%s has duration %"
+                G_GUINT64_FORMAT
+                "s", info->get_uri().c_str(), info->get_duration() / Gst::SECOND);
     _info.emplace(info->get_uri(), info);
   };
 
+#ifndef SINGLE_THREADED
   mutex lock;
   condition_variable check;
   bool isFinished = false;
@@ -214,6 +219,7 @@ void GstPlayer::SetPlaylist(const Napi::CallbackInfo &info, const Napi::Value &v
     isFinished = true;
     check.notify_one();
   };
+#endif
 
   if (size > 0) {
 #ifdef MACOSX
@@ -222,7 +228,9 @@ void GstPlayer::SetPlaylist(const Napi::CallbackInfo &info, const Napi::Value &v
     auto discoverer = Gst::Discoverer::create(Gst::SECOND);
 #endif
     discoverer->signal_discovered().connect(discovered);
+#ifndef SINGLE_THREADED
     discoverer->signal_finished().connect(finished);
+#endif
     discoverer->start();
     for (uint32_t i = 0; i < size; i++) {
       auto uriValue = array.Get(i);
@@ -244,12 +252,16 @@ void GstPlayer::SetPlaylist(const Napi::CallbackInfo &info, const Napi::Value &v
         }
       }
     }
+#ifndef SINGLE_THREADED
     unique_lock<mutex> locker(lock);
     while (!isFinished) check.wait(locker);
+#endif
   }
 
   {
+#ifndef DISABLE_LOCK
     unique_lock<mutex> locker(_lock);
+#endif
     swap(_playlist, playlist);
   }
 
@@ -269,8 +281,9 @@ void GstPlayer::UpdateTotal() {
 void GstPlayer::OnBusMessageSync(const Glib::RefPtr<Gst::Message> &message) {
   switch (message->get_message_type()) {
     case Gst::MESSAGE_ELEMENT: {
-      g_debug("message: %s", message->get_structure().to_string().c_str());
-      if (gst_is_video_overlay_prepare_window_handle_message(message->gobj())) {
+      auto structure = message->get_structure();
+      if (structure) g_debug("message: %s", structure.to_string().c_str());
+      if (gst_is_video_overlay_prepare_window_handle_message(message->gobj()) && video && video->get_realized()) {
         /* Retrieve window handler from GDK */
         guintptr window_handle;
         GdkWindow *window = video->get_window()->gobj();
@@ -281,22 +294,47 @@ void GstPlayer::OnBusMessageSync(const Glib::RefPtr<Gst::Message> &message) {
 #elif defined (GDK_WINDOWING_X11)
         window_handle = GDK_WINDOW_XID (window);
 #endif
-        auto xoverlay =  find_overlay(Glib::RefPtr<Gst::Element>::cast_dynamic(message->get_source()));
-        if (xoverlay) {
-          g_debug("FOUND XOVERLAY");
-          xoverlay->set_window_handle(window_handle);
+        auto source = message->get_source()->gobj();
+        if (GST_IS_VIDEO_OVERLAY(source)) {
+          gst_video_overlay_set_window_handle(GST_VIDEO_OVERLAY (source), window_handle);
+          g_debug("SET OVERLAY");
         } else {
-          auto source = message->get_source()->gobj();
-          if (GST_IS_VIDEO_OVERLAY(source)) {
-            g_debug("WINDOW_HANDLE %lu", window_handle);
-            gst_video_overlay_set_window_handle(GST_VIDEO_OVERLAY (source), window_handle);
-          }
+          g_warning("overlay not found");
         }
       }
     }
     default:return;
   }
 }
+
+// This function is used to receive asynchronous messages from play_bin's bus
+bool GstPlayer::OnBusMessage(const Glib::RefPtr<Gst::Bus> & /* bus */,
+                             const Glib::RefPtr<Gst::Message> &message) {
+  switch (message->get_message_type()) {
+    case Gst::MESSAGE_EOS: {
+      g_debug("EOS");
+      AsyncEmit("EOS", "");
+      break;
+    }
+    case Gst::MESSAGE_ERROR: {
+      Glib::RefPtr<Gst::MessageError> msg_error = Glib::RefPtr<Gst::MessageError>::cast_static(message);
+      if (msg_error) {
+        Glib::Error err = msg_error->parse_error();
+        g_error("Error: %s", err.what().c_str());
+//        g_error("Error: %s", msg_error->parse_debug().c_str());
+      } else {
+        g_error(" Bus Error.");
+      }
+      break;
+    }
+    default: {
+//      auto structure = message->get_structure();
+//      g_info("bus unhandled async message=%s", structure.to_string().c_str());
+    }
+  }
+  return true;
+}
+
 Napi::Value GstPlayer::GetScreen(const Napi::CallbackInfo &info) {
   return Napi::Number::New(info.Env(), screenNumber);
 }
@@ -315,28 +353,43 @@ void GstPlayer::SetScreen(const Napi::CallbackInfo &info, const Napi::Value &val
   Emit(info, "changed", "screen");
 }
 void GstPlayer::AsyncLayout(Lambda &&lambda) {
+#ifndef DISABLE_LOCK
   unique_lock<mutex> locker(_lock);
+#endif
   lambda();
   if (!needUpdateLayout) {
     needUpdateLayout = true;
-    GContextInvoke([this]() { UpdateLayout(); });
+    GtkContextInvoke([this]() { UpdateLayout(); });
   }
 }
 
 void GstPlayer::UpdateLayout() {
   CHECK_CONTEXT();
+#ifndef DISABLE_LOCK
   unique_lock<mutex> locker(_lock);
+#endif
+  g_debug("UpdateLayout %d,%d:%dx%d", left, top, width, height);
   video->set_size_request(width, height);
+  if (video->get_realized()) {
+    video->get_window()->resize(width, height);
+  }
 
   if (aspect) {
     int nom = letterBoxing ? 0 : width;
     int denom = letterBoxing ? 1 : height;
-    Glib::Value<Gst::Fraction> value;
-    value.init(Glib::Value<Gst::Fraction>::value_type());
-    value.set(Gst::Fraction(nom, denom));
-    aspect->set_property_value("aspect-ratio", value);
+    aspect->set_property("aspect-ratio", Gst::Fraction(nom, denom));
   }
   SetWindowOutput(video, left, top, output, preferredOutputModel, screenNumber);
+  auto overlay = GST_VIDEO_OVERLAY(gst_bin_get_by_interface(GST_BIN(_playbin->gobj()), GST_TYPE_VIDEO_OVERLAY));
+  if (overlay) {
+    gst_video_overlay_expose(overlay);
+    gst_object_unref(overlay);
+  }
+  if (show) {
+    video->show();
+  } else {
+    video->hide();
+  }
   needUpdateLayout = false;
 }
 
@@ -366,7 +419,7 @@ void GstPlayer::SetWidth(const Napi::CallbackInfo &info, const Napi::Value &valu
   if (!CheckPositiveEvenNumber(info, value)) return;
 
   int32_t widthVal = value.As<Napi::Number>();
-  AsyncLayout([widthVal, this] () {
+  AsyncLayout([widthVal, this]() {
     width = widthVal;
   });
   Emit(info, "changed", "width");
@@ -380,7 +433,7 @@ void GstPlayer::SetHeight(const Napi::CallbackInfo &info, const Napi::Value &val
   if (!CheckPositiveEvenNumber(info, value)) return;
 
   int32_t heightVal = value.As<Napi::Number>();
-  AsyncLayout([heightVal, this] () {
+  AsyncLayout([heightVal, this]() {
     height = heightVal;
   });
   Emit(info, "changed", "height");
@@ -393,7 +446,7 @@ Napi::Value GstPlayer::GetLeft(const Napi::CallbackInfo &info) {
 void GstPlayer::SetLeft(const Napi::CallbackInfo &info, const Napi::Value &value) {
   if (!CheckPositiveEvenNumber(info, value)) return;
   int32_t leftVal = value.As<Napi::Number>();
-  AsyncLayout([leftVal, this] () {
+  AsyncLayout([leftVal, this]() {
     left = leftVal;
   });
   Emit(info, "changed", "left");
@@ -407,7 +460,7 @@ void GstPlayer::SetTop(const Napi::CallbackInfo &info, const Napi::Value &value)
   if (!CheckPositiveEvenNumber(info, value)) return;
 
   int32_t topVal = value.As<Napi::Number>();
-  AsyncLayout([topVal, this] () {
+  AsyncLayout([topVal, this]() {
     top = topVal;
   });
   Emit(info, "changed", "top");
@@ -424,8 +477,9 @@ void GstPlayer::SetOutput(const Napi::CallbackInfo &info, const Napi::Value &val
     return;
   }
 
-  string outputVal = value.As<Napi::String>();
-  AsyncLayout([outputVal, this] () {
+  string
+  outputVal = value.As<Napi::String>();
+  AsyncLayout([outputVal, this]() {
     output = outputVal;
   });
   Emit(info, "changed", "output");
@@ -442,21 +496,22 @@ void GstPlayer::SetPreferredOutputModel(const Napi::CallbackInfo &info, const Na
     Napi::TypeError::New(env, "String expected").ThrowAsJavaScriptException();
     return;
   }
-  string modelVal = value.As<Napi::String>();
-  AsyncLayout([modelVal, this] () {
+  string
+  modelVal = value.As<Napi::String>();
+  AsyncLayout([modelVal, this]() {
     preferredOutputModel = modelVal;
   });
   Emit(info, "changed", "preferredOutputModel");
 }
 
 void GstPlayer::Show(const Napi::CallbackInfo &info) {
-  GContextInvoke([this] () {
+  GtkContextInvoke([this]() {
     video->show();
   });
 }
 
 void GstPlayer::Hide(const Napi::CallbackInfo &info) {
-  GContextInvoke([this] () {
+  GtkContextInvoke([this]() {
     video->hide();
   });
 }
@@ -487,9 +542,10 @@ void GstPlayer::SetCurrent(const Napi::CallbackInfo &info, const Napi::Value &va
     Napi::RangeError::New(info.Env(), "Index is out of range").ThrowAsJavaScriptException();
     return;
   }
-#ifdef MACOSX
+//  string uri = _playlist[index];
   _playbin->set_property("uri", _playlist[index]);
-#else
-  _playbin->set_property("uri", _playlist[index == 0 ? 1 : index]);
-#endif
+//  Glib::Value<string> uri;
+//  uri.init(Glib::Value<string>::value_type());
+//  uri.set(_playlist[index]);
+//  _playbin->set_property_value("uri", uri);
 }

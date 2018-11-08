@@ -11,6 +11,7 @@ set(node_gst_player_VERSION_MAJOR 1)
 set(node_gst_player_VERSION_MINOR 0)
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
 
+add_definitions(-DG_LOG_USE_STRUCTURED)
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     add_definitions(-DMACOSX)
     set_source_files_properties(src/gstplayer.cc PROPERTIES COMPILE_FLAGS -xobjective-c++)
@@ -71,6 +72,7 @@ endif ()
 # You should add this line in every CMake.js based project
 include_directories(${CMAKE_JS_INC})
 
+# libX11-dev
 find_package(X11 REQUIRED)
 include_directories(${X11_INCLUDE_DIR} ${X11_Xrandr_INCLUDE_PATH})
 
@@ -79,6 +81,7 @@ find_package(PkgConfig REQUIRED)
 
 # Setup CMake to use GTK+, tell the compiler where to look for headers
 # and to the linker where to look for libraries
+# libgtk-3-dev
 pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
 include_directories(${GTK3_INCLUDE_DIRS})
 link_directories(${GTK3_LIBRARY_DIRS})

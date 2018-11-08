@@ -21,7 +21,32 @@ namespace X11 {
 
 std::vector<napi_threadsafe_function> tf_collections;
 
+#ifdef SINGLE_THREADED
+#include <uv.h>
+
+uv_timer_t timer;
+bool exiting = false;
+Napi::FunctionReference callback_;
+
+void iterate_main_loop(uv_timer_t *handle) {
+  if (!exiting) {
+      g_main_context_iteration(nullptr, FALSE);
+  } else {
+    uv_timer_stop(handle);
+    uv_close((uv_handle_t *)&timer, nullptr);
+    g_debug("stop timer");
+  }
+}
+#else
 GContextWorker *GContextWorker::worker = nullptr;
+
+gboolean sourceFunction(gpointer user_data) {
+  Lambda *l = static_cast<Lambda *>(user_data);
+  (*l)();
+  delete l;
+  return FALSE;
+}
+#endif
 
 ThreadSafeFunction::ThreadSafeFunction(Napi::Env env, Napi::Object receiver, std::string method) {
   _recv = Napi::Weak(receiver);
@@ -58,8 +83,7 @@ void ThreadSafeFunction::CallIntoJS(napi_env env, napi_value callback, void *ctx
 //  self->_recv.Unref();
 //}
 
-void GContextWorker::Init(Napi::Function &callback) {
-  if (worker) return;
+void GtkContextInit(Napi::Function &callback) {
   Glib::init();
   Gio::init();
 
@@ -77,26 +101,57 @@ void GContextWorker::Init(Napi::Function &callback) {
 
   bool initialized = Gst::init_check();
   g_debug("gstreamer initialized %s", initialized ? "Ok" : "FAILED");
+#ifndef SINGLE_THREADED
+  GContextWorker::Init(callback);
+#else
+  // It is only necessary to call this function if multiple threads might use Xlib concurrently.
+  // If all calls to Xlib functions are protected by some other access mechanism
+  // Xlib thread initialization is not required.
+
+  X11::XInitThreads();
+
+  gdk_init(nullptr, nullptr);
+  gtk_init(nullptr, nullptr);
+  uv_timer_init(uv_default_loop(), &timer);
+  uv_timer_start(&timer, iterate_main_loop, 10, 10);
+  callback_ = Napi::Persistent(callback);
+#endif
+}
+
+void GtkContextClose() {
+  for(auto tf : tf_collections) {
+    napi_release_threadsafe_function(tf, napi_tsfn_release);
+  }
+  tf_collections.clear();
+#ifdef SINGLE_THREADED
+  exiting = true;
+  if (callback_) {
+    callback_.Call(std::initializer_list<napi_value>{});
+    callback_.Reset();
+  }
+#else
+  GContextWorker::Close();
+#endif
+}
+
+#ifndef SINGLE_THREADED
+void GContextWorker::Init(Napi::Function &callback) {
+  if (worker) return;
   worker = new GContextWorker(callback);
   worker->Queue();
-//  std::unique_lock<std::mutex> locker(worker->lock);
-//  while (!worker->ready) {
-//    g_debug("wait");
-//    worker->check.wait(locker);
-//    g_debug("check");
-//  }
-//  g_debug("ready");
+  std::unique_lock<std::mutex> locker(worker->lock);
+  while (!worker->ready) {
+    worker->check.wait(locker);
+  }
+  g_debug("ready");
 }
 
 void GContextWorker::Close() {
   if (!worker || !worker->loop) return;
-  for(auto tf : tf_collections) {
-    napi_release_threadsafe_function(tf, napi_tsfn_release);
-  }
   GMainLoop *loop = nullptr;
   std::swap(worker->loop, loop);
 
-  GContextInvoke([loop] {
+  GtkContextInvoke([loop] {
     g_main_loop_quit(loop);
     g_main_loop_unref(loop);
   });
@@ -116,16 +171,18 @@ void GContextWorker::Execute() {
   loop_thread = g_thread_self();
 #endif
   loop = g_main_loop_new(nullptr, FALSE);
-//  {
-//    std::unique_lock<std::mutex> locker(lock);
-//    ready = true;
-//    check.notify_one();
-//  }
+  {
+    std::unique_lock<std::mutex> locker(lock);
+    ready = true;
+    check.notify_one();
+  }
   g_main_loop_run(loop);
 }
 void GContextWorker::Check() {
 #ifdef DEBUG
-  g_debug("CHECK_CONTEXT");
-  g_assert_true(worker != nullptr && worker->loop_thread == g_thread_self());
+  g_assert_true(worker != nullptr);
+  g_assert_true(worker->ready && worker->loop_thread == g_thread_self());
 #endif
 }
+
+#endif

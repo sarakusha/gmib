@@ -9,8 +9,9 @@
 
 bool isInitialized = false;
 
-void GContextInit(const Napi::CallbackInfo &info) {
+void Initialize(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
+  Napi::HandleScope scope(env);
   if (isInitialized) {
     Napi::Error::New(env, "Re-initialize").ThrowAsJavaScriptException();
     return;
@@ -27,20 +28,21 @@ void GContextInit(const Napi::CallbackInfo &info) {
 
   Napi::Function cb = info[0].As<Napi::Function>();
 
-  GContextWorker::Init(cb);
+  GtkContextInit(cb);
   ScreenInit();
   isInitialized = true;
 }
 
-void GContextClose(const Napi::CallbackInfo &info) {
-//  GContextInvoke([]() { XrandrClose(); });
-  GContextWorker::Close();
+void Close(const Napi::CallbackInfo &info) {
+//  GtkContextInvoke([]() { XrandrClose(); });
+  Napi::HandleScope scope(info.Env());
+  GtkContextClose();
 }
 
 
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
-  exports.Set(Napi::String::New(env, "init"), Napi::Function::New(env, GContextInit));
-  exports.Set(Napi::String::New(env, "close"), Napi::Function::New(env, GContextClose));
+  exports.Set(Napi::String::New(env, "init"), Napi::Function::New(env, Initialize));
+  exports.Set(Napi::String::New(env, "close"), Napi::Function::New(env, Close));
   XrandrInit(env, exports);
   GstPlayer::Init(env, exports);
   return exports;

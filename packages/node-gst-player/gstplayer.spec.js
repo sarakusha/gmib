@@ -1,23 +1,43 @@
 const gstplayer = require('./index');
 const GstPlayer = gstplayer.GstPlayer;
 const util = require('util');
+const path = require('path');
+console.log('xrandr.getOutputs()', util.inspect(gstplayer.xrandr.getOutputs(), {showHidden: true, depth: null}));
 
-// console.log('xrandr.getOutputs()', util.inspect(gstplayer.xrandr.getOutputs(), {showHidden: true, depth: null}));
-
-setTimeout(() => {
-    const player = new GstPlayer();
-    player.playlist = [
-        'file:///Users/sarakusha/Movies/demo/1_number-count-backwards_-1spwfpgb__D.mp4',
-        'file:///home/sarakusha/Video/demo/1_number-count-backwards_-1spwfpgb__D.mp4'
-    ];
-    console.log('player', util.inspect(player, null, false));
+function printPlayer(player) {
     console.log(
         Object
             .getOwnPropertyNames(Object.getPrototypeOf(player))
             .filter(name => typeof player[name] !== 'function')
-            .forEach(name => console.log(`${name} = ${player[name]}`)));
+            .reduce((result, name) => {result[name] = player[name]; return result}, {}));
+}
+
+function bootstrap() {
+    const player = new GstPlayer();
+    const movie = path.resolve('../test.mp4');
+    player.playlist = [
+        `file:///${movie}`
+    ];
     player.current = 0;
     player.show();
     player.play();
-}, 500);
-setTimeout(() => gstplayer.close(), 10000).unref();
+    setTimeout(() => {
+        player.width = 600;
+        player.height = 400;
+    }, 1000);
+    setTimeout(() => {
+        player.left = 600;
+        player.top = 400;
+        printPlayer(player);
+    }, 2000);
+    player.on("changed", (prop) => {
+        console.log(`changed ${prop} =  ${player[prop]}`);
+    });
+    player.on("EOS", () => {
+        gstplayer.close();
+    });
+}
+
+bootstrap();
+// setTimeout(() => gstplayer.close(), 10000).unref();
+

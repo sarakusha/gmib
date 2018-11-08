@@ -26,7 +26,7 @@ typedef unordered_map<string, MonitorItem> Monitors;
 unordered_set<string> outputNames;
 using namespace X11;
 
-static Monitors monitors;
+Monitors monitors;
 
 /**
  * Поиск предпочтительного монтора в режиме auto в порядке приоритета,
@@ -148,19 +148,6 @@ struct Monitor {
 //      container.get_size_request(width, height);
     });
 
-    static int providers = 0;
-    // TODO: Проверить на -1
-    int check = 1 << screen_number;
-    if (!(providers & check)) {
-      auto provider = Gtk::CssProvider::create();
-      auto result1 = provider->load_from_data(
-          "GtkWindow {\n"
-          "  background-color: black;\n"
-          "}\n");
-      g_debug("css provider %s", result1 ? "loaded" : "failed");
-      Gtk::StyleContext::add_provider_for_screen(screen, provider, GTK_STYLE_PROVIDER_PRIORITY_USER);
-      providers |= check;
-    }
 
     auto res = getScreenResources(screen_number);
     auto outputs = getOutputs(res).first;
@@ -186,7 +173,8 @@ struct Monitor {
     g_debug("update %d,%d:%dx%d", crtcInfo->x, crtcInfo->y, crtcInfo->width, crtcInfo->height);
     main.move(crtcInfo->x, crtcInfo->y);
     container.set_size_request(crtcInfo->width, crtcInfo->height);
-    container.get_window()->resize(crtcInfo->width, crtcInfo->height);
+    if (container.get_realized())
+      container.get_window()->resize(crtcInfo->width, crtcInfo->height);
     main.fullscreen();
   }
 
@@ -204,6 +192,20 @@ string getOutputName(string output, int screen_number) {
 MonitorItem getMonitor(string output, const string &modelName, int &screen_number) {
   if (screen_number == -1) {
     screen_number = DefaultScreen(getDisplay());
+  }
+  static int providers = 0;
+  // TODO: Проверить на -1
+  int check = 1 << screen_number;
+  if (!(providers & check)) {
+    auto provider = Gtk::CssProvider::create();
+    Gtk::StyleContext::add_provider_for_screen(getScreen(screen_number), provider, GTK_STYLE_PROVIDER_PRIORITY_USER);
+    auto result1 = provider->load_from_data(
+        "#container,  GtkWindow {\n"
+        "  background-color: black;\n"
+        "}\n");
+    g_debug("css provider %s", result1 ? "loaded" : "failed");
+    g_debug("css: %s", provider->to_string().c_str());
+    providers |= check;
   }
   if (output == "auto") {
     output = getPreferredOutput(modelName, screen_number);
@@ -250,40 +252,28 @@ void SetWindowOutput(Gtk::Widget *window,
   auto monitor = getMonitor(output, modelName, screen_number);
   sigc::connection connection;
   auto reparent = [&monitor, window, &connection, left, top]() -> void {
-    g_debug("reparent");
     if (window->get_parent()) {
       window->reparent(monitor->container);
       monitor->container.move(*window, left, top);
     } else {
       monitor->container.put(*window, left, top);
     }
-//    int width, height;
-//    monitor->container.get_size_request(width, height);
-//    monitor->container.get_window()->resize(width, height);
+
+    { // Иначе окно может пропасть (ХЗ)
+      int width, height;
+      monitor->container.get_size_request(width, height);
+      monitor->container.get_window()->resize(width, height);
 //    g_debug("w: %d, h: %d", width, height);
+    }
+
     if (connection) {
       connection.disconnect();
     }
   };
+
   if (monitor->container.get_realized()) {
     reparent();
   } else {
     connection = monitor->container.signal_realize().connect(reparent);
   }
-//  monitor->main.show_all();
-  int width, height;
-  monitor->container.get_size_request(width, height);
-  if (monitor->container.get_realized()) {
-    monitor->container.get_window()->resize(width, height);
-//    if (window.get_realized()) {
-//      g_debug("reparent");
-//      window.get_window()->reparent(monitor->container.get_window(), left, top);
-//    }
-  }
 }
-
-//Gtk::Window VideoWindowCreate(string output, const Gst::VideoRectangle &rect, string model, int screen) {
-//  GContextWorker::Check();
-//  return Gtk::Window();
-//}
-

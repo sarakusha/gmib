@@ -17,18 +17,26 @@
 
 #include <node_api.h>
 
+#ifdef MACOSX
+#define SINGLE_THREADED
+#endif
+
 typedef std::function<void()> Lambda;
 
+#ifdef SINGLE_THREADED
+#define CHECK_CONTEXT()
+#else
 #define CHECK_CONTEXT() GContextWorker::Check();
 
-inline void GContextInvoke(Lambda &&lambda) {
-  gpointer func = new Lambda(std::forward<Lambda>(lambda));
-  g_main_context_invoke(nullptr, [](gpointer user_data) -> gboolean {
-    Lambda *l = static_cast<Lambda *>(user_data);
-    (*l)();
-    delete l;
-    return FALSE;
-  }, func);
+gboolean sourceFunction(gpointer user_data);
+#endif
+
+inline void GtkContextInvoke(Lambda &&lambda) {
+#ifdef SINGLE_THREADED
+  lambda();
+#else
+  g_main_context_invoke(nullptr, sourceFunction, new Lambda(std::forward<Lambda>(lambda)));
+#endif
 }
 
 class ThreadSafeFunction {
@@ -65,6 +73,10 @@ class ThreadSafeFunction {
   Napi::ObjectReference _recv;
 };
 
+void GtkContextInit(Napi::Function &callback);
+void GtkContextClose();
+
+#ifndef SINGLE_THREADED
  class GContextWorker : public Napi::AsyncWorker {
  private:
   static GContextWorker *worker;
@@ -79,13 +91,14 @@ class ThreadSafeFunction {
   static void Check();
 
  private:
-  GContextWorker(const Napi::Function &callback): /* ready(false), */ AsyncWorker(callback, "GtkContext") {}
-//  std::mutex lock;
-//  std::condition_variable check;
-//  bool ready;
+  GContextWorker(const Napi::Function &callback): ready(false), AsyncWorker(callback, "GtkContext") {}
+  std::mutex lock;
+  std::condition_variable check;
+  bool ready;
 
  protected:
   void Execute() override;
 };
+#endif
 
 #endif //NODE_GST_PLAYER_GCONTEXT_H

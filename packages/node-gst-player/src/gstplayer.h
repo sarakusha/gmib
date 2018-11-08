@@ -13,8 +13,16 @@
 #include <glibmm.h>
 #include <gstreamermm/pipeline.h>
 #include <gtkmm/drawingarea.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gstreamermm.h>
+#pragma GCC diagnostics pop
 #include "gcontext.h"
+
+#ifdef SINGLE_THREADED
+#define DISABLE_LOCK
+#endif
+
 
 using namespace std;
 namespace Gst {
@@ -65,6 +73,7 @@ class GstPlayer : public Napi::ObjectWrap<GstPlayer> {
   void Stop(const Napi::CallbackInfo &info);
 
   void OnBusMessageSync(const Glib::RefPtr<Gst::Message> &message);
+  bool OnBusMessage(const Glib::RefPtr<Gst::Bus>& bus, const Glib::RefPtr<Gst::Message>& message);
 
   static Napi::FunctionReference constructor;
   ThreadSafeFunction emit;
@@ -84,12 +93,15 @@ class GstPlayer : public Napi::ObjectWrap<GstPlayer> {
   Playlist _playlist;
   Reference<Napi::Array> _playlistRef;
   MediaInfo _info;
+#ifndef DISABLE_LOCK
   mutex _lock;
+#endif
   bool needUpdateLayout;
 
   Glib::RefPtr<Gst::Pipeline> _playbin;
   Glib::RefPtr<Gst::Element> aspect;
   Gtk::DrawingArea *video;
+  guint busWatchId;
 };
 
 #endif //NODE_GST_PLAYER_GSTPLAYER_H

@@ -4,10 +4,13 @@ const EventEmmitter = require('events').EventEmitter;
 
 process.on('SIGINT', gstplayer.close);
 process.on('SIGTERM', gstplayer.close);
+process.on('uncaughtException', (err) => {
+    console.error("Unhandled exception", err.stack);
+    gstplayer.close();
+});
 
 inherits(gstplayer.GstPlayer, EventEmmitter);
 
-// process.on('uncaughtException', gstplayer.close);
 
 gstplayer.init(() => {
     console.log('GContext was closed');
