@@ -1,13 +1,20 @@
 mibCategories:
   siolynx:
     link: true
+    find: version
   minihost:
     mib: minihost_v2.06b
+    find: sarp
   fancontrol:
     mib: fan_control
+    find: version
   c22:
     link: true
     baudRate: 57600
+  sensor:
+    mib: ti_lux_2_3
+    find: sarp
+    disableBatchReading: true
 knownDevices:
   - device: Siolynx2
     vid: '0403' # 1027

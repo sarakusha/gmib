@@ -1,4 +1,4 @@
-import Promise from 'bluebird';
+// import Promise from 'bluebird';
 
 declare namespace detector {
   export type Callback = ((err?: any, result?: IDevice[]) => void) | null;

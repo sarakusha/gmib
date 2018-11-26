@@ -4,9 +4,11 @@ import { Transform, TransformCallback, TransformOptions } from 'stream';
 import { MAX_DATA_LENGTH, Offsets, PREAMBLE, SERVICE_INFO_LENGTH, States } from '../nbconst';
 import { NmsDatagram } from '../nms';
 import { SarpDatagram } from '../sarp';
+import { printBuffer } from './helper';
 import NibusDatagram from './NibusDatagram';
 
-const debug = debugFactory('nibus.js');
+const debug = debugFactory('nibus:decoder');
+const debugSerial = debugFactory('nibus-serial:decoder');
 
 function crcNibus(byteArray: number[]) {
   const crc = crc16ccitt(Buffer.from(byteArray), 0);
@@ -28,6 +30,7 @@ export default class NibusDecoder extends Transform {
   // tslint:disable-next-line
   public _transform(chunk: any, encoding: string, callback: TransformCallback) {
     console.assert(encoding === 'buffer', 'Unexpected encoding');
+    debugSerial(printBuffer(chunk));
     let data = [...chunk];
     while (data.length > 0) {
       data = this.analyze(data);

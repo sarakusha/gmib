@@ -1,12 +1,7 @@
-// import './detector';
-// import nms from './nms/servicetype';
-process.on('uncaughtException', (err) => {
-  console.error('ERROR:', err);
-  process.exit(1);
-});
+import * as service from './service';
+import * as sarp from './sarp';
+import * as nms from './nms';
+import * as nibus from './nibus';
+import * as mib from './mib';
 
-import('./sarp').catch((err) => {
-  console.error('ERROR while load', err);
-  process.exit(1);
-});
-// console.log(nms);
+export { service, sarp, nibus, mib, nms };

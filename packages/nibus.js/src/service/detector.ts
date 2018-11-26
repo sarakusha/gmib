@@ -9,7 +9,7 @@ import { EventEmitter } from 'events';
 import { NibusBaudRate } from '../nibus';
 
 const debug = debugFactory('nibus:detector');
-const detectionPath = path.resolve(__dirname, './detection.yml');
+const detectionPath = path.resolve(__dirname, '../../detection.yml');
 const knownPorts: IKnownPort[] = [];
 
 const loadDetection = (): IDetection | undefined => {
@@ -28,6 +28,12 @@ const loadDetection = (): IDetection | undefined => {
 
 let detection = loadDetection();
 
+/**
+ * @fires add
+ * @fires remove
+ * @fires plug
+ * @fires unplug
+ */
 class Detector extends EventEmitter {
   start() {
     usbDetection.startMonitoring();
@@ -53,17 +59,18 @@ class Detector extends EventEmitter {
 
 const detector = new Detector();
 
-interface ISerialPort {
-  comName: string;
-  locationId: string;
-  manufacturer: string;
-  pnpId?: string;
-  productId: HexOrNumber;
-  serialNumber: string;
-  vendorId: HexOrNumber;
-}
+// interface ISerialPort {
+//   comName: string;
+//   locationId?: string;
+//   manufacturer?: string;
+//   pnpId?: string;
+//   productId: HexOrNumber;
+//   serialNumber: string;
+//   vendorId: HexOrNumber;
+// }
 
-export interface IKnownPort extends ISerialPort {
+type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
+export interface IKnownPort extends Omit<SerialPort.PortInfo, 'productId' | 'vendorId'>  {
   device?: string;
   productId: number;
   vendorId: number;
@@ -88,6 +95,8 @@ export interface IMibDescription {
   link?: boolean;
   baudRate?: NibusBaudRate;
   category: string;
+  find?: string;
+  disableBatchReading?: boolean;
 }
 
 interface IDetection {
@@ -97,21 +106,21 @@ interface IDetection {
   knownDevices: IDetectorItem[];
 }
 
-const getId = (id: HexOrNumber) => typeof id === 'string' ? parseInt(id, 16) : id;
+const getId = (id?: HexOrNumber) => typeof id === 'string' ? parseInt(id, 16) : id;
 
-function equals(port: ISerialPort, device: usbDetection.IDevice): boolean {
-  return (getId(port.productId) === device.productId)
-    && (getId(port.vendorId) === device.vendorId)
+function equals(port: SerialPort.PortInfo, device: usbDetection.IDevice): boolean {
+  return getId(port.productId) === device.productId
+    && getId(port.vendorId) === device.vendorId
     && port.serialNumber === device.serialNumber;
 }
 
-async function detectDevice(port: ISerialPort, lastAdded?: usbDetection.IDevice)
+async function detectDevice(port: SerialPort.PortInfo, lastAdded?: usbDetection.IDevice)
   : Promise<IKnownPort> {
   let detected: usbDetection.IDevice | undefined;
   if (lastAdded && equals(port, lastAdded)) {
     detected = lastAdded;
   } else {
-    let list = await usbDetection.find(getId(port.vendorId), getId(port.productId), () => {});
+    let list = await usbDetection.find(getId(port.vendorId)!, getId(port.productId)!, () => {});
     const { serialNumber, manufacturer } = port;
     list = _.filter(
       list,
@@ -139,8 +148,8 @@ async function detectDevice(port: ISerialPort, lastAdded?: usbDetection.IDevice)
   }
   return {
     ...port,
-    productId: getId(port.productId),
-    vendorId: getId(port.vendorId),
+    productId: getId(port.productId)!,
+    vendorId: getId(port.vendorId)!,
   };
 }
 
@@ -175,7 +184,7 @@ async function reloadDevices(lastAdded?: usbDetection.IDevice) {
     if (detection == null) {
       detection = loadDetection();
     }
-    const list: ISerialPort[] = await SerialPort.list();
+    const list: SerialPort.PortInfo[] = await SerialPort.list();
     const externalPorts = list.filter(port => !!port.productId);
     const prevPorts = knownPorts.splice(0);
 
@@ -195,19 +204,36 @@ async function reloadDevices(lastAdded?: usbDetection.IDevice) {
       } else {
         device = await detectDevice(port, lastAdded);
         device.category = matchCategory(device);
+        /**
+         * new device plugged
+         * @event Detector#plug
+         */
         detector.emit('plug', device);
         debug(`new device ${device.device || device.vendorId}/\
 ${device.category || device.productId} was plugged to ${device.comName}`);
         if (device.category) {
+          /**
+           * device with category was added
+           * @event Detector#add
+           * @param {IKnownPort} device
+           */
           detector.emit('add', device);
         }
       }
       knownPorts.push(device);
     }, Promise.resolve());
     prevPorts.forEach((port) => {
+      /**
+       * @event Detector#unplug
+       */
       detector.emit('unplug', port);
       debug(`device ${port.device || port.vendorId}/\
 ${port.category || port.productId} was unplugged from ${port.comName}`);
+      /**
+       * device with category was removed
+       * @event Detector#remove
+       * @param {IKnownPort} device
+       */
       port.category && detector.emit('remove', port);
     });
   } catch (err) {

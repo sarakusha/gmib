@@ -56,7 +56,7 @@ export function getSizeOf(valueType?: NmsValueType, value?: string): number {
 
 export function decodeValue(valueType: NmsValueType, buffer: Buffer, offset = 0): any {
   console.assert(
-    buffer.length <= offset + getSizeOf(valueType),
+    buffer.length >= offset + getSizeOf(valueType),
     `Buffer is too small ${buffer.length} < ${offset} + ${getSizeOf(valueType)}`,
   );
   switch (valueType) {
@@ -70,7 +70,11 @@ export function decodeValue(valueType: NmsValueType, buffer: Buffer, offset = 0)
       return buffer.readInt32LE(offset);
     case NmsValueType.Int64:
     case NmsValueType.UInt64:
-      return buffer.toString('hex', offset, offset + 8).toUpperCase();
+      return buffer
+        .toString('hex', offset, offset + 8)
+        .match(/.{2}/g)!
+        .reverse().join('')
+        .toUpperCase();
     case NmsValueType.UInt8:
       return buffer.readUInt8(offset);
     case NmsValueType.UInt16:

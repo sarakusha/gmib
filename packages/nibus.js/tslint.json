@@ -25,7 +25,8 @@
   "linterOptions": {
     "exclude": [
       "lib/",
-      "src/@types"
+      "src/@types",
+      "src/test/"
     ]
   }
 }

@@ -4,11 +4,14 @@ import { EventEmitter } from 'events';
 import debugFactory from 'debug';
 import { TimeoutError } from '../errors';
 import { NmsDatagram } from '../nms';
-import { SarpDatagram } from '../sarp';
+import NmsServiceType from '../nms/NmsServiceType';
+import { createSarp, SarpQueryType, SarpDatagram } from '../sarp';
 import { IMibDescription } from '../service';
 import NibusDatagram from './NibusDatagram';
 import NibusEncoder from './NibusEncoder';
 import NibusDecoder from './NibusDecoder';
+
+export const MINIHOST_TYPE = 0xabc6;
 
 const debug = debugFactory('nibus:connection');
 const portOptions: OpenOptions = {
@@ -18,35 +21,51 @@ const portOptions: OpenOptions = {
   stopBits: 1,
 };
 
-export type NibusBaudRate = 115200 | 57600;
+export type NibusBaudRate = 115200 | 57600 | 28800;
 
 const NIBUS_TIMEOUT = 1000;
 
 class WaitedNmsDatagram {
-  readonly resolve: (datagram?: NmsDatagram) => void;
-  readonly reject: (reason: Error) => void;
+  readonly resolve: (datagram: NmsDatagram) => void;
 
   constructor(
     public readonly req: NmsDatagram,
-    resolve: (datagram?: NmsDatagram) => void,
+    resolve: (datagram: NmsDatagram|NmsDatagram[]) => void,
     reject: (reason: Error) => void,
     callback: (self: WaitedNmsDatagram) => void) {
-    const timer = setTimeout(() => this.reject(new TimeoutError()), NIBUS_TIMEOUT);
-    const stop = () => {
-      clearTimeout(timer);
+    let timer: NodeJS.Timer;
+    let counter: number = req.service !== NmsServiceType.Read
+      ? 1
+      : Math.floor(req.nms.length / 3) + 1;
+    const datagrams: NmsDatagram[] = [];
+    const timeout = () => {
       callback(this);
+      datagrams.length === 0 ? reject(new TimeoutError()) : resolve(datagrams);
     };
-    this.resolve = (datagram?: NmsDatagram) => {
-      stop();
-      resolve(datagram);
+    const restart = (step = 1) => {
+      counter -= step;
+      clearTimeout(timer);
+      if (counter > 0) {
+        timer = setTimeout(timeout, NIBUS_TIMEOUT);
+      } else if (counter === 0) {
+        callback(this);
+      }
+      return counter === 0;
     };
-    this.reject = (reason) => {
-      stop();
-      reject(reason);
+    restart(0);
+    this.resolve = (datagram: NmsDatagram) => {
+      datagrams.push(datagram);
+      if (restart()) {
+        resolve(datagrams.length > 1 ? datagrams : datagram);
+      }
     };
   }
 }
 
+/**
+ * @fires sarp
+ * @fires data
+ */
 export default class NibusConnection extends EventEmitter {
   private readonly serial: SerialPort;
   private readonly encoder = new NibusEncoder();
@@ -58,16 +77,29 @@ export default class NibusConnection extends EventEmitter {
   private stopWaiting = (waited: WaitedNmsDatagram) => _.remove(this.waited, waited);
 
   private onDatagram(datagram: NibusDatagram) {
-    if (datagram instanceof NmsDatagram && datagram.isResponse) {
-      const waited = this.waited.find(waited => datagram.isResponseFor(waited.req));
-      if (waited) {
-        return waited.resolve(datagram);
+    let showLog = true;
+    if (datagram instanceof NmsDatagram) {
+      if (datagram.isResponse) {
+        const waited = this.waited.find(waited => datagram.isResponseFor(waited.req));
+        if (waited) {
+          waited.resolve(datagram);
+          showLog = false;
+        }
       }
+      /**
+       * @event NibusConnection#data
+       * @param {NibusDatagram} datagram
+       */
+      this.emit('data', datagram);
+    } else if (datagram instanceof SarpDatagram) {
+      showLog = false;
+      /**
+       * @event NibusConnection#sarp
+       * @param {SarpDatagram} datagram
+       */
+      this.emit('sarp', datagram);
     }
-    if (datagram instanceof SarpDatagram) {
-      return this.emit('sarp', datagram);
-    }
-    this.emit('data', datagram);
+    showLog && debug(`datagram received`, JSON.stringify(datagram.toJSON()));
   }
 
   constructor(public readonly port: string, public readonly description: IMibDescription) {
@@ -85,11 +117,21 @@ export default class NibusConnection extends EventEmitter {
     debug(`new connection on ${port} (${description.category})`);
   }
 
-  public sendDatagram(datagram: NibusDatagram): Promise<NmsDatagram | undefined> {
+  public sendDatagram(datagram: NibusDatagram): Promise<NmsDatagram | NmsDatagram[] | undefined> {
+    // debug('write datagram', JSON.stringify(datagram.toJSON()));
     const { encoder, stopWaiting, waited, closed } = this;
     return new Promise((resolve, reject) => {
       this.ready = this.ready.finally(async () => {
         if (closed) return reject(new Error('Closed'));
+        if (!this.serial.isOpen) {
+          await new Promise((resolve, reject) => {
+            const timeout = setTimeout(reject, 2000);
+            this.serial.once('open', () => {
+              clearTimeout(timeout);
+              resolve();
+            });
+          });
+        }
         if (!encoder.write(datagram)) {
           await new Promise(cb => encoder.once('drain', cb));
         }
@@ -106,12 +148,21 @@ export default class NibusConnection extends EventEmitter {
     });
   }
 
+  public findByType(type: number = MINIHOST_TYPE) {
+    const sarp = createSarp(SarpQueryType.ByType, [0, 0, 0, (type >> 8) & 0xFF, type & 0xFF]);
+    return this.sendDatagram(sarp);
+  }
+
   public close(callback?: (err?: Error) => void) {
     const { port, description } = this;
     debug(`close connection on ${port} (${description.category})`);
     this.closed = true;
     this.encoder.end();
     this.decoder.removeAllListeners('data');
-    this.serial.isOpen && this.serial.close(callback);
+    if (this.serial.isOpen) {
+      this.serial.close(callback);
+    } else {
+      callback && callback();
+    }
   }
 }

@@ -39,10 +39,14 @@ export default class NmsDatagram extends NibusDatagram implements INmsOptions {
         ...frameOrOptions,
       };
       console.assert(options.nms.length <= NMS_MAX_DATA_LENGTH);
+      // fix: NMS batch read
+      const nmsLength = options.service !== NmsServiceType.Read
+        ? (options.nms.length & 0x3f)
+        : 0;
       const nibusData = [
         ((options.service & 0x1f) << 3) | (options.isResponse ? 4 : 0) | ((options.id >> 8) & 3),
         options.id & 0xff,
-        (options.isResponsible ? 0 : 0x80) | (options.nms.length & 0x3f),
+        (options.isResponsible ? 0 : 0x80) | nmsLength,
         ...options.nms,
       ];
       const nibusOptions: INibusOptions = Object.assign({
@@ -56,7 +60,10 @@ export default class NmsDatagram extends NibusDatagram implements INmsOptions {
     this.service = data[0] >> 3;
     this.isResponse = !!(data[0] & 4);
     this.isResponsible = (data[2] & 0x80) === 0;
-    const nmsLength = data[2] & 0x3F;
+    // fix: NMS batch read
+    const nmsLength = this.service !== NmsServiceType.Read
+      ? data[2] & 0x3F
+      : data.length - 3;
     this.nms = this.data.slice(3, 3 + nmsLength);
   }
 
@@ -113,5 +120,20 @@ export default class NmsDatagram extends NibusDatagram implements INmsOptions {
     const { isResponse, service, source, id } = this;
     return isResponse && service === req.service
       && (source.equals(req.destination) || (id === req.id && req.destination.isEmpty));
+  }
+
+  public toJSON() {
+    const result = super.toJSON();
+    if (this.isResponse) {
+      delete result.isResponsible;
+      if (this.valueType !== undefined) {
+        result.value = this.value;
+        result.valueType = NmsValueType[this.valueType];
+      }
+      result.status = this.status;
+      delete result.nms;
+    }
+    delete result.data;
+    return result;
   }
 }

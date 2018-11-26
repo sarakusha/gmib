@@ -3,9 +3,11 @@ import { EventEmitter } from 'events';
 import debugFactory from 'debug';
 import Address from '../Address';
 import { IDevice, devices } from '../mib';
+import { getMibFile, IMibDeviceType } from '../mib/devices';
+import { toInt } from '../mib/mib';
 import { NibusConnection } from '../nibus';
 import { createNmsRead } from '../nms';
-import { createSarp, SarpQueryType } from '../sarp';
+import SarpDatagram from '../sarp/SarpDatagram';
 import detector, { IKnownPort } from './detector';
 
 const debug = debugFactory('nibus:service');
@@ -16,11 +18,21 @@ function ping(connection: NibusConnection, address: Address): Promise<number> {
     .then((datagram) => {
       return <number>(Reflect.getOwnMetadata('timeStamp', datagram!)) - now;
     })
-    .catch(() => -1);
+    .catch((reson) => {
+      debug(`ping failed ${reson}`);
+      return -1;
+    });
 }
 
-export const MINIHOST_TYPE = 0xabc6;
-
+/**
+ * @fires add
+ * @fires remove
+ * @fires connected
+ * @fires disconnected
+ * @fires start
+ * @fires stop
+ * @fires found
+ */
 class NibusService extends EventEmitter {
   private connections: NibusConnection[] = [];
   private isStarted = false;
@@ -31,14 +43,26 @@ class NibusService extends EventEmitter {
       const connection = new NibusConnection(comName, mibCategory);
       this.connections.push(connection);
       // debug(`new nibus-connection: ${mibCategory.category}`);
-      this.emit('add', category);
+      /**
+       * Add new port with category
+       * @event NibusService#add
+       * @param {NibusConnection} connection
+       */
+      this.emit('add', connection);
+      this.find(connection);
       devices.get()
         .filter(device => device.connection == null)
         .reduce(async (promise, device) => {
           await promise;
           const time = await ping(connection, device.address);
+          debug(`ping ${time}`);
           if (time !== -1) {
             device.connection = connection;
+            /**
+             * New connected device
+             * @event NibusService#connected
+             * @type IDevice
+             */
             this.emit('connected', device);
             // device.emit('connected');
             debug(`mib-device ${device.address} was connected`);
@@ -58,15 +82,60 @@ class NibusService extends EventEmitter {
         .filter(device => device.connection === connection)
         .forEach((device) => {
           device.connection = undefined;
+          /**
+           * device was disconnected
+           * @event NibusService#disconnected
+           * @param {IDevice} device
+           */
           this.emit('disconnected', device);
           // device.emit('disconnected');
           debug(`mib-device ${device.address} was disconnected`);
         });
-      this.emit('remove', connection.port);
+      /**
+       * @event NibusService#remove
+       * @param {NibusConnection} connection
+       */
+      this.emit('remove', connection);
     }
   };
 
-  start() {
+  private find(connection: NibusConnection) {
+    const { description } = connection;
+    switch (description.find) {
+      case 'sarp': {
+        const { category } = description;
+        const mib = require(getMibFile(description.mib!));
+        const { types } = mib;
+        const device = types[mib.device] as IMibDeviceType;
+        const mibType = toInt(device.appinfo.device_type);
+        connection.once('sarp', (sarpDatagram: SarpDatagram) => {
+          /**
+           * @event found
+           */
+          const address = new Address(sarpDatagram.mac);
+          this.emit(
+            'found',
+            {
+              connection,
+              category,
+              address,
+            },
+          );
+          debug(`device ${category}[${address}] was found`);
+        });
+        connection.findByType(mibType).catch();
+        break;
+      }
+      case 'version':
+        // TODO: get mac
+        break;
+      default:
+        break;
+    }
+  }
+
+  public start() {
+    if (this.isStarted) return;
     const { detection, ports } = detector;
     if (detection == null) throw new Error('detection is N/A');
     this.connections = ports
@@ -78,17 +147,31 @@ class NibusService extends EventEmitter {
     debug(`It was created ${this.connections.length} nibus-connection(s): ${this.connections.map(
       connection => connection.description.category).join()}`);
 
+    this.connections.forEach((connection) => {
+      this.emit('add', connection);
+      this.find(connection);
+    });
+
     detector.on('add', this.addHandler);
     detector.on('remove', this.removeHandler);
     detector.start();
     this.isStarted = true;
+    process.once('SIGINT', () => this.stop());
+    process.once('SIGTERM', () => this.stop());
+    /**
+     * @event NibusService#start
+     */
     this.emit('start');
     debug('started');
   }
 
-  stop() {
+  public stop() {
+    if (!this.isStarted) return;
     this.isStarted = false;
     debug('stopped');
+    /**
+     * @event NibusService#stop
+     */
     this.emit('stop');
     detector.stop();
     this.connections.forEach(connection => connection.close());
@@ -125,18 +208,16 @@ class NibusService extends EventEmitter {
     const [timeout, connection] = await Promise.race(acceptables.map(
       connection => ping(connection, device.address)
         .then(t => [t, connection] as [number, NibusConnection])));
-    if (timeout === -1) return -1;
+    if (timeout === -1) {
+      // ping(acceptables[0], device.address);
+      return -1;
+    }
 
     device.connection = connection;
     this.emit('connected', device);
     // device.emit('connected');
-    debug(`mib-device ${device.address} was connected`);
+    debug(`mib-device [${device.address}] was connected`);
     return timeout;
-  }
-
-  findFirstByType(type: number = MINIHOST_TYPE) {
-    const sarp = createSarp(SarpQueryType.ByType, [0, 0, 0, (type >> 8) & 0xFF, type & 0xFF]);
-
   }
 }
 

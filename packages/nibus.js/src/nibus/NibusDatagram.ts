@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import { crc16ccitt } from 'crc';
 import Address, { AddressParam } from '../Address';
 import { MAX_DATA_LENGTH, Offsets, PREAMBLE } from '../nbconst';
@@ -14,6 +15,8 @@ export interface INibusOptions extends INibusCommon {
   protocol: number;
   data: Buffer;
 }
+
+const leadZero = (value: number) => `0${value}`.slice(-2);
 
 // @timeStamp
 export default class NibusDatagram implements INibusOptions {
@@ -73,5 +76,24 @@ export default class NibusDatagram implements INibusOptions {
     this.data = this.raw.slice(Offsets.DATA, (Offsets.DATA + this.raw[Offsets.LENGTH]) - 1);
     Reflect.defineMetadata('timeStamp', Date.now(), this);
     process.nextTick(() => Object.freeze(this));
+  }
+
+  public toJSON() {
+    // @ts-ignore
+    const result = { ...this };
+    result.source = result.source.toString();
+    result.destination = result.destination.toString();
+    const ts = new Date(Reflect.getMetadata('timeStamp', this));
+    result.timeStamp =
+      `${leadZero(ts.getHours())}:${leadZero(ts.getMinutes())}:\
+${leadZero(ts.getSeconds())}.${ts.getMilliseconds()}`;
+    delete result.raw;
+    return result;
+    // return {
+    //   destination: this.destination.toString(),
+    //   source: this.source.toString(),
+    //   priority: this.priority,
+    //   protocol: this.pr,
+    // };
   }
 }

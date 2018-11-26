@@ -7,7 +7,9 @@ export { SarpDatagram, ISarpOptions };
 
 export function createSarp(
   queryType: SarpQueryType, queryParam: Buffer | Uint8Array | number[] = Buffer.alloc(5)) {
-  const param: Buffer = Buffer.isBuffer(queryParam) ? queryParam : Buffer.from(queryParam);
+  const param: Buffer = Buffer.isBuffer(queryParam)
+    ? queryParam
+    : Buffer.from(<number[]>(queryParam));
   return new SarpDatagram({
     queryType,
     destination: Address.broadcast,

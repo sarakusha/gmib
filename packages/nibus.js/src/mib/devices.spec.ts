@@ -1,4 +1,4 @@
-import 'reflect-metadata';
+// import 'reflect-metadata';
 import devices from './devices';
 import { getMibs } from './mib2json';
 
@@ -15,6 +15,8 @@ describe('Device', () => {
     const device = devices.create('auto', 'siolynx');
     expect(device.getId('2')).toBe(device.getId('version'));
     expect(device.getId('cdata')).toBe(271);
+    expect(device.getId(271)).toBe(271);
+    expect(device.getId('10f')).toBe(271);
   });
   test('different properties', () => {
     const device1 = devices.create('::34:56', 'mcdvi');

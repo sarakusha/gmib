@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import { AddressParam } from '../Address';
+import Address, { AddressParam } from '../Address';
 import NmsDatagram from './NmsDatagram';
 import { encodeValue, getNmsType } from './nms';
 import NmsServiceType from './NmsServiceType';
@@ -10,22 +10,27 @@ export { NmsValueType };
 export { NmsDatagram };
 export { getNmsType };
 
-export function createNmsRead(destination: AddressParam, id: number, ...ids: number[]) {
-  if (ids.length > 20) {
+export function createNmsRead(destination: AddressParam, ...ids: number[]) {
+  if (ids.length > 21) {
     throw new Error('To many properties (21)');
   }
-  const nms = _.flatten(ids.map(next => [
+  const [id, ...rest] = ids;
+  const nms = _.flatten(rest.map(next => [
     NmsServiceType.Read << 3 | next >> 8,
     next & 0xff,
     0,
   ]));
-  return new NmsDatagram({
+  const datagram = new NmsDatagram({
     destination,
     id,
     isResponsible: true,
     nms: Buffer.from(nms),
     service: NmsServiceType.Read,
   });
+  // if (ids.length > 1) {
+  //   datagram.data[2] = datagram.data[2] & 0xC0;
+  // }
+  return datagram;
 }
 
 export function createNmsWrite(

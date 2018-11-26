@@ -1,10 +1,10 @@
 import _ from 'lodash';
 import Serialport from 'serialport';
 import usbDetection from 'usb-detection';
-import NibusDecoder from './nibus/NibusDecoder';
-import NibusEncoder from './nibus/NibusEncoder';
-import { createNmsRead, NmsDatagram } from './nms/index';
-import { createSarp, SarpQueryType } from './sarp/index';
+import NibusDecoder from '../nibus/NibusDecoder';
+import NibusEncoder from '../nibus/NibusEncoder';
+import { createNmsRead, NmsDatagram } from '../nms';
+import { createSarp, SarpQueryType } from '../sarp';
 
 const vid = '0403';
 const pid = '6001';

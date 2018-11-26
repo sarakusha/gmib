@@ -1,16 +1,14 @@
 export class MibError extends Error {
 }
 
-export class NibusError extends Error {
-  constructor(public errcode: number, msg = 'Nibus error') {
-    super(msg);
-  }
+const getErrMsg = (errcode: number, prototype: object) => {
+  const errEnum = Reflect.getMetadata('errorType', prototype);
+  return errEnum && errEnum[errcode] && errEnum[errcode].annotation || `NiBUS error ${errcode}`;
+};
 
-  public updateErrorMessage(errEnum: string[]) {
-    if (this.errcode && errEnum[this.errcode]) {
-      this.message = errEnum[this.errcode];
-    }
-    return this.message;
+export class NibusError extends Error {
+  constructor(public errcode: number, prototype: object) {
+    super(getErrMsg(errcode, prototype));
   }
 }
 

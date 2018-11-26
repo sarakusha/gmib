@@ -13,7 +13,7 @@ export const withValue = (value: any, writable = false): PropertyDescriptor => (
 });
 const hex = /^0X[0-9A-F]+$/i;
 const isHex = (str: string) => hex.test(str)
-  || parseInt(str, 16).toString(16) === str.toLowerCase().replace(/^[0 ]+/, '');
+  || parseInt(str, 10).toString(10) !== str.toLowerCase().replace(/^[0 ]+/, '');
 export const toInt = (value: string | number = 0) => typeof value === 'number'
   ? value
   : parseInt(value, isHex(value) ? 16 : 10);
