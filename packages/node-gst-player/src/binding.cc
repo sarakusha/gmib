@@ -2,12 +2,15 @@
 // Created by Andrei Sarakeev on 18/09/2018.
 //
 #include <napi.h>
-#include "gstplayer.h"
+#include <gst/gstinfo.h>
+#include "player.h"
 #include "gcontext.h"
 #include "screen.h"
 #include "xrandr.h"
 
 bool isInitialized = false;
+GST_DEBUG_CATEGORY (avs_debug);
+#define GST_CAT_DEFAULT avs_debug
 
 void Initialize(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
@@ -34,17 +37,16 @@ void Initialize(const Napi::CallbackInfo &info) {
 }
 
 void Close(const Napi::CallbackInfo &info) {
-//  GtkContextInvoke([]() { XrandrClose(); });
   Napi::HandleScope scope(info.Env());
   GtkContextClose();
 }
 
-
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
+  GST_DEBUG_CATEGORY_INIT (avs_debug, "avs", 0, "node-avs-player");
   exports.Set(Napi::String::New(env, "init"), Napi::Function::New(env, Initialize));
   exports.Set(Napi::String::New(env, "close"), Napi::Function::New(env, Close));
   XrandrInit(env, exports);
-  GstPlayer::Init(env, exports);
+  Player::Init(env, exports);
   return exports;
 }
 

@@ -6,16 +6,20 @@
 #include <cstring>
 #include <cmath>
 #include <algorithm>
+#include <gst/gstinfo.h>
 
 #include "xrandr.h"
 #include "utils.h"
+
+GST_DEBUG_CATEGORY (xrandr_debug);
+#define GST_CAT_DEFAULT xrandr_debug
 
 using namespace std;
 using namespace X11;
 
 Display *dpy = nullptr;
 
-typedef unsigned char byte;
+typedef unsigned char BYTE;
 
 typedef struct {
   int x1, y1, x2, y2;
@@ -279,9 +283,9 @@ getScreenResources(int screen_number) {
     screen_number = DefaultScreen(dpy);
   }
   Window root = RootWindow (dpy, screen_number);
-//  g_debug("screen %d, dpy, dpy: %p, root: %lu", screen_number, dpy, root);
+//  GST_DEBUG("screen %d, dpy, dpy: %p, root: %lu", screen_number, dpy, root);
 //  auto r = XRRGetScreenResources(d, root);
-//  g_debug("res: %p", r);
+//  GST_DEBUG("res: %p", r);
 //  XRRFreeScreenResources(r);
 
   ScreenResourcesPtr res(XRRGetScreenResources(dpy, root), XRRFreeScreenResources);
@@ -295,7 +299,7 @@ getOutputs(ScreenResources res) {
   for (int o = 0; o < resData->noutput; o++) {
     OutputInfoPtr outputInfo(XRRGetOutputInfo(dpy, resData.get(), resData->outputs[o]), XRRFreeOutputInfo);
     if (!outputInfo) {
-      g_warning ("could not get output 0x%lx information", resData->outputs[o]);
+      GST_WARNING ("could not get output 0x%lx information", resData->outputs[o]);
       continue;
     }
     outputs.insert({resData->outputs[o], outputInfo});
@@ -310,14 +314,14 @@ getCrtcs(ScreenResources res) {
   for (int c = 0; c < resData->ncrtc; c++) {
     CrtcInfoPtr crtcInfo(XRRGetCrtcInfo(dpy, resData.get(), resData->crtcs[c]), XRRFreeCrtcInfo);
     if (!crtcInfo) {
-      g_warning ("could not get crtc 0x%lx information", resData->crtcs[c]);
+      GST_WARNING ("could not get crtc 0x%lx information", resData->crtcs[c]);
       continue;
     }
-    // g_debug("CRTC: 0x%lx", res->crtcs[c]);
-    // g_debug("\tsize: %dx%d", crtcInfo->width, crtcInfo->height);
-    // g_debug("\torigin: %d, %d", crtcInfo->x, crtcInfo->y);
-    // g_debug("\tmode: 0x%lx", crtcInfo->mode);
-    // g_debug("\toutput[0]: 0x%lx", crtcInfo->noutput > 0 ? crtcInfo->outputs[0] : 0);
+    // GST_DEBUG("CRTC: 0x%lx", res->crtcs[c]);
+    // GST_DEBUG("\tsize: %dx%d", crtcInfo->width, crtcInfo->height);
+    // GST_DEBUG("\torigin: %d, %d", crtcInfo->x, crtcInfo->y);
+    // GST_DEBUG("\tmode: 0x%lx", crtcInfo->mode);
+    // GST_DEBUG("\toutput[0]: 0x%lx", crtcInfo->noutput > 0 ? crtcInfo->outputs[0] : 0);
     crtcs.insert({resData->crtcs[c], crtcInfo});
   }
   return make_pair(crtcs, res.second);
@@ -340,7 +344,7 @@ getModes(ScreenResources res) {
   for (int m = 0; m < resData->nmode; m++) {
     ModeInfoPtr modeInfo = cloneModeInfo(&resData->modes[m]);
     if (!modeInfo) {
-      g_warning ("out of memory");
+      GST_WARNING ("out of memory");
       continue;
     }
     modes.insert({modeInfo->id, modeInfo});
@@ -354,7 +358,7 @@ getScale(const XTransform &transform) {
   for (int k = 0; k < 2; k++) {
     for (int l = 0; l < 2; l++) {
       if ((k == l && transform.matrix[k][l] == 0) || (k != l && transform.matrix[k][l] != 0)) {
-        g_warning("Transformation is not scaling");
+        GST_WARNING("Transformation is not scaling");
         return scale;
       }
     }
@@ -406,7 +410,7 @@ transformPoint(XTransform *transform, double *xp, double *yp) {
   }
 
   if (!result[2]) {
-    g_warning("invalid transfomation");
+    GST_WARNING("invalid transfomation");
     return false;
   }
   for (j = 0; j < 2; j++) {
@@ -468,7 +472,7 @@ modeGeometry(XRRModeInfo *modeInfo, Rotation rotation, XTransform *transform, bo
 static bool
 updateScreenSize(Napi::Env env, Outputs &outputs, Crtcs crtcs, Modes &modes) {
   if (outputs.second != crtcs.second || crtcs.second != modes.second) {
-    g_warning("different screens");
+    GST_WARNING("different screens");
     return false;
   }
   Window root = RootWindow (dpy, outputs.second);
@@ -523,7 +527,7 @@ updateScreenSize(Napi::Env env, Outputs &outputs, Crtcs crtcs, Modes &modes) {
 
   XRRSetScreenSize(dpy, root, width, height, width_mm, height_mm);
   // }
-  g_debug("screen size: %dx%d", width, height);
+  GST_DEBUG("screen size: %dx%d", width, height);
 
   return true;
 }
@@ -628,7 +632,7 @@ getPropertyValue(Napi::Env env, Atom value_type, int value_format, const void *v
       case 8:return Napi::Number::New(env, *static_cast<const int8_t *>(value_bytes));
       case 16:return Napi::Number::New(env, *static_cast<const int16_t *>(value_bytes));
       case 32:return Napi::Number::New(env, *static_cast<const int32_t *>(value_bytes));
-      default:g_warning("Unknown format");
+      default:GST_WARNING("Unknown format");
         return env.Undefined();
     }
   }
@@ -638,12 +642,12 @@ getPropertyValue(Napi::Env env, Atom value_type, int value_format, const void *v
       case 8:return Napi::Number::New(env, *static_cast<const uint8_t *>(value_bytes));
       case 16:return Napi::Number::New(env, *static_cast<const uint16_t *>(value_bytes));
       case 32:return Napi::Number::New(env, *static_cast<const uint32_t *>(value_bytes));
-      default:g_warning("Unknown format");
+      default:GST_WARNING("Unknown format");
         return env.Undefined();
     }
   }
 
-  g_warning("Unknown property type");
+  GST_WARNING("Unknown property type");
   return env.Undefined();
 }
 
@@ -676,7 +680,7 @@ getPropertyArray(Napi::Env env, uint32_t nitems, Atom value_type, int value_form
       case 8:return Napi::Int8Array::New(env, nitems, buffer, 0);
       case 16:return Napi::Int16Array::New(env, nitems / 2, buffer, 0);
       case 32:return Napi::Int32Array::New(env, nitems / 4, buffer, 0);
-      default:g_warning("Unknown format");
+      default:GST_WARNING("Unknown format");
         return env.Undefined();
     }
   }
@@ -686,7 +690,7 @@ getPropertyArray(Napi::Env env, uint32_t nitems, Atom value_type, int value_form
     case 8:return Napi::Uint8Array::New(env, nitems, buffer, 0);
     case 16:return Napi::Uint16Array::New(env, nitems / 2, buffer, 0);
     case 32:return Napi::Uint32Array::New(env, nitems / 4, buffer, 0);
-    default:g_warning("Unknown format");
+    default:GST_WARNING("Unknown format");
       return env.Undefined();
   }
 }
@@ -697,10 +701,10 @@ convertToChar(int ch) {
 }
 
 static void
-parseEDID(Napi::Env env, Napi::Object obj, int size, const byte *edid) {
+parseEDID(Napi::Env env, Napi::Object obj, int size, const BYTE *edid) {
   int i;
   int j;
-  byte sum = 0;
+  BYTE sum = 0;
   char modelname[13] = {};
 
   //check the checksum
@@ -708,13 +712,13 @@ parseEDID(Napi::Env env, Napi::Object obj, int size, const byte *edid) {
     sum += edid[i];
   }
   if (sum) {
-    g_warning ("EDID Checksum failed");
+    GST_WARNING ("EDID Checksum failed");
   }
 
   //check header
   for (i = 0; i < 8; i++) {
     if (!(((i == 0 || i == 7) && edid[i] == 0x00) || (edid[i] == 0xff))) { //0x00 0xff 0xff 0xff 0xff 0xff 0x00
-      g_warning("Header incorrect. Probably not an edid");
+      GST_WARNING("Header incorrect. Probably not an edid");
     }
   }
 
@@ -872,7 +876,7 @@ transformLayout(const char *output, int &left, int &top, int &width, int &height
   auto screen_number = static_cast<int>(strtol(output, &pend, 10));
   output = pend + 1;
   auto res = getScreenResources(screen_number);
-//  g_debug(">transformLayout %s, %d,%d %dx%d, screen: %d", output, left, top, width, height, screen_number);
+//  GST_DEBUG(">transformLayout %s, %d,%d %dx%d, screen: %d", output, left, top, width, height, screen_number);
 
   auto outputs = getOutputs(res);
   auto crtcs = getCrtcs(res);
@@ -886,7 +890,7 @@ transformLayout(const char *output, int &left, int &top, int &width, int &height
   int temp;
   switch (crtcInfo->rotation & 0xf) {
     case RR_Rotate_0:break;
-    case RR_Rotate_180:g_debug("transform invert");
+    case RR_Rotate_180:GST_DEBUG("transform invert");
       left = crtcInfo->width - width - left;
       top = crtcInfo->height - height - top;
       break;
@@ -900,7 +904,7 @@ transformLayout(const char *output, int &left, int &top, int &width, int &height
       top = crtcInfo->height - height - left;
       left = temp;
       break;
-    default:g_warning("unknown rotation");
+    default:GST_WARNING("unknown rotation");
       break;
   }
   if (crtcInfo->rotation & RR_Reflect_X) {
@@ -911,7 +915,7 @@ transformLayout(const char *output, int &left, int &top, int &width, int &height
     top = crtcInfo->height - height - top;
   }
 
-  // g_debug("<transformLayout %s, %d,%d %dx%d", output, left, top, width, height);
+  // GST_DEBUG("<transformLayout %s, %d,%d %dx%d", output, left, top, width, height);
 }
 
 unordered_map<string, string>
@@ -971,9 +975,9 @@ getArrayOutputs(Napi::Env env, ScreenResources res) {
   auto modes = getModes(res).first;
   auto crtcs = getCrtcs(res).first;
   auto outputs = getOutputs(res).first;
-  g_debug("modes %lu", modes.size());
-  g_debug("crtcs %lu", crtcs.size());
-  g_debug("outputs %lu", outputs.size());
+  GST_DEBUG("modes %lu", modes.size());
+  GST_DEBUG("crtcs %lu", crtcs.size());
+  GST_DEBUG("outputs %lu", outputs.size());
 
   auto result = Napi::Array::New(env, outputs.size());
   uint32_t i = 0;
@@ -1002,7 +1006,7 @@ getArrayOutputs(Napi::Env env, ScreenResources res) {
         output.Set("rate", modeRate(curMode.get()));
       }
       updateCrtcTransform(env, output, curOutput->crtc);
-      // g_debug("timestamp %" PRIu64 ", %" PRIu64, curOutput->timestamp, curCrtc->timestamp);
+      // GST_DEBUG("timestamp %" PRIu64 ", %" PRIu64, curOutput->timestamp, curCrtc->timestamp);
       output.Set("timestamp", std::max(curOutput->timestamp, curCrtc->timestamp));
     } else {
       output.Set("timestamp", curOutput->timestamp);
@@ -1051,7 +1055,7 @@ Napi::Value GetOutputs(const Napi::CallbackInfo &info) {
   int count = ScreenCount(dpy);
   auto retValue = Napi::Array::New(env, count);
 
-  g_debug("ScreenCount %d", count);
+  GST_DEBUG("ScreenCount %d", count);
   for (uint32_t screen_number = 0; screen_number < count; screen_number++) {
     auto res = getScreenResources(screen_number);
     if (!res.first) continue;
@@ -1143,7 +1147,7 @@ Napi::Value SetMode(const Napi::CallbackInfo &info) {
       Napi::Error::New(env, "Cannot find crtc for output").ThrowAsJavaScriptException();
       return env.Undefined();
     }
-    g_debug("Found crtc 0x%lx for output %s", itCrtc->first, curOutput->name);
+    GST_DEBUG("Found crtc 0x%lx for output %s", itCrtc->first, curOutput->name);
     curCrtc = itCrtc->second;
     crtcXid = itCrtc->first;
     tempOutputs.assign(curCrtc->outputs, curCrtc->outputs + curCrtc->noutput);
@@ -1269,6 +1273,7 @@ Display *getDisplay() {
 }
 
 Napi::Object XrandrInit(Napi::Env env, Napi::Object exports) {
+  GST_DEBUG_CATEGORY_INIT (xrandr_debug, "avs_xrandr", 4, "node_gst_player");
   auto xrandr = Napi::Object::New(env);
   dpy = XOpenDisplay(nullptr);
   xrandr.Set("getOutputs", Napi::Function::New(env, GetOutputs));

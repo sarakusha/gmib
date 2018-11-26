@@ -24,9 +24,6 @@ findByName(const T &map, const char *name) {
   });
 }
 
-
-
-
-
+Glib::RefPtr<Gdk::Screen> getScreen(int screen_number = -1);
 
 #endif //NODE_GST_PLAYER_SCREEN_H

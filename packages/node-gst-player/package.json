@@ -11,7 +11,8 @@
     "cmake-js": "^4.0.0"
   },
   "scripts": {
-    "install": "cmake-js compile"
+    "install": "cmake-js compile",
+    "compile-debug": "cmake-js build -D"
   },
   "devDependencies": {
     "node-addon-api": "^1.4.0"

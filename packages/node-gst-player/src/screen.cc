@@ -17,7 +17,11 @@
 #include <gtkmm/cssprovider.h>
 #include <gtkmm/stylecontext.h>
 #include <glibmm/init.h>
-#include <cassert>
+#include <assert.h>
+#include <gst/gstinfo.h>
+
+GST_DEBUG_CATEGORY (screen_debug);
+#define GST_CAT_DEFAULT screen_debug
 
 struct Monitor;
 typedef shared_ptr<Monitor> MonitorItem;
@@ -73,7 +77,7 @@ getPreferredOutput(const string &modelName, int screen_number) {
 }
 
 Glib::RefPtr<Gdk::Screen>
-getScreen(int screen_number = -1) {
+getScreen(int screen_number) {
   auto manager = Gdk::DisplayManager::get();
 #ifdef MACOSX
   return manager->get_default_display()->get_default_screen();
@@ -84,19 +88,19 @@ getScreen(int screen_number = -1) {
 
   auto list = manager->list_displays();
   auto name = get_display_without_screen() + "." + std::to_string(screen_number);
-  g_debug("find display: %s", name.c_str());
+  GST_DEBUG("find display: %s", name.c_str());
   // TODO: Проверить
   auto it =
       std::find_if(begin(list), end(list), [name, screen_number](const Glib::RefPtr<Gdk::Display> &display) -> bool {
         auto currentName = display->get_name();
-        g_debug("DISPLAY FOUND: %s", currentName.c_str());
+        GST_DEBUG("DISPLAY FOUND: %s", currentName.c_str());
         return currentName == name || (screen_number == 0 && currentName == ":0");
       });
 
   Glib::RefPtr<Gdk::Display> display;
 
   if (it == end(list)) {
-    g_debug("open DISPLAY %s", name.c_str());
+    GST_DEBUG("open DISPLAY %s", name.c_str());
     display = Gdk::Display::open(name);
   } else {
     display = *it;
@@ -127,6 +131,13 @@ struct Monitor {
     main.set_accept_focus(false);
     main.set_focus_on_map(false);
     main.set_has_resize_grip(false);
+    auto provider = Gtk::CssProvider::create();
+    provider->load_from_data(
+        "* {\n"
+        "  background-color: black;\n"
+        "}\n");
+    main.get_style_context()->add_provider(provider, GTK_STYLE_PROVIDER_PRIORITY_USER);
+
 #ifndef MACOSX
     main.set_decorated(false);
 #endif
@@ -140,7 +151,6 @@ struct Monitor {
     main.add(container);
     assert(screen);
     main.signal_realize().connect([this, screen]() {
-      g_debug("main realized");
       assert(main.get_window());
       assert(screen);
       main.get_window()->set_cursor(Gdk::Cursor::create(screen->get_display(), Gdk::BLANK_CURSOR));
@@ -156,7 +166,7 @@ struct Monitor {
     auto it = findByName(outputs, output.c_str());
     assert(it != outputs.end() && it->second->crtc);
     update(crtcs[it->second->crtc]);
-    g_debug("%s monitor was created", output.c_str());
+    GST_DEBUG("%s monitor was created", output.c_str());
   }
 
   void update(const CrtcInfoPtr &crtcInfo) {
@@ -170,7 +180,7 @@ struct Monitor {
       main.move(width, height);
       return;
     }
-    g_debug("update %d,%d:%dx%d", crtcInfo->x, crtcInfo->y, crtcInfo->width, crtcInfo->height);
+    GST_DEBUG("%d,%d:%dx%d", crtcInfo->x, crtcInfo->y, crtcInfo->width, crtcInfo->height);
     main.move(crtcInfo->x, crtcInfo->y);
     container.set_size_request(crtcInfo->width, crtcInfo->height);
     if (container.get_realized())
@@ -193,29 +203,29 @@ MonitorItem getMonitor(string output, const string &modelName, int &screen_numbe
   if (screen_number == -1) {
     screen_number = DefaultScreen(getDisplay());
   }
-  static int providers = 0;
-  // TODO: Проверить на -1
-  int check = 1 << screen_number;
-  if (!(providers & check)) {
-    auto provider = Gtk::CssProvider::create();
-    Gtk::StyleContext::add_provider_for_screen(getScreen(screen_number), provider, GTK_STYLE_PROVIDER_PRIORITY_USER);
-    auto result1 = provider->load_from_data(
-        "#container,  GtkWindow {\n"
-        "  background-color: black;\n"
-        "}\n");
-    g_debug("css provider %s", result1 ? "loaded" : "failed");
-    g_debug("css: %s", provider->to_string().c_str());
-    providers |= check;
-  }
+//  static int providers = 0;
+//  // TODO: Проверить на -1
+//  int check = 1 << screen_number;
+//  if (!(providers & check)) {
+//    auto provider = Gtk::CssProvider::create();
+//    Gtk::StyleContext::add_provider_for_screen(getScreen(screen_number), provider, GTK_STYLE_PROVIDER_PRIORITY_USER);
+//    auto result1 = provider->load_from_data(
+//        "#container,  GtkWindow {\n"
+//        "  background-color: black;\n"
+//        "}\n");
+//    GST_DEBUG("css provider %s", result1 ? "loaded" : "failed");
+//    GST_DEBUG("css: %s", provider->to_string().c_str());
+//    providers |= check;
+//  }
   if (output == "auto") {
     output = getPreferredOutput(modelName, screen_number);
   }
 
-  g_debug("output %s", output.c_str());
+//  GST_DEBUG("output %s", output.c_str());
 
   string fullName = getOutputName(output, screen_number);
   if (outputNames.find(fullName) == outputNames.end() && output != "none") {
-    g_warning("Invalid output name: %s, screen: %d", output.c_str(), screen_number);
+    GST_WARNING("Invalid output name: %s, screen: %d", output.c_str(), screen_number);
   }
 
   auto it = monitors.find(fullName);
@@ -229,11 +239,12 @@ MonitorItem getMonitor(string output, const string &modelName, int &screen_numbe
 }
 
 void ScreenInit() {
+  GST_DEBUG_CATEGORY_INIT (screen_debug, "avs_screen", 3, "node_gst_player");
   int screenCount = ScreenCount(getDisplay());
   for (int screen_number = 0; screen_number < screenCount; screen_number++) {
     auto res = getScreenResources(screen_number);
     if (!res.first) {
-      g_debug("screen resources is not available");
+      GST_DEBUG("screen resources is not available");
       return;
     }
     auto outputs = getOutputs(res);
@@ -263,7 +274,7 @@ void SetWindowOutput(Gtk::Widget *window,
       int width, height;
       monitor->container.get_size_request(width, height);
       monitor->container.get_window()->resize(width, height);
-//    g_debug("w: %d, h: %d", width, height);
+//    GST_DEBUG("w: %d, h: %d", width, height);
     }
 
     if (connection) {
