@@ -1,0 +1,15 @@
+{
+  "watch": [
+    "server/**/*.ts",
+    "package.json",
+    "next.config.json",
+    "components/**/*.ts",
+    "pages/**/*.ts"
+  ],
+  "execMap": {
+    "ts": "ts-node --project tsconfig.dev.json --typeCheck --compilerOptions \"{\\\"module\\\":\\\"commonjs\\\"}\""
+  },
+  "env": {
+    "NODE_ENV": "development"
+  }
+}
