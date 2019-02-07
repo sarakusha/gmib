@@ -7,7 +7,7 @@
     "pages/**/*.ts"
   ],
   "execMap": {
-    "ts": "ts-node --project tsconfig.dev.json --typeCheck --compilerOptions \"{\\\"module\\\":\\\"commonjs\\\"}\""
+    "ts": "ts-node --project tsconfig.dev.json"
   },
   "env": {
     "NODE_ENV": "development"

@@ -1,135 +1,46 @@
-import React, { Component, ReactNode } from 'react';
-import io from 'socket.io-client';
-
-enum Effect {
-  none = 0,
-  shine,
-  neon,
-}
-
-type PriceItem = {
-  name: string;
-  subName?: string;
-  price: number;
-  isVisible?: boolean;
-  effect?: Effect;
-};
-
-export interface StelaState {
-  width: number;
-  height: number;
-  backgroundColor: string;
-  isCondensed: boolean;
-  isBold: boolean;
-  title: string;
-  titleColor?: string;
-  titleSize: number;
-  nameColor: string;
-  nameSize: number;
-  subColor: string;
-  subSize: string;
-  priceColor: string;
-  priceSize: string;
-  items: PriceItem[];
-}
+import React from 'react';
+import { /* Effect, */ StelaProps } from '../src/stela';
 
 // type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
-type Props = Partial<StelaState>;
-
-export default class Stela extends Component<Props, StelaState> {
-  socket?: SocketIOClient.Socket;
-
-  static async getInitialProps({ req, query }): Promise<Props> {
-    console.log('getInitialProps', !!req ? 'Server' : 'Client');
-    const isServer = !!req;
-    if (isServer) {
-      console.log('Initial', query);
-      return query;
-    }
-    return {};
-    // const res = await fetch('/initial', { headers: { Accept: 'application/json' } });
-    // return res.json();
-  }
-
-  constructor(props) {
-    super(props);
-    this.state = {
-      titleColor: '#7cb5ec',
-      nameColor: '#fff',
-      subColor: '#e7ba00',
-      priceColor: '#fff',
-      isBold: true,
-      items: [],
-      ...props,
-    };
-  }
-
-  componentDidMount(): void {
-    this.socket = io();
-    this.socket.on('initial', this.updateHandler);
-    this.socket.on('changed', this.updateHandler);
-  }
-
-  componentWillUnmount(): void {
-    if (this.socket) {
-      this.socket.off('changed', this.updateHandler);
-      this.socket.off('initial', this.updateHandler);
-      this.socket.close();
-    }
-  }
-
-  updateHandler = (props) => {
-    this.setState(props);
-  };
-
-  render(): ReactNode {
-    const {
-      width,
-      height,
-      isBold,
-      title,
-      titleColor,
-      titleSize,
-      nameColor,
-      nameSize,
-      subColor,
-      subSize,
-      priceColor,
-      priceSize,
-      backgroundColor,
-      isCondensed,
-      items,
-    } = this.state;
-    return (
-      <div className={'stela'}>
-        <h3>{title}</h3>
-        <ul>
-          {items.map((item, index) =>
-            (<li key={item.name || index}>
+const Stela = (props: StelaProps) => {
+  const {
+    width,
+    height,
+    isBold,
+    title,
+    titleColor,
+    titleSize,
+    nameColor,
+    nameSize,
+    subColor,
+    subSize,
+    priceColor,
+    priceSize,
+    backgroundColor,
+    isCondensed,
+    lineHeight,
+    items,
+  } = props;
+  return (
+    <div className={'stela'}>
+      <h3>{title}</h3>
+      <ul>
+        {items.filter(item => item.isVisible).map((item, index) => {
+          // const neon = item.effect === Effect.neon;
+          return (
+            <li key={item.name || index}>
+              {/*<div className={classNames('name', { neon })}>{item.name}</div>*/}
               <div className="name">{item.name}</div>
               {item.subName && <div className="sub">{item.subName}</div>}
-              <div className="price">{item.price.toFixed(2)}</div>
-            </li>))}
-        </ul>
-        {/* language=CSS */}
-        <style global jsx>{`
-          * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-          }
-
-          html,
-          body {
-            -webkit-font-smoothing: antialiased;
-            font-family: "Ubuntu${isCondensed ? ' Condensed' : ''}", sans-serif;
-            height: 100%;
-            overflow: hidden;
-          }
-
-        `}</style>
-        {/* language=CSS */}
-        <style jsx>{`
+              <div className="price">
+                {Number(item.price).toFixed(2)}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      {/* language=CSS */}
+      <style jsx>{`
           .stela {
             width: ${width}px;
             height: ${height}px;
@@ -177,8 +88,56 @@ export default class Stela extends Component<Props, StelaState> {
             font-size: ${priceSize}px;
           }
 
+          .neon {
+            animation: neon 1.5s ease-in-out infinite alternate;
+          }
+
+          @keyframes neon {
+            from {
+              text-shadow:
+                0 0 10px #fff,
+                0 0 20px #fff,
+                0 0 30px #fff,
+                0 0 40px #f17,
+                0 0 70px #f17,
+                0 0 80px #f17,
+                0 0 100px #f17,
+                0 0 150px #f17;
+            }
+
+            to {
+              text-shadow:
+                0 0 5px #fff,
+                0 0 10px #fff,
+                0 0 15px #fff,
+                0 0 20px #F17,
+                0 0 35px #F17,
+                0 0 40px #F17,
+                0 0 50px #F17,
+                0 0 75px #F17;
+            }
+          }
         `}</style>
-      </div>
-    );
-  }
-}
+      {/* language=CSS */}
+      <style global jsx>{`
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+
+          html,
+          body {
+            -webkit-font-smoothing: antialiased;
+            /*font-family: "Ubuntu${isCondensed ? ' Condensed' : ''}", sans-serif;*/
+            font-family: LCDnova, sans-serif;
+            height: 100%;
+            overflow: hidden;
+            line-height: ${lineHeight};
+          }
+        `}</style>
+    </div>
+  );
+};
+
+export default Stela;

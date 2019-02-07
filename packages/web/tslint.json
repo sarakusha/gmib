@@ -2,14 +2,16 @@
     "defaultSeverity": "error",
     "extends": [
         "tslint-config-airbnb",
-        "tslint-react"
+        "tslint-react",
+        "tslint-react-a11y"
     ],
     "jsRules": {},
     "rules": {
         "import-name": false,
         "jsx-boolean-value": false,
         "jsx-no-multiline-js": false,
-        "semicolon": [true, "always", "ignore-bound-class-methods"]
+        "semicolon": [true, "always", "ignore-bound-class-methods"],
+        "variable-name": [true, "ban-keywords", "check-format", "allow-leading-underscore", "allow-pascal-case"]
     },
     "rulesDirectory": []
 }

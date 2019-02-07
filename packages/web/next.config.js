@@ -1,18 +1,19 @@
 const withTypescript = require('@zeit/next-typescript');
+const withCSS = require('@zeit/next-css');
 const { ContextReplacementPlugin } = require('webpack');
-const keysTransformer = require('ts-transformer-keys/transformer').default;
+// const keysTransformer = require('ts-transformer-keys/transformer').default;
 
 const { ANALYZE } = process.env;
-module.exports = withTypescript({
-  publicRuntimeConfig: {
+module.exports = withCSS(withTypescript({
+  serverRuntimeConfig: {
     bekar: {
       width: 160,
       height: 320,
       isCondensed: false,
-      backgroundColor: 'black',
+      // backgroundColor: 'black',
       titleSize: 26,
       nameSize: 24,
-      subSuze: 14,
+      subSize: 14,
       priceSize: 24,
       title: 'Бекар',
       items: [
@@ -57,19 +58,20 @@ module.exports = withTypescript({
     );
 
     // A TypeScript custom transformer which enables to obtain keys of given type.
-    if (isServer) {
-      config.module.rules.push({
-        test: /\.ts$/,
-        loader: 'ts-loader',
-        options: {
-          getCustomTransformers: program => ({
-            before: [
-              keysTransformer(program)
-            ]
-          }),
-        },
-      });
-    }
+    // Не работает с ts-node (только с webpack)
+    // if (isServer) {
+    //   config.module.rules.push({
+    //     test: /\.ts$/,
+    //     loader: 'awesome-typescript-loader',
+    //     options: {
+    //       getCustomTransformers: program => ({
+    //         before: [
+    //           keysTransformer(program)
+    //         ]
+    //       }),
+    //     },
+    //   });
+    // }
 
     // const { IgnorePlugin } = require('webpack');
     // config.plugins.push(
@@ -77,4 +79,4 @@ module.exports = withTypescript({
     // );
     return config;
   },
-});
+}));
