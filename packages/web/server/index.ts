@@ -41,7 +41,7 @@ const sessionMiddleware = session({
 });
 
 function checkAndUpdateID() {
-  const items: PriceItem[] = store.get('items');
+  const items: PriceItem[] = store.get('items') || [];
   const ids = {};
   store.set('items', items.map((item) => {
     while (!item.id || ids[item.id]) {
