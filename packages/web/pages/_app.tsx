@@ -1,8 +1,8 @@
 import Head from 'next/head';
 import React from 'react';
-import App, { Container } from 'next/app';
+import App, { Container, NextAppContext } from 'next/app';
 import pick from 'lodash/pick';
-// import Head from 'next/head';
+import LoginDialog, { LoginProps, LoginResult } from '../components/LoginDialog';
 import io from 'socket.io-client';
 import { MuiThemeProvider } from '@material-ui/core/styles';
 import CssBaseline from '@material-ui/core/CssBaseline';
@@ -12,24 +12,59 @@ import getPageContext from '../src/getPageContext';
 
 export interface IStela extends StelaProps {
   update: (props: Partial<StelaProps>) => void;
-  // bindSubmitForm: (submitForm: () => void) => void;
-  // submittingChanged?: (isSubmitting: boolean) => void;
-  // bindResetForm?: (resetForm: () => void) => void;
+  logout?: () => void;
 }
 
-class StelaApp extends App<StelaProps> {
-  state: StelaProps;
+// const sessionId = 'session';
+// const getLocalSession = () => JSON.parse(localStorage.getItem(sessionId));
+// const saveLocalSession = session => localStorage.setItem(sessionId, JSON.stringify(session));
+// const removeLocalSession = () => localStorage.removeItem(sessionId);
+
+const parseResponse = async (res: Response): Promise<LoginResult> => {
+  const contentType = res.headers.get('content-type');
+  if (contentType && contentType.indexOf('application/json') !== -1) {
+    return [res.ok, await res.json()];
+  }
+  return [res.ok, { message: await res.text() }];
+};
+
+class StelaApp extends App<{ session?: any, isNeedLogin?: boolean }> {
+  state: StelaProps & { username?: string };
   socket = io();
   pageContext = getPageContext();
+  needLogin = false;
 
-  static async getInitialProps({ ctx }) {
+  static async getInitialProps({ ctx, Component }) {
     const { req, query } = ctx;
+    let isNeedLogin = false;
+    if (Component.getInitialProps) {
+      const compProps = await Component.getInitialProps(ctx);
+      isNeedLogin = compProps.isNeedLogin;
+    }
     const isServer = !!req;
-    return isServer ? query : {};
+    if (isServer) {
+      // console.log('USER', req.session && req.session.passport && req.session.passport.user);
+      // console.log('INITIAL SESSION', req.session);
+      return {
+        isNeedLogin,
+        pageProps: query,
+        session: req.session,
+      };
+    }
+    // const session = getLocalSession();
+    // if (session && Object.keys(session).length > 0) {
+    //   return {
+    //     session,
+    //     pageProps: {},
+    //   };
+    // }
+    // TODO: fetch session & save local
+    return { pageProps: {} };
   }
 
   constructor(props) {
     super(props);
+    const { pageProps, session } = props;
     this.state = {
       titleColor: '#7cb5ec',
       nameColor: '#fff',
@@ -38,7 +73,10 @@ class StelaApp extends App<StelaProps> {
       isBold: true,
       lineHeight: 1,
       items: [],
-      ...props,
+      marginTop: 0,
+      fontName: 'Ubuntu',
+      ...pageProps,
+      username: session && session.passport && session.passport.user,
     };
   }
 
@@ -50,10 +88,43 @@ class StelaApp extends App<StelaProps> {
     this.socket.emit('update', pick(props, PROPS));
   };
 
+  handleSubmitLogin = (values: LoginProps): Promise<LoginResult> => {
+    return Promise.resolve()
+      .then(() => fetch('/login', {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(values),
+      }))
+      .then(parseResponse, () => [false, { message: 'Server error' }])
+      .then(
+        (res: LoginResult) => {
+          const [isOk, session] = res;
+          if (isOk) {
+            this.setState({ username: session && session.passport.user });
+            this.socket.emit('reload');
+          }
+          return res;
+        },
+      );
+  };
+
+  logout = () => {
+    fetch('/logout').then();
+    this.handleLogout();
+  };
+
+  handleLogout = () => {
+    this.setState({ username: null });
+  };
+
   componentDidMount() {
     // connect to WS server and listen event
     this.socket.on('initial', this.handleChanged);
     this.socket.on('changed', this.handleChanged);
+    this.socket.on('logout', this.handleLogout);
     // remove the server-side injected CSS
     const jssStyles = document.querySelector('#jss-sever-side');
     if (jssStyles && jssStyles.parentNode) {
@@ -63,14 +134,16 @@ class StelaApp extends App<StelaProps> {
 
   // close socket connection
   componentWillUnmount() {
+    this.socket.off('logout', this.handleLogout);
     this.socket.off('changed', this.handleChanged);
     this.socket.off('initial', this.handleChanged);
     this.socket.close();
   }
 
   render() {
-    const { Component } = this.props;
-    const pageProps = this.state;
+    const { Component, isNeedLogin } = this.props;
+    const { username, ...pageProps } = this.state;
+    const isLoginOpen = !username;
     const { theme, generateClassName, sheetsManager, sheetsRegistry } = this.pageContext;
     return (
       <Container>
@@ -84,7 +157,10 @@ class StelaApp extends App<StelaProps> {
               {...pageProps}
               pageContext={this.pageContext}
               update={this.update}
+              logout={this.logout}
             />
+            {isNeedLogin &&
+            <LoginDialog isOpen={isLoginOpen} onSubmit={this.handleSubmitLogin} />}
           </MuiThemeProvider>
         </JssProvider>
       </Container>

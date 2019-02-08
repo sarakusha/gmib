@@ -20,6 +20,8 @@ const Stela = (props: StelaProps) => {
     isCondensed,
     lineHeight,
     items,
+    paddingTop,
+    fontName,
   } = props;
   return (
     <div className={'stela'}>
@@ -42,6 +44,7 @@ const Stela = (props: StelaProps) => {
       {/* language=CSS */}
       <style jsx>{`
           .stela {
+            padding-top: ${paddingTop}px;
             width: ${width}px;
             height: ${height}px;
             background: ${backgroundColor};
@@ -75,9 +78,9 @@ const Stela = (props: StelaProps) => {
           .sub {
             overflow: hidden;
             white-space: nowrap;
-            font-size: ${subSize};
+            font-size: ${subSize}px;
             font-weight: normal;
-            font-family: "Ubuntu Condensed", sans-serif;
+            font-family: ${fontName === 'Ubuntu' ? 'Ubuntu Condensed' : fontName}, sans-serif;
             color: ${subColor};
           }
 
@@ -129,8 +132,10 @@ const Stela = (props: StelaProps) => {
           html,
           body {
             -webkit-font-smoothing: antialiased;
-            /*font-family: "Ubuntu${isCondensed ? ' Condensed' : ''}", sans-serif;*/
-            font-family: LCDnova, sans-serif;
+            font-family: ${fontName === 'Ubuntu'
+        ? `Ubuntu${isCondensed ? ' Condensed' : ''}`
+        : fontName}, sans-serif;
+            /*font-family: LCDnova, sans-serif;*/
             height: 100%;
             overflow: hidden;
             line-height: ${lineHeight};

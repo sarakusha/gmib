@@ -3,8 +3,9 @@
     "server/**/*.ts",
     "package.json",
     "next.config.json",
-    "components/**/*.ts",
-    "pages/**/*.ts"
+    "components/**/*.tsx",
+    "pages/**/*.tsx",
+    "src/**/*.ts"
   ],
   "execMap": {
     "ts": "ts-node --project tsconfig.dev.json"

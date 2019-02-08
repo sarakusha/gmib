@@ -8,6 +8,7 @@ import { createStyles, withStyles, WithStyles, Theme } from '@material-ui/core/s
 import Toolbar from '@material-ui/core/Toolbar';
 import Typography from '@material-ui/core/Typography';
 import ViewIcon from '@material-ui/icons/Visibility';
+import LogOutIcon from '@material-ui/icons/ExitToApp';
 import RefreshIcon from '@material-ui/icons/Refresh';
 import SendIcon from '@material-ui/icons/Send';
 import { IStela } from './_app';
@@ -71,13 +72,16 @@ const styles = (theme: Theme) => createStyles({
   },
 });
 
-interface Props extends WithStyles<typeof styles>, IStela {}
+interface Props extends WithStyles<typeof styles>, IStela {
+  session: any;
+}
 
 interface State {
   src: string;
   isOpen: boolean;
   isSubmitting: boolean;
   settingsExpanded: boolean;
+  // isLoginOpen: boolean;
 }
 
 class Dashboard extends PureComponent<Props, State> {
@@ -85,6 +89,10 @@ class Dashboard extends PureComponent<Props, State> {
     width: 160,
     height: 320,
   };
+
+  static getInitialProps() {
+    return { isNeedLogin: true };
+  }
 
   submitForm = () => {};
   resetForm = () => {};
@@ -121,7 +129,7 @@ class Dashboard extends PureComponent<Props, State> {
   };
 
   render() {
-    const { classes, update, ...values } = this.props;
+    const { classes, update, logout, ...values } = this.props;
     const { width, height, title } = values;
     const { src, isSubmitting } = this.state;
     const scale = (drawerWidth - 10) / width;
@@ -162,6 +170,15 @@ class Dashboard extends PureComponent<Props, State> {
             >
               {title || 'Стела'}
             </Typography>
+            <IconButton
+              color="inherit"
+              onClick={logout}
+              className={classes.right}
+              title="Выйти"
+              aria-label="Log Out"
+            >
+              <LogOutIcon />
+            </IconButton>
             <IconButton
               color="inherit"
               onClick={this.reset}

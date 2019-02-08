@@ -29,6 +29,8 @@ export interface StelaProps {
   priceSize: string;
   lineHeight: number;
   items: PriceItem[];
+  paddingTop: number;
+  fontName: string;
 }
 
 export const PROPS = [
@@ -48,6 +50,8 @@ export const PROPS = [
   'priceSize',
   'lineHeight',
   'items',
+  'paddingTop',
+  'fontName',
 ];
 
 export interface BindFormik {

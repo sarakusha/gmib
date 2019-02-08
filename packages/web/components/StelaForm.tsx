@@ -1,10 +1,11 @@
 import FormGroup from '@material-ui/core/FormGroup';
+import MenuItem from '@material-ui/core/MenuItem';
 import { createStyles, Theme, WithStyles, withStyles } from '@material-ui/core/styles';
 import classNames from 'classnames';
 import { TextAlignProperty } from 'csstype';
 import {
   ArrayHelpers,
-  FastField as Field, FieldArray, Form, FormikProps, withFormik,
+  Field, FieldArray, Form, FormikProps, withFormik,
 } from 'formik';
 import { CheckboxWithLabel, TextField } from 'formik-material-ui';
 import set from 'lodash/set';
@@ -64,6 +65,9 @@ const styles = (theme: Theme) => createStyles({
     backgroundColor: theme.palette.background.default,
     userSelect: 'none',
   },
+  fontName: {
+    maxWidth: '20ch',
+  },
 });
 
 type StylesType = WithStyles<typeof styles>;
@@ -71,27 +75,31 @@ type InnerType =
   FormikProps<StelaProps>
   & StylesType & BindFormik;
 
+const rightAlign = {
+  textAlign: 'right' as TextAlignProperty,
+};
+
 const sizeProps = {
   min: 6,
-  style: {
-    textAlign: 'right' as TextAlignProperty,
-  },
+  style: rightAlign,
 };
 
 const dimensionProps = {
   min: 20,
   step: 4,
-  style: {
-    textAlign: 'right' as TextAlignProperty,
-  },
+  style: rightAlign,
 };
 
 const lineHeightProps = {
   min: 1,
   step: 0.1,
-  style: {
-    textAlign: 'right' as TextAlignProperty,
-  },
+  style: rightAlign,
+};
+
+const paddingProps = {
+  min: 0,
+  step: 1,
+  style: rightAlign,
 };
 
 const InnerForm = (props: InnerType) => {
@@ -239,7 +247,7 @@ const InnerForm = (props: InnerType) => {
             <Field
               name="isCondensed"
               Label={{
-                label: 'Сжатый',
+                label: 'Уплотненный',
                 className: classes.textField,
               }}
               component={CheckboxWithLabel}
@@ -253,6 +261,19 @@ const InnerForm = (props: InnerType) => {
               inputProps={lineHeightProps}
             />
           </FormGroup>
+          <Field
+            name="fontName"
+            type="text"
+            label="Имя"
+            select
+            title="Гарнитура"
+            component={TextField}
+            className={classes.fontName}
+            InputLabelProps={{ shrink: true }}
+          >
+            <MenuItem value="Ubuntu">Ubuntu</MenuItem>
+            <MenuItem value="LCDnova">LCD</MenuItem>
+          </Field>
         </FormFieldSet>
         <FormFieldSet margin="normal" legend={'Заголовок'} fullWidth={false}>
           <FormGroup row={true}>
@@ -349,6 +370,15 @@ const InnerForm = (props: InnerType) => {
               component={TextField}
               className={classes.numberField}
               inputProps={dimensionProps}
+            />
+            <Field
+              name="paddingTop"
+              type="number"
+              label="Отступ"
+              title="Отступ сверху"
+              component={TextField}
+              className={classes.numberField}
+              inputProps={paddingProps}
             />
           </FormGroup>
         </FormFieldSet>

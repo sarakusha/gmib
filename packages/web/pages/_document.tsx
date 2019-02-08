@@ -88,6 +88,7 @@ StelaDocument.getInitialProps = async (ctx) => {
     styles: [
       (
         <style
+          key="jss-server-side"
           id="jss-server-side"
           // eslint-disable-next-line react/no-danger
           dangerouslySetInnerHTML={{ __html: css }}
