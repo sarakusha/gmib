@@ -106,6 +106,7 @@ export interface IDevice {
   connection?: NibusConnection;
 
   release(): number;
+
   getId(idOrName: string | number): number;
 
   [mibProperty: string]: any;
@@ -361,7 +362,13 @@ class DevicePrototype extends EventEmitter {
      * @event IDevice#changing
      */
     const names = map[id] || [];
-    this.emit(isDirty ? 'changing' : 'changed', { id, names });
+    this.emit(
+      isDirty ? 'changing' : 'changed',
+      {
+        id,
+        names,
+      },
+    );
   }
 
   public addref() {
@@ -440,6 +447,23 @@ class DevicePrototype extends EventEmitter {
             return -1;
           })))
       .then(ids => ids.filter(id => id > 0));
+  }
+
+  public writeValues(source: object, strong = true): Promise<number[]> {
+    try {
+      const ids = Object.keys(source).map(name => this.getId(name));
+      if (ids.length === 0) return Promise.reject(new TypeError('value is empty'));
+      Object.assign(this, source);
+      return this.write(...ids)
+        .then((written) => {
+          if (written.length === 0 || (strong && written.length !== ids.length)) {
+            throw this.getError(ids[0]);
+          }
+          return written;
+        });
+    } catch (err) {
+      return Promise.reject(err);
+    }
   }
 
   private readAll(): Promise<any> {

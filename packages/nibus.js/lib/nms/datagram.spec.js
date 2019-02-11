@@ -50,7 +50,7 @@ describe('NmsDatagram tests', () => {
     expect(nms.id).toBe(2);
     expect((0, _crc.crc16ccitt)(frame.slice(1, -2), 0)).toBe(frame.readUInt16BE(frame.length - 2));
   });
-  test('curcular test', () => {
+  test('circular test', () => {
     const nms = new _NmsDatagram.default(options); // console.log(nms);
 
     const copy = new _NmsDatagram.default(nms.raw); // console.log(copy);

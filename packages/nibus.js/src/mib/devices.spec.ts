@@ -1,6 +1,7 @@
 // import 'reflect-metadata';
 import devices from './devices';
 import { getMibs } from './mib2json';
+// import {inspect} from 'util';
 
 describe('Device', () => {
   test('one mib - one prototype', () => {

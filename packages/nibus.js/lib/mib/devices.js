@@ -248,14 +248,20 @@ class DevicePrototype extends _events.EventEmitter {
   }
 
   getId(idOrName) {
-    let id = (0, _mib.toInt)(idOrName);
+    let id;
 
-    if (Number.isNaN(id) || id <= 0) {
+    if (typeof idOrName === 'string') {
       id = Reflect.getMetadata('id', this, idOrName);
+      if (Number.isInteger(id)) return id;
+      id = (0, _mib.toInt)(idOrName);
+    } else {
+      id = idOrName;
+    }
 
-      if (!id) {
-        throw new Error(`Unknown property ${idOrName}`);
-      }
+    const map = Reflect.getMetadata('map', this);
+
+    if (!Reflect.has(map, id)) {
+      throw new Error(`Unknown property ${idOrName}`);
     }
 
     return id;
@@ -412,6 +418,23 @@ class DevicePrototype extends _events.EventEmitter {
       this.setError(datagram.id, reason);
       return -1;
     }))).then(ids => ids.filter(id => id > 0));
+  }
+
+  writeValues(source, strong = true) {
+    try {
+      const ids = Object.keys(source).map(name => this.getId(name));
+      if (ids.length === 0) return Promise.reject(new TypeError('value is empty'));
+      Object.assign(this, source);
+      return this.write(...ids).then(written => {
+        if (written.length === 0 || strong && written.length !== ids.length) {
+          throw this.getError(ids[0]);
+        }
+
+        return written;
+      });
+    } catch (err) {
+      return Promise.reject(err);
+    }
   }
 
   readAll() {

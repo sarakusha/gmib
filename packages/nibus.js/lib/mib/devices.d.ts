@@ -66,6 +66,7 @@ export interface IDevice {
     read(...ids: number[]): Promise<any[]>;
     connection?: NibusConnection;
     release(): number;
+    getId(idOrName: string | number): number;
     [mibProperty: string]: any;
 }
 export declare function getMibFile(mibname: string): string;

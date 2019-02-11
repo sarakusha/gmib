@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import Address, { AddressParam } from '../Address';
+import { AddressParam } from '../Address';
 import NmsDatagram from './NmsDatagram';
 import { encodeValue, getNmsType } from './nms';
 import NmsServiceType from './NmsServiceType';

@@ -42,7 +42,7 @@ describe('NmsDatagram tests', () => {
     expect(nms.id).toBe(2);
     expect(crc16ccitt(frame.slice(1, -2), 0)).toBe(frame.readUInt16BE(frame.length - 2));
   });
-  test('curcular test', () => {
+  test('circular test', () => {
     const nms = new NmsDatagram(options);
     // console.log(nms);
     const copy = new NmsDatagram(nms.raw);
