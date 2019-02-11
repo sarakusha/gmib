@@ -11,12 +11,26 @@ export interface INibusCommon {
   source?: AddressParam;
 }
 
+export enum Protocol {
+  NMS = 1,
+  SARP = 2,
+}
+
 export interface INibusOptions extends INibusCommon {
-  protocol: number;
+  protocol: Protocol;
   data: Buffer;
 }
 
 const leadZero = (value: number) => `0${value}`.slice(-2);
+
+export interface INibusDatagramJSON {
+  priority: number;
+  protocol: Protocol;
+  destination: string;
+  source: string;
+  timeStamp: string;
+  data?: Buffer;
+}
 
 // @timeStamp
 export default class NibusDatagram implements INibusOptions {
@@ -78,17 +92,17 @@ export default class NibusDatagram implements INibusOptions {
     process.nextTick(() => Object.freeze(this));
   }
 
-  public toJSON() {
-    // @ts-ignore
-    const result = { ...this };
-    result.source = result.source.toString();
-    result.destination = result.destination.toString();
+  public toJSON(): INibusDatagramJSON {
     const ts = new Date(Reflect.getMetadata('timeStamp', this));
-    result.timeStamp =
-      `${leadZero(ts.getHours())}:${leadZero(ts.getMinutes())}:\
-${leadZero(ts.getSeconds())}.${ts.getMilliseconds()}`;
-    delete result.raw;
-    return result;
+    return {
+      priority: this.priority,
+      protocol: this.protocol,
+      source: this.source.toString(),
+      destination: this.destination.toString(),
+      timeStamp: `${leadZero(ts.getHours())}:${leadZero(ts.getMinutes())}:\
+${leadZero(ts.getSeconds())}.${ts.getMilliseconds()}`,
+      data: Buffer.from(this.data),
+    };
     // return {
     //   destination: this.destination.toString(),
     //   source: this.source.toString(),

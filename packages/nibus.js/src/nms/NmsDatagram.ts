@@ -1,6 +1,6 @@
 import Address from '../Address';
 import { NMS_MAX_DATA_LENGTH, Offsets, PREAMBLE } from '../nbconst';
-import { NibusDatagram, INibusCommon, INibusOptions } from '../nibus';
+import { INibusCommon, INibusDatagramJSON, INibusOptions, NibusDatagram, Protocol } from '../nibus';
 import { decodeValue, getSizeOf } from './nms';
 import NmsServiceType from './NmsServiceType';
 import NmsValueType from './NmsValueType';
@@ -11,9 +11,23 @@ export interface INmsOptions extends INibusCommon {
   nms?: Buffer;
   isResponse?: boolean;
   isResponsible?: boolean;
+  status?: number;
 }
 
 const emptyBuffer = Buffer.alloc(0);
+
+export interface INmsDatagramJSON extends INibusDatagramJSON {
+  protocol: Protocol.NMS;
+  data?: never;
+  id: number;
+  service: NmsServiceType;
+  nms?: Buffer;
+  isResponse?: boolean;
+  isResponsible?: boolean;
+  value?: string;
+  valueType?: string;
+  status?: number;
+}
 
 export default class NmsDatagram extends NibusDatagram implements INmsOptions {
   public static isNmsFrame(frame: Buffer) {
@@ -122,18 +136,25 @@ export default class NmsDatagram extends NibusDatagram implements INmsOptions {
       && (source.equals(req.destination) || (id === req.id && req.destination.isEmpty));
   }
 
-  public toJSON() {
-    const result = super.toJSON();
+  public toJSON(): INmsDatagramJSON {
+    const { data, protocol, ...props } = super.toJSON();
+    const result: INmsDatagramJSON = {
+      ...props,
+      protocol: Protocol.NMS,
+      id: this.id,
+      service: this.service,
+      data: undefined,
+    };
     if (this.isResponse) {
-      delete result.isResponsible;
       if (this.valueType !== undefined) {
-        result.value = this.value;
+        result.value = this.value.toString();
         result.valueType = NmsValueType[this.valueType];
       }
       result.status = this.status;
-      delete result.nms;
+    } else {
+      result.isResponsible = this.isResponsible;
+      result.nms = Buffer.from(this.nms);
     }
-    delete result.data;
     return result;
   }
 }

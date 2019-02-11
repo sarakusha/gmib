@@ -91,7 +91,7 @@ interface IMibDevice {
  * @fires changed
  * @fires changing
  */
-export interface IDevice {
+export interface IDevice extends EventEmitter {
   [$values]: { [id: number]: any };
   [$errors]: { [id: number]: Error };
   [$dirties]: { [id: number]: boolean };
