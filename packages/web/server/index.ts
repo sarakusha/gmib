@@ -7,6 +7,7 @@ import { pick } from 'lodash';
 import bodyParser from 'body-parser';
 import session from 'express-session';
 import memorystore from 'memorystore';
+import compression from 'compression';
 import users from '../src/users';
 // import csrf from 'csurf';
 
@@ -106,6 +107,7 @@ io.on('connection', (socket) => {
 });
 
 nextApp.prepare().then(() => {
+  app.use(compression());
   // let all requests to /_next/* pass to it *before*
   // Express Session and other middleware is called.
   app.all('/_next/*', (req, res) => nextHandler(req, res));
