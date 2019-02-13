@@ -6,20 +6,14 @@
     "jsRules": {},
     "rules": {
         "quotemark": [true, "single"],
-        "indent": [true, 2],
+        "indent": [true, "spaces", 2],
         "no-bitwise": false,
         "no-console": [true, "log", "warning"],
         "no-unused-expression": [true, "allow-fast-null-checks"],
         "no-this-assignment": [true, {"allow-destructuring": true}],
         "align": [true, "parameters", "statements"],
-        "import-name": [ true, {
-          "debug": "debugFactory",
-          "lodash": "_",
-          "serialport": "SerialPort",
-          "bluebird": "Promise",
-          "jsYaml": "yaml"
-        }],
-        "semicolon": [true, "strict-bound-class-methods"]
+        "import-name": false,
+        "semicolon": [true, "always","strict-bound-class-methods"]
     },
     "rulesDirectory": [],
   "linterOptions": {

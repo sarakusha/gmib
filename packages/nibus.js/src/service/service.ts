@@ -19,7 +19,7 @@ function ping(connection: NibusConnection, address: Address): Promise<number> {
       return <number>(Reflect.getOwnMetadata('timeStamp', datagram!)) - now;
     })
     .catch((reson) => {
-      debug(`ping failed ${reson}`);
+      debug(`ping [${address}] failed ${reson}`);
       return -1;
     });
 }
@@ -134,17 +134,18 @@ class NibusService extends EventEmitter {
     }
   }
 
-  public start() {
+  public async start() {
     if (this.isStarted) return;
-    const { detection, ports } = detector;
+    const { detection } = detector;
     if (detection == null) throw new Error('detection is N/A');
+    const ports = await detector.getPorts();
     this.connections = ports
       .filter(({ category }) => category != null && detection.mibCategories[category] != null)
       .map(({ comName, category }) =>
         new NibusConnection(comName, detection.mibCategories[category!]));
 
     this.connections.length &&
-    debug(`It was created ${this.connections.length} nibus-connection(s): ${this.connections.map(
+    debug(`It has created ${this.connections.length} nibus-connection(s): ${this.connections.map(
       connection => connection.description.category).join()}`);
 
     this.connections.forEach((connection) => {
@@ -176,8 +177,8 @@ class NibusService extends EventEmitter {
     detector.stop();
     this.connections.forEach(connection => connection.close());
     devices.get().forEach((device) => {
+      device.connection && debug(`mib-device ${device.address} was disconnected`);
       device.connection = undefined;
-      debug(`mib-device ${device.address} was disconnected`);
       // device.emit('disconnected');
     });
     this.connections.length = 0;

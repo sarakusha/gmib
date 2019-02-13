@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import debugFactory from 'debug';
-import fs from 'fs';
+import fs, { Stats } from 'fs';
 import path from 'path';
 import SerialPort from 'serialport';
 import usbDetection from 'usb-detection';
@@ -10,7 +10,7 @@ import { NibusBaudRate } from '../nibus';
 
 const debug = debugFactory('nibus:detector');
 const detectionPath = path.resolve(__dirname, '../../detection.yml');
-const knownPorts: IKnownPort[] = [];
+let knownPorts: Promise<IKnownPort[]> = Promise.resolve([]);
 
 const loadDetection = (): IDetection | undefined => {
   try {
@@ -28,6 +28,18 @@ const loadDetection = (): IDetection | undefined => {
 
 let detection = loadDetection();
 
+function reloadDevices(lastAdded?: usbDetection.IDevice) {
+  knownPorts = knownPorts.then(ports => reloadDevicesAsync(ports, lastAdded));
+}
+
+const detectionListener = (curr: Stats, prev: Stats) => {
+  if (curr.mtime !== prev.mtime) {
+    debug(`detection file was changed, reloading devices...`);
+    detection = undefined;
+    reloadDevices();
+  }
+};
+
 /**
  * @fires add
  * @fires remove
@@ -37,9 +49,12 @@ let detection = loadDetection();
 class Detector extends EventEmitter {
   start() {
     usbDetection.startMonitoring();
+    debug(`start watching the detector file ${detectionPath}`);
+    fs.watchFile(detectionPath, { persistent: false }, detectionListener);
   }
 
   stop() {
+    fs.unwatchFile(detectionPath, detectionListener);
     usbDetection.stopMonitoring();
   }
 
@@ -48,7 +63,7 @@ class Detector extends EventEmitter {
     process.nextTick(() => usbDetection.startMonitoring());
   }
 
-  get ports() {
+  async getPorts() {
     return knownPorts;
   }
 
@@ -70,7 +85,8 @@ const detector = new Detector();
 // }
 
 type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
-export interface IKnownPort extends Omit<SerialPort.PortInfo, 'productId' | 'vendorId'>  {
+
+export interface IKnownPort extends Omit<SerialPort.PortInfo, 'productId' | 'vendorId'> {
   device?: string;
   productId: number;
   vendorId: number;
@@ -179,17 +195,18 @@ const matchCategory = (port: IKnownPort): string | undefined => {
   if (match) return match.category;
 };
 
-async function reloadDevices(lastAdded?: usbDetection.IDevice) {
+async function reloadDevicesAsync(prevPorts: IKnownPort[], lastAdded?: usbDetection.IDevice) {
+  const ports: IKnownPort[] = [];
   try {
     if (detection == null) {
       detection = loadDetection();
     }
     const list: SerialPort.PortInfo[] = await SerialPort.list();
     const externalPorts = list.filter(port => !!port.productId);
-    const prevPorts = knownPorts.splice(0);
+    // const prevPorts = knownPorts.splice(0);
 
     await externalPorts.reduce(async (promise, port) => {
-      await promise;
+      const nextPorts = await promise;
       const prev = _.findIndex(prevPorts, { comName: port.comName });
       let device: IKnownPort;
       if (prev !== -1) {
@@ -220,8 +237,9 @@ ${device.category || device.productId} was plugged to ${device.comName}`);
           detector.emit('add', device);
         }
       }
-      knownPorts.push(device);
-    }, Promise.resolve());
+      nextPorts.push(device);
+      return nextPorts;
+    }, Promise.resolve(ports));
     prevPorts.forEach((port) => {
       /**
        * @event Detector#unplug
@@ -236,21 +254,23 @@ ${port.category || port.productId} was unplugged from ${port.comName}`);
        */
       port.category && detector.emit('remove', port);
     });
+    return ports;
   } catch (err) {
     debug(`Error: reload devices was failed (${err.message || err})`);
+    return ports;
   }
 }
 
-debug(`start watching the detector file ${detectionPath}`);
-fs.watchFile(detectionPath, { persistent: false }, (curr, prev) => {
-  if (curr.mtime !== prev.mtime) {
-    debug(`detection file was changed, reloading devices...`);
-    detection = undefined;
-    reloadDevices().catch();
-  }
-});
+// debug(`start watching the detector file ${detectionPath}`);
+// fs.watchFile(detectionPath, { persistent: false }, (curr, prev) => {
+//   if (curr.mtime !== prev.mtime) {
+//     debug(`detection file was changed, reloading devices...`);
+//     detection = undefined;
+//     reloadDevices().catch();
+//   }
+// });
 
-reloadDevices().catch();
+reloadDevices();
 
 const reload = _.debounce(reloadDevices, 2000);
 usbDetection.on('add', (usbDevice) => {
@@ -260,7 +280,7 @@ usbDetection.on('add', (usbDevice) => {
 
 usbDetection.on('remove', (usbDevice) => {
   debug('removed', JSON.stringify(usbDevice));
-  reloadDevices(usbDevice).catch();
+  reload(usbDevice);
 });
 
 export default detector;

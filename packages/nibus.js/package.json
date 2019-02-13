@@ -6,7 +6,8 @@
   "types": "lib/index.d.ts",
   "scripts": {
     "test": "jest src",
-    "serve": "export NODE_ENV=development; export DEBUG='nibus:*'; nodemon --exec babel-node --watch src --extensions \".ts,.tsx,.js\" src/index.ts",
+    "serve": "export NODE_ENV=development; export DEBUG='nibus:*'; nodemon --exec babel-node --watch src --extensions \".ts,.tsx,.js\" --inspect src/service/test.ts",
+    "cli": "export NODE_ENV=development; export DEBUG='nibus:*'; babel-node --extensions \".ts,.tsx,.js\" --inspect src/cli/index.ts",
     "build": "export BABEL_ENV=production; tsc --emitDeclarationOnly && babel src --out-dir lib --extensions \".ts,.tsx,.js\"",
     "type-check": "tsc --noEmit"
   },
@@ -44,6 +45,7 @@
     "@types/lodash": "^4.14.109",
     "@types/node": "^10.3.1",
     "@types/serialport": "^7.0.0",
+    "@types/yargs": "^12.0.8",
     "babel-core": "^7.0.0-bridge.0",
     "babel-jest": "^24.1.0",
     "babel-plugin-source-map-support": "^2.0.1",
@@ -64,7 +66,9 @@
     "reflect-metadata": "^0.1.12",
     "sax": "^1.2.4",
     "serialport": "^7.0.2",
-    "usb-detection": "^4.0.0"
+    "table-layout": "^0.4.4",
+    "usb-detection": "^4.0.0",
+    "yargs": "^12.0.5"
   },
   "jest": {
     "moduleFileExtensions": [

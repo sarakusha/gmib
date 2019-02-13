@@ -36,6 +36,11 @@ knownDevices:
     pid: '6001'
     manufacturer: NATA
     category: c22
+  - device: AlphaHostControl
+    vid: '0403'
+    pid: '6001' # 24577
+    manufacturer: 'Nata Info'
+    category: minihost
   - device: MiniHost_alfa
     vid: '0403'
     pid: '6015' # 24597
