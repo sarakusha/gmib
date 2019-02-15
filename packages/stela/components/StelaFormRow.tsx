@@ -14,8 +14,8 @@ import FormFieldSet from './FormFieldSet';
 interface RowProps {
   item: PriceItem;
   index: number;
-  handleProps: DraggableProvidedDragHandleProps;
-  errors: Partial<PriceItem>;
+  handleProps: DraggableProvidedDragHandleProps | null;
+  errors: Partial<PriceItem> | undefined;
   locked?: boolean;
   isDragging?: boolean;
   remove: () => void;

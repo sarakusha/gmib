@@ -19,7 +19,7 @@ const createPageContext = (): IPageContext => {
         MuiCssBaseline: {
           '@global': {
             body: {
-              backgroundColor: null,
+              backgroundColor: undefined,
             },
           },
         },

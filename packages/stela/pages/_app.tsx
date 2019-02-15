@@ -28,27 +28,27 @@ const parseResponse = async (res: Response): Promise<LoginResult> => {
   return [res.ok, { message: await res.text() }];
 };
 
-class StelaApp extends App<{ session?: any, isNeedLogin?: boolean }> {
-  state: StelaProps & { username?: string };
+type State = StelaProps & { username?: string | null };
+
+class StelaApp extends App<{ session?: any, isNeedLogin?: boolean }, State> {
   socket = io();
   pageContext = getPageContext();
   needLogin = false;
 
-  static async getInitialProps({ ctx, Component }) {
+  static async getInitialProps({ ctx, Component }: NextAppContext) {
     const { req, query } = ctx;
     let isNeedLogin = false;
     if (Component.getInitialProps) {
       const compProps = await Component.getInitialProps(ctx);
       isNeedLogin = compProps.isNeedLogin;
     }
-    const isServer = !!req;
-    if (isServer) {
+    if (req) {
       // console.log('USER', req.session && req.session.passport && req.session.passport.user);
       // console.log('INITIAL SESSION', req.session);
       return {
         isNeedLogin,
         pageProps: query,
-        session: req.session,
+        session: (req as any).session,
       };
     }
     // const session = getLocalSession();
@@ -62,7 +62,7 @@ class StelaApp extends App<{ session?: any, isNeedLogin?: boolean }> {
     return { pageProps: {} };
   }
 
-  constructor(props) {
+  constructor(props: any) {
     super(props);
     const { pageProps, session } = props;
     this.state = {
@@ -80,7 +80,7 @@ class StelaApp extends App<{ session?: any, isNeedLogin?: boolean }> {
     };
   }
 
-  handleChanged = (props: Partial<StelaProps>) => {
+  handleChanged = <K extends keyof State>(props: Pick<State, K>) => {
     this.setState(props);
   };
 
@@ -98,12 +98,12 @@ class StelaApp extends App<{ session?: any, isNeedLogin?: boolean }> {
         },
         body: JSON.stringify(values),
       }))
-      .then(parseResponse, () => [false, { message: 'Server error' }])
+      .then(parseResponse, (): LoginResult => [false, { message: 'Server error' }])
       .then(
         (res: LoginResult) => {
           const [isOk, session] = res;
           if (isOk) {
-            this.setState({ username: session && session.passport.user });
+            this.setState({ username: session && session.passport && session.passport.user });
             this.socket.emit('reload');
           }
           return res;

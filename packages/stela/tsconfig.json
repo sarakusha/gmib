@@ -1,0 +1,28 @@
+{
+  "extends": "../tsconfig.settings.json",
+  "compileOnSave": false,
+  "exclude": [
+    "bak",
+    "node_modules",
+    ".next",
+    "dist",
+    "lib",
+    "next.config.js"
+  ],
+  "compilerOptions": {
+    "strict": true,
+    "rootDir": ".",
+    "outDir": "lib",
+    "jsx": "preserve",
+    "lib": [
+      "dom",
+      "es2015",
+      "es2016"
+    ],
+    "baseUrl": "./",
+    "paths": {
+      "material-ui-color-picker": ["types/material-ui-color-picker"],
+      "memorystore": ["types/memorystore"]
+    }
+  }
+}

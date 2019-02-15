@@ -114,7 +114,7 @@ class Dashboard extends PureComponent<Props, State> {
   };
 
   state: State = {
-    src: null,
+    src: '',
     isOpen: false,
     settingsExpanded: true,
     isSubmitting: true,

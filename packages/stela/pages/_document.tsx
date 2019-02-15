@@ -23,7 +23,7 @@ class StelaDocument extends Document<{ pageContext: IPageContext } & IStela> {
         {/* PWA primary color */}
         <meta
           name="theme-color"
-          content={pageContext ? pageContext.theme.palette.primary.main : null}
+          content={pageContext && pageContext.theme.palette.primary.main}
         />
         <link
           rel="stylesheet"
@@ -69,7 +69,7 @@ StelaDocument.getInitialProps = async (ctx) => {
   // 4. page.render
 
   // Render app and page and get the context of the page with collected side effects.
-  let pageContext;
+  let pageContext: IPageContext | undefined;
   const page = ctx.renderPage(Component => (props) => {
     pageContext = props.pageContext;
     return <Component {...props} />;
@@ -91,7 +91,7 @@ StelaDocument.getInitialProps = async (ctx) => {
           key="jss-server-side"
           id="jss-server-side"
           // eslint-disable-next-line react/no-danger
-          dangerouslySetInnerHTML={{ __html: css }}
+          dangerouslySetInnerHTML={{ __html: css || '' }}
         />
       ),
       flush() || null,

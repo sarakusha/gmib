@@ -118,7 +118,7 @@ const InnerForm = (props: InnerType) => {
     () => {
       bindSubmitForm && bindSubmitForm(submitForm);
       return () => {
-        bindSubmitForm && bindSubmitForm(null);
+        bindSubmitForm && bindSubmitForm(() => {});
       };
     },
     [submitForm, bindSubmitForm],
@@ -133,12 +133,12 @@ const InnerForm = (props: InnerType) => {
     () => {
       bindResetForm && bindResetForm(resetForm);
       return () => {
-        bindResetForm && bindResetForm(null);
+        bindResetForm && bindResetForm(() => {});
       };
     },
     [resetForm, bindResetForm],
   );
-  const arrayHelpersRef = useRef(null as ArrayHelpers);
+  const arrayHelpersRef = useRef<ArrayHelpers|null>(null);
   const dragEndMemo = useCallback(
     (result: DropResult) => {
       if (!result.destination || !arrayHelpersRef.current) return;
@@ -148,7 +148,7 @@ const InnerForm = (props: InnerType) => {
   );
   const addClick = useCallback(
     () => {
-      arrayHelpersRef.current.push({ id: timeid() });
+      arrayHelpersRef.current && arrayHelpersRef.current.push({ id: timeid() });
     },
     [arrayHelpersRef],
   );
@@ -156,11 +156,11 @@ const InnerForm = (props: InnerType) => {
   const [locked, setLocked] = useState(true);
   const [settingsExpanded, setSettingsExpanded] = useState(false);
 
-  function handleChange(e, isLocked) {
+  function handleChange(e: React.ChangeEvent<{}>, isLocked: boolean) {
     setLocked(isLocked);
   }
 
-  function handleSettingsChange(e, expanded) {
+  function handleSettingsChange(e: React.ChangeEvent<{}>, expanded: boolean) {
     setSettingsExpanded(expanded);
   }
 
@@ -190,7 +190,7 @@ const InnerForm = (props: InnerType) => {
                       >
                         {items.map((item, index) => (
                           <Draggable
-                            draggableId={item.id}
+                            draggableId={item.id || `${index}`}
                             index={index}
                             key={item.id}
                             isDragDisabled={locked}

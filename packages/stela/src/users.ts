@@ -83,7 +83,7 @@ class UserStore {
     return [user, undefined];
   }
 
-  changeUserPassword(name: string, newPassword: string, oldPassword): UserResult {
+  changeUserPassword(name: string, newPassword: string, oldPassword: string): UserResult {
     const user = this.users[name];
     if (!user) {
       return [null, `Unknown user "${name}"`];

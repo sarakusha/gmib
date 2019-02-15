@@ -20,22 +20,23 @@ export interface LoginDialogProps extends Partial<LoginProps> {
 }
 
 const LoginForm = ({ isOpen, onSubmit, username, password }: LoginDialogProps) => {
-  const formRef = useRef(null);
+  const formRef = useRef<Formik<LoginProps>>(null);
   const submitForm = useCallback(
     (e: React.MouseEvent) => {
-      formRef.current && formRef.current.submitForm();
+      if (formRef.current) formRef.current.submitForm();
       e.stopPropagation();
     },
     [],
   );
   const onSubmitForm = useCallback(
     (values: LoginProps, formikActions: FormikActions<LoginProps>) => {
+      onSubmit &&
       Promise
-        .resolve(onSubmit && onSubmit(values))
+        .resolve(onSubmit(values))
         .then(([isOk, { message }]) => {
           formikActions.setSubmitting(false);
           if (!isOk) {
-            formikActions.setFieldError('password', message);
+            formikActions.setFieldError('password', message || 'invalid password');
           }
         });
     },

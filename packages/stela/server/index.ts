@@ -22,7 +22,7 @@ const debug = debugFactory(pkgName);
 const app = express();
 const server = new Server(app);
 const io = socketIo(server);
-const port = parseInt(process.env.PORT, 10) || 3000;
+const port = parseInt(process.env.PORT || '3000', 10);
 const nextHandler = nextApp.getRequestHandler();
 const MemoryStore = memorystore(session);
 const maxAge = 60000 * 60 / 2; // prune expired entries every h
@@ -35,7 +35,6 @@ const sessionMiddleware = session({
   saveUninitialized: true,
   cookie: {
     maxAge,
-    name: 'connect.sid',
     httpOnly: true,
     secure: 'auto',
   },
@@ -43,7 +42,7 @@ const sessionMiddleware = session({
 
 function checkAndUpdateID() {
   const items: PriceItem[] = store.get('items') || [];
-  const ids = {};
+  const ids: { [k: string]: boolean } = {};
   store.set('items', items.map((item) => {
     while (!item.id || ids[item.id]) {
       item.id = timeid();
@@ -70,12 +69,6 @@ io.use(({ request }, next) => {
 });
 
 io.on('connection', (socket) => {
-  const session = (socket.handshake as any).session;
-  // if (session) {
-  //   session.socket = socket;
-  //   session.save();
-  // }
-  // console.log('socket session', session);
   debug('socket has connected');
   // console.log('CONNECT SOCKET', socket.request.session);
   socket.emit('initial', store.all);
@@ -164,7 +157,7 @@ nextApp.prepare().then(() => {
 
   app.get('*', (req, res) => nextHandler(req, res));
 
-  server.listen(port, (err) => {
+  server.listen(port, (err?: Error) => {
     if (err) throw err;
     console.log(`> Ready on http://localhost:${port}`);
   });

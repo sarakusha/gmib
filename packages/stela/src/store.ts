@@ -5,5 +5,5 @@ export const pkgName = 'stela';
 
 // const { serverRuntimeConfig } = getConfig();
 
-const store = new Configstore(pkgName/* , serverRuntimeConfig.bekar */);
+const store = new Configstore(pkgName);
 export default store;
