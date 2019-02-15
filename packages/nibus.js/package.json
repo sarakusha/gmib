@@ -7,7 +7,8 @@
   "scripts": {
     "test": "jest src",
     "serve": "export NODE_ENV=development; export DEBUG='nibus:*'; nodemon --exec babel-node --watch src --extensions \".ts,.tsx,.js\" --inspect src/service/test.ts",
-    "cli": "export NODE_ENV=development; export DEBUG='nibus:*'; babel-node --extensions \".ts,.tsx,.js\" --inspect src/cli/index.ts",
+    "cli": "export NODE_ENV=development; export DEBUG='nibus:*'; babel-node --extensions \".ts,.tsx,.js\" --inspect src/cli/index.ts list",
+    "sock": "export NODE_ENV=development; export DEBUG='nibus:*'; babel-node --extensions \".ts,.tsx,.js\" --inspect src/test/socket.ts",
     "build": "export BABEL_ENV=production; tsc --emitDeclarationOnly && babel src --out-dir lib --extensions \".ts,.tsx,.js\"",
     "type-check": "tsc --noEmit"
   },
@@ -41,9 +42,10 @@
     "@types/crc": "^3.4.0",
     "@types/debug": "^4.1.0",
     "@types/jest": "^24.0.0",
+    "@types/jest-diff": "^20.0.0",
     "@types/js-yaml": "^3.11.1",
     "@types/lodash": "^4.14.109",
-    "@types/node": "^10.3.1",
+    "@types/node": "^11.9.3",
     "@types/serialport": "^7.0.0",
     "@types/yargs": "^12.0.8",
     "babel-core": "^7.0.0-bridge.0",
@@ -68,7 +70,8 @@
     "serialport": "^7.0.2",
     "table-layout": "^0.4.4",
     "usb-detection": "^4.0.0",
-    "yargs": "^12.0.5"
+    "xpipe": "^1.0.5",
+    "yargs": "^13.1.0"
   },
   "jest": {
     "moduleFileExtensions": [
@@ -88,5 +91,8 @@
       "**/__tests__/*.+(ts|tsx|js)",
       "**/src/**/*.spec.+(ts|tsx|js)"
     ]
+  },
+  "peerDependencies": {
+    "jest": "^24.1.0"
   }
 }
