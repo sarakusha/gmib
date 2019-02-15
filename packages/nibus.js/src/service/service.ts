@@ -127,6 +127,7 @@ class NibusService extends EventEmitter {
         break;
       }
       case 'version':
+        ping(connection, new Address('::6e:ec'));
         // TODO: get mac
         break;
       default:
@@ -134,28 +135,15 @@ class NibusService extends EventEmitter {
     }
   }
 
-  public async start() {
+  public async start(watch = true) {
     if (this.isStarted) return;
     const { detection } = detector;
     if (detection == null) throw new Error('detection is N/A');
-    const ports = await detector.getPorts();
-    this.connections = ports
-      .filter(({ category }) => category != null && detection.mibCategories[category] != null)
-      .map(({ comName, category }) =>
-        new NibusConnection(comName, detection.mibCategories[category!]));
-
-    this.connections.length &&
-    debug(`It has created ${this.connections.length} nibus-connection(s): ${this.connections.map(
-      connection => connection.description.category).join()}`);
-
-    this.connections.forEach((connection) => {
-      this.emit('add', connection);
-      this.find(connection);
-    });
-
     detector.on('add', this.addHandler);
     detector.on('remove', this.removeHandler);
-    detector.start();
+    await detector.getPorts();
+
+    if (watch) detector.start();
     this.isStarted = true;
     process.once('SIGINT', () => this.stop());
     process.once('SIGTERM', () => this.stop());
