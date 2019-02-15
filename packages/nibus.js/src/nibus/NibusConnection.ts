@@ -30,7 +30,7 @@ class WaitedNmsDatagram {
 
   constructor(
     public readonly req: NmsDatagram,
-    resolve: (datagram: NmsDatagram|NmsDatagram[]) => void,
+    resolve: (datagram: NmsDatagram | NmsDatagram[]) => void,
     reject: (reason: Error) => void,
     callback: (self: WaitedNmsDatagram) => void) {
     let timer: NodeJS.Timer;
@@ -125,11 +125,15 @@ export default class NibusConnection extends EventEmitter {
         if (closed) return reject(new Error('Closed'));
         if (!this.serial.isOpen) {
           await new Promise((resolve, reject) => {
-            const timeout = setTimeout(reject, 2000);
-            this.serial.once('open', () => {
+            const timeout = setTimeout(() => {
+              this.serial.off('open', handleOpen);
+              reject(new Error('Can\'t open port'));
+            }, 2000);
+            const handleOpen = () => {
               clearTimeout(timeout);
               resolve();
-            });
+            };
+            this.serial.once('open', handleOpen);
           });
         }
         if (!encoder.write(datagram)) {
