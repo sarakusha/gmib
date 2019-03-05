@@ -20,7 +20,7 @@
   },
   "author": "Andrei Sarakeev",
   "license": "ISC",
-  "private": true,
+  "private": false,
   "devDependencies": {
     "@babel/cli": "^7",
     "@babel/core": "^7.2.2",
