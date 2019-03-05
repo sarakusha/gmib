@@ -4,6 +4,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.getMibFile = getMibFile;
+exports.getMibPrototype = getMibPrototype;
 exports.default = void 0;
 
 var _events = require("events");
@@ -26,16 +27,23 @@ var _nms = require("../nms");
 
 var _mib = require("./mib");
 
-var _detector = _interopRequireDefault(require("../service/detector"));
+var _mib2json = require("./mib2json");
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
+// import detector from '../service/detector';
 const debug = (0, _debug.default)('nibus:devices');
 const $values = Symbol('values');
 const $errors = Symbol('errors');
 const $dirties = Symbol('dirties');
+
+function safeNumber(val) {
+  const num = parseFloat(val);
+  return Number.isNaN(num) || `${num}` !== val ? val : num;
+}
+
 var PrivateProps;
 
 (function (PrivateProps) {
@@ -71,7 +79,9 @@ function defineMibProperty(target, key, types, prop) {
   if (type != null) {
     const {
       appinfo: info = {},
-      enumeration
+      enumeration,
+      minInclusive,
+      maxInclusive
     } = type;
     const {
       units,
@@ -83,6 +93,8 @@ function defineMibProperty(target, key, types, prop) {
     precision && converters.push((0, _mib.precisionConverter)(precision));
     enumeration && converters.push((0, _mib.enumerationConverter)(enumeration));
     representation && size && converters.push((0, _mib.representationConverter)(representation, size));
+    minInclusive && converters.push((0, _mib.minInclusiveConverter)(minInclusive));
+    maxInclusive && converters.push((0, _mib.maxInclusiveConverter)(maxInclusive));
   }
 
   if (key === 'brightness' && prop.type === 'xs:unsignedByte') {
@@ -142,12 +154,18 @@ function defineMibProperty(target, key, types, prop) {
   if (isWritable) {
     attributes.set = function (newValue) {
       console.assert(Reflect.get(this, '$countRef') > 0, 'Device was released');
-      this.setRawValue(id, (0, _mib.convertFrom)(converters)(newValue));
+      const value = (0, _mib.convertFrom)(converters)(newValue);
+
+      if (value === undefined || Number.isNaN(value)) {
+        throw new Error(`Invalid value: ${JSON.stringify(newValue)}`);
+      }
+
+      this.setRawValue(id, value);
     };
   }
 
   Reflect.defineProperty(target, propertyKey, attributes);
-  return id;
+  return [id, propertyKey];
 }
 
 function getMibFile(mibname) {
@@ -177,31 +195,24 @@ class DevicePrototype extends _events.EventEmitter {
     Reflect.defineMetadata('deviceType', (0, _mib.toInt)(device.appinfo.device_type), this);
     device.appinfo.loader_type && Reflect.defineMetadata('loaderType', (0, _mib.toInt)(device.appinfo.loader_type), this);
     device.appinfo.firmware && Reflect.defineMetadata('firmware', device.appinfo.firmware, this);
-    types.errorType && Reflect.defineMetadata('errorType', types.errorType.enumeration, this);
-
-    const mibCategory = _lodash.default.find(_detector.default.detection.mibCategories, {
-      mib: mibname
-    });
-
-    if (mibCategory) {
-      const {
-        category,
-        disableBatchReading
-      } = mibCategory;
-      Reflect.defineMetadata('category', category, this);
-      Reflect.defineMetadata('disableBatchReading', !!disableBatchReading, this);
-    }
+    types.errorType && Reflect.defineMetadata('errorType', types.errorType.enumeration, this); // TODO: category
+    // const mibCategory = _.find(detector.detection!.mibCategories, { mib: mibname });
+    // if (mibCategory) {
+    //   const { category, disableBatchReading } = mibCategory;
+    //   Reflect.defineMetadata('category', category, this);
+    //   Reflect.defineMetadata('disableBatchReading', !!disableBatchReading, this);
+    // }
 
     const keys = Reflect.ownKeys(device.properties);
     Reflect.defineMetadata('mibProperties', keys, this);
     const map = {};
     keys.forEach(key => {
-      const id = defineMibProperty(this, key, types, device.properties[key]);
+      const [id, propName] = defineMibProperty(this, key, types, device.properties[key]);
 
       if (!map[id]) {
-        map[id] = [key];
+        map[id] = [propName];
       } else {
-        map[id].push(key);
+        map[id].push(propName);
       }
     });
     Reflect.defineMetadata('map', map, this);
@@ -227,11 +238,9 @@ class DevicePrototype extends _events.EventEmitter {
      * @event IDevice#disconnected
      */
 
-    this.emit(value != null ? 'connected' : 'disconnected');
-
-    if (value) {
-      this.drain().catch(() => {});
-    }
+    this.emit(value != null ? 'connected' : 'disconnected'); // if (value) {
+    //   this.drain().catch(() => {});
+    // }
   } // noinspection JSUnusedGlobalSymbols
 
 
@@ -267,6 +276,18 @@ class DevicePrototype extends _events.EventEmitter {
     return id;
   }
 
+  getName(idOrName) {
+    const map = Reflect.getMetadata('map', this);
+
+    if (Reflect.has(map, idOrName)) {
+      return map[idOrName][0];
+    }
+
+    const keys = Reflect.getMetadata('mibProperties', this);
+    if (typeof idOrName === 'string' && keys.includes(idOrName)) return idOrName;
+    throw new Error(`Unknown property ${idOrName}`);
+  }
+
   getRawValue(idOrName) {
     const id = this.getId(idOrName);
     const {
@@ -276,12 +297,13 @@ class DevicePrototype extends _events.EventEmitter {
   }
 
   setRawValue(idOrName, value, isDirty = true) {
+    // debug(`setRawValue(${idOrName}, ${JSON.stringify(safeNumber(value))})`);
     const id = this.getId(idOrName);
     const {
       [$values]: values,
       [$errors]: errors
     } = this;
-    values[id] = value;
+    values[id] = safeNumber(value);
     delete errors[id];
     this.setDirty(id, isDirty);
   }
@@ -443,7 +465,7 @@ class DevicePrototype extends _events.EventEmitter {
     return ids.length > 0 ? this.read(...ids) : Promise.resolve([]);
   }
 
-  read(...ids) {
+  async read(...ids) {
     const {
       connection
     } = this;
@@ -455,8 +477,10 @@ class DevicePrototype extends _events.EventEmitter {
     const chunks = (0, _helper.chunkArray)(ids, disableBatchReading ? 1 : 21);
     debug(`read [${chunks.map(chunk => `[${chunk.join()}]`).join()}] from [${this.address}]`);
     const requests = chunks.map(chunk => (0, _nms.createNmsRead)(this.address, ...chunk));
-    return Promise.all(requests.map((datagram, index) => connection.sendDatagram(datagram).then(response => {
-      const datagrams = !Array.isArray(response) ? [response] : response;
+    return requests.reduce(async (promise, datagram) => {
+      const result = await promise;
+      const response = await connection.sendDatagram(datagram);
+      const datagrams = Array.isArray(response) ? response : [response];
       datagrams.forEach(({
         id,
         value,
@@ -467,55 +491,45 @@ class DevicePrototype extends _events.EventEmitter {
         } else {
           this.setError(id, new _errors.NibusError(status, this));
         }
-      });
-      return datagrams.reduce((result, {
-        id
-      }) => {
+
         const names = map[id];
         console.assert(names && names.length > 0, `Invalid id ${id}`);
         names.forEach(propName => {
-          const value = this[propName];
-          const error = this.getError(id);
-          result[propName] = error ? {
-            error: error.message
-          } : value;
+          result[propName] = status === 0 ? this[propName] : {
+            error: (this.getError(id) || {}).message || 'error'
+          };
         });
-        return result;
-      }, {});
-    }, reason => {
-      return chunks[index].reduce((result, id) => {
-        this.setError(id, reason);
-        map[id].forEach(propName => result[propName] = reason);
-        return result;
       });
-    }))).then(results => results.length > 1 ? Object.assign({}, ...results) : results[0]);
+      return result;
+    }, Promise.resolve({}));
   }
 
 } // tslint:disable-next-line
 
 
-/**
- * @fires new
- * @fires delete
- */
-class Devices extends _events.EventEmitter {
-  constructor(...args) {
-    super(...args);
+function findMibByType(type) {
+  const cacheMibs = Object.keys(mibTypesCache);
+  const cached = cacheMibs.find(mib => Reflect.getMetadata('deviceType', mibTypesCache[mib].prototype) === type);
+  if (cached) return cached;
+  const mibs = (0, _mib2json.getMibsSync)();
+  return _lodash.default.difference(mibs, cacheMibs).find(mibName => {
+    const mibfile = getMibFile(mibName);
 
-    _defineProperty(this, "get", () => _lodash.default.values(deviceMap));
-  }
+    const mib = require(mibfile);
 
-  create(address, mib = 'minihost_v2.06b') {
-    const targetAddress = new _Address.default(address);
-    let device = deviceMap[targetAddress.toString()];
+    const {
+      types
+    } = mib;
+    const device = types[mib.device];
+    return (0, _mib.toInt)(device.appinfo.device_type) === type;
+  });
+}
 
-    if (device) {
-      console.assert(Reflect.getMetadata('mib', device) === mib, `mibs are different, expected ${mib}`);
-      device.addref();
-      return device;
-    } // tslint:disable-next-line
+function getConstructor(mib) {
+  let constructor = mibTypesCache[mib];
 
-
+  if (!constructor) {
+    // tslint:disable-next-line
     function Device(address) {
       _events.EventEmitter.apply(this);
 
@@ -527,24 +541,60 @@ class Devices extends _events.EventEmitter {
       this.$debounceDrain = _lodash.default.debounce(this.drain, 25);
     }
 
-    let constructor = mibTypesCache[mib];
+    const prototype = new DevicePrototype(mib);
+    Device.prototype = Object.create(prototype);
+    constructor = Device;
+    mibTypesCache[mib] = constructor;
+  }
 
-    if (!constructor) {
-      const prototype = new DevicePrototype(mib);
-      Device.prototype = Object.create(prototype);
-      constructor = Device;
-      mibTypesCache[mib] = constructor;
+  return constructor;
+}
+
+function getMibPrototype(mib) {
+  return getConstructor(mib).prototype;
+}
+
+class Devices extends _events.EventEmitter {
+  constructor(...args) {
+    super(...args);
+
+    _defineProperty(this, "get", () => _lodash.default.values(deviceMap));
+
+    _defineProperty(this, "find", address => {
+      const targetAddress = new _Address.default(address);
+      return deviceMap[targetAddress.toString()];
+    });
+  }
+
+  create(address, mibOrType) {
+    let mib;
+
+    if (typeof mibOrType === 'number') {
+      mib = findMibByType(mibOrType);
+      if (mib === undefined) throw new Error('Unknown mib type');
+    } else if (typeof mibOrType === 'string') {
+      mib = String(mibOrType || 'minihost_v2.06b');
+    } else {
+      throw new Error('mib expected');
     }
 
-    device = Reflect.construct(constructor, [targetAddress]);
-    deviceMap[targetAddress.toString()] = device;
-    /**
-     * New device event
-     * @event Devices#new
-     * @param {IDevice} device
-     */
+    const targetAddress = new _Address.default(address);
+    let device = deviceMap[targetAddress.toString()];
 
-    this.emit('new', device);
+    if (device) {
+      console.assert(Reflect.getMetadata('mib', device) === mib, `mibs are different, expected ${mib}`);
+      device.addref();
+      return device;
+    }
+
+    const constructor = getConstructor(mib);
+    device = Reflect.construct(constructor, [targetAddress]);
+
+    if (!targetAddress.isEmpty) {
+      deviceMap[targetAddress.toString()] = device;
+      process.nextTick(() => this.emit('new', device));
+    }
+
     return device;
   }
 

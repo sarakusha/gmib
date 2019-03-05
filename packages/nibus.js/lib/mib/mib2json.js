@@ -7,6 +7,7 @@ exports.mib2json = mib2json;
 exports.convert = convert;
 exports.convertDir = convertDir;
 exports.getMibs = getMibs;
+exports.getMibsSync = getMibsSync;
 
 var _fs = _interopRequireDefault(require("fs"));
 
@@ -168,7 +169,8 @@ function mib2json(mibpath) {
           const appinfo = current.appinfo;
 
           if (appinfo[local]) {
-            appinfo[local] += '\n' + text;
+            appinfo[local] += `
+${text}`;
           } else {
             appinfo[local] = text;
           }
@@ -226,14 +228,31 @@ function convertDir(dir) {
   });
 }
 
+let mibs = [];
+const mibsDir = path.resolve(__dirname, '../../mibs');
+
+function filesToMibs(files) {
+  return files.map(file => jsonMibRe.exec(file)).filter(matches => matches != null).map(matches => matches[1]);
+}
+
 function getMibs() {
   return new Promise((resolve, reject) => {
-    _fs.default.readdir(path.resolve(__dirname, '../../mibs'), (err, files) => {
+    _fs.default.readdir(mibsDir, (err, files) => {
       if (err) {
+        mibs = [];
         return reject(err);
       }
 
-      resolve(files.map(file => jsonMibRe.exec(file)).filter(matches => matches != null).map(matches => matches[1]));
+      mibs = filesToMibs(files);
+      resolve(mibs);
     });
   });
+}
+
+function getMibsSync() {
+  if (!mibs || mibs.length === 0) {
+    mibs = filesToMibs(_fs.default.readdirSync(mibsDir));
+  }
+
+  return mibs;
 }

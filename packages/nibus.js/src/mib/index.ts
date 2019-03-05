@@ -1,2 +1,2 @@
-export { default as devices, IDevice } from './devices';
-export { convert, convertDir, mib2json, getMibs } from './mib2json';
+export { default as devices, IDevice, getMibPrototype } from './devices';
+export { convert, convertDir, mib2json, getMibs, getMibsSync } from './mib2json';

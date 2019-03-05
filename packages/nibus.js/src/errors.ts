@@ -1,3 +1,5 @@
+import Address from './Address';
+
 export class MibError extends Error {
 }
 
@@ -13,7 +15,11 @@ export class NibusError extends Error {
 }
 
 export class TimeoutError extends Error {
-  constructor(msg = 'Timeout error') {
+  constructor(address: Address);
+  constructor(msg?: string);
+  constructor(param: any) {
+    const defaultMsg = 'Timeout error';
+    const msg = param instanceof Address ? `${defaultMsg} on ${param}` : param || defaultMsg;
     super(msg);
   }
 }

@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.default = void 0;
+exports.default = exports.Protocol = void 0;
 
 require("reflect-metadata");
 
@@ -17,9 +17,17 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
-const leadZero = value => `0${value}`.slice(-2); // @timeStamp
+let Protocol;
+exports.Protocol = Protocol;
 
+(function (Protocol) {
+  Protocol[Protocol["NMS"] = 1] = "NMS";
+  Protocol[Protocol["SARP"] = 2] = "SARP";
+})(Protocol || (exports.Protocol = Protocol = {}));
 
+const leadZero = value => `0${value}`.slice(-2);
+
+// @timeStamp
 class NibusDatagram {
   // @noenum
   // @noenum
@@ -74,16 +82,16 @@ class NibusDatagram {
   }
 
   toJSON() {
-    // @ts-ignore
-    const result = { ...this
-    };
-    result.source = result.source.toString();
-    result.destination = result.destination.toString();
     const ts = new Date(Reflect.getMetadata('timeStamp', this));
-    result.timeStamp = `${leadZero(ts.getHours())}:${leadZero(ts.getMinutes())}:\
-${leadZero(ts.getSeconds())}.${ts.getMilliseconds()}`;
-    delete result.raw;
-    return result; // return {
+    return {
+      priority: this.priority,
+      protocol: this.protocol,
+      source: this.source.toString(),
+      destination: this.destination.toString(),
+      timeStamp: `${leadZero(ts.getHours())}:${leadZero(ts.getMinutes())}:\
+${leadZero(ts.getSeconds())}.${ts.getMilliseconds()}`,
+      data: Buffer.from(this.data)
+    }; // return {
     //   destination: this.destination.toString(),
     //   source: this.source.toString(),
     //   priority: this.priority,

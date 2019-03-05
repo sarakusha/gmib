@@ -1,5 +1,6 @@
 mibCategories:
   siolynx:
+    mib: siolynx
     link: true
     find: version
   minihost:

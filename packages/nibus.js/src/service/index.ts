@@ -1,2 +1,3 @@
-export { default } from './service';
-export { default as detector, IMibDescription } from './detector';
+export { default } from './session';
+// export { default as detector } from './detector';
+export { IMibDescription } from './KnownPorts';

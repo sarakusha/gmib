@@ -115,7 +115,7 @@ export function decodeValue(valueType: NmsValueType, buffer: Buffer, offset = 0)
 
 function writeValue(valueType: NmsValueType, value: any, buffer: Buffer, offset = 0): number {
   let pos = offset;
-  switch (valueType && 0xFF) {
+  switch (valueType) {
     case NmsValueType.Boolean:
       pos = buffer.writeUInt8(value ? 1 : 0, pos);
       break;

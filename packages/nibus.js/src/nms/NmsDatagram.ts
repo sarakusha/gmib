@@ -91,6 +91,12 @@ export default class NmsDatagram extends NibusDatagram implements INmsOptions {
         break;
       case NmsServiceType.InformationReport:
         return this.nms[0];
+      case NmsServiceType.UploadSegment:
+        return NmsValueType.UInt32;
+      case NmsServiceType.RequestDomainUpload:
+        return NmsValueType.UInt32;
+      case NmsServiceType.RequestDomainDownload:
+        return NmsValueType.UInt32;
       default:
         break;
     }
@@ -119,12 +125,14 @@ export default class NmsDatagram extends NibusDatagram implements INmsOptions {
       case NmsServiceType.InformationReport:
         return safeDecode(1);
       case NmsServiceType.RequestDomainUpload:
-        return safeDecode(1, NmsValueType.UInt32);
+        return safeDecode(1);
       case NmsServiceType.UploadSegment:
         return {
           data: nms.slice(5),
-          offset: safeDecode(1, NmsValueType.UInt32),
+          offset: safeDecode(1),
         };
+      case NmsServiceType.RequestDomainDownload:
+        return safeDecode(1);
       default:
         return undefined;
     }

@@ -1,12 +1,14 @@
-export function chunkArray(array: string|any[], len: number) {
-  const ret: any[] = [];
+type Arrayable = any[] | Buffer | string;
+
+export function chunkArray<T extends Arrayable>(array: T, len: number) {
+  const ret: T[] = [];
   const size = Math.ceil(array.length / len);
   ret.length = size;
   let offset;
 
   for (let i = 0; i < size; i += 1) {
     offset = i * len;
-    ret[i] = array.slice(offset, offset + len);
+    ret[i] = array.slice(offset, offset + len) as T;
   }
 
   return ret;
@@ -26,5 +28,3 @@ export function printBuffer(buffer: Buffer) {
 //   }
 //   return result;
 // }
-
-

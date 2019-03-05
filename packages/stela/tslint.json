@@ -1,17 +1,29 @@
 {
-    "defaultSeverity": "error",
-    "extends": [
-        "tslint-config-airbnb",
-        "tslint-react",
-        "tslint-react-a11y"
+  "defaultSeverity": "error",
+  "extends": [
+    "tslint-config-airbnb",
+    "tslint-react",
+    "tslint-react-a11y",
+    "tslint-react-hooks"
+  ],
+  "jsRules": {},
+  "rules": {
+    "import-name": false,
+    "jsx-boolean-value": false,
+    "jsx-no-multiline-js": false,
+    "semicolon": [
+      true,
+      "always",
+      "ignore-bound-class-methods"
     ],
-    "jsRules": {},
-    "rules": {
-        "import-name": false,
-        "jsx-boolean-value": false,
-        "jsx-no-multiline-js": false,
-        "semicolon": [true, "always", "ignore-bound-class-methods"],
-        "variable-name": [true, "ban-keywords", "check-format", "allow-leading-underscore", "allow-pascal-case"]
-    },
-    "rulesDirectory": []
+    "variable-name": [
+      true,
+      "ban-keywords",
+      "check-format",
+      "allow-leading-underscore",
+      "allow-pascal-case"
+    ],
+    "react-hooks-nesting": "error"
+  },
+  "rulesDirectory": []
 }

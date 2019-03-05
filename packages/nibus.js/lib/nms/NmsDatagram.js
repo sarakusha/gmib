@@ -99,6 +99,15 @@ class NmsDatagram extends _nibus.NibusDatagram {
       case _NmsServiceType.default.InformationReport:
         return this.nms[0];
 
+      case _NmsServiceType.default.UploadSegment:
+        return _NmsValueType.default.UInt32;
+
+      case _NmsServiceType.default.RequestDomainUpload:
+        return _NmsValueType.default.UInt32;
+
+      case _NmsServiceType.default.RequestDomainDownload:
+        return _NmsValueType.default.UInt32;
+
       default:
         break;
     }
@@ -139,13 +148,16 @@ class NmsDatagram extends _nibus.NibusDatagram {
         return safeDecode(1);
 
       case _NmsServiceType.default.RequestDomainUpload:
-        return safeDecode(1, _NmsValueType.default.UInt32);
+        return safeDecode(1);
 
       case _NmsServiceType.default.UploadSegment:
         return {
           data: nms.slice(5),
-          offset: safeDecode(1, _NmsValueType.default.UInt32)
+          offset: safeDecode(1)
         };
+
+      case _NmsServiceType.default.RequestDomainDownload:
+        return safeDecode(1);
 
       default:
         return undefined;
@@ -163,21 +175,30 @@ class NmsDatagram extends _nibus.NibusDatagram {
   }
 
   toJSON() {
-    const result = super.toJSON();
+    const {
+      data,
+      protocol,
+      ...props
+    } = super.toJSON();
+    const result = { ...props,
+      protocol: _nibus.Protocol.NMS,
+      id: this.id,
+      service: this.service,
+      data: undefined
+    };
 
     if (this.isResponse) {
-      delete result.isResponsible;
-
       if (this.valueType !== undefined) {
-        result.value = this.value;
+        result.value = this.value.toString();
         result.valueType = _NmsValueType.default[this.valueType];
       }
 
       result.status = this.status;
-      delete result.nms;
+    } else {
+      result.isResponsible = this.isResponsible;
+      result.nms = Buffer.from(this.nms);
     }
 
-    delete result.data;
     return result;
   }
 

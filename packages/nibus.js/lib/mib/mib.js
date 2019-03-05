@@ -10,6 +10,8 @@ exports.enumerationConverter = enumerationConverter;
 exports.representationConverter = representationConverter;
 exports.packed8floatConverter = packed8floatConverter;
 exports.getIntSize = getIntSize;
+exports.minInclusiveConverter = minInclusiveConverter;
+exports.maxInclusiveConverter = maxInclusiveConverter;
 exports.convertFrom = exports.convertTo = exports.versionTypeConverter = exports.fixedPointNumber4Converter = exports.percentConverter = exports.booleanConverter = exports.toInt = exports.withValue = void 0;
 
 var _printf = _interopRequireDefault(require("printf"));
@@ -53,21 +55,22 @@ function precisionConverter(precision) {
 }
 
 function enumerationConverter(enumerationValues) {
-  const enumeration = {};
+  const from = {};
+  const to = {};
   const keys = Reflect.ownKeys(enumerationValues);
   keys.forEach(key => {
     const value = enumerationValues[key];
     const index = toInt(key);
-    enumeration[value.annotation] = index;
-    enumeration[index] = value.annotation;
+    from[value.annotation] = index;
+    to[index] = value.annotation;
   });
   return {
-    from: value => typeof value === 'string' ? enumeration[value] : value,
-    to: value => typeof value === 'number' ? enumeration[value] : value
+    from: value => typeof value === 'string' && Reflect.has(from, value) ? from[value] : undefined,
+    to: value => (typeof value === 'number' || typeof value === 'string') && Reflect.has(to, value) ? to[value] : value
   };
 }
 
-const yes = /^\s*(yes|on|true|1|да)\s*/i;
+const yes = /^\s*(yes|on|true|1|да)\s*$/i;
 const no = /^\s*(no|off|false|0|нет)\s*$/i;
 const booleanConverter = {
   from: value => {
@@ -106,7 +109,7 @@ function representationConverter(format, size) {
   switch (format) {
     case '%b':
     case '%B':
-      fmt = '%0' + size * 8 + 's';
+      fmt = `%0${size * 8}s`;
 
       from = value => typeof value === 'string' ? parseInt(value, 2) : value;
 
@@ -116,7 +119,7 @@ function representationConverter(format, size) {
 
     case '%x':
     case '%X':
-      fmt = '%0' + size + 's';
+      fmt = `%0${size}s`;
 
       from = value => typeof value === 'string' ? parseInt(value, 16) : value;
 
@@ -206,7 +209,23 @@ function getIntSize(type) {
   }
 }
 
-const convertTo = converters => value => converters.reduceRight((result, converter) => result && converter.to(result), value);
+function minInclusiveConverter(min) {
+  const minIncl = parseFloat(min);
+  return {
+    from: value => Math.max(value, minIncl),
+    to: value => value
+  };
+}
+
+function maxInclusiveConverter(max) {
+  const maxIncl = parseFloat(max);
+  return {
+    from: value => Math.min(value, maxIncl),
+    to: value => value
+  };
+}
+
+const convertTo = converters => value => converters.reduceRight((result, converter) => result !== undefined && converter.to(result), value);
 
 exports.convertTo = convertTo;
 

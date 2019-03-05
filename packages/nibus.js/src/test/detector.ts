@@ -13,15 +13,15 @@ function delay(timeout: number) {
   return new Promise(resolve => setTimeout(resolve, timeout));
 }
 
-interface ISerialPortType {
-  comName: string;
-  manufacturer: string;
-  serialNumber: string;
-  pnpId?: any;
-  locationId: string;
-  vendorId: string;
-  productId: string;
-}
+// interface ISerialPortType {
+//   comName: string;
+//   manufacturer: string;
+//   serialNumber: string;
+//   pnpId?: any;
+//   locationId: string;
+//   vendorId: string;
+//   productId: string;
+// }
 
 // usbDetection.on(`add:${parseInt(vid, 16)}:${parseInt(pid, 16)}`, (device) => {
 usbDetection.on(`add`, (device) => {
@@ -31,11 +31,11 @@ usbDetection.on(`add`, (device) => {
 
 function findAll() {
   serialport.list()
-    .then((list: ISerialPortType[]) => {
+    .then((list) => {
       list.filter(item => !!item.vendorId)
         .forEach(data => console.info(JSON.stringify(data)));
       console.info('=====================================================');
-    })
+    });
     // .then(() => {
     //   usbDetection.find((err, list) => {
     //     list && list.forEach(console.info);
@@ -46,7 +46,7 @@ function findAll() {
 
 function find() {
   return serialport.list()
-    .then((list: ISerialPortType[]) => {
+    .then((list) => {
       const [port] = _.filter(
         list,
         {

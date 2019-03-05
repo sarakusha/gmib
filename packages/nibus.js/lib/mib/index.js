@@ -15,6 +15,12 @@ Object.defineProperty(exports, "IDevice", {
     return _devices.IDevice;
   }
 });
+Object.defineProperty(exports, "getMibPrototype", {
+  enumerable: true,
+  get: function () {
+    return _devices.getMibPrototype;
+  }
+});
 Object.defineProperty(exports, "convert", {
   enumerable: true,
   get: function () {
@@ -37,6 +43,12 @@ Object.defineProperty(exports, "getMibs", {
   enumerable: true,
   get: function () {
     return _mib2json.getMibs;
+  }
+});
+Object.defineProperty(exports, "getMibsSync", {
+  enumerable: true,
+  get: function () {
+    return _mib2json.getMibsSync;
   }
 });
 

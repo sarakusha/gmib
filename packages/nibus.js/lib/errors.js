@@ -5,6 +5,10 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.TimeoutError = exports.NibusError = exports.MibError = void 0;
 
+var _Address = _interopRequireDefault(require("./Address"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
 class MibError extends Error {}
 
 exports.MibError = MibError;
@@ -25,7 +29,9 @@ class NibusError extends Error {
 exports.NibusError = NibusError;
 
 class TimeoutError extends Error {
-  constructor(msg = 'Timeout error') {
+  constructor(param) {
+    const defaultMsg = 'Timeout error';
+    const msg = param instanceof _Address.default ? `${defaultMsg} on ${param}` : param || defaultMsg;
     super(msg);
   }
 

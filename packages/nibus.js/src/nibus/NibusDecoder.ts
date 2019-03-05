@@ -50,7 +50,7 @@ export default class NibusDecoder extends Transform {
     const skipped: number[] = [];
     const reset = (index: number) => {
       skipped.push(this.datagram[0]);
-      debug('dropped: ', Buffer.from(skipped));
+      debugSerial('dropped: ', printBuffer(Buffer.from(skipped)));
       const retry = [...this.datagram, ...data.slice(index + 1)].slice(1);
       this.datagram.length = 0;
       this.state = States.PREAMBLE_WAITING;
@@ -84,7 +84,9 @@ export default class NibusDecoder extends Transform {
             this.state = States.PREAMBLE_WAITING;
             if (crcNibus(this.datagram.slice(1))) {
               const frame = Buffer.from(this.datagram);
+              skipped.length > 0 && debugSerial('skipped: ', printBuffer(Buffer.from(skipped)));
               this.datagram.length = 0;
+              skipped.length = 0;
               if (NmsDatagram.isNmsFrame(frame)) {
                 this.push(new NmsDatagram(frame));
               } else if (SarpDatagram.isSarpFrame(frame)) {

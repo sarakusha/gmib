@@ -36,7 +36,7 @@ function ping(connection, address) {
   return connection.sendDatagram((0, _nms.createNmsRead)(address, 2)).then(datagram => {
     return Reflect.getOwnMetadata('timeStamp', datagram) - now;
   }).catch(reson => {
-    debug(`ping failed ${reson}`);
+    debug(`ping [${address}] failed ${reson}`);
     return -1;
   });
 }
@@ -170,7 +170,8 @@ class NibusService extends _events.EventEmitter {
         }
 
       case 'version':
-        // TODO: get mac
+        ping(connection, new _Address.default('::6e:ec')); // TODO: get mac
+
         break;
 
       default:
@@ -178,31 +179,19 @@ class NibusService extends _events.EventEmitter {
     }
   }
 
-  start() {
+  async start(watch = true) {
     if (this.isStarted) return;
     const {
-      detection,
-      ports
+      detection
     } = _detector.default;
     if (detection == null) throw new Error('detection is N/A');
-    this.connections = ports.filter(({
-      category
-    }) => category != null && detection.mibCategories[category] != null).map(({
-      comName,
-      category
-    }) => new _nibus.NibusConnection(comName, detection.mibCategories[category]));
-    this.connections.length && debug(`It was created ${this.connections.length} nibus-connection(s): ${this.connections.map(connection => connection.description.category).join()}`);
-    this.connections.forEach(connection => {
-      this.emit('add', connection);
-      this.find(connection);
-    });
 
     _detector.default.on('add', this.addHandler);
 
     _detector.default.on('remove', this.removeHandler);
 
-    _detector.default.start();
-
+    await _detector.default.getPorts();
+    if (watch) _detector.default.start();
     this.isStarted = true;
     process.once('SIGINT', () => this.stop());
     process.once('SIGTERM', () => this.stop());
@@ -229,8 +218,8 @@ class NibusService extends _events.EventEmitter {
     this.connections.forEach(connection => connection.close());
 
     _mib.devices.get().forEach(device => {
-      device.connection = undefined;
-      debug(`mib-device ${device.address} was disconnected`); // device.emit('disconnected');
+      device.connection && debug(`mib-device ${device.address} was disconnected`);
+      device.connection = undefined; // device.emit('disconnected');
     });
 
     this.connections.length = 0;

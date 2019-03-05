@@ -43,21 +43,23 @@ export function precisionConverter(precision: string): IConverter {
 }
 
 export function enumerationConverter(enumerationValues: IMibType['enumeration']): IConverter {
-  const enumeration: any = {};
+  const from: any = {};
+  const to: any = {};
   const keys = Reflect.ownKeys(enumerationValues!) as string[];
   keys.forEach((key) => {
     const value = enumerationValues![key];
     const index = toInt(key);
-    enumeration[value.annotation] = index;
-    enumeration[index] = value.annotation;
+    from[value.annotation] = index;
+    to[index] = value.annotation;
   });
   return {
-    from: value => typeof value === 'string' ? enumeration[value] : value,
-    to: value => typeof value === 'number' ? enumeration[value] : value,
+    from: value => typeof value === 'string' && Reflect.has(from, value) ? from[value] : undefined,
+    to: value => (typeof value === 'number' || typeof value === 'string')
+    && Reflect.has(to, value) ? to[value] : value,
   };
 }
 
-const yes = /^\s*(yes|on|true|1|да)\s*/i;
+const yes = /^\s*(yes|on|true|1|да)\s*$/i;
 const no = /^\s*(no|off|false|0|нет)\s*$/i;
 export const booleanConverter: IConverter = {
   from: (value) => {
@@ -99,13 +101,13 @@ export function representationConverter(format: string, size: number): IConverte
   switch (format) {
     case '%b':
     case '%B':
-      fmt = '%0' + size * 8 + 's';
+      fmt = `%0${size * 8}s`;
       from = value => typeof value === 'string' ? parseInt(value, 2) : value;
       to = value => typeof value === 'number' ? printf(fmt, value.toString(2)) : value;
       break;
     case '%x':
     case '%X':
-      fmt = '%0' + size + 's';
+      fmt = `%0${size}s`;
       from = value => typeof value === 'string' ? parseInt(value, 16) : value;
       to = value => typeof value === 'number' ? printf(fmt, value.toString(16)) : value;
       break;
@@ -183,8 +185,26 @@ export function getIntSize(type: string) {
   }
 }
 
+export function minInclusiveConverter(min: string) : IConverter {
+  const minIncl = parseFloat(min);
+  return {
+    from: value => Math.max(value as number, minIncl),
+    to: value => value,
+  };
+}
+
+export function maxInclusiveConverter(max: string) : IConverter {
+  const maxIncl = parseFloat(max);
+  return {
+    from: value => Math.min(value as number, maxIncl),
+    to: value => value,
+  };
+}
 export const convertTo = (converters: IConverter[]) => (value: ResultType) =>
-  converters.reduceRight((result, converter) => result && converter.to(result), value);
+  converters.reduceRight(
+    (result, converter) => result !== undefined && converter.to(result),
+    value,
+  );
 
 export const convertFrom = (converters: IConverter[]) => (value: PresentType) =>
   converters.reduce((present, converter) => converter.from(present), value);

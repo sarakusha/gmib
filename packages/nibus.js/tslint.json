@@ -8,7 +8,7 @@
         "quotemark": [true, "single"],
         "indent": [true, "spaces", 2],
         "no-bitwise": false,
-        "no-console": [true, "log", "warning"],
+        "no-console": [false, "log", "warning"],
         "no-unused-expression": [true, "allow-fast-null-checks"],
         "no-this-assignment": [true, {"allow-destructuring": true}],
         "align": [true, "parameters", "statements"],

@@ -5,6 +5,7 @@
     "strict": true,                           /* Enable all strict type-checking options. */
     "experimentalDecorators": true,        /* Enables experimental support for ES7 decorators. */
     "baseUrl": "./",
+    "strictNullChecks": true,
     "paths": {
       "usb-detection": ["@types/usb-detection"],
       "sax": ["@types/sax"],

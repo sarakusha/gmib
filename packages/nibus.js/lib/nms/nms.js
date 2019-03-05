@@ -142,7 +142,7 @@ function decodeValue(valueType, buffer, offset = 0) {
 function writeValue(valueType, value, buffer, offset = 0) {
   let pos = offset;
 
-  switch (valueType && 0xFF) {
+  switch (valueType) {
     case _NmsValueType.default.Boolean:
       pos = buffer.writeUInt8(value ? 1 : 0, pos);
       break;

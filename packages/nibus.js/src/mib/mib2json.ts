@@ -133,7 +133,8 @@ export function mib2json(mibpath: string): Promise<any> {
           const local = this._parser.tag.local;
           const appinfo = current.appinfo;
           if (appinfo[local]) {
-            appinfo[local] += '\n' + text;
+            appinfo[local] += `
+${text}`;
           } else {
             appinfo[local] = text;
           }
@@ -196,16 +197,32 @@ export function convertDir(dir: string) {
   });
 }
 
+let mibs: string[] = [];
+const mibsDir = path.resolve(__dirname, '../../mibs');
+
+function filesToMibs(files: string[]) {
+  return files
+    .map(file => jsonMibRe.exec(file))
+    .filter(matches => matches != null)
+    .map(matches => matches![1]);
+}
+
 export function getMibs(): Promise<string[]> {
   return new Promise((resolve, reject) => {
-    fs.readdir(path.resolve(__dirname, '../../mibs'), (err, files) => {
+    fs.readdir(mibsDir, (err, files) => {
       if (err) {
+        mibs = [];
         return reject(err);
       }
-      resolve(files
-        .map(file => jsonMibRe.exec(file))
-        .filter(matches => matches != null)
-        .map(matches => matches![1]));
+      mibs = filesToMibs(files);
+      resolve(mibs);
     });
   });
+}
+
+export function getMibsSync(): string[] {
+  if (!mibs || mibs.length === 0) {
+    mibs = filesToMibs(fs.readdirSync(mibsDir));
+  }
+  return mibs;
 }

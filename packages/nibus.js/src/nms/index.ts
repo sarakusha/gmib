@@ -1,7 +1,8 @@
 import _ from 'lodash';
 import { AddressParam } from '../Address';
-import NmsDatagram from './NmsDatagram';
+import { NMS_MAX_DATA_LENGTH } from '../nbconst';
 import { encodeValue, getNmsType } from './nms';
+import NmsDatagram from './NmsDatagram';
 import NmsServiceType from './NmsServiceType';
 import NmsValueType from './NmsValueType';
 
@@ -74,12 +75,87 @@ export function createNmsUploadSegment(
     throw new Error('Invalid length');
   }
   const nms = Buffer.alloc(5);
-  nms.writeInt32LE(offset, 0);
+  nms.writeUInt32LE(offset, 0);
   nms.writeUInt8(length, 4);
   return new NmsDatagram({
     destination,
     id,
     nms,
     service: NmsServiceType.UploadSegment,
+  });
+}
+
+export function createNmsRequestDomainDownload(destination: AddressParam, domain: string) {
+  if (domain.length !== 8) {
+    throw new Error('domain must be string of 8 characters');
+  }
+  return new NmsDatagram({
+    destination,
+    id: 0,
+    nms: Buffer.from(domain, 'ascii'),
+    service: NmsServiceType.RequestDomainDownload,
+  });
+}
+
+export function createNmsInitiateDownloadSequence(destination: AddressParam, id: number) {
+  return new NmsDatagram({
+    destination,
+    id,
+    service: NmsServiceType.InitiateDownloadSequence,
+  });
+}
+
+export function createNmsDownloadSegment(
+  destination: AddressParam,
+  id: number,
+  offset: number,
+  data: Buffer) {
+  if (offset < 0 || 0xFFFF < offset) {
+    throw new Error('Invalid offset');
+  }
+  const max = NMS_MAX_DATA_LENGTH - 4;
+  if (data.length > max) {
+    throw new Error(`Too big data. No more than ${max} bytes at a time`);
+  }
+  const ofs = Buffer.alloc(4, 0, 'binary');
+  ofs.writeUInt32LE(offset, 0);
+
+  return new NmsDatagram({
+    destination,
+    id,
+    nms: Buffer.concat([ofs, data]),
+    service: NmsServiceType.DownloadSegment,
+  });
+}
+
+export function createNmsTerminateDownloadSequence(destination: AddressParam, id: number) {
+  return new NmsDatagram({
+    destination,
+    id,
+    service: NmsServiceType.TerminateDownloadSequence,
+  });
+}
+
+export function createNmsVerifyDomainChecksum(
+  destination: AddressParam,
+  id: number,
+  offset: number,
+  size: number,
+  crc: number) {
+  if (offset < 0 || 0xFFFF < offset) {
+    throw new Error('Invalid offset');
+  }
+  if (size < 0 || 0xFFFF < size) {
+    throw new Error('Invalid size');
+  }
+  const nms = Buffer.alloc(10, 0, 'binary');
+  nms.writeUInt32LE(offset, 0);
+  nms.writeUInt32LE(size, 4);
+  nms.writeUInt16LE(crc, 8);
+  return new NmsDatagram({
+    destination,
+    id,
+    nms,
+    service: NmsServiceType.VerifyDomainChecksum,
   });
 }

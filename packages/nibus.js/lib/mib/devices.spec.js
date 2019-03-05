@@ -7,6 +7,7 @@ var _mib2json = require("./mib2json");
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 // import 'reflect-metadata';
+// import {inspect} from 'util';
 describe('Device', () => {
   test('one mib - one prototype', () => {
     const device1 = _devices.default.create('::34:56', 'mcdvi');

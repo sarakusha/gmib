@@ -72,7 +72,7 @@ class NibusDecoder extends _stream.Transform {
 
     const reset = index => {
       skipped.push(this.datagram[0]);
-      debug('dropped: ', Buffer.from(skipped));
+      debugSerial('dropped: ', (0, _helper.printBuffer)(Buffer.from(skipped)));
       const retry = [...this.datagram, ...data.slice(index + 1)].slice(1);
       this.datagram.length = 0;
       this.state = _nbconst.States.PREAMBLE_WAITING;
@@ -117,7 +117,9 @@ class NibusDecoder extends _stream.Transform {
 
             if (crcNibus(this.datagram.slice(1))) {
               const frame = Buffer.from(this.datagram);
+              skipped.length > 0 && debugSerial('skipped: ', (0, _helper.printBuffer)(Buffer.from(skipped)));
               this.datagram.length = 0;
+              skipped.length = 0;
 
               if (_nms.NmsDatagram.isNmsFrame(frame)) {
                 this.push(new _nms.NmsDatagram(frame));
