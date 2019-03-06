@@ -229,6 +229,8 @@ async function reloadDevicesAsync(prevPorts: IKnownPort[], lastAdded?: UsbDetect
          * @event Detector#plug
          */
         detector.emit('plug', device);
+        console.log('PORT', JSON.stringify(port));
+        console.log('DEV', JSON.stringify(device));
         debug(`new device ${device.device || device.vendorId}/\
 ${device.category || device.productId} was plugged to ${device.comName}`);
         if (device.category) {

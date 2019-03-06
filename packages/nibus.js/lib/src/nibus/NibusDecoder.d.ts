@@ -1,9 +1,7 @@
 /// <reference types="node" />
 import { Transform, TransformCallback, TransformOptions } from 'stream';
 export default class NibusDecoder extends Transform {
-    private state;
-    private datagram;
-    private expectedLength;
+    private buf;
     constructor(options?: TransformOptions);
     _transform(chunk: any, encoding: string, callback: TransformCallback): void;
     _flush(callback: TransformCallback): void;

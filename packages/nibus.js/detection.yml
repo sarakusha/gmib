@@ -27,6 +27,12 @@ knownDevices:
     pid: '6001'
     manufacturer: FTDI
     category: siolynx
+  # Windows
+  - device: USB Serial Converter
+    vid: '0403'
+    pid: '6001'
+    manufacturer: FTDI
+    category: siolynx
   - device: FanControl
     vid: '0403'
     pid: '6001'
@@ -46,6 +52,12 @@ knownDevices:
     vid: '0403'
     pid: '6015' # 24597
     manufacturer: 'Nata-Info'
+    category: minihost
+  # Windows
+  - device: USB Serial Converter
+    vid: '0403'
+    pid: '6015'
+    manufacturer: FTDI
     category: minihost
   - device: FT230X Basic UART
     vid: '0403'

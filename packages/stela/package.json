@@ -1,6 +1,6 @@
 {
-  "name": "stela",
-  "version": "1.0.2",
+  "name": "@nata/stela",
+  "version": "1.0.3",
   "description": "Stela",
   "repository": "git@git.nata-info.ru:repository/stela.git",
   "author": "Andrei Sarakeev <sarakusha@gmail.com>",

@@ -16,7 +16,7 @@ const startOptions: StartOptions = {
   max_restarts: 3,
 };
 
-if (process.env.NODE_ENV === 'development') {
+if (path.extname(__filename) === '.ts') {
   startOptions.script = 'service/dev.start.js';
   startOptions.watch = [
     'service/start.ts',
@@ -37,7 +37,7 @@ const startCommand: CommandModule = {
         process.exit(2);
       }
       debug('pm2 is connected');
-      pm2.delete(String(startOptions.name), () =>
+      pm2.delete(startOptions.name!, () =>
         pm2.start(startOptions, (err) => {
           pm2.disconnect();
           if (err) {
