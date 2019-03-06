@@ -16,9 +16,10 @@ function crcNibus(byteArray: number[]) {
 }
 
 export default class NibusDecoder extends Transform {
-  private state = States.PREAMBLE_WAITING;
-  private datagram: number[] = [];
-  private expectedLength = 0;
+  // private state = States.PREAMBLE_WAITING;
+  // private datagram: number[] = [];
+  // private expectedLength = 0;
+  private buf: number[] = [];
 
   constructor(options?: TransformOptions) {
     super({
@@ -31,62 +32,59 @@ export default class NibusDecoder extends Transform {
   public _transform(chunk: any, encoding: string, callback: TransformCallback) {
     console.assert(encoding === 'buffer', 'Unexpected encoding');
     debugSerial(printBuffer(chunk));
-    let data = [...chunk];
-    while (data.length > 0) {
-      data = this.analyze(data);
+    const data = [...this.buf, ...chunk];
+    if (data.length > 0) {
+      this.buf = this.analyze(data);
     }
     callback();
   }
 
   // tslint:disable-next-line
   public _flush(callback: TransformCallback) {
-    this.datagram.length = 0;
-    this.expectedLength = 0;
-    this.state = States.PREAMBLE_WAITING;
+    this.buf.length = 0;
+    // this.datagram.length = 0;
+    // this.expectedLength = 0;
+    // this.state = States.PREAMBLE_WAITING;
     callback();
   }
 
   private analyze(data: number[]) {
-    const skipped: number[] = [];
-    const reset = (index: number) => {
-      skipped.push(this.datagram[0]);
-      debugSerial('dropped: ', printBuffer(Buffer.from(skipped)));
-      const retry = [...this.datagram, ...data.slice(index + 1)].slice(1);
-      this.datagram.length = 0;
-      this.state = States.PREAMBLE_WAITING;
-      return retry;
+    let start = -1;
+    let expectedLength = -1;
+    let state: States = States.PREAMBLE_WAITING;
+    const reset = () => {
+      console.assert(start !== -1, 'reset outside datagram');
+      const ret = start;
+      start = expectedLength = -1;
+      state = States.PREAMBLE_WAITING;
+      return ret;
     };
     for (let i = 0; i < data.length; i += 1) {
-      const b = data[i];
-      switch (this.state) {
+      switch (state) {
         case States.PREAMBLE_WAITING:
-          if (b === PREAMBLE) {
-            this.state = States.HEADER_READING;
-            this.datagram = [b];
-          } else {
-            skipped.push(b);
+          if (data[i] === PREAMBLE) {
+            state = States.HEADER_READING;
+            start = i;
           }
           break;
         case States.HEADER_READING:
-          this.datagram.push(b);
-          if (this.datagram.length > Offsets.LENGTH) {
-            const length = this.datagram[Offsets.LENGTH];
+          if (i - start === Offsets.LENGTH) {
+            const length = data[start + Offsets.LENGTH]; // this.datagram[Offsets.LENGTH];
             if (length - 1 > MAX_DATA_LENGTH) {
-              return reset(i);
+              i = reset();
+              continue;
             }
-            this.state = States.DATA_READING;
-            this.expectedLength = (length + SERVICE_INFO_LENGTH + 2) - 1;
+            state = States.DATA_READING;
+            expectedLength = (length + SERVICE_INFO_LENGTH + 2) - 1;
           }
           break;
         case States.DATA_READING:
-          this.datagram.push(b);
-          if (this.expectedLength === this.datagram.length) {
-            this.state = States.PREAMBLE_WAITING;
-            if (crcNibus(this.datagram.slice(1))) {
-              const frame = Buffer.from(this.datagram);
-              skipped.length > 0 && debugSerial('skipped: ', printBuffer(Buffer.from(skipped)));
-              this.datagram.length = 0;
-              skipped.length = 0;
+          if (expectedLength === i - start + 1) {
+            state = States.PREAMBLE_WAITING;
+            const datagram = data.slice(start, i + 1);
+            if (crcNibus(datagram.slice(1))) {
+              const frame = Buffer.from(datagram);
+              start > 0 && debugSerial('skipped: ', printBuffer(Buffer.from(data.slice(0, start))));
               if (NmsDatagram.isNmsFrame(frame)) {
                 this.push(new NmsDatagram(frame));
               } else if (SarpDatagram.isSarpFrame(frame)) {
@@ -94,9 +92,12 @@ export default class NibusDecoder extends Transform {
               } else {
                 this.push(new NibusDatagram(frame));
               }
+              start = expectedLength = -1;
+              state = States.PREAMBLE_WAITING;
             } else {
               debug('CRC error');
-              return reset(i);
+              i = reset();
+              continue;
             }
           }
           break;
@@ -105,6 +106,6 @@ export default class NibusDecoder extends Transform {
           break;
       }
     } // for
-    return [];
+    return start === -1 ? [] : data.slice(start);
   }
 }

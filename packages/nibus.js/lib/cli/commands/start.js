@@ -24,7 +24,7 @@ const startOptions = {
   max_restarts: 3
 };
 
-if (process.env.NODE_ENV === 'development') {
+if (_path.default.extname(__filename) === '.ts') {
   startOptions.script = 'service/dev.start.js';
   startOptions.watch = ['service/start.ts', 'ipc/Server.ts', 'ipc/SerialTee.ts', 'service/detection.ts'];
 }
@@ -42,7 +42,7 @@ const startCommand = {
 
       debug('pm2 is connected');
 
-      _pm.default.delete(String(startOptions.name), () => _pm.default.start(startOptions, err => {
+      _pm.default.delete(startOptions.name, () => _pm.default.start(startOptions, err => {
         _pm.default.disconnect();
 
         if (err) {
