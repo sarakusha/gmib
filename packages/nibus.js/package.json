@@ -1,6 +1,6 @@
 {
   "name": "@nata/nibus.js",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Nata-Info NiBUS",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -20,7 +20,7 @@
   },
   "author": "Andrei Sarakeev <avs@nata-info.ru>",
   "license": "SEE LICENSE IN eula.txt",
-  "private": true,
+  "private": false,
   "devDependencies": {
     "@babel/cli": "^7",
     "@babel/core": "^7.2.2",
