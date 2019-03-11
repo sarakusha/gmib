@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import { crc16ccitt } from 'crc';
+import _ from 'lodash';
 import Address, { AddressParam } from '../Address';
 import { MAX_DATA_LENGTH, Offsets, PREAMBLE } from '../nbconst';
 
@@ -109,5 +110,18 @@ ${leadZero(ts.getSeconds())}.${ts.getMilliseconds()}`,
     //   priority: this.priority,
     //   protocol: this.pr,
     // };
+  }
+
+  toString(opts?: { pick?: string[], omit?: string[] }) {
+    let self: any = this.toJSON();
+    if (opts) {
+      if (opts.pick) {
+        self = _.pick(self, opts.pick);
+      }
+      if (opts.omit) {
+        self = _.omit(self, opts.omit);
+      }
+    }
+    return JSON.stringify(self);
   }
 }

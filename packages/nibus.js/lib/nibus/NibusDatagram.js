@@ -9,6 +9,8 @@ require("reflect-metadata");
 
 var _crc = require("crc");
 
+var _lodash = _interopRequireDefault(require("lodash"));
+
 var _Address = _interopRequireDefault(require("../Address"));
 
 var _nbconst = require("../nbconst");
@@ -97,6 +99,22 @@ ${leadZero(ts.getSeconds())}.${ts.getMilliseconds()}`,
     //   priority: this.priority,
     //   protocol: this.pr,
     // };
+  }
+
+  toString(opts) {
+    let self = this.toJSON();
+
+    if (opts) {
+      if (opts.pick) {
+        self = _lodash.default.pick(self, opts.pick);
+      }
+
+      if (opts.omit) {
+        self = _lodash.default.omit(self, opts.omit);
+      }
+    }
+
+    return JSON.stringify(self);
   }
 
 }

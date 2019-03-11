@@ -8,7 +8,7 @@ import { printBuffer } from './helper';
 import NibusDatagram from './NibusDatagram';
 
 const debug = debugFactory('nibus:decoder');
-const debugSerial = debugFactory('nibus-serial:decoder');
+// const debugSerial = debugFactory('nibus-serial:decoder');
 
 function crcNibus(byteArray: number[]) {
   const crc = crc16ccitt(Buffer.from(byteArray), 0);
@@ -31,7 +31,7 @@ export default class NibusDecoder extends Transform {
   // tslint:disable-next-line
   public _transform(chunk: any, encoding: string, callback: TransformCallback) {
     console.assert(encoding === 'buffer', 'Unexpected encoding');
-    debugSerial(printBuffer(chunk));
+    // debugSerial(printBuffer(chunk));
     const data = [...this.buf, ...chunk];
     if (data.length > 0) {
       this.buf = this.analyze(data);
@@ -50,6 +50,7 @@ export default class NibusDecoder extends Transform {
 
   private analyze(data: number[]) {
     let start = -1;
+    let lastEnd = 0;
     let expectedLength = -1;
     let state: States = States.PREAMBLE_WAITING;
     const reset = () => {
@@ -84,7 +85,9 @@ export default class NibusDecoder extends Transform {
             const datagram = data.slice(start, i + 1);
             if (crcNibus(datagram.slice(1))) {
               const frame = Buffer.from(datagram);
-              start > 0 && debugSerial('skipped: ', printBuffer(Buffer.from(data.slice(0, start))));
+              if (start > lastEnd) {
+                debug('skipped: ', printBuffer(Buffer.from(data.slice(lastEnd, start))));
+              }
               if (NmsDatagram.isNmsFrame(frame)) {
                 this.push(new NmsDatagram(frame));
               } else if (SarpDatagram.isSarpFrame(frame)) {
@@ -94,6 +97,7 @@ export default class NibusDecoder extends Transform {
               }
               start = expectedLength = -1;
               state = States.PREAMBLE_WAITING;
+              lastEnd = i + 1;
             } else {
               debug('CRC error');
               i = reset();
@@ -106,6 +110,8 @@ export default class NibusDecoder extends Transform {
           break;
       }
     } // for
+    const skipped = start === -1 ? data.slice(lastEnd) : data.slice(lastEnd, start);
+    if (skipped.length) debug('skipped: ', printBuffer(Buffer.from(skipped)));
     return start === -1 ? [] : data.slice(start);
   }
 }

@@ -233,19 +233,15 @@ async function reloadDevicesAsync(prevPorts, lastAdded) {
          * @event Detector#plug
          */
 
-        detector.emit('plug', device);
-        console.log('PORT', JSON.stringify(port));
-        console.log('DEV', JSON.stringify(device));
-        debug(`new device ${device.device || device.vendorId}/\
-${device.category || device.productId} was plugged to ${device.comName}`);
+        detector.emit('plug', device); // console.log('PORT', JSON.stringify(port));
+        // console.log('DEV', JSON.stringify(device));
 
         if (device.category) {
-          /**
-           * device with category was added
-           * @event Detector#add
-           * @param {IKnownPort} device
-           */
+          debug(`new device ${device.device || device.vendorId}/\
+${device.category} was plugged to ${device.comName}`);
           detector.emit('add', device);
+        } else {
+          debug(`unknown device %o was plugged`, device);
         }
       }
 

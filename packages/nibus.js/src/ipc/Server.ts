@@ -7,7 +7,33 @@ import xpipe from 'xpipe';
 const debug = debugFactory('nibus:IPCServer');
 const noop = () => {};
 
-export default class IPCServer extends Duplex {
+export enum Direction {
+  in,
+  out,
+}
+
+interface IPCServer {
+  on(event: 'connection', listener: (socket: Socket) => void): this;
+  on(event: 'client:error', listener: (err: Error) => void): this;
+  on(event: 'raw', listener: (data: Buffer, dir: Direction) => void): this;
+  on(event: string | symbol, listener: (...args: any[]) => void): this;
+
+  once(event: 'connection', listener: (socket: Socket) => void): this;
+  once(event: 'raw', listener: (data: Buffer, dir: Direction) => void): this;
+  once(event: string | symbol, listener: (...args: any[]) => void): this;
+
+  addListener(event: 'connection', listener: (socket: Socket) => void): this;
+  addListener(event: 'client:error', listener: (err: Error) => void): this;
+  addListener(event: 'raw', listener: (data: Buffer, dir: Direction) => void): this;
+  addListener(event: string | symbol, listener: (...args: any[]) => void): this;
+
+  emit(event: 'connection', socket: Socket): boolean;
+  emit(event: 'client:error', err: Error): boolean;
+  emit(event: 'raw', data: Buffer, dir: Direction): boolean;
+  emit(event: string | symbol, ...args: any[]): boolean;
+}
+
+class IPCServer extends Duplex {
   private readonly server: Server;
   private readonly clients: Socket[];
   private closed = false;
@@ -20,7 +46,7 @@ export default class IPCServer extends Duplex {
     this.server = net
       .createServer(this.connectionHandler)
       .on('error', this.errorHandler)
-      .on('close', this.closeHandler)
+      .on('close', this.close)
       .listen(xpipe.eq(path), () => {
         debug('listening on', this.server.address());
       });
@@ -57,11 +83,6 @@ export default class IPCServer extends Duplex {
     }
   };
 
-  private closeHandler = () => {
-    this.closed = true;
-    this.emit('close');
-  };
-
   private clientErrorHandler(client: Socket, err: Error) {
     debug('error on client', err.message);
     this.emit('client:error', client, err);
@@ -75,7 +96,9 @@ export default class IPCServer extends Duplex {
     if (this.reading) {
       this.reading = this.push(data);
     }
-    if (this.raw) return;
+    if (this.raw)  {
+      return this.emit('raw', data, Direction.in);
+    }
     debug('data from', client.remoteAddress, data.toString());
     const { event, args } = JSON.parse(data.toString());
     this.emit(`client:${event}`, client, ...args);
@@ -92,6 +115,7 @@ export default class IPCServer extends Duplex {
 
   // tslint:disable-next-line:function-name
   _write(chunk: any, encoding: string, callback: (error?: (Error | null)) => void): void {
+    this.emit('raw', chunk as Buffer, Direction.out);
     this.clients.forEach(client => client.write(chunk, encoding, noop));
     callback();
   }
@@ -121,13 +145,16 @@ export default class IPCServer extends Duplex {
       .then(() => {});
   }
 
-  close() {
+  close = () => {
     if (this.closed) return;
     const path = this.server.address();
     this.clients.forEach(client => client.destroy());
     this.clients.length = 0;
     this.server.close();
     this.raw && this.push(null);
+    this.closed = true;
     debug(`${path} closed`);
-  }
+  };
 }
+
+export default IPCServer;

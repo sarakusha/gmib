@@ -1,13 +1,70 @@
-import { Socket } from 'net';
 import debugFactory from 'debug';
-import { Server, SerialTee } from '../ipc';
+import { Socket } from 'net';
+import { SerialTee, Server } from '../ipc';
+import { SerialLogger } from '../ipc/SerialTee';
+import { Direction } from '../ipc/Server';
+import { NibusDatagram, NibusDecoder } from '../nibus';
+import { printBuffer } from '../nibus/helper';
+import { PATH } from './const';
 import detector from './detector';
+import { IKnownPort } from './KnownPorts';
 
+debugFactory.enable('nibus:detector,nibus.service');
 const debug = debugFactory('nibus:service');
+
 const noop = () => {};
 
-import { PATH } from './const';
-import { IKnownPort } from './KnownPorts';
+if (process.platform === 'win32') {
+  const rl = require('readline').createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  rl.on('SIGINT', () => process.emit('SIGINT', 'SIGINT'));
+}
+
+export enum LogLevel {
+  none,
+  hex,
+  nibus,
+}
+
+type Fields = string[] | undefined;
+let pick: Fields;
+let omit: Fields;
+
+const direction = (dir: Direction) => dir === Direction.in ? '<<<' : '>>>';
+const decoderIn = new NibusDecoder();
+decoderIn.on('data', (datagram: NibusDatagram) => {
+  debug(`${direction(Direction.in)} ${datagram.toString({
+    pick,
+    omit,
+  })}`);
+});
+const decoderOut = new NibusDecoder();
+decoderOut.on('data', (datagram: NibusDatagram) => {
+  debug(`${direction(Direction.out)} ${datagram.toString({
+    pick,
+    omit,
+  })}`);
+});
+
+const loggers = {
+  none: null,
+  hex: (data: Buffer, dir: Direction) => {
+    debug(`${direction(dir)} ${printBuffer(data)}`);
+  },
+  nibus: (data: Buffer, dir: Direction) => {
+    switch (dir) {
+      case Direction.in:
+        decoderIn.write(data);
+        break;
+      case Direction.out:
+        decoderOut.write(data);
+        break;
+    }
+  },
+};
 
 class NibusService {
   private readonly server: Server;
@@ -17,7 +74,20 @@ class NibusService {
   constructor() {
     this.server = new Server(PATH);
     this.server.on('connection', this.connectionHandler);
+    this.server.on('client:setLogLevel', this.logLevelHandler);
   }
+
+  private logLevelHandler = (
+    client: Socket,
+    logLevel: 'none' | 'hex' | 'nibus',
+    pickFields: Fields,
+    omitFields: Fields) => {
+    pick = pickFields;
+    omit = omitFields;
+    debug('logLevel', logLevel);
+    const logger: SerialLogger | null = loggers[logLevel];
+    this.connections.forEach(connection => connection.setLogger(logger));
+  };
 
   private connectionHandler = (socket: Socket) => {
     const { server, connections } = this;

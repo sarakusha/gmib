@@ -371,7 +371,7 @@ class DevicePrototype extends EventEmitter {
   public isDirty(idOrName: string | number): boolean {
     const id = this.getId(idOrName);
     const { [$dirties]: dirties } = this;
-    return dirties[id] === true;
+    return !!dirties[id];
   }
 
   public setDirty(idOrName: string | number, isDirty = true) {

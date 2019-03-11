@@ -32,5 +32,9 @@ export default class NibusDatagram implements INibusOptions {
     readonly raw: Buffer;
     constructor(frameOrOptions: Buffer | INibusOptions);
     toJSON(): INibusDatagramJSON;
+    toString(opts?: {
+        pick?: string[];
+        omit?: string[];
+    }): string;
 }
 //# sourceMappingURL=NibusDatagram.d.ts.map
