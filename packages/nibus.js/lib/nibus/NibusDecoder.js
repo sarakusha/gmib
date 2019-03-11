@@ -25,8 +25,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
-const debug = (0, _debug.default)('nibus:decoder');
-const debugSerial = (0, _debug.default)('nibus-serial:decoder');
+const debug = (0, _debug.default)('nibus:decoder'); // const debugSerial = debugFactory('nibus-serial:decoder');
 
 function crcNibus(byteArray) {
   const crc = (0, _crc.crc16ccitt)(Buffer.from(byteArray), 0);
@@ -47,8 +46,8 @@ class NibusDecoder extends _stream.Transform {
 
 
   _transform(chunk, encoding, callback) {
-    console.assert(encoding === 'buffer', 'Unexpected encoding');
-    debugSerial((0, _helper.printBuffer)(chunk));
+    console.assert(encoding === 'buffer', 'Unexpected encoding'); // debugSerial(printBuffer(chunk));
+
     const data = [...this.buf, ...chunk];
 
     if (data.length > 0) {
@@ -69,6 +68,7 @@ class NibusDecoder extends _stream.Transform {
 
   analyze(data) {
     let start = -1;
+    let lastEnd = 0;
     let expectedLength = -1;
     let state = _nbconst.States.PREAMBLE_WAITING;
 
@@ -112,7 +112,10 @@ class NibusDecoder extends _stream.Transform {
 
             if (crcNibus(datagram.slice(1))) {
               const frame = Buffer.from(datagram);
-              start > 0 && debugSerial('skipped: ', (0, _helper.printBuffer)(Buffer.from(data.slice(0, start))));
+
+              if (start > lastEnd) {
+                debug('skipped: ', (0, _helper.printBuffer)(Buffer.from(data.slice(lastEnd, start))));
+              }
 
               if (_nms.NmsDatagram.isNmsFrame(frame)) {
                 this.push(new _nms.NmsDatagram(frame));
@@ -124,6 +127,7 @@ class NibusDecoder extends _stream.Transform {
 
               start = expectedLength = -1;
               state = _nbconst.States.PREAMBLE_WAITING;
+              lastEnd = i + 1;
             } else {
               debug('CRC error');
               i = reset();
@@ -140,6 +144,8 @@ class NibusDecoder extends _stream.Transform {
     } // for
 
 
+    const skipped = start === -1 ? data.slice(lastEnd) : data.slice(lastEnd, start);
+    if (skipped.length) debug('skipped: ', (0, _helper.printBuffer)(Buffer.from(skipped)));
     return start === -1 ? [] : data.slice(start);
   }
 

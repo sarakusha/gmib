@@ -2,7 +2,6 @@
 import * as t from 'io-ts';
 // import { NibusBaudRate, NibusBaudRateV } from '../nibus';
 
-
 export type HexOrNumber = string | number;
 export const CategoryV = t.union([
   t.literal('siolynx'),

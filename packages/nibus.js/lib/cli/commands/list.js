@@ -9,8 +9,6 @@ var _lodash = _interopRequireDefault(require("lodash"));
 
 var _tableLayout = _interopRequireDefault(require("table-layout"));
 
-var _debug = _interopRequireDefault(require("debug"));
-
 var _const = require("../../service/const");
 
 var _ipc = require("../../ipc");
@@ -18,10 +16,6 @@ var _ipc = require("../../ipc");
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 // @ts-ignore
-// import { Socket, connect } from 'net';
-// import service, { detector } from '../service';
-// import { IKnownPort } from '../service/detector';
-const debug = (0, _debug.default)('nibus:list');
 const listCommand = {
   command: 'list',
   describe: 'Показать список доступных устройств',
@@ -29,14 +23,10 @@ const listCommand = {
   handler: async () => new Promise((resolve, reject) => {
     const socket = _ipc.Client.connect(_const.PATH);
 
-    let closed = false;
     let resolved = false;
+    let error;
     socket.once('close', () => {
-      // debug('close event');
-      if (!closed) {
-        closed = true;
-        resolved || reject();
-      }
+      resolved ? resolve() : reject(error && error.message);
     });
     socket.on('ports', ports => {
       // debug('ports', ports);
@@ -59,11 +49,16 @@ const listCommand = {
       });
       console.info(table.toString());
       resolved = true;
-      resolve();
       socket.destroy();
     });
     socket.on('error', err => {
-      debug('<error>', err);
+      if (err.code === 'ENOENT') {
+        error = {
+          message: 'Сервис не запущен'
+        };
+      } else {
+        error = err;
+      }
     });
   }) // const rows = _.sortBy<IKnownPort>(ports, [_.property('manufacturer'),
   // _.property('category')]) .map(({ manufacturer, category, device, comName }) => ({

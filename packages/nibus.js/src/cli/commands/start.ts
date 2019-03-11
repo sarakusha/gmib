@@ -9,9 +9,9 @@ const debug = debugFactory('nibus:start');
 // const connect = promisify(pm2.connect);
 // const start = promisify<StartOptions>(pm2.start);
 
-const startOptions: StartOptions = {
+export const startOptions: StartOptions = {
   name: 'nibus.service',
-  script: 'service/start.js',
+  script: 'service/demon.js',
   cwd: path.resolve(__dirname, '../..'),
   max_restarts: 3,
 };
@@ -19,10 +19,10 @@ const startOptions: StartOptions = {
 if (path.extname(__filename) === '.ts') {
   startOptions.script = 'service/dev.start.js';
   startOptions.watch = [
-    'service/start.ts',
+    'service/demon.ts',
     'ipc/Server.ts',
     'ipc/SerialTee.ts',
-    'service/detection.ts',
+    'service/detector.ts',
   ];
 }
 

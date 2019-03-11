@@ -192,7 +192,7 @@ class NibusConnection extends EventEmitter {
       const type = (value as number) >>> 16;
       return [version, type];
     } catch (err) {
-      debug('<error>', err.stack);
+      debug('<error>', err.message || err);
       return [];
     }
   }

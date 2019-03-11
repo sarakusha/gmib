@@ -41,6 +41,8 @@ class SerialTee extends _events.EventEmitter {
 
     _defineProperty(this, "server", void 0);
 
+    _defineProperty(this, "logger", null);
+
     _defineProperty(this, "close", () => {
       if (this.closed) return;
       const {
@@ -73,6 +75,18 @@ class SerialTee extends _events.EventEmitter {
 
   get path() {
     return this.server.path;
+  }
+
+  setLogger(logger) {
+    if (this.logger) {
+      this.server.off('raw', this.logger);
+    }
+
+    this.logger = logger;
+
+    if (this.logger) {
+      this.server.on('raw', this.logger);
+    }
   }
 
   toJSON() {

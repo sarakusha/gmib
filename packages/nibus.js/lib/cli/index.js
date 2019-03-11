@@ -1,4 +1,4 @@
-#!/usr/bin/env node --no-warnings
+#!/usr/bin/env node
 "use strict";
 
 var _yargs = _interopRequireDefault(require("yargs"));
@@ -15,14 +15,19 @@ var _read = _interopRequireDefault(require("./commands/read"));
 
 var _start = _interopRequireDefault(require("./commands/start"));
 
+var _stop = _interopRequireDefault(require("./commands/stop"));
+
 var _write = _interopRequireDefault(require("./commands/write"));
 
 var _upload = _interopRequireDefault(require("./commands/upload"));
 
 var _download = _interopRequireDefault(require("./commands/download"));
 
+var _log = _interopRequireDefault(require("./commands/log"));
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+// noinspection JSUnusedLocalSymbols
 const argv = _yargs.default.option('m', {
   alias: 'mac',
   desc: 'Адрес устройства',
@@ -51,4 +56,4 @@ const argv = _yargs.default.option('m', {
   desc: 'использовать firmware_version для определения типа устройства',
   boolean: true,
   default: true
-}).command(_start.default).command(_list.default).command(_ping.default).command(_dump.default).command(_read.default).command(_write.default).command(_upload.default).command(_download.default).locale('ru').completion('completion').showHelpOnFail(false).strict().help().wrap(Math.min(_yargs.default.terminalWidth(), 100)).epilogue('(c) Nata-Info, 2019').argv;
+}).command(_start.default).command(_stop.default).command(_list.default).command(_ping.default).command(_dump.default).command(_read.default).command(_write.default).command(_upload.default).command(_download.default).command(_log.default).locale('ru').completion('completion').showHelpOnFail(false).strict().help().wrap(Math.min(_yargs.default.terminalWidth(), 100)).epilogue('(c) Nata-Info, 2019').argv;

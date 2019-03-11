@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.default = void 0;
+exports.default = exports.startOptions = void 0;
 
 var _pm = _interopRequireDefault(require("pm2"));
 
@@ -19,14 +19,15 @@ const debug = (0, _debug.default)('nibus:start'); // import { promisify } from '
 
 const startOptions = {
   name: 'nibus.service',
-  script: 'service/start.js',
+  script: 'service/demon.js',
   cwd: _path.default.resolve(__dirname, '../..'),
   max_restarts: 3
 };
+exports.startOptions = startOptions;
 
 if (_path.default.extname(__filename) === '.ts') {
   startOptions.script = 'service/dev.start.js';
-  startOptions.watch = ['service/start.ts', 'ipc/Server.ts', 'ipc/SerialTee.ts', 'service/detection.ts'];
+  startOptions.watch = ['service/demon.ts', 'ipc/Server.ts', 'ipc/SerialTee.ts', 'service/detector.ts'];
 }
 
 const startCommand = {

@@ -334,7 +334,7 @@ class DevicePrototype extends _events.EventEmitter {
     const {
       [$dirties]: dirties
     } = this;
-    return dirties[id] === true;
+    return !!dirties[id];
   }
 
   setDirty(idOrName, isDirty = true) {

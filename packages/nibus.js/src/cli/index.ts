@@ -1,4 +1,4 @@
-#!/usr/bin/env node --no-warnings
+#!/usr/bin/env node
 import yargs from 'yargs';
 import { getMibsSync } from '../mib';
 import dump from './commands/dump';
@@ -6,10 +6,13 @@ import list from './commands/list';
 import ping from './commands/ping';
 import read from './commands/read';
 import start from './commands/start';
+import stop from './commands/stop';
 import write from './commands/write';
 import upload from './commands/upload';
 import download from './commands/download';
+import log from './commands/log';
 
+// noinspection JSUnusedLocalSymbols
 const argv = yargs
   .option('m', {
     alias: 'mac',
@@ -47,6 +50,7 @@ const argv = yargs
     default: true,
   })
   .command(start)
+  .command(stop)
   .command(list)
   .command(ping)
   .command(dump as any)
@@ -54,6 +58,7 @@ const argv = yargs
   .command(write as any)
   .command(upload as any)
   .command(download as any)
+  .command(log as any)
   .locale('ru')
   .completion('completion')
   .showHelpOnFail(false)

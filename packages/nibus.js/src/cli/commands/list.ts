@@ -2,29 +2,19 @@ import { CommandModule } from 'yargs';
 import _ from 'lodash';
 // @ts-ignore
 import Table from 'table-layout';
-import debugFactory from 'debug';
-// import { Socket, connect } from 'net';
 import { PATH } from '../../service/const';
 import { Client, IPortArg } from '../../ipc';
 
-// import service, { detector } from '../service';
-// import { IKnownPort } from '../service/detector';
-
-const debug = debugFactory('nibus:list');
 const listCommand: CommandModule = {
   command: 'list',
   describe: 'Показать список доступных устройств',
   builder: {},
   handler: async () => new Promise((resolve, reject) => {
     const socket = Client.connect(PATH);
-    let closed = false;
     let resolved = false;
+    let error: any;
     socket.once('close', () => {
-      // debug('close event');
-      if (!closed) {
-        closed = true;
-        resolved || reject();
-      }
+      resolved ? resolve() : reject(error && error.message);
     });
     socket.on('ports', (ports: IPortArg[]) => {
       // debug('ports', ports);
@@ -40,13 +30,15 @@ const listCommand: CommandModule = {
       });
       console.info(table.toString());
       resolved = true;
-      resolve();
       socket.destroy();
     });
     socket.on('error', (err) => {
-      debug('<error>', err);
+      if ((err as any).code === 'ENOENT') {
+        error = { message: 'Сервис не запущен' };
+      } else {
+        error = err;
+      }
     });
-
   }),
 
 // const rows = _.sortBy<IKnownPort>(ports, [_.property('manufacturer'),

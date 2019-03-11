@@ -45,6 +45,14 @@ class IPCClient extends _net.Socket {
     this.on('data', this.parseEvents);
   }
 
+  send(event, ...args) {
+    const data = {
+      event,
+      args
+    };
+    return new Promise(resolve => this.write(JSON.stringify(data), resolve));
+  }
+
   static connect(path, connectionListener) {
     const client = new IPCClient();
     return client.connect(_xpipe.default.eq(path), connectionListener);

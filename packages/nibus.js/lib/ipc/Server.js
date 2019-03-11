@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.default = void 0;
+exports.default = exports.Direction = void 0;
 
 var _net = _interopRequireWildcard(require("net"));
 
@@ -25,8 +25,16 @@ const debug = (0, _debug.default)('nibus:IPCServer');
 
 const noop = () => {};
 
+let Direction;
+exports.Direction = Direction;
+
+(function (Direction) {
+  Direction[Direction["in"] = 0] = "in";
+  Direction[Direction["out"] = 1] = "out";
+})(Direction || (exports.Direction = Direction = {}));
+
 class IPCServer extends _stream.Duplex {
-  constructor(path, raw = false) {
+  constructor(_path, raw = false) {
     super();
     this.raw = raw;
 
@@ -66,14 +74,20 @@ class IPCServer extends _stream.Duplex {
       }
     });
 
-    _defineProperty(this, "closeHandler", () => {
+    _defineProperty(this, "close", () => {
+      if (this.closed) return;
+      const path = this.server.address();
+      this.clients.forEach(client => client.destroy());
+      this.clients.length = 0;
+      this.server.close();
+      this.raw && this.push(null);
       this.closed = true;
-      this.emit('close');
+      debug(`${path} closed`);
     });
 
     this.clients = [];
     this.server = new _net.Server();
-    this.server = _net.default.createServer(this.connectionHandler).on('error', this.errorHandler).on('close', this.closeHandler).listen(_xpipe.default.eq(path), () => {
+    this.server = _net.default.createServer(this.connectionHandler).on('error', this.errorHandler).on('close', this.close).listen(_xpipe.default.eq(_path), () => {
       debug('listening on', this.server.address());
     });
     process.on('SIGINT', () => this.close());
@@ -94,7 +108,10 @@ class IPCServer extends _stream.Duplex {
       this.reading = this.push(data);
     }
 
-    if (this.raw) return;
+    if (this.raw) {
+      return this.emit('raw', data, Direction.in);
+    }
+
     debug('data from', client.remoteAddress, data.toString());
     const {
       event,
@@ -116,6 +133,7 @@ class IPCServer extends _stream.Duplex {
 
 
   _write(chunk, encoding, callback) {
+    this.emit('raw', chunk, Direction.out);
     this.clients.forEach(client => client.write(chunk, encoding, noop));
     callback();
   } // tslint:disable-next-line:function-name
@@ -145,16 +163,7 @@ class IPCServer extends _stream.Duplex {
     return Promise.all(this.clients.map(client => this.send(client, event, ...args))).then(() => {});
   }
 
-  close() {
-    if (this.closed) return;
-    const path = this.server.address();
-    this.clients.forEach(client => client.destroy());
-    this.clients.length = 0;
-    this.server.close();
-    this.raw && this.push(null);
-    debug(`${path} closed`);
-  }
-
 }
 
-exports.default = IPCServer;
+var _default = IPCServer;
+exports.default = _default;
