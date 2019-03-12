@@ -52,7 +52,7 @@ const argv = yargs
   .command(start)
   .command(stop)
   .command(list)
-  .command(ping)
+  .command(ping as any)
   .command(dump as any)
   .command(read as any)
   .command(write as any)

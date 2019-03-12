@@ -47,7 +47,11 @@ const writeCommand: CommandModule<CommonOpts, WriteOpts> = {
   describe: 'запись переменных в устройство',
   builder: argv => argv
     .demandOption(['mac', 'm'])
-    .example('write', '$0 write -m ::ab:cd hofs=100 vofs=300 brightness=34'),
+    .example(
+      '$0 write -m ::ab:cd hofs=100 vofs=300 brightness=34',
+      `записать в переменные: hofs<-100, vofs<-300, brightness<-34 на устройстве с адресом ::ab:cd
+      mib указывать не обязательно, если у устройства есть firmware_version`,
+    ),
   handler: makeAddressHandler(write),
 };
 

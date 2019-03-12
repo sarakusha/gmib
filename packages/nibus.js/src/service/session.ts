@@ -277,4 +277,7 @@ session.on('found', ({ address, category, connection }) => {
   }
 });
 
+process.on('SIGINT', () => session.close());
+process.on('SIGTERM', () => session.close());
+
 export default session;

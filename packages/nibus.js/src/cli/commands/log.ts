@@ -1,5 +1,8 @@
 import { CommandModule } from 'yargs';
 import debugFactory from 'debug';
+import { Tail } from 'tail';
+import path from 'path';
+import { homedir } from 'os';
 import { PATH } from '../../service/const';
 import { Client } from '../../ipc';
 
@@ -21,8 +24,13 @@ const logCommand: CommandModule = {
     .option('omit', {
       desc: 'выдавть поля кроме указанных в логах nibus',
       array: true,
+    })
+    .option('begin', {
+      alias: 'b',
+      describe: 'вывод с начала',
+      boolean: true,
     }),
-  handler: ({ level, pick, omit }) => new Promise((resolve, reject) => {
+  handler: ({ level, pick, omit, begin }) => new Promise((resolve, reject) => {
     const socket = Client.connect(PATH);
     let resolved = false;
     socket.once('close', () => {
@@ -38,7 +46,15 @@ const logCommand: CommandModule = {
       } catch {}
       socket.destroy();
     });
-
+    const log = new Tail(path.resolve(
+      homedir(),
+      '.pm2',
+      'logs',
+      'nibus.service-error.log',
+    ), { fromBeginning: !!begin });
+    process.on('SIGINT', () => log.unwatch());
+    log.watch();
+    log.on('line', console.log);
   }),
 };
 

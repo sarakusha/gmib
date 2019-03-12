@@ -31,10 +31,10 @@ const stopCommand = {
       debug('pm2 is connected');
 
       _pm.default.delete(_start.startOptions.name, error => {
-        if (error) {
-          error.message === 'process name not found' || console.error('error while delete', error.message);
+        if (error && error.message !== 'process name not found') {
+          console.error('не удалось остановить сервис', error.message);
         } else {
-          debug('nibus.service stopped');
+          console.info('nibus.service остановлен');
         }
 
         _pm.default.disconnect();

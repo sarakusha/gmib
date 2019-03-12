@@ -27,7 +27,8 @@ argc, address, connection, mibOrType) {
 const writeCommand = {
   command: 'write',
   describe: 'запись переменных в устройство',
-  builder: argv => argv.demandOption(['mac', 'm']).example('write', '$0 write -m ::ab:cd hofs=100 vofs=300 brightness=34'),
+  builder: argv => argv.demandOption(['mac', 'm']).example('$0 write -m ::ab:cd hofs=100 vofs=300 brightness=34', `записать в переменные: hofs<-100, vofs<-300, brightness<-34 на устройстве с адресом ::ab:cd
+      mib указывать не обязательно, если у устройства есть firmware_version`),
   handler: (0, _handlers.makeAddressHandler)(write)
 };
 var _default = writeCommand;

@@ -1,5 +1,6 @@
 import debugFactory from 'debug';
 import { Socket } from 'net';
+import Configstore from 'configstore';
 import { SerialTee, Server } from '../ipc';
 import { SerialLogger } from '../ipc/SerialTee';
 import { Direction } from '../ipc/Server';
@@ -8,6 +9,9 @@ import { printBuffer } from '../nibus/helper';
 import { PATH } from './const';
 import detector from './detector';
 import { IKnownPort } from './KnownPorts';
+import pkg from '../../package.json';
+
+const conf = new Configstore(pkg.name, { logLevel: 'none' });
 
 debugFactory.enable('nibus:detector,nibus.service');
 const debug = debugFactory('nibus:service');
@@ -23,29 +27,22 @@ if (process.platform === 'win32') {
   rl.on('SIGINT', () => process.emit('SIGINT', 'SIGINT'));
 }
 
-export enum LogLevel {
-  none,
-  hex,
-  nibus,
-}
-
+type LogLevel = 'none' | 'hex' | 'nibus';
 type Fields = string[] | undefined;
-let pick: Fields;
-let omit: Fields;
 
 const direction = (dir: Direction) => dir === Direction.in ? '<<<' : '>>>';
 const decoderIn = new NibusDecoder();
 decoderIn.on('data', (datagram: NibusDatagram) => {
   debug(`${direction(Direction.in)} ${datagram.toString({
-    pick,
-    omit,
+    pick: conf.get('pick') as Fields,
+    omit: conf.get('omit') as Fields,
   })}`);
 });
 const decoderOut = new NibusDecoder();
 decoderOut.on('data', (datagram: NibusDatagram) => {
   debug(`${direction(Direction.out)} ${datagram.toString({
-    pick,
-    omit,
+    pick: conf.get('pick') as Fields,
+    omit: conf.get('omit') as Fields,
   })}`);
 });
 
@@ -77,16 +74,21 @@ class NibusService {
     this.server.on('client:setLogLevel', this.logLevelHandler);
   }
 
+  updateLogger(connection?: SerialTee) {
+    const logger: SerialLogger | null = loggers[conf.get('logLevel') as LogLevel];
+    const connections = connection ? [connection] : this.connections;
+    connections.forEach(con => con.setLogger(logger));
+  }
+
   private logLevelHandler = (
     client: Socket,
-    logLevel: 'none' | 'hex' | 'nibus',
+    logLevel: LogLevel,
     pickFields: Fields,
     omitFields: Fields) => {
-    pick = pickFields;
-    omit = omitFields;
-    debug('logLevel', logLevel);
-    const logger: SerialLogger | null = loggers[logLevel];
-    this.connections.forEach(connection => connection.setLogger(logger));
+    conf.set('logLevel', logLevel);
+    conf.set('pick', pickFields);
+    conf.set('omit', omitFields);
+    this.updateLogger();
   };
 
   private connectionHandler = (socket: Socket) => {
@@ -107,6 +109,7 @@ class NibusService {
       connection.on('close', (comName: string) => this.removeHandler({ comName }));
       this.connections.push(connection);
       this.server.broadcast('add', connection.toJSON()).catch(noop);
+      this.updateLogger(connection);
       // this.find(connection);
     }
   };
