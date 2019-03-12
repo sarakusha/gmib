@@ -34,11 +34,16 @@ const logCommand = {
   }).option('omit', {
     desc: 'выдавть поля кроме указанных в логах nibus',
     array: true
+  }).option('begin', {
+    alias: 'b',
+    describe: 'вывод с начала',
+    boolean: true
   }),
   handler: ({
     level,
     pick,
-    omit
+    omit,
+    begin
   }) => new Promise((resolve, reject) => {
     const socket = _ipc.Client.connect(_const.PATH);
 
@@ -57,11 +62,12 @@ const logCommand = {
 
       socket.destroy();
     });
-    const log = new _tail.Tail(_path.default.resolve((0, _os.homedir)(), '.pm2', 'logs', 'nibus.service-error.log'));
+    const log = new _tail.Tail(_path.default.resolve((0, _os.homedir)(), '.pm2', 'logs', 'nibus.service-error.log'), {
+      fromBeginning: !!begin
+    });
     process.on('SIGINT', () => log.unwatch());
     log.watch();
-    log.on('line', line => console.log(line));
-    log.on('error', console.error);
+    log.on('line', console.log);
   })
 };
 var _default = logCommand;
