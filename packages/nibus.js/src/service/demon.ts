@@ -82,12 +82,12 @@ class NibusService {
 
   private logLevelHandler = (
     client: Socket,
-    logLevel: LogLevel,
+    logLevel: LogLevel | undefined,
     pickFields: Fields,
     omitFields: Fields) => {
-    conf.set('logLevel', logLevel);
-    conf.set('pick', pickFields);
-    conf.set('omit', omitFields);
+    logLevel && conf.set('logLevel', logLevel);
+    pickFields || conf.set('pick', pickFields);
+    omitFields || conf.set('omit', omitFields);
     this.updateLogger();
   };
 

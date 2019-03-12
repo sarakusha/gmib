@@ -26,8 +26,7 @@ const logCommand = {
   builder: argv => argv.option('level', {
     alias: ['l', 'lev'],
     desc: 'уровень',
-    choices: ['none', 'hex', 'nibus'],
-    default: 'none'
+    choices: ['none', 'hex', 'nibus']
   }).option('pick', {
     desc: 'выдавать указанные поля в логах nibus',
     array: true
@@ -67,7 +66,7 @@ const logCommand = {
     });
     process.on('SIGINT', () => log.unwatch());
     log.watch();
-    log.on('line', console.log);
+    log.on('line', console.log.bind(console));
   })
 };
 var _default = logCommand;

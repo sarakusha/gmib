@@ -81,9 +81,11 @@ class Detector extends _events.EventEmitter {
     }, detectionListener); // detection = loadDetection();
 
 
-    reloadDevices();
-    usbDetection.on('add', reload);
-    usbDetection.on('remove', reload);
+    reloadDevices(); // Должна быть debounce с задержкой, иначе Serial.list не определит
+
+    usbDetection.on('add', reload); // Удаление без задержки!
+
+    usbDetection.on('remove', reloadDevices);
   }
 
   stop() {
@@ -161,12 +163,14 @@ async function detectDevice(port, lastAdded) {
     const {
       productId,
       vendorId,
-      deviceName: device
+      deviceName: device,
+      deviceAddress
     } = detected;
     return { ...port,
       productId,
       vendorId,
-      device
+      device,
+      deviceAddress
     };
   }
 
