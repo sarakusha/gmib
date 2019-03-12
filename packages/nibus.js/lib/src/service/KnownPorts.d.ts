@@ -11,6 +11,7 @@ export declare const KnownPortV: t.IntersectionC<[t.TypeC<{
     serialNumber: t.StringC;
     pnpId: t.StringC;
     locationId: t.StringC;
+    deviceAddress: t.NumberC;
     device: t.StringC;
     category: t.UnionC<[t.LiteralC<"siolynx">, t.LiteralC<"minihost">, t.LiteralC<"fancontrol">, t.LiteralC<"c22">, t.LiteralC<"relay">, t.UndefinedC]>;
 }>]>;

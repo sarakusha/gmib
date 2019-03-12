@@ -12,6 +12,7 @@ export declare const PortArgV: t.TypeC<{
         serialNumber: t.StringC;
         pnpId: t.StringC;
         locationId: t.StringC;
+        deviceAddress: t.NumberC;
         device: t.StringC;
         category: t.UnionC<[t.LiteralC<"siolynx">, t.LiteralC<"minihost">, t.LiteralC<"fancontrol">, t.LiteralC<"c22">, t.LiteralC<"relay">, t.UndefinedC]>;
     }>]>;
@@ -43,6 +44,7 @@ export declare const PortsEventV: t.TypeC<{
             serialNumber: t.StringC;
             pnpId: t.StringC;
             locationId: t.StringC;
+            deviceAddress: t.NumberC;
             device: t.StringC;
             category: t.UnionC<[t.LiteralC<"siolynx">, t.LiteralC<"minihost">, t.LiteralC<"fancontrol">, t.LiteralC<"c22">, t.LiteralC<"relay">, t.UndefinedC]>;
         }>]>;
@@ -67,6 +69,7 @@ export declare const PortsEventV: t.TypeC<{
             serialNumber: t.StringC;
             pnpId: t.StringC;
             locationId: t.StringC;
+            deviceAddress: t.NumberC;
             device: t.StringC;
             category: t.UnionC<[t.LiteralC<"siolynx">, t.LiteralC<"minihost">, t.LiteralC<"fancontrol">, t.LiteralC<"c22">, t.LiteralC<"relay">, t.UndefinedC]>;
         }>]>;
@@ -97,6 +100,7 @@ export declare const PortAddedEventV: t.TypeC<{
             serialNumber: t.StringC;
             pnpId: t.StringC;
             locationId: t.StringC;
+            deviceAddress: t.NumberC;
             device: t.StringC;
             category: t.UnionC<[t.LiteralC<"siolynx">, t.LiteralC<"minihost">, t.LiteralC<"fancontrol">, t.LiteralC<"c22">, t.LiteralC<"relay">, t.UndefinedC]>;
         }>]>;
@@ -121,6 +125,7 @@ export declare const PortAddedEventV: t.TypeC<{
             serialNumber: t.StringC;
             pnpId: t.StringC;
             locationId: t.StringC;
+            deviceAddress: t.NumberC;
             device: t.StringC;
             category: t.UnionC<[t.LiteralC<"siolynx">, t.LiteralC<"minihost">, t.LiteralC<"fancontrol">, t.LiteralC<"c22">, t.LiteralC<"relay">, t.UndefinedC]>;
         }>]>;
@@ -151,6 +156,7 @@ export declare const PortRemovedEventV: t.TypeC<{
             serialNumber: t.StringC;
             pnpId: t.StringC;
             locationId: t.StringC;
+            deviceAddress: t.NumberC;
             device: t.StringC;
             category: t.UnionC<[t.LiteralC<"siolynx">, t.LiteralC<"minihost">, t.LiteralC<"fancontrol">, t.LiteralC<"c22">, t.LiteralC<"relay">, t.UndefinedC]>;
         }>]>;
@@ -175,6 +181,7 @@ export declare const PortRemovedEventV: t.TypeC<{
             serialNumber: t.StringC;
             pnpId: t.StringC;
             locationId: t.StringC;
+            deviceAddress: t.NumberC;
             device: t.StringC;
             category: t.UnionC<[t.LiteralC<"siolynx">, t.LiteralC<"minihost">, t.LiteralC<"fancontrol">, t.LiteralC<"c22">, t.LiteralC<"relay">, t.UndefinedC]>;
         }>]>;
@@ -205,6 +212,7 @@ export declare const EventV: t.TaggedUnionC<"event", [t.TypeC<{
             serialNumber: t.StringC;
             pnpId: t.StringC;
             locationId: t.StringC;
+            deviceAddress: t.NumberC;
             device: t.StringC;
             category: t.UnionC<[t.LiteralC<"siolynx">, t.LiteralC<"minihost">, t.LiteralC<"fancontrol">, t.LiteralC<"c22">, t.LiteralC<"relay">, t.UndefinedC]>;
         }>]>;
@@ -229,6 +237,7 @@ export declare const EventV: t.TaggedUnionC<"event", [t.TypeC<{
             serialNumber: t.StringC;
             pnpId: t.StringC;
             locationId: t.StringC;
+            deviceAddress: t.NumberC;
             device: t.StringC;
             category: t.UnionC<[t.LiteralC<"siolynx">, t.LiteralC<"minihost">, t.LiteralC<"fancontrol">, t.LiteralC<"c22">, t.LiteralC<"relay">, t.UndefinedC]>;
         }>]>;
@@ -256,6 +265,7 @@ export declare const EventV: t.TaggedUnionC<"event", [t.TypeC<{
             serialNumber: t.StringC;
             pnpId: t.StringC;
             locationId: t.StringC;
+            deviceAddress: t.NumberC;
             device: t.StringC;
             category: t.UnionC<[t.LiteralC<"siolynx">, t.LiteralC<"minihost">, t.LiteralC<"fancontrol">, t.LiteralC<"c22">, t.LiteralC<"relay">, t.UndefinedC]>;
         }>]>;
@@ -280,6 +290,7 @@ export declare const EventV: t.TaggedUnionC<"event", [t.TypeC<{
             serialNumber: t.StringC;
             pnpId: t.StringC;
             locationId: t.StringC;
+            deviceAddress: t.NumberC;
             device: t.StringC;
             category: t.UnionC<[t.LiteralC<"siolynx">, t.LiteralC<"minihost">, t.LiteralC<"fancontrol">, t.LiteralC<"c22">, t.LiteralC<"relay">, t.UndefinedC]>;
         }>]>;
@@ -307,6 +318,7 @@ export declare const EventV: t.TaggedUnionC<"event", [t.TypeC<{
             serialNumber: t.StringC;
             pnpId: t.StringC;
             locationId: t.StringC;
+            deviceAddress: t.NumberC;
             device: t.StringC;
             category: t.UnionC<[t.LiteralC<"siolynx">, t.LiteralC<"minihost">, t.LiteralC<"fancontrol">, t.LiteralC<"c22">, t.LiteralC<"relay">, t.UndefinedC]>;
         }>]>;
@@ -331,6 +343,7 @@ export declare const EventV: t.TaggedUnionC<"event", [t.TypeC<{
             serialNumber: t.StringC;
             pnpId: t.StringC;
             locationId: t.StringC;
+            deviceAddress: t.NumberC;
             device: t.StringC;
             category: t.UnionC<[t.LiteralC<"siolynx">, t.LiteralC<"minihost">, t.LiteralC<"fancontrol">, t.LiteralC<"c22">, t.LiteralC<"relay">, t.UndefinedC]>;
         }>]>;

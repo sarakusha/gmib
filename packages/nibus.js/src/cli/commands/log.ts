@@ -15,7 +15,6 @@ const logCommand: CommandModule = {
       alias: ['l', 'lev'],
       desc: 'уровень',
       choices: ['none', 'hex', 'nibus'],
-      default: 'none',
     })
     .option('pick', {
       desc: 'выдавать указанные поля в логах nibus',
@@ -54,7 +53,7 @@ const logCommand: CommandModule = {
     ), { fromBeginning: !!begin });
     process.on('SIGINT', () => log.unwatch());
     log.watch();
-    log.on('line', console.log);
+    log.on('line', console.log.bind(console));
   }),
 };
 

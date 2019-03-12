@@ -84,9 +84,9 @@ class NibusService {
     _defineProperty(this, "connections", []);
 
     _defineProperty(this, "logLevelHandler", (client, logLevel, pickFields, omitFields) => {
-      conf.set('logLevel', logLevel);
-      conf.set('pick', pickFields);
-      conf.set('omit', omitFields);
+      logLevel && conf.set('logLevel', logLevel);
+      pickFields || conf.set('pick', pickFields);
+      omitFields || conf.set('omit', omitFields);
       this.updateLogger();
     });
 

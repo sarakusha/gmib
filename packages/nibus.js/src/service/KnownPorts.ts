@@ -23,6 +23,7 @@ export const KnownPortV = t.intersection([
     serialNumber: t.string,
     pnpId: t.string,
     locationId: t.string,
+    deviceAddress: t.number,
     device: t.string,
     category: CategoryV,
   }),

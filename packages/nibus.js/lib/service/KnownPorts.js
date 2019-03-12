@@ -21,6 +21,7 @@ const KnownPortV = t.intersection([t.type({
   serialNumber: t.string,
   pnpId: t.string,
   locationId: t.string,
+  deviceAddress: t.number,
   device: t.string,
   category: CategoryV
 })]);
