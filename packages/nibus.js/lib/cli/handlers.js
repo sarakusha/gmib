@@ -56,6 +56,7 @@ const makeAddressHandler = (action, breakout = false) => args => new Promise(asy
             await action(args, mac, connection, type);
             hasFound = true;
             if (breakout) return close();
+            wait();
           }
         } else {
           clearTimeout(timeout);
