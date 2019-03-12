@@ -1,6 +1,2 @@
-export declare enum LogLevel {
-    none = 0,
-    hex = 1,
-    nibus = 2
-}
+export {};
 //# sourceMappingURL=demon.d.ts.map

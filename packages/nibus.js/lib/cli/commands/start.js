@@ -30,20 +30,41 @@ if (_path.default.extname(__filename) === '.ts') {
   startOptions.watch = ['service/demon.ts', 'ipc/Server.ts', 'ipc/SerialTee.ts', 'service/detector.ts'];
 }
 
+const startup = platform => new Promise((resolve, reject) => {
+  const timeout = setTimeout(() => reject(new Error('Timeout')), 10000);
+
+  _pm.default.startup(platform, err => {
+    clearTimeout(timeout);
+    if (err) return reject(err);
+    resolve();
+  });
+});
+
 const startCommand = {
   command: 'start',
   describe: 'запустить сервис NiBUS',
-  builder: {},
-  handler: () => {
+  builder: argv => argv.option('auto', {
+    describe: 'автозапуск сервиса после старта стистемы для заданной ОС',
+    choices: ['ubuntu', 'centos', 'redhat', 'gentoo', 'systemd', 'darwin', 'amazon']
+  }),
+  handler: argc => {
     _pm.default.connect(err => {
       if (err) {
-        console.error('error while connect pm2', err.stack);
+        console.error('не удалось подключиться к pm2', err.message);
         process.exit(2);
       }
 
       debug('pm2 is connected');
 
-      _pm.default.delete(startOptions.name, () => _pm.default.start(startOptions, err => {
+      _pm.default.delete(startOptions.name, () => _pm.default.start(startOptions, async err => {
+        if (!err && argc.auto) {
+          try {
+            await startup(argc.auto);
+          } catch (e) {
+            console.error('Не удалось зарегестрировать сервис', e.message);
+          }
+        }
+
         _pm.default.disconnect();
 
         if (err) {
@@ -51,7 +72,7 @@ const startCommand = {
           process.exit(2);
         }
 
-        debug('nibus.service was started');
+        console.info('nibus.service запущен');
       }));
     });
   }

@@ -9,6 +9,7 @@ mibCategories:
   fancontrol:
     mib: fan_control
     find: version
+    link: true
   c22:
     link: true
     baudRate: 57600

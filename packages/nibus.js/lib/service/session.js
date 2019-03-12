@@ -313,5 +313,7 @@ session.on('found', ({
     session._connectDevice(device, connection);
   }
 });
+process.on('SIGINT', () => session.close());
+process.on('SIGTERM', () => session.close());
 var _default = session;
 exports.default = _default;

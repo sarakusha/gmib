@@ -1,11 +1,8 @@
 "use strict";
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.LogLevel = void 0;
-
 var _debug = _interopRequireDefault(require("debug"));
+
+var _configstore = _interopRequireDefault(require("configstore"));
 
 var _ipc = require("../ipc");
 
@@ -19,9 +16,15 @@ var _const = require("./const");
 
 var _detector = _interopRequireDefault(require("./detector"));
 
+var _package = _interopRequireDefault(require("../../package.json"));
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+const conf = new _configstore.default(_package.default.name, {
+  logLevel: 'none'
+});
 
 _debug.default.enable('nibus:detector,nibus.service');
 
@@ -38,32 +41,20 @@ if (process.platform === 'win32') {
   rl.on('SIGINT', () => process.emit('SIGINT', 'SIGINT'));
 }
 
-let LogLevel;
-exports.LogLevel = LogLevel;
-
-(function (LogLevel) {
-  LogLevel[LogLevel["none"] = 0] = "none";
-  LogLevel[LogLevel["hex"] = 1] = "hex";
-  LogLevel[LogLevel["nibus"] = 2] = "nibus";
-})(LogLevel || (exports.LogLevel = LogLevel = {}));
-
-let pick;
-let omit;
-
 const direction = dir => dir === _Server.Direction.in ? '<<<' : '>>>';
 
 const decoderIn = new _nibus.NibusDecoder();
 decoderIn.on('data', datagram => {
   debug(`${direction(_Server.Direction.in)} ${datagram.toString({
-    pick,
-    omit
+    pick: conf.get('pick'),
+    omit: conf.get('omit')
   })}`);
 });
 const decoderOut = new _nibus.NibusDecoder();
 decoderOut.on('data', datagram => {
   debug(`${direction(_Server.Direction.out)} ${datagram.toString({
-    pick,
-    omit
+    pick: conf.get('pick'),
+    omit: conf.get('omit')
   })}`);
 });
 const loggers = {
@@ -93,11 +84,10 @@ class NibusService {
     _defineProperty(this, "connections", []);
 
     _defineProperty(this, "logLevelHandler", (client, logLevel, pickFields, omitFields) => {
-      pick = pickFields;
-      omit = omitFields;
-      debug('logLevel', logLevel);
-      const logger = loggers[logLevel];
-      this.connections.forEach(connection => connection.setLogger(logger));
+      conf.set('logLevel', logLevel);
+      conf.set('pick', pickFields);
+      conf.set('omit', omitFields);
+      this.updateLogger();
     });
 
     _defineProperty(this, "connectionHandler", socket => {
@@ -123,7 +113,8 @@ class NibusService {
           comName
         }));
         this.connections.push(connection);
-        this.server.broadcast('add', connection.toJSON()).catch(noop); // this.find(connection);
+        this.server.broadcast('add', connection.toJSON()).catch(noop);
+        this.updateLogger(connection); // this.find(connection);
       }
     });
 
@@ -147,6 +138,12 @@ class NibusService {
     this.server = new _ipc.Server(_const.PATH);
     this.server.on('connection', this.connectionHandler);
     this.server.on('client:setLogLevel', this.logLevelHandler);
+  }
+
+  updateLogger(connection) {
+    const logger = loggers[conf.get('logLevel')];
+    const connections = connection ? [connection] : this.connections;
+    connections.forEach(con => con.setLogger(logger));
   }
 
   start() {

@@ -7,6 +7,12 @@ exports.default = void 0;
 
 var _debug = _interopRequireDefault(require("debug"));
 
+var _tail = require("tail");
+
+var _path = _interopRequireDefault(require("path"));
+
+var _os = require("os");
+
 var _const = require("../../service/const");
 
 var _ipc = require("../../ipc");
@@ -51,6 +57,11 @@ const logCommand = {
 
       socket.destroy();
     });
+    const log = new _tail.Tail(_path.default.resolve((0, _os.homedir)(), '.pm2', 'logs', 'nibus.service-error.log'));
+    process.on('SIGINT', () => log.unwatch());
+    log.watch();
+    log.on('line', line => console.log(line));
+    log.on('error', console.error);
   })
 };
 var _default = logCommand;
