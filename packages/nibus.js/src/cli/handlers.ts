@@ -58,6 +58,7 @@ const makeAddressHandler = <O extends Defined<CommonOpts, 'm' | 'mac'>>
                 await action(args, mac, connection, type);
                 hasFound = true;
                 if (breakout) return close();
+                wait();
               }
             } else {
               clearTimeout(timeout);
