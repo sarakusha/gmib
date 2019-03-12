@@ -25,6 +25,8 @@ var _download = _interopRequireDefault(require("./commands/download"));
 
 var _log = _interopRequireDefault(require("./commands/log"));
 
+var _mib2 = _interopRequireDefault(require("./commands/mib"));
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 // noinspection JSUnusedLocalSymbols
@@ -56,4 +58,4 @@ const argv = _yargs.default.option('m', {
   desc: 'использовать firmware_version для определения типа устройства',
   boolean: true,
   default: true
-}).command(_start.default).command(_stop.default).command(_list.default).command(_ping.default).command(_dump.default).command(_read.default).command(_write.default).command(_upload.default).command(_download.default).command(_log.default).locale('ru').completion('completion').showHelpOnFail(false).strict().help().wrap(Math.min(_yargs.default.terminalWidth(), 100)).epilogue('(c) Nata-Info, 2019').argv;
+}).command(_start.default).command(_stop.default).command(_list.default).command(_ping.default).command(_dump.default).command(_read.default).command(_write.default).command(_upload.default).command(_download.default).command(_log.default).command(_mib2.default).locale('ru').completion('completion').showHelpOnFail(false).strict().help().wrap(Math.min(_yargs.default.terminalWidth(), 100)).epilogue('(c) Nata-Info, 2019').argv;

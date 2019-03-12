@@ -197,9 +197,14 @@ ${text}`;
   });
 }
 
-async function convert(mibpath) {
+async function convert(mibpath, dir) {
   const json = await mib2json(mibpath);
-  const jsonpath = `${mibpath.replace(/\.[^/.]+$/, '')}.json`;
+  let jsonpath = `${mibpath.replace(/\.[^/.]+$/, '')}.json`;
+
+  if (dir) {
+    jsonpath = path.resolve(dir, path.basename(jsonpath));
+  }
+
   const data = JSON.stringify(json, null, 2);
   return new Promise((resolve, reject) => {
     _fs.default.writeFile(jsonpath, data, err => {
