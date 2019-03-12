@@ -162,9 +162,12 @@ ${text}`;
   });
 }
 
-export async function convert(mibpath: string): Promise<void> {
+export async function convert(mibpath: string, dir?: string): Promise<void> {
   const json = await mib2json(mibpath);
-  const jsonpath = `${mibpath.replace(/\.[^/.]+$/, '')}.json`;
+  let jsonpath = `${mibpath.replace(/\.[^/.]+$/, '')}.json`;
+  if (dir) {
+    jsonpath = path.resolve(dir, path.basename(jsonpath));
+  }
   const data = JSON.stringify(json, null, 2);
   return new Promise<void>((resolve, reject) => {
     fs.writeFile(jsonpath, data, (err) => {

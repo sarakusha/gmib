@@ -11,6 +11,7 @@ import write from './commands/write';
 import upload from './commands/upload';
 import download from './commands/download';
 import log from './commands/log';
+import mib from './commands/mib';
 
 // noinspection JSUnusedLocalSymbols
 const argv = yargs
@@ -59,6 +60,7 @@ const argv = yargs
   .command(upload as any)
   .command(download as any)
   .command(log as any)
+  .command(mib as any)
   .locale('ru')
   .completion('completion')
   .showHelpOnFail(false)
