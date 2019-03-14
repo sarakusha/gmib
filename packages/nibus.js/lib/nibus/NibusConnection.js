@@ -40,6 +40,7 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 const MINIHOST_TYPE = 0xabc6;
 exports.MINIHOST_TYPE = MINIHOST_TYPE;
 const FIRMWARE_VERSION_ID = 0x85;
+const VERSION_ID = 2;
 const debug = (0, _debug.default)('nibus:connection');
 let NIBUS_TIMEOUT = 1000;
 
@@ -197,7 +198,7 @@ class NibusConnection extends _events.EventEmitter {
   ping(address) {
     debug(`ping [${address.toString()}] ${this.path}`);
     const now = Date.now();
-    return this.sendDatagram((0, _nms.createNmsRead)(address, 2)).then(datagram => {
+    return this.sendDatagram((0, _nms.createNmsRead)(address, VERSION_ID)).then(datagram => {
       return Reflect.getOwnMetadata('timeStamp', datagram) - now;
     }).catch(() => {
       // debug(`ping [${address}] failed ${reson}`);
@@ -211,9 +212,8 @@ class NibusConnection extends _events.EventEmitter {
     return this.sendDatagram(sarp);
   }
 
-  async getFirmwareVersion(address) {
-    debug('get fw_ver', address.toString());
-    const nmsRead = (0, _nms.createNmsRead)(address, FIRMWARE_VERSION_ID);
+  async getVersion(address) {
+    const nmsRead = (0, _nms.createNmsRead)(address, VERSION_ID);
 
     try {
       const {

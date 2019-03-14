@@ -52,7 +52,7 @@ const writeCommand: CommandModule<CommonOpts, WriteOpts> = {
       `записать в переменные: hofs<-100, vofs<-300, brightness<-34 на устройстве с адресом ::ab:cd
       mib указывать не обязательно, если у устройства есть firmware_version`,
     ),
-  handler: makeAddressHandler(write),
+  handler: makeAddressHandler(write, true),
 };
 
 export default writeCommand;

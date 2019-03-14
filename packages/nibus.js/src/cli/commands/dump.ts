@@ -30,7 +30,7 @@ async function dumpDevice(
 
   let device: IDevice;
   if (!mib) {
-    const [, type] = await connection.getFirmwareVersion(address);
+    const [, type] = await connection.getVersion(address);
     device = devices.create(address, type);
   } else {
     device = devices.create(address, mib);

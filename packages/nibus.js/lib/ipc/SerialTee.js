@@ -25,6 +25,18 @@ const portOptions = {
   stopBits: 1
 };
 
+// declare module serialport {
+//   interface SerialPort {
+//     write(
+//       data: string | Uint8Array | Buffer,
+//       callback?: (error: any, bytesWritten: number) => void): boolean;
+//     write(
+//       buffer: string | Uint8Array | Buffer,
+//       encoding?: 'ascii' | 'utf8' | 'utf16le' | 'ucs2' | 'base64' | 'binary' | 'hex',
+//       callback?: (error: any, bytesWritten: number) => void): boolean;
+//     test: () => void;
+//   }
+// }
 class SerialTee extends _events.EventEmitter {
   static getSocketPath(path) {
     return `/tmp/nibus.${path.replace(/^(\/dev\/)/, '')}`;

@@ -14,9 +14,14 @@ export const withValue = (value: any, writable = false): PropertyDescriptor => (
 const hex = /^0X[0-9A-F]+$/i;
 const isHex = (str: string) => hex.test(str)
   || parseInt(str, 10).toString(10) !== str.toLowerCase().replace(/^[0 ]+/, '');
-export const toInt = (value: string | number = 0) => typeof value === 'number'
-  ? value
-  : parseInt(value, isHex(value) ? 16 : 10);
+
+export const toInt = (value: string | boolean | number = 0) => {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'boolean') return value ? 1 : 0;
+  if (value === 'true') return 1;
+  if (value === 'false') return 0;
+  return parseInt(value, isHex(value) ? 16 : 10);
+};
 
 type ResultType = string | number | boolean | undefined;
 type PresentType = string | number | boolean | undefined;
@@ -52,8 +57,13 @@ export function enumerationConverter(enumerationValues: IMibType['enumeration'])
     from[value.annotation] = index;
     to[index] = value.annotation;
   });
+  // console.log('from %o, to %o', from, to);
   return {
-    from: value => typeof value === 'string' && Reflect.has(from, value) ? from[value] : undefined,
+    from: (value) => {
+      if (typeof value === 'string' && Reflect.has(from, value)) return from[value];
+      const simple = toInt(value);
+      return Number.isNaN(simple) ? value : simple;
+    },
     to: value => (typeof value === 'number' || typeof value === 'string')
     && Reflect.has(to, value) ? to[value] : value,
   };

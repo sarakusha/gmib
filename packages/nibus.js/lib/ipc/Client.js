@@ -50,7 +50,7 @@ class IPCClient extends _net.Socket {
       event,
       args
     };
-    return new Promise(resolve => this.write(JSON.stringify(data), resolve));
+    return new Promise(resolve => this.write(JSON.stringify(data), () => resolve()));
   }
 
   static connect(path, connectionListener) {

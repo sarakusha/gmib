@@ -31,7 +31,7 @@ async function upload( // setCount: NibusCounter,
   hex,
   raw
 }, address, connection) {
-  const reqUpload = (0, _nms.createNmsRequestDomainUpload)(address, domain.padEnd(8, ' '));
+  const reqUpload = (0, _nms.createNmsRequestDomainUpload)(address, domain.padEnd(8, '\0'));
   const {
     id,
     value: domainSize,
@@ -106,6 +106,7 @@ SIZE: ${rest}
       await write((0, _helper.printBuffer)(result.data));
       await write('\n');
     } else {
+      console.log('RESULT', result);
       await write(result.data);
     } // console.log(printBuffer(result.data));
     // data.push(result.data);

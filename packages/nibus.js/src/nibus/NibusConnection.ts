@@ -22,6 +22,7 @@ import NibusDecoder from './NibusDecoder';
 
 export const MINIHOST_TYPE = 0xabc6;
 const FIRMWARE_VERSION_ID = 0x85;
+const VERSION_ID = 2;
 
 const debug = debugFactory('nibus:connection');
 let NIBUS_TIMEOUT = 1000;
@@ -163,7 +164,7 @@ class NibusConnection extends EventEmitter {
   public ping(address: AddressParam): Promise<number> {
     debug(`ping [${address.toString()}] ${this.path}`);
     const now = Date.now();
-    return this.sendDatagram(createNmsRead(address, 2))
+    return this.sendDatagram(createNmsRead(address, VERSION_ID))
       .then((datagram) => {
         return <number>(Reflect.getOwnMetadata('timeStamp', datagram!)) - now;
       })
@@ -179,9 +180,8 @@ class NibusConnection extends EventEmitter {
     return this.sendDatagram(sarp);
   }
 
-  public async getFirmwareVersion(address: AddressParam): Promise<number[]> {
-    debug('get fw_ver', address.toString());
-    const nmsRead = createNmsRead(address, FIRMWARE_VERSION_ID);
+  public async getVersion(address: AddressParam): Promise<number[]> {
+    const nmsRead = createNmsRead(address, VERSION_ID);
     try {
       const { value, status } = await this.sendDatagram(nmsRead) as NmsDatagram;
       if (status !== 0) {

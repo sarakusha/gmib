@@ -65,6 +65,7 @@ function getBaseType(types, type) {
 
 function defineMibProperty(target, key, types, prop) {
   const propertyKey = (0, _mib.validJsName)(key);
+  console.assert(prop, `invalid mibprop ${key}`);
   const {
     appinfo
   } = prop;
@@ -136,20 +137,19 @@ function defineMibProperty(target, key, types, prop) {
   Reflect.defineMetadata('nmsType', (0, _nms.getNmsType)(simpleType), target, propertyKey);
   const attributes = {
     enumerable: isReadable
-  };
+  }; // if (isReadable) {
 
-  if (isReadable) {
-    attributes.get = function () {
-      console.assert(Reflect.get(this, '$countRef') > 0, 'Device was released');
-      let value;
+  attributes.get = function () {
+    console.assert(Reflect.get(this, '$countRef') > 0, 'Device was released');
+    let value;
 
-      if (!this.getError(id)) {
-        value = (0, _mib.convertTo)(converters)(this.getRawValue(id));
-      }
+    if (!this.getError(id)) {
+      value = (0, _mib.convertTo)(converters)(this.getRawValue(id));
+    }
 
-      return value;
-    };
-  }
+    return value;
+  }; // }
+
 
   if (isWritable) {
     attributes.set = function (newValue) {
@@ -204,7 +204,7 @@ class DevicePrototype extends _events.EventEmitter {
     // }
 
     const keys = Reflect.ownKeys(device.properties);
-    Reflect.defineMetadata('mibProperties', keys, this);
+    Reflect.defineMetadata('mibProperties', keys.map(_mib.validJsName), this);
     const map = {};
     keys.forEach(key => {
       const [id, propName] = defineMibProperty(this, key, types, device.properties[key]);
@@ -345,8 +345,8 @@ class DevicePrototype extends _events.EventEmitter {
     } = this;
 
     if (isDirty) {
-      dirties[id] = true;
-      this.write(id).catch(() => {});
+      dirties[id] = true; // TODO: implement autosave
+      // this.write(id).catch(() => {});
     } else {
       delete dirties[id];
     }

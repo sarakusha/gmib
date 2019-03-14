@@ -1,6 +1,7 @@
 import { decode, encode } from 'iconv-lite';
 import { MibError } from '../errors';
 import { NMS_MAX_DATA_LENGTH } from '../nbconst';
+import { chunkArray } from '../nibus/helper';
 import NmsValueType from './NmsValueType';
 
 const packByte = (b: number) => (((b % 100) / 10) * 16) + (b % 10);
@@ -128,17 +129,28 @@ function writeValue(valueType: NmsValueType, value: any, buffer: Buffer, offset 
     case NmsValueType.Int32:
       pos = buffer.writeInt32LE(value, pos);
       break;
-    case NmsValueType.UInt64:
     case NmsValueType.Int64:
+      console.error('signedLong is not implemented');
+      break;
+    case NmsValueType.UInt64:
       if (typeof value === 'number') {
         const int = Math.floor(value);
         const low = int & 0xFFFFFFFF;
-        const hi = int >>> 32;
+        const hi = 0;
+        // console.log(`${valueType} hi=${hi} lo=${low} value=${value}, int=${int}`);
         pos = buffer.writeUInt32LE(low, pos);
         pos = buffer.writeUInt32LE(hi, pos);
       }
       if (typeof value === 'string') {
-        pos = buffer.write(value, pos, value.length, 'hex');
+        // console.log('STR', value);
+        // const start = pos;
+        pos = buffer.write(
+          chunkArray(value.padStart(16, '0'), 2).reverse().join(''),
+          pos,
+          8,
+          'hex',
+        );
+        // console.log('BUF', buffer.toString('hex', start, pos + 1));
       }
       break;
     case NmsValueType.UInt8:

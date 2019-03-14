@@ -201,16 +201,16 @@ function defineMibProperty(
   const attributes: IPropertyDescriptor<DevicePrototype> = {
     enumerable: isReadable,
   };
-  if (isReadable) {
-    attributes.get = function () {
-      console.assert(Reflect.get(this, '$countRef') > 0, 'Device was released');
-      let value;
-      if (!this.getError(id)) {
-        value = convertTo(converters)(this.getRawValue(id));
-      }
-      return value;
-    };
-  }
+  // if (isReadable) {
+  attributes.get = function () {
+    console.assert(Reflect.get(this, '$countRef') > 0, 'Device was released');
+    let value;
+    if (!this.getError(id)) {
+      value = convertTo(converters)(this.getRawValue(id));
+    }
+    return value;
+  };
+  // }
   if (isWritable) {
     attributes.set = function (newValue: any) {
       console.assert(Reflect.get(this, '$countRef') > 0, 'Device was released');
@@ -264,7 +264,7 @@ class DevicePrototype extends EventEmitter {
     // }
 
     const keys = Reflect.ownKeys(device.properties) as string[];
-    Reflect.defineMetadata('mibProperties', keys, this);
+    Reflect.defineMetadata('mibProperties', keys.map(validJsName), this);
     const map: { [id: number]: string[] } = {};
     keys.forEach((key: string) => {
       const [id, propName] = defineMibProperty(this, key, types, device.properties[key]);
@@ -380,7 +380,8 @@ class DevicePrototype extends EventEmitter {
     const { [$dirties]: dirties } = this;
     if (isDirty) {
       dirties[id] = true;
-      this.write(id).catch(() => {});
+      // TODO: implement autosave
+      // this.write(id).catch(() => {});
     } else {
       delete dirties[id];
     }

@@ -34,7 +34,13 @@ const hex = /^0X[0-9A-F]+$/i;
 
 const isHex = str => hex.test(str) || parseInt(str, 10).toString(10) !== str.toLowerCase().replace(/^[0 ]+/, '');
 
-const toInt = (value = 0) => typeof value === 'number' ? value : parseInt(value, isHex(value) ? 16 : 10);
+const toInt = (value = 0) => {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'boolean') return value;
+  if (value === 'true') return 1;
+  if (value === 'false') return 0;
+  return parseInt(value, isHex(value) ? 16 : 10);
+};
 
 exports.toInt = toInt;
 
@@ -62,10 +68,15 @@ function enumerationConverter(enumerationValues) {
     const value = enumerationValues[key];
     const index = toInt(key);
     from[value.annotation] = index;
-    to[index] = value.annotation;
-  });
+    to[String(index)] = value.annotation;
+  }); // console.log('from %o, to %o', from, to);
+
   return {
-    from: value => typeof value === 'string' && Reflect.has(from, value) ? from[value] : undefined,
+    from: value => {
+      if (typeof value === 'string' && Reflect.has(from, value)) return from[value];
+      const simple = toInt(value);
+      return typeof simple === 'number' && Number.isNaN(simple) ? value : simple;
+    },
     to: value => (typeof value === 'number' || typeof value === 'string') && Reflect.has(to, value) ? to[value] : value
   };
 }

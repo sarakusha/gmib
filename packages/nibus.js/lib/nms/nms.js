@@ -14,6 +14,8 @@ var _errors = require("../errors");
 
 var _nbconst = require("../nbconst");
 
+var _helper = require("../nibus/helper");
+
 var _NmsValueType = _interopRequireDefault(require("./NmsValueType"));
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
@@ -159,18 +161,24 @@ function writeValue(valueType, value, buffer, offset = 0) {
       pos = buffer.writeInt32LE(value, pos);
       break;
 
-    case _NmsValueType.default.UInt64:
     case _NmsValueType.default.Int64:
+      console.error('signedLong is not implemented');
+      break;
+
+    case _NmsValueType.default.UInt64:
       if (typeof value === 'number') {
         const int = Math.floor(value);
         const low = int & 0xFFFFFFFF;
-        const hi = int >>> 32;
+        const hi = 0; // console.log(`${valueType} hi=${hi} lo=${low} value=${value}, int=${int}`);
+
         pos = buffer.writeUInt32LE(low, pos);
         pos = buffer.writeUInt32LE(hi, pos);
       }
 
       if (typeof value === 'string') {
-        pos = buffer.write(value, pos, value.length, 'hex');
+        // console.log('STR', value);
+        // const start = pos;
+        pos = buffer.write((0, _helper.chunkArray)(value.padStart(16, '0'), 2).reverse().join(''), pos, 8, 'hex'); // console.log('BUF', buffer.toString('hex', start, pos + 1));
       }
 
       break;

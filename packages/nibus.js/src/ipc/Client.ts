@@ -40,10 +40,10 @@ export default class IPCClient extends Socket implements IClient {
       event,
       args,
     };
-    return new Promise(resolve => this.write(JSON.stringify(data), resolve));
+    return new Promise(resolve => this.write(JSON.stringify(data), () => resolve()));
   }
 
-  static connect(path: string, connectionListener?: Function): IPCClient {
+  static connect(path: string, connectionListener?: () => void): IPCClient {
     const client = new IPCClient();
     return client.connect(xpipe.eq(path), connectionListener);
   }

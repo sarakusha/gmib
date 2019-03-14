@@ -52,7 +52,7 @@ const makeAddressHandler = <O extends Defined<CommonOpts, 'm' | 'mac'>>
           if (connection.description.link) {
             count += 1;
             if (args.fw) {
-              const [, type] = await connection.getFirmwareVersion(mac);
+              const [, type] = await connection.getVersion(mac);
               if (type) {
                 clearTimeout(timeout);
                 await action(args, mac, connection, type);
