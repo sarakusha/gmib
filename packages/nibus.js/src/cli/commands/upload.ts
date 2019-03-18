@@ -1,22 +1,14 @@
 import { Arguments, CommandModule, Defined } from 'yargs';
 import fs from 'fs';
 import path from 'path';
-import util from 'util';
 import Progress from 'progress';
-// import debugFactory from 'debug';
 
-import Address from '../../Address';
-import { NibusConnection } from '../../nibus';
+import { IDevice } from '../../mib';
+import { UploadDataListener } from '../../mib/devices';
 import { printBuffer } from '../../nibus/helper';
-import {
-  createNmsInitiateUploadSequence,
-  createNmsRequestDomainUpload, createNmsUploadSegment,
-  NmsDatagram,
-} from '../../nms';
 import { makeAddressHandler } from '../handlers';
 import { CommonOpts } from '../options';
-
-// const debug = debugFactory('nibus:upload');
+import { action as writeAction } from './write';
 
 type UploadOpts = Defined<CommonOpts, 'mac' | 'm'> & {
   domain: string,
@@ -29,28 +21,19 @@ type UploadOpts = Defined<CommonOpts, 'mac' | 'm'> & {
   force?: boolean,
 };
 
-async function upload(
-  // setCount: NibusCounter,
-  { domain, offset, size, out, force, hex, raw }: Arguments<UploadOpts>,
-  address: Address,
-  connection: NibusConnection) {
-  const reqUpload = createNmsRequestDomainUpload(address, domain.padEnd(8, ' '));
-  const { id, value: domainSize, status } = await connection.sendDatagram(reqUpload) as NmsDatagram;
-  // let ws: NodeJS.WriteStream | WriteStream;
+export async function action(device: IDevice, args: Arguments<UploadOpts>) {
+  const writeArgs = args.out
+    ? {
+      ...args,
+      quiet: true,
+    }
+    : args;
+  await writeAction(device, writeArgs);
+  const { domain, offset, size, out, force, hex, quiet } = args;
   let close = () => {};
-  let write: (data: any) => Promise<void>;
+  let write: (data: any) => void;
   let tick = (size: number) => {};
-  if (status !== 0) {
-    // debug('<error>', status);
-    throw new Error(`Request upload domain error: ${status}`);
-  }
-  const initUpload = createNmsInitiateUploadSequence(address, id);
-  const { status: initStat } = await connection.sendDatagram(initUpload) as NmsDatagram;
-  if (initStat !== 0) {
-    throw new Error(`Initiate upload domain error ${initStat}`);
-  }
-  let rest = size || domainSize;
-  let pos = offset;
+
   if (out) {
     if (!force && fs.existsSync(out)) {
       throw new Error(`File ${path.resolve(out)} already exists`);
@@ -58,48 +41,47 @@ async function upload(
     const ws = fs.createWriteStream(out, {
       encoding: hex ? 'utf8' : 'binary',
     });
-    write = util.promisify(ws.write.bind(ws));
+    write = data => ws.write(data, err => err && console.error(err.message));
     close = ws.close.bind(ws);
-    const bar = new Progress(
-      `  uploading [:bar] ${rest <= 50 ? '' : ':rate/bps :percent '}:current/:total :etas`,
-      {
-        total: rest,
-        width: 20,
-      },
-    );
-    tick = bar.tick.bind(bar);
   } else {
-    write = util.promisify(process.stdout.write.bind(process.stdout));
+    write = data => process.stdout.write(data, err => err && console.error(err.message));
   }
-  if (hex) {
-    await write(`DOMAIN: ${domain}
-OFFSET: ${offset}
-SIZE: ${rest}
-`);
-  }
-  while (rest > 0) {
-    const length = Math.min(255, rest);
-    const uploadSegment = createNmsUploadSegment(address, id, pos, length);
-    // setCount(c => c + 1);
-    const segment = await connection.sendDatagram(uploadSegment) as NmsDatagram;
-    const { status: uploadStatus, value: result } = segment;
-    if (uploadStatus !== 0) {
-      throw new Error(`Upload segment error ${uploadStatus}`);
-    }
+  const dataHandler: UploadDataListener = ({ data }) => {
+    tick(data.length);
     if (hex) {
-      await write(printBuffer(result.data));
-      await write('\n');
+      write(`${printBuffer(data)}${'\n'}`);
     } else {
-      await write(result.data);
+      write(data);
     }
-    // console.log(printBuffer(result.data));
-    // data.push(result.data);
-    rest -= result.data.length;
-    pos += result.data.length;
-    tick(result.data.length);
+  };
+
+  device.once('uploadStart', ({ domainSize }) => {
+    const total = size || domainSize;
+    if (out) {
+      const bar = new Progress(
+        `  uploading [:bar] ${total! <= 50 ? '' : ':rate/bps :percent '}:current/:total :etas`,
+        {
+          total: total!,
+          width: 20,
+        },
+      );
+      tick = bar.tick.bind(bar);
+    }
+    if (hex && !quiet) {
+      write(`DOMAIN: ${domain}
+OFFSET: ${offset}
+SIZE: ${total!}
+`);
+    }
+  });
+  device.on('uploadData', dataHandler);
+
+  try {
+    await device.upload(domain, offset, size);
+  } finally {
+    device.off('uploadData', dataHandler);
+    close();
   }
-  // console.log(printBuffer(Buffer.concat(data)));
-  close();
 }
 
 const uploadCommand: CommandModule<CommonOpts, UploadOpts> = {
@@ -138,7 +120,7 @@ const uploadCommand: CommandModule<CommonOpts, UploadOpts> = {
         describe: 'перезаписать существующий файл',
       })
       .demandOption(['m', 'mac', 'domain']),
-  handler: makeAddressHandler(upload, true),
+  handler: makeAddressHandler(action, true),
 };
 
 export default uploadCommand;

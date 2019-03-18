@@ -9,8 +9,8 @@ const getErrMsg = (errcode: number, prototype: object) => {
 };
 
 export class NibusError extends Error {
-  constructor(public errcode: number, prototype: object) {
-    super(getErrMsg(errcode, prototype));
+  constructor(public errcode: number, prototype: object, msg?: string) {
+    super(`${msg ? `${msg}: ` : ''}${getErrMsg(errcode, prototype)}`);
   }
 }
 

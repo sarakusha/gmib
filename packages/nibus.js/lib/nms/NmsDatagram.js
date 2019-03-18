@@ -116,7 +116,7 @@ class NmsDatagram extends _nibus.NibusDatagram {
   }
 
   get status() {
-    if (this.nms.length === 0) {
+    if (this.nms.length === 0 || !this.isResponse) {
       return undefined;
     }
 
@@ -177,19 +177,18 @@ class NmsDatagram extends _nibus.NibusDatagram {
   toJSON() {
     const {
       data,
-      protocol,
       ...props
     } = super.toJSON();
     const result = { ...props,
-      protocol: _nibus.Protocol.NMS,
       id: this.id,
-      service: this.service,
+      service: _NmsServiceType.default[this.service],
       data: undefined
     };
 
-    if (this.isResponse) {
+    if (this.isResponse || this.service === _NmsServiceType.default.InformationReport) {
       if (this.valueType !== undefined) {
-        result.value = this.value.toString();
+        // result.value = JSON.stringify(this.value);
+        result.value = this.value;
         result.valueType = _NmsValueType.default[this.valueType];
       }
 

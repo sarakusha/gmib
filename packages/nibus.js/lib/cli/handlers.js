@@ -5,6 +5,8 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.makeAddressHandler = void 0;
 
+var _mib = require("../mib");
+
 var _Address = _interopRequireDefault(require("../Address"));
 
 var _nibus = require("../nibus");
@@ -31,6 +33,16 @@ const makeAddressHandler = (action, breakout = false) => args => new Promise(asy
   const mac = new _Address.default(args.mac);
   let count = await _service.default.start(); // const setCount: NibusCounter = (handler = (c: number) => c) => count = handler(count);
 
+  const perform = async (connection, mibOrType) => {
+    clearTimeout(timeout);
+
+    const device = _mib.devices.create(mac, mibOrType);
+
+    device.connection = connection;
+    await action(device, args);
+    hasFound = true;
+  };
+
   _service.default.on('found', async ({
     address,
     connection
@@ -38,36 +50,19 @@ const makeAddressHandler = (action, breakout = false) => args => new Promise(asy
     try {
       if (address.equals(mac)) {
         if (!args.mib || args.mib === connection.description.mib) {
-          clearTimeout(timeout);
-          await action(args, mac, connection, connection.description.mib);
-          hasFound = true;
+          await perform(connection, connection.description.mib);
           if (breakout) return close();
+          wait();
         }
       }
 
       if (connection.description.link) {
         count += 1;
+        const [, type] = await connection.getVersion(mac);
 
-        if (args.fw) {
-          const [, type] = await connection.getVersion(mac);
-
-          if (type) {
-            clearTimeout(timeout);
-            await action(args, mac, connection, type);
-            hasFound = true;
-            if (breakout) return close();
-            wait();
-          }
-        } else {
-          clearTimeout(timeout);
-          const ping = await connection.ping(mac);
-
-          if (ping !== -1) {
-            await action(args, mac, connection, args.mib);
-            hasFound = true;
-            if (breakout) return close();
-          }
-
+        if (type) {
+          await perform(connection, type);
+          if (breakout) return close();
           wait();
         }
       }

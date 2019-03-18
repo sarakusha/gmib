@@ -1,5 +1,5 @@
-### Установка
-####node.js
+## Установка
+### node.js
 Требуется установить актуальную версию [node.js](https://nodejs.org).
 Для <b>*nix</b> систем рекомендуется использовать [Node Version Manager (nvm)](https://github.com/creationix/nvm).
 Просто запустите скрипт с помощью curl
@@ -24,33 +24,33 @@ npm set registry http://192.168.20.111:4873
 ```
 
 Выполните 
-####Ubuntu
+### Ubuntu
 1. Убедитесь что установлен [Python 2.7](https://www.python.org/downloads/) <sub><sup>(требуется для node-gyp)</sup></sub>
 2. `sudo apt-get install -y build-essential libudev-dev`
 
-####macOS
+### macOS
 1. [Python 2.7](https://www.python.org/downloads/)
 2. [Xcode](https://developer.apple.com/xcode/download/)
 3. Command Line Tools `xcode-select --install`
 
-####Windows
+### Windows
 * Устанвите [git](https://gitforwindows.org/)
-* ##### Опция 1 (автоматически)
+* #### Опция 1 (автоматически)
   Установка всех утилит используя [windows-build-tools](https://github.com/felixrieseberg/windows-build-tools)
 
   `npm i -g --production windows-build-tools`
-* ##### Опция 2 (вручную)
+* #### Опция 2 (вручную)
   * [Visual Studio Build Tools](https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=BuildTools)
   * [Python 2.7](https://www.python.org/downloads/)
   * `npm config set msvs_version 2017`
 
-##### Установка/обновление пакета `@nata/nibus.js`
+## Установка/обновление пакета `@nata/nibus.js`
 Чтобы установить или обновить пакет выполните команду
 ```bash
 npm i -g @nata/nibus.js
 ```
 Перед обновлением остановите службу `nibus stop`
-### Запуск сервиса `nibus.js` и команды
+## Запуск сервиса `nibus.js` и команды
 * запуск
 ```bash
 nibus start
@@ -75,7 +75,6 @@ nibus dump
 * дамп устройств за `Siolunx` с указанным `mib` или адресом  `mac`
 ```bash
 nibus dump --mib pconsole
-
 nibus dump --mac ::23:56
 ```
 * чтение одной переменной

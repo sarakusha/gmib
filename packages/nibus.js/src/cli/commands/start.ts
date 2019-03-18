@@ -2,7 +2,7 @@ import pm2, { StartOptions } from 'pm2';
 import { CommandModule } from 'yargs';
 import path from 'path';
 import debugFactory from 'debug';
-import { promisify } from 'util';
+// import { promisify } from 'util';
 
 const debug = debugFactory('nibus:start');
 // import { promisify } from 'util';
@@ -18,6 +18,10 @@ export const startOptions: StartOptions = {
 };
 
 if (path.extname(__filename) === '.ts') {
+  startOptions.env = {
+    DEBUG: 'nibus:*,-nibus:decoder',
+    DEBUG_COLORS: '1',
+  };
   startOptions.script = 'service/dev.start.js';
   startOptions.watch = [
     'service/demon.ts',

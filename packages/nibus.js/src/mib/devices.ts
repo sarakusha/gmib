@@ -1,3 +1,4 @@
+import { crc16ccitt } from 'crc';
 import { EventEmitter } from 'events';
 import _ from 'lodash';
 import path from 'path';
@@ -5,9 +6,22 @@ import 'reflect-metadata';
 import debugFactory from 'debug';
 import Address, { AddressParam } from '../Address';
 import { NibusError } from '../errors';
+import { NMS_MAX_DATA_LENGTH } from '../nbconst';
 import { NibusConnection } from '../nibus';
 import { chunkArray } from '../nibus/helper';
-import { createNmsRead, createNmsWrite, getNmsType } from '../nms';
+import {
+  createNmsDownloadSegment,
+  createNmsInitiateDownloadSequence,
+  createNmsInitiateUploadSequence,
+  createNmsRead,
+  createNmsRequestDomainDownload,
+  createNmsRequestDomainUpload,
+  createNmsTerminateDownloadSequence,
+  createNmsUploadSegment,
+  createNmsVerifyDomainChecksum,
+  createNmsWrite,
+  getNmsType,
+} from '../nms';
 import NmsDatagram from '../nms/NmsDatagram';
 import {
   booleanConverter, convertFrom, convertTo,
@@ -97,28 +111,90 @@ interface IMibDevice {
  * @fires changed
  * @fires changing
  */
-export interface IDevice extends EventEmitter {
+type Listener<T> = (arg: T) => void;
+type ChangedArg = { id: number, names: string[] };
+type ChangedListener = Listener<ChangedArg>;
+type UploadStartArg = { domain: string, domainSize: number, offset: number, size: number };
+type UploadStartListener = Listener<UploadStartArg>;
+type UploadDataArg = { domain: string, data: Buffer, pos: number };
+export type UploadDataListener = Listener<UploadDataArg>;
+type UploadFinishArg = { domain: string, offset: number, data: Buffer };
+type UploadFinishListener = Listener<UploadFinishArg>;
+type DownloadStartArg = { domain: string, domainSize: number, offset: number, size: number };
+type DownloadStartListener = Listener<DownloadStartArg>;
+type DownloadDataArg = { domain: string, length: number };
+export type DownloadDataListener = Listener<DownloadDataArg>;
+type DownloadFinishArg = { domain: string; offset: number, size: number };
+type DownloadFinishListener = Listener<DownloadFinishArg>;
+
+export interface IDevice {
   readonly address: Address;
-
   drain(): Promise<number[]>;
-
   write(...ids: number[]): Promise<number[]>;
-
   read(...ids: number[]): Promise<{ [name: string]: any }>;
-
+  upload(domain: string, offset?: number, size?: number): Promise<Uint8Array>;
+  // download(domain: string, data: Uint8Array | Buffer, offset?: number): Promise<void>;
   connection?: NibusConnection;
-
   release(): number;
-
   getId(idOrName: string | number): number;
-
   getName(idOrName: string | number): string;
-
   getRawValue(idOrName: number | string): any;
-
   getError(idOrName: number | string): any;
-
   [mibProperty: string]: any;
+
+  on(event: 'connected' | 'disconnected', listener: () => void): this;
+  on(event: 'changing' | 'changed', listener: ChangedListener): this;
+  on(event: 'uploadStart', listener: UploadStartListener): this;
+  on(event: 'uploadData', listener: UploadDataListener): this;
+  on(event: 'uploadFinish', listener: UploadFinishListener): this;
+  on(event: 'downloadStart', listener: DownloadStartListener): this;
+  on(event: 'downloadData', listener: DownloadDataListener): this;
+  on(event: 'downloadFinish', listener: DownloadFinishListener): this;
+
+  once(event: 'connected' | 'disconnected', listener: () => void): this;
+  once(event: 'changing' | 'changed', listener: ChangedListener): this;
+  once(event: 'uploadStart', listener: UploadStartListener): this;
+  once(event: 'uploadData', listener: UploadDataListener): this;
+  once(event: 'uploadFinish', listener: UploadFinishListener): this;
+  once(event: 'downloadStart', listener: DownloadStartListener): this;
+  once(event: 'downloadData', listener: DownloadDataListener): this;
+  once(event: 'downloadFinish', listener: DownloadFinishListener): this;
+
+  addListener(event: 'connected' | 'disconnected', listener: () => void): this;
+  addListener(event: 'changing' | 'changed', listener: ChangedListener): this;
+  addListener(event: 'uploadStart', listener: UploadStartListener): this;
+  addListener(event: 'uploadData', listener: UploadDataListener): this;
+  addListener(event: 'uploadFinish', listener: UploadFinishListener): this;
+  addListener(event: 'downloadStart', listener: DownloadStartListener): this;
+  addListener(event: 'downloadData', listener: DownloadDataListener): this;
+  addListener(event: 'downloadFinish', listener: DownloadFinishListener): this;
+
+  off(event: 'connected' | 'disconnected', listener: () => void): this;
+  off(event: 'changing' | 'changed', listener: ChangedListener): this;
+  off(event: 'uploadStart', listener: UploadStartListener): this;
+  off(event: 'uploadData', listener: UploadDataListener): this;
+  off(event: 'uploadFinish', listener: UploadFinishListener): this;
+  off(event: 'downloadStart', listener: DownloadStartListener): this;
+  off(event: 'downloadData', listener: DownloadDataListener): this;
+  off(event: 'downloadFinish', listener: DownloadFinishListener): this;
+
+  removeListener(event: 'connected' | 'disconnected', listener: () => void): this;
+  removeListener(event: 'changing' | 'changed', listener: ChangedListener): this;
+  removeListener(event: 'uploadStart', listener: UploadStartListener): this;
+  removeListener(event: 'uploadData', listener: UploadDataListener): this;
+  removeListener(event: 'uploadFinish', listener: UploadFinishListener): this;
+  removeListener(event: 'downloadStart', listener: DownloadStartListener): this;
+  removeListener(event: 'downloadData', listener: DownloadDataListener): this;
+  removeListener(event: 'downloadFinish', listener: DownloadFinishListener): this;
+
+  emit(event: 'connected' | 'disconnected'): boolean;
+  emit(event: 'changing' | 'changed', arg: ChangedArg): boolean;
+  emit(event: 'uploadStart', arg: UploadStartArg): boolean;
+  emit(event: 'uploadData', arg: UploadDataArg): boolean;
+  emit(event: 'uploadFinish', arg: UploadFinishArg): boolean;
+  emit(event: 'downloadStart', arg: DownloadStartArg): boolean;
+  emit(event: 'downloadData', arg: DownloadDataArg): boolean;
+  emit(event: 'downloadFinish', arg: DownloadFinishArg): boolean;
 }
 
 interface IPropertyDescriptor<Owner> {
@@ -229,7 +305,7 @@ export function getMibFile(mibname: string) {
   return path.resolve(__dirname, '../../mibs/', `${mibname}.mib.json`);
 }
 
-class DevicePrototype extends EventEmitter {
+class DevicePrototype extends EventEmitter implements IDevice {
   // will be override for an instance
   $countRef = 1;
 
@@ -305,7 +381,7 @@ class DevicePrototype extends EventEmitter {
     };
     const keys: string[] = Reflect.getMetadata('mibProperties', this);
     keys.forEach((key) => {
-      if (this.key !== undefined) json[key] = this[key];
+      if (this[key] !== undefined) json[key] = this[key];
     });
     json.address = this.address.toString();
     return json;
@@ -337,6 +413,14 @@ class DevicePrototype extends EventEmitter {
     throw new Error(`Unknown property ${idOrName}`);
   }
 
+  /*
+    public toIds(idsOrNames: (string | number)[]): number[] {
+      const map = Reflect.getMetadata('map', this);
+      return idsOrNames.map((idOrName) => {
+        if (typeof idOrName === 'string')
+      });
+    }
+  */
   public getRawValue(idOrName: number | string): any {
     const id = this.getId(idOrName);
     const { [$values]: values } = this;
@@ -428,9 +512,8 @@ class DevicePrototype extends EventEmitter {
     const map = Reflect.getMetadata('map', this);
     const ids = Object.entries(values)
       .filter(([, value]) => value != null)
-      .map(([id]) => map[id][0])
-      .filter(name => Reflect.getMetadata('isWritable', this, name))
-      .map(name => Reflect.getMetadata('id', this, name));
+      .map(([id]) => Number(id))
+      .filter((id => Reflect.getMetadata('isWritable', this, map[id][0])));
     return ids.length > 0 ? this.write(...ids) : Promise.resolve([]);
   }
 
@@ -538,10 +621,146 @@ class DevicePrototype extends EventEmitter {
       Promise.resolve({} as { [name: string]: any }),
     );
   }
+
+  async upload(domain: string, offset = 0, size?: number): Promise<Buffer> {
+    const { connection } = this;
+    try {
+      if (!connection) throw new Error('disconnected');
+      const reqUpload = createNmsRequestDomainUpload(this.address, domain.padEnd(8, '\0'));
+      const { id, value: domainSize, status } =
+        await connection.sendDatagram(reqUpload) as NmsDatagram;
+      if (status !== 0) {
+        // debug('<error>', status);
+        throw new NibusError(status!, this, 'Request upload domain error');
+      }
+      const initUpload = createNmsInitiateUploadSequence(this.address, id);
+      const { status: initStat } = await connection.sendDatagram(initUpload) as NmsDatagram;
+      if (initStat !== 0) {
+        throw new NibusError(initStat!, this, 'Initiate upload domain error');
+      }
+      const total = size || (domainSize - offset);
+      let rest = total;
+      let pos = offset;
+      this.emit(
+        'uploadStart',
+        {
+          domain,
+          domainSize,
+          offset,
+          size: total,
+        },
+      );
+      const bufs: Buffer[] = [];
+      while (rest > 0) {
+        const length = Math.min(255, rest);
+        const uploadSegment = createNmsUploadSegment(this.address, id, pos, length);
+        const { status: uploadStatus, value: result } =
+          await connection.sendDatagram(uploadSegment) as NmsDatagram;
+        if (uploadStatus !== 0) {
+          throw new NibusError(uploadStatus!, this, 'Upload segment error');
+        }
+        if (result.data.length === 0) {
+          break;
+        }
+        bufs.push(result.data);
+        this.emit(
+          'uploadData',
+          {
+            domain,
+            pos,
+            data: result.data,
+          },
+        );
+        rest -= result.data.length;
+        pos += result.data.length;
+      }
+      const result = Buffer.concat(bufs);
+      this.emit('uploadFinish', { domain, offset, data: result });
+      return result;
+    } catch (e) {
+      this.emit('uploadError', e);
+      throw e;
+    }
+  }
+
+  async download(domain: string, buffer: Buffer, offset = 0) {
+    const { connection } = this;
+    try {
+      if (!connection) throw new Error('disconnected');
+      const reqDownload = createNmsRequestDomainDownload(this.address, domain.padEnd(8, '\0'));
+      const { id, value: max, status } = await connection.sendDatagram(reqDownload) as NmsDatagram;
+      if (status !== 0) {
+        // debug('<error>', status);
+        throw new NibusError(status!, this, 'Request download domain error');
+      }
+      this.emit(
+        'downloadStart',
+        {
+          domain,
+          offset,
+          domainSize: max,
+          size: buffer.length,
+        },
+      );
+      if (buffer.length > max - offset) {
+        throw new Error(`Buffer to large. Expected ${max - offset} bytes`);
+      }
+      const initDownload = createNmsInitiateDownloadSequence(this.address, id);
+      const { status: initStat } = await connection.sendDatagram(initDownload) as NmsDatagram;
+      if (initStat !== 0) {
+        throw new NibusError(initStat!, this, 'Initiate download domain error');
+      }
+      const crc = crc16ccitt(buffer, 0);
+      const chunkSize = NMS_MAX_DATA_LENGTH - 4;
+      const chunks = chunkArray(buffer, chunkSize);
+      await chunks.reduce(async (prev, chunk: Buffer, i) => {
+        await prev;
+        const pos = i * chunkSize + offset;
+        const segmentDownload =
+          createNmsDownloadSegment(this.address, id, pos, chunk);
+        const { status: downloadStat } =
+          await connection.sendDatagram(segmentDownload) as NmsDatagram;
+        if (downloadStat !== 0) {
+          throw new NibusError(downloadStat!, this, 'Download segment error');
+        }
+        this.emit(
+          'downloadData',
+          {
+            domain,
+            length: chunk.length,
+          },
+        );
+      }, Promise.resolve());
+      const verify = createNmsVerifyDomainChecksum(this.address, id, offset, buffer.length, crc);
+      const { status: verifyStat } = await connection.sendDatagram(verify) as NmsDatagram;
+      if (verifyStat !== 0) {
+        throw new NibusError(verifyStat!, this, 'Download segment error');
+      }
+      const terminate = createNmsTerminateDownloadSequence(this.address, id);
+      const { status: termStat } = await connection.sendDatagram(terminate) as NmsDatagram;
+      if (termStat !== 0) {
+        throw new NibusError(termStat!, this, 'Terminate download sequence error');
+      }
+      this.emit(
+        'downloadFinish',
+        {
+          domain,
+          offset,
+          size: buffer.length,
+        },
+      );
+    } catch (e) {
+      this.emit('downloadError', e);
+      throw e;
+    }
+  }
 }
 
 // tslint:disable-next-line
-interface DevicePrototype extends IDevice {
+interface DevicePrototype {
+  readonly address: Address;
+  [mibProperty: string]: any;
+  $countRef: number;
   [$values]: { [id: number]: any };
   [$errors]: { [id: number]: Error };
   [$dirties]: { [id: number]: boolean };
@@ -563,17 +782,9 @@ function findMibByType(type: number): string | undefined {
 }
 
 declare interface Devices {
-  on(event: 'new', deviceListener: (device: IDevice) => void): this;
-
-  once(event: 'new', deviceListener: (device: IDevice) => void): this;
-
-  addEventListener(event: 'new', deviceListener: (device: IDevice) => void): this;
-
-  on(event: 'delete', deviceListener: (device: IDevice) => void): this;
-
-  once(event: 'delete', deviceListener: (device: IDevice) => void): this;
-
-  addEventListener(event: 'delete', deviceListener: (device: IDevice) => void): this;
+  on(event: 'new' | 'delete', deviceListener: (device: IDevice) => void): this;
+  once(event: 'new' | 'delete', deviceListener: (device: IDevice) => void): this;
+  addListener(event: 'new' | 'delete', deviceListener: (device: IDevice) => void): this;
 }
 
 function getConstructor(mib: string): Function {
@@ -587,7 +798,7 @@ function getConstructor(mib: string): Function {
       this[$dirties] = {};
       Reflect.defineProperty(this, 'address', withValue(address));
       this.$countRef = 1;
-      this.$debounceDrain = _.debounce(this.drain, 25);
+      // this.$debounceDrain = _.debounce(this.drain, 25);
     }
 
     const prototype = new DevicePrototype(mib);

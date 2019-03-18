@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { INibusCommon, INibusDatagramJSON, NibusDatagram, Protocol } from '../nibus';
+import { INibusCommon, INibusDatagramJSON, NibusDatagram } from '../nibus';
 import NmsServiceType from './NmsServiceType';
 export interface INmsOptions extends INibusCommon {
     id: number;
@@ -10,10 +10,10 @@ export interface INmsOptions extends INibusCommon {
     status?: number;
 }
 export interface INmsDatagramJSON extends INibusDatagramJSON {
-    protocol: Protocol.NMS;
+    protocol: string;
     data?: never;
     id: number;
-    service: NmsServiceType;
+    service: string;
     nms?: Buffer;
     isResponse?: boolean;
     isResponsible?: boolean;

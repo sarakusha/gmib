@@ -1,8 +1,10 @@
 "use strict";
 
+var _configstore = _interopRequireDefault(require("configstore"));
+
 var _debug = _interopRequireDefault(require("debug"));
 
-var _configstore = _interopRequireDefault(require("configstore"));
+var _package = _interopRequireDefault(require("../../package.json"));
 
 var _ipc = require("../ipc");
 
@@ -16,19 +18,18 @@ var _const = require("./const");
 
 var _detector = _interopRequireDefault(require("./detector"));
 
-var _package = _interopRequireDefault(require("../../package.json"));
-
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
 const conf = new _configstore.default(_package.default.name, {
-  logLevel: 'none'
-});
-
-_debug.default.enable('nibus:detector,nibus.service');
+  logLevel: 'none',
+  omit: ['priority']
+}); // debugFactory.enable('nibus:detector,nibus.service');
 
 const debug = (0, _debug.default)('nibus:service');
+const debugIn = (0, _debug.default)('nibus:INP<<<');
+const debugOut = (0, _debug.default)('nibus:OUT>>>');
 
 const noop = () => {};
 
@@ -45,22 +46,30 @@ const direction = dir => dir === _Server.Direction.in ? '<<<' : '>>>';
 
 const decoderIn = new _nibus.NibusDecoder();
 decoderIn.on('data', datagram => {
-  debug(`${direction(_Server.Direction.in)} ${datagram.toString({
+  debugIn(datagram.toString({
     pick: conf.get('pick'),
     omit: conf.get('omit')
-  })}`);
+  }));
 });
 const decoderOut = new _nibus.NibusDecoder();
 decoderOut.on('data', datagram => {
-  debug(`${direction(_Server.Direction.out)} ${datagram.toString({
+  debugOut(datagram.toString({
     pick: conf.get('pick'),
     omit: conf.get('omit')
-  })}`);
+  }));
 });
 const loggers = {
   none: null,
   hex: (data, dir) => {
-    debug(`${direction(dir)} ${(0, _helper.printBuffer)(data)}`);
+    switch (dir) {
+      case _Server.Direction.in:
+        debugIn((0, _helper.printBuffer)(data));
+        break;
+
+      case _Server.Direction.out:
+        debugOut((0, _helper.printBuffer)(data));
+        break;
+    }
   },
   nibus: (data, dir) => {
     switch (dir) {
@@ -85,8 +94,8 @@ class NibusService {
 
     _defineProperty(this, "logLevelHandler", (client, logLevel, pickFields, omitFields) => {
       logLevel && conf.set('logLevel', logLevel);
-      pickFields || conf.set('pick', pickFields);
-      omitFields || conf.set('omit', omitFields);
+      pickFields && conf.set('pick', pickFields);
+      omitFields && conf.set('omit', omitFields);
       this.updateLogger();
     });
 
@@ -107,7 +116,6 @@ class NibusService {
       const mibCategory = _detector.default.detection.mibCategories[category];
 
       if (mibCategory) {
-        // debug('connection added', mibCategory);
         const connection = new _ipc.SerialTee(portInfo, mibCategory);
         connection.on('close', comName => this.removeHandler({
           comName

@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.MibDescriptionV = exports.NibusBaudRateV = exports.FindKindV = exports.KnownPortV = exports.CategoryV = void 0;
+exports.MibDescriptionV = exports.NibusParityV = exports.NibusBaudRateV = exports.FindKindV = exports.KnownPortV = exports.CategoryV = void 0;
 
 var t = _interopRequireWildcard(require("io-ts"));
 
@@ -33,10 +33,13 @@ const FindKindV = t.keyof({
 exports.FindKindV = FindKindV;
 const NibusBaudRateV = t.union([t.literal(115200), t.literal(57600), t.literal(28800)], 'NibusBaudRate');
 exports.NibusBaudRateV = NibusBaudRateV;
+const NibusParityV = t.union([t.literal('none'), t.literal('even'), t.literal('mark')], 'NibusParity');
+exports.NibusParityV = NibusParityV;
 const MibDescriptionV = t.partial({
   mib: t.string,
   link: t.boolean,
   baudRate: NibusBaudRateV,
+  parity: NibusParityV,
   category: t.string,
   find: FindKindV,
   disableBatchReading: t.boolean

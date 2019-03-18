@@ -16,7 +16,7 @@ export interface INibusOptions extends INibusCommon {
 }
 export interface INibusDatagramJSON {
     priority: number;
-    protocol: Protocol;
+    protocol: string;
     destination: string;
     source: string;
     timeStamp: string;

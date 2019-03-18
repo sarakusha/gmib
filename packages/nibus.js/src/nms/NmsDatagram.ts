@@ -17,10 +17,10 @@ export interface INmsOptions extends INibusCommon {
 const emptyBuffer = Buffer.alloc(0);
 
 export interface INmsDatagramJSON extends INibusDatagramJSON {
-  protocol: Protocol.NMS;
+  protocol: string;
   data?: never;
   id: number;
-  service: NmsServiceType;
+  service: string;
   nms?: Buffer;
   isResponse?: boolean;
   isResponsible?: boolean;
@@ -104,7 +104,7 @@ export default class NmsDatagram extends NibusDatagram implements INmsOptions {
   }
 
   get status() {
-    if (this.nms.length === 0) {
+    if (this.nms.length === 0 || !this.isResponse) {
       return undefined;
     }
     return this.nms.readInt8(0);
@@ -145,17 +145,17 @@ export default class NmsDatagram extends NibusDatagram implements INmsOptions {
   }
 
   public toJSON(): INmsDatagramJSON {
-    const { data, protocol, ...props } = super.toJSON();
+    const { data, ...props } = super.toJSON();
     const result: INmsDatagramJSON = {
       ...props,
-      protocol: Protocol.NMS,
       id: this.id,
-      service: this.service,
+      service: NmsServiceType[this.service],
       data: undefined,
     };
-    if (this.isResponse) {
+    if (this.isResponse || this.service === NmsServiceType.InformationReport) {
       if (this.valueType !== undefined) {
-        result.value = this.value.toString();
+        // result.value = JSON.stringify(this.value);
+        result.value = this.value;
         result.valueType = NmsValueType[this.valueType];
       }
       result.status = this.status;

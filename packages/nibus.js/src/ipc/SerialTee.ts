@@ -48,6 +48,7 @@ export default class SerialTee extends EventEmitter {
       {
         ...portOptions,
         baudRate: description.baudRate || 115200,
+        parity: description.parity || portOptions.parity,
       },
     );
     this.serial.on('close', this.close);

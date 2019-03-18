@@ -20,6 +20,7 @@ export declare const PortArgV: t.TypeC<{
         mib: t.StringC;
         link: t.BooleanC;
         baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
+        parity: t.UnionC<[t.LiteralC<"none">, t.LiteralC<"even">, t.LiteralC<"mark">]>;
         category: t.StringC;
         find: t.KeyofC<{
             sarp: null;
@@ -52,6 +53,7 @@ export declare const PortsEventV: t.TypeC<{
             mib: t.StringC;
             link: t.BooleanC;
             baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
+            parity: t.UnionC<[t.LiteralC<"none">, t.LiteralC<"even">, t.LiteralC<"mark">]>;
             category: t.StringC;
             find: t.KeyofC<{
                 sarp: null;
@@ -77,6 +79,7 @@ export declare const PortsEventV: t.TypeC<{
             mib: t.StringC;
             link: t.BooleanC;
             baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
+            parity: t.UnionC<[t.LiteralC<"none">, t.LiteralC<"even">, t.LiteralC<"mark">]>;
             category: t.StringC;
             find: t.KeyofC<{
                 sarp: null;
@@ -108,6 +111,7 @@ export declare const PortAddedEventV: t.TypeC<{
             mib: t.StringC;
             link: t.BooleanC;
             baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
+            parity: t.UnionC<[t.LiteralC<"none">, t.LiteralC<"even">, t.LiteralC<"mark">]>;
             category: t.StringC;
             find: t.KeyofC<{
                 sarp: null;
@@ -133,6 +137,7 @@ export declare const PortAddedEventV: t.TypeC<{
             mib: t.StringC;
             link: t.BooleanC;
             baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
+            parity: t.UnionC<[t.LiteralC<"none">, t.LiteralC<"even">, t.LiteralC<"mark">]>;
             category: t.StringC;
             find: t.KeyofC<{
                 sarp: null;
@@ -164,6 +169,7 @@ export declare const PortRemovedEventV: t.TypeC<{
             mib: t.StringC;
             link: t.BooleanC;
             baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
+            parity: t.UnionC<[t.LiteralC<"none">, t.LiteralC<"even">, t.LiteralC<"mark">]>;
             category: t.StringC;
             find: t.KeyofC<{
                 sarp: null;
@@ -189,6 +195,7 @@ export declare const PortRemovedEventV: t.TypeC<{
             mib: t.StringC;
             link: t.BooleanC;
             baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
+            parity: t.UnionC<[t.LiteralC<"none">, t.LiteralC<"even">, t.LiteralC<"mark">]>;
             category: t.StringC;
             find: t.KeyofC<{
                 sarp: null;
@@ -220,6 +227,7 @@ export declare const EventV: t.TaggedUnionC<"event", [t.TypeC<{
             mib: t.StringC;
             link: t.BooleanC;
             baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
+            parity: t.UnionC<[t.LiteralC<"none">, t.LiteralC<"even">, t.LiteralC<"mark">]>;
             category: t.StringC;
             find: t.KeyofC<{
                 sarp: null;
@@ -245,6 +253,7 @@ export declare const EventV: t.TaggedUnionC<"event", [t.TypeC<{
             mib: t.StringC;
             link: t.BooleanC;
             baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
+            parity: t.UnionC<[t.LiteralC<"none">, t.LiteralC<"even">, t.LiteralC<"mark">]>;
             category: t.StringC;
             find: t.KeyofC<{
                 sarp: null;
@@ -273,6 +282,7 @@ export declare const EventV: t.TaggedUnionC<"event", [t.TypeC<{
             mib: t.StringC;
             link: t.BooleanC;
             baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
+            parity: t.UnionC<[t.LiteralC<"none">, t.LiteralC<"even">, t.LiteralC<"mark">]>;
             category: t.StringC;
             find: t.KeyofC<{
                 sarp: null;
@@ -298,6 +308,7 @@ export declare const EventV: t.TaggedUnionC<"event", [t.TypeC<{
             mib: t.StringC;
             link: t.BooleanC;
             baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
+            parity: t.UnionC<[t.LiteralC<"none">, t.LiteralC<"even">, t.LiteralC<"mark">]>;
             category: t.StringC;
             find: t.KeyofC<{
                 sarp: null;
@@ -326,6 +337,7 @@ export declare const EventV: t.TaggedUnionC<"event", [t.TypeC<{
             mib: t.StringC;
             link: t.BooleanC;
             baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
+            parity: t.UnionC<[t.LiteralC<"none">, t.LiteralC<"even">, t.LiteralC<"mark">]>;
             category: t.StringC;
             find: t.KeyofC<{
                 sarp: null;
@@ -351,6 +363,7 @@ export declare const EventV: t.TaggedUnionC<"event", [t.TypeC<{
             mib: t.StringC;
             link: t.BooleanC;
             baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
+            parity: t.UnionC<[t.LiteralC<"none">, t.LiteralC<"even">, t.LiteralC<"mark">]>;
             category: t.StringC;
             find: t.KeyofC<{
                 sarp: null;

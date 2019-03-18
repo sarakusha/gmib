@@ -1,6 +1,7 @@
+import Configstore from 'configstore';
 import debugFactory from 'debug';
 import { Socket } from 'net';
-import Configstore from 'configstore';
+import pkg from '../../package.json';
 import { SerialTee, Server } from '../ipc';
 import { SerialLogger } from '../ipc/SerialTee';
 import { Direction } from '../ipc/Server';
@@ -9,12 +10,18 @@ import { printBuffer } from '../nibus/helper';
 import { PATH } from './const';
 import detector from './detector';
 import { IKnownPort } from './KnownPorts';
-import pkg from '../../package.json';
 
-const conf = new Configstore(pkg.name, { logLevel: 'none' });
+const conf = new Configstore(pkg.name,
+  {
+    logLevel: 'none',
+    omit: ['priority'],
+  },
+);
 
-debugFactory.enable('nibus:detector,nibus.service');
+// debugFactory.enable('nibus:detector,nibus.service');
 const debug = debugFactory('nibus:service');
+const debugIn = debugFactory('nibus:INP<<<');
+const debugOut = debugFactory('nibus:OUT>>>');
 
 const noop = () => {};
 
@@ -33,23 +40,30 @@ type Fields = string[] | undefined;
 const direction = (dir: Direction) => dir === Direction.in ? '<<<' : '>>>';
 const decoderIn = new NibusDecoder();
 decoderIn.on('data', (datagram: NibusDatagram) => {
-  debug(`${direction(Direction.in)} ${datagram.toString({
+  debugIn(datagram.toString({
     pick: conf.get('pick') as Fields,
     omit: conf.get('omit') as Fields,
-  })}`);
+  }));
 });
 const decoderOut = new NibusDecoder();
 decoderOut.on('data', (datagram: NibusDatagram) => {
-  debug(`${direction(Direction.out)} ${datagram.toString({
+  debugOut(datagram.toString({
     pick: conf.get('pick') as Fields,
     omit: conf.get('omit') as Fields,
-  })}`);
+  }));
 });
 
 const loggers = {
   none: null,
   hex: (data: Buffer, dir: Direction) => {
-    debug(`${direction(dir)} ${printBuffer(data)}`);
+    switch (dir) {
+      case Direction.in:
+        debugIn(printBuffer(data));
+        break;
+      case Direction.out:
+        debugOut(printBuffer(data));
+        break;
+    }
   },
   nibus: (data: Buffer, dir: Direction) => {
     switch (dir) {
@@ -86,8 +100,8 @@ class NibusService {
     pickFields: Fields,
     omitFields: Fields) => {
     logLevel && conf.set('logLevel', logLevel);
-    pickFields || conf.set('pick', pickFields);
-    omitFields || conf.set('omit', omitFields);
+    pickFields && conf.set('pick', pickFields);
+    omitFields && conf.set('omit', omitFields);
     this.updateLogger();
   };
 
@@ -104,7 +118,6 @@ class NibusService {
     const { category } = portInfo;
     const mibCategory = detector.detection!.mibCategories[category!];
     if (mibCategory) {
-      // debug('connection added', mibCategory);
       const connection = new SerialTee(portInfo, mibCategory);
       connection.on('close', (comName: string) => this.removeHandler({ comName }));
       this.connections.push(connection);

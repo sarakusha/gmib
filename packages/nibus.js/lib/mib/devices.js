@@ -7,6 +7,8 @@ exports.getMibFile = getMibFile;
 exports.getMibPrototype = getMibPrototype;
 exports.default = void 0;
 
+var _crc = require("crc");
+
 var _events = require("events");
 
 var _lodash = _interopRequireDefault(require("lodash"));
@@ -20,6 +22,8 @@ var _debug = _interopRequireDefault(require("debug"));
 var _Address = _interopRequireDefault(require("../Address"));
 
 var _errors = require("../errors");
+
+var _nbconst = require("../nbconst");
 
 var _helper = require("../nibus/helper");
 
@@ -65,7 +69,6 @@ function getBaseType(types, type) {
 
 function defineMibProperty(target, key, types, prop) {
   const propertyKey = (0, _mib.validJsName)(key);
-  console.assert(prop, `invalid mibprop ${key}`);
   const {
     appinfo
   } = prop;
@@ -250,7 +253,7 @@ class DevicePrototype extends _events.EventEmitter {
     };
     const keys = Reflect.getMetadata('mibProperties', this);
     keys.forEach(key => {
-      if (this.key !== undefined) json[key] = this[key];
+      if (this[key] !== undefined) json[key] = this[key];
     });
     json.address = this.address.toString();
     return json;
@@ -287,6 +290,15 @@ class DevicePrototype extends _events.EventEmitter {
     if (typeof idOrName === 'string' && keys.includes(idOrName)) return idOrName;
     throw new Error(`Unknown property ${idOrName}`);
   }
+  /*
+    public toIds(idsOrNames: (string | number)[]): number[] {
+      const map = Reflect.getMetadata('map', this);
+      return idsOrNames.map((idOrName) => {
+        if (typeof idOrName === 'string')
+      });
+    }
+  */
+
 
   getRawValue(idOrName) {
     const id = this.getId(idOrName);
@@ -397,7 +409,7 @@ class DevicePrototype extends _events.EventEmitter {
       [$values]: values
     } = this;
     const map = Reflect.getMetadata('map', this);
-    const ids = Object.entries(values).filter(([, value]) => value != null).map(([id]) => map[id][0]).filter(name => Reflect.getMetadata('isWritable', this, name)).map(name => Reflect.getMetadata('id', this, name));
+    const ids = Object.entries(values).filter(([, value]) => value != null).map(([id]) => Number(id)).filter(id => Reflect.getMetadata('isWritable', this, map[id][0]));
     return ids.length > 0 ? this.write(...ids) : Promise.resolve([]);
   }
 
@@ -504,6 +516,172 @@ class DevicePrototype extends _events.EventEmitter {
     }, Promise.resolve({}));
   }
 
+  async upload(domain, offset = 0, size) {
+    const {
+      connection
+    } = this;
+
+    try {
+      if (!connection) throw new Error('disconnected');
+      const reqUpload = (0, _nms.createNmsRequestDomainUpload)(this.address, domain.padEnd(8, '\0'));
+      const {
+        id,
+        value: domainSize,
+        status
+      } = await connection.sendDatagram(reqUpload);
+
+      if (status !== 0) {
+        // debug('<error>', status);
+        throw new _errors.NibusError(status, this, 'Request upload domain error');
+      }
+
+      const initUpload = (0, _nms.createNmsInitiateUploadSequence)(this.address, id);
+      const {
+        status: initStat
+      } = await connection.sendDatagram(initUpload);
+
+      if (initStat !== 0) {
+        throw new _errors.NibusError(initStat, this, 'Initiate upload domain error');
+      }
+
+      const total = size || domainSize - offset;
+      let rest = total;
+      let pos = offset;
+      this.emit('uploadStart', {
+        domain,
+        domainSize,
+        offset,
+        size: total
+      });
+      const bufs = [];
+
+      while (rest > 0) {
+        const length = Math.min(255, rest);
+        const uploadSegment = (0, _nms.createNmsUploadSegment)(this.address, id, pos, length);
+        const {
+          status: uploadStatus,
+          value: result
+        } = await connection.sendDatagram(uploadSegment);
+
+        if (uploadStatus !== 0) {
+          throw new _errors.NibusError(uploadStatus, this, 'Upload segment error');
+        }
+
+        if (result.data.length === 0) {
+          break;
+        }
+
+        bufs.push(result.data);
+        this.emit('uploadData', {
+          domain,
+          pos,
+          data: result.data
+        });
+        rest -= result.data.length;
+        pos += result.data.length;
+      }
+
+      const result = Buffer.concat(bufs);
+      this.emit('uploadFinish', {
+        domain,
+        offset,
+        data: result
+      });
+      return result;
+    } catch (e) {
+      this.emit('uploadError', e);
+      throw e;
+    }
+  }
+
+  async download(domain, buffer, offset = 0) {
+    const {
+      connection
+    } = this;
+
+    try {
+      if (!connection) throw new Error('disconnected');
+      const reqDownload = (0, _nms.createNmsRequestDomainDownload)(this.address, domain.padEnd(8, '\0'));
+      const {
+        id,
+        value: max,
+        status
+      } = await connection.sendDatagram(reqDownload);
+
+      if (status !== 0) {
+        // debug('<error>', status);
+        throw new _errors.NibusError(status, this, 'Request download domain error');
+      }
+
+      this.emit('downloadStart', {
+        domain,
+        offset,
+        domainSize: max,
+        size: buffer.length
+      });
+
+      if (buffer.length > max - offset) {
+        throw new Error(`Buffer to large. Expected ${max - offset} bytes`);
+      }
+
+      const initDownload = (0, _nms.createNmsInitiateDownloadSequence)(this.address, id);
+      const {
+        status: initStat
+      } = await connection.sendDatagram(initDownload);
+
+      if (initStat !== 0) {
+        throw new _errors.NibusError(initStat, this, 'Initiate download domain error');
+      }
+
+      const crc = (0, _crc.crc16ccitt)(buffer, 0);
+      const chunkSize = _nbconst.NMS_MAX_DATA_LENGTH - 4;
+      const chunks = (0, _helper.chunkArray)(buffer, chunkSize);
+      await chunks.reduce(async (prev, chunk, i) => {
+        await prev;
+        const pos = i * chunkSize + offset;
+        const segmentDownload = (0, _nms.createNmsDownloadSegment)(this.address, id, pos, chunk);
+        const {
+          status: downloadStat
+        } = await connection.sendDatagram(segmentDownload);
+
+        if (downloadStat !== 0) {
+          throw new _errors.NibusError(downloadStat, this, 'Download segment error');
+        }
+
+        this.emit('downloadData', {
+          domain,
+          length: chunk.length
+        });
+      }, Promise.resolve());
+      const verify = (0, _nms.createNmsVerifyDomainChecksum)(this.address, id, offset, buffer.length, crc);
+      const {
+        status: verifyStat
+      } = await connection.sendDatagram(verify);
+
+      if (verifyStat !== 0) {
+        throw new _errors.NibusError(verifyStat, this, 'Download segment error');
+      }
+
+      const terminate = (0, _nms.createNmsTerminateDownloadSequence)(this.address, id);
+      const {
+        status: termStat
+      } = await connection.sendDatagram(terminate);
+
+      if (termStat !== 0) {
+        throw new _errors.NibusError(termStat, this, 'Terminate download sequence error');
+      }
+
+      this.emit('downloadFinish', {
+        domain,
+        offset,
+        size: buffer.length
+      });
+    } catch (e) {
+      this.emit('downloadError', e);
+      throw e;
+    }
+  }
+
 } // tslint:disable-next-line
 
 
@@ -537,8 +715,7 @@ function getConstructor(mib) {
       this[$errors] = {};
       this[$dirties] = {};
       Reflect.defineProperty(this, 'address', (0, _mib.withValue)(address));
-      this.$countRef = 1;
-      this.$debounceDrain = _lodash.default.debounce(this.drain, 25);
+      this.$countRef = 1; // this.$debounceDrain = _.debounce(this.drain, 25);
     }
 
     const prototype = new DevicePrototype(mib);
