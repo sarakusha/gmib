@@ -9,7 +9,8 @@
     "paths": {
       "usb-detection": ["@types/usb-detection"],
       "sax": ["@types/sax"],
-      "xpipe": ["@types/xpipe"]
+      "xpipe": ["@types/xpipe"],
+      "serialport": ["@types/serialport"]
     }
   },
   "include": [

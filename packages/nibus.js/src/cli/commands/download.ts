@@ -1,21 +1,11 @@
 import { Arguments, CommandModule, Defined } from 'yargs';
 import fs from 'fs';
-import path from 'path';
 import Progress from 'progress';
-import { crc16ccitt } from 'crc';
 
-import Address from '../../Address';
-import { NMS_MAX_DATA_LENGTH } from '../../nbconst';
-import { NibusConnection } from '../../nibus';
-import { chunkArray } from '../../nibus/helper';
-import {
-  createNmsDownloadSegment,
-  createNmsInitiateDownloadSequence,
-  createNmsRequestDomainDownload, createNmsTerminateDownloadSequence, createNmsVerifyDomainChecksum,
-  NmsDatagram,
-} from '../../nms';
+import { IDevice } from '../../mib';
 import { makeAddressHandler } from '../handlers';
 import { CommonOpts } from '../options';
+import { action as writeAction } from './write';
 
 type DownloadOpts = Defined<CommonOpts, 'm' | 'mac'> & {
   domain: string,
@@ -25,13 +15,13 @@ type DownloadOpts = Defined<CommonOpts, 'm' | 'mac'> & {
   hex?: boolean,
 };
 
-function readAllFromStdin(max: number) {
+function readAllFromStdin() {
   const buffers: Buffer[] = [];
-  let rest = max;
+  // let rest = max;
   const onData = (buffer: Buffer) => {
-    if (rest <= 0) return;
+    // if (rest <= 0) return;
     buffers.push(buffer);
-    rest -= buffer.length;
+    // rest -= buffer.length;
   };
   return new Promise<Buffer>(((resolve, reject) => {
     process.stdin
@@ -39,65 +29,59 @@ function readAllFromStdin(max: number) {
       .once('end', () => {
         process.stdin.off('data', onData);
         process.stdin.off('error', reject);
-        resolve(Buffer.concat(buffers).slice(0, max));
+        resolve(Buffer.concat(buffers));
       })
       .once('error', reject);
   }));
 }
 
-async function download(
-  { domain, offset, source, hex }: Arguments<DownloadOpts>,
-  address: Address,
-  connection: NibusConnection) {
-  const reqDownload = createNmsRequestDomainDownload(address, domain.padEnd(8, ' '));
-  const { id, value: max, status } = await connection.sendDatagram(reqDownload) as NmsDatagram;
-  if (status !== 0) {
-    // debug('<error>', status);
-    throw new Error(`Request download domain error: ${status}`);
+export const convert = (buffer: Buffer): [Buffer, number] => {
+  const lines = buffer.toString('ascii').split(/\r?\n/g);
+  let offset = 0;
+  if (lines.length === 0) return [Buffer.alloc(0), 0];
+  const first = lines[0];
+  let start = 0;
+  if (first[0] === '@') {
+    offset = parseInt(first.slice(1), 16);
+    start = 1;
   }
-  const initDownload = createNmsInitiateDownloadSequence(address, id);
-  const { status: initStat } = await connection.sendDatagram(initDownload) as NmsDatagram;
-  if (initStat !== 0) {
-    throw new Error(`Initiate download domain error ${initStat}`);
-  }
+  const hexToBuf = (hex: string) => Buffer.from(hex.split(/[\s:-=]/g).join(''), 'hex');
+  return [Buffer.concat(lines.slice(start).map(hexToBuf)), offset];
+};
+
+export async function action(
+  device: IDevice,
+  args: Arguments<DownloadOpts>) {
+  const { domain, offset, source, hex } = args;
+  await writeAction(device, args);
   let buffer: Buffer;
+  let ofs = 0;
   let tick = (size: number) => {};
   if (source) {
     buffer = await fs.promises.readFile(source);
-    if (buffer.length > max) {
-      throw new Error(`File ${path.resolve(source)} to large. Expected ${max} bytes`);
-    }
+    if (hex) [buffer, ofs] = convert(buffer);
+    const dest = (offset || ofs).toString(16).padStart(4, '0');
     const bar = new Progress(
-      '  downloading [:bar] :rate/bps :percent :current/:total :etas',
-      { total: buffer.length, width: 20 },
+      `  downloading [:bar] to ${dest} :rate/bps :percent :current/:total :etas`,
+      {
+        total: buffer.length,
+        width: 20,
+      },
     );
     tick = bar.tick.bind(bar);
   } else {
-    buffer = await readAllFromStdin(max);
-  }
-  const crc = crc16ccitt(buffer, 0);
-  const chunkSize = NMS_MAX_DATA_LENGTH - 4;
-  const chunks = chunkArray(buffer, chunkSize);
-  await chunks.reduce(async (prev, chunk: Buffer, i) => {
-    await prev;
-    const segmentDownload = createNmsDownloadSegment(address, id, i * chunkSize + offset, chunk);
-    const { status: downloadStat } = await connection.sendDatagram(segmentDownload) as NmsDatagram;
-    if (downloadStat !== 0) {
-      throw new Error(`Download segment error ${downloadStat}`);
+    buffer = await readAllFromStdin();
+    if (hex) {
+      [buffer, ofs] = convert(buffer);
     }
-    tick(chunk.length);
-  }, Promise.resolve());
-  const verify = createNmsVerifyDomainChecksum(address, id, offset, buffer.length, crc);
-  const { status: verifyStat } = await connection.sendDatagram(verify) as NmsDatagram;
-  if (verifyStat !== 0) {
-    throw new Error(`Download segment error ${verifyStat}`);
   }
-  const terminate = createNmsTerminateDownloadSequence(address, id);
-  const { status: termStat } = await connection.sendDatagram(terminate) as NmsDatagram;
-  if (termStat !== 0) {
-    throw new Error(`Terminate download sequence error ${termStat}`);
-  }
+  device.on('downloadData', ({ domain: dataDomain, length }) => {
+    if (dataDomain === domain) tick(length);
+  });
+
+  await device.download(domain, buffer, offset || ofs);
 }
+
 const downloadCommand: CommandModule<CommonOpts, DownloadOpts> = {
   command: 'download',
   describe: 'загрузить домен в устройство',
@@ -128,7 +112,7 @@ const downloadCommand: CommandModule<CommonOpts, DownloadOpts> = {
         return true;
       })
       .demandOption(['m', 'mac']),
-  handler: makeAddressHandler(download, true),
+  handler: makeAddressHandler(action, true),
 };
 
 export default downloadCommand;

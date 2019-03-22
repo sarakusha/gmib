@@ -31,7 +31,7 @@ export default class NibusDecoder extends Transform {
   // tslint:disable-next-line
   public _transform(chunk: any, encoding: string, callback: TransformCallback) {
     console.assert(encoding === 'buffer', 'Unexpected encoding');
-    // debugSerial(printBuffer(chunk));
+    // console.log('@@@@@@@@', printBuffer(chunk));
     const data = [...this.buf, ...chunk];
     if (data.length > 0) {
       this.buf = this.analyze(data);

@@ -17,6 +17,19 @@ export interface SerialLogger {
   (data: Buffer, dir: Direction): void;
 }
 
+// declare module serialport {
+//   interface SerialPort {
+//     write(
+//       data: string | Uint8Array | Buffer,
+//       callback?: (error: any, bytesWritten: number) => void): boolean;
+//     write(
+//       buffer: string | Uint8Array | Buffer,
+//       encoding?: 'ascii' | 'utf8' | 'utf16le' | 'ucs2' | 'base64' | 'binary' | 'hex',
+//       callback?: (error: any, bytesWritten: number) => void): boolean;
+//     test: () => void;
+//   }
+// }
+
 export default class SerialTee extends EventEmitter {
   private readonly serial: SerialPort;
   private closed = false;
@@ -35,6 +48,7 @@ export default class SerialTee extends EventEmitter {
       {
         ...portOptions,
         baudRate: description.baudRate || 115200,
+        parity: description.parity || portOptions.parity,
       },
     );
     this.serial.on('close', this.close);

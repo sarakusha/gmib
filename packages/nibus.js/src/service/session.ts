@@ -10,7 +10,7 @@ import { toInt } from '../mib/mib';
 import { NibusConnection } from '../nibus';
 import { createNmsRead } from '../nms';
 import SarpDatagram from '../sarp/SarpDatagram';
-import { PATH } from './const';
+import { PATH } from './common';
 import { Category } from './KnownPorts';
 
 const debug = debugFactory('nibus:session');
@@ -24,19 +24,12 @@ type DeviceListener = (device: IDevice) => void;
 
 declare interface NibusSession {
   on(event: 'start' | 'close', listener: Function): this;
-
   on(event: 'found', listener: FoundListener): this;
-
   on(event: 'add' | 'remove', listener: ConnectionListener): this;
-
   on(event: 'connected' | 'disconnected', listener: DeviceListener): this;
-
   once(event: 'start' | 'close', listener: Function): this;
-
   once(event: 'found', listener: FoundListener): this;
-
   once(event: 'add' | 'remove', listener: ConnectionListener): this;
-
   once(event: 'connected' | 'disconnected', listener: DeviceListener): this;
 }
 
@@ -112,14 +105,14 @@ class NibusSession extends EventEmitter {
     const { category } = description;
     switch (description.find) {
       case 'sarp': {
-        const mib = require(getMibFile(description.mib!));
-        const { types } = mib;
-        const device = types[mib.device] as IMibDeviceType;
-        const mibType = toInt(device.appinfo.device_type);
+        let { type } = description;
+        if (type === undefined) {
+          const mib = require(getMibFile(description.mib!));
+          const { types } = mib;
+          const device = types[mib.device] as IMibDeviceType;
+          type = toInt(device.appinfo.device_type);
+        }
         connection.once('sarp', (sarpDatagram: SarpDatagram) => {
-          /**
-           * @event found
-           */
           const address = new Address(sarpDatagram.mac);
           debug(`device ${category}[${address}] was found on ${connection.path}`);
           this.emit(
@@ -131,7 +124,7 @@ class NibusSession extends EventEmitter {
             },
           );
         });
-        connection.findByType(mibType).catch(noop);
+        connection.findByType(type).catch(noop);
         break;
       }
       case 'version':

@@ -3,7 +3,7 @@ export declare class MibError extends Error {
 }
 export declare class NibusError extends Error {
     errcode: number;
-    constructor(errcode: number, prototype: object);
+    constructor(errcode: number, prototype: object, msg?: string);
 }
 export declare class TimeoutError extends Error {
     constructor(address: Address);

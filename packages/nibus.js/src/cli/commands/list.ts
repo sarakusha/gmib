@@ -2,7 +2,7 @@ import { CommandModule } from 'yargs';
 import _ from 'lodash';
 // @ts-ignore
 import Table from 'table-layout';
-import { PATH } from '../../service/const';
+import { PATH } from '../../service/common';
 import { Client, IPortArg } from '../../ipc';
 
 const listCommand: CommandModule = {

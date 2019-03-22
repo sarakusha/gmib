@@ -156,7 +156,7 @@ class IPCServer extends _stream.Duplex {
       event,
       args
     };
-    return new Promise(resolve => client.write(JSON.stringify(data), resolve));
+    return new Promise(resolve => client.write(JSON.stringify(data), () => resolve()));
   }
 
   broadcast(event, ...args) {

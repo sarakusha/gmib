@@ -3,6 +3,7 @@ import { crc16ccitt } from 'crc';
 import _ from 'lodash';
 import Address, { AddressParam } from '../Address';
 import { MAX_DATA_LENGTH, Offsets, PREAMBLE } from '../nbconst';
+import { printBuffer } from './helper';
 
 // import {timeStamp} from '../utils';
 
@@ -26,7 +27,7 @@ const leadZero = (value: number) => `0${value}`.slice(-2);
 
 export interface INibusDatagramJSON {
   priority: number;
-  protocol: Protocol;
+  protocol: string;
   destination: string;
   source: string;
   timeStamp: string;
@@ -97,23 +98,17 @@ export default class NibusDatagram implements INibusOptions {
     const ts = new Date(Reflect.getMetadata('timeStamp', this));
     return {
       priority: this.priority,
-      protocol: this.protocol,
+      protocol: Protocol[this.protocol],
       source: this.source.toString(),
       destination: this.destination.toString(),
       timeStamp: `${leadZero(ts.getHours())}:${leadZero(ts.getMinutes())}:\
 ${leadZero(ts.getSeconds())}.${ts.getMilliseconds()}`,
       data: Buffer.from(this.data),
     };
-    // return {
-    //   destination: this.destination.toString(),
-    //   source: this.source.toString(),
-    //   priority: this.priority,
-    //   protocol: this.pr,
-    // };
   }
 
   toString(opts?: { pick?: string[], omit?: string[] }) {
-    let self: any = this.toJSON();
+    let self: any = replaceBuffers(this.toJSON());
     if (opts) {
       if (opts.pick) {
         self = _.pick(self, opts.pick);
@@ -124,4 +119,15 @@ ${leadZero(ts.getSeconds())}.${ts.getMilliseconds()}`,
     }
     return JSON.stringify(self);
   }
+}
+
+const replaceBuffers = (obj: any) => {
+  Object.entries(obj).forEach(([name, value]) => {
+    if (Buffer.isBuffer(value)) {
+      obj[name] = printBuffer(value);
+    } else if (_.isPlainObject(value)) {
+      obj[name] = replaceBuffers(value);
+    }
+  });
+  return obj;
 }

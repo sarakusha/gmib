@@ -9,7 +9,7 @@ var _lodash = _interopRequireDefault(require("lodash"));
 
 var _tableLayout = _interopRequireDefault(require("table-layout"));
 
-var _const = require("../../service/const");
+var _common = require("../../service/common");
 
 var _ipc = require("../../ipc");
 
@@ -21,7 +21,7 @@ const listCommand = {
   describe: 'Показать список доступных устройств',
   builder: {},
   handler: async () => new Promise((resolve, reject) => {
-    const socket = _ipc.Client.connect(_const.PATH);
+    const socket = _ipc.Client.connect(_common.PATH);
 
     let resolved = false;
     let error;

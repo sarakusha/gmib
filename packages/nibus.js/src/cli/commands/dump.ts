@@ -30,8 +30,8 @@ async function dumpDevice(
 
   let device: IDevice;
   if (!mib) {
-    const [, type] = await connection.getFirmwareVersion(address);
-    device = devices.create(address, type);
+    const [version, type] = await connection.getVersion(address);
+    device = devices.create(address, type, version);
   } else {
     device = devices.create(address, mib);
   }
@@ -139,8 +139,7 @@ const dumpCommand: CommandModule<CommonOpts, DumpOpts> = {
             findDevices(argv.mib!, connection, argv);
           }
         }
-        if (connection.description.mib
-          && (!mac || mac.equals(address))
+        if ((!mac || mac.equals(address))
           && (!argv.mib || argv.mib === connection.description.mib)) {
           await dumpDevice(address, connection, argv, connection.description.mib);
         }

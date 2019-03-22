@@ -4,7 +4,7 @@ mibCategories:
     link: true
     find: version
   minihost:
-    mib: minihost_v2.06b
+    type: 0xabc6
     find: sarp
   fancontrol:
     mib: fan_control
@@ -13,6 +13,8 @@ mibCategories:
   c22:
     link: true
     baudRate: 57600
+    # В случае прямого подключения для эмуляции 9 бита любой even/odd (mark, space только на Windows)
+    parity: even
   sensor:
     mib: ti_lux_2_3
     find: sarp
@@ -44,10 +46,20 @@ knownDevices:
     pid: '6001'
     manufacturer: NATA
     category: c22
+  - device: C22 USB to RS422 Converter
+    vid: '0403'
+    pid: '6015'
+    manufacturer: Nata-Info
+    category: c22
   - device: AlphaHostControl
     vid: '0403'
-    pid: '6001' # 24577
-    manufacturer: 'Nata Info'
+    pid: '6001'
+    manufacturer: 'Nata-Info'
+    category: minihost
+  - device: AlphaHostControl
+    vid: '0403'
+    pid: '6015'
+    manufacturer: 'Nata-Info'
     category: minihost
   - device: MiniHost_alfa
     vid: '0403'

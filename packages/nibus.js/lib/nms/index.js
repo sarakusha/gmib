@@ -13,6 +13,7 @@ exports.createNmsInitiateDownloadSequence = createNmsInitiateDownloadSequence;
 exports.createNmsDownloadSegment = createNmsDownloadSegment;
 exports.createNmsTerminateDownloadSequence = createNmsTerminateDownloadSequence;
 exports.createNmsVerifyDomainChecksum = createNmsVerifyDomainChecksum;
+exports.createExecuteProgramInvocation = createExecuteProgramInvocation;
 Object.defineProperty(exports, "getNmsType", {
   enumerable: true,
   get: function () {
@@ -61,25 +62,21 @@ function createNmsRead(destination, ...ids) {
 
   const nms = _lodash.default.flatten(rest.map(next => [_NmsServiceType.default.Read << 3 | next >> 8, next & 0xff, 0]));
 
-  const datagram = new _NmsDatagram.default({
+  return new _NmsDatagram.default({
     destination,
     id,
-    isResponsible: true,
+    notReply: false,
     nms: Buffer.from(nms),
     service: _NmsServiceType.default.Read
-  }); // if (ids.length > 1) {
-  //   datagram.data[2] = datagram.data[2] & 0xC0;
-  // }
-
-  return datagram;
+  });
 }
 
-function createNmsWrite(destination, id, type, value, isResponsible = true) {
+function createNmsWrite(destination, id, type, value, notReply = false) {
   const nms = (0, _nms.encodeValue)(type, value);
   return new _NmsDatagram.default({
     destination,
     id,
-    isResponsible,
+    notReply,
     nms,
     service: _NmsServiceType.default.Write
   });
@@ -107,7 +104,7 @@ function createNmsRequestDomainUpload(destination, domain) {
 }
 
 function createNmsUploadSegment(destination, id, offset, length) {
-  if (offset < 0 || 0xFFFF < offset) {
+  if (offset < 0) {
     throw new Error('Invalid offset');
   }
 
@@ -148,7 +145,7 @@ function createNmsInitiateDownloadSequence(destination, id) {
 }
 
 function createNmsDownloadSegment(destination, id, offset, data) {
-  if (offset < 0 || 0xFFFF < offset) {
+  if (offset < 0) {
     throw new Error('Invalid offset');
   }
 
@@ -177,11 +174,11 @@ function createNmsTerminateDownloadSequence(destination, id) {
 }
 
 function createNmsVerifyDomainChecksum(destination, id, offset, size, crc) {
-  if (offset < 0 || 0xFFFF < offset) {
+  if (offset < 0) {
     throw new Error('Invalid offset');
   }
 
-  if (size < 0 || 0xFFFF < size) {
+  if (size < 0) {
     throw new Error('Invalid size');
   }
 
@@ -194,5 +191,26 @@ function createNmsVerifyDomainChecksum(destination, id, offset, size, crc) {
     id,
     nms,
     service: _NmsServiceType.default.VerifyDomainChecksum
+  });
+}
+
+function createExecuteProgramInvocation(destination, id, notReply = false, ...args) {
+  let nms = Buffer.alloc(0);
+
+  if (args.length > 0) {
+    const size = args.reduce((len, [type, value]) => len + (0, _nms.getSizeOf)(type, value), 1);
+    nms = Buffer.alloc(size);
+    let pos = nms.writeUInt8(args.length, 0);
+    args.forEach(([type, value]) => {
+      pos = (0, _nms.writeValue)(type, value, nms, pos);
+    });
+  }
+
+  return new _NmsDatagram.default({
+    destination,
+    id,
+    nms,
+    notReply,
+    service: _NmsServiceType.default.ExecuteProgramInvocation
   });
 }

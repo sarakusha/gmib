@@ -46,7 +46,7 @@ class NibusDecoder extends _stream.Transform {
 
 
   _transform(chunk, encoding, callback) {
-    console.assert(encoding === 'buffer', 'Unexpected encoding'); // debugSerial(printBuffer(chunk));
+    console.assert(encoding === 'buffer', 'Unexpected encoding'); // console.log('@@@@@@@@', printBuffer(chunk));
 
     const data = [...this.buf, ...chunk];
 

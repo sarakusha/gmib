@@ -238,14 +238,13 @@ async function reloadDevicesAsync(prevPorts, lastAdded) {
          */
 
         detector.emit('plug', device); // console.log('PORT', JSON.stringify(port));
-        // console.log('DEV', JSON.stringify(device));
 
         if (device.category) {
           debug(`new device ${device.device || device.vendorId}/\
 ${device.category} was plugged to ${device.comName}`);
           detector.emit('add', device);
         } else {
-          debug(`unknown device %o was plugged`, device);
+          debug('unknown device %o was plugged', device);
         }
       }
 
@@ -276,7 +275,7 @@ ${port.category || port.productId} was unplugged from ${port.comName}`);
     });
     return ports;
   } catch (err) {
-    debug(`Error: reload devices was failed (${err.stack || err.message || err})`);
+    debug(`Error: reload devices was failed (${err.message || err})`);
     return ports;
   }
 } // debug(`start watching the detector file ${detectionPath}`);

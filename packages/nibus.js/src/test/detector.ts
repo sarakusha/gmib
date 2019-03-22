@@ -1,9 +1,9 @@
 import _ from 'lodash';
-import serialport from 'serialport';
+import SerialPort from 'serialport';
 import usbDetection from 'usb-detection';
 import NibusDecoder from '../nibus/NibusDecoder';
 import NibusEncoder from '../nibus/NibusEncoder';
-import { createNmsRead, NmsDatagram } from '../nms';
+import { NmsDatagram } from '../nms';
 import { createSarp, SarpQueryType } from '../sarp';
 
 const vid = '0403';
@@ -30,7 +30,7 @@ usbDetection.on(`add`, (device) => {
 });
 
 function findAll() {
-  serialport.list()
+  SerialPort.list()
     .then((list) => {
       list.filter(item => !!item.vendorId)
         .forEach(data => console.info(JSON.stringify(data)));
@@ -45,7 +45,7 @@ function findAll() {
 }
 
 function find() {
-  return serialport.list()
+  return SerialPort.list()
     .then((list) => {
       const [port] = _.filter(
         list,
@@ -58,7 +58,7 @@ function find() {
         throw Error('no devices');
       }
       console.debug('FOUND', port);
-      const siolynx = new serialport(port.comName, {
+      const siolynx = new SerialPort(port.comName, {
         baudRate: 115200,
         dataBits: 8,
         parity: 'none',

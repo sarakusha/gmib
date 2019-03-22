@@ -13,6 +13,7 @@ var _debug = _interopRequireDefault(require("debug"));
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+// import { promisify } from 'util';
 const debug = (0, _debug.default)('nibus:start'); // import { promisify } from 'util';
 // const connect = promisify(pm2.connect);
 // const start = promisify<StartOptions>(pm2.start);
@@ -26,6 +27,10 @@ const startOptions = {
 exports.startOptions = startOptions;
 
 if (_path.default.extname(__filename) === '.ts') {
+  startOptions.env = {
+    DEBUG: 'nibus:*,-nibus:decoder',
+    DEBUG_COLORS: '1'
+  };
   startOptions.script = 'service/dev.start.js';
   startOptions.watch = ['service/demon.ts', 'ipc/Server.ts', 'ipc/SerialTee.ts', 'service/detector.ts'];
 }

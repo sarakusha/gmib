@@ -10,20 +10,20 @@ export interface INmsOptions extends INibusCommon {
   service: NmsServiceType;
   nms?: Buffer;
   isResponse?: boolean;
-  isResponsible?: boolean;
+  notReply?: boolean;
   status?: number;
 }
 
 const emptyBuffer = Buffer.alloc(0);
 
 export interface INmsDatagramJSON extends INibusDatagramJSON {
-  protocol: Protocol.NMS;
+  protocol: string;
   data?: never;
   id: number;
-  service: NmsServiceType;
+  service: string;
   nms?: Buffer;
   isResponse?: boolean;
-  isResponsible?: boolean;
+  notReply?: boolean;
   value?: string;
   valueType?: string;
   status?: number;
@@ -36,7 +36,7 @@ export default class NmsDatagram extends NibusDatagram implements INmsOptions {
   }
 
   public readonly isResponse: boolean;
-  public readonly isResponsible: boolean;
+  public readonly notReply: boolean;
   public readonly service: number;
   public readonly id: number;
   public readonly nms: Buffer;
@@ -48,7 +48,7 @@ export default class NmsDatagram extends NibusDatagram implements INmsOptions {
       const options = {
         source: new Address('auto'),
         isResponse: false,
-        isResponsible: true,
+        notReply: false,
         nms: emptyBuffer,
         ...frameOrOptions,
       };
@@ -60,7 +60,7 @@ export default class NmsDatagram extends NibusDatagram implements INmsOptions {
       const nibusData = [
         ((options.service & 0x1f) << 3) | (options.isResponse ? 4 : 0) | ((options.id >> 8) & 3),
         options.id & 0xff,
-        (options.isResponsible ? 0 : 0x80) | nmsLength,
+        (options.notReply ? 0x80 : 0) | nmsLength,
         ...options.nms,
       ];
       const nibusOptions: INibusOptions = Object.assign({
@@ -73,7 +73,7 @@ export default class NmsDatagram extends NibusDatagram implements INmsOptions {
     this.id = ((data[0] & 3) << 8) | data[1];
     this.service = data[0] >> 3;
     this.isResponse = !!(data[0] & 4);
-    this.isResponsible = (data[2] & 0x80) === 0;
+    this.notReply = !!(data[2] & 0x80);
     // fix: NMS batch read
     const nmsLength = this.service !== NmsServiceType.Read
       ? data[2] & 0x3F
@@ -104,7 +104,7 @@ export default class NmsDatagram extends NibusDatagram implements INmsOptions {
   }
 
   get status() {
-    if (this.nms.length === 0) {
+    if (this.nms.length === 0 || !this.isResponse) {
       return undefined;
     }
     return this.nms.readInt8(0);
@@ -145,22 +145,22 @@ export default class NmsDatagram extends NibusDatagram implements INmsOptions {
   }
 
   public toJSON(): INmsDatagramJSON {
-    const { data, protocol, ...props } = super.toJSON();
+    const { data, ...props } = super.toJSON();
     const result: INmsDatagramJSON = {
       ...props,
-      protocol: Protocol.NMS,
       id: this.id,
-      service: this.service,
+      service: NmsServiceType[this.service],
       data: undefined,
     };
-    if (this.isResponse) {
+    if (this.isResponse || this.service === NmsServiceType.InformationReport) {
       if (this.valueType !== undefined) {
-        result.value = this.value.toString();
+        // result.value = JSON.stringify(this.value);
+        result.value = this.value;
         result.valueType = NmsValueType[this.valueType];
       }
       result.status = this.status;
     } else {
-      result.isResponsible = this.isResponsible;
+      result.notReply = this.notReply;
       result.nms = Buffer.from(this.nms);
     }
     return result;

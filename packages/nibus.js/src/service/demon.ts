@@ -1,20 +1,33 @@
+import Configstore from 'configstore';
 import debugFactory from 'debug';
 import { Socket } from 'net';
-import Configstore from 'configstore';
+import _ from 'lodash';
+import pkg from '../../package.json';
 import { SerialTee, Server } from '../ipc';
 import { SerialLogger } from '../ipc/SerialTee';
 import { Direction } from '../ipc/Server';
+import { getMibFile, getMibs, toInt } from '../mib';
+import { IMibDeviceType, MibDeviceV } from '../mib/devices';
 import { NibusDatagram, NibusDecoder } from '../nibus';
 import { printBuffer } from '../nibus/helper';
-import { PATH } from './const';
+import { Config, LogLevel, PATH } from './common';
 import detector from './detector';
 import { IKnownPort } from './KnownPorts';
-import pkg from '../../package.json';
 
-const conf = new Configstore(pkg.name, { logLevel: 'none' });
+const conf = new Configstore(
+  pkg.name,
+  {
+    logLevel: 'none',
+    omit: ['priority'],
+  },
+);
 
-debugFactory.enable('nibus:detector,nibus.service');
+// debugFactory.enable('nibus:detector,nibus.service');
 const debug = debugFactory('nibus:service');
+const debugIn = debugFactory('nibus:INP<<<');
+const debugOut = debugFactory('nibus:OUT>>>');
+
+debug(`config path: ${conf.path}`);
 
 const noop = () => {};
 
@@ -27,29 +40,68 @@ if (process.platform === 'win32') {
   rl.on('SIGINT', () => process.emit('SIGINT', 'SIGINT'));
 }
 
-type LogLevel = 'none' | 'hex' | 'nibus';
 type Fields = string[] | undefined;
 
-const direction = (dir: Direction) => dir === Direction.in ? '<<<' : '>>>';
+const minVersionToInt = (str?: string) => {
+  if (!str) return 0;
+  const [high, low] = str.split('.', 2);
+  return (toInt(high) << 8) + toInt(low);
+};
+
+async function updateMibTypes() {
+  const mibs = await getMibs();
+  conf.set('mibs', mibs);
+  const mibTypes: Config['mibTypes'] = {};
+  mibs.forEach((mib) => {
+    const mibfile = getMibFile(mib);
+    const validation = MibDeviceV.decode(require(mibfile));
+    if (validation.isLeft()) {
+      debug(`<error>: Invalid mib file ${mibfile}`);
+    } else {
+      const { types } = validation.value;
+      const device = types[validation.value.device] as IMibDeviceType;
+      const type = toInt(device.appinfo.device_type);
+      const minVersion = minVersionToInt(device.appinfo.min_version);
+      const mibs = mibTypes[type] || [];
+      mibs.push({
+        mib,
+        minVersion,
+      });
+      mibTypes[type] = _.sortBy(mibs, 'minVersion');
+    }
+  });
+  conf.set('mibTypes', mibTypes);
+}
+
+updateMibTypes().catch(e => debug(`<error> ${e.message}`));
+
+// const direction = (dir: Direction) => dir === Direction.in ? '<<<' : '>>>';
 const decoderIn = new NibusDecoder();
 decoderIn.on('data', (datagram: NibusDatagram) => {
-  debug(`${direction(Direction.in)} ${datagram.toString({
+  debugIn(datagram.toString({
     pick: conf.get('pick') as Fields,
     omit: conf.get('omit') as Fields,
-  })}`);
+  }));
 });
 const decoderOut = new NibusDecoder();
 decoderOut.on('data', (datagram: NibusDatagram) => {
-  debug(`${direction(Direction.out)} ${datagram.toString({
+  debugOut(datagram.toString({
     pick: conf.get('pick') as Fields,
     omit: conf.get('omit') as Fields,
-  })}`);
+  }));
 });
 
 const loggers = {
   none: null,
   hex: (data: Buffer, dir: Direction) => {
-    debug(`${direction(dir)} ${printBuffer(data)}`);
+    switch (dir) {
+      case Direction.in:
+        debugIn(printBuffer(data));
+        break;
+      case Direction.out:
+        debugOut(printBuffer(data));
+        break;
+    }
   },
   nibus: (data: Buffer, dir: Direction) => {
     switch (dir) {
@@ -86,8 +138,8 @@ class NibusService {
     pickFields: Fields,
     omitFields: Fields) => {
     logLevel && conf.set('logLevel', logLevel);
-    pickFields || conf.set('pick', pickFields);
-    omitFields || conf.set('omit', omitFields);
+    pickFields && conf.set('pick', pickFields);
+    omitFields && conf.set('omit', omitFields);
     this.updateLogger();
   };
 
@@ -104,7 +156,6 @@ class NibusService {
     const { category } = portInfo;
     const mibCategory = detector.detection!.mibCategories[category!];
     if (mibCategory) {
-      // debug('connection added', mibCategory);
       const connection = new SerialTee(portInfo, mibCategory);
       connection.on('close', (comName: string) => this.removeHandler({ comName }));
       this.connections.push(connection);

@@ -16,6 +16,6 @@ export default class IPCClient extends Socket implements IClient {
     protected constructor(options?: SocketConstructorOpts);
     parseEvents: (data: Buffer) => void;
     send(event: string, ...args: any[]): Promise<void>;
-    static connect(path: string, connectionListener?: Function): IPCClient;
+    static connect(path: string, connectionListener?: () => void): IPCClient;
 }
 //# sourceMappingURL=Client.d.ts.map

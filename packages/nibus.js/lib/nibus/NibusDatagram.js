@@ -15,6 +15,8 @@ var _Address = _interopRequireDefault(require("../Address"));
 
 var _nbconst = require("../nbconst");
 
+var _helper = require("./helper");
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
@@ -87,22 +89,17 @@ class NibusDatagram {
     const ts = new Date(Reflect.getMetadata('timeStamp', this));
     return {
       priority: this.priority,
-      protocol: this.protocol,
+      protocol: Protocol[this.protocol],
       source: this.source.toString(),
       destination: this.destination.toString(),
       timeStamp: `${leadZero(ts.getHours())}:${leadZero(ts.getMinutes())}:\
 ${leadZero(ts.getSeconds())}.${ts.getMilliseconds()}`,
       data: Buffer.from(this.data)
-    }; // return {
-    //   destination: this.destination.toString(),
-    //   source: this.source.toString(),
-    //   priority: this.priority,
-    //   protocol: this.pr,
-    // };
+    };
   }
 
   toString(opts) {
-    let self = this.toJSON();
+    let self = replaceBuffers(this.toJSON());
 
     if (opts) {
       if (opts.pick) {
@@ -122,3 +119,14 @@ ${leadZero(ts.getSeconds())}.${ts.getMilliseconds()}`,
 exports.default = NibusDatagram;
 
 _defineProperty(NibusDatagram, "defaultSource", _Address.default.empty);
+
+const replaceBuffers = obj => {
+  Object.entries(obj).forEach(([name, value]) => {
+    if (Buffer.isBuffer(value)) {
+      obj[name] = (0, _helper.printBuffer)(value);
+    } else if (_lodash.default.isPlainObject(value)) {
+      obj[name] = replaceBuffers(value);
+    }
+  });
+  return obj;
+};
