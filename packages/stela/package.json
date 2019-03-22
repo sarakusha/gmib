@@ -1,6 +1,6 @@
 {
   "name": "@nata/stela",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Stela",
   "repository": "git@git.nata-info.ru:repository/stela.git",
   "author": "Andrei Sarakeev <avs@nata-info.ru>",
@@ -12,6 +12,9 @@
     "analyze": "ANALYZE=1 next build",
     "build": "next build && tsc --project tsconfig.server.json",
     "start": "cross-env NODE_ENV=production node lib/server/index.js"
+  },
+  "bin": {
+    "stela": "index.js"
   },
   "dependencies": {
     "@material-ui/core": "^3.9.1",
@@ -37,6 +40,7 @@
     "passport": "^0.4.0",
     "passport-jwt": "^4.0.0",
     "passport-local": "^1.0.0",
+    "pm2": "^3.4.0",
     "react": "^16.8.0-alpha.1",
     "react-beautiful-dnd": "^10.0.4",
     "react-dom": "^16.8.0-alpha.1",
