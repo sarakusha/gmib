@@ -156,7 +156,7 @@ export interface IDevice {
         [name: string]: any;
     }>;
     upload(domain: string, offset?: number, size?: number): Promise<Uint8Array>;
-    download(domain: string, data: Buffer, offset?: number): Promise<void>;
+    download(domain: string, data: Buffer, offset?: number, noTerm?: boolean): Promise<void>;
     execute(program: string, args?: Record<string, any>): Promise<NmsDatagram | NmsDatagram[] | undefined>;
     connection?: NibusConnection;
     release(): number;

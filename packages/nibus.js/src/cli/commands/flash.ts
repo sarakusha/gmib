@@ -92,40 +92,36 @@ const meta: KindMeta = {
 };
 
 async function action(device: IDevice, args: Arguments<FlashOpts>) {
-  setNibusTimeout(5000);
-  try {
-    await writeAction(device, args);
-    const opts = meta[args.kind as Kind];
-    let buffer = opts.converter(await fs.promises.readFile(args.source));
-    if (!opts.size.includes(buffer.length)) {
-      throw new Error(`Invalid data length. Expected ${opts.size.join(',')} got ${buffer.length}`);
-    }
-    if (args.kind !== 'ctrl') {
-      const header = createHeader(args.kind, 0, buffer);
-      buffer = Buffer.concat([header, buffer, header]);
-    } else {
-      const crc = Buffer.alloc(2);
-      crc.writeUInt16LE(crc16ccitt(buffer, crcPrev), 0);
-      buffer = Buffer.concat([buffer, crc]);
-    }
-    const dest = opts.offset.toString(16).padStart(4, '0');
-    const bar = new Progress(
-      `  flashing [:bar] to ${dest} :rate/bps :percent :current/:total :etas`,
-      {
-        total: buffer.length,
-        width: 30,
-      },
-    );
-    device.on('downloadData', ({ domain: downloadDomain, length }) => {
-      if (domain === downloadDomain) bar.tick(length);
-    });
+  await writeAction(device, args);
+  const opts = meta[args.kind as Kind];
+  process.env['NODE_NO_WARNINGS'] = '1';
+  let buffer = opts.converter(await fs.promises.readFile(args.source));
+  if (!opts.size.includes(buffer.length)) {
+    throw new Error(`Invalid data length. Expected ${opts.size.join(',')} got ${buffer.length}`);
+  }
+  if (args.kind !== 'ctrl') {
+    const header = createHeader(args.kind, 0, buffer);
+    buffer = Buffer.concat([header, buffer, header]);
+  } else {
+    const crc = Buffer.alloc(2);
+    crc.writeUInt16LE(crc16ccitt(buffer, crcPrev), 0);
+    buffer = Buffer.concat([buffer, crc]);
+  }
+  const dest = opts.offset.toString(16).padStart(4, '0');
+  const bar = new Progress(
+    `  flashing [:bar] to ${dest} :rate/bps :percent :current/:total :etas`,
+    {
+      total: buffer.length,
+      width: 30,
+    },
+  );
+  device.on('downloadData', ({ domain: downloadDomain, length }) => {
+    if (domain === downloadDomain) bar.tick(length);
+  });
 
-    await device.download(domain, buffer, opts.offset);
-    if (args.execute) {
-      await device.execute(args.execute);
-    }
-  } finally {
-    setNibusTimeout(1000);
+  await device.download(domain, buffer, opts.offset);
+  if (args.execute) {
+    await device.execute(args.execute);
   }
 }
 
@@ -164,7 +160,8 @@ const flashCommand: CommandModule<CommonOpts, FlashOpts> = {
     // .conflicts('hex', 'dec')
     .example(
       'flash',
-      '$0 flash -m ::1 -k ctrl moduleSelect=0 --src Slim_Ctrl_v5_Mcu_v1.2.txt --exec update')
+      '$0 flash -m ::1 -k ctrl moduleSelect=0 --src Slim_Ctrl_v5_Mcu_v1.2.txt --exec update',
+    )
     .demandOption(['mac', 'm', 'kind', 'source']),
   handler: makeAddressHandler(action),
 };

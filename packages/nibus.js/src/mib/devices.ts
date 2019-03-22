@@ -195,7 +195,7 @@ export interface IDevice {
   write(...ids: number[]): Promise<number[]>;
   read(...ids: number[]): Promise<{ [name: string]: any }>;
   upload(domain: string, offset?: number, size?: number): Promise<Uint8Array>;
-  download(domain: string, data: Buffer, offset?: number): Promise<void>;
+  download(domain: string, data: Buffer, offset?: number, noTerm?: boolean): Promise<void>;
   execute(
     program: string,
     args?: Record<string, any>): Promise<NmsDatagram | NmsDatagram[] | undefined>;
@@ -791,7 +791,7 @@ class DevicePrototype extends EventEmitter implements IDevice {
     }
   }
 
-  async download(domain: string, buffer: Buffer, offset = 0) {
+  async download(domain: string, buffer: Buffer, offset = 0, noTerm = false) {
     const { connection } = this;
     if (!connection) throw new Error('disconnected');
     const reqDownload = createNmsRequestDomainDownload(this.address, domain.padEnd(8, '\0'));
@@ -801,11 +801,18 @@ class DevicePrototype extends EventEmitter implements IDevice {
       throw new NibusError(status!, this, 'Request download domain error');
     }
     const terminate = async (err?: Error) => {
-      const req = createNmsTerminateDownloadSequence(this.address, id);
-      const { status: termStat } = await connection.sendDatagram(req) as NmsDatagram;
+      let termStat = 0;
+      if (!noTerm) {
+        const req = createNmsTerminateDownloadSequence(this.address, id);
+        const res = await connection.sendDatagram(req) as NmsDatagram;
+        termStat = res.status!;
+      }
       if (err) throw err;
       if (termStat !== 0) {
-        throw new NibusError(termStat!, this, 'Terminate download sequence error');
+        throw new NibusError(
+          termStat!,
+          this,
+          'Terminate download sequence error, maybe need --no-term');
       }
     };
     if (buffer.length > max - offset) {

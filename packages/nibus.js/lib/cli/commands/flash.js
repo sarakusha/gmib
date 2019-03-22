@@ -13,8 +13,6 @@ var _lodash = _interopRequireDefault(require("lodash"));
 
 var _progress = _interopRequireDefault(require("progress"));
 
-var _nibus = require("../../nibus");
-
 var _handlers = require("../handlers");
 
 var _write = require("./write");
@@ -90,44 +88,39 @@ const meta = {
 };
 
 async function action(device, args) {
-  (0, _nibus.setNibusTimeout)(5000);
+  await (0, _write.action)(device, args);
+  const opts = meta[args.kind];
+  process.env['NODE_NO_WARNINGS'] = '1';
+  let buffer = opts.converter((await _fs.default.promises.readFile(args.source)));
 
-  try {
-    await (0, _write.action)(device, args);
-    const opts = meta[args.kind];
-    let buffer = opts.converter((await _fs.default.promises.readFile(args.source)));
+  if (!opts.size.includes(buffer.length)) {
+    throw new Error(`Invalid data length. Expected ${opts.size.join(',')} got ${buffer.length}`);
+  }
 
-    if (!opts.size.includes(buffer.length)) {
-      throw new Error(`Invalid data length. Expected ${opts.size.join(',')} got ${buffer.length}`);
-    }
+  if (args.kind !== 'ctrl') {
+    const header = createHeader(args.kind, 0, buffer);
+    buffer = Buffer.concat([header, buffer, header]);
+  } else {
+    const crc = Buffer.alloc(2);
+    crc.writeUInt16LE((0, _crc.crc16ccitt)(buffer, crcPrev), 0);
+    buffer = Buffer.concat([buffer, crc]);
+  }
 
-    if (args.kind !== 'ctrl') {
-      const header = createHeader(args.kind, 0, buffer);
-      buffer = Buffer.concat([header, buffer, header]);
-    } else {
-      const crc = Buffer.alloc(2);
-      crc.writeUInt16LE((0, _crc.crc16ccitt)(buffer, crcPrev), 0);
-      buffer = Buffer.concat([buffer, crc]);
-    }
+  const dest = opts.offset.toString(16).padStart(4, '0');
+  const bar = new _progress.default(`  flashing [:bar] to ${dest} :rate/bps :percent :current/:total :etas`, {
+    total: buffer.length,
+    width: 30
+  });
+  device.on('downloadData', ({
+    domain: downloadDomain,
+    length
+  }) => {
+    if (domain === downloadDomain) bar.tick(length);
+  });
+  await device.download(domain, buffer, opts.offset);
 
-    const dest = opts.offset.toString(16).padStart(4, '0');
-    const bar = new _progress.default(`  flashing [:bar] to ${dest} :rate/bps :percent :current/:total :etas`, {
-      total: buffer.length,
-      width: 30
-    });
-    device.on('downloadData', ({
-      domain: downloadDomain,
-      length
-    }) => {
-      if (domain === downloadDomain) bar.tick(length);
-    });
-    await device.download(domain, buffer, opts.offset);
-
-    if (args.execute) {
-      await device.execute(args.execute);
-    }
-  } finally {
-    (0, _nibus.setNibusTimeout)(1000);
+  if (args.execute) {
+    await device.execute(args.execute);
   }
 }
 

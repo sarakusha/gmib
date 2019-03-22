@@ -67,7 +67,7 @@ const makeAddressHandler = (action, breakout = false) => args => new Promise(asy
         }
       }
     } catch (e) {
-      close(e.stack || e.message || e);
+      close(e.message || e);
     }
 
     count -= 1;

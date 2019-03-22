@@ -13,6 +13,8 @@ type DownloadOpts = Defined<CommonOpts, 'm' | 'mac'> & {
   source?: string,
   src?: string,
   hex?: boolean,
+  execute?: string,
+  terminate?: boolean,
 };
 
 function readAllFromStdin() {
@@ -79,7 +81,7 @@ export async function action(
     if (dataDomain === domain) tick(length);
   });
 
-  await device.download(domain, buffer, offset || ofs);
+  await device.download(domain, buffer, offset || ofs, !args.terminate);
 }
 
 const downloadCommand: CommandModule<CommonOpts, DownloadOpts> = {
@@ -110,6 +112,17 @@ const downloadCommand: CommandModule<CommonOpts, DownloadOpts> = {
       .check(({ hex, raw }) => {
         if (hex && raw) throw new Error('Arguments hex and raw are mutually exclusive');
         return true;
+      })
+      .option('execute', {
+        alias: 'exec',
+        string: true,
+        describe: 'выполнить программу после записи',
+      })
+      .option('term', {
+        alias: 'terminate',
+        describe: 'выполнять TerminateDownloadSequence в конце',
+        boolean: true,
+        default: true,
       })
       .demandOption(['m', 'mac']),
   handler: makeAddressHandler(action, true),

@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env node --no-warnings
 import yargs from 'yargs';
 import { getMibsSync } from '../mib';
 import dump from './commands/dump';
@@ -51,6 +51,11 @@ const argv = yargs
     desc: 'использовать firmware_version для определения типа устройства',
     boolean: true,
     default: true,
+  })
+  .option('timeout', {
+    desc: 'тймаут в секундах',
+    number: true,
+    default: 1,
   })
   .command(start)
   .command(stop)

@@ -12,6 +12,7 @@ export interface INmsOptions extends INibusCommon {
   isResponse?: boolean;
   notReply?: boolean;
   status?: number;
+  timeout?: number;
 }
 
 const emptyBuffer = Buffer.alloc(0);
@@ -40,6 +41,7 @@ export default class NmsDatagram extends NibusDatagram implements INmsOptions {
   public readonly service: number;
   public readonly id: number;
   public readonly nms: Buffer;
+  public readonly timeout?: number;
 
   constructor(frameOrOptions: Buffer | INmsOptions) {
     if (Buffer.isBuffer(frameOrOptions)) {
@@ -68,6 +70,9 @@ export default class NmsDatagram extends NibusDatagram implements INmsOptions {
         protocol: 1,
       }, options);
       super(nibusOptions);
+      if (frameOrOptions.timeout !== undefined) {
+        this.timeout = frameOrOptions.timeout;
+      }
     }
     const { data } = this;
     this.id = ((data[0] & 3) << 8) | data[1];

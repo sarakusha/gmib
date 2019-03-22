@@ -8,6 +8,7 @@ export interface INmsOptions extends INibusCommon {
     isResponse?: boolean;
     notReply?: boolean;
     status?: number;
+    timeout?: number;
 }
 export interface INmsDatagramJSON extends INibusDatagramJSON {
     protocol: string;
@@ -28,6 +29,7 @@ export default class NmsDatagram extends NibusDatagram implements INmsOptions {
     readonly service: number;
     readonly id: number;
     readonly nms: Buffer;
+    readonly timeout?: number;
     constructor(frameOrOptions: Buffer | INmsOptions);
     readonly valueType: number | undefined;
     readonly status: number | undefined;

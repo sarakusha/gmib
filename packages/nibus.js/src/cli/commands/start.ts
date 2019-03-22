@@ -15,13 +15,13 @@ export const startOptions: StartOptions = {
   script: 'service/demon.js',
   cwd: path.resolve(__dirname, '../..'),
   max_restarts: 3,
+  env: {
+    DEBUG: 'nibus:*,-nibus:decoder',
+    DEBUG_COLORS: '1',
+  },
 };
 
 if (path.extname(__filename) === '.ts') {
-  startOptions.env = {
-    DEBUG: 'nibus:*,-nibus:decoder',
-    DEBUG_COLORS: '1',
-  };
   startOptions.script = 'service/dev.start.js';
   startOptions.watch = [
     'service/demon.ts',

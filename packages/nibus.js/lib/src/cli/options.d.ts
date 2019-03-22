@@ -9,6 +9,7 @@ export interface CommonOpts {
     quiet: boolean;
     q: boolean;
     fw: boolean;
+    timeout: number;
 }
 declare type Omit<T, K> = {
     [key in Exclude<keyof T, K>]: T[key];

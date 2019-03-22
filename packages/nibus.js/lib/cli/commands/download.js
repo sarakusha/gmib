@@ -88,7 +88,7 @@ async function action(device, args) {
   }) => {
     if (dataDomain === domain) tick(length);
   });
-  await device.download(domain, buffer, offset || ofs);
+  await device.download(domain, buffer, offset || ofs, !args.terminate);
 }
 
 const downloadCommand = {
@@ -116,6 +116,15 @@ const downloadCommand = {
   }) => {
     if (hex && raw) throw new Error('Arguments hex and raw are mutually exclusive');
     return true;
+  }).option('execute', {
+    alias: 'exec',
+    string: true,
+    describe: 'выполнить программу после записи'
+  }).option('term', {
+    alias: 'terminate',
+    describe: 'выполнять TerminateDownloadSequence в конце',
+    boolean: true,
+    default: true
   }).demandOption(['m', 'mac']),
   handler: (0, _handlers.makeAddressHandler)(action, true)
 };

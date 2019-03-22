@@ -43,6 +43,8 @@ var _lodash = _interopRequireDefault(require("lodash"));
 
 var _nbconst = require("../nbconst");
 
+var _nibus = require("../nibus");
+
 var _nms = require("./nms");
 
 var _NmsDatagram = _interopRequireDefault(require("./NmsDatagram"));
@@ -140,7 +142,8 @@ function createNmsInitiateDownloadSequence(destination, id) {
   return new _NmsDatagram.default({
     destination,
     id,
-    service: _NmsServiceType.default.InitiateDownloadSequence
+    service: _NmsServiceType.default.InitiateDownloadSequence,
+    timeout: 5 * (0, _nibus.getNibusTimeout)()
   });
 }
 
@@ -169,7 +172,8 @@ function createNmsTerminateDownloadSequence(destination, id) {
   return new _NmsDatagram.default({
     destination,
     id,
-    service: _NmsServiceType.default.TerminateDownloadSequence
+    service: _NmsServiceType.default.TerminateDownloadSequence,
+    timeout: (0, _nibus.getNibusTimeout)() * 6
   });
 }
 
@@ -190,7 +194,8 @@ function createNmsVerifyDomainChecksum(destination, id, offset, size, crc) {
     destination,
     id,
     nms,
-    service: _NmsServiceType.default.VerifyDomainChecksum
+    service: _NmsServiceType.default.VerifyDomainChecksum,
+    timeout: (0, _nibus.getNibusTimeout)() * 3
   });
 }
 
@@ -211,6 +216,7 @@ function createExecuteProgramInvocation(destination, id, notReply = false, ...ar
     id,
     nms,
     notReply,
-    service: _NmsServiceType.default.ExecuteProgramInvocation
+    service: _NmsServiceType.default.ExecuteProgramInvocation,
+    timeout: (0, _nibus.getNibusTimeout)() * 3
   });
 }
