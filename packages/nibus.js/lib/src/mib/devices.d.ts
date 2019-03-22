@@ -1,46 +1,110 @@
 /// <reference types="node" />
 import { EventEmitter } from 'events';
+import * as t from 'io-ts';
 import 'reflect-metadata';
 import Address, { AddressParam } from '../Address';
 import { NibusConnection } from '../nibus';
-interface IMibPropertyAppInfo {
-    nms_id: string | number;
-    access: string;
-    category?: string;
+import NmsDatagram from '../nms/NmsDatagram';
+declare const MibDeviceTypeV: t.TypeC<{
+    annotation: t.StringC;
+    appinfo: t.IntersectionC<[t.TypeC<{
+        mib_version: t.StringC;
+    }>, t.PartialC<{
+        device_type: t.StringC;
+        loader_type: t.StringC;
+        firmware: t.StringC;
+        min_version: t.StringC;
+    }>]>;
+    properties: t.RecordC<t.StringC, t.TypeC<{
+        type: t.StringC;
+        annotation: t.StringC;
+        appinfo: t.IntersectionC<[t.TypeC<{
+            nms_id: t.UnionC<[t.StringC, t.BrandC<t.NumberC, t.IntBrand>]>;
+            access: t.StringC;
+        }>, t.PartialC<{
+            category: t.StringC;
+        }>]>;
+    }>>;
+}>;
+export interface IMibDeviceType extends t.TypeOf<typeof MibDeviceTypeV> {
 }
-interface IMibProperty {
-    type: string;
-    annotation: string;
-    appinfo: IMibPropertyAppInfo;
+declare const MibTypeV: t.IntersectionC<[t.TypeC<{
+    base: t.StringC;
+}>, t.PartialC<{
+    appinfo: t.PartialC<{
+        zero: t.StringC;
+        units: t.StringC;
+        precision: t.StringC;
+        representation: t.StringC;
+    }>;
+    minInclusive: t.StringC;
+    maxInclusive: t.StringC;
+    enumeration: t.RecordC<t.StringC, t.TypeC<{
+        annotation: t.StringC;
+    }>>;
+}>]>;
+export interface IMibType extends t.TypeOf<typeof MibTypeV> {
 }
-export interface IMibDeviceType {
-    annotation: string;
-    appinfo: {
-        mib_vertsion: string;
-        device_type: string;
-        loader_type?: string;
-        firmware?: string;
-    };
-    properties: {
-        [key: string]: IMibProperty;
-    };
-}
-export interface IMibType {
-    base: string;
-    appinfo?: {
-        zero?: string;
-        units?: string;
-        precision?: string;
-        representation?: string;
-    };
-    minInclusive?: string;
-    maxInclusive?: string;
-    enumeration?: {
-        [key: string]: {
-            annotation: string;
-        };
-    };
-}
+export declare const MibDeviceV: t.IntersectionC<[t.TypeC<{
+    device: t.StringC;
+    types: t.RecordC<t.StringC, t.UnionC<[t.TypeC<{
+        annotation: t.StringC;
+        appinfo: t.IntersectionC<[t.TypeC<{
+            mib_version: t.StringC;
+        }>, t.PartialC<{
+            device_type: t.StringC;
+            loader_type: t.StringC;
+            firmware: t.StringC;
+            min_version: t.StringC;
+        }>]>;
+        properties: t.RecordC<t.StringC, t.TypeC<{
+            type: t.StringC;
+            annotation: t.StringC;
+            appinfo: t.IntersectionC<[t.TypeC<{
+                nms_id: t.UnionC<[t.StringC, t.BrandC<t.NumberC, t.IntBrand>]>;
+                access: t.StringC;
+            }>, t.PartialC<{
+                category: t.StringC;
+            }>]>;
+        }>>;
+    }>, t.IntersectionC<[t.TypeC<{
+        base: t.StringC;
+    }>, t.PartialC<{
+        appinfo: t.PartialC<{
+            zero: t.StringC;
+            units: t.StringC;
+            precision: t.StringC;
+            representation: t.StringC;
+        }>;
+        minInclusive: t.StringC;
+        maxInclusive: t.StringC;
+        enumeration: t.RecordC<t.StringC, t.TypeC<{
+            annotation: t.StringC;
+        }>>;
+    }>]>, t.TypeC<{
+        annotation: t.StringC;
+        properties: t.TypeC<{
+            id: t.TypeC<{
+                type: t.LiteralC<"xs:unsignedShort">;
+                annotation: t.StringC;
+            }>;
+        }>;
+    }>]>>;
+}>, t.PartialC<{
+    subroutines: t.RecordC<t.StringC, t.IntersectionC<[t.TypeC<{
+        annotation: t.StringC;
+        appinfo: t.IntersectionC<[t.TypeC<{
+            nms_id: t.UnionC<[t.StringC, t.BrandC<t.NumberC, t.IntBrand>]>;
+        }>, t.PartialC<{
+            response: t.StringC;
+        }>]>;
+    }>, t.PartialC<{
+        properties: t.RecordC<t.StringC, t.TypeC<{
+            type: t.StringC;
+            annotation: t.StringC;
+        }>>;
+    }>]>>;
+}>]>;
 declare type Listener<T> = (arg: T) => void;
 declare type ChangedArg = {
     id: number;
@@ -92,6 +156,8 @@ export interface IDevice {
         [name: string]: any;
     }>;
     upload(domain: string, offset?: number, size?: number): Promise<Uint8Array>;
+    download(domain: string, data: Buffer, offset?: number): Promise<void>;
+    execute(program: string, args?: Record<string, any>): Promise<NmsDatagram | NmsDatagram[] | undefined>;
     connection?: NibusConnection;
     release(): number;
     getId(idOrName: string | number): number;
@@ -159,7 +225,7 @@ declare class Devices extends EventEmitter {
     get: () => IDevice[];
     find: (address: AddressParam) => IDevice | undefined;
     create(address: AddressParam, mib: string): IDevice;
-    create(address: AddressParam, type: number): IDevice;
+    create(address: AddressParam, type: number, version?: number): IDevice;
 }
 declare const devices: Devices;
 export default devices;

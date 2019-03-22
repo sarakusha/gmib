@@ -10,7 +10,7 @@ export interface INmsOptions extends INibusCommon {
   service: NmsServiceType;
   nms?: Buffer;
   isResponse?: boolean;
-  isResponsible?: boolean;
+  notReply?: boolean;
   status?: number;
 }
 
@@ -23,7 +23,7 @@ export interface INmsDatagramJSON extends INibusDatagramJSON {
   service: string;
   nms?: Buffer;
   isResponse?: boolean;
-  isResponsible?: boolean;
+  notReply?: boolean;
   value?: string;
   valueType?: string;
   status?: number;
@@ -36,7 +36,7 @@ export default class NmsDatagram extends NibusDatagram implements INmsOptions {
   }
 
   public readonly isResponse: boolean;
-  public readonly isResponsible: boolean;
+  public readonly notReply: boolean;
   public readonly service: number;
   public readonly id: number;
   public readonly nms: Buffer;
@@ -48,7 +48,7 @@ export default class NmsDatagram extends NibusDatagram implements INmsOptions {
       const options = {
         source: new Address('auto'),
         isResponse: false,
-        isResponsible: true,
+        notReply: false,
         nms: emptyBuffer,
         ...frameOrOptions,
       };
@@ -60,7 +60,7 @@ export default class NmsDatagram extends NibusDatagram implements INmsOptions {
       const nibusData = [
         ((options.service & 0x1f) << 3) | (options.isResponse ? 4 : 0) | ((options.id >> 8) & 3),
         options.id & 0xff,
-        (options.isResponsible ? 0 : 0x80) | nmsLength,
+        (options.notReply ? 0x80 : 0) | nmsLength,
         ...options.nms,
       ];
       const nibusOptions: INibusOptions = Object.assign({
@@ -73,7 +73,7 @@ export default class NmsDatagram extends NibusDatagram implements INmsOptions {
     this.id = ((data[0] & 3) << 8) | data[1];
     this.service = data[0] >> 3;
     this.isResponse = !!(data[0] & 4);
-    this.isResponsible = (data[2] & 0x80) === 0;
+    this.notReply = !!(data[2] & 0x80);
     // fix: NMS batch read
     const nmsLength = this.service !== NmsServiceType.Read
       ? data[2] & 0x3F
@@ -160,7 +160,7 @@ export default class NmsDatagram extends NibusDatagram implements INmsOptions {
       }
       result.status = this.status;
     } else {
-      result.isResponsible = this.isResponsible;
+      result.notReply = this.notReply;
       result.nms = Buffer.from(this.nms);
     }
     return result;

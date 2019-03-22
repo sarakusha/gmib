@@ -114,7 +114,11 @@ export function decodeValue(valueType: NmsValueType, buffer: Buffer, offset = 0)
   return array;
 }
 
-function writeValue(valueType: NmsValueType, value: any, buffer: Buffer, offset = 0): number {
+export function writeValue(
+  valueType: NmsValueType,
+  value: any,
+  buffer: Buffer,
+  offset = 0): number {
   let pos = offset;
   switch (valueType) {
     case NmsValueType.Boolean:

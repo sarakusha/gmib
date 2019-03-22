@@ -33,10 +33,10 @@ const makeAddressHandler = (action, breakout = false) => args => new Promise(asy
   const mac = new _Address.default(args.mac);
   let count = await _service.default.start(); // const setCount: NibusCounter = (handler = (c: number) => c) => count = handler(count);
 
-  const perform = async (connection, mibOrType) => {
+  const perform = async (connection, mibOrType, version) => {
     clearTimeout(timeout);
 
-    const device = _mib.devices.create(mac, mibOrType);
+    const device = _mib.devices.create(mac, mibOrType, version);
 
     device.connection = connection;
     await action(device, args);
@@ -48,7 +48,7 @@ const makeAddressHandler = (action, breakout = false) => args => new Promise(asy
     connection
   }) => {
     try {
-      if (address.equals(mac)) {
+      if (address.equals(mac) && connection.description.mib) {
         if (!args.mib || args.mib === connection.description.mib) {
           await perform(connection, connection.description.mib);
           if (breakout) return close();
@@ -56,18 +56,18 @@ const makeAddressHandler = (action, breakout = false) => args => new Promise(asy
         }
       }
 
-      if (connection.description.link) {
+      if (address.equals(mac) && connection.description.type || connection.description.link) {
         count += 1;
-        const [, type] = await connection.getVersion(mac);
+        const [version, type] = await connection.getVersion(mac);
 
         if (type) {
-          await perform(connection, type);
+          await perform(connection, type, version);
           if (breakout) return close();
           wait();
         }
       }
     } catch (e) {
-      close(e.message || e);
+      close(e.stack || e.message || e);
     }
 
     count -= 1;

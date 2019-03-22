@@ -17,7 +17,7 @@ describe('NmsDatagram tests', () => {
     destination: new _Address.default('::12:34'),
     id: 123,
     isResponse: true,
-    isResponsible: true,
+    notReply: false,
     nms: Buffer.from([1, 2, 3, 4, 5, 6, 7, 8, 9, 0]),
     priority: 3,
     service: _index.NmsServiceType.Read,
@@ -28,7 +28,7 @@ describe('NmsDatagram tests', () => {
     expect(nms).toHaveProperty('destination', options.destination);
     expect(nms).toHaveProperty('id', options.id);
     expect(nms).toHaveProperty('isResponse', options.isResponse);
-    expect(nms).toHaveProperty('isResponsible', options.isResponsible);
+    expect(nms).toHaveProperty('notReply', options.notReply);
     expect(nms).toHaveProperty('nms', options.nms);
     expect(nms).toHaveProperty('priority', options.priority);
     expect(nms).toHaveProperty('service', options.service);

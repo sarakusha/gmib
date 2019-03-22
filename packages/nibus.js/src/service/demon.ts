@@ -1,17 +1,21 @@
 import Configstore from 'configstore';
 import debugFactory from 'debug';
 import { Socket } from 'net';
+import _ from 'lodash';
 import pkg from '../../package.json';
 import { SerialTee, Server } from '../ipc';
 import { SerialLogger } from '../ipc/SerialTee';
 import { Direction } from '../ipc/Server';
+import { getMibFile, getMibs, toInt } from '../mib';
+import { IMibDeviceType, MibDeviceV } from '../mib/devices';
 import { NibusDatagram, NibusDecoder } from '../nibus';
 import { printBuffer } from '../nibus/helper';
-import { PATH } from './const';
+import { Config, LogLevel, PATH } from './common';
 import detector from './detector';
 import { IKnownPort } from './KnownPorts';
 
-const conf = new Configstore(pkg.name,
+const conf = new Configstore(
+  pkg.name,
   {
     logLevel: 'none',
     omit: ['priority'],
@@ -22,6 +26,8 @@ const conf = new Configstore(pkg.name,
 const debug = debugFactory('nibus:service');
 const debugIn = debugFactory('nibus:INP<<<');
 const debugOut = debugFactory('nibus:OUT>>>');
+
+debug(`config path: ${conf.path}`);
 
 const noop = () => {};
 
@@ -34,10 +40,42 @@ if (process.platform === 'win32') {
   rl.on('SIGINT', () => process.emit('SIGINT', 'SIGINT'));
 }
 
-type LogLevel = 'none' | 'hex' | 'nibus';
 type Fields = string[] | undefined;
 
-const direction = (dir: Direction) => dir === Direction.in ? '<<<' : '>>>';
+const minVersionToInt = (str?: string) => {
+  if (!str) return 0;
+  const [high, low] = str.split('.', 2);
+  return (toInt(high) << 8) + toInt(low);
+};
+
+async function updateMibTypes() {
+  const mibs = await getMibs();
+  conf.set('mibs', mibs);
+  const mibTypes: Config['mibTypes'] = {};
+  mibs.forEach((mib) => {
+    const mibfile = getMibFile(mib);
+    const validation = MibDeviceV.decode(require(mibfile));
+    if (validation.isLeft()) {
+      debug(`<error>: Invalid mib file ${mibfile}`);
+    } else {
+      const { types } = validation.value;
+      const device = types[validation.value.device] as IMibDeviceType;
+      const type = toInt(device.appinfo.device_type);
+      const minVersion = minVersionToInt(device.appinfo.min_version);
+      const mibs = mibTypes[type] || [];
+      mibs.push({
+        mib,
+        minVersion,
+      });
+      mibTypes[type] = _.sortBy(mibs, 'minVersion');
+    }
+  });
+  conf.set('mibTypes', mibTypes);
+}
+
+updateMibTypes().catch(e => debug(`<error> ${e.message}`));
+
+// const direction = (dir: Direction) => dir === Direction.in ? '<<<' : '>>>';
 const decoderIn = new NibusDecoder();
 decoderIn.on('data', (datagram: NibusDatagram) => {
   debugIn(datagram.toString({

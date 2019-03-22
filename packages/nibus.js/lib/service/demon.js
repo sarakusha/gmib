@@ -4,17 +4,23 @@ var _configstore = _interopRequireDefault(require("configstore"));
 
 var _debug = _interopRequireDefault(require("debug"));
 
+var _lodash = _interopRequireDefault(require("lodash"));
+
 var _package = _interopRequireDefault(require("../../package.json"));
 
 var _ipc = require("../ipc");
 
 var _Server = require("../ipc/Server");
 
+var _mib = require("../mib");
+
+var _devices = require("../mib/devices");
+
 var _nibus = require("../nibus");
 
 var _helper = require("../nibus/helper");
 
-var _const = require("./const");
+var _common = require("./common");
 
 var _detector = _interopRequireDefault(require("./detector"));
 
@@ -30,6 +36,7 @@ const conf = new _configstore.default(_package.default.name, {
 const debug = (0, _debug.default)('nibus:service');
 const debugIn = (0, _debug.default)('nibus:INP<<<');
 const debugOut = (0, _debug.default)('nibus:OUT>>>');
+debug(`config path: ${conf.path}`);
 
 const noop = () => {};
 
@@ -42,7 +49,42 @@ if (process.platform === 'win32') {
   rl.on('SIGINT', () => process.emit('SIGINT', 'SIGINT'));
 }
 
-const direction = dir => dir === _Server.Direction.in ? '<<<' : '>>>';
+const minVersionToInt = str => {
+  if (!str) return 0;
+  const [high, low] = str.split('.', 2);
+  return ((0, _mib.toInt)(high) << 8) + (0, _mib.toInt)(low);
+};
+
+async function updateMibTypes() {
+  const mibs = await (0, _mib.getMibs)();
+  conf.set('mibs', mibs);
+  const mibTypes = {};
+  mibs.forEach(mib => {
+    const mibfile = (0, _mib.getMibFile)(mib);
+
+    const validation = _devices.MibDeviceV.decode(require(mibfile));
+
+    if (validation.isLeft()) {
+      debug(`<error>: Invalid mib file ${mibfile}`);
+    } else {
+      const {
+        types
+      } = validation.value;
+      const device = types[validation.value.device];
+      const type = (0, _mib.toInt)(device.appinfo.device_type);
+      const minVersion = minVersionToInt(device.appinfo.min_version);
+      const mibs = mibTypes[type] || [];
+      mibs.push({
+        mib,
+        minVersion
+      });
+      mibTypes[type] = _lodash.default.sortBy(mibs, 'minVersion');
+    }
+  });
+  conf.set('mibTypes', mibTypes);
+}
+
+updateMibTypes().catch(e => debug(`<error> ${e.message}`)); // const direction = (dir: Direction) => dir === Direction.in ? '<<<' : '>>>';
 
 const decoderIn = new _nibus.NibusDecoder();
 decoderIn.on('data', datagram => {
@@ -143,7 +185,7 @@ class NibusService {
       }
     });
 
-    this.server = new _ipc.Server(_const.PATH);
+    this.server = new _ipc.Server(_common.PATH);
     this.server.on('connection', this.connectionHandler);
     this.server.on('client:setLogLevel', this.logLevelHandler);
   }

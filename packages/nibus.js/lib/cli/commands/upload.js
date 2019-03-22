@@ -12,6 +12,8 @@ var _path = _interopRequireDefault(require("path"));
 
 var _progress = _interopRequireDefault(require("progress"));
 
+var _os = require("os");
+
 var _helper = require("../../nibus/helper");
 
 var _handlers = require("../handlers");
@@ -21,10 +23,6 @@ var _write = require("./write");
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 async function action(device, args) {
-  const writeArgs = args.out ? { ...args,
-    quiet: true
-  } : args;
-  await (0, _write.action)(device, writeArgs);
   const {
     domain,
     offset,
@@ -34,6 +32,10 @@ async function action(device, args) {
     hex,
     quiet
   } = args;
+  const writeArgs = out ? { ...args,
+    quiet: true
+  } : args;
+  await (0, _write.action)(device, writeArgs);
 
   let close = () => {};
 
@@ -63,7 +65,7 @@ async function action(device, args) {
     tick(data.length);
 
     if (hex) {
-      write(`${(0, _helper.printBuffer)(data)}${'\n'}`);
+      write(`${(0, _helper.printBuffer)(data)}${_os.EOL}`);
     } else {
       write(data);
     }
@@ -72,7 +74,7 @@ async function action(device, args) {
   device.once('uploadStart', ({
     domainSize
   }) => {
-    const total = size || domainSize;
+    const total = size || domainSize - offset;
 
     if (out) {
       const bar = new _progress.default(`  uploading [:bar] ${total <= 50 ? '' : ':rate/bps :percent '}:current/:total :etas`, {
@@ -82,11 +84,11 @@ async function action(device, args) {
       tick = bar.tick.bind(bar);
     }
 
-    if (hex && !quiet) {
-      write(`DOMAIN: ${domain}
-OFFSET: ${offset}
-SIZE: ${total}
-`);
+    if (hex && offset > 0) {
+      write(`@${offset.toString(16).padStart(4, '0')}${_os.EOL}`); //       write(`DOMAIN: ${domain}
+      // OFFSET: ${offset}
+      // SIZE: ${total!}
+      // `);
     }
   });
   device.on('uploadData', dataHandler);

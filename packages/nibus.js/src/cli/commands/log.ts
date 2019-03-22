@@ -3,7 +3,7 @@ import debugFactory from 'debug';
 import { Tail } from 'tail';
 import path from 'path';
 import { homedir } from 'os';
-import { PATH } from '../../service/const';
+import { PATH } from '../../service/common';
 import { Client } from '../../ipc';
 
 const debug = debugFactory('nibus:log');

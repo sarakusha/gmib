@@ -5,11 +5,17 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.getMibFile = getMibFile;
 exports.getMibPrototype = getMibPrototype;
-exports.default = void 0;
+exports.default = exports.MibDeviceV = void 0;
 
 var _crc = require("crc");
 
+var _debug = _interopRequireDefault(require("debug"));
+
 var _events = require("events");
+
+var t = _interopRequireWildcard(require("io-ts"));
+
+var _PathReporter = require("io-ts/lib/PathReporter");
 
 var _lodash = _interopRequireDefault(require("lodash"));
 
@@ -17,7 +23,7 @@ var _path = _interopRequireDefault(require("path"));
 
 require("reflect-metadata");
 
-var _debug = _interopRequireDefault(require("debug"));
+var _xdgBasedir = require("xdg-basedir");
 
 var _Address = _interopRequireDefault(require("../Address"));
 
@@ -29,15 +35,20 @@ var _helper = require("../nibus/helper");
 
 var _nms = require("../nms");
 
+var _common = require("../service/common");
+
 var _mib = require("./mib");
 
-var _mib2json = require("./mib2json");
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {}; if (desc.get || desc.set) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } } newObj.default = obj; return newObj; } }
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
+// import { getMibsSync } from './mib2json';
 // import detector from '../service/detector';
+const pkgName = require('../../package.json').name;
+
 const debug = (0, _debug.default)('nibus:devices');
 const $values = Symbol('values');
 const $errors = Symbol('errors');
@@ -56,6 +67,75 @@ var PrivateProps;
 
 const deviceMap = {};
 const mibTypesCache = {};
+const MibPropertyAppInfoV = t.intersection([t.type({
+  nms_id: t.union([t.string, t.Int]),
+  access: t.string
+}), t.partial({
+  category: t.string
+})]); // interface IMibPropertyAppInfo extends t.TypeOf<typeof MibPropertyAppInfoV> {}
+
+const MibPropertyV = t.type({
+  type: t.string,
+  annotation: t.string,
+  appinfo: MibPropertyAppInfoV
+});
+const MibDeviceAppInfoV = t.intersection([t.type({
+  mib_version: t.string
+}), t.partial({
+  device_type: t.string,
+  loader_type: t.string,
+  firmware: t.string,
+  min_version: t.string
+})]);
+const MibDeviceTypeV = t.type({
+  annotation: t.string,
+  appinfo: MibDeviceAppInfoV,
+  properties: t.record(t.string, MibPropertyV)
+});
+const MibTypeV = t.intersection([t.type({
+  base: t.string
+}), t.partial({
+  appinfo: t.partial({
+    zero: t.string,
+    units: t.string,
+    precision: t.string,
+    representation: t.string
+  }),
+  minInclusive: t.string,
+  maxInclusive: t.string,
+  enumeration: t.record(t.string, t.type({
+    annotation: t.string
+  }))
+})]);
+const MibSubroutineV = t.intersection([t.type({
+  annotation: t.string,
+  appinfo: t.intersection([t.type({
+    nms_id: t.union([t.string, t.Int])
+  }), t.partial({
+    response: t.string
+  })])
+}), t.partial({
+  properties: t.record(t.string, t.type({
+    type: t.string,
+    annotation: t.string
+  }))
+})]);
+const SubroutineTypeV = t.type({
+  annotation: t.string,
+  properties: t.type({
+    id: t.type({
+      type: t.literal('xs:unsignedShort'),
+      annotation: t.string
+    })
+  })
+});
+const MibDeviceV = t.intersection([t.type({
+  device: t.string,
+  types: t.record(t.string, t.union([MibDeviceTypeV, MibTypeV, SubroutineTypeV]))
+}), t.partial({
+  subroutines: t.record(t.string, MibSubroutineV)
+})]);
+exports.MibDeviceV = MibDeviceV;
 
 function getBaseType(types, type) {
   let base = type;
@@ -184,27 +264,51 @@ class DevicePrototype extends _events.EventEmitter {
     _defineProperty(this, "$countRef", 1);
 
     const mibfile = getMibFile(mibname);
+    const mibValidation = MibDeviceV.decode(require(mibfile));
 
-    const mib = require(mibfile);
+    if (mibValidation.isLeft()) {
+      throw new Error(`Invalid mib file ${mibfile} ${_PathReporter.PathReporter.report(mibValidation)}`);
+    }
 
+    const mib = mibValidation.value;
     const {
-      types
+      types,
+      subroutines
     } = mib;
     const device = types[mib.device];
     Reflect.defineMetadata('mib', mibname, this);
     Reflect.defineMetadata('mibfile', mibfile, this);
     Reflect.defineMetadata('annotation', device.annotation, this);
-    Reflect.defineMetadata('mibVersion', device.appinfo.mib_vertsion, this);
+    Reflect.defineMetadata('mibVersion', device.appinfo.mib_version, this);
     Reflect.defineMetadata('deviceType', (0, _mib.toInt)(device.appinfo.device_type), this);
     device.appinfo.loader_type && Reflect.defineMetadata('loaderType', (0, _mib.toInt)(device.appinfo.loader_type), this);
     device.appinfo.firmware && Reflect.defineMetadata('firmware', device.appinfo.firmware, this);
-    types.errorType && Reflect.defineMetadata('errorType', types.errorType.enumeration, this); // TODO: category
+    device.appinfo.min_version && Reflect.defineMetadata('min_version', device.appinfo.min_version, this);
+    types.errorType && Reflect.defineMetadata('errorType', types.errorType.enumeration, this);
+
+    if (subroutines) {
+      const metasubs = _lodash.default.transform(subroutines, (result, sub, name) => {
+        result[name] = {
+          id: (0, _mib.toInt)(sub.appinfo.nms_id),
+          description: sub.annotation,
+          args: sub.properties && Object.entries(sub.properties).map(([name, prop]) => ({
+            name,
+            type: (0, _nms.getNmsType)(prop.type),
+            desc: prop.annotation
+          }))
+        };
+        return result;
+      }, {});
+
+      Reflect.defineMetadata('subroutines', metasubs, this);
+    } // TODO: category
     // const mibCategory = _.find(detector.detection!.mibCategories, { mib: mibname });
     // if (mibCategory) {
     //   const { category, disableBatchReading } = mibCategory;
     //   Reflect.defineMetadata('category', category, this);
     //   Reflect.defineMetadata('disableBatchReading', !!disableBatchReading, this);
     // }
+
 
     const keys = Reflect.ownKeys(device.properties);
     Reflect.defineMetadata('mibProperties', keys.map(_mib.validJsName), this);
@@ -598,109 +702,154 @@ class DevicePrototype extends _events.EventEmitter {
     const {
       connection
     } = this;
+    if (!connection) throw new Error('disconnected');
+    const reqDownload = (0, _nms.createNmsRequestDomainDownload)(this.address, domain.padEnd(8, '\0'));
+    const {
+      id,
+      value: max,
+      status
+    } = await connection.sendDatagram(reqDownload);
 
-    try {
-      if (!connection) throw new Error('disconnected');
-      const reqDownload = (0, _nms.createNmsRequestDomainDownload)(this.address, domain.padEnd(8, '\0'));
-      const {
-        id,
-        value: max,
-        status
-      } = await connection.sendDatagram(reqDownload);
+    if (status !== 0) {
+      // debug('<error>', status);
+      throw new _errors.NibusError(status, this, 'Request download domain error');
+    }
 
-      if (status !== 0) {
-        // debug('<error>', status);
-        throw new _errors.NibusError(status, this, 'Request download domain error');
-      }
-
-      this.emit('downloadStart', {
-        domain,
-        offset,
-        domainSize: max,
-        size: buffer.length
-      });
-
-      if (buffer.length > max - offset) {
-        throw new Error(`Buffer to large. Expected ${max - offset} bytes`);
-      }
-
-      const initDownload = (0, _nms.createNmsInitiateDownloadSequence)(this.address, id);
-      const {
-        status: initStat
-      } = await connection.sendDatagram(initDownload);
-
-      if (initStat !== 0) {
-        throw new _errors.NibusError(initStat, this, 'Initiate download domain error');
-      }
-
-      const crc = (0, _crc.crc16ccitt)(buffer, 0);
-      const chunkSize = _nbconst.NMS_MAX_DATA_LENGTH - 4;
-      const chunks = (0, _helper.chunkArray)(buffer, chunkSize);
-      await chunks.reduce(async (prev, chunk, i) => {
-        await prev;
-        const pos = i * chunkSize + offset;
-        const segmentDownload = (0, _nms.createNmsDownloadSegment)(this.address, id, pos, chunk);
-        const {
-          status: downloadStat
-        } = await connection.sendDatagram(segmentDownload);
-
-        if (downloadStat !== 0) {
-          throw new _errors.NibusError(downloadStat, this, 'Download segment error');
-        }
-
-        this.emit('downloadData', {
-          domain,
-          length: chunk.length
-        });
-      }, Promise.resolve());
-      const verify = (0, _nms.createNmsVerifyDomainChecksum)(this.address, id, offset, buffer.length, crc);
-      const {
-        status: verifyStat
-      } = await connection.sendDatagram(verify);
-
-      if (verifyStat !== 0) {
-        throw new _errors.NibusError(verifyStat, this, 'Download segment error');
-      }
-
-      const terminate = (0, _nms.createNmsTerminateDownloadSequence)(this.address, id);
+    const terminate = async err => {
+      const req = (0, _nms.createNmsTerminateDownloadSequence)(this.address, id);
       const {
         status: termStat
-      } = await connection.sendDatagram(terminate);
+      } = await connection.sendDatagram(req);
+      if (err) throw err;
 
       if (termStat !== 0) {
         throw new _errors.NibusError(termStat, this, 'Terminate download sequence error');
       }
+    };
 
-      this.emit('downloadFinish', {
-        domain,
-        offset,
-        size: buffer.length
-      });
-    } catch (e) {
-      this.emit('downloadError', e);
-      throw e;
+    if (buffer.length > max - offset) {
+      throw new Error(`Buffer to large. Expected ${max - offset} bytes`);
     }
+
+    const initDownload = (0, _nms.createNmsInitiateDownloadSequence)(this.address, id);
+    const {
+      status: initStat
+    } = await connection.sendDatagram(initDownload);
+
+    if (initStat !== 0) {
+      throw new _errors.NibusError(initStat, this, 'Initiate download domain error');
+    }
+
+    this.emit('downloadStart', {
+      domain,
+      offset,
+      domainSize: max,
+      size: buffer.length
+    });
+    const crc = (0, _crc.crc16ccitt)(buffer, 0);
+    const chunkSize = _nbconst.NMS_MAX_DATA_LENGTH - 4;
+    const chunks = (0, _helper.chunkArray)(buffer, chunkSize);
+    await chunks.reduce(async (prev, chunk, i) => {
+      await prev;
+      const pos = i * chunkSize + offset;
+      const segmentDownload = (0, _nms.createNmsDownloadSegment)(this.address, id, pos, chunk);
+      const {
+        status: downloadStat
+      } = await connection.sendDatagram(segmentDownload);
+
+      if (downloadStat !== 0) {
+        await terminate(new _errors.NibusError(downloadStat, this, 'Download segment error'));
+      }
+
+      this.emit('downloadData', {
+        domain,
+        length: chunk.length
+      });
+    }, Promise.resolve());
+    const verify = (0, _nms.createNmsVerifyDomainChecksum)(this.address, id, offset, buffer.length, crc);
+    const {
+      status: verifyStat
+    } = await connection.sendDatagram(verify);
+
+    if (verifyStat !== 0) {
+      await terminate(new _errors.NibusError(verifyStat, this, 'Download segment error'));
+    }
+
+    await terminate();
+    this.emit('downloadFinish', {
+      domain,
+      offset,
+      size: buffer.length
+    });
+  }
+
+  async execute(program, args) {
+    const {
+      connection
+    } = this;
+    if (!connection) throw new Error('disconnected');
+    const subroutines = Reflect.getMetadata('subroutines', this);
+
+    if (!subroutines || !Reflect.has(subroutines, program)) {
+      throw new Error(`Unknown program ${program}`);
+    }
+
+    const subroutine = subroutines[program];
+    const props = [];
+
+    if (subroutine.args) {
+      Object.entries(subroutine.args).forEach(([name, desc]) => {
+        const arg = args && args[name];
+        if (!arg) throw new Error(`Expected arg ${name} in program ${program}`);
+        props.push([desc.type, arg]);
+      });
+    }
+
+    const req = (0, _nms.createExecuteProgramInvocation)(this.address, subroutine.id, subroutine.notReply, ...props);
+    return connection.sendDatagram(req);
   }
 
 } // tslint:disable-next-line
 
 
-function findMibByType(type) {
-  const cacheMibs = Object.keys(mibTypesCache);
-  const cached = cacheMibs.find(mib => Reflect.getMetadata('deviceType', mibTypesCache[mib].prototype) === type);
-  if (cached) return cached;
-  const mibs = (0, _mib2json.getMibsSync)();
-  return _lodash.default.difference(mibs, cacheMibs).find(mibName => {
-    const mibfile = getMibFile(mibName);
+function findMibByType(type, version) {
+  const conf = _path.default.resolve(_xdgBasedir.config || '/tmp', 'configstore', pkgName);
 
-    const mib = require(mibfile);
+  const validate = _common.ConfigV.decode(require(conf));
 
-    const {
-      types
-    } = mib;
-    const device = types[mib.device];
-    return (0, _mib.toInt)(device.appinfo.device_type) === type;
-  });
+  if (validate.isLeft()) {
+    throw new Error(`Invalid config file ${conf}
+  ${_PathReporter.PathReporter.report(validate)}`);
+  }
+
+  const {
+    mibTypes
+  } = validate.value;
+  const mibs = mibTypes[type];
+
+  if (mibs && mibs.length) {
+    let mibType = mibs[0];
+
+    if (version && mibs.length > 1) {
+      mibType = _lodash.default.findLast(mibs, ({
+        minVersion = 0
+      }) => minVersion <= version) || mibType;
+    }
+
+    return mibType.mib;
+  } // const cacheMibs = Object.keys(mibTypesCache);
+  // const cached = cacheMibs.find(mib =>
+  //   Reflect.getMetadata('deviceType', mibTypesCache[mib].prototype) === type);
+  // if (cached) return cached;
+  // const mibs = getMibsSync();
+  // return _.difference(mibs, cacheMibs).find((mibName) => {
+  //   const mibfile = getMibFile(mibName);
+  //   const mib: IMibDevice = require(mibfile);
+  //   const { types } = mib;
+  //   const device = types[mib.device] as IMibDeviceType;
+  //   return toInt(device.appinfo.device_type) === type;
+  // });
+
 }
 
 function getConstructor(mib) {
@@ -743,16 +892,16 @@ class Devices extends _events.EventEmitter {
     });
   }
 
-  create(address, mibOrType) {
+  create(address, mibOrType, version) {
     let mib;
 
     if (typeof mibOrType === 'number') {
-      mib = findMibByType(mibOrType);
+      mib = findMibByType(mibOrType, version);
       if (mib === undefined) throw new Error('Unknown mib type');
     } else if (typeof mibOrType === 'string') {
       mib = String(mibOrType || 'minihost_v2.06b');
     } else {
-      throw new Error('mib expected');
+      throw new Error(`mib or type expected, got ${mibOrType}`);
     }
 
     const targetAddress = new _Address.default(address);

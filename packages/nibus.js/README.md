@@ -96,5 +96,10 @@ nibus download --mac ::23:74 --domain NVRAM --src data.bin --offset=1024
 * посмотреть лог
 ```bash
 nibus log --level hex
+nibus log --level nibus --omit priority
+```
+* залить прошивку в нулевой модуль и выполнть update
+```bash
+nibus flash -m ::1 -k ctrl moduleSelect=0 --src Slim_Ctrl_v5_Mcu_v1.2.txt --exec update
 ```
 

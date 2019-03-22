@@ -3,13 +3,16 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.default = void 0;
+exports.action = action;
+exports.default = exports.convert = void 0;
 
 var _fs = _interopRequireDefault(require("fs"));
 
 var _progress = _interopRequireDefault(require("progress"));
 
 var _handlers = require("../handlers");
+
+var _write = require("./write");
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -28,44 +31,64 @@ function readAllFromStdin() {
       resolve(Buffer.concat(buffers));
     }).once('error', reject);
   });
-} // TODO hex
+}
 
+const convert = buffer => {
+  const lines = buffer.toString('ascii').split(/\r?\n/g);
+  let offset = 0;
+  if (lines.length === 0) return [Buffer.alloc(0), 0];
+  const first = lines[0];
+  let start = 0;
 
-async function action(device, {
-  domain,
-  offset,
-  source,
-  hex
-}) {
+  if (first[0] === '@') {
+    offset = parseInt(first.slice(1), 16);
+    start = 1;
+  }
+
+  const hexToBuf = hex => Buffer.from(hex.split(/[\s:-=]/g).join(''), 'hex');
+
+  return [Buffer.concat(lines.slice(start).map(hexToBuf)), offset];
+};
+
+exports.convert = convert;
+
+async function action(device, args) {
+  const {
+    domain,
+    offset,
+    source,
+    hex
+  } = args;
+  await (0, _write.action)(device, args);
   let buffer;
+  let ofs = 0;
 
   let tick = size => {};
 
   if (source) {
     buffer = await _fs.default.promises.readFile(source);
-    const bar = new _progress.default('  downloading [:bar] :rate/bps :percent :current/:total :etas', {
+    if (hex) [buffer, ofs] = convert(buffer);
+    const dest = (offset || ofs).toString(16).padStart(4, '0');
+    const bar = new _progress.default(`  downloading [:bar] to ${dest} :rate/bps :percent :current/:total :etas`, {
       total: buffer.length,
       width: 20
     });
     tick = bar.tick.bind(bar);
   } else {
     buffer = await readAllFromStdin();
+
+    if (hex) {
+      [buffer, ofs] = convert(buffer);
+    }
   }
 
-  const onData = ({
+  device.on('downloadData', ({
     domain: dataDomain,
     length
   }) => {
     if (dataDomain === domain) tick(length);
-  };
-
-  device.on('downloadData', onData);
-
-  try {
-    await device.download(domain, buffer, offset);
-  } finally {
-    device.off('downloadData', onData);
-  }
+  });
+  await device.download(domain, buffer, offset || ofs);
 }
 
 const downloadCommand = {

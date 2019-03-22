@@ -15,7 +15,7 @@ const hex = /^0X[0-9A-F]+$/i;
 const isHex = (str: string) => hex.test(str)
   || parseInt(str, 10).toString(10) !== str.toLowerCase().replace(/^[0 ]+/, '');
 
-export const toInt = (value: string | boolean | number = 0) => {
+export const toInt = (value: string | boolean | number = 0): number => {
   if (typeof value === 'number') return value;
   if (typeof value === 'boolean') return value ? 1 : 0;
   if (value === 'true') return 1;

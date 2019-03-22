@@ -1,6 +1,6 @@
 {
   "name": "@nata/nibus.js",
-  "version": "1.1.8",
+  "version": "1.2.0",
   "description": "Nata-Info NiBUS",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -52,6 +52,7 @@
     "@types/progress": "^2.0.3",
     "@types/serialport": "^7.0.0",
     "@types/tail": "^1.2.1",
+    "@types/xdg-basedir": "^2.0.0",
     "@types/yargs": "^12.0.8",
     "babel-core": "^7.0.0-bridge.0",
     "babel-jest": "^24.1.0",
@@ -62,6 +63,7 @@
     "ts-jest": "^24.0.0",
     "tslint": "^5.10.0",
     "tslint-config-airbnb": "^5.9.2",
+    "tslint-react-hooks": "^2.0.0",
     "typescript": "^3.0.1"
   },
   "dependencies": {
@@ -75,6 +77,7 @@
     "io-ts-types": "^0.4.2",
     "js-yaml": "^3.12.0",
     "lodash": "^4.17.10",
+    "monocle-ts": "^1.7.1",
     "pm2": "^3.3.1",
     "printf": "^0.5.1",
     "progress": "^2.0.3",
@@ -85,6 +88,7 @@
     "table-layout": "^0.4.4",
     "tail": "^2.0.2",
     "usb-detection": "^4.0.0",
+    "xdg-basedir": "^3.0.0",
     "xpipe": "^1.0.5",
     "yargs": "^13.1.0"
   },

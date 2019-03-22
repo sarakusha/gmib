@@ -13,7 +13,7 @@ var _path = _interopRequireDefault(require("path"));
 
 var _os = require("os");
 
-var _const = require("../../service/const");
+var _common = require("../../service/common");
 
 var _ipc = require("../../ipc");
 
@@ -44,7 +44,7 @@ const logCommand = {
     omit,
     begin
   }) => new Promise((resolve, reject) => {
-    const socket = _ipc.Client.connect(_const.PATH);
+    const socket = _ipc.Client.connect(_common.PATH);
 
     let resolved = false;
     socket.once('close', () => {

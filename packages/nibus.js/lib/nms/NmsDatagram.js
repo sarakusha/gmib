@@ -34,7 +34,7 @@ class NmsDatagram extends _nibus.NibusDatagram {
 
       _defineProperty(this, "isResponse", void 0);
 
-      _defineProperty(this, "isResponsible", void 0);
+      _defineProperty(this, "notReply", void 0);
 
       _defineProperty(this, "service", void 0);
 
@@ -45,14 +45,14 @@ class NmsDatagram extends _nibus.NibusDatagram {
       const options = {
         source: new _Address.default('auto'),
         isResponse: false,
-        isResponsible: true,
+        notReply: false,
         nms: emptyBuffer,
         ...frameOrOptions
       };
       console.assert(options.nms.length <= _nbconst.NMS_MAX_DATA_LENGTH); // fix: NMS batch read
 
       const nmsLength = options.service !== _NmsServiceType.default.Read ? options.nms.length & 0x3f : 0;
-      const nibusData = [(options.service & 0x1f) << 3 | (options.isResponse ? 4 : 0) | options.id >> 8 & 3, options.id & 0xff, (options.isResponsible ? 0 : 0x80) | nmsLength, ...options.nms];
+      const nibusData = [(options.service & 0x1f) << 3 | (options.isResponse ? 4 : 0) | options.id >> 8 & 3, options.id & 0xff, (options.notReply ? 0x80 : 0) | nmsLength, ...options.nms];
       const nibusOptions = Object.assign({
         data: Buffer.from(nibusData),
         protocol: 1
@@ -61,7 +61,7 @@ class NmsDatagram extends _nibus.NibusDatagram {
 
       _defineProperty(this, "isResponse", void 0);
 
-      _defineProperty(this, "isResponsible", void 0);
+      _defineProperty(this, "notReply", void 0);
 
       _defineProperty(this, "service", void 0);
 
@@ -76,7 +76,7 @@ class NmsDatagram extends _nibus.NibusDatagram {
     this.id = (data[0] & 3) << 8 | data[1];
     this.service = data[0] >> 3;
     this.isResponse = !!(data[0] & 4);
-    this.isResponsible = (data[2] & 0x80) === 0; // fix: NMS batch read
+    this.notReply = !!(data[2] & 0x80); // fix: NMS batch read
 
     const nmsLength = this.service !== _NmsServiceType.default.Read ? data[2] & 0x3F : data.length - 3;
     this.nms = this.data.slice(3, 3 + nmsLength);
@@ -194,7 +194,7 @@ class NmsDatagram extends _nibus.NibusDatagram {
 
       result.status = this.status;
     } else {
-      result.isResponsible = this.isResponsible;
+      result.notReply = this.notReply;
       result.nms = Buffer.from(this.nms);
     }
 

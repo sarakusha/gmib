@@ -28,9 +28,9 @@ const makeAddressHandler = <O extends Defined<CommonOpts, 'm' | 'mac'>>
       let count = await session.start();
       // const setCount: NibusCounter = (handler = (c: number) => c) => count = handler(count);
 
-      const perform = async (connection: NibusConnection, mibOrType: any) => {
+      const perform = async (connection: NibusConnection, mibOrType: any, version?: number) => {
         clearTimeout(timeout);
-        const device = devices.create(mac, mibOrType);
+        const device = devices.create(mac, mibOrType, version);
         device.connection = connection;
         await action(device, args);
         hasFound = true;
@@ -38,24 +38,24 @@ const makeAddressHandler = <O extends Defined<CommonOpts, 'm' | 'mac'>>
 
       session.on('found', async ({ address, connection }) => {
         try {
-          if (address.equals(mac)) {
+          if (address.equals(mac) && connection.description.mib) {
             if (!args.mib || args.mib === connection.description.mib) {
-              await perform(connection, connection.description.mib!);
+              await perform(connection, connection.description.mib);
               if (breakout) return close();
               wait();
             }
           }
-          if (connection.description.link) {
+          if (address.equals(mac) && connection.description.type || connection.description.link) {
             count += 1;
-            const [, type] = await connection.getVersion(mac);
+            const [version, type] = await connection.getVersion(mac);
             if (type) {
-              await perform(connection, type);
+              await perform(connection, type, version);
               if (breakout) return close();
               wait();
             }
           }
         } catch (e) {
-          close(e.message || e);
+          close(e.stack || e.message || e);
         }
         count -= 1;
         if (count === 0) {

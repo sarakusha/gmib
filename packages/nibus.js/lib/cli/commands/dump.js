@@ -34,8 +34,8 @@ async function dumpDevice(address, connection, argv, mib) {
   let device;
 
   if (!mib) {
-    const [, type] = await connection.getVersion(address);
-    device = _mib.devices.create(address, type);
+    const [version, type] = await connection.getVersion(address);
+    device = _mib.devices.create(address, type, version);
   } else {
     device = _mib.devices.create(address, mib);
   }
@@ -163,7 +163,7 @@ const dumpCommand = {
           }
         }
 
-        if (connection.description.mib && (!mac || mac.equals(address)) && (!argv.mib || argv.mib === connection.description.mib)) {
+        if ((!mac || mac.equals(address)) && (!argv.mib || argv.mib === connection.description.mib)) {
           await dumpDevice(address, connection, argv, connection.description.mib);
         }
 

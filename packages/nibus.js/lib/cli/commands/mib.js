@@ -5,6 +5,8 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.default = void 0;
 
+var _PathReporter = require("io-ts/lib/PathReporter");
+
 var _path = _interopRequireDefault(require("path"));
 
 var _mib = require("../../mib");
@@ -18,10 +20,19 @@ const mibCommand = {
     describe: 'путь к mib-файлу',
     type: 'string'
   }).demandOption('mibfile'),
-  handler: ({
+  handler: async ({
     mibfile
   }) => {
-    return (0, _mib.convert)(mibfile, _path.default.resolve(__dirname, '../../../mibs'));
+    const dest = _path.default.resolve(__dirname, '../../../mibs');
+
+    await (0, _mib.convert)(mibfile, dest);
+
+    const validation = _mib.MibDeviceV.decode(require(dest));
+
+    if (validation.isLeft()) {
+      throw new Error(`Invalid mib file: ${mibfile}
+      ${_PathReporter.PathReporter.report(validation)}`);
+    }
   }
 };
 var _default = mibCommand;

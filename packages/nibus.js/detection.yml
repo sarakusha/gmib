@@ -4,7 +4,7 @@ mibCategories:
     link: true
     find: version
   minihost:
-    mib: minihost3
+    type: 0xabc6
     find: sarp
   fancontrol:
     mib: fan_control

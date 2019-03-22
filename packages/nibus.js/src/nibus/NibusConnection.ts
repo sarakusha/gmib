@@ -148,7 +148,7 @@ class NibusConnection extends EventEmitter {
         if (!encoder.write(datagram)) {
           await new Promise(cb => encoder.once('drain', cb));
         }
-        if (!(datagram instanceof NmsDatagram) || !datagram.isResponsible) {
+        if (!(datagram instanceof NmsDatagram) || datagram.notReply) {
           return resolve();
         }
         waited.push(new WaitedNmsDatagram(

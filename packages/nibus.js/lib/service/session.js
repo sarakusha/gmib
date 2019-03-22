@@ -25,7 +25,7 @@ var _nibus = require("../nibus");
 
 var _nms = require("../nms");
 
-var _const = require("./const");
+var _common = require("./common");
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {}; if (desc.get || desc.set) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } } newObj.default = obj; return newObj; } }
 
@@ -141,17 +141,21 @@ class NibusSession extends _events.EventEmitter {
     switch (description.find) {
       case 'sarp':
         {
-          const mib = require((0, _devices.getMibFile)(description.mib));
+          let {
+            type
+          } = description;
 
-          const {
-            types
-          } = mib;
-          const device = types[mib.device];
-          const mibType = (0, _mib2.toInt)(device.appinfo.device_type);
+          if (type === undefined) {
+            const mib = require((0, _devices.getMibFile)(description.mib));
+
+            const {
+              types
+            } = mib;
+            const device = types[mib.device];
+            type = (0, _mib2.toInt)(device.appinfo.device_type);
+          }
+
           connection.once('sarp', sarpDatagram => {
-            /**
-             * @event found
-             */
             const address = new _Address.default(sarpDatagram.mac);
             debug(`device ${category}[${address}] was found on ${connection.path}`);
             this.emit('found', {
@@ -160,7 +164,7 @@ class NibusSession extends _events.EventEmitter {
               address
             });
           });
-          connection.findByType(mibType).catch(noop);
+          connection.findByType(type).catch(noop);
           break;
         }
 
@@ -204,7 +208,7 @@ class NibusSession extends _events.EventEmitter {
   start() {
     return new Promise(resolve => {
       if (this.isStarted) return resolve();
-      this.socket = _ipc.Client.connect(_const.PATH);
+      this.socket = _ipc.Client.connect(_common.PATH);
       this.socket.on('ports', this.reloadHandler);
       this.socket.on('add', this.addHandler);
       this.socket.on('remove', this.removeHandler);

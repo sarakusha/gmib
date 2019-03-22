@@ -26,14 +26,14 @@
     "resume": {
       "annotation": "Включение отображения",
       "appinfo": {
-        "responce": "False",
+        "response": "False",
         "nms_id": "19"
       }
     },
     "shutdown": {
       "annotation": "Выключение отображения",
       "appinfo": {
-        "responce": "False",
+        "response": "False",
         "nms_id": "20"
       }
     }
@@ -368,15 +368,6 @@
         },
         "2": {
           "annotation": "Авто"
-        }
-      }
-    },
-    "service": {
-      "annotation": "NMS-сервис",
-      "properties": {
-        "id": {
-          "type": "xs:unsignedByte",
-          "annotation": "Идентификатор сервиса"
         }
       }
     },

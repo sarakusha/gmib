@@ -5,6 +5,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.getSizeOf = getSizeOf;
 exports.decodeValue = decodeValue;
+exports.writeValue = writeValue;
 exports.encodeValue = encodeValue;
 exports.getNmsType = getNmsType;
 

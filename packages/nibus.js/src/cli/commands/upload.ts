@@ -2,6 +2,7 @@ import { Arguments, CommandModule, Defined } from 'yargs';
 import fs from 'fs';
 import path from 'path';
 import Progress from 'progress';
+import { EOL } from 'os';
 
 import { IDevice } from '../../mib';
 import { UploadDataListener } from '../../mib/devices';
@@ -22,14 +23,14 @@ type UploadOpts = Defined<CommonOpts, 'mac' | 'm'> & {
 };
 
 export async function action(device: IDevice, args: Arguments<UploadOpts>) {
-  const writeArgs = args.out
+  const { domain, offset, size, out, force, hex, quiet } = args;
+  const writeArgs = out
     ? {
       ...args,
       quiet: true,
     }
     : args;
   await writeAction(device, writeArgs);
-  const { domain, offset, size, out, force, hex, quiet } = args;
   let close = () => {};
   let write: (data: any) => void;
   let tick = (size: number) => {};
@@ -49,14 +50,14 @@ export async function action(device: IDevice, args: Arguments<UploadOpts>) {
   const dataHandler: UploadDataListener = ({ data }) => {
     tick(data.length);
     if (hex) {
-      write(`${printBuffer(data)}${'\n'}`);
+      write(`${printBuffer(data)}${EOL}`);
     } else {
       write(data);
     }
   };
 
   device.once('uploadStart', ({ domainSize }) => {
-    const total = size || domainSize;
+    const total = size || (domainSize - offset);
     if (out) {
       const bar = new Progress(
         `  uploading [:bar] ${total! <= 50 ? '' : ':rate/bps :percent '}:current/:total :etas`,
@@ -67,11 +68,12 @@ export async function action(device: IDevice, args: Arguments<UploadOpts>) {
       );
       tick = bar.tick.bind(bar);
     }
-    if (hex && !quiet) {
-      write(`DOMAIN: ${domain}
-OFFSET: ${offset}
-SIZE: ${total!}
-`);
+    if (hex && offset > 0) {
+      write(`@${offset.toString(16).padStart(4, '0')}${EOL}`);
+//       write(`DOMAIN: ${domain}
+// OFFSET: ${offset}
+// SIZE: ${total!}
+// `);
     }
   });
   device.on('uploadData', dataHandler);

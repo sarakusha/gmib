@@ -14,13 +14,25 @@ export declare const PortArgV: t.TypeC<{
         locationId: t.StringC;
         deviceAddress: t.NumberC;
         device: t.StringC;
-        category: t.UnionC<[t.LiteralC<"siolynx">, t.LiteralC<"minihost">, t.LiteralC<"fancontrol">, t.LiteralC<"c22">, t.LiteralC<"relay">, t.UndefinedC]>;
+        category: t.UnionC<[t.KeyofC<{
+            siolynx: null;
+            minihost: null;
+            fancontrol: null;
+            c22: null;
+            relay: null;
+            undefined: null;
+        }>, t.UndefinedC]>;
     }>]>;
     description: t.PartialC<{
+        type: t.NumberC;
         mib: t.StringC;
         link: t.BooleanC;
         baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
-        parity: t.UnionC<[t.LiteralC<"none">, t.LiteralC<"even">, t.LiteralC<"mark">]>;
+        parity: t.KeyofC<{
+            none: null;
+            even: null;
+            mark: null;
+        }>;
         category: t.StringC;
         find: t.KeyofC<{
             sarp: null;
@@ -47,13 +59,25 @@ export declare const PortsEventV: t.TypeC<{
             locationId: t.StringC;
             deviceAddress: t.NumberC;
             device: t.StringC;
-            category: t.UnionC<[t.LiteralC<"siolynx">, t.LiteralC<"minihost">, t.LiteralC<"fancontrol">, t.LiteralC<"c22">, t.LiteralC<"relay">, t.UndefinedC]>;
+            category: t.UnionC<[t.KeyofC<{
+                siolynx: null;
+                minihost: null;
+                fancontrol: null;
+                c22: null;
+                relay: null;
+                undefined: null;
+            }>, t.UndefinedC]>;
         }>]>;
         description: t.PartialC<{
+            type: t.NumberC;
             mib: t.StringC;
             link: t.BooleanC;
             baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
-            parity: t.UnionC<[t.LiteralC<"none">, t.LiteralC<"even">, t.LiteralC<"mark">]>;
+            parity: t.KeyofC<{
+                none: null;
+                even: null;
+                mark: null;
+            }>;
             category: t.StringC;
             find: t.KeyofC<{
                 sarp: null;
@@ -73,13 +97,25 @@ export declare const PortsEventV: t.TypeC<{
             locationId: t.StringC;
             deviceAddress: t.NumberC;
             device: t.StringC;
-            category: t.UnionC<[t.LiteralC<"siolynx">, t.LiteralC<"minihost">, t.LiteralC<"fancontrol">, t.LiteralC<"c22">, t.LiteralC<"relay">, t.UndefinedC]>;
+            category: t.UnionC<[t.KeyofC<{
+                siolynx: null;
+                minihost: null;
+                fancontrol: null;
+                c22: null;
+                relay: null;
+                undefined: null;
+            }>, t.UndefinedC]>;
         }>]>;
         description: t.PartialC<{
+            type: t.NumberC;
             mib: t.StringC;
             link: t.BooleanC;
             baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
-            parity: t.UnionC<[t.LiteralC<"none">, t.LiteralC<"even">, t.LiteralC<"mark">]>;
+            parity: t.KeyofC<{
+                none: null;
+                even: null;
+                mark: null;
+            }>;
             category: t.StringC;
             find: t.KeyofC<{
                 sarp: null;
@@ -105,13 +141,25 @@ export declare const PortAddedEventV: t.TypeC<{
             locationId: t.StringC;
             deviceAddress: t.NumberC;
             device: t.StringC;
-            category: t.UnionC<[t.LiteralC<"siolynx">, t.LiteralC<"minihost">, t.LiteralC<"fancontrol">, t.LiteralC<"c22">, t.LiteralC<"relay">, t.UndefinedC]>;
+            category: t.UnionC<[t.KeyofC<{
+                siolynx: null;
+                minihost: null;
+                fancontrol: null;
+                c22: null;
+                relay: null;
+                undefined: null;
+            }>, t.UndefinedC]>;
         }>]>;
         description: t.PartialC<{
+            type: t.NumberC;
             mib: t.StringC;
             link: t.BooleanC;
             baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
-            parity: t.UnionC<[t.LiteralC<"none">, t.LiteralC<"even">, t.LiteralC<"mark">]>;
+            parity: t.KeyofC<{
+                none: null;
+                even: null;
+                mark: null;
+            }>;
             category: t.StringC;
             find: t.KeyofC<{
                 sarp: null;
@@ -131,13 +179,25 @@ export declare const PortAddedEventV: t.TypeC<{
             locationId: t.StringC;
             deviceAddress: t.NumberC;
             device: t.StringC;
-            category: t.UnionC<[t.LiteralC<"siolynx">, t.LiteralC<"minihost">, t.LiteralC<"fancontrol">, t.LiteralC<"c22">, t.LiteralC<"relay">, t.UndefinedC]>;
+            category: t.UnionC<[t.KeyofC<{
+                siolynx: null;
+                minihost: null;
+                fancontrol: null;
+                c22: null;
+                relay: null;
+                undefined: null;
+            }>, t.UndefinedC]>;
         }>]>;
         description: t.PartialC<{
+            type: t.NumberC;
             mib: t.StringC;
             link: t.BooleanC;
             baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
-            parity: t.UnionC<[t.LiteralC<"none">, t.LiteralC<"even">, t.LiteralC<"mark">]>;
+            parity: t.KeyofC<{
+                none: null;
+                even: null;
+                mark: null;
+            }>;
             category: t.StringC;
             find: t.KeyofC<{
                 sarp: null;
@@ -163,13 +223,25 @@ export declare const PortRemovedEventV: t.TypeC<{
             locationId: t.StringC;
             deviceAddress: t.NumberC;
             device: t.StringC;
-            category: t.UnionC<[t.LiteralC<"siolynx">, t.LiteralC<"minihost">, t.LiteralC<"fancontrol">, t.LiteralC<"c22">, t.LiteralC<"relay">, t.UndefinedC]>;
+            category: t.UnionC<[t.KeyofC<{
+                siolynx: null;
+                minihost: null;
+                fancontrol: null;
+                c22: null;
+                relay: null;
+                undefined: null;
+            }>, t.UndefinedC]>;
         }>]>;
         description: t.PartialC<{
+            type: t.NumberC;
             mib: t.StringC;
             link: t.BooleanC;
             baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
-            parity: t.UnionC<[t.LiteralC<"none">, t.LiteralC<"even">, t.LiteralC<"mark">]>;
+            parity: t.KeyofC<{
+                none: null;
+                even: null;
+                mark: null;
+            }>;
             category: t.StringC;
             find: t.KeyofC<{
                 sarp: null;
@@ -189,13 +261,25 @@ export declare const PortRemovedEventV: t.TypeC<{
             locationId: t.StringC;
             deviceAddress: t.NumberC;
             device: t.StringC;
-            category: t.UnionC<[t.LiteralC<"siolynx">, t.LiteralC<"minihost">, t.LiteralC<"fancontrol">, t.LiteralC<"c22">, t.LiteralC<"relay">, t.UndefinedC]>;
+            category: t.UnionC<[t.KeyofC<{
+                siolynx: null;
+                minihost: null;
+                fancontrol: null;
+                c22: null;
+                relay: null;
+                undefined: null;
+            }>, t.UndefinedC]>;
         }>]>;
         description: t.PartialC<{
+            type: t.NumberC;
             mib: t.StringC;
             link: t.BooleanC;
             baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
-            parity: t.UnionC<[t.LiteralC<"none">, t.LiteralC<"even">, t.LiteralC<"mark">]>;
+            parity: t.KeyofC<{
+                none: null;
+                even: null;
+                mark: null;
+            }>;
             category: t.StringC;
             find: t.KeyofC<{
                 sarp: null;
@@ -221,13 +305,25 @@ export declare const EventV: t.TaggedUnionC<"event", [t.TypeC<{
             locationId: t.StringC;
             deviceAddress: t.NumberC;
             device: t.StringC;
-            category: t.UnionC<[t.LiteralC<"siolynx">, t.LiteralC<"minihost">, t.LiteralC<"fancontrol">, t.LiteralC<"c22">, t.LiteralC<"relay">, t.UndefinedC]>;
+            category: t.UnionC<[t.KeyofC<{
+                siolynx: null;
+                minihost: null;
+                fancontrol: null;
+                c22: null;
+                relay: null;
+                undefined: null;
+            }>, t.UndefinedC]>;
         }>]>;
         description: t.PartialC<{
+            type: t.NumberC;
             mib: t.StringC;
             link: t.BooleanC;
             baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
-            parity: t.UnionC<[t.LiteralC<"none">, t.LiteralC<"even">, t.LiteralC<"mark">]>;
+            parity: t.KeyofC<{
+                none: null;
+                even: null;
+                mark: null;
+            }>;
             category: t.StringC;
             find: t.KeyofC<{
                 sarp: null;
@@ -247,13 +343,25 @@ export declare const EventV: t.TaggedUnionC<"event", [t.TypeC<{
             locationId: t.StringC;
             deviceAddress: t.NumberC;
             device: t.StringC;
-            category: t.UnionC<[t.LiteralC<"siolynx">, t.LiteralC<"minihost">, t.LiteralC<"fancontrol">, t.LiteralC<"c22">, t.LiteralC<"relay">, t.UndefinedC]>;
+            category: t.UnionC<[t.KeyofC<{
+                siolynx: null;
+                minihost: null;
+                fancontrol: null;
+                c22: null;
+                relay: null;
+                undefined: null;
+            }>, t.UndefinedC]>;
         }>]>;
         description: t.PartialC<{
+            type: t.NumberC;
             mib: t.StringC;
             link: t.BooleanC;
             baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
-            parity: t.UnionC<[t.LiteralC<"none">, t.LiteralC<"even">, t.LiteralC<"mark">]>;
+            parity: t.KeyofC<{
+                none: null;
+                even: null;
+                mark: null;
+            }>;
             category: t.StringC;
             find: t.KeyofC<{
                 sarp: null;
@@ -276,13 +384,25 @@ export declare const EventV: t.TaggedUnionC<"event", [t.TypeC<{
             locationId: t.StringC;
             deviceAddress: t.NumberC;
             device: t.StringC;
-            category: t.UnionC<[t.LiteralC<"siolynx">, t.LiteralC<"minihost">, t.LiteralC<"fancontrol">, t.LiteralC<"c22">, t.LiteralC<"relay">, t.UndefinedC]>;
+            category: t.UnionC<[t.KeyofC<{
+                siolynx: null;
+                minihost: null;
+                fancontrol: null;
+                c22: null;
+                relay: null;
+                undefined: null;
+            }>, t.UndefinedC]>;
         }>]>;
         description: t.PartialC<{
+            type: t.NumberC;
             mib: t.StringC;
             link: t.BooleanC;
             baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
-            parity: t.UnionC<[t.LiteralC<"none">, t.LiteralC<"even">, t.LiteralC<"mark">]>;
+            parity: t.KeyofC<{
+                none: null;
+                even: null;
+                mark: null;
+            }>;
             category: t.StringC;
             find: t.KeyofC<{
                 sarp: null;
@@ -302,13 +422,25 @@ export declare const EventV: t.TaggedUnionC<"event", [t.TypeC<{
             locationId: t.StringC;
             deviceAddress: t.NumberC;
             device: t.StringC;
-            category: t.UnionC<[t.LiteralC<"siolynx">, t.LiteralC<"minihost">, t.LiteralC<"fancontrol">, t.LiteralC<"c22">, t.LiteralC<"relay">, t.UndefinedC]>;
+            category: t.UnionC<[t.KeyofC<{
+                siolynx: null;
+                minihost: null;
+                fancontrol: null;
+                c22: null;
+                relay: null;
+                undefined: null;
+            }>, t.UndefinedC]>;
         }>]>;
         description: t.PartialC<{
+            type: t.NumberC;
             mib: t.StringC;
             link: t.BooleanC;
             baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
-            parity: t.UnionC<[t.LiteralC<"none">, t.LiteralC<"even">, t.LiteralC<"mark">]>;
+            parity: t.KeyofC<{
+                none: null;
+                even: null;
+                mark: null;
+            }>;
             category: t.StringC;
             find: t.KeyofC<{
                 sarp: null;
@@ -331,13 +463,25 @@ export declare const EventV: t.TaggedUnionC<"event", [t.TypeC<{
             locationId: t.StringC;
             deviceAddress: t.NumberC;
             device: t.StringC;
-            category: t.UnionC<[t.LiteralC<"siolynx">, t.LiteralC<"minihost">, t.LiteralC<"fancontrol">, t.LiteralC<"c22">, t.LiteralC<"relay">, t.UndefinedC]>;
+            category: t.UnionC<[t.KeyofC<{
+                siolynx: null;
+                minihost: null;
+                fancontrol: null;
+                c22: null;
+                relay: null;
+                undefined: null;
+            }>, t.UndefinedC]>;
         }>]>;
         description: t.PartialC<{
+            type: t.NumberC;
             mib: t.StringC;
             link: t.BooleanC;
             baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
-            parity: t.UnionC<[t.LiteralC<"none">, t.LiteralC<"even">, t.LiteralC<"mark">]>;
+            parity: t.KeyofC<{
+                none: null;
+                even: null;
+                mark: null;
+            }>;
             category: t.StringC;
             find: t.KeyofC<{
                 sarp: null;
@@ -357,13 +501,25 @@ export declare const EventV: t.TaggedUnionC<"event", [t.TypeC<{
             locationId: t.StringC;
             deviceAddress: t.NumberC;
             device: t.StringC;
-            category: t.UnionC<[t.LiteralC<"siolynx">, t.LiteralC<"minihost">, t.LiteralC<"fancontrol">, t.LiteralC<"c22">, t.LiteralC<"relay">, t.UndefinedC]>;
+            category: t.UnionC<[t.KeyofC<{
+                siolynx: null;
+                minihost: null;
+                fancontrol: null;
+                c22: null;
+                relay: null;
+                undefined: null;
+            }>, t.UndefinedC]>;
         }>]>;
         description: t.PartialC<{
+            type: t.NumberC;
             mib: t.StringC;
             link: t.BooleanC;
             baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
-            parity: t.UnionC<[t.LiteralC<"none">, t.LiteralC<"even">, t.LiteralC<"mark">]>;
+            parity: t.KeyofC<{
+                none: null;
+                even: null;
+                mark: null;
+            }>;
             category: t.StringC;
             find: t.KeyofC<{
                 sarp: null;
