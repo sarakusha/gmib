@@ -1,6 +1,6 @@
 # typescript build output
 dist
-lib
+#lib
 ### Node template
 # Logs
 logs
@@ -65,7 +65,7 @@ typings/
 .cache
 
 # next.js build output
-.next
+#.next
 
 # nuxt.js build output
 .nuxt
