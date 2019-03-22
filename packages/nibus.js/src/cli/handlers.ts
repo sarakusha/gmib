@@ -55,7 +55,7 @@ const makeAddressHandler = <O extends Defined<CommonOpts, 'm' | 'mac'>>
             }
           }
         } catch (e) {
-          close(e.stack || e.message || e);
+          close(e.message || e);
         }
         count -= 1;
         if (count === 0) {

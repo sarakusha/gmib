@@ -1,6 +1,7 @@
 import _ from 'lodash';
 import { AddressParam } from '../Address';
 import { NMS_MAX_DATA_LENGTH } from '../nbconst';
+import { getNibusTimeout } from '../nibus';
 import { encodeValue, getNmsType, getSizeOf, writeValue } from './nms';
 import NmsDatagram from './NmsDatagram';
 import NmsServiceType from './NmsServiceType';
@@ -98,6 +99,7 @@ export function createNmsInitiateDownloadSequence(destination: AddressParam, id:
     destination,
     id,
     service: NmsServiceType.InitiateDownloadSequence,
+    timeout: 5 * getNibusTimeout(),
   });
 }
 
@@ -129,6 +131,7 @@ export function createNmsTerminateDownloadSequence(destination: AddressParam, id
     destination,
     id,
     service: NmsServiceType.TerminateDownloadSequence,
+    timeout: getNibusTimeout() * 6,
   });
 }
 
@@ -153,6 +156,7 @@ export function createNmsVerifyDomainChecksum(
     id,
     nms,
     service: NmsServiceType.VerifyDomainChecksum,
+    timeout: getNibusTimeout() * 3,
   });
 }
 
@@ -178,5 +182,6 @@ export function createExecuteProgramInvocation(
     nms,
     notReply,
     service: NmsServiceType.ExecuteProgramInvocation,
+    timeout: getNibusTimeout() * 3,
   });
 }

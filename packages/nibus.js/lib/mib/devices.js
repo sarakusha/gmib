@@ -698,7 +698,7 @@ class DevicePrototype extends _events.EventEmitter {
     }
   }
 
-  async download(domain, buffer, offset = 0) {
+  async download(domain, buffer, offset = 0, noTerm = false) {
     const {
       connection
     } = this;
@@ -716,14 +716,18 @@ class DevicePrototype extends _events.EventEmitter {
     }
 
     const terminate = async err => {
-      const req = (0, _nms.createNmsTerminateDownloadSequence)(this.address, id);
-      const {
-        status: termStat
-      } = await connection.sendDatagram(req);
+      let termStat = 0;
+
+      if (!noTerm) {
+        const req = (0, _nms.createNmsTerminateDownloadSequence)(this.address, id);
+        const res = await connection.sendDatagram(req);
+        termStat = res.status;
+      }
+
       if (err) throw err;
 
       if (termStat !== 0) {
-        throw new _errors.NibusError(termStat, this, 'Terminate download sequence error');
+        throw new _errors.NibusError(termStat, this, 'Terminate download sequence error, maybe need --no-term');
       }
     };
 

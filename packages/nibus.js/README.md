@@ -17,10 +17,10 @@ nvm alias default node
 ```
 На **Windows** можно использовать  [официальный установщик](https://nodejs.org/en/download/current/). Необходимо перезагрузить **Windows** после установки.
 
-После установки node.js обновите `npm` и укажите репозиторий *Nata-Info* <small>(только внутри сети Nata-Info)</small>
+После установки node.js обновите `npm` и укажите репозиторий *Nata-Info*
 ```bash
 npm i -g npm
-npm set registry http://192.168.20.111:4873
+npm set registry https://npm.nata-info.ru
 ```
 
 Выполните 

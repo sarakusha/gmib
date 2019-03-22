@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env node --no-warnings
 "use strict";
 
 var _yargs = _interopRequireDefault(require("yargs"));
@@ -62,4 +62,8 @@ const argv = _yargs.default.option('m', {
   desc: 'использовать firmware_version для определения типа устройства',
   boolean: true,
   default: true
+}).option('timeout', {
+  desc: 'тймаут в секундах',
+  number: true,
+  default: 1
 }).command(_start.default).command(_stop.default).command(_list.default).command(_ping.default).command(_dump.default).command(_read.default).command(_write.default).command(_upload.default).command(_download.default).command(_log.default).command(_mib2.default).command(_flash.default).command(_execute.default).locale('ru').completion('completion').showHelpOnFail(false).strict().help().wrap(Math.min(_yargs.default.terminalWidth(), 100)).epilogue('(c) Nata-Info, 2019').argv;

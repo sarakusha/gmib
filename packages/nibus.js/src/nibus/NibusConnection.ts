@@ -57,9 +57,7 @@ class WaitedNmsDatagram {
       counter -= step;
       clearTimeout(timer);
       if (counter > 0) {
-        timer = setTimeout(timeout, req.service !== NmsServiceType.VerifyDomainChecksum
-          ? NIBUS_TIMEOUT
-          : NIBUS_TIMEOUT * 5);
+        timer = setTimeout(timeout, req.timeout || NIBUS_TIMEOUT);
       } else if (counter === 0) {
         callback(this);
       }

@@ -41,6 +41,8 @@ class NmsDatagram extends _nibus.NibusDatagram {
       _defineProperty(this, "id", void 0);
 
       _defineProperty(this, "nms", void 0);
+
+      _defineProperty(this, "timeout", void 0);
     } else {
       const options = {
         source: new _Address.default('auto'),
@@ -68,6 +70,12 @@ class NmsDatagram extends _nibus.NibusDatagram {
       _defineProperty(this, "id", void 0);
 
       _defineProperty(this, "nms", void 0);
+
+      _defineProperty(this, "timeout", void 0);
+
+      if (frameOrOptions.timeout !== undefined) {
+        this.timeout = frameOrOptions.timeout;
+      }
     }
 
     const {

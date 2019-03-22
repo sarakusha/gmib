@@ -8,6 +8,8 @@ declare type DownloadOpts = Defined<CommonOpts, 'm' | 'mac'> & {
     source?: string;
     src?: string;
     hex?: boolean;
+    execute?: string;
+    terminate?: boolean;
 };
 export declare const convert: (buffer: Buffer) => [Buffer, number];
 export declare function action(device: IDevice, args: Arguments<DownloadOpts>): Promise<void>;
