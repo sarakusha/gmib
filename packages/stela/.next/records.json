@@ -13,41 +13,21 @@
     "byName": {
       "commons": 0,
       "static/runtime/webpack.js": 1,
-      "static/runtime/main.js": 2,
-      "static/uojHUj33yvIUGm8Q5zE09/pages/_app.js": 3,
-      "static/uojHUj33yvIUGm8Q5zE09/pages/_error.js": 4,
-      "static/uojHUj33yvIUGm8Q5zE09/pages/dashboard.js": 5,
-      "static/uojHUj33yvIUGm8Q5zE09/pages/index.js": 6,
-      "static/ktgXK2ZtmHSMUOtDE~1_I/pages/_app.js": 7,
-      "static/ktgXK2ZtmHSMUOtDE~1_I/pages/_error.js": 8,
-      "static/ktgXK2ZtmHSMUOtDE~1_I/pages/dashboard.js": 9,
-      "static/ktgXK2ZtmHSMUOtDE~1_I/pages/index.js": 10,
-      "static/G4WghGYonXOpXE2WMfxSY/pages/_app.js": 3,
-      "static/G4WghGYonXOpXE2WMfxSY/pages/_error.js": 4,
-      "static/G4WghGYonXOpXE2WMfxSY/pages/dashboard.js": 5,
-      "static/G4WghGYonXOpXE2WMfxSY/pages/index.js": 6,
-      "static/0OL~Em0BX0drtmkz6yUHN/pages/_app.js": 7,
-      "static/0OL~Em0BX0drtmkz6yUHN/pages/_error.js": 8,
-      "static/0OL~Em0BX0drtmkz6yUHN/pages/dashboard.js": 9,
-      "static/0OL~Em0BX0drtmkz6yUHN/pages/index.js": 10,
-      "static/9E990CP9MhskMqU0_Nfxc/pages/_app.js": 3,
-      "static/9E990CP9MhskMqU0_Nfxc/pages/_error.js": 4,
-      "static/9E990CP9MhskMqU0_Nfxc/pages/dashboard.js": 5,
-      "static/9E990CP9MhskMqU0_Nfxc/pages/index.js": 6,
-      "static/h~e_88OnSc1L~lqoksM4o/pages/_app.js": 7,
-      "static/h~e_88OnSc1L~lqoksM4o/pages/_error.js": 8,
-      "static/h~e_88OnSc1L~lqoksM4o/pages/dashboard.js": 9,
-      "static/h~e_88OnSc1L~lqoksM4o/pages/index.js": 10
+      "static/7G_CEF714NYSZPxQFOHsA/pages/_app.js": 2,
+      "static/7G_CEF714NYSZPxQFOHsA/pages/_error.js": 3,
+      "static/7G_CEF714NYSZPxQFOHsA/pages/dashboard.js": 4,
+      "static/7G_CEF714NYSZPxQFOHsA/pages/index.js": 5,
+      "static/runtime/main.js": 6
     },
     "bySource": {},
     "usedIds": [
       0,
       1,
-      10,
       2,
-      7,
-      8,
-      9
+      3,
+      4,
+      5,
+      6
     ]
   }
 }
