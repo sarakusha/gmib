@@ -121,13 +121,13 @@ class StelaApp extends App<{ session?: any, isNeedLogin?: boolean }, State> {
   };
 
   componentDidMount() {
-    // this.socket = io();
+    this.socket = io();
     // this.socket = io({ transports: ['polling'] });
-    this.socket = io({ transports: ['websocket'] });
-    this.socket.on('reconnect_attempt', () => {
-      console.log('RECONNECT');
-      this.socket!.io.opts.transports = ['polling', 'websocket'];
-    });
+    // this.socket = io({ transports: ['websocket'] });
+    // this.socket.on('reconnect_attempt', () => {
+    //   console.log('RECONNECT');
+    //   this.socket!.io.opts.transports = ['polling', 'websocket'];
+    // });
     // connect to WS server and listen event
     this.socket.on('initial', this.handleChanged);
     this.socket.on('changed', this.handleChanged);

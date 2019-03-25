@@ -95,11 +95,7 @@ class StelaApp extends app_1.default {
         return { pageProps: {} };
     }
     componentDidMount() {
-        this.socket = socket_io_client_1.default({ transports: ['websocket'] });
-        this.socket.on('reconnect_attempt', () => {
-            console.log('RECONNECT');
-            this.socket.io.opts.transports = ['polling', 'websocket'];
-        });
+        this.socket = socket_io_client_1.default();
         this.socket.on('initial', this.handleChanged);
         this.socket.on('changed', this.handleChanged);
         this.socket.on('logout', this.handleLogout);

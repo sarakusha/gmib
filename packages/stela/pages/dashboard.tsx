@@ -13,6 +13,7 @@ import RefreshIcon from '@material-ui/icons/Refresh';
 import SendIcon from '@material-ui/icons/Send';
 import { IStela } from './_app';
 import StelaForm from '../components/StelaForm';
+import Stela from './index';
 
 const drawerWidth = 240;
 
@@ -23,12 +24,13 @@ const styles = (theme: Theme) => createStyles({
   },
   frame: {
     backgroundColor: 'black',
-    margin: 5,
+    marginLeft: 5,
+    marginRight: 5,
   },
   paperFrame: {
-    ...theme.mixins.gutters(),
-    paddingTop: theme.spacing.unit * 2,
-    paddingBottom: theme.spacing.unit * 2,
+    // ...theme.mixins.gutters(),
+    paddingTop: 5,
+    paddingBottom: 5,
   },
   drawer: {
     [theme.breakpoints.up('sm')]: {
@@ -121,7 +123,7 @@ class Dashboard extends PureComponent<Props, State> {
   };
 
   componentDidMount() {
-    this.setState({ src: `http://${window.location.host}/` });
+    // this.setState({ src: `http://${window.location.host}/` });
   }
 
   handleDrawerToggle = () => {
@@ -134,8 +136,19 @@ class Dashboard extends PureComponent<Props, State> {
     const { src, isSubmitting } = this.state;
     const scale = (drawerWidth - 10) / width;
     const drawer = (
-      <Paper style={{ height: height * scale + 10 }}>
-        <iframe
+      <Paper style={{ height: height * scale + 10 }} className={classes.paperFrame}>
+          <div
+            style={{
+              width,
+              height,
+              transform: `scale(${scale}`,
+              transformOrigin: 'left top',
+            }}
+            className={classes.frame}
+          >
+            <Stela {...values} />
+          </div>
+        {/*        <iframe
           src={src}
           width={width}
           style={{
@@ -147,7 +160,7 @@ class Dashboard extends PureComponent<Props, State> {
           className={classes.frame}
         >
           Стела
-        </iframe>
+        </iframe>*/}
       </Paper>
     );
     return (

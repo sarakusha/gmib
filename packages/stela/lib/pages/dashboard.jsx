@@ -33,14 +33,19 @@ const ExitToApp_1 = __importDefault(require("@material-ui/icons/ExitToApp"));
 const Refresh_1 = __importDefault(require("@material-ui/icons/Refresh"));
 const Send_1 = __importDefault(require("@material-ui/icons/Send"));
 const StelaForm_1 = __importDefault(require("../components/StelaForm"));
+const index_1 = __importDefault(require("./index"));
 const drawerWidth = 240;
 const styles = (theme) => styles_1.createStyles({
     root: {},
     frame: {
         backgroundColor: 'black',
-        margin: 5,
+        marginLeft: 5,
+        marginRight: 5,
     },
-    paperFrame: Object.assign({}, theme.mixins.gutters(), { paddingTop: theme.spacing.unit * 2, paddingBottom: theme.spacing.unit * 2 }),
+    paperFrame: {
+        paddingTop: 5,
+        paddingBottom: 5,
+    },
     drawer: {
         [theme.breakpoints.up('sm')]: {
             width: drawerWidth,
@@ -108,20 +113,22 @@ class Dashboard extends react_1.PureComponent {
         return { isNeedLogin: true };
     }
     componentDidMount() {
-        this.setState({ src: `http://${window.location.host}/` });
     }
     render() {
         const _a = this.props, { classes, update, logout } = _a, values = __rest(_a, ["classes", "update", "logout"]);
         const { width, height, title } = values;
         const { src, isSubmitting } = this.state;
         const scale = (drawerWidth - 10) / width;
-        const drawer = (<Paper_1.default style={{ height: height * scale + 10 }}>
-        <iframe src={src} width={width} style={{
+        const drawer = (<Paper_1.default style={{ height: height * scale + 10 }} className={classes.paperFrame}>
+          <div style={{
+            width,
+            height,
             transform: `scale(${scale}`,
             transformOrigin: 'left top',
-        }} height={height} frameBorder={0} className={classes.frame}>
-          Стела
-        </iframe>
+        }} className={classes.frame}>
+            <index_1.default {...values}/>
+          </div>
+        
       </Paper_1.default>);
         return (<div className={classes.root}>
         <AppBar_1.default position="fixed" className={classes.appBar}>

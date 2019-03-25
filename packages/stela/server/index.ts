@@ -3,18 +3,19 @@ import express from 'express';
 import next from 'next';
 import socketIo from 'socket.io';
 import debugFactory from 'debug';
-import { pick, omit } from 'lodash';
+import { pick } from 'lodash';
 import bodyParser from 'body-parser';
 import session from 'express-session';
 import memorystore from 'memorystore';
 import compression from 'compression';
+import morgan from 'morgan';
 import users from '../src/users';
 // import csrf from 'csurf';
 
 import { passport } from '../src/auth';
 import { PriceItem, PROPS } from '../src/stela';
 import timeid from '../src/timeid';
-import store, { pkgName } from '../src/store';
+import store, { pkgName, getSafeStore } from '../src/store';
 
 process
   .on('uncaughtException', (e) => {
@@ -29,6 +30,7 @@ const dev = process.env.NODE_ENV !== 'production';
 const nextApp = next({ dev });
 const debug = debugFactory(pkgName);
 const app = express();
+app.use(morgan('dev'));
 const server = new Server(app);
 const io = socketIo(server);
 const port = parseInt(process.env.PORT || '3000', 10);
@@ -81,7 +83,7 @@ io.use(({ request }, next) => {
 io.on('connection', (socket) => {
   debug('socket has connected');
   // console.log('CONNECT SOCKET', socket.request.session);
-  socket.emit('initial', omit(store.all, ['users']));
+  socket.emit('initial', getSafeStore());
   socket.on('disconnected', () => {
     debug('socket has disconnected');
   });
@@ -92,9 +94,9 @@ io.on('connection', (socket) => {
   });
   socket.on('update', (props) => {
     const session = socket.request.session;
-    // console.log('UPDATE SOCKET SESSION', session);
+    console.log('UPDATE SOCKET SESSION', session);
     const username = session && session.passport && session.passport.user;
-    // console.log('USERNAME', username);
+    console.log('USERNAME', username);
     if (!users.hasUser(username)) {
       socket.emit('logout');
       return;
@@ -121,11 +123,11 @@ nextApp.prepare().then(() => {
   app.use(passport.session());
 
   app.get('/', (req, res) => {
-    return nextApp.render(req, res, '/', store.all);
+    return nextApp.render(req, res, '/', getSafeStore());
   });
 
   app.get('/dashboard', (res, req) => {
-    return nextApp.render(res, req, '/dashboard', store.all);
+    return nextApp.render(res, req, '/dashboard', getSafeStore());
   });
 
   app.post(

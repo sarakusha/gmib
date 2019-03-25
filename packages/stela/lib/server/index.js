@@ -20,6 +20,7 @@ const body_parser_1 = __importDefault(require("body-parser"));
 const express_session_1 = __importDefault(require("express-session"));
 const memorystore_1 = __importDefault(require("memorystore"));
 const compression_1 = __importDefault(require("compression"));
+const morgan_1 = __importDefault(require("morgan"));
 const users_1 = __importDefault(require("../src/users"));
 const auth_1 = require("../src/auth");
 const stela_1 = require("../src/stela");
@@ -37,6 +38,7 @@ const dev = process.env.NODE_ENV !== 'production';
 const nextApp = next_1.default({ dev });
 const debug = debug_1.default(store_1.pkgName);
 const app = express_1.default();
+app.use(morgan_1.default('dev'));
 const server = new http_1.Server(app);
 const io = socket_io_1.default(server);
 const port = parseInt(process.env.PORT || '3000', 10);
@@ -82,7 +84,7 @@ io.use(({ request }, next) => {
 });
 io.on('connection', (socket) => {
     debug('socket has connected');
-    socket.emit('initial', lodash_1.omit(store_1.default.all, ['users']));
+    socket.emit('initial', store_1.getSafeStore());
     socket.on('disconnected', () => {
         debug('socket has disconnected');
     });
@@ -91,7 +93,9 @@ io.on('connection', (socket) => {
     });
     socket.on('update', (props) => {
         const session = socket.request.session;
+        console.log('UPDATE SOCKET SESSION', session);
         const username = session && session.passport && session.passport.user;
+        console.log('USERNAME', username);
         if (!users_1.default.hasUser(username)) {
             socket.emit('logout');
             return;
@@ -111,10 +115,10 @@ nextApp.prepare().then(() => {
     app.use(auth_1.passport.initialize());
     app.use(auth_1.passport.session());
     app.get('/', (req, res) => {
-        return nextApp.render(req, res, '/', store_1.default.all);
+        return nextApp.render(req, res, '/', store_1.getSafeStore());
     });
     app.get('/dashboard', (res, req) => {
-        return nextApp.render(res, req, '/dashboard', store_1.default.all);
+        return nextApp.render(res, req, '/dashboard', store_1.getSafeStore());
     });
     app.post('/login', auth_1.passport.authenticate('local'), (req, res) => {
         const session = req.session;
