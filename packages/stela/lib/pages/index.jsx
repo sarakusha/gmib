@@ -10,7 +10,7 @@ const Stela = (props) => {
       <h3>{title}</h3>
       <ul>
         {items.filter(item => item.isVisible).map((item, index) => {
-        return (<li key={item.name || index}>
+        return (<li key={item.id || index}>
               
               <div className="name">{item.name}</div>
               {item.subName && <div className="sub">{item.subName}</div>}

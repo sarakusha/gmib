@@ -138,7 +138,7 @@ const InnerForm = (props: InnerType) => {
     },
     [resetForm, bindResetForm],
   );
-  const arrayHelpersRef = useRef<ArrayHelpers|null>(null);
+  const arrayHelpersRef = useRef<ArrayHelpers | null>(null);
   const dragEndMemo = useCallback(
     (result: DropResult) => {
       if (!result.destination || !arrayHelpersRef.current) return;
@@ -148,7 +148,14 @@ const InnerForm = (props: InnerType) => {
   );
   const addClick = useCallback(
     () => {
-      arrayHelpersRef.current && arrayHelpersRef.current.push({ id: timeid() });
+      const item: PriceItem = {
+        id: timeid(),
+        name: '',
+        subName: '',
+        price: '',
+        isVisible: true,
+      };
+      arrayHelpersRef.current && arrayHelpersRef.current.push(item);
     },
     [arrayHelpersRef],
   );
@@ -217,6 +224,7 @@ const InnerForm = (props: InnerType) => {
                             )}
                           </Draggable>
                         ))}
+                        {provided.placeholder}
                       </div>
                     )}
                   </Droppable>
@@ -397,7 +405,7 @@ export default compose<InnerType, IStela & BindFormik>(
       items: items.map(({ name, subName, price, ...other }) => ({
         name: name || '',
         subName: subName || '',
-        price: typeof price === 'number' ? price.toFixed(2) : price,
+        price: typeof price === 'number' ? price.toFixed(2) : price || '',
         ...other,
       })),
     }),
@@ -405,7 +413,7 @@ export default compose<InnerType, IStela & BindFormik>(
       update(values);
       setSubmitting(false);
     },
-    validate: (values: StelaProps) => {
+    validate: (values) => {
       const errors: any = {};
       const { items } = values;
       items.forEach(({ name, price }, index) => {
@@ -413,7 +421,7 @@ export default compose<InnerType, IStela & BindFormik>(
           set(errors, `items[${index}].name`, `required${index}`);
         }
         const num = Number(price);
-        if (Number.isNaN(num) || num === 0) {
+        if (price !== '' && (Number.isNaN(num) || num === 0)) {
           set(errors, `items[${index}].price`, 'must be a number');
           // errors[`items[${index}].price`] = 'MUST BE A NUMBER';
         }

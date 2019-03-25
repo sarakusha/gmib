@@ -1,13 +1,13 @@
 {
   "name": "@nata/stela",
-  "version": "1.0.5",
+  "version": "1.1.0",
   "description": "Stela",
   "repository": "git@git.nata-info.ru:repository/stela.git",
   "author": "Andrei Sarakeev <avs@nata-info.ru>",
   "license": "SEE LICENSE IN eula.txt",
   "private": false,
   "scripts": {
-    "dev": "DEBUG=stela,passport nodemon server/index.ts",
+    "dev": "DEBUG=express-session nodemon server/index.ts",
     "type": "tsc --project tsconfig.server.json --noEmit",
     "analyze": "ANALYZE=1 next build",
     "build": "next build && tsc --project tsconfig.server.json",
@@ -93,6 +93,5 @@
     "webpack-bundle-analyzer": "^3.0.3"
   },
   "peerDependencies": {
-    "webpack": "^4.26.1"
   }
 }

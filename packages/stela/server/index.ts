@@ -3,7 +3,7 @@ import express from 'express';
 import next from 'next';
 import socketIo from 'socket.io';
 import debugFactory from 'debug';
-import { pick } from 'lodash';
+import { pick, omit } from 'lodash';
 import bodyParser from 'body-parser';
 import session from 'express-session';
 import memorystore from 'memorystore';
@@ -15,6 +15,15 @@ import { passport } from '../src/auth';
 import { PriceItem, PROPS } from '../src/stela';
 import timeid from '../src/timeid';
 import store, { pkgName } from '../src/store';
+
+process
+  .on('uncaughtException', (e) => {
+    console.error('<ERROR> uncaught exception', e.stack);
+    process.exit(1);
+  })
+  .on('unhandledRejection', (reason) => {
+    console.error('EEEEEEEEEE', reason);
+  });
 
 const dev = process.env.NODE_ENV !== 'production';
 const nextApp = next({ dev });
@@ -65,13 +74,14 @@ console.log(`configuration file is ${store.path}`);
 
 // Wrap the session middleware
 io.use(({ request }, next) => {
-  sessionMiddleware(request, request.res, next);
+  console.log('MIDDL', !!request.res);
+  sessionMiddleware(request, request.res || {}, next);
 });
 
 io.on('connection', (socket) => {
   debug('socket has connected');
   // console.log('CONNECT SOCKET', socket.request.session);
-  socket.emit('initial', store.all);
+  socket.emit('initial', omit(store.all, ['users']));
   socket.on('disconnected', () => {
     debug('socket has disconnected');
   });

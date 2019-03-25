@@ -29,8 +29,9 @@ const Stela = (props: StelaProps) => {
       <ul>
         {items.filter(item => item.isVisible).map((item, index) => {
           // const neon = item.effect === Effect.neon;
+          // console.log('ITEM', item);
           return (
-            <li key={item.name || index}>
+            <li key={item.id || index}>
               {/*<div className={classNames('name', { neon })}>{item.name}</div>*/}
               <div className="name">{item.name}</div>
               {item.subName && <div className="sub">{item.subName}</div>}

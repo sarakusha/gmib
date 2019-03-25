@@ -5,9 +5,9 @@ export declare enum Effect {
 export interface PriceItem {
     id?: string;
     name: string;
-    subName?: string;
+    subName: string;
     price: number | string;
-    isVisible?: boolean;
+    isVisible: boolean;
     effect?: Effect;
 }
 export interface StelaProps {

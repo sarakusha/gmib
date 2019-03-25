@@ -14,7 +14,7 @@ declare class StelaApp extends App<{
     session?: any;
     isNeedLogin?: boolean;
 }, State> {
-    socket: SocketIOClient.Socket;
+    socket: SocketIOClient.Socket | undefined;
     pageContext: import("../src/getPageContext").IPageContext;
     needLogin: boolean;
     static getInitialProps({ ctx, Component }: NextAppContext): Promise<{

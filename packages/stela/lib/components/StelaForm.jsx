@@ -125,7 +125,14 @@ const InnerForm = (props) => {
         arrayHelpersRef.current.move(result.source.index, result.destination.index);
     }, [arrayHelpersRef]);
     const addClick = react_1.useCallback(() => {
-        arrayHelpersRef.current && arrayHelpersRef.current.push({ id: timeid_1.default() });
+        const item = {
+            id: timeid_1.default(),
+            name: '',
+            subName: '',
+            price: '',
+            isVisible: true,
+        };
+        arrayHelpersRef.current && arrayHelpersRef.current.push(item);
     }, [arrayHelpersRef]);
     const [locked, setLocked] = react_1.useState(true);
     const [settingsExpanded, setSettingsExpanded] = react_1.useState(false);
@@ -149,6 +156,7 @@ const InnerForm = (props) => {
                                 <StelaFormRow_1.default item={item} index={index} classes={classes} handleProps={provided.dragHandleProps} errors={errors.items && errors.items[index]} locked={locked} isDragging={snapshot.isDragging} remove={arrayHelpers.handleRemove(index)}/>
                               </div>)}
                           </react_beautiful_dnd_1.Draggable>))}
+                        {provided.placeholder}
                       </div>)}
                   </react_beautiful_dnd_1.Droppable>
                 </react_beautiful_dnd_1.DragDropContext>);
@@ -216,7 +224,7 @@ exports.default = recompose_1.compose(styles_1.withStyles(styles), formik_1.with
         var { update, classes, items } = _a, props = __rest(_a, ["update", "classes", "items"]);
         return (Object.assign({}, props, { items: items.map((_a) => {
                 var { name, subName, price } = _a, other = __rest(_a, ["name", "subName", "price"]);
-                return (Object.assign({ name: name || '', subName: subName || '', price: typeof price === 'number' ? price.toFixed(2) : price }, other));
+                return (Object.assign({ name: name || '', subName: subName || '', price: typeof price === 'number' ? price.toFixed(2) : price || '' }, other));
             }) }));
     },
     handleSubmit: (values, { props: { update }, setSubmitting }) => {
@@ -231,7 +239,7 @@ exports.default = recompose_1.compose(styles_1.withStyles(styles), formik_1.with
                 set_1.default(errors, `items[${index}].name`, `required${index}`);
             }
             const num = Number(price);
-            if (Number.isNaN(num) || num === 0) {
+            if (price !== '' && (Number.isNaN(num) || num === 0)) {
                 set_1.default(errors, `items[${index}].price`, 'must be a number');
             }
         });

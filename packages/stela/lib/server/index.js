@@ -25,6 +25,14 @@ const auth_1 = require("../src/auth");
 const stela_1 = require("../src/stela");
 const timeid_1 = __importDefault(require("../src/timeid"));
 const store_1 = __importStar(require("../src/store"));
+process
+    .on('uncaughtException', (e) => {
+    console.error('<ERROR> uncaught exception', e.stack);
+    process.exit(1);
+})
+    .on('unhandledRejection', (reason) => {
+    console.error('EEEEEEEEEE', reason);
+});
 const dev = process.env.NODE_ENV !== 'production';
 const nextApp = next_1.default({ dev });
 const debug = debug_1.default(store_1.pkgName);
@@ -69,11 +77,12 @@ function checkAndUpdateID() {
 checkAndUpdateID();
 console.log(`configuration file is ${store_1.default.path}`);
 io.use(({ request }, next) => {
-    sessionMiddleware(request, request.res, next);
+    console.log('MIDDL', !!request.res);
+    sessionMiddleware(request, request.res || {}, next);
 });
 io.on('connection', (socket) => {
     debug('socket has connected');
-    socket.emit('initial', store_1.default.all);
+    socket.emit('initial', lodash_1.omit(store_1.default.all, ['users']));
     socket.on('disconnected', () => {
         debug('socket has disconnected');
     });

@@ -31,7 +31,7 @@ const parseResponse = async (res: Response): Promise<LoginResult> => {
 type State = StelaProps & { username?: string | null };
 
 class StelaApp extends App<{ session?: any, isNeedLogin?: boolean }, State> {
-  socket = io();
+  socket: SocketIOClient.Socket | undefined;
   pageContext = getPageContext();
   needLogin = false;
 
@@ -85,7 +85,7 @@ class StelaApp extends App<{ session?: any, isNeedLogin?: boolean }, State> {
   };
 
   update = (props: Partial<StelaProps>) => {
-    this.socket.emit('update', pick(props, PROPS));
+    this.socket!.emit('update', pick(props, PROPS));
   };
 
   handleSubmitLogin = (values: LoginProps): Promise<LoginResult> => {
@@ -104,7 +104,7 @@ class StelaApp extends App<{ session?: any, isNeedLogin?: boolean }, State> {
           const [isOk, session] = res;
           if (isOk) {
             this.setState({ username: session && session.passport && session.passport.user });
-            this.socket.emit('reload');
+            this.socket!.emit('reload');
           }
           return res;
         },
@@ -121,6 +121,13 @@ class StelaApp extends App<{ session?: any, isNeedLogin?: boolean }, State> {
   };
 
   componentDidMount() {
+    // this.socket = io();
+    // this.socket = io({ transports: ['polling'] });
+    this.socket = io({ transports: ['websocket'] });
+    this.socket.on('reconnect_attempt', () => {
+      console.log('RECONNECT');
+      this.socket!.io.opts.transports = ['polling', 'websocket'];
+    });
     // connect to WS server and listen event
     this.socket.on('initial', this.handleChanged);
     this.socket.on('changed', this.handleChanged);
@@ -134,10 +141,10 @@ class StelaApp extends App<{ session?: any, isNeedLogin?: boolean }, State> {
 
   // close socket connection
   componentWillUnmount() {
-    this.socket.off('logout', this.handleLogout);
-    this.socket.off('changed', this.handleChanged);
-    this.socket.off('initial', this.handleChanged);
-    this.socket.close();
+    this.socket!.off('logout', this.handleLogout);
+    this.socket!.off('changed', this.handleChanged);
+    this.socket!.off('initial', this.handleChanged);
+    this.socket!.close();
   }
 
   render() {
