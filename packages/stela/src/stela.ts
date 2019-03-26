@@ -6,9 +6,9 @@ export enum Effect {
 export interface PriceItem {
   id?: string;
   name: string;
-  subName?: string;
+  subName: string;
   price: number | string;
-  isVisible?: boolean;
+  isVisible: boolean;
   effect?: Effect;
 }
 
@@ -31,6 +31,7 @@ export interface StelaProps {
   items: PriceItem[];
   paddingTop: number;
   fontName: string;
+  // notGlobal?: boolean;
 }
 
 export const PROPS = [

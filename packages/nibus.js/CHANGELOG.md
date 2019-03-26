@@ -10,6 +10,10 @@
 > - [Experimental]
 > - [Deprecation]
 
+# 1.2.2
+- **Bug Fix**
+  - исправлена ошибка с запуском в Linux
+  
 # 1.2.1
 - **New Feature**
   - добавлен флаг `--no-term` для команды `download`
