@@ -22,6 +22,7 @@ const Stela = (props: StelaProps) => {
     items,
     paddingTop,
     fontName,
+    // notGlobal = false,
   } = props;
   return (
     <div className={'stela'}>
@@ -45,12 +46,21 @@ const Stela = (props: StelaProps) => {
       {/* language=CSS */}
       <style jsx>{`
           .stela {
+            line-height: ${lineHeight};
             padding-top: ${paddingTop}px;
             width: ${width}px;
             height: ${height}px;
             background: ${backgroundColor};
             color: white;
             font-weight: ${isBold ? 'bold' : 'inherited'};
+            padding-left: 2px;
+            padding-right: 2px;
+            -webkit-font-smoothing: antialiased;
+            font-family: ${fontName === 'Ubuntu'
+        ? `Ubuntu${isCondensed ? ' Condensed' : ''}`
+        : fontName}, sans-serif;
+            /*font-family: LCDnova, sans-serif;*/
+            overflow: hidden;
             /*font-size: 28px;*/
           }
 
@@ -124,24 +134,12 @@ const Stela = (props: StelaProps) => {
         `}</style>
       {/* language=CSS */}
       <style global jsx>{`
-          * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-          }
-
-          html,
-          body {
-            -webkit-font-smoothing: antialiased;
-            font-family: ${fontName === 'Ubuntu'
-        ? `Ubuntu${isCondensed ? ' Condensed' : ''}`
-        : fontName}, sans-serif;
-            /*font-family: LCDnova, sans-serif;*/
-            height: 100%;
-            overflow: hidden;
-            line-height: ${lineHeight};
-          }
-        `}</style>
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+      `}</style>
     </div>
   );
 };

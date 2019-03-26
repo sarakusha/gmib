@@ -31,6 +31,7 @@ export interface StelaProps {
   items: PriceItem[];
   paddingTop: number;
   fontName: string;
+  // notGlobal?: boolean;
 }
 
 export const PROPS = [

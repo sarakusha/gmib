@@ -20,7 +20,6 @@ const body_parser_1 = __importDefault(require("body-parser"));
 const express_session_1 = __importDefault(require("express-session"));
 const memorystore_1 = __importDefault(require("memorystore"));
 const compression_1 = __importDefault(require("compression"));
-const morgan_1 = __importDefault(require("morgan"));
 const users_1 = __importDefault(require("../src/users"));
 const auth_1 = require("../src/auth");
 const stela_1 = require("../src/stela");
@@ -32,13 +31,12 @@ process
     process.exit(1);
 })
     .on('unhandledRejection', (reason) => {
-    console.error('EEEEEEEEEE', reason);
+    console.error('<error> unhandled rejection', reason);
 });
 const dev = process.env.NODE_ENV !== 'production';
 const nextApp = next_1.default({ dev });
 const debug = debug_1.default(store_1.pkgName);
 const app = express_1.default();
-app.use(morgan_1.default('dev'));
 const server = new http_1.Server(app);
 const io = socket_io_1.default(server);
 const port = parseInt(process.env.PORT || '3000', 10);
@@ -79,7 +77,6 @@ function checkAndUpdateID() {
 checkAndUpdateID();
 console.log(`configuration file is ${store_1.default.path}`);
 io.use(({ request }, next) => {
-    console.log('MIDDL', !!request.res);
     sessionMiddleware(request, request.res || {}, next);
 });
 io.on('connection', (socket) => {
@@ -93,9 +90,7 @@ io.on('connection', (socket) => {
     });
     socket.on('update', (props) => {
         const session = socket.request.session;
-        console.log('UPDATE SOCKET SESSION', session);
         const username = session && session.passport && session.passport.user;
-        console.log('USERNAME', username);
         if (!users_1.default.hasUser(username)) {
             socket.emit('logout');
             return;

@@ -8,7 +8,7 @@ import bodyParser from 'body-parser';
 import session from 'express-session';
 import memorystore from 'memorystore';
 import compression from 'compression';
-import morgan from 'morgan';
+// import morgan from 'morgan';
 import users from '../src/users';
 // import csrf from 'csurf';
 
@@ -23,14 +23,14 @@ process
     process.exit(1);
   })
   .on('unhandledRejection', (reason) => {
-    console.error('EEEEEEEEEE', reason);
+    console.error('<error> unhandled rejection', reason);
   });
 
 const dev = process.env.NODE_ENV !== 'production';
 const nextApp = next({ dev });
 const debug = debugFactory(pkgName);
 const app = express();
-app.use(morgan('dev'));
+// app.use(morgan('dev'));
 const server = new Server(app);
 const io = socketIo(server);
 const port = parseInt(process.env.PORT || '3000', 10);
@@ -76,7 +76,7 @@ console.log(`configuration file is ${store.path}`);
 
 // Wrap the session middleware
 io.use(({ request }, next) => {
-  console.log('MIDDL', !!request.res);
+  // console.log('MIDDL', !!request.res);
   sessionMiddleware(request, request.res || {}, next);
 });
 
@@ -94,9 +94,9 @@ io.on('connection', (socket) => {
   });
   socket.on('update', (props) => {
     const session = socket.request.session;
-    console.log('UPDATE SOCKET SESSION', session);
+    // console.log('UPDATE SOCKET SESSION', session);
     const username = session && session.passport && session.passport.user;
-    console.log('USERNAME', username);
+    // console.log('USERNAME', username);
     if (!users.hasUser(username)) {
       socket.emit('logout');
       return;

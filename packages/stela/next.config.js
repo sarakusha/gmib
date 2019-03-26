@@ -1,48 +1,13 @@
 const withTypescript = require('@zeit/next-typescript');
 const withCSS = require('@zeit/next-css');
 const { ContextReplacementPlugin } = require('webpack');
+const path = require('path');
 // const keysTransformer = require('ts-transformer-keys/transformer').default;
 
 const { ANALYZE } = process.env;
 module.exports = withCSS(withTypescript({
-  serverRuntimeConfig: {
-    bekar: {
-      width: 160,
-      height: 320,
-      isCondensed: false,
-      // backgroundColor: 'black',
-      titleSize: 26,
-      nameSize: 24,
-      subSize: 14,
-      priceSize: 24,
-      title: 'Бекар',
-      items: [
-        {
-          name: 'А98',
-          price: 48,
-          subName: 'Ultra',
-        },
-        {
-          name: 'А95',
-          price: 45.5,
-        },
-        {
-          name: 'А92',
-          price: 41.6,
-        },
-        {
-          name: 'ДТ',
-          price: 38.4,
-        },
-      ],
-    },
-    magistral: {
-      width: 240,
-      height: 720,
-      title: 'МАГИСТРАЛЬ',
-    },
-  },
   webpack: function (config, { isServer }) {
+    // config.optimization.minimize = false;
     if (ANALYZE) {
       const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
 
@@ -56,8 +21,13 @@ module.exports = withCSS(withTypescript({
     config.plugins.push(
       new ContextReplacementPlugin(/moment[/\\]locale$/, /ru/),
     );
+    config.module.rules.forEach((rule) => {
+      if (rule.use.loader === 'next-babel-loader') {
+        rule.use.options.configFile = path.resolve(__dirname, 'babel.config.js');
+        rule.exclude = [/\/node_modules\/(?!@nata\/stela\/)/];
+      }
+    });
 
-    // A TypeScript custom transformer which enables to obtain keys of given type.
     // Не работает с ts-node (только с webpack)
     // if (isServer) {
     //   config.module.rules.push({
