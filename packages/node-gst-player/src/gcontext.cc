@@ -268,9 +268,9 @@ void AsyncDeferred::CallbackJS(napi_env environment, napi_value callback, void *
   AsyncDeferred::ResolveLambda *getResult = static_cast<AsyncDeferred::ResolveLambda *>(data);
   Napi::Function func(env, callback);
   auto result = (*getResult)(env);
-  delete getResult;
   func.MakeCallback(env.Global(), std::initializer_list<napi_value>{env.Null(), result}, context);
   auto status = napi_resolve_deferred(env, deferredData->deferred, result);
   delete deferredData;
+  delete getResult;
   assert(status == napi_ok);
 }

@@ -55,7 +55,7 @@ function bootstrap() {
 //     }, 5000);
 //     setTimeout(() => {
 //         player.top = 400;
-//         printPlayer(player);
+        printPlayer(player);
 //     }, 6000);
     player.on('changed', (prop) => {
         console.log(`changed ${prop} = ${player[prop]}`);

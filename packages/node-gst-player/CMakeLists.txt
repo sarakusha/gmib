@@ -11,7 +11,7 @@ set(node_gst_player_VERSION_MAJOR 1)
 set(node_gst_player_VERSION_MINOR 0)
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
 
-add_definitions(-DG_LOG_USE_STRUCTURED)
+add_definitions(-DG_LOG_USE_STRUCTURED -DNAPI_EXPERIMENTAL)
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     add_definitions(-DMACOSX)
     set_source_files_properties(src/player.cc PROPERTIES COMPILE_FLAGS -xobjective-c++)

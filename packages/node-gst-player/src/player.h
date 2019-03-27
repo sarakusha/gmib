@@ -97,6 +97,7 @@ class Player : public Napi::ObjectWrap<Player> {
   Napi::Value GetAccurateSeek(const Napi::CallbackInfo &info);
   void SetAccurateSeek(const Napi::CallbackInfo &info, const Napi::Value &value);
   Napi::Value GetDuration(const Napi::CallbackInfo &info);
+  Napi::Value GetTotal(const Napi::CallbackInfo &info);
   Napi::Value GetAudioEnabled(const Napi::CallbackInfo &info);
   void SetAudioEnabled(const Napi::CallbackInfo &info, const Napi::Value &value);
   Napi::Value GetSubtitleEnabled(const Napi::CallbackInfo &info);
@@ -110,6 +111,7 @@ class Player : public Napi::ObjectWrap<Player> {
   void Pause(const Napi::CallbackInfo &info);
   void Stop(const Napi::CallbackInfo &info);
   void Seek(const Napi::CallbackInfo &info);
+  void UpdateCurrent(const Napi::CallbackInfo &info);
   static Napi::Value Discover(const Napi::CallbackInfo &info);
 
   void OnBusMessageSync(const Glib::RefPtr<Gst::Message> &message);
@@ -121,12 +123,13 @@ class Player : public Napi::ObjectWrap<Player> {
   static Napi::FunctionReference _constructor;
   AsyncMethod _emit;
 
-  void UpdateTotal();
+  void UpdateTotal(const Napi::CallbackInfo &info);
   void UpdateLayout();
 
   void tryNext();
   bool setCurrentImpl(int32_t index);
   void setState(PlayerState value);
+  void shrinkMedia();
 
   std::string output;
   int32_t screenNumber;
@@ -135,6 +138,9 @@ class Player : public Napi::ObjectWrap<Player> {
   int32_t _width;
   int32_t _height;
   int32_t _current;
+  uint64_t _total;
+  gint64 _lastShrink;
+
   bool _loop;
   bool show;
   bool _letterBoxing;
@@ -142,8 +148,8 @@ class Player : public Napi::ObjectWrap<Player> {
   bool _subtitleEnabled;
   std::string preferredOutputModel;
   Playlist _playlist;
-  Reference<Napi::Array> _playlistRef;
-  MediaInfo _info;
+  Napi::Reference<Napi::Array> _playlistRef;
+  MediaInfo _media;
 #ifndef DISABLE_LOCK
   mutex _lock;
 #endif

@@ -89,6 +89,7 @@ Napi::Object Player::Init(Napi::Env env, Napi::Object exports) {
       InstanceAccessor("position", &Player::GetPosition, nullptr),
       InstanceAccessor("accurateSeek", &Player::GetAccurateSeek, &Player::SetAccurateSeek),
       InstanceAccessor("duration", &Player::GetDuration, nullptr),
+      InstanceAccessor("total", &Player::GetTotal, nullptr),
       InstanceAccessor("audioEnabled", &Player::GetAudioEnabled, &Player::SetAudioEnabled),
       InstanceAccessor("subtitleEnabled", &Player::GetSubtitleEnabled, &Player::SetSubtitleEnabled),
       InstanceAccessor("letterboxing", &Player::GetLetterboxing, &Player::SetLetterboxing),
@@ -98,7 +99,8 @@ Napi::Object Player::Init(Napi::Env env, Napi::Object exports) {
       InstanceMethod("play", &Player::Play),
       InstanceMethod("pause", &Player::Pause),
       InstanceMethod("stop", &Player::Stop),
-      InstanceMethod("seek", &Player::Seek)
+      InstanceMethod("seek", &Player::Seek),
+      InstanceMethod("updateCurrent", &Player::UpdateCurrent)
   });
 
   _constructor = Napi::Persistent(func);
@@ -125,6 +127,7 @@ Player::Player(const Napi::CallbackInfo &info) :
     _skipped{false},
     _audioEnabled{false},
     _subtitleEnabled{false},
+    _lastShrink{0},
     _emit(info.Env(), this->Value()) {
   auto env = info.Env();
   Napi::HandleScope scope(env);
@@ -134,11 +137,11 @@ Player::Player(const Napi::CallbackInfo &info) :
       return;
     }
     output = info[0].As<Napi::String>().Utf8Value();
-    if (info.Length() > 1 && !info[1].IsNumber()) {
-      Napi::TypeError::New(env, "screen number expected").ThrowAsJavaScriptException();
-      return;
+    if (info.Length() > 1 && info[1].IsNumber()) {
+      screenNumber = info[1].As<Napi::Number>().Int32Value();
+//      Napi::TypeError::New(env, "screen number expected").ThrowAsJavaScriptException();
+//      return;
     }
-    screenNumber = info[1].As<Napi::Number>().Int32Value();
   }
   _playlistRef.Reset(Napi::Array::New(env, 0));
   _usePlaybin = getenv("NODE_GST_PLAYER_USE_PLAYBIN") || getenv("USE_PLAYBIN3");
@@ -217,7 +220,7 @@ Player::Player(const Napi::CallbackInfo &info) :
     signal_position_update_wrapper("position-updated", _player).connect([this](guint64 position) {
       auto duration = gst_player_get_duration(GST_PLAYER(_player->gobj()));
       AsyncEmit("position",
-                ((double) position / GST_SECOND),
+                static_cast<int>(position / GST_MSECOND),
                 static_cast<int>(std::round(100.0 * position / duration)));
     });
     signal_callback<void(guint64)> signal_duration_changed_wrapper;
@@ -287,7 +290,12 @@ void Player::SetPlaylist(const Napi::CallbackInfo &info, const Napi::Value &valu
     GST_DEBUG("%s has duration %"
                   G_GUINT64_FORMAT
                   "s", info->get_uri().c_str(), info->get_duration() / Gst::SECOND);
-    _info.emplace(info->get_uri(), info);
+    auto it = _media.find(info->get_uri());
+    if (it == _media.end()) {
+      GST_WARNING("uri %s not found", info->get_uri().c_str());
+      return;
+    }
+    it->second = info;
   };
 
 #ifndef SINGLE_THREADED
@@ -331,8 +339,9 @@ void Player::SetPlaylist(const Napi::CallbackInfo &info, const Napi::Value &valu
       if (access(file, F_OK) == -1) {
         GST_WARNING("file %s not found", file);
       } else {
-        auto it = _info.find(uri);
-        if (it == _info.end() || !it->second) {
+        auto it = _media.find(uri);
+        if (it == _media.end()) {
+          _media.emplace(uri, nullptr);
           discoverer->discover_uri_async(uri);
         }
       }
@@ -351,17 +360,46 @@ void Player::SetPlaylist(const Napi::CallbackInfo &info, const Napi::Value &valu
     swap(_playlist, playlist);
   }
 
-  UpdateTotal();
+  UpdateTotal(info);
 
   _playlistRef.Reset(playlistValue, 1);
+  Emit(info, "changed", "playlist");
 }
 
 Napi::Value Player::GetPlaylist(const Napi::CallbackInfo &info) {
   return _playlistRef.Value();
 }
 
-void Player::UpdateTotal() {
+void Player::shrinkMedia() {
+  if (_lastShrink != 0) {
+    MediaInfo media;
+    for (const auto &uri: _playlist) {
+      auto it = media.find(uri);
+      if (it == media.end()) {
+        it = _media.find(uri);
+        if (it != _media.end()) {
+          it = media.emplace(uri, it->second).first;
+        }
+      }
+    }
+    _media.swap(media);
+  }
+  _lastShrink = g_get_real_time();
+}
 
+void Player::UpdateTotal(const Napi::CallbackInfo &info) {
+  if (_playlist.size() > 0 && g_get_real_time() - _lastShrink > 7*24*60*60*1000) {
+    shrinkMedia();
+  }
+  uint64_t total = 0;
+  for (const auto &uri: _playlist) {
+    auto it = _media.find(uri);
+    if (it != _media.end() && it->second) {
+      total += it->second->get_duration() / GST_MSECOND;
+    }
+  }
+  _total = total;
+  Emit(info, "changed", "total");
 }
 
 void Player::OnBusMessageSync(const Glib::RefPtr<Gst::Message> &message) {
@@ -897,7 +935,7 @@ void Player::SetAccurateSeek(const Napi::CallbackInfo &info, const Napi::Value &
 
 Napi::Value Player::GetDuration(const Napi::CallbackInfo &info) {
   auto duration = gst_player_get_duration(GST_PLAYER(_player->gobj()));
-  return Napi::Number::New(info.Env(), duration / (double) GST_SECOND);
+  return Napi::Number::New(info.Env(), duration / GST_MSECOND);
 }
 
 void Player::Seek(const Napi::CallbackInfo &info) {
@@ -989,6 +1027,7 @@ Napi::Value Player::Discover(const Napi::CallbackInfo &info) {
       auto result = Napi::Object::New(env);
       for (auto &item: *list) {
         result.Set(item.first, item.second);
+        GST_DEBUG("%s = %s", item.first.c_str(), item.second.c_str());
       }
       return result;
     };
@@ -1026,4 +1065,25 @@ Napi::Value Player::Discover(const Napi::CallbackInfo &info) {
   }
 
   return promise.Promise();
+}
+
+Napi::Value Player::GetTotal(const Napi::CallbackInfo &info) {
+  return Napi::Number::New(info.Env(), _total);
+}
+
+void Player::UpdateCurrent(const Napi::CallbackInfo &info) {
+  if (info.Length() < 1) {
+    Napi::TypeError::New(info.Env(), "Wrong number of arguments").ThrowAsJavaScriptException();
+    return;
+  }
+  if (!info[0].IsNumber()) {
+    Napi::TypeError::New(info.Env(), "number expected").ThrowAsJavaScriptException();
+    return;
+  }
+  uint32_t index = info[0].As<Napi::Number>();
+  if (index < 0 || _playlist.size() <= index) {
+    Napi::RangeError::New(info.Env(), "index is out of range").ThrowAsJavaScriptException();
+    return;
+  }
+  _current = index;
 }
