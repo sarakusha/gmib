@@ -2,12 +2,17 @@ const withTypescript = require('@zeit/next-typescript');
 const withCSS = require('@zeit/next-css');
 const { ContextReplacementPlugin } = require('webpack');
 const path = require('path');
+const _ = require('lodash');
 // const keysTransformer = require('ts-transformer-keys/transformer').default;
 
 const { ANALYZE } = process.env;
+const exclude = [
+  /[\\/]node_modules[\\/](?!@nata[\\/]stela[\\/])/,
+  /@nata[\\/]stela[\\/]node_modules[\\/]/,
+];
 module.exports = withCSS(withTypescript({
   webpack: function (config, { isServer }) {
-    // config.optimization.minimize = false;
+    config.optimization.minimize = false;
     if (ANALYZE) {
       const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
 
@@ -24,7 +29,13 @@ module.exports = withCSS(withTypescript({
     config.module.rules.forEach((rule) => {
       if (rule.use.loader === 'next-babel-loader') {
         rule.use.options.configFile = path.resolve(__dirname, 'babel.config.js');
-        rule.exclude = [/\/node_modules\/(?!@nata\/stela\/)/];
+        // console.log('EXCLUDE', rule.exclude);
+        // Особый способ исключения нужен для установки в глобальное пространство
+        // Обратить внимание на предыдущий exclude
+        // (после компиляции не должно быть <bash>grep -r 'async function ' .next</bash>)
+        if (typeof rule.exclude !== 'function') {
+          rule.exclude = exclude;
+        }
       }
     });
 

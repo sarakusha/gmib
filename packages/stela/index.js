@@ -20,7 +20,7 @@ commander
 commander
   .command('start')
   .description('Запустить stela')
-  .option('-p, --port <port>', 'Номер порта', parseInt, 3000)
+  .option('-p, --port <port>', 'Номер порта', '3000')
   .action(({ port }) => {
     startOptions.env['PORT'] = port;
     console.log(path.resolve(__dirname, 'lib/server/index.js'));
@@ -118,4 +118,4 @@ commander
 if (process.argv.length < 3) {
   commander.help();
 }
-!commander.commands.map(cmd => cmd._name).includes(commander.args[0]._name) && commander.help();
+!commander.commands.map(cmd => cmd._name).includes(process.argv[2]) && commander.help();

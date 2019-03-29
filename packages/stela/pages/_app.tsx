@@ -122,7 +122,6 @@ class StelaApp extends App<{ session?: any, isNeedLogin?: boolean }, State> {
 
   componentDidMount() {
     this.socket = io();
-    // this.socket = io({ transports: ['polling'] });
     // this.socket = io({ transports: ['websocket'] });
     // this.socket.on('reconnect_attempt', () => {
     //   console.log('RECONNECT');
@@ -133,7 +132,7 @@ class StelaApp extends App<{ session?: any, isNeedLogin?: boolean }, State> {
     this.socket.on('changed', this.handleChanged);
     this.socket.on('logout', this.handleLogout);
     // remove the server-side injected CSS
-    const jssStyles = document.querySelector('#jss-sever-side');
+    const jssStyles = document.getElementById('jss-server-side');
     if (jssStyles && jssStyles.parentNode) {
       jssStyles.parentNode.removeChild(jssStyles);
     }

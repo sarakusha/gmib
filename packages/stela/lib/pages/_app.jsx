@@ -99,7 +99,7 @@ class StelaApp extends app_1.default {
         this.socket.on('initial', this.handleChanged);
         this.socket.on('changed', this.handleChanged);
         this.socket.on('logout', this.handleLogout);
-        const jssStyles = document.querySelector('#jss-sever-side');
+        const jssStyles = document.getElementById('jss-server-side');
         if (jssStyles && jssStyles.parentNode) {
             jssStyles.parentNode.removeChild(jssStyles);
         }

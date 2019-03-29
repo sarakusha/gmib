@@ -29,7 +29,7 @@ const pingCommand: CommandModule<CommonOpts, PingOpts> = {
       number: true,
     })
     .demandOption(['m', 'mac']),
-  handler: async ({ count = -1, timeout = 1, mac }) => {
+  handler: async ({ count = -1, timeout = 1, mac, quiet, raw }) => {
     await session.start();
     const stat: number[] = [];
     let transmitted = 0;
@@ -38,19 +38,25 @@ const pingCommand: CommandModule<CommonOpts, PingOpts> = {
       const min = _.min(stat);
       const max = _.max(stat);
       const avg = round(_.mean(stat));
-      console.info(`
+      quiet || raw || console.info(`
 ${transmitted} пакет(ов) отправлено, ${stat.length} пакет(ов) получено, ${loss}% пакетов потеряно
-min/avg/max = ${min}/${avg}/${max}`);
+min/avg/max = ${min || '-'}/${Number.isNaN(avg) ? '-' : avg}/${max || '-'}`);
     });
-    while (count - transmitted !== 0) {
+    let exit = false;
+    process.on('SIGINT', () => {
+      exit = true;
+    });
+    while (count - transmitted !== 0 && !exit) {
       const ping = await session.ping(mac);
       if (ping !== -1) stat.push(ping);
       transmitted += 1;
-      console.info(`${mac} ${ping !== -1 ? `${ping} ms` : '*'}`);
+      quiet || raw || console.info(`${mac} ${ping !== -1 ? `${ping} ms` : '*'}`);
       if (count - transmitted === 0) break;
       await delay(timeout);
     }
     session.close();
+    if (raw) console.info(stat.length);
+    if (stat.length === 0) return Promise.reject();
   },
 };
 

@@ -284,6 +284,7 @@ class NibusSession extends _events.EventEmitter {
       connections
     } = this;
     const addr = new _Address.default(address);
+    if (connections.length === 0) return Promise.resolve(-1);
     return Promise.race(connections.map(connection => connection.ping(addr)));
   }
 

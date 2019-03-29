@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="d633fecc-eb5f-49cf-9c48-5c26b534c9e9" name="user@192.168.23.17" url="http://192.168.23.17">
+        <fileTransfer host="192.168.23.17" port="22" privateKey="$USER_HOME$/.ssh/id_rsa" rootFolder="/home/user" accessType="SFTP" keyPair="true">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" shareSSLContext="true" />
+          </advancedOptions>
+          <option name="port" value="22" />
+        </fileTransfer>
+      </webServer>
+      <webServer id="25e15b46-0066-49f0-9e71-16bc2434a9b5" name="sarakusha@192.168.23.26" url="http://192.168.23.26">
+        <fileTransfer host="192.168.23.26" port="22" privateKey="$USER_HOME$/.ssh/id_rsa" rootFolder="/home/sarakusha" accessType="SFTP" keyPair="true">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" shareSSLContext="true" />
+          </advancedOptions>
+          <option name="port" value="22" />
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
