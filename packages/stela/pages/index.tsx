@@ -46,7 +46,6 @@ const Stela = (props: StelaProps) => {
       {/* language=CSS */}
       <style jsx>{`
           .stela {
-            line-height: ${lineHeight};
             padding-top: ${paddingTop}px;
             width: ${width}px;
             height: ${height}px;
@@ -59,9 +58,8 @@ const Stela = (props: StelaProps) => {
             font-family: ${fontName === 'Ubuntu'
         ? `Ubuntu${isCondensed ? ' Condensed' : ''}`
         : fontName}, sans-serif;
-            /*font-family: LCDnova, sans-serif;*/
+            line-height: ${lineHeight};
             overflow: hidden;
-            /*font-size: 28px;*/
           }
 
           h3 {

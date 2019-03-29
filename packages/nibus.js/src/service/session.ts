@@ -242,6 +242,7 @@ class NibusSession extends EventEmitter {
   async ping(address: AddressParam): Promise<number> {
     const { connections } = this;
     const addr = new Address(address);
+    if (connections.length === 0) return Promise.resolve(-1);
     return Promise.race(connections.map(connection => connection.ping(addr)));
   }
 }

@@ -13,7 +13,8 @@
   },
   "scripts": {
     "install": "cmake-js compile",
-    "compile-debug": "cmake-js build -D"
+    "compile-debug": "cmake-js build -D",
+    "build": "cmake-js build"
   },
   "devDependencies": {
     "@types/node": "^10.12.10",

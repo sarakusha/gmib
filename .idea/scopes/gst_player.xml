@@ -1,0 +1,3 @@
+<component name="DependencyValidationManager">
+  <scope name="gst-player" pattern="file[@nata]:packages/node-gst-player//*||file:lerna.json||file:package.json" />
+</component>

@@ -31,7 +31,9 @@ const pingCommand = {
   handler: async ({
     count = -1,
     timeout = 1,
-    mac
+    mac,
+    quiet,
+    raw
   }) => {
     await _service.default.start();
     const stat = [];
@@ -44,21 +46,28 @@ const pingCommand = {
       const max = _lodash.default.max(stat);
 
       const avg = round(_lodash.default.mean(stat));
-      console.info(`
+      quiet || raw || console.info(`
 ${transmitted} пакет(ов) отправлено, ${stat.length} пакет(ов) получено, ${loss}% пакетов потеряно
-min/avg/max = ${min}/${avg}/${max}`);
+min/avg/max = ${min || '-'}/${Number.isNaN(avg) ? '-' : avg}/${max || '-'}`);
+    });
+    let exit = false;
+    process.on('SIGINT', () => {
+      exit = true;
     });
 
-    while (count - transmitted !== 0) {
+    while (count - transmitted !== 0 && !exit) {
       const ping = await _service.default.ping(mac);
       if (ping !== -1) stat.push(ping);
       transmitted += 1;
-      console.info(`${mac} ${ping !== -1 ? `${ping} ms` : '*'}`);
+      quiet || raw || console.info(`${mac} ${ping !== -1 ? `${ping} ms` : '*'}`);
       if (count - transmitted === 0) break;
       await delay(timeout);
     }
 
     _service.default.close();
+
+    if (raw) console.info(stat.length);
+    if (stat.length === 0) return Promise.reject();
   }
 };
 var _default = pingCommand;
