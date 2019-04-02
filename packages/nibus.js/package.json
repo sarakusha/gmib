@@ -1,6 +1,6 @@
 {
   "name": "@nata/nibus.js",
-  "version": "1.2.3",
+  "version": "1.2.3a",
   "description": "Nata-Info NiBUS",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -111,7 +111,6 @@
       "**/src/**/*.spec.+(ts|tsx|js)"
     ]
   },
-  "peerDependencies": {
-  },
+  "peerDependencies": {},
   "gitHead": "42178ffae5cbc1456b789116398a4cbefff8dcad"
 }
