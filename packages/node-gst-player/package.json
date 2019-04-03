@@ -5,7 +5,25 @@
   "main": "index.js",
   "types": "index.d.ts",
   "author": "Andrei Sarakeev",
-  "license": "MIT",
+  "license": "SEE LICENSE IN EULA.md",
+  "directories": {
+    "lib": "lib"
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "src"
+  ],
+  "publishConfig": {
+    "registry": "https://npm.nata-info.ru"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sarakusha/nata.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sarakusha/nata/issues"
+  },
   "private": true,
   "dependencies": {
     "bindings": "^1.3.0",
@@ -17,7 +35,7 @@
     "build": "cmake-js build"
   },
   "devDependencies": {
-    "@types/node": "^10.12.10",
+    "@types/node": "^11.13.0",
     "node-addon-api": "^1.4.0"
   },
   "engines": {

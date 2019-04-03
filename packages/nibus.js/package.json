@@ -2,6 +2,10 @@
   "name": "@nata/nibus.js",
   "version": "1.2.3a",
   "description": "Nata-Info NiBUS",
+  "keywords": [
+    "nata-info",
+    "nibus"
+  ],
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "scripts": {
@@ -15,7 +19,24 @@
     "nibus-dev": "src/cli/index-dev.js"
   },
   "author": "Andrei Sarakeev <avs@nata-info.ru>",
-  "license": "SEE LICENSE IN eula.txt",
+  "license": "SEE LICENSE IN EULA.md",
+  "directories": {
+    "lib": "lib"
+  },
+  "files": [
+    "lib",
+    "mibs"
+  ],
+  "publishConfig": {
+    "registry": "https://npm.nata-info.ru"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sarakusha/nata.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sarakusha/nata/issues"
+  },
   "private": false,
   "devDependencies": {
     "@babel/cli": "^7",

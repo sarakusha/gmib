@@ -17,10 +17,10 @@ export declare function representationConverter(format: string, size: number): I
 export declare function packed8floatConverter(subtype: IMibType): IConverter;
 export declare const fixedPointNumber4Converter: IConverter;
 export declare const versionTypeConverter: IConverter;
-export declare function getIntSize(type: string): 1 | 2 | 4 | 8 | undefined;
+export declare function getIntSize(type: string): 8 | 1 | 2 | 4 | undefined;
 export declare function minInclusiveConverter(min: string): IConverter;
 export declare function maxInclusiveConverter(max: string): IConverter;
-export declare const convertTo: (converters: IConverter[]) => (value: PresentType) => PresentType;
-export declare const convertFrom: (converters: IConverter[]) => (value: PresentType) => PresentType;
+export declare const convertTo: (converters: IConverter[]) => (value: string | number | boolean | undefined) => string | number | boolean | undefined;
+export declare const convertFrom: (converters: IConverter[]) => (value: string | number | boolean | undefined) => string | number | boolean | undefined;
 export {};
 //# sourceMappingURL=mib.d.ts.map

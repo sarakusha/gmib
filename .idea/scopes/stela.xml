@@ -1,3 +1,3 @@
 <component name="DependencyValidationManager">
-  <scope name="stela" pattern="file[@nata]:packages/stela//*" />
+  <scope name="stela" pattern="file[@nata]:packages/stela//*||file:lerna.json||file:package.json" />
 </component>

@@ -1,0 +1,3 @@
+<component name="DependencyValidationManager">
+  <scope name="gmib" pattern="file[@nata]:node_modules//*||file[@nata]:packages/gmib//*||file:lerna.json||file:package.json" />
+</component>

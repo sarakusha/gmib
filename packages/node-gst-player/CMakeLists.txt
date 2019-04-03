@@ -15,9 +15,11 @@ add_definitions(-DG_LOG_USE_STRUCTURED -DNAPI_EXPERIMENTAL)
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     add_definitions(-DMACOSX)
     set_source_files_properties(src/player.cc PROPERTIES COMPILE_FLAGS -xobjective-c++)
+    #fix libffi https://github.com/mesonbuild/meson/issues/2273#issuecomment-420412230
+    set(ENV{PKG_CONFIG_PATH} /usr/local/opt/libffi/lib/pkgconfig)
 endif ()
 
-add_definitions(-DNAPI_VERSION=3 -DNAPI_EXPERIMENTAL)
+add_definitions(-DNAPI_VERSION=4 -DNAPI_EXPERIMENTAL)
 
 function(PARSE_CMAKEJS_PROPERTIES)
     function(GET_VARIABLE INPUT_STRING VARIABLE_TO_SELECT OUTPUT_VARIABLE)
