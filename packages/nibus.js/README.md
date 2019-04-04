@@ -26,7 +26,9 @@ npm set registry https://npm.nata-info.ru
 Выполните 
 ### Ubuntu
 1. Убедитесь что установлен [Python 2.7](https://www.python.org/downloads/) <sub><sup>(требуется для node-gyp)</sup></sub>
-2. `sudo apt-get install -y build-essential libudev-dev`
+  ```bash
+  sudo apt install -y python2.7 python-pip build-essential libudev-dev
+  ```
 
 ### macOS
 1. [Python 2.7](https://www.python.org/downloads/)

@@ -6,8 +6,6 @@ var _debug = _interopRequireDefault(require("debug"));
 
 var _lodash = _interopRequireDefault(require("lodash"));
 
-var _package = _interopRequireDefault(require("../../package.json"));
-
 var _ipc = require("../ipc");
 
 var _Server = require("../ipc/Server");
@@ -28,7 +26,9 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
-const conf = new _configstore.default(_package.default.name, {
+const pkg = require('../../package.json');
+
+const conf = new _configstore.default(pkg.name, {
   logLevel: 'none',
   omit: ['priority']
 }); // debugFactory.enable('nibus:detector,nibus.service');

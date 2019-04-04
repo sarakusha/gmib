@@ -1,7 +1,8 @@
 {
-  "extends": "../tsconfig.settings.json",
+  "extends": "./tsconfig.settings.json",
   "compilerOptions": {
     "outDir": "lib",                          /* Redirect output structure to the directory. */
+    "rootDir": "src",
     "strict": true,                           /* Enable all strict type-checking options. */
     "experimentalDecorators": true,        /* Enables experimental support for ES7 decorators. */
     "baseUrl": "./",
@@ -15,11 +16,11 @@
   },
   "include": [
     "src/**/*.ts",
-    "package.json"
   ],
   "exclude": [
     "node_modules/",
     "**/*.spec.ts",
-    "lib/"
+    "lib/",
+    "package.json"
   ]
 }

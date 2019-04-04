@@ -2,7 +2,6 @@ import Configstore from 'configstore';
 import debugFactory from 'debug';
 import { Socket } from 'net';
 import _ from 'lodash';
-import pkg from '../../package.json';
 import { SerialTee, Server } from '../ipc';
 import { SerialLogger } from '../ipc/SerialTee';
 import { Direction } from '../ipc/Server';
@@ -14,6 +13,7 @@ import { Config, LogLevel, PATH } from './common';
 import detector from './detector';
 import { IKnownPort } from './KnownPorts';
 
+const pkg = require('../../package.json');
 const conf = new Configstore(
   pkg.name,
   {
