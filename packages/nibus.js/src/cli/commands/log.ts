@@ -1,10 +1,20 @@
+/*
+ * @license
+ * Copyright (c) 2019. Nata-Info
+ * @author Andrei Sarakeev <avs@nata-info.ru>
+ *
+ * This file is part of the "@nata" project.
+ * For the full copyright and license information, please view
+ * the EULA file that was distributed with this source code.
+ */
+
 import { CommandModule } from 'yargs';
 import debugFactory from 'debug';
 import { Tail } from 'tail';
 import path from 'path';
 import { homedir } from 'os';
-import { PATH } from '../../service/common';
-import { Client } from '../../ipc';
+import { PATH } from '@nata/nibus.js-client';
+import { Client } from '@nata/nibus.js-client/lib/ipc';
 
 const debug = debugFactory('nibus:log');
 const logCommand: CommandModule = {

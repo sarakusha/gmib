@@ -1,8 +1,7 @@
 /// <reference types="node" />
 import { EventEmitter } from 'events';
-import { IKnownPort } from '../service/KnownPorts';
 import { Direction } from './Server';
-import { IMibDescription } from '../service';
+import { IMibDescription, IKnownPort } from '@nata/nibus.js-client/lib/session';
 export interface SerialLogger {
     (data: Buffer, dir: Direction): void;
 }
@@ -13,7 +12,6 @@ export default class SerialTee extends EventEmitter {
     private closed;
     private readonly server;
     private logger;
-    static getSocketPath(path: string): string;
     constructor(portInfo: IKnownPort, description: IMibDescription);
     readonly path: string;
     close: () => void;

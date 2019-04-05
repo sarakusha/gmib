@@ -1,7 +1,17 @@
+/*
+ * @license
+ * Copyright (c) 2019. Nata-Info
+ * @author Andrei Sarakeev <avs@nata-info.ru>
+ *
+ * This file is part of the "@nata" project.
+ * For the full copyright and license information, please view
+ * the EULA file that was distributed with this source code.
+ */
+
 import { PathReporter } from 'io-ts/lib/PathReporter';
 import { CommandModule } from 'yargs';
 import path from 'path';
-import { convert, MibDeviceV } from '../../mib';
+import { convert, MibDeviceV } from '@nata/nibus.js-client/lib/mib';
 
 const mibCommand: CommandModule = {
   command: 'mib <mibfile>',

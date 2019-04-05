@@ -1,5 +1,16 @@
 "use strict";
 
+require("source-map-support/register");
+
+/*
+ * @license
+ * Copyright (c) 2019. Nata-Info
+ * @author Andrei Sarakeev <avs@nata-info.ru>
+ *
+ * This file is part of the "@nata" project.
+ * For the full copyright and license information, please view
+ * the EULA file that was distributed with this source code.
+ */
 const usbDetect = require('usb-detection');
 
 usbDetect.on('add', device => {
@@ -10,3 +21,4 @@ process.on('SIGINT', () => {
   usbDetect.stopMonitoring();
   console.log('stop');
 });
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi4uLy4uL3NyYy9zZXJ2aWNlL2NoZWNrLmpzIl0sIm5hbWVzIjpbInVzYkRldGVjdCIsInJlcXVpcmUiLCJvbiIsImRldmljZSIsImNvbnNvbGUiLCJsb2ciLCJzdGFydE1vbml0b3JpbmciLCJwcm9jZXNzIiwic3RvcE1vbml0b3JpbmciXSwibWFwcGluZ3MiOiI7Ozs7QUFBQTs7Ozs7Ozs7O0FBVUEsTUFBTUEsU0FBUyxHQUFHQyxPQUFPLENBQUMsZUFBRCxDQUF6Qjs7QUFFQUQsU0FBUyxDQUFDRSxFQUFWLENBQWEsS0FBYixFQUFxQkMsTUFBRCxJQUFZO0FBQzlCQyxFQUFBQSxPQUFPLENBQUNDLEdBQVIsQ0FBWSxTQUFaLEVBQXVCRixNQUF2QjtBQUNELENBRkQ7QUFJQUgsU0FBUyxDQUFDTSxlQUFWO0FBQ0FDLE9BQU8sQ0FBQ0wsRUFBUixDQUFXLFFBQVgsRUFBcUIsTUFBTTtBQUN6QkYsRUFBQUEsU0FBUyxDQUFDUSxjQUFWO0FBQ0FKLEVBQUFBLE9BQU8sQ0FBQ0MsR0FBUixDQUFZLE1BQVo7QUFDRCxDQUhEIiwic291cmNlc0NvbnRlbnQiOlsiLypcbiAqIEBsaWNlbnNlXG4gKiBDb3B5cmlnaHQgKGMpIDIwMTkuIE5hdGEtSW5mb1xuICogQGF1dGhvciBBbmRyZWkgU2FyYWtlZXYgPGF2c0BuYXRhLWluZm8ucnU+XG4gKlxuICogVGhpcyBmaWxlIGlzIHBhcnQgb2YgdGhlIFwiQG5hdGFcIiBwcm9qZWN0LlxuICogRm9yIHRoZSBmdWxsIGNvcHlyaWdodCBhbmQgbGljZW5zZSBpbmZvcm1hdGlvbiwgcGxlYXNlIHZpZXdcbiAqIHRoZSBFVUxBIGZpbGUgdGhhdCB3YXMgZGlzdHJpYnV0ZWQgd2l0aCB0aGlzIHNvdXJjZSBjb2RlLlxuICovXG5cbmNvbnN0IHVzYkRldGVjdCA9IHJlcXVpcmUoJ3VzYi1kZXRlY3Rpb24nKTtcblxudXNiRGV0ZWN0Lm9uKCdhZGQnLCAoZGV2aWNlKSA9PiB7XG4gIGNvbnNvbGUubG9nKCdjaGFuZ2VkJywgZGV2aWNlKTtcbn0pO1xuXG51c2JEZXRlY3Quc3RhcnRNb25pdG9yaW5nKCk7XG5wcm9jZXNzLm9uKCdTSUdJTlQnLCAoKSA9PiB7XG4gIHVzYkRldGVjdC5zdG9wTW9uaXRvcmluZygpO1xuICBjb25zb2xlLmxvZygnc3RvcCcpO1xufSk7XG4iXX0=

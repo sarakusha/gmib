@@ -1,9 +1,19 @@
+/*
+ * @license
+ * Copyright (c) 2019. Nata-Info
+ * @author Andrei Sarakeev <avs@nata-info.ru>
+ *
+ * This file is part of the "@nata" project.
+ * For the full copyright and license information, please view
+ * the EULA file that was distributed with this source code.
+ */
+
 import { CommandModule } from 'yargs';
 import _ from 'lodash';
 // @ts-ignore
 import Table from 'table-layout';
-import { PATH } from '../../service/common';
-import { Client, IPortArg } from '../../ipc';
+import { PATH } from '@nata/nibus.js-client';
+import { Client, IPortArg } from '@nata/nibus.js-client/lib/ipc';
 
 const listCommand: CommandModule = {
   command: 'list',

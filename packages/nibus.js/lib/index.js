@@ -1,46 +1,82 @@
+#!/usr/bin/env node
+
+/*
+ * @license
+ * Copyright (c) 2019. Nata-Info
+ * @author Andrei Sarakeev <avs@nata-info.ru>
+ *
+ * This file is part of the "@nata" project.
+ * For the full copyright and license information, please view
+ * the EULA file that was distributed with this source code.
+ */
 "use strict";
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-var _exportNames = {
-  sarp: true,
-  nms: true,
-  nibus: true,
-  mib: true
-};
-exports.mib = exports.nibus = exports.nms = exports.sarp = exports.default = void 0;
+require("source-map-support/register");
 
-var _service = _interopRequireWildcard(require("./service"));
+var _yargs = _interopRequireDefault(require("yargs"));
 
-Object.keys(_service).forEach(function (key) {
-  if (key === "default" || key === "__esModule") return;
-  if (Object.prototype.hasOwnProperty.call(_exportNames, key)) return;
-  Object.defineProperty(exports, key, {
-    enumerable: true,
-    get: function () {
-      return _service[key];
-    }
-  });
-});
+var _mib = require("@nata/nibus.js-client/lib/mib");
 
-var sarp = _interopRequireWildcard(require("./sarp"));
+var _dump = _interopRequireDefault(require("./cli/commands/dump"));
 
-exports.sarp = sarp;
+var _list = _interopRequireDefault(require("./cli/commands/list"));
 
-var nms = _interopRequireWildcard(require("./nms"));
+var _ping = _interopRequireDefault(require("./cli/commands/ping"));
 
-exports.nms = nms;
+var _read = _interopRequireDefault(require("./cli/commands/read"));
 
-var nibus = _interopRequireWildcard(require("./nibus"));
+var _start = _interopRequireDefault(require("./cli/commands/start"));
 
-exports.nibus = nibus;
+var _stop = _interopRequireDefault(require("./cli/commands/stop"));
 
-var mib = _interopRequireWildcard(require("./mib"));
+var _write = _interopRequireDefault(require("./cli/commands/write"));
 
-exports.mib = mib;
+var _upload = _interopRequireDefault(require("./cli/commands/upload"));
 
-function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {}; if (desc.get || desc.set) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } } newObj.default = obj; return newObj; } }
+var _download = _interopRequireDefault(require("./cli/commands/download"));
 
-var _default = _service.default;
-exports.default = _default;
+var _log = _interopRequireDefault(require("./cli/commands/log"));
+
+var _mib2 = _interopRequireDefault(require("./cli/commands/mib"));
+
+var _flash = _interopRequireDefault(require("./cli/commands/flash"));
+
+var _execute = _interopRequireDefault(require("./cli/commands/execute"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+// noinspection JSUnusedLocalSymbols 111
+const argv = _yargs.default.option('m', {
+  alias: 'mac',
+  desc: 'Адрес устройства',
+  type: 'string'
+}).option('raw', {
+  boolean: true,
+  default: false,
+  desc: 'Cырые данные'
+}).option('id', {
+  alias: 'name',
+  description: 'имя или id переменной',
+  array: true
+}).option('mib', {
+  desc: 'mib-файл',
+  choices: (0, _mib.getMibsSync)(),
+  string: true
+}).option('compact', {
+  desc: 'компактная таблица для вывода',
+  boolean: true,
+  default: true
+}).option('q', {
+  desc: 'тихий режим',
+  boolean: true,
+  alias: 'quiet'
+}).option('fw', {
+  desc: 'использовать firmware_version для определения типа устройства',
+  boolean: true,
+  default: true
+}).option('timeout', {
+  desc: 'тймаут в секундах',
+  number: true,
+  default: 1
+}).command(_start.default).command(_stop.default).command(_list.default).command(_ping.default).command(_dump.default).command(_read.default).command(_write.default).command(_upload.default).command(_download.default).command(_log.default).command(_mib2.default).command(_flash.default).command(_execute.default).locale('ru').completion('completion').showHelpOnFail(false).strict().help().wrap(Math.min(_yargs.default.terminalWidth(), 100)).epilogue('(c) Nata-Info, 2019').argv;
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi4uL3NyYy9pbmRleC50cyJdLCJuYW1lcyI6WyJhcmd2IiwieWFyZ3MiLCJvcHRpb24iLCJhbGlhcyIsImRlc2MiLCJ0eXBlIiwiYm9vbGVhbiIsImRlZmF1bHQiLCJkZXNjcmlwdGlvbiIsImFycmF5IiwiY2hvaWNlcyIsInN0cmluZyIsIm51bWJlciIsImNvbW1hbmQiLCJzdGFydCIsInN0b3AiLCJsaXN0IiwicGluZyIsImR1bXAiLCJyZWFkIiwid3JpdGUiLCJ1cGxvYWQiLCJkb3dubG9hZCIsImxvZyIsIm1pYiIsImZsYXNoIiwiZXhlY3V0ZSIsImxvY2FsZSIsImNvbXBsZXRpb24iLCJzaG93SGVscE9uRmFpbCIsInN0cmljdCIsImhlbHAiLCJ3cmFwIiwiTWF0aCIsIm1pbiIsInRlcm1pbmFsV2lkdGgiLCJlcGlsb2d1ZSJdLCJtYXBwaW5ncyI6IkFBQUE7O0FBQ0E7Ozs7Ozs7Ozs7Ozs7QUFTQTs7QUFDQTs7QUFDQTs7QUFDQTs7QUFDQTs7QUFDQTs7QUFDQTs7QUFDQTs7QUFDQTs7QUFDQTs7QUFDQTs7QUFDQTs7QUFDQTs7QUFDQTs7QUFDQTs7OztBQUVBO0FBQ0EsTUFBTUEsSUFBSSxHQUFHQyxlQUNWQyxNQURVLENBQ0gsR0FERyxFQUNFO0FBQ1hDLEVBQUFBLEtBQUssRUFBRSxLQURJO0FBRVhDLEVBQUFBLElBQUksRUFBRSxrQkFGSztBQUdYQyxFQUFBQSxJQUFJLEVBQUU7QUFISyxDQURGLEVBTVZILE1BTlUsQ0FNSCxLQU5HLEVBTUk7QUFDYkksRUFBQUEsT0FBTyxFQUFFLElBREk7QUFFYkMsRUFBQUEsT0FBTyxFQUFFLEtBRkk7QUFHYkgsRUFBQUEsSUFBSSxFQUFFO0FBSE8sQ0FOSixFQVdWRixNQVhVLENBV0gsSUFYRyxFQVdHO0FBQ1pDLEVBQUFBLEtBQUssRUFBRSxNQURLO0FBRVpLLEVBQUFBLFdBQVcsRUFBRSx1QkFGRDtBQUdaQyxFQUFBQSxLQUFLLEVBQUU7QUFISyxDQVhILEVBZ0JWUCxNQWhCVSxDQWdCSCxLQWhCRyxFQWdCSTtBQUNiRSxFQUFBQSxJQUFJLEVBQUUsVUFETztBQUViTSxFQUFBQSxPQUFPLEVBQUUsdUJBRkk7QUFHYkMsRUFBQUEsTUFBTSxFQUFFO0FBSEssQ0FoQkosRUFxQlZULE1BckJVLENBcUJILFNBckJHLEVBcUJRO0FBQ2pCRSxFQUFBQSxJQUFJLEVBQUUsK0JBRFc7QUFFakJFLEVBQUFBLE9BQU8sRUFBRSxJQUZRO0FBR2pCQyxFQUFBQSxPQUFPLEVBQUU7QUFIUSxDQXJCUixFQTBCVkwsTUExQlUsQ0EwQkgsR0ExQkcsRUEwQkU7QUFDWEUsRUFBQUEsSUFBSSxFQUFFLGFBREs7QUFFWEUsRUFBQUEsT0FBTyxFQUFFLElBRkU7QUFHWEgsRUFBQUEsS0FBSyxFQUFFO0FBSEksQ0ExQkYsRUErQlZELE1BL0JVLENBK0JILElBL0JHLEVBK0JHO0FBQ1pFLEVBQUFBLElBQUksRUFBRSwrREFETTtBQUVaRSxFQUFBQSxPQUFPLEVBQUUsSUFGRztBQUdaQyxFQUFBQSxPQUFPLEVBQUU7QUFIRyxDQS9CSCxFQW9DVkwsTUFwQ1UsQ0FvQ0gsU0FwQ0csRUFvQ1E7QUFDakJFLEVBQUFBLElBQUksRUFBRSxtQkFEVztBQUVqQlEsRUFBQUEsTUFBTSxFQUFFLElBRlM7QUFHakJMLEVBQUFBLE9BQU8sRUFBRTtBQUhRLENBcENSLEVBeUNWTSxPQXpDVSxDQXlDRkMsY0F6Q0UsRUEwQ1ZELE9BMUNVLENBMENGRSxhQTFDRSxFQTJDVkYsT0EzQ1UsQ0EyQ0ZHLGFBM0NFLEVBNENWSCxPQTVDVSxDQTRDRkksYUE1Q0UsRUE2Q1ZKLE9BN0NVLENBNkNGSyxhQTdDRSxFQThDVkwsT0E5Q1UsQ0E4Q0ZNLGFBOUNFLEVBK0NWTixPQS9DVSxDQStDRk8sY0EvQ0UsRUFnRFZQLE9BaERVLENBZ0RGUSxlQWhERSxFQWlEVlIsT0FqRFUsQ0FpREZTLGlCQWpERSxFQWtEVlQsT0FsRFUsQ0FrREZVLFlBbERFLEVBbURWVixPQW5EVSxDQW1ERlcsYUFuREUsRUFvRFZYLE9BcERVLENBb0RGWSxjQXBERSxFQXFEVlosT0FyRFUsQ0FxREZhLGdCQXJERSxFQXNEVkMsTUF0RFUsQ0FzREgsSUF0REcsRUF1RFZDLFVBdkRVLENBdURDLFlBdkRELEVBd0RWQyxjQXhEVSxDQXdESyxLQXhETCxFQXlEVkMsTUF6RFUsR0EwRFZDLElBMURVLEdBMkRWQyxJQTNEVSxDQTJETEMsSUFBSSxDQUFDQyxHQUFMLENBQVNqQyxlQUFNa0MsYUFBTixFQUFULEVBQWdDLEdBQWhDLENBM0RLLEVBNERWQyxRQTVEVSxDQTRERCxxQkE1REMsRUE2RFZwQyxJQTdESCIsInNvdXJjZXNDb250ZW50IjpbIiMhL3Vzci9iaW4vZW52IG5vZGVcbi8qXG4gKiBAbGljZW5zZVxuICogQ29weXJpZ2h0IChjKSAyMDE5LiBOYXRhLUluZm9cbiAqIEBhdXRob3IgQW5kcmVpIFNhcmFrZWV2IDxhdnNAbmF0YS1pbmZvLnJ1PlxuICpcbiAqIFRoaXMgZmlsZSBpcyBwYXJ0IG9mIHRoZSBcIkBuYXRhXCIgcHJvamVjdC5cbiAqIEZvciB0aGUgZnVsbCBjb3B5cmlnaHQgYW5kIGxpY2Vuc2UgaW5mb3JtYXRpb24sIHBsZWFzZSB2aWV3XG4gKiB0aGUgRVVMQSBmaWxlIHRoYXQgd2FzIGRpc3RyaWJ1dGVkIHdpdGggdGhpcyBzb3VyY2UgY29kZS5cbiAqL1xuaW1wb3J0IHlhcmdzIGZyb20gJ3lhcmdzJztcbmltcG9ydCB7IGdldE1pYnNTeW5jIH0gZnJvbSAnQG5hdGEvbmlidXMuanMtY2xpZW50L2xpYi9taWInO1xuaW1wb3J0IGR1bXAgZnJvbSAnLi9jbGkvY29tbWFuZHMvZHVtcCc7XG5pbXBvcnQgbGlzdCBmcm9tICcuL2NsaS9jb21tYW5kcy9saXN0JztcbmltcG9ydCBwaW5nIGZyb20gJy4vY2xpL2NvbW1hbmRzL3BpbmcnO1xuaW1wb3J0IHJlYWQgZnJvbSAnLi9jbGkvY29tbWFuZHMvcmVhZCc7XG5pbXBvcnQgc3RhcnQgZnJvbSAnLi9jbGkvY29tbWFuZHMvc3RhcnQnO1xuaW1wb3J0IHN0b3AgZnJvbSAnLi9jbGkvY29tbWFuZHMvc3RvcCc7XG5pbXBvcnQgd3JpdGUgZnJvbSAnLi9jbGkvY29tbWFuZHMvd3JpdGUnO1xuaW1wb3J0IHVwbG9hZCBmcm9tICcuL2NsaS9jb21tYW5kcy91cGxvYWQnO1xuaW1wb3J0IGRvd25sb2FkIGZyb20gJy4vY2xpL2NvbW1hbmRzL2Rvd25sb2FkJztcbmltcG9ydCBsb2cgZnJvbSAnLi9jbGkvY29tbWFuZHMvbG9nJztcbmltcG9ydCBtaWIgZnJvbSAnLi9jbGkvY29tbWFuZHMvbWliJztcbmltcG9ydCBmbGFzaCBmcm9tICcuL2NsaS9jb21tYW5kcy9mbGFzaCc7XG5pbXBvcnQgZXhlY3V0ZSBmcm9tICcuL2NsaS9jb21tYW5kcy9leGVjdXRlJztcblxuLy8gbm9pbnNwZWN0aW9uIEpTVW51c2VkTG9jYWxTeW1ib2xzIDExMVxuY29uc3QgYXJndiA9IHlhcmdzXG4gIC5vcHRpb24oJ20nLCB7XG4gICAgYWxpYXM6ICdtYWMnLFxuICAgIGRlc2M6ICfQkNC00YDQtdGBINGD0YHRgtGA0L7QudGB0YLQstCwJyxcbiAgICB0eXBlOiAnc3RyaW5nJyxcbiAgfSlcbiAgLm9wdGlvbigncmF3Jywge1xuICAgIGJvb2xlYW46IHRydWUsXG4gICAgZGVmYXVsdDogZmFsc2UsXG4gICAgZGVzYzogJ0PRi9GA0YvQtSDQtNCw0L3QvdGL0LUnLFxuICB9KVxuICAub3B0aW9uKCdpZCcsIHtcbiAgICBhbGlhczogJ25hbWUnLFxuICAgIGRlc2NyaXB0aW9uOiAn0LjQvNGPINC40LvQuCBpZCDQv9C10YDQtdC80LXQvdC90L7QuScsXG4gICAgYXJyYXk6IHRydWUsXG4gIH0pXG4gIC5vcHRpb24oJ21pYicsIHtcbiAgICBkZXNjOiAnbWliLdGE0LDQudC7JyxcbiAgICBjaG9pY2VzOiBnZXRNaWJzU3luYygpLFxuICAgIHN0cmluZzogdHJ1ZSxcbiAgfSlcbiAgLm9wdGlvbignY29tcGFjdCcsIHtcbiAgICBkZXNjOiAn0LrQvtC80L/QsNC60YLQvdCw0Y8g0YLQsNCx0LvQuNGG0LAg0LTQu9GPINCy0YvQstC+0LTQsCcsXG4gICAgYm9vbGVhbjogdHJ1ZSxcbiAgICBkZWZhdWx0OiB0cnVlLFxuICB9KVxuICAub3B0aW9uKCdxJywge1xuICAgIGRlc2M6ICfRgtC40YXQuNC5INGA0LXQttC40LwnLFxuICAgIGJvb2xlYW46IHRydWUsXG4gICAgYWxpYXM6ICdxdWlldCcsXG4gIH0pXG4gIC5vcHRpb24oJ2Z3Jywge1xuICAgIGRlc2M6ICfQuNGB0L/QvtC70YzQt9C+0LLQsNGC0YwgZmlybXdhcmVfdmVyc2lvbiDQtNC70Y8g0L7Qv9GA0LXQtNC10LvQtdC90LjRjyDRgtC40L/QsCDRg9GB0YLRgNC+0LnRgdGC0LLQsCcsXG4gICAgYm9vbGVhbjogdHJ1ZSxcbiAgICBkZWZhdWx0OiB0cnVlLFxuICB9KVxuICAub3B0aW9uKCd0aW1lb3V0Jywge1xuICAgIGRlc2M6ICfRgtC50LzQsNGD0YIg0LIg0YHQtdC60YPQvdC00LDRhScsXG4gICAgbnVtYmVyOiB0cnVlLFxuICAgIGRlZmF1bHQ6IDEsXG4gIH0pXG4gIC5jb21tYW5kKHN0YXJ0KVxuICAuY29tbWFuZChzdG9wKVxuICAuY29tbWFuZChsaXN0KVxuICAuY29tbWFuZChwaW5nIGFzIGFueSlcbiAgLmNvbW1hbmQoZHVtcCBhcyBhbnkpXG4gIC5jb21tYW5kKHJlYWQgYXMgYW55KVxuICAuY29tbWFuZCh3cml0ZSBhcyBhbnkpXG4gIC5jb21tYW5kKHVwbG9hZCBhcyBhbnkpXG4gIC5jb21tYW5kKGRvd25sb2FkIGFzIGFueSlcbiAgLmNvbW1hbmQobG9nIGFzIGFueSlcbiAgLmNvbW1hbmQobWliIGFzIGFueSlcbiAgLmNvbW1hbmQoZmxhc2ggYXMgYW55KVxuICAuY29tbWFuZChleGVjdXRlIGFzIGFueSlcbiAgLmxvY2FsZSgncnUnKVxuICAuY29tcGxldGlvbignY29tcGxldGlvbicpXG4gIC5zaG93SGVscE9uRmFpbChmYWxzZSlcbiAgLnN0cmljdCgpXG4gIC5oZWxwKClcbiAgLndyYXAoTWF0aC5taW4oeWFyZ3MudGVybWluYWxXaWR0aCgpLCAxMDApKVxuICAuZXBpbG9ndWUoJyhjKSBOYXRhLUluZm8sIDIwMTknKVxuICAuYXJndjtcbiJdfQ==

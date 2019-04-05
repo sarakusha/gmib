@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2019. OOO Nata-Info
- * @author: Andrei Sarakeev <avs@nata-info.ru>
+ * @license
+ * Copyright (c) 2019. Nata-Info
+ * @author Andrei Sarakeev <avs@nata-info.ru>
  *
  * This file is part of the "@nata" project.
  * For the full copyright and license information, please view
@@ -8,10 +9,9 @@
  */
 
 import { Arguments, Defined } from 'yargs';
-import { devices, IDevice } from '../mib';
-import Address from '../Address';
-import { getNibusTimeout, NibusConnection } from '../nibus';
-import session from '../service';
+import { devices, IDevice } from '@nata/nibus.js-client/lib/mib';
+import session, { Address } from '@nata/nibus.js-client';
+import { getNibusTimeout, NibusConnection } from '@nata/nibus.js-client/lib/nibus';
 import { CommonOpts } from './options';
 
 // export type NibusCounter = (handler: (count: number) => number) => void;

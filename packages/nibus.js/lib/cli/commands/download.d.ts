@@ -1,6 +1,6 @@
 /// <reference types="node" />
 import { Arguments, CommandModule, Defined } from 'yargs';
-import { IDevice } from '../../mib';
+import { IDevice } from '@nata/nibus.js-client/lib/mib';
 import { CommonOpts } from '../options';
 declare type DownloadOpts = Defined<CommonOpts, 'm' | 'mac'> & {
     domain: string;

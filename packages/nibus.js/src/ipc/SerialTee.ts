@@ -1,9 +1,19 @@
+/*
+ * @license
+ * Copyright (c) 2019. Nata-Info
+ * @author Andrei Sarakeev <avs@nata-info.ru>
+ *
+ * This file is part of the "@nata" project.
+ * For the full copyright and license information, please view
+ * the EULA file that was distributed with this source code.
+ */
+
 import SerialPort, { OpenOptions } from 'serialport';
 import debugFactory from 'debug';
 import { EventEmitter } from 'events';
-import { IKnownPort } from '../service/KnownPorts';
+import { ipc } from '@nata/nibus.js-client/';
 import Server, { Direction } from './Server';
-import { IMibDescription } from '../service';
+import { IMibDescription, IKnownPort } from '@nata/nibus.js-client/lib/session';
 
 const debug = debugFactory('nibus:serial-tee');
 const portOptions: OpenOptions = {
@@ -36,10 +46,6 @@ export default class SerialTee extends EventEmitter {
   private readonly server: Server;
   private logger: SerialLogger | null = null;
 
-  static getSocketPath(path: string) {
-    return `/tmp/nibus.${path.replace(/^(\/dev\/)/, '')}`;
-  }
-
   constructor(public readonly portInfo: IKnownPort, public readonly description: IMibDescription) {
     super();
     const { comName: path } = portInfo;
@@ -52,7 +58,7 @@ export default class SerialTee extends EventEmitter {
       },
     );
     this.serial.on('close', this.close);
-    this.server = new Server(SerialTee.getSocketPath(path), true);
+    this.server = new Server(ipc.getSocketPath(path), true);
     this.server.pipe(this.serial);
     this.serial.pipe(this.server);
     debug(`new connection on ${path} (${description.category})`);

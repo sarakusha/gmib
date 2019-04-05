@@ -1,15 +1,24 @@
+/*
+ * @license
+ * Copyright (c) 2019. Nata-Info
+ * @author Andrei Sarakeev <avs@nata-info.ru>
+ *
+ * This file is part of the "@nata" project.
+ * For the full copyright and license information, please view
+ * the EULA file that was distributed with this source code.
+ */
+
 import chalk from 'chalk';
 import Table, { HorizontalTable } from 'cli-table3';
 import _ from 'lodash';
 import { Arguments, CommandModule } from 'yargs';
 import debugFactory from 'debug';
 
-import Address from '../../Address';
-import { devices, getMibPrototype, IDevice } from '../../mib';
-import { getNibusTimeout, NibusConnection } from '../../nibus';
-import SarpQueryType from '../../sarp/SarpQueryType';
-import session from '../../service';
+import session, { Address } from '@nata/nibus.js-client';
 import { CommonOpts } from '../options';
+import { devices, getMibPrototype, IDevice } from '@nata/nibus.js-client/lib/mib';
+import { getNibusTimeout, NibusConnection } from '@nata/nibus.js-client/lib/nibus';
+import { SarpQueryType } from '@nata/nibus.js-client/lib/sarp';
 
 type RowType = {
   displayName: string,

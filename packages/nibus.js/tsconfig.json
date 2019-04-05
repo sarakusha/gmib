@@ -21,6 +21,6 @@
     "node_modules/",
     "**/*.spec.ts",
     "lib/",
-    "package.json"
+    "src/index-dev.js"
   ]
 }

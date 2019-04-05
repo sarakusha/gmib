@@ -1,3 +1,13 @@
+/*
+ * @license
+ * Copyright (c) 2019. Nata-Info
+ * @author Andrei Sarakeev <avs@nata-info.ru>
+ *
+ * This file is part of the "@nata" project.
+ * For the full copyright and license information, please view
+ * the EULA file that was distributed with this source code.
+ */
+
 import Configstore from 'configstore';
 import debugFactory from 'debug';
 import { Socket } from 'net';
@@ -5,13 +15,13 @@ import _ from 'lodash';
 import { SerialTee, Server } from '../ipc';
 import { SerialLogger } from '../ipc/SerialTee';
 import { Direction } from '../ipc/Server';
-import { getMibFile, getMibs, toInt } from '../mib';
-import { IMibDeviceType, MibDeviceV } from '../mib/devices';
-import { NibusDatagram, NibusDecoder } from '../nibus';
-import { printBuffer } from '../nibus/helper';
-import { Config, LogLevel, PATH } from './common';
+import { getMibFile, getMibs, toInt } from '@nata/nibus.js-client/lib/mib';
+import { IMibDeviceType, MibDeviceV } from '@nata/nibus.js-client/lib/mib/devices';
+import { NibusDatagram, NibusDecoder } from '@nata/nibus.js-client/lib/nibus';
+import { printBuffer } from '@nata/nibus.js-client/lib/nibus/helper';
+import { Config, LogLevel, PATH } from '@nata/nibus.js-client';
 import detector from './detector';
-import { IKnownPort } from './KnownPorts';
+import { IKnownPort } from '@nata/nibus.js-client/lib/session/KnownPorts';
 
 const pkg = require('../../package.json');
 const conf = new Configstore(
