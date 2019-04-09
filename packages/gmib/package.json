@@ -1,6 +1,12 @@
 {
   "name": "@nata/gmib",
   "version": "0.0.1",
+  "description": "Nata-Info gmib tool",
+  "keywords": [
+    "nata-info",
+    "nibus",
+    "sarakusha"
+  ],
   "license": "SEE LICENSE IN EULA.md",
   "author": "Andrei Sarakeev <avs@nata-info.ru>",
   "publishConfig": {
@@ -15,31 +21,42 @@
   },
   "scripts": {
     "dev": "electron-webpack dev",
-    "compile": "electron-webpack",
+    "compile": "NODE_ENV=production electron-webpack",
     "dist": "yarn compile && electron-builder",
     "dist:dir": "yarn dist --dir -c.compression=store -c.mac.identity=null",
-    "showMainConfig": "node util/main-config.js",
-    "showRendererConfig": "node util/renderer-config.js"
+    "type": "tsc --project tsconfig.json --noEmit",
+    "showMainConfig": "node src/util/show-config.js main",
+    "showRendererConfig": "node src/util/show-config.js renderer"
   },
   "dependencies": {
     "@material-ui/core": "^3.9.2",
     "@material-ui/icons": "^3.0.2",
+    "@nata/nibus.js-client": "^1.2.6",
+    "classnames": "^2.2.6",
+    "lodash": "^4.17.11",
+    "ramda": "^0.26.1",
     "react": "^16.8.6",
-    "react-dom": "^16.8.6",
+    "react-dom": "npm:@hot-loader/react-dom",
     "react-hot-loader": "^4.8.2",
-    "source-map-support": "^0.5.11"
+    "recompose": "^0.30.0",
+    "source-map-support": "^0.5.11",
+    "typesafe-actions": "^4.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.4.0",
     "@babel/plugin-proposal-class-properties": "^7.4.0",
     "@babel/preset-react": "^7.0.0",
+    "@types/classnames": "^2.2.7",
     "@types/electron": "^1.6.10",
+    "@types/electron-devtools-installer": "^2.2.0",
     "@types/material-ui": "^0.21.6",
+    "@types/ramda": "types/npm-ramda#dist",
     "@types/react": "^16.8.10",
     "@types/react-dom": "^16.8.3",
+    "@types/recompose": "^0.30.5",
     "electron": "^4.1.1",
     "electron-builder": "^20.39.0",
-    "electron-react-devtools": "^0.5.3",
+    "electron-devtools-installer": "^2.2.4",
     "electron-webpack": "^2.6.2",
     "electron-webpack-ts": "^3.1.1",
     "tslint": "^5.15.0",
@@ -52,12 +69,16 @@
   },
   "build": {
     "appId": "ru.nata-info.gmib",
+    "copyright": "Copyright © Nata-Info, 2019",
     "productName": "gmib",
     "mac": {
       "category": "public.app-category.developer-tools"
     },
     "linux": {
       "category": "Development"
+    },
+    "directories": {
+      "output": "build"
     }
   }
 }

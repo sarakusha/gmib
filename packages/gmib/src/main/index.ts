@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2019. OOO Nata-Info
- * @author: Andrei Sarakeev <avs@nata-info.ru>
+ * @license
+ * Copyright (c) 2019. Nata-Info
+ * @author Andrei Sarakeev <avs@nata-info.ru>
  *
  * This file is part of the "@nata" project.
  * For the full copyright and license information, please view
@@ -20,14 +21,27 @@ function createMainWindow() {
   const window = new BrowserWindow();
 
   if (isDevelopment) {
-    window.webContents.openDevTools();
+    import('electron-devtools-installer').then(
+      ({ default: installExtension, REACT_DEVELOPER_TOOLS }) => {
+        installExtension(REACT_DEVELOPER_TOOLS)
+          .then((name) => {
+            window.webContents.once('did-frame-finish-load', () => {
+              window.webContents.openDevTools();
+              // window.webContents.on('devtools-opened', () => {
+              //   window.focus();
+              // });
+            });
+            console.log(`Added Extension:  ${name}`);
+          })
+          .catch(err => console.log('An error occurred: ', err));
+      });
   }
 
   if (isDevelopment) {
     window.loadURL(`http://localhost:${process.env.ELECTRON_WEBPACK_WDS_PORT}`);
   } else {
     window.loadURL(formatUrl({
-      pathname: path.join(__dirname, 'index.ts.html'),
+      pathname: path.join(__dirname, 'index.html'),
       protocol: 'file',
       slashes: true,
     }));

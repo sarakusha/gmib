@@ -7,7 +7,9 @@
  * the EULA file that was distributed with this source code.
  */
 
-module.exports = {
+const isProduction = process.env.NODE_ENV === 'production';
+
+module.exports = isProduction ? {} : {
   module: {
     rules: [
       {

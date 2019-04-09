@@ -1,4 +1,5 @@
 {
+  "commonDistDirectory": "dist",
   "renderer": {
     "webpackConfig": "webpack.renderer.additions.js"
   }

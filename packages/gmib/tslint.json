@@ -8,6 +8,7 @@
   ],
   "jsRules": {},
   "rules": {
+    "no-unused-variable": false,
     "import-name": false,
     "jsx-boolean-value": false,
     "jsx-no-multiline-js": false,
