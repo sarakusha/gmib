@@ -25,11 +25,11 @@ import { Category } from './KnownPorts';
 const debug = debugFactory('nibus:session');
 const noop = () => {};
 
-type FoundListener =
+export type FoundListener =
   (arg: { connection: NibusConnection, category: Category, address: Address }) => void;
 
-type ConnectionListener = (connection: NibusConnection) => void;
-type DeviceListener = (device: IDevice) => void;
+export type ConnectionListener = (connection: NibusConnection) => void;
+export type DeviceListener = (device: IDevice) => void;
 
 declare interface NibusSession {
   on(event: 'start' | 'close', listener: Function): this;
@@ -40,6 +40,14 @@ declare interface NibusSession {
   once(event: 'found', listener: FoundListener): this;
   once(event: 'add' | 'remove', listener: ConnectionListener): this;
   once(event: 'connected' | 'disconnected', listener: DeviceListener): this;
+  off(event: 'start' | 'close', listener: Function): this;
+  off(event: 'found', listener: FoundListener): this;
+  off(event: 'add' | 'remove', listener: ConnectionListener): this;
+  off(event: 'connected' | 'disconnected', listener: DeviceListener): this;
+  removeListener(event: 'start' | 'close', listener: Function): this;
+  removeListener(event: 'found', listener: FoundListener): this;
+  removeListener(event: 'add' | 'remove', listener: ConnectionListener): this;
+  removeListener(event: 'connected' | 'disconnected', listener: DeviceListener): this;
 }
 
 class NibusSession extends EventEmitter {
@@ -178,7 +186,7 @@ class NibusSession extends EventEmitter {
   //
   start() {
     return new Promise<number>((resolve) => {
-      if (this.isStarted) return resolve();
+      if (this.isStarted) return resolve(this.connections.length);
       this.socket = Client.connect(PATH);
       this.socket.on('ports', this.reloadHandler);
       this.socket.on('add', this.addHandler);
@@ -253,6 +261,10 @@ class NibusSession extends EventEmitter {
     const addr = new Address(address);
     if (connections.length === 0) return Promise.resolve(-1);
     return Promise.race(connections.map(connection => connection.ping(addr)));
+  }
+
+  get ports() {
+    return this.connections.length;
   }
 }
 

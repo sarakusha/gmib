@@ -6,6 +6,12 @@
   "types": "index.d.ts",
   "author": "Andrei Sarakeev",
   "license": "SEE LICENSE IN EULA.md",
+  "keywords": [
+    "nata-info",
+    "digital signage",
+    "gstreamer",
+    "sarakusha"
+  ],
   "directories": {
     "lib": "lib"
   },

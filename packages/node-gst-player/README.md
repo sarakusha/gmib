@@ -11,6 +11,9 @@
   - setuptools3 (pip3 install setuptools)
   - git clone --depth 1 --single-branch --branch master https://gitlab.freedesktop.org/gstreamer/cerbero
 6. gstreamer-1.0 gstreamer-base-1.0 gstreamer-video-1.0 gstreamer-plugins-base-1.0 gstreamer-plugins-bad-1.0 gstreamer-player-1.0
+  ```bash
+  sudo apt install libgstreamer-plugins-bad1.0-dev libgstreamer-plugins-base1.0-dev libgstreamermm-1.0-dev libgtkmm-3.0-dev
+  ```
 7. gstreamermm-1.0
 8. gtkmm-3.0
 

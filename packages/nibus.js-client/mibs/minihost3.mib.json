@@ -1073,12 +1073,12 @@
       }
     },
     "hDirectionType": {
-      "base": "xs:unsignedByte",
+      "base": "xs:boolean",
       "enumeration": {
-        "0": {
+        "false": {
           "annotation": "слева направо"
         },
-        "1": {
+        "true": {
           "annotation": "справа налево"
         }
       }

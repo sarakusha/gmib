@@ -57,7 +57,9 @@ export function precisionConverter(precision: string): IConverter {
   };
 }
 
-export function enumerationConverter(enumerationValues: IMibType['enumeration']): IConverter {
+export function enumerationConverter(
+  enumerationValues: IMibType['enumeration'],
+  simpleType?: string): IConverter {
   const from: any = {};
   const to: any = {};
   const keys = Reflect.ownKeys(enumerationValues!) as string[];
@@ -65,17 +67,22 @@ export function enumerationConverter(enumerationValues: IMibType['enumeration'])
     const value = enumerationValues![key];
     const index = toInt(key);
     from[value.annotation] = index;
-    to[index] = value.annotation;
+    to[String(index)] = value.annotation;
   });
   // console.log('from %o, to %o', from, to);
   return {
     from: (value) => {
-      if (typeof value === 'string' && Reflect.has(from, value)) return from[value];
+      if (Reflect.has(from, String(value))) {
+        return from[String(value)];
+      }
       const simple = toInt(value);
       return Number.isNaN(simple) ? value : simple;
     },
-    to: value => (typeof value === 'number' || typeof value === 'string')
-    && Reflect.has(to, value) ? to[value] : value,
+    to: (value) => {
+      let index: number | string = toInt(value);
+      if (Number.isNaN(index)) index = String(value);
+      return Reflect.has(to, String(index)) ? to[String(index)] : value;
+    },
   };
 }
 
@@ -205,21 +212,22 @@ export function getIntSize(type: string) {
   }
 }
 
-export function minInclusiveConverter(min: string) : IConverter {
+export function minInclusiveConverter(min: string): IConverter {
   const minIncl = parseFloat(min);
   return {
-    from: value => Math.max(value as number, minIncl),
+    from: value => typeof value === 'number' ?  Math.max(value, minIncl) : value,
     to: value => value,
   };
 }
 
-export function maxInclusiveConverter(max: string) : IConverter {
+export function maxInclusiveConverter(max: string): IConverter {
   const maxIncl = parseFloat(max);
   return {
-    from: value => Math.min(value as number, maxIncl),
+    from: value => typeof value === 'number' ? Math.min(value, maxIncl) : value,
     to: value => value,
   };
 }
+
 export const convertTo = (converters: IConverter[]) => (value: ResultType) =>
   converters.reduceRight(
     (result, converter) => result !== undefined && converter.to(result),

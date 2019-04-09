@@ -86,10 +86,10 @@ io.on('connection', (socket) => {
         debug('socket has disconnected');
     });
     socket.on('reload', () => {
-        socket.request.session.reload(() => { });
+        socket.request.index.reload(() => { });
     });
     socket.on('update', (props) => {
-        const session = socket.request.session;
+        const session = socket.request.index;
         const username = session && session.passport && session.passport.user;
         if (!users_1.default.hasUser(username)) {
             socket.emit('logout');
@@ -116,7 +116,7 @@ nextApp.prepare().then(() => {
         return nextApp.render(res, req, '/dashboard', store_1.getSafeStore());
     });
     app.post('/login', auth_1.passport.authenticate('local'), (req, res) => {
-        const session = req.session;
+        const session = req.index;
         res.send(session);
     });
     app.get('/logout', (req, res) => {

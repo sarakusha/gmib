@@ -60,6 +60,7 @@ import {
   versionTypeConverter,
   withValue,
 } from './mib';
+import timeid from '../timeid';
 // import { getMibsSync } from './mib2json';
 // import detector from '../service/detector';
 
@@ -184,22 +185,23 @@ export const MibDeviceV = t.intersection([
 interface IMibDevice extends t.TypeOf<typeof MibDeviceV> {}
 
 type Listener<T> = (arg: T) => void;
-type ChangedArg = { id: number, names: string[] };
-type ChangedListener = Listener<ChangedArg>;
+type ChangeArg = { id: number, names: string[] };
+export type ChangeListener = Listener<ChangeArg>;
 type UploadStartArg = { domain: string, domainSize: number, offset: number, size: number };
-type UploadStartListener = Listener<UploadStartArg>;
+export type UploadStartListener = Listener<UploadStartArg>;
 type UploadDataArg = { domain: string, data: Buffer, pos: number };
 export type UploadDataListener = Listener<UploadDataArg>;
 type UploadFinishArg = { domain: string, offset: number, data: Buffer };
-type UploadFinishListener = Listener<UploadFinishArg>;
+export type UploadFinishListener = Listener<UploadFinishArg>;
 type DownloadStartArg = { domain: string, domainSize: number, offset: number, size: number };
-type DownloadStartListener = Listener<DownloadStartArg>;
+export type DownloadStartListener = Listener<DownloadStartArg>;
 type DownloadDataArg = { domain: string, length: number };
 export type DownloadDataListener = Listener<DownloadDataArg>;
 type DownloadFinishArg = { domain: string; offset: number, size: number };
-type DownloadFinishListener = Listener<DownloadFinishArg>;
+export type DownloadFinishListener = Listener<DownloadFinishArg>;
 
 export interface IDevice {
+  readonly id: string;
   readonly address: Address;
   drain(): Promise<number[]>;
   write(...ids: number[]): Promise<number[]>;
@@ -218,7 +220,7 @@ export interface IDevice {
   [mibProperty: string]: any;
 
   on(event: 'connected' | 'disconnected', listener: () => void): this;
-  on(event: 'changing' | 'changed', listener: ChangedListener): this;
+  on(event: 'changing' | 'changed', listener: ChangeListener): this;
   on(event: 'uploadStart', listener: UploadStartListener): this;
   on(event: 'uploadData', listener: UploadDataListener): this;
   on(event: 'uploadFinish', listener: UploadFinishListener): this;
@@ -227,7 +229,7 @@ export interface IDevice {
   on(event: 'downloadFinish', listener: DownloadFinishListener): this;
 
   once(event: 'connected' | 'disconnected', listener: () => void): this;
-  once(event: 'changing' | 'changed', listener: ChangedListener): this;
+  once(event: 'changing' | 'changed', listener: ChangeListener): this;
   once(event: 'uploadStart', listener: UploadStartListener): this;
   once(event: 'uploadData', listener: UploadDataListener): this;
   once(event: 'uploadFinish', listener: UploadFinishListener): this;
@@ -236,7 +238,7 @@ export interface IDevice {
   once(event: 'downloadFinish', listener: DownloadFinishListener): this;
 
   addListener(event: 'connected' | 'disconnected', listener: () => void): this;
-  addListener(event: 'changing' | 'changed', listener: ChangedListener): this;
+  addListener(event: 'changing' | 'changed', listener: ChangeListener): this;
   addListener(event: 'uploadStart', listener: UploadStartListener): this;
   addListener(event: 'uploadData', listener: UploadDataListener): this;
   addListener(event: 'uploadFinish', listener: UploadFinishListener): this;
@@ -245,7 +247,7 @@ export interface IDevice {
   addListener(event: 'downloadFinish', listener: DownloadFinishListener): this;
 
   off(event: 'connected' | 'disconnected', listener: () => void): this;
-  off(event: 'changing' | 'changed', listener: ChangedListener): this;
+  off(event: 'changing' | 'changed', listener: ChangeListener): this;
   off(event: 'uploadStart', listener: UploadStartListener): this;
   off(event: 'uploadData', listener: UploadDataListener): this;
   off(event: 'uploadFinish', listener: UploadFinishListener): this;
@@ -254,7 +256,7 @@ export interface IDevice {
   off(event: 'downloadFinish', listener: DownloadFinishListener): this;
 
   removeListener(event: 'connected' | 'disconnected', listener: () => void): this;
-  removeListener(event: 'changing' | 'changed', listener: ChangedListener): this;
+  removeListener(event: 'changing' | 'changed', listener: ChangeListener): this;
   removeListener(event: 'uploadStart', listener: UploadStartListener): this;
   removeListener(event: 'uploadData', listener: UploadDataListener): this;
   removeListener(event: 'uploadFinish', listener: UploadFinishListener): this;
@@ -263,7 +265,7 @@ export interface IDevice {
   removeListener(event: 'downloadFinish', listener: DownloadFinishListener): this;
 
   emit(event: 'connected' | 'disconnected'): boolean;
-  emit(event: 'changing' | 'changed', arg: ChangedArg): boolean;
+  emit(event: 'changing' | 'changed', arg: ChangeArg): boolean;
   emit(event: 'uploadStart', arg: UploadStartArg): boolean;
   emit(event: 'uploadData', arg: UploadDataArg): boolean;
   emit(event: 'uploadFinish', arg: UploadFinishArg): boolean;
@@ -314,19 +316,40 @@ function defineMibProperty(
   const converters: IConverter[] = [];
   const isReadable = appinfo.access.indexOf('r') > -1;
   const isWritable = appinfo.access.indexOf('w') > -1;
+  let enumeration: IMibType['enumeration'] | undefined;
   if (type != null) {
-    const { appinfo: info = {}, enumeration, minInclusive, maxInclusive } = type;
+    const { appinfo: info = {}, minInclusive, maxInclusive } = type;
+    enumeration = type.enumeration;
     const { units, precision, representation } = info;
     const size = getIntSize(simpleType);
-    units && converters.push(unitConverter(units));
+    if (units) {
+      converters.push(unitConverter(units));
+      Reflect.defineMetadata('unit', units, target, propertyKey);
+    }
     precision && converters.push(precisionConverter(precision));
-    enumeration && converters.push(enumerationConverter(enumeration));
+    if (enumeration) {
+      converters.push(enumerationConverter(enumeration, simpleType));
+      Reflect.defineMetadata('enum', Object.entries(enumeration)
+        .map(([key, val]) => [
+          val!.annotation,
+          toInt(key),
+        ]), target, propertyKey);
+    }
     representation && size && converters.push(representationConverter(representation, size));
-    minInclusive && converters.push(minInclusiveConverter(minInclusive));
-    maxInclusive && converters.push(maxInclusiveConverter(maxInclusive));
+    if (minInclusive) {
+      converters.push(minInclusiveConverter(minInclusive));
+      Reflect.defineMetadata('min', minInclusive, target, propertyKey);
+    }
+    if (maxInclusive) {
+      converters.push(maxInclusiveConverter(maxInclusive));
+      Reflect.defineMetadata('max', maxInclusive, target, propertyKey);
+    }
   }
   if (key === 'brightness' && prop.type === 'xs:unsignedByte') {
     converters.push(percentConverter);
+    Reflect.defineMetadata('unit', '%', target, propertyKey);
+    Reflect.defineMetadata('min', 0, target, propertyKey);
+    Reflect.defineMetadata('max', 100, target, propertyKey);
   }
   switch (simpleType) {
     case 'packed8Float':
@@ -341,9 +364,9 @@ function defineMibProperty(
   if (prop.type === 'versionType') {
     converters.push(versionTypeConverter);
   }
-  if (simpleType === 'xs:boolean') {
+  if (simpleType === 'xs:boolean' && !enumeration) {
     converters.push(booleanConverter);
-    Reflect.defineMetadata('enum', [{ Да: true }, { Нет: false }], target, propertyKey);
+    Reflect.defineMetadata('enum', [['Да', true], ['Нет', false]], target, propertyKey);
   }
   Reflect.defineMetadata('isWritable', isWritable, target, propertyKey);
   Reflect.defineMetadata('isReadable', isReadable, target, propertyKey);
@@ -360,20 +383,22 @@ function defineMibProperty(
   const attributes: IPropertyDescriptor<DevicePrototype> = {
     enumerable: isReadable,
   };
-  // if (isReadable) {
+  const to = convertTo(converters);
+  const from = convertFrom(converters);
+  Reflect.defineMetadata('convertTo', to, target, propertyKey);
+  Reflect.defineMetadata('convertFrom', from, target, propertyKey);
   attributes.get = function () {
     console.assert(Reflect.get(this, '$countRef') > 0, 'Device was released');
     let value;
     if (!this.getError(id)) {
-      value = convertTo(converters)(this.getRawValue(id));
+      value = to(this.getRawValue(id));
     }
     return value;
   };
-  // }
   if (isWritable) {
     attributes.set = function (newValue: any) {
       console.assert(Reflect.get(this, '$countRef') > 0, 'Device was released');
-      const value = convertFrom(converters)(newValue);
+      const value = from(newValue);
       if (value === undefined || Number.isNaN(value as number)) {
         throw new Error(`Invalid value: ${JSON.stringify(newValue)}`);
       }
@@ -391,6 +416,7 @@ export function getMibFile(mibname: string) {
 class DevicePrototype extends EventEmitter implements IDevice {
   // will be override for an instance
   $countRef = 1;
+  id = timeid();
 
   // private $debounceDrain = _.debounce(this.drain, 25);
 
@@ -596,6 +622,7 @@ class DevicePrototype extends EventEmitter implements IDevice {
 
   public addref() {
     this.$countRef += 1;
+    debug('addref', new Error('addref').stack);
     return this.$countRef;
   }
 
@@ -822,7 +849,8 @@ class DevicePrototype extends EventEmitter implements IDevice {
         throw new NibusError(
           termStat!,
           this,
-          'Terminate download sequence error, maybe need --no-term');
+          'Terminate download sequence error, maybe need --no-term',
+        );
       }
     };
     if (buffer.length > max - offset) {
@@ -962,6 +990,7 @@ function getConstructor(mib: string): Function {
       this[$dirties] = {};
       Reflect.defineProperty(this, 'address', withValue(address));
       this.$countRef = 1;
+      debug(new Error('CREATE').stack);
       // this.$debounceDrain = _.debounce(this.drain, 25);
     }
 

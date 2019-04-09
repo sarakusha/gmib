@@ -23,9 +23,9 @@ const safeParseNumber = (value: any) => {
   const num = parseFloat(value);
   return Number.isNaN(num) ? value : num;
 };
-const toInt = (value: number | boolean) => typeof value === 'boolean'
-  ? value ? 1 : 0
-  : value;
+// const toInt = (value: number | boolean) => typeof value === 'boolean'
+//   ? value ? 1 : 0
+//   : value;
 
 const styles = (theme: Theme) => createStyles({
   menuItem: {
@@ -140,5 +140,6 @@ const PropertyValueCell = ({ proto, name, value, classes, onChangeProperty }: In
 
 export default compose<InnerProps, Props>(
   hot,
+  React.memo,
   withStyles(styles),
 )(PropertyValueCell);

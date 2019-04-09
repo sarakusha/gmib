@@ -106,18 +106,18 @@ export declare const MibDeviceV: t.IntersectionC<[t.TypeC<{
     }>]>>;
 }>]>;
 declare type Listener<T> = (arg: T) => void;
-declare type ChangedArg = {
+declare type ChangeArg = {
     id: number;
     names: string[];
 };
-declare type ChangedListener = Listener<ChangedArg>;
+export declare type ChangeListener = Listener<ChangeArg>;
 declare type UploadStartArg = {
     domain: string;
     domainSize: number;
     offset: number;
     size: number;
 };
-declare type UploadStartListener = Listener<UploadStartArg>;
+export declare type UploadStartListener = Listener<UploadStartArg>;
 declare type UploadDataArg = {
     domain: string;
     data: Buffer;
@@ -129,14 +129,14 @@ declare type UploadFinishArg = {
     offset: number;
     data: Buffer;
 };
-declare type UploadFinishListener = Listener<UploadFinishArg>;
+export declare type UploadFinishListener = Listener<UploadFinishArg>;
 declare type DownloadStartArg = {
     domain: string;
     domainSize: number;
     offset: number;
     size: number;
 };
-declare type DownloadStartListener = Listener<DownloadStartArg>;
+export declare type DownloadStartListener = Listener<DownloadStartArg>;
 declare type DownloadDataArg = {
     domain: string;
     length: number;
@@ -147,8 +147,9 @@ declare type DownloadFinishArg = {
     offset: number;
     size: number;
 };
-declare type DownloadFinishListener = Listener<DownloadFinishArg>;
+export declare type DownloadFinishListener = Listener<DownloadFinishArg>;
 export interface IDevice {
+    readonly id: string;
     readonly address: Address;
     drain(): Promise<number[]>;
     write(...ids: number[]): Promise<number[]>;
@@ -166,7 +167,7 @@ export interface IDevice {
     getError(idOrName: number | string): any;
     [mibProperty: string]: any;
     on(event: 'connected' | 'disconnected', listener: () => void): this;
-    on(event: 'changing' | 'changed', listener: ChangedListener): this;
+    on(event: 'changing' | 'changed', listener: ChangeListener): this;
     on(event: 'uploadStart', listener: UploadStartListener): this;
     on(event: 'uploadData', listener: UploadDataListener): this;
     on(event: 'uploadFinish', listener: UploadFinishListener): this;
@@ -174,7 +175,7 @@ export interface IDevice {
     on(event: 'downloadData', listener: DownloadDataListener): this;
     on(event: 'downloadFinish', listener: DownloadFinishListener): this;
     once(event: 'connected' | 'disconnected', listener: () => void): this;
-    once(event: 'changing' | 'changed', listener: ChangedListener): this;
+    once(event: 'changing' | 'changed', listener: ChangeListener): this;
     once(event: 'uploadStart', listener: UploadStartListener): this;
     once(event: 'uploadData', listener: UploadDataListener): this;
     once(event: 'uploadFinish', listener: UploadFinishListener): this;
@@ -182,7 +183,7 @@ export interface IDevice {
     once(event: 'downloadData', listener: DownloadDataListener): this;
     once(event: 'downloadFinish', listener: DownloadFinishListener): this;
     addListener(event: 'connected' | 'disconnected', listener: () => void): this;
-    addListener(event: 'changing' | 'changed', listener: ChangedListener): this;
+    addListener(event: 'changing' | 'changed', listener: ChangeListener): this;
     addListener(event: 'uploadStart', listener: UploadStartListener): this;
     addListener(event: 'uploadData', listener: UploadDataListener): this;
     addListener(event: 'uploadFinish', listener: UploadFinishListener): this;
@@ -190,7 +191,7 @@ export interface IDevice {
     addListener(event: 'downloadData', listener: DownloadDataListener): this;
     addListener(event: 'downloadFinish', listener: DownloadFinishListener): this;
     off(event: 'connected' | 'disconnected', listener: () => void): this;
-    off(event: 'changing' | 'changed', listener: ChangedListener): this;
+    off(event: 'changing' | 'changed', listener: ChangeListener): this;
     off(event: 'uploadStart', listener: UploadStartListener): this;
     off(event: 'uploadData', listener: UploadDataListener): this;
     off(event: 'uploadFinish', listener: UploadFinishListener): this;
@@ -198,7 +199,7 @@ export interface IDevice {
     off(event: 'downloadData', listener: DownloadDataListener): this;
     off(event: 'downloadFinish', listener: DownloadFinishListener): this;
     removeListener(event: 'connected' | 'disconnected', listener: () => void): this;
-    removeListener(event: 'changing' | 'changed', listener: ChangedListener): this;
+    removeListener(event: 'changing' | 'changed', listener: ChangeListener): this;
     removeListener(event: 'uploadStart', listener: UploadStartListener): this;
     removeListener(event: 'uploadData', listener: UploadDataListener): this;
     removeListener(event: 'uploadFinish', listener: UploadFinishListener): this;
@@ -206,7 +207,7 @@ export interface IDevice {
     removeListener(event: 'downloadData', listener: DownloadDataListener): this;
     removeListener(event: 'downloadFinish', listener: DownloadFinishListener): this;
     emit(event: 'connected' | 'disconnected'): boolean;
-    emit(event: 'changing' | 'changed', arg: ChangedArg): boolean;
+    emit(event: 'changing' | 'changed', arg: ChangeArg): boolean;
     emit(event: 'uploadStart', arg: UploadStartArg): boolean;
     emit(event: 'uploadData', arg: UploadDataArg): boolean;
     emit(event: 'uploadFinish', arg: UploadFinishArg): boolean;

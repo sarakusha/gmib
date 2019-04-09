@@ -8,8 +8,8 @@
  * the EULA file that was distributed with this source code.
  */
 
-export { default } from './session';
 // export { default as detector } from './detector';
 export { IMibDescription, IKnownPort } from './KnownPorts';
-
 export * from './common';
+export * from './session';
+export { default } from './session';

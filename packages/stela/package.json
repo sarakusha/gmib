@@ -3,6 +3,11 @@
   "version": "1.3.0",
   "description": "Stela",
   "author": "Andrei Sarakeev <avs@nata-info.ru>",
+  "keywords": [
+    "nata-info",
+    "sarakusha",
+    "scoreboard"
+  ],
   "license": "SEE LICENSE IN EULA.md",
   "private": false,
   "scripts": {
@@ -46,8 +51,7 @@
     "recompose": "^0.30.0",
     "socket.io": "^2.2.0",
     "socket.io-client": "^2.2.0",
-    "tslint-react-a11y": "^1.0.0",
-    "uniqid": "^5.0.3"
+    "tslint-react-a11y": "^1.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.0",

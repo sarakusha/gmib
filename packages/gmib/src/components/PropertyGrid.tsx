@@ -70,9 +70,10 @@ const PropertyGrid = ({ classes, device }: InnerProps) => {
   // const [update, forceUpdate] = useForceUpdate();
   const changeHandler = useCallback(
     (name: string, value: any) => {
+      device[name] = value;
       setProps(props => ({
         ...props,
-        [name]: value,
+        [name]: device[name],
       }));
       // console.log('CHANGE', name, value);
       // dispatch({
@@ -135,5 +136,6 @@ const PropertyGrid = ({ classes, device }: InnerProps) => {
 
 export default compose<InnerProps, Props>(
   hot,
+  React.memo,
   withStyles(styles),
 )(PropertyGrid);

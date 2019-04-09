@@ -30,7 +30,8 @@
   "scripts": {
     "test": "jest src",
     "type-check": "tsc --noEmit",
-    "build": "cross-env BABEL_ENV=production yarn clean && tsc --emitDeclarationOnly && babel src --out-dir lib --extensions \".ts,.tsx,.js\"",
+    "rebuild": "cross-env BABEL_ENV=production yarn clean && tsc --emitDeclarationOnly && babel src --out-dir lib --extensions \".ts,.tsx,.js\"",
+    "build": "cross-env BABEL_ENV=production tsc --emitDeclarationOnly && babel src --out-dir lib --extensions \".ts,.tsx,.js\"",
     "clean": "rm -rf lib tsconfig.tsbuildinfo"
   },
   "bugs": {
