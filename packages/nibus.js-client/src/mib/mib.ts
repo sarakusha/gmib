@@ -57,9 +57,7 @@ export function precisionConverter(precision: string): IConverter {
   };
 }
 
-export function enumerationConverter(
-  enumerationValues: IMibType['enumeration'],
-  simpleType?: string): IConverter {
+export function enumerationConverter(enumerationValues: IMibType['enumeration']): IConverter {
   const from: any = {};
   const to: any = {};
   const keys = Reflect.ownKeys(enumerationValues!) as string[];

@@ -1084,12 +1084,12 @@
       }
     },
     "vDirectionType": {
-      "base": "xs:unsignedByte",
+      "base": "xs:boolean",
       "enumeration": {
-        "0": {
+        "false": {
           "annotation": "сверху вниз"
         },
-        "1": {
+        "true": {
           "annotation": "снизу вверх"
         }
       }

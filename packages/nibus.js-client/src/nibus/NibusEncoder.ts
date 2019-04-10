@@ -24,7 +24,7 @@ export default class NibusEncoder extends Transform {
   }
 
   // tslint:disable-next-line
-  public _transform(chunk: any, encoding: string, callback: TransformCallback) {
+  public _transform(chunk: any, _encoding: string, callback: TransformCallback) {
     const chunks = Array.isArray(chunk) ? chunk : [chunk];
     chunks.forEach((datagram: NibusDatagram) => {
       // debugSerial(printBuffer(datagram.raw));

@@ -10,7 +10,7 @@
 
 import Address from '../Address';
 import { NMS_MAX_DATA_LENGTH, Offsets, PREAMBLE } from '../nbconst';
-import { INibusCommon, INibusDatagramJSON, INibusOptions, NibusDatagram, Protocol } from '../nibus';
+import { INibusCommon, INibusDatagramJSON, INibusOptions, NibusDatagram } from '../nibus';
 import { decodeValue, getSizeOf } from './nms';
 import NmsServiceType from './NmsServiceType';
 import NmsValueType from './NmsValueType';

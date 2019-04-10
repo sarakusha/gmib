@@ -10,7 +10,6 @@
 import { IDevice } from '@nata/nibus.js-client/lib/mib';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { hot } from 'react-hot-loader/root';
-// import classNames from 'classnames';
 import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
 import compose from 'recompose/compose';
 import Table from '@material-ui/core/Table';
@@ -21,6 +20,7 @@ import TableRow from '@material-ui/core/TableRow';
 import groupBy from 'lodash/groupBy';
 import Typography from '@material-ui/core/Typography';
 import PropertyValueCell from './PropertyValueCell';
+import debounce from 'lodash/debounce';
 
 const styles = (theme: Theme) => createStyles({
   table: {},
@@ -31,66 +31,65 @@ type Props = {
 };
 type InnerProps = Props & WithStyles<typeof styles>;
 
-// type SetPropertyAction = {
-//   name: string,
-//   value: any,
-// };
-//
-// type PropertyState = Record<string, any>;
-//
-// const reducer = (state: PropertyState = {}, action: SetPropertyAction) => {
-//   console.log(action);
-//   state[action.name] = action.value;
-//   // console.log('STATE', JSON.stringify(state));
-//   return { ...state };
-// };
-//
-// const initializer = (device: IDevice) => {
-//   const mibProperties = Reflect.getMetadata('mibProperties', device) as string[];
-//   const state: PropertyState = {};
-//   mibProperties
-//     .filter(name => Reflect.getMetadata('isReadable', device, name))
-//     .forEach((name: string) => {
-//       state[name] = 0;
-//     });
-//   console.log('initial', state);
-//   return state;
-// };
-//
-// function useForceUpdate() {
-//   const [update, set] = useState(true);
-//   return [update, () => { set(value => !value); }];
-// }
-
-const PropertyGrid = ({ classes, device }: InnerProps) => {
-  console.assert(!!device, 'Invalid device');
+const useDevice = (device: IDevice) => {
   const [props, setProps] = useState({});
-  // const [props, dispatch] =
-  // useReducer<typeof reducer, IDevice>(reducer, device, initializer);
-  // const [update, forceUpdate] = useForceUpdate();
-  const changeHandler = useCallback(
+  const [names, setNames] = useState([] as string[]);
+  const reload = useCallback(
+    () => {
+      device.read().then((props) => {
+        setNames(Object.keys(props));
+        setProps(props);
+      });
+    },
+    [device, setNames, setProps],
+  );
+  useEffect(
+    () => { reload(); },
+    [device],
+  );
+  const update = useCallback(
+    () => {
+      console.log('UPDATE', names.length);
+      setProps(
+        names.reduce(
+          (props, name) => {
+            props[name] = device[name];
+            return props;
+          },
+          {} as Record<string, any>,
+        ));
+    },
+    [device, names],
+  );
+  const drain = useMemo(
+    () => debounce(() => device.drain().then(() => update()), 100),
+    [device, update],
+  );
+
+  const setValue = useCallback(
     (name: string, value: any) => {
       device[name] = value;
       setProps(props => ({
         ...props,
         [name]: device[name],
       }));
-      // console.log('CHANGE', name, value);
-      // dispatch({
-      //   name,
-      //   value,
-      // });
+      drain();
     },
-    [setProps],
+    [device, drain],
   );
-  useEffect(
-    () => {
-      device && device.read()
-        .then(props => setProps(props));
-        // .then(() => forceUpdate());
-    },
-    [device, setProps],
-  );
+
+  return {
+    props,
+    setValue,
+    reload,
+    update,
+    names,
+  };
+};
+
+const PropertyGrid = ({ classes, device }: InnerProps) => {
+  console.assert(!!device, 'Invalid device');
+  const { props, setValue } = useDevice(device);
   const categories = useMemo(
     () => groupBy(
       Object.entries(props),
@@ -123,7 +122,8 @@ const PropertyGrid = ({ classes, device }: InnerProps) => {
                   proto={Reflect.getPrototypeOf(device)}
                   name={name}
                   value={value}
-                  onChangeProperty={changeHandler}
+                  dirty={device.isDirty(name)}
+                  onChangeProperty={setValue}
                 />
               </TableRow>
             ))}

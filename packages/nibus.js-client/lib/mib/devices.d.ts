@@ -165,6 +165,7 @@ export interface IDevice {
     getName(idOrName: string | number): string;
     getRawValue(idOrName: number | string): any;
     getError(idOrName: number | string): any;
+    isDirty(idOrName: string | number): boolean;
     [mibProperty: string]: any;
     on(event: 'connected' | 'disconnected', listener: () => void): this;
     on(event: 'changing' | 'changed', listener: ChangeListener): this;

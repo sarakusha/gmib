@@ -284,7 +284,7 @@ devices.on('delete', (device: IDevice) => {
   }
 });
 
-session.on('found', ({ address, category, connection }) => {
+session.on('found', ({ address, connection }) => {
   console.assert(address.type === AddressType.mac, 'mac-address expected');
   const device = devices.find(address);
   if (device) {

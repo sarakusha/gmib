@@ -30,7 +30,7 @@ import NibusEncoder from './NibusEncoder';
 import NibusDecoder from './NibusDecoder';
 
 export const MINIHOST_TYPE = 0xabc6;
-const FIRMWARE_VERSION_ID = 0x85;
+// const FIRMWARE_VERSION_ID = 0x85;
 const VERSION_ID = 2;
 
 const debug = debugFactory('nibus:connection');

@@ -26,7 +26,7 @@ class Utf8Converter extends Transform {
 
   // tslint:disable-next-line
   public _transform(chunk: any, encoding: string, callback: TransformCallback): void {
-    callback(undefined, decode(chunk, this.encoding));
+    callback(undefined, decode(chunk, encoding));
   }
 }
 

@@ -10,7 +10,7 @@ export interface IConverter {
 }
 export declare function unitConverter(unit: string): IConverter;
 export declare function precisionConverter(precision: string): IConverter;
-export declare function enumerationConverter(enumerationValues: IMibType['enumeration'], simpleType?: string): IConverter;
+export declare function enumerationConverter(enumerationValues: IMibType['enumeration']): IConverter;
 export declare const booleanConverter: IConverter;
 export declare const percentConverter: IConverter;
 export declare function representationConverter(format: string, size: number): IConverter;
@@ -20,7 +20,7 @@ export declare const versionTypeConverter: IConverter;
 export declare function getIntSize(type: string): 1 | 2 | 4 | 8 | undefined;
 export declare function minInclusiveConverter(min: string): IConverter;
 export declare function maxInclusiveConverter(max: string): IConverter;
-export declare const convertTo: (converters: IConverter[]) => (value: PresentType) => PresentType;
-export declare const convertFrom: (converters: IConverter[]) => (value: PresentType) => PresentType;
+export declare const convertTo: (converters: IConverter[]) => (value: string | number | boolean | undefined) => string | number | boolean | undefined;
+export declare const convertFrom: (converters: IConverter[]) => (value: string | number | boolean | undefined) => string | number | boolean | undefined;
 export {};
 //# sourceMappingURL=mib.d.ts.map

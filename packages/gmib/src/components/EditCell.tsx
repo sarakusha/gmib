@@ -37,6 +37,9 @@ const styles = (theme: Theme) => createStyles({
     marginLeft: 0,
     marginRight: -20,
   },
+  inputDirty: {
+    fontWeight: 'bold',
+  },
 });
 
 type Props = {
@@ -46,23 +49,22 @@ type Props = {
   unit?: string,
   min?: number,
   max?: number,
+  dirty?: boolean,
   onChangeProperty?: (name: string, value: any) => void,
 } & TableCellProps;
 type InnerProps = Props & WithStyles<typeof styles>;
 
 const EditCell =
   ({
-    value, classes, className, align, type, unit, min, max, name, onChangeProperty, ...props
+    value, classes, className, align, type, unit, min, max, name, onChangeProperty, dirty, ...props
   }: InnerProps) => {
-    const inputClasses = useMemo(
-      () => ({
-        input: classNames({
-          [classes.inputRight]: align === 'right',
-          [classes.inputCenter]: align === 'center',
-        }),
+    const inputClasses = {
+      input: classNames({
+        [classes.inputRight]: align === 'right',
+        [classes.inputCenter]: align === 'center',
+        [classes.inputDirty]: dirty,
       }),
-      [align],
-    );
+    };
     const endAdornment = useMemo(
       () => unit
         ? (

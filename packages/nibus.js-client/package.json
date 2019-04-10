@@ -82,5 +82,6 @@
     "sax": "^1.2.4",
     "xdg-basedir": "^3.0.0",
     "xpipe": "^1.0.5"
-  }
+  },
+  "peerDependencies": {}
 }

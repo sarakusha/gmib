@@ -217,6 +217,7 @@ export interface IDevice {
   getName(idOrName: string | number): string;
   getRawValue(idOrName: number | string): any;
   getError(idOrName: number | string): any;
+  isDirty(idOrName: string | number): boolean;
   [mibProperty: string]: any;
 
   on(event: 'connected' | 'disconnected', listener: () => void): this;
@@ -328,7 +329,7 @@ function defineMibProperty(
     }
     precision && converters.push(precisionConverter(precision));
     if (enumeration) {
-      converters.push(enumerationConverter(enumeration, simpleType));
+      converters.push(enumerationConverter(enumeration));
       Reflect.defineMetadata('enum', Object.entries(enumeration)
         .map(([key, val]) => [
           val!.annotation,
