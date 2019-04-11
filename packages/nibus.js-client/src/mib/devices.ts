@@ -417,8 +417,6 @@ export function getMibFile(mibname: string) {
 class DevicePrototype extends EventEmitter implements IDevice {
   // will be override for an instance
   $countRef = 1;
-  id = timeid();
-
   // private $debounceDrain = _.debounce(this.drain, 25);
 
   constructor(mibname: string) {
@@ -936,6 +934,7 @@ class DevicePrototype extends EventEmitter implements IDevice {
 
 // tslint:disable-next-line
 interface DevicePrototype {
+  readonly id: string;
   readonly address: Address;
   [mibProperty: string]: any;
   $countRef: number;
@@ -974,7 +973,7 @@ function findMibByType(type: number, version?: number): string | undefined {
   // });
 }
 
-declare interface Devices {
+export declare interface Devices {
   on(event: 'new' | 'delete', deviceListener: (device: IDevice) => void): this;
   once(event: 'new' | 'delete', deviceListener: (device: IDevice) => void): this;
   addListener(event: 'new' | 'delete', deviceListener: (device: IDevice) => void): this;
@@ -991,12 +990,13 @@ function getConstructor(mib: string): Function {
       this[$dirties] = {};
       Reflect.defineProperty(this, 'address', withValue(address));
       this.$countRef = 1;
-      debug(new Error('CREATE').stack);
-      // this.$debounceDrain = _.debounce(this.drain, 25);
+      (this as any).id = timeid();
+      // debug(new Error('CREATE').stack);
     }
 
     const prototype = new DevicePrototype(mib);
     Device.prototype = Object.create(prototype);
+    (Device as any).displayName = `${mib[0].toUpperCase()}${mib.slice(1)}`;
     constructor = Device;
     mibTypesCache[mib] = constructor;
   }
@@ -1007,7 +1007,7 @@ export function getMibPrototype(mib: string): Object {
   return getConstructor(mib).prototype;
 }
 
-class Devices extends EventEmitter {
+export class Devices extends EventEmitter {
   get = (): IDevice[] => _.values(deviceMap);
 
   find = (address: AddressParam): IDevice | undefined => {
@@ -1023,7 +1023,7 @@ class Devices extends EventEmitter {
       mib = findMibByType(mibOrType, version);
       if (mib === undefined) throw new Error('Unknown mib type');
     } else if (typeof mibOrType === 'string') {
-      mib = String(mibOrType || 'minihost_v2.06b');
+      mib = String(mibOrType);
     } else {
       throw new Error(`mib or type expected, got ${mibOrType}`);
     }
