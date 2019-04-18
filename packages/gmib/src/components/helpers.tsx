@@ -8,3 +8,6 @@
  * the EULA file that was distributed with this source code.
  */
 
+export function tuplify<T extends any[]>(...args: T) {
+  return args;
+};

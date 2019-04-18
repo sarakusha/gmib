@@ -19,19 +19,16 @@ mibCategories:
     mib: ti_lux_2_3
     find: sarp
     disableBatchReading: true
+  ftdi:
+    select:
+      - siolynx
+      - minihost
 knownDevices:
   - device: Siolynx2
     vid: '0403' # 1027
     pid: '6001' # 24577
-    manufacturer: NATA
     category: siolynx
   - device: FT232R USB UART
-    vid: '0403'
-    pid: '6001'
-    manufacturer: FTDI
-    category: siolynx
-  # Windows
-  - device: USB Serial Converter
     vid: '0403'
     pid: '6001'
     manufacturer: FTDI
@@ -65,12 +62,6 @@ knownDevices:
     vid: '0403'
     pid: '6015' # 24597
     manufacturer: 'Nata-Info'
-    category: minihost
-  # Windows
-  - device: USB Serial Converter
-    vid: '0403'
-    pid: '6015'
-    manufacturer: FTDI
     category: minihost
   - device: FT230X Basic UART
     vid: '0403'

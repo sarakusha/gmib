@@ -119,36 +119,25 @@ class NibusSession extends EventEmitter {
 
   private find(connection: NibusConnection) {
     const { description } = connection;
-    const { category } = description;
-    switch (description.find) {
-      case 'sarp': {
-        let { type } = description;
-        if (type === undefined) {
-          const mib = require(getMibFile(description.mib!));
-          const { types } = mib;
-          const device = types[mib.device] as IMibDeviceType;
-          type = toInt(device.appinfo.device_type);
-        }
-        connection.once('sarp', (sarpDatagram: SarpDatagram) => {
-          const address = new Address(sarpDatagram.mac);
-          debug(`device ${category}[${address}] was found on ${connection.path}`);
-          this.emit(
-            'found',
-            {
-              connection,
-              category,
-              address,
-            },
-          );
-        });
-        connection.findByType(type).catch(noop);
-        break;
-      }
-      case 'version':
-        connection.sendDatagram(createNmsRead(Address.empty, 2))
-          .then((datagram) => {
-            if (!datagram || Array.isArray(datagram)) return;
-            const address = new Address(datagram.source.mac);
+    const descriptions = Array.isArray(description.select) ? description.select : [description];
+    descriptions.forEach((description) => {
+      const { category } = description;
+      switch (description.find) {
+        case 'sarp': {
+          let { type } = description;
+          if (type === undefined) {
+            const mib = require(getMibFile(description.mib!));
+            const { types } = mib;
+            const device = types[mib.device] as IMibDeviceType;
+            type = toInt(device.appinfo.device_type);
+          }
+          connection.once('sarp', (sarpDatagram: SarpDatagram) => {
+            if (connection.description.category === 'ftdi') {
+              debug(`category was changed: ${connection.description.category} => ${category}`);
+              connection.description = description;
+            }
+            const address = new Address(sarpDatagram.mac);
+            debug(`device ${category}[${address}] was found on ${connection.path}`);
             this.emit(
               'found',
               {
@@ -157,12 +146,34 @@ class NibusSession extends EventEmitter {
                 address,
               },
             );
-            debug(`device ${category}[${address}] was found on ${connection.path}`);
-          }, noop);
-        break;
-      default:
-        break;
-    }
+          });
+          connection.findByType(type).catch(noop);
+          break;
+        }
+        case 'version':
+          connection.sendDatagram(createNmsRead(Address.empty, 2))
+            .then((datagram) => {
+              if (!datagram || Array.isArray(datagram)) return;
+              if (connection.description.category === 'ftdi') {
+                debug(`category was changed: ${connection.description.category} => ${category}`);
+                connection.description = description;
+              }
+              const address = new Address(datagram.source.mac);
+              this.emit(
+                'found',
+                {
+                  connection,
+                  category,
+                  address,
+                },
+              );
+              debug(`device ${category}[${address}] was found on ${connection.path}`);
+            }, noop);
+          break;
+        default:
+          break;
+      }
+    });
   }
 
   // public async start(watch = true) {
@@ -187,11 +198,15 @@ class NibusSession extends EventEmitter {
   start() {
     return new Promise<number>((resolve) => {
       if (this.isStarted) return resolve(this.connections.length);
+      this.isStarted = true;
       this.socket = Client.connect(PATH);
+      this.socket.once('error', (error) => {
+        console.error('error while start nibus.service', error.message);
+        this.close();
+      });
       this.socket.on('ports', this.reloadHandler);
       this.socket.on('add', this.addHandler);
       this.socket.on('remove', this.removeHandler);
-      this.isStarted = true;
       this.socket.once('ports', (ports) => {
         resolve(ports.length);
         this.emit('start');

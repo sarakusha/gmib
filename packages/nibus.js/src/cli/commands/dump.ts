@@ -138,6 +138,10 @@ const dumpCommand: CommandModule<CommonOpts, DumpOpts> = {
     };
     const mac = argv.mac && new Address(argv.mac);
     count = await session.start();
+    // На Windows сложнее метод определения и занимает больше времени
+    if (process.platform === 'win32') {
+      count *= 2;
+    }
     session.on('found', async ({ address, connection }) => {
       try {
         if (connection.description.link) {

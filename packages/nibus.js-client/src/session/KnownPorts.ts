@@ -20,6 +20,7 @@ export const CategoryV = t.union([
     fancontrol: null,
     c22: null,
     relay: null,
+    ftdi: null,
     undefined: null,
   }),
   t.undefined,
@@ -44,42 +45,43 @@ export const KnownPortV = t.intersection([
 
 export interface IKnownPort extends t.TypeOf<typeof KnownPortV> {}
 
-export const FindKindV = t.keyof({
-  sarp: null,
-  version: null,
-}, 'FindKind');
-export type FindKind = t.TypeOf<typeof FindKindV>;
+// export const FindKindV = t.keyof({
+//   sarp: null,
+//   version: null,
+// }, 'FindKind');
+// export type FindKind = t.TypeOf<typeof FindKindV>;
+//
+// export const NibusBaudRateV = t.union(
+//   [t.literal(115200), t.literal(57600), t.literal(28800)],
+//   'NibusBaudRate',
+// );
+//
+// export const NibusParityV = t.keyof(
+//   {
+//     none: null,
+//     even: null,
+//     mark: null,
+//   },
+//   'NibusParity',
+// );
 
-export const NibusBaudRateV = t.union(
-  [t.literal(115200), t.literal(57600), t.literal(28800)],
-  'NibusBaudRate',
-);
-
-export const NibusParityV = t.keyof(
-  {
-    none: null,
-    even: null,
-    mark: null,
-  },
-  'NibusParity',
-);
-
-export type NibusBaudRate = t.TypeOf<typeof NibusBaudRateV>;
-export type NibusParity = t.TypeOf<typeof NibusParityV>;
-
-export const MibDescriptionV = t.partial({
-  type: t.number,
-  mib: t.string,
-  link: t.boolean,
-  baudRate: NibusBaudRateV,
-  parity: NibusParityV,
-  category: t.string,
-  find: FindKindV,
-  disableBatchReading: t.boolean,
-});
-
-export interface IMibDescription extends t.TypeOf<typeof MibDescriptionV> {
-  // baudRate?: NibusBaudRate;
-  // parity?: NibusParity;
-  // find?: FindKind;
-}
+// export type NibusBaudRate = t.TypeOf<typeof NibusBaudRateV>;
+// export type NibusParity = t.TypeOf<typeof NibusParityV>;
+//
+// export const MibDescriptionV = t.partial({
+//   type: t.number,
+//   mib: t.string,
+//   link: t.boolean,
+//   baudRate: NibusBaudRateV,
+//   parity: NibusParityV,
+//   category: t.string,
+//   find: FindKindV,
+//   disableBatchReading: t.boolean,
+//   select: t.array(t.string),
+// });
+//
+// export interface IMibDescription extends t.TypeOf<typeof MibDescriptionV> {
+//   baudRate?: NibusBaudRate;
+//   parity?: NibusParity;
+//   find?: FindKind;
+// }

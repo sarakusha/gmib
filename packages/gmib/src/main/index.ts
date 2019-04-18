@@ -11,6 +11,7 @@
 import { app, BrowserWindow } from 'electron';
 import * as path from 'path';
 import { format as formatUrl } from 'url';
+import { Socket } from 'net';
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
@@ -80,3 +81,4 @@ app.on('activate', () => {
 app.on('ready', () => {
   mainWindow = createMainWindow();
 });
+

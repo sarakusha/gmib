@@ -13,7 +13,8 @@ import debugFactory from 'debug';
 import { EventEmitter } from 'events';
 import { ipc } from '@nata/nibus.js-client/';
 import Server, { Direction } from './Server';
-import { IMibDescription, IKnownPort } from '@nata/nibus.js-client/lib/session';
+import { IKnownPort } from '@nata/nibus.js-client/lib/session';
+import { IMibDescription } from '@nata/nibus.js-client/lib/MibDescription';
 
 const debug = debugFactory('nibus:serial-tee');
 const portOptions: OpenOptions = {

@@ -18,7 +18,7 @@ import setDisplayName from 'recompose/setDisplayName';
 import MenuItem from '@material-ui/core/MenuItem';
 import EditCell from './EditCell';
 
-const capitalize = (str: string) => str.charAt(0).toUpperCase() + str.slice(1);
+const capitalize = (str: string) => str && (str.charAt(0).toUpperCase() + str.slice(1));
 const safeParseNumber = (value: any) => {
   const num = parseFloat(value);
   return Number.isNaN(num) ? value : num;
@@ -58,8 +58,8 @@ type InnerProps = Props & WithStyles<typeof styles>;
 type CellProps = { value: any, dirty?: boolean };
 type CellComponent = React.FunctionComponent<CellProps>;
 
-const PropertyValueCell =
-  ({ proto, name, value, classes, onChangeProperty, dirty }: InnerProps) => {
+const PropertyValueCell: React.FC<InnerProps> =
+  ({ proto, name, value, classes, onChangeProperty, dirty }) => {
     // console.log(name, value, dirty);
     const cellFactory = useCallback<() => CellComponent>(
       () => {

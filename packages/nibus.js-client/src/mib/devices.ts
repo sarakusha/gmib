@@ -35,11 +35,13 @@ import {
   createNmsUploadSegment,
   createNmsVerifyDomainChecksum,
   createNmsWrite,
-  getNmsType, TypedValue,
+  getNmsType,
+  TypedValue,
 } from '../nms';
 import NmsDatagram from '../nms/NmsDatagram';
 import NmsValueType from '../nms/NmsValueType';
 import { ConfigV } from '../session/common';
+import timeid from '../timeid';
 import {
   booleanConverter,
   convertFrom,
@@ -60,7 +62,6 @@ import {
   versionTypeConverter,
   withValue,
 } from './mib';
-import timeid from '../timeid';
 // import { getMibsSync } from './mib2json';
 // import detector from '../service/detector';
 
@@ -199,14 +200,15 @@ type DownloadDataArg = { domain: string, length: number };
 export type DownloadDataListener = Listener<DownloadDataArg>;
 type DownloadFinishArg = { domain: string; offset: number, size: number };
 export type DownloadFinishListener = Listener<DownloadFinishArg>;
+export type DeviceId = string & { __brand: 'DeviceId' };
 
 export interface IDevice {
-  readonly id: string;
+  readonly id: DeviceId;
   readonly address: Address;
   drain(): Promise<number[]>;
   write(...ids: number[]): Promise<number[]>;
   read(...ids: number[]): Promise<{ [name: string]: any }>;
-  upload(domain: string, offset?: number, size?: number): Promise<Uint8Array>;
+  upload(domain: string, offset?: number, size?: number): Promise<Buffer>;
   download(domain: string, data: Buffer, offset?: number, noTerm?: boolean): Promise<void>;
   execute(
     program: string,
@@ -318,8 +320,74 @@ function defineMibProperty(
   const isReadable = appinfo.access.indexOf('r') > -1;
   const isWritable = appinfo.access.indexOf('w') > -1;
   let enumeration: IMibType['enumeration'] | undefined;
+  let min: number | undefined;
+  let max: number | undefined;
+  switch (getNmsType(simpleType)) {
+    case NmsValueType.Int8:
+      min = -128;
+      max = 127;
+      break;
+    case NmsValueType.Int16:
+      min = -32768;
+      max = 32767;
+      break;
+    case NmsValueType.Int32:
+      min = -2147483648;
+      max = 2147483647;
+      break;
+    case NmsValueType.UInt8:
+      min = 0;
+      max = 255;
+      break;
+    case NmsValueType.UInt16:
+      min = 0;
+      max = 65535;
+      break;
+    case NmsValueType.UInt32:
+      min = 0;
+      max = 4294967295;
+      break;
+  }
+  switch (simpleType) {
+    case 'packed8Float':
+      converters.push(packed8floatConverter(type));
+      break;
+    case 'fixedPointNumber4':
+      converters.push(fixedPointNumber4Converter);
+      break;
+    default:
+      break;
+  }
+  if (key === 'brightness' && prop.type === 'xs:unsignedByte') {
+    converters.push(percentConverter);
+    Reflect.defineMetadata('unit', '%', target, propertyKey);
+    Reflect.defineMetadata('min', 0, target, propertyKey);
+    Reflect.defineMetadata('max', 100, target, propertyKey);
+  } else if (isWritable) {
+    if (type != null) {
+      const { minInclusive, maxInclusive } = type;
+      if (minInclusive) {
+        const val = parseFloat(minInclusive);
+        min = min !== undefined ? Math.max(min, val) : val;
+      }
+      if (maxInclusive) {
+        const val = parseFloat(maxInclusive);
+        max = max !== undefined ? Math.min(max, val) : val;
+      }
+    }
+    if (min !== undefined) {
+      min = convertTo(converters)(min) as number;
+      converters.push(minInclusiveConverter(min));
+      Reflect.defineMetadata('min', min, target, propertyKey);
+    }
+    if (max !== undefined) {
+      max = convertTo(converters)(max) as number;
+      converters.push(maxInclusiveConverter(max));
+      Reflect.defineMetadata('max', max, target, propertyKey);
+    }
+  }
   if (type != null) {
-    const { appinfo: info = {}, minInclusive, maxInclusive } = type;
+    const { appinfo: info = {} } = type;
     enumeration = type.enumeration;
     const { units, precision, representation } = info;
     const size = getIntSize(simpleType);
@@ -337,31 +405,8 @@ function defineMibProperty(
         ]), target, propertyKey);
     }
     representation && size && converters.push(representationConverter(representation, size));
-    if (minInclusive) {
-      converters.push(minInclusiveConverter(minInclusive));
-      Reflect.defineMetadata('min', minInclusive, target, propertyKey);
-    }
-    if (maxInclusive) {
-      converters.push(maxInclusiveConverter(maxInclusive));
-      Reflect.defineMetadata('max', maxInclusive, target, propertyKey);
-    }
   }
-  if (key === 'brightness' && prop.type === 'xs:unsignedByte') {
-    converters.push(percentConverter);
-    Reflect.defineMetadata('unit', '%', target, propertyKey);
-    Reflect.defineMetadata('min', 0, target, propertyKey);
-    Reflect.defineMetadata('max', 100, target, propertyKey);
-  }
-  switch (simpleType) {
-    case 'packed8Float':
-      converters.push(packed8floatConverter(type));
-      break;
-    case 'fixedPointNumber4':
-      converters.push(fixedPointNumber4Converter);
-      break;
-    default:
-      break;
-  }
+
   if (prop.type === 'versionType') {
     converters.push(versionTypeConverter);
   }
@@ -417,6 +462,7 @@ export function getMibFile(mibname: string) {
 class DevicePrototype extends EventEmitter implements IDevice {
   // will be override for an instance
   $countRef = 1;
+
   // private $debounceDrain = _.debounce(this.drain, 25);
 
   constructor(mibname: string) {
@@ -715,11 +761,15 @@ class DevicePrototype extends EventEmitter implements IDevice {
   }
 
   private readAll(): Promise<any> {
+    if (this.$read) return this.$read;
     const map: { [id: string]: string[] } = Reflect.getMetadata('map', this);
     const ids = Object.entries(map)
       .filter(([, names]) => Reflect.getMetadata('isReadable', this, names[0]))
-      .map(([id]) => Number(id));
-    return ids.length > 0 ? this.read(...ids) : Promise.resolve([]);
+      .map(([id]) => Number(id))
+      .sort();
+    this.$read = ids.length > 0 ? this.read(...ids) : Promise.resolve([]);
+    const clear = () => delete this.$read;
+    return this.$read.finally(clear);
   }
 
   public async read(...ids: number[]): Promise<{ [name: string]: any }> {
@@ -934,10 +984,11 @@ class DevicePrototype extends EventEmitter implements IDevice {
 
 // tslint:disable-next-line
 interface DevicePrototype {
-  readonly id: string;
+  readonly id: DeviceId;
   readonly address: Address;
   [mibProperty: string]: any;
   $countRef: number;
+  $read?: Promise<any>;
   [$values]: { [id: number]: any };
   [$errors]: { [id: number]: Error };
   [$dirties]: { [id: number]: boolean };
@@ -990,7 +1041,7 @@ function getConstructor(mib: string): Function {
       this[$dirties] = {};
       Reflect.defineProperty(this, 'address', withValue(address));
       this.$countRef = 1;
-      (this as any).id = timeid();
+      (this as any).id = timeid() as DeviceId;
       // debug(new Error('CREATE').stack);
     }
 

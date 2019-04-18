@@ -33,19 +33,28 @@ export const NibusParityV = t.keyof(
 export type NibusBaudRate = t.TypeOf<typeof NibusBaudRateV>;
 export type NibusParity = t.TypeOf<typeof NibusParityV>;
 
-export const MibDescriptionV = t.partial({
-  type: t.number,
-  mib: t.string,
-  link: t.boolean,
-  baudRate: NibusBaudRateV,
-  parity: NibusParityV,
-  category: t.string,
-  find: FindKindV,
-  disableBatchReading: t.boolean,
-});
+export const MibDescriptionV: t.Type<IMibDescription> = t.recursion('MibDescriptionV', () =>
+  t.partial({
+    type: t.number,
+    mib: t.string,
+    link: t.boolean,
+    baudRate: NibusBaudRateV,
+    parity: NibusParityV,
+    category: t.string,
+    find: FindKindV,
+    disableBatchReading: t.boolean,
+    select: t.array(MibDescriptionV),
+  }),
+);
 
-export interface IMibDescription extends t.TypeOf<typeof MibDescriptionV> {
-  // baudRate?: NibusBaudRate;
-  // parity?: NibusParity;
-  // find?: FindKind;
+export interface IMibDescription {
+  type?: number,
+  mib?: string,
+  link?: boolean,
+  baudRate?: NibusBaudRate,
+  parity?: NibusParity,
+  category?: string,
+  find?: FindKind,
+  disableBatchReading?: boolean,
+  select?: IMibDescription[],
 }

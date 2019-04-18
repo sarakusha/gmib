@@ -210,18 +210,16 @@ export function getIntSize(type: string) {
   }
 }
 
-export function minInclusiveConverter(min: string): IConverter {
-  const minIncl = parseFloat(min);
+export function minInclusiveConverter(min: number): IConverter {
   return {
-    from: value => typeof value === 'number' ?  Math.max(value, minIncl) : value,
+    from: value => typeof value === 'number' ?  Math.max(value, min) : value,
     to: value => value,
   };
 }
 
-export function maxInclusiveConverter(max: string): IConverter {
-  const maxIncl = parseFloat(max);
+export function maxInclusiveConverter(max: number): IConverter {
   return {
-    from: value => typeof value === 'number' ? Math.min(value, maxIncl) : value,
+    from: value => typeof value === 'number' ? Math.min(value, max) : value,
     to: value => value,
   };
 }

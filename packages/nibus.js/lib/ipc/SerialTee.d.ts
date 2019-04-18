@@ -1,7 +1,8 @@
 /// <reference types="node" />
 import { EventEmitter } from 'events';
 import { Direction } from './Server';
-import { IMibDescription, IKnownPort } from '@nata/nibus.js-client/lib/session';
+import { IKnownPort } from '@nata/nibus.js-client/lib/session';
+import { IMibDescription } from '@nata/nibus.js-client/lib/MibDescription';
 export interface SerialLogger {
     (data: Buffer, dir: Direction): void;
 }

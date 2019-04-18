@@ -9,7 +9,7 @@
  */
 
 // export { default as detector } from './detector';
-export { IMibDescription, IKnownPort } from './KnownPorts';
+export { IKnownPort } from './KnownPorts';
 export * from './common';
 export * from './session';
 export { default } from './session';

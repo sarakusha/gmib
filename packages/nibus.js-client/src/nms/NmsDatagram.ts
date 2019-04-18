@@ -154,9 +154,9 @@ export default class NmsDatagram extends NibusDatagram implements INmsOptions {
   }
 
   public isResponseFor(req: NmsDatagram) {
-    const { isResponse, service, source, id } = this;
-    return isResponse && service === req.service
-      && (source.equals(req.destination) || (id === req.id && req.destination.isEmpty));
+    const { isResponse, service, destination } = this;
+    return isResponse && service === req.service && destination.equals(req.source);
+      // && (source.equals(req.destination) || (id === req.id && req.destination.isEmpty));
   }
 
   public toJSON(): INmsDatagramJSON {

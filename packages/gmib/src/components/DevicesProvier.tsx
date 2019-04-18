@@ -8,32 +8,31 @@
  * the EULA file that was distributed with this source code.
  */
 
-import session from '@nata/nibus.js-client';
-import { IDevice } from '@nata/nibus.js-client/lib/mib';
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { useSessionContext } from './SessionContext';
+import { useSessionContext } from './SessionProvider';
 
-type DeviceId = string | undefined;
+export type DeviceId = string | null;
 const emptyProto = Object.freeze({});
 const useDevices = () => {
-  const { devices } = useSessionContext();
+  const { devices, session } = useSessionContext();
   const createDevice = useCallback(devices.create.bind(devices), []);
+  type DeviceType = ReturnType<typeof createDevice>;
   const [devs, setDevices] = useState(devices.get());
-  const [current, setCurrent] = useState<DeviceId>();
+  const [current, setCurrent] = useState<DeviceId>(null);
   const getProto = useCallback(
     (id: DeviceId) => {
       if (!id) return emptyProto;
       const device = devs.find(device => device.id === id);
       return device ? Reflect.getPrototypeOf(device) : emptyProto;
     },
-    [],
+    [devs],
   );
   useEffect(
     () => {
       const updateHandler = () => setDevices(devices.get());
-      const disconnectHandler = (device: IDevice) => {
+      const disconnectHandler = (device: DeviceType) => {
         if (device.id === current) {
-          setCurrent(undefined);
+          setCurrent(null);
         }
         device.release();
       };
@@ -56,8 +55,9 @@ const useDevices = () => {
     devices: devs,
   };
 };
-export const DevicesContext = createContext<ReturnType<typeof useDevices>>(undefined as any);
-export const DevicesProvider: React.FC<{}> = ({ children }) => {
+const DevicesContext = createContext<ReturnType<typeof useDevices>>(undefined as any);
+export const useDevicesContext = () => useContext(DevicesContext);
+const DevicesProvider: React.FC<{}> = ({ children }) => {
   const context = useDevices();
   return (
     <DevicesContext.Provider value={context}>
@@ -65,4 +65,5 @@ export const DevicesProvider: React.FC<{}> = ({ children }) => {
     </DevicesContext.Provider>
   );
 };
-export const useDevicesContext = () => useContext(DevicesContext);
+
+export default DevicesProvider;

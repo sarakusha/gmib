@@ -41,7 +41,7 @@ type Props = {
 };
 type InnerProps = Props & WithStyles<typeof styles>;
 
-const ErrorCard = ({ error, classes, onAction }: InnerProps) => {
+const ErrorCard: React.FC<InnerProps> = ({ error, classes, onAction }) => {
   const clickHandler = useCallback((event: MouseEvent) => onAction && onAction(), [onAction]);
   return (
     <Card className={classes.card}>

@@ -1,6 +1,6 @@
 {
   "name": "@nata/gmib",
-  "version": "0.0.1",
+  "version": "0.2.0",
   "description": "Nata-Info gmib tool",
   "keywords": [
     "nata-info",
@@ -20,26 +20,35 @@
     "url": "https://github.com/sarakusha/nata/issues"
   },
   "scripts": {
-    "dev": "electron-webpack dev",
-    "compile": "NODE_ENV=production electron-webpack",
+    "dev": "cross-env electron-webpack dev",
+    "compile": "cross-env NODE_ENV=production electron-webpack",
     "dist": "yarn compile && electron-builder",
     "dist:dir": "yarn dist --dir -c.compression=store -c.mac.identity=null",
+    "dist:win": "yarn dist -w",
+    "dist:win32": "yarn dist -w --ia32",
     "type": "tsc --project tsconfig.json --noEmit",
     "showMainConfig": "node src/util/show-config.js main",
-    "showRendererConfig": "node src/util/show-config.js renderer"
+    "showRendererConfig": "node src/util/show-config.js renderer",
+    "analyze": "cross-env ANALYZE=1 electron-webpack dev"
   },
   "dependencies": {
     "@material-ui/core": "^3.9.2",
     "@material-ui/icons": "^3.0.2",
     "@nata/nibus.js-client": "^1.2.6",
     "classnames": "^2.2.6",
+    "electron-json-storage": "^4.1.6",
+    "immer": "^2.1.5",
+    "lerna": "^3.11.1",
     "lodash": "^4.17.11",
     "react": "^16.8.6",
     "react-dom": "npm:@hot-loader/react-dom",
     "react-hot-loader": "^4.8.2",
+    "react-swipeable-views": "^0.13.1",
     "recompose": "^0.30.0",
+    "remove": "^0.1.5",
     "source-map-support": "^0.5.11",
-    "typesafe-actions": "^4.0.0"
+    "typeface-roboto": "^0.0.54",
+    "warning": "^4.0.3"
   },
   "devDependencies": {
     "@babel/core": "^7.4.0",
@@ -47,10 +56,16 @@
     "@babel/preset-react": "^7.0.0",
     "@types/classnames": "^2.2.7",
     "@types/electron-devtools-installer": "^2.2.0",
+    "@types/electron-json-storage": "^4.0.0",
     "@types/material-ui": "^0.21.6",
     "@types/react": "^16.8.10",
     "@types/react-dom": "^16.8.3",
+    "@types/react-swipeable-views": "^0.13.0",
     "@types/recompose": "^0.30.5",
+    "@types/warning": "^3.0.0",
+    "babel-plugin-import": "^1.11.0",
+    "cross-env": "^5.2.0",
+    "css-loader": "^2.1.1",
     "electron": "^4.1.1",
     "electron-builder": "^20.39.0",
     "electron-devtools-installer": "^2.2.4",
@@ -62,7 +77,7 @@
     "tslint-react-hooks": "^2.0.0",
     "typescript": "^3.3.4000",
     "webpack": "^4.29.6",
-    "webpack-build-notifier": "^0.1.31"
+    "webpack-build-notifier": "^1.0.1"
   },
   "build": {
     "appId": "ru.nata-info.gmib",

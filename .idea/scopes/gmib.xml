@@ -1,3 +1,3 @@
 <component name="DependencyValidationManager">
-  <scope name="gmib" pattern="file[@nata]:packages/gmib//*&amp;&amp;!file[@nata]:packages/gmib/dist//*||file[@nata]:packages/nibus.js/src//*||file[@nata]:packages/nibus.js-client/src//*||file[@nata]:packages/nibus.js-client/mibs/*" />
+  <scope name="gmib" pattern="file[@nata]:packages/gmib//*&amp;&amp;!file[@nata]:packages/gmib/dist//*||file[@nata]:packages/nibus.js/src//*||file[@nata]:packages/nibus.js-client/src//*||file[@nata]:packages/nibus.js-client/mibs/*||file:packages/nibus.js/detection.yml" />
 </component>

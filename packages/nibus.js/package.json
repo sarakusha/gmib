@@ -1,6 +1,6 @@
 {
   "name": "@nata/nibus.js",
-  "version": "1.3.3-b",
+  "version": "1.3.4",
   "description": "Nata-Info NiBUS",
   "keywords": [
     "nata-info",
@@ -13,7 +13,7 @@
     "type-check": "tsc --noEmit",
     "service": "cross-env NODE_ENV=development DEBUG=nibus babel-node --extensions \".ts,.tsx,.js\" src/index.ts start",
     "build": "cross-env BABEL_ENV=production yarn clean && tsc --emitDeclarationOnly && babel src --out-dir lib --extensions \".ts,.tsx,.js\" && chmod +x lib/index.js",
-    "clean": "rm -rf lib tsconfig.tsbuildinfo"
+    "clean": "rimraf -rf lib tsconfig.tsbuildinfo"
   },
   "bin": {
     "nibus": "lib/index.js"
@@ -76,6 +76,7 @@
     "babel-core": "^7.0.0-bridge.0",
     "babel-jest": "^24.1.0",
     "babel-plugin-source-map-support": "^2.0.1",
+    "cross-env": "^5.2.0",
     "jest": "^24.1.0",
     "rimraf": "^2.6.3",
     "supports-color": "^6.1.0",

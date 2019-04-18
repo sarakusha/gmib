@@ -8,44 +8,57 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { IDevice } from '@nata/nibus.js-client/lib/mib';
-import React, { useCallback } from 'react';
-import { hot } from 'react-hot-loader/root';
-import { useDevices } from './SessionContext';
 import ListItem from '@material-ui/core/ListItem';
 import ListItemIcon from '@material-ui/core/ListItemIcon';
 import ListItemText from '@material-ui/core/ListItemText';
 import ListSubheader from '@material-ui/core/ListSubheader';
 import DeviceHubIcon from '@material-ui/icons/DeviceHub';
-// import TvIcon from '@material-ui/icons/Tv';
+import DeviceIcon from '@material-ui/icons/Memory';
+import TvIcon from '@material-ui/icons/Tv';
+import { DeviceId } from '@nata/nibus.js-client/lib/mib';
+import React, { useCallback } from 'react';
+import { hot } from 'react-hot-loader/root';
+import { useDevicesContext } from './DevicesProvier';
 
-type Props = {
-  setCurrent: (device: IDevice) => void,
-};
-
-const DeviceListItems = ({ setCurrent }: Props) => {
-  const [devices] = useDevices();
+const DeviceListItems: React.FC<{}> = () => {
+  const { devices, setCurrent, current } = useDevicesContext();
   const clickHandler = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
-      const index = Number(e.currentTarget.dataset.id);
-      setCurrent(devices[index]);
+      const id = e.currentTarget.dataset.id as DeviceId || null;
+      setCurrent(id);
     },
-    [devices],
+    [],
   );
   return (
     <>
       <ListSubheader inset>Устройства</ListSubheader>
-      {devices.map((device, index) => (
-        <ListItem button key={device.id} onClick={clickHandler} data-id={index}>
-          <ListItemIcon>
-            <DeviceHubIcon />
-          </ListItemIcon>
-          <ListItemText
-            primary={device.address.toString()}
-            secondary={Reflect.getMetadata('mib', device)}
-          />
-        </ListItem>
-      ))}
+      {devices.map((device) => {
+        const desc = device.connection && device.connection.description || {};
+        let Icon = DeviceIcon;
+        if (desc.link) {
+          Icon = DeviceHubIcon;
+        } else if (desc.mib && desc.mib.startsWith('minihost')) {
+          Icon = TvIcon;
+        }
+        return (
+          <ListItem
+            button
+            key={device.id}
+            onClick={clickHandler}
+            data-id={device.id}
+            selected={device.id === current}
+            disabled={!device.connection}
+          >
+            <ListItemIcon>
+              <Icon />
+            </ListItemIcon>
+            <ListItemText
+              primary={device.address.toString()}
+              secondary={Reflect.getMetadata('mib', device)}
+            />
+          </ListItem>
+        );
+      })}
     </>
   );
 };

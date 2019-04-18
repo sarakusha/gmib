@@ -106,7 +106,7 @@ class NibusConnection extends EventEmitter {
   private ready = Promise.resolve();
   private closed = false;
   private readonly waited: WaitedNmsDatagram[] = [];
-  public readonly description: IMibDescription;
+  public description: IMibDescription;
 
   private stopWaiting = (waited: WaitedNmsDatagram) => _.remove(this.waited, waited);
 

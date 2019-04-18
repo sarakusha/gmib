@@ -26,7 +26,7 @@ declare class NibusConnection extends EventEmitter {
     private ready;
     private closed;
     private readonly waited;
-    readonly description: IMibDescription;
+    description: IMibDescription;
     private stopWaiting;
     private onDatagram;
     constructor(path: string, description: IMibDescription);

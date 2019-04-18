@@ -17,15 +17,9 @@ const context = {
   devices,
 };
 
-function tuplify<T extends any[]>(...args: T) {
-  return args;
-}
-
 const SessionContext = createContext(context);
 
 export const useSessionContext = () => useContext(SessionContext);
-// export const useSessionContext = () => useContext(SessionContext).session;
-// export const useDevicesContext = () => useContext(SessionContext).devices;
 const useSessionStart = () => {
   const [ports, setPorts] = useState<number | null>(null);
   const [error, setError] = useState<Error | null>(null);
@@ -35,9 +29,11 @@ const useSessionStart = () => {
   );
   const foundHandler = useCallback<FoundListener>(
     async ({ address, connection }) => {
+      console.log('FOUND', connection.description, address.toString());
       try {
         if (connection.description.mib) {
           const device = devices.create(address, connection.description.mib);
+          // devices.create('::3', connection.description.mib).connection = connection;
           device.connection = connection;
         } else {
           const [version, type] = await connection.getVersion(address);
@@ -84,4 +80,4 @@ export const SessionProvider: React.FC<{}> = ({ children }) => {
   );
 };
 
-export default SessionContext;
+export default SessionProvider;

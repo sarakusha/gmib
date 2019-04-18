@@ -80,7 +80,7 @@
           "appinfo": {
             "nms_id": "0x100",
             "access": "r",
-            "category": "Нибус"
+            "category": "NiBUS"
           }
         },
         "rs485_collisions": {
@@ -89,7 +89,7 @@
           "appinfo": {
             "nms_id": "0x101",
             "access": "r",
-            "category": "Нибус"
+            "category": "NiBUS"
           }
         },
         "rs485_rx_datagrams": {
@@ -98,7 +98,7 @@
           "appinfo": {
             "nms_id": "0x102",
             "access": "r",
-            "category": "Нибус"
+            "category": "NiBUS"
           }
         },
         "rs485_tx_datagrams": {
@@ -107,7 +107,7 @@
           "appinfo": {
             "nms_id": "0x103",
             "access": "r",
-            "category": "Нибус"
+            "category": "NiBUS"
           }
         },
         "rs485_tx_failed": {
@@ -116,7 +116,7 @@
           "appinfo": {
             "nms_id": "0x105",
             "access": "r",
-            "category": "Нибус"
+            "category": "NiBUS"
           }
         },
         "sarp_retries": {

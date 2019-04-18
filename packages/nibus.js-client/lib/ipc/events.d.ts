@@ -1,6 +1,7 @@
 import * as t from 'io-ts';
 import { Mixed } from 'io-ts/lib';
-import { IKnownPort, IMibDescription } from '../session/KnownPorts';
+import { IMibDescription } from '../MibDescription';
+import { IKnownPort } from '../session/KnownPorts';
 export declare const PortArgV: t.TypeC<{
     portInfo: t.IntersectionC<[t.TypeC<{
         comName: t.StringC;
@@ -19,26 +20,11 @@ export declare const PortArgV: t.TypeC<{
             fancontrol: null;
             c22: null;
             relay: null;
+            ftdi: null;
             undefined: null;
         }>, t.UndefinedC]>;
     }>]>;
-    description: t.PartialC<{
-        type: t.NumberC;
-        mib: t.StringC;
-        link: t.BooleanC;
-        baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
-        parity: t.KeyofC<{
-            none: null;
-            even: null;
-            mark: null;
-        }>;
-        category: t.StringC;
-        find: t.KeyofC<{
-            sarp: null;
-            version: null;
-        }>;
-        disableBatchReading: t.BooleanC;
-    }>;
+    description: t.Type<IMibDescription, IMibDescription, unknown>;
 }>;
 export interface IPortArg extends t.TypeOf<typeof PortArgV> {
     portInfo: IKnownPort;
@@ -64,26 +50,11 @@ export declare const PortsEventV: t.TypeC<{
                 fancontrol: null;
                 c22: null;
                 relay: null;
+                ftdi: null;
                 undefined: null;
             }>, t.UndefinedC]>;
         }>]>;
-        description: t.PartialC<{
-            type: t.NumberC;
-            mib: t.StringC;
-            link: t.BooleanC;
-            baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
-            parity: t.KeyofC<{
-                none: null;
-                even: null;
-                mark: null;
-            }>;
-            category: t.StringC;
-            find: t.KeyofC<{
-                sarp: null;
-                version: null;
-            }>;
-            disableBatchReading: t.BooleanC;
-        }>;
+        description: t.Type<IMibDescription, IMibDescription, unknown>;
     }>>, t.Mixed]> | t.TupleC<[t.ArrayC<t.TypeC<{
         portInfo: t.IntersectionC<[t.TypeC<{
             comName: t.StringC;
@@ -102,26 +73,11 @@ export declare const PortsEventV: t.TypeC<{
                 fancontrol: null;
                 c22: null;
                 relay: null;
+                ftdi: null;
                 undefined: null;
             }>, t.UndefinedC]>;
         }>]>;
-        description: t.PartialC<{
-            type: t.NumberC;
-            mib: t.StringC;
-            link: t.BooleanC;
-            baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
-            parity: t.KeyofC<{
-                none: null;
-                even: null;
-                mark: null;
-            }>;
-            category: t.StringC;
-            find: t.KeyofC<{
-                sarp: null;
-                version: null;
-            }>;
-            disableBatchReading: t.BooleanC;
-        }>;
+        description: t.Type<IMibDescription, IMibDescription, unknown>;
     }>>]>;
 }>;
 export interface IPortsEvent extends t.TypeOf<typeof PortsEventV> {
@@ -146,26 +102,11 @@ export declare const PortAddedEventV: t.TypeC<{
                 fancontrol: null;
                 c22: null;
                 relay: null;
+                ftdi: null;
                 undefined: null;
             }>, t.UndefinedC]>;
         }>]>;
-        description: t.PartialC<{
-            type: t.NumberC;
-            mib: t.StringC;
-            link: t.BooleanC;
-            baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
-            parity: t.KeyofC<{
-                none: null;
-                even: null;
-                mark: null;
-            }>;
-            category: t.StringC;
-            find: t.KeyofC<{
-                sarp: null;
-                version: null;
-            }>;
-            disableBatchReading: t.BooleanC;
-        }>;
+        description: t.Type<IMibDescription, IMibDescription, unknown>;
     }>, t.Mixed]> | t.TupleC<[t.TypeC<{
         portInfo: t.IntersectionC<[t.TypeC<{
             comName: t.StringC;
@@ -184,26 +125,11 @@ export declare const PortAddedEventV: t.TypeC<{
                 fancontrol: null;
                 c22: null;
                 relay: null;
+                ftdi: null;
                 undefined: null;
             }>, t.UndefinedC]>;
         }>]>;
-        description: t.PartialC<{
-            type: t.NumberC;
-            mib: t.StringC;
-            link: t.BooleanC;
-            baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
-            parity: t.KeyofC<{
-                none: null;
-                even: null;
-                mark: null;
-            }>;
-            category: t.StringC;
-            find: t.KeyofC<{
-                sarp: null;
-                version: null;
-            }>;
-            disableBatchReading: t.BooleanC;
-        }>;
+        description: t.Type<IMibDescription, IMibDescription, unknown>;
     }>]>;
 }>;
 export interface IPortAddedEvent extends t.TypeOf<typeof PortAddedEventV> {
@@ -228,26 +154,11 @@ export declare const PortRemovedEventV: t.TypeC<{
                 fancontrol: null;
                 c22: null;
                 relay: null;
+                ftdi: null;
                 undefined: null;
             }>, t.UndefinedC]>;
         }>]>;
-        description: t.PartialC<{
-            type: t.NumberC;
-            mib: t.StringC;
-            link: t.BooleanC;
-            baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
-            parity: t.KeyofC<{
-                none: null;
-                even: null;
-                mark: null;
-            }>;
-            category: t.StringC;
-            find: t.KeyofC<{
-                sarp: null;
-                version: null;
-            }>;
-            disableBatchReading: t.BooleanC;
-        }>;
+        description: t.Type<IMibDescription, IMibDescription, unknown>;
     }>, t.Mixed]> | t.TupleC<[t.TypeC<{
         portInfo: t.IntersectionC<[t.TypeC<{
             comName: t.StringC;
@@ -266,26 +177,11 @@ export declare const PortRemovedEventV: t.TypeC<{
                 fancontrol: null;
                 c22: null;
                 relay: null;
+                ftdi: null;
                 undefined: null;
             }>, t.UndefinedC]>;
         }>]>;
-        description: t.PartialC<{
-            type: t.NumberC;
-            mib: t.StringC;
-            link: t.BooleanC;
-            baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
-            parity: t.KeyofC<{
-                none: null;
-                even: null;
-                mark: null;
-            }>;
-            category: t.StringC;
-            find: t.KeyofC<{
-                sarp: null;
-                version: null;
-            }>;
-            disableBatchReading: t.BooleanC;
-        }>;
+        description: t.Type<IMibDescription, IMibDescription, unknown>;
     }>]>;
 }>;
 export interface IPortRemovedEvent extends t.TypeOf<typeof PortRemovedEventV> {
@@ -310,26 +206,11 @@ export declare const EventV: t.TaggedUnionC<"event", [t.TypeC<{
                 fancontrol: null;
                 c22: null;
                 relay: null;
+                ftdi: null;
                 undefined: null;
             }>, t.UndefinedC]>;
         }>]>;
-        description: t.PartialC<{
-            type: t.NumberC;
-            mib: t.StringC;
-            link: t.BooleanC;
-            baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
-            parity: t.KeyofC<{
-                none: null;
-                even: null;
-                mark: null;
-            }>;
-            category: t.StringC;
-            find: t.KeyofC<{
-                sarp: null;
-                version: null;
-            }>;
-            disableBatchReading: t.BooleanC;
-        }>;
+        description: t.Type<IMibDescription, IMibDescription, unknown>;
     }>>, t.Mixed]> | t.TupleC<[t.ArrayC<t.TypeC<{
         portInfo: t.IntersectionC<[t.TypeC<{
             comName: t.StringC;
@@ -348,26 +229,11 @@ export declare const EventV: t.TaggedUnionC<"event", [t.TypeC<{
                 fancontrol: null;
                 c22: null;
                 relay: null;
+                ftdi: null;
                 undefined: null;
             }>, t.UndefinedC]>;
         }>]>;
-        description: t.PartialC<{
-            type: t.NumberC;
-            mib: t.StringC;
-            link: t.BooleanC;
-            baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
-            parity: t.KeyofC<{
-                none: null;
-                even: null;
-                mark: null;
-            }>;
-            category: t.StringC;
-            find: t.KeyofC<{
-                sarp: null;
-                version: null;
-            }>;
-            disableBatchReading: t.BooleanC;
-        }>;
+        description: t.Type<IMibDescription, IMibDescription, unknown>;
     }>>]>;
 }>, t.TypeC<{
     event: t.LiteralC<string>;
@@ -389,26 +255,11 @@ export declare const EventV: t.TaggedUnionC<"event", [t.TypeC<{
                 fancontrol: null;
                 c22: null;
                 relay: null;
+                ftdi: null;
                 undefined: null;
             }>, t.UndefinedC]>;
         }>]>;
-        description: t.PartialC<{
-            type: t.NumberC;
-            mib: t.StringC;
-            link: t.BooleanC;
-            baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
-            parity: t.KeyofC<{
-                none: null;
-                even: null;
-                mark: null;
-            }>;
-            category: t.StringC;
-            find: t.KeyofC<{
-                sarp: null;
-                version: null;
-            }>;
-            disableBatchReading: t.BooleanC;
-        }>;
+        description: t.Type<IMibDescription, IMibDescription, unknown>;
     }>, t.Mixed]> | t.TupleC<[t.TypeC<{
         portInfo: t.IntersectionC<[t.TypeC<{
             comName: t.StringC;
@@ -427,26 +278,11 @@ export declare const EventV: t.TaggedUnionC<"event", [t.TypeC<{
                 fancontrol: null;
                 c22: null;
                 relay: null;
+                ftdi: null;
                 undefined: null;
             }>, t.UndefinedC]>;
         }>]>;
-        description: t.PartialC<{
-            type: t.NumberC;
-            mib: t.StringC;
-            link: t.BooleanC;
-            baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
-            parity: t.KeyofC<{
-                none: null;
-                even: null;
-                mark: null;
-            }>;
-            category: t.StringC;
-            find: t.KeyofC<{
-                sarp: null;
-                version: null;
-            }>;
-            disableBatchReading: t.BooleanC;
-        }>;
+        description: t.Type<IMibDescription, IMibDescription, unknown>;
     }>]>;
 }>, t.TypeC<{
     event: t.LiteralC<string>;
@@ -468,26 +304,11 @@ export declare const EventV: t.TaggedUnionC<"event", [t.TypeC<{
                 fancontrol: null;
                 c22: null;
                 relay: null;
+                ftdi: null;
                 undefined: null;
             }>, t.UndefinedC]>;
         }>]>;
-        description: t.PartialC<{
-            type: t.NumberC;
-            mib: t.StringC;
-            link: t.BooleanC;
-            baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
-            parity: t.KeyofC<{
-                none: null;
-                even: null;
-                mark: null;
-            }>;
-            category: t.StringC;
-            find: t.KeyofC<{
-                sarp: null;
-                version: null;
-            }>;
-            disableBatchReading: t.BooleanC;
-        }>;
+        description: t.Type<IMibDescription, IMibDescription, unknown>;
     }>, t.Mixed]> | t.TupleC<[t.TypeC<{
         portInfo: t.IntersectionC<[t.TypeC<{
             comName: t.StringC;
@@ -506,26 +327,11 @@ export declare const EventV: t.TaggedUnionC<"event", [t.TypeC<{
                 fancontrol: null;
                 c22: null;
                 relay: null;
+                ftdi: null;
                 undefined: null;
             }>, t.UndefinedC]>;
         }>]>;
-        description: t.PartialC<{
-            type: t.NumberC;
-            mib: t.StringC;
-            link: t.BooleanC;
-            baudRate: t.UnionC<[t.LiteralC<115200>, t.LiteralC<57600>, t.LiteralC<28800>]>;
-            parity: t.KeyofC<{
-                none: null;
-                even: null;
-                mark: null;
-            }>;
-            category: t.StringC;
-            find: t.KeyofC<{
-                sarp: null;
-                version: null;
-            }>;
-            disableBatchReading: t.BooleanC;
-        }>;
+        description: t.Type<IMibDescription, IMibDescription, unknown>;
     }>]>;
 }>]>;
 export declare type Event = IPortsEvent | IPortAddedEvent | IPortRemovedEvent;

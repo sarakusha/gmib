@@ -148,15 +148,18 @@ declare type DownloadFinishArg = {
     size: number;
 };
 export declare type DownloadFinishListener = Listener<DownloadFinishArg>;
+export declare type DeviceId = string & {
+    __brand: 'DeviceId';
+};
 export interface IDevice {
-    readonly id: string;
+    readonly id: DeviceId;
     readonly address: Address;
     drain(): Promise<number[]>;
     write(...ids: number[]): Promise<number[]>;
     read(...ids: number[]): Promise<{
         [name: string]: any;
     }>;
-    upload(domain: string, offset?: number, size?: number): Promise<Uint8Array>;
+    upload(domain: string, offset?: number, size?: number): Promise<Buffer>;
     download(domain: string, data: Buffer, offset?: number, noTerm?: boolean): Promise<void>;
     execute(program: string, args?: Record<string, any>): Promise<NmsDatagram | NmsDatagram[] | undefined>;
     connection?: NibusConnection;
@@ -217,13 +220,13 @@ export interface IDevice {
     emit(event: 'downloadFinish', arg: DownloadFinishArg): boolean;
 }
 export declare function getMibFile(mibname: string): string;
-declare interface Devices {
+export declare interface Devices {
     on(event: 'new' | 'delete', deviceListener: (device: IDevice) => void): this;
     once(event: 'new' | 'delete', deviceListener: (device: IDevice) => void): this;
     addListener(event: 'new' | 'delete', deviceListener: (device: IDevice) => void): this;
 }
 export declare function getMibPrototype(mib: string): Object;
-declare class Devices extends EventEmitter {
+export declare class Devices extends EventEmitter {
     get: () => IDevice[];
     find: (address: AddressParam) => IDevice | undefined;
     create(address: AddressParam, mib: string): IDevice;

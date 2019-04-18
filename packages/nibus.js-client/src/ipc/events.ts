@@ -12,7 +12,8 @@
 import * as t from 'io-ts';
 import { JSONFromString } from 'io-ts-types';
 import { Mixed } from 'io-ts/lib';
-import { IKnownPort, KnownPortV, MibDescriptionV, IMibDescription } from '../session/KnownPorts';
+import { IMibDescription, MibDescriptionV } from '../MibDescription';
+import { IKnownPort, KnownPortV } from '../session/KnownPorts';
 
 const eventType = <A extends Mixed, B extends Mixed>(name: string, a: A, b?: B) => t.type({
   event: t.literal(name),

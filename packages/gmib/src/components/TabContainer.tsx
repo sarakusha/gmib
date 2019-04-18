@@ -9,7 +9,7 @@
  */
 
 import { IDevice } from '@nata/nibus.js-client/lib/mib';
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
 import classNames from 'classnames';
 import { hot } from 'react-hot-loader/root';
@@ -19,7 +19,9 @@ const styles = (theme: Theme) => createStyles({
   root: {
     flexShrink: 1,
     flexGrow: 1,
-    maxWidth: 'none',
+    // maxWidth: 'none',
+    // width: '100%',
+    display: 'flex',
   },
   hidden: {
     display: 'none',
@@ -28,21 +30,31 @@ const styles = (theme: Theme) => createStyles({
 
 export type Props = {
   children?: React.ReactNode,
-  value: any,
+  value: number | string,
   selected?: boolean,
 };
 type InnerProps = Props & WithStyles<typeof styles>;
-const TabContainer = ({ children, classes, selected }: InnerProps) => {
-  // useEffect(() => {
-  //   const element = document.getElementById(value.id);
-  //   element && (element.scrollTop = 300);
-  //   console.log('ON', value.id, element && element.scrollTop);
-  //   return () => {
-  //     console.log('OFF', value.id, element && element.scrollTop, pageYOffset);
-  //   };
-  // }, [selected]);
+const TabContainer: React.FC<InnerProps> = ({ children, classes, selected = true }) => {
+  /*
+  const ref = useRef(null);
+  useEffect(
+    () => {
+      console.log('REF', ref.current && ref.current.scrollTo(0, 0));
+      // const element = document.getElementById(value);
+      // element && (element.scrollTop = 300);
+      // console.log('ON', value, element && element.scrollTop);
+      // window.scrollTo(0,0);
+      // return () => {
+      //   console.log('OFF', value, element && element.scrollTop, pageYOffset);
+      // };
+    },
+    [selected],
+  );
+   */
   return (
-    <div className={classNames(classes.root, { [classes.hidden]: !selected })}> {children} </div>
+    <div className={classNames(classes.root, { [classes.hidden]: !selected })}>
+      {children}
+    </div>
   );
 };
 

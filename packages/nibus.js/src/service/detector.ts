@@ -18,12 +18,12 @@ import _ from 'lodash';
 import path from 'path';
 import SerialPort from 'serialport';
 import UsbDetection from 'usb-detection';
+import { IMibDescription } from '@nata/nibus.js-client/lib/MibDescription';
 import {
   Category,
   CategoryV,
   HexOrNumber,
   IKnownPort,
-  IMibDescription,
   KnownPortV,
 } from '@nata/nibus.js-client/lib/session/KnownPorts';
 
@@ -53,7 +53,12 @@ const loadDetection = (): IDetection | undefined => {
     const data = fs.readFileSync(detectionPath, 'utf8');
     const result = yaml.safeLoad(data) as IDetection;
     Object.keys(result.mibCategories).forEach((category) => {
-      result.mibCategories[category].category = category;
+      const desc = result.mibCategories[category];
+      desc.category = category;
+      if (Array.isArray(desc.select)) {
+        desc.select = (desc.select as unknown as string[])
+          .map(cat => result.mibCategories[cat] || cat);
+      }
     });
     return result;
   } catch (err) {
@@ -208,6 +213,11 @@ const matchCategory = (port: IKnownPort): Category => {
       && (!item.manufacturer || (port.manufacturer === item.manufacturer))
       && (getId(item.vid) === port.vendorId) && (getId(item.pid) === port.productId),
   ) as IDetectorItem;
+  if (!match && process.platform === 'win32'
+    && (port.productId === 0x6001 || port.productId === 0x6015)
+    && port.vendorId === 0x0403) {
+    return 'ftdi';
+  }
   if (match) return CategoryV.decode(match.category).getOrElse(undefined);
 };
 

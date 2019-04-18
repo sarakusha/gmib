@@ -1,6 +1,7 @@
 /// <reference types="node" />
 import { EventEmitter } from 'events';
-import { Category, HexOrNumber, IKnownPort, IMibDescription } from '@nata/nibus.js-client/lib/session/KnownPorts';
+import { IMibDescription } from '@nata/nibus.js-client/lib/MibDescription';
+import { Category, HexOrNumber, IKnownPort } from '@nata/nibus.js-client/lib/session/KnownPorts';
 interface IDetectorItem {
     device: string;
     vid: HexOrNumber;

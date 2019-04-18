@@ -9,6 +9,11 @@
 > - [Polish]
 > - [Experimental]
 > - [Deprecation]
+# 1.3.4
+- **Bug Fix**
+  - увеличен таймаут для Windows при определении устройства
+- **Internal**
+  - добален cross-env и rimraf для кроссплатформенности
 
 # 1.3.0
 - **Braking Change**
