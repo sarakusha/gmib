@@ -1,4 +1,3 @@
-/* tslint:disable:no-this-assignment */
 /*
  * @license
  * Copyright (c) 2019. Nata-Info
@@ -8,258 +7,167 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-
-import { IconButton } from '@material-ui/core';
-import { IDevice } from '@nata/nibus.js-client/lib/mib';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { IconButton, Paper, Typography } from '@material-ui/core';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
 import { hot } from 'react-hot-loader/root';
 import compose from 'recompose/compose';
-import debounce from 'lodash/debounce';
-import { EventEmitter } from 'events';
 import StartIcon from '@material-ui/icons/refresh';
+import CancelIcon from '@material-ui/icons/cancel';
 import { useDevicesContext } from './DevicesProvier';
 import { useDevice } from './DevicesStateProvider';
 import ModuleInfo from './ModuleInfo';
 import { useToolbar } from './ToolbarProvider';
-
-type Minihost3InfoType = {
-  t?: number,
-  v1?: number,
-  v2?: number,
-  ver?: string,
-};
-
-type Module3InfoType = {
-  x: number,
-  y: number,
-  info?: Minihost3InfoType,
-  error?: Error,
-};
-
-const parseData = (info: Minihost3InfoType, selector: number, data: Buffer) => {
-  switch (selector) {
-    case 0:
-      info.t = data[2] / 2;
-      if (info.t > 127) {
-        info.t -= 256;
-      }
-      return;
-    case 1:
-      info.v1 = data.readUInt16LE(2);
-      return;
-    case 2:
-      info.v2 = data.readUInt16LE(2);
-      return;
-    case 3:
-      info.ver = `${data[3]}.${data[2]}`;
-      return;
-    default:
-      throw new Error(`Unknown selector ${selector}`);
-  }
-};
+import Range from './Range';
+import Minihost3Loader from '../util/Minihost3Loader';
+import Minihost2Loader from '../util/Minihost2Loader';
 
 const styles = (theme: Theme) => createStyles({
   root: {
-    // flex: 1,
-    // overflow: 'hidden',
-    // width: '100%',
+    width: '100%',
+    display: 'grid',
+    gridTemplateColumns: 'auto 1fr',
+    gridTemplateRows: 'auto 1fr',
+    gridTemplateAreas: `
+      "corner hRange"
+      "vRange main"
+    `,
   },
+  main: {
+    gridArea: 'main',
+    display: 'flex',
+    overflow: 'auto',
+  },
+  wrapper: {},
   grid: {
     display: 'grid',
     gridAutoFlow: 'column',
   },
+  hRange: {
+    gridArea: 'hRange',
+    width: '36ch',
+    marginBottom: theme.spacing.unit * 3,
+    marginTop: theme.spacing.unit * 3,
+    marginLeft: theme.spacing.unit * 2,
+  },
+  vRange: {
+    gridArea: 'vRange',
+    marginTop: theme.spacing.unit * 2,
+    marginLeft: theme.spacing.unit * 3,
+    marginRight: theme.spacing.unit * 3,
+    height: '48ch',
+  },
+  corner: {
+    gridArea: 'corner',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    backgroundColor: theme.palette.grey[100],
+    color: theme.palette.grey[500],
+    '&>*': {
+      padding: 2,
+      textAlign: 'center',
+    },
+    margin: theme.spacing.unit / 2,
+  },
+  xpos: {
+    borderBottom: '1px solid white',
+  },
+  ypos: {},
 });
 
-type HandlerType = () => void;
 type Props = {
-  xMin?: number,
-  xMax?: number,
-  yMin?: number,
-  yMax?: number,
   id: string,
-  // setStart?: (start: HandlerType) => void,
-  // setCancel?: (cancel: HandlerType) => void,
   active?: boolean,
 };
 
-class Minihost3Loader extends EventEmitter {
-  readonly selectorId: number;
-  readonly moduleSelectId: number;
-  static DOMAIN = 'MODUL';
-  private isCanceled = false;
-  private isRunning = false;
-  private cancelPromise = Promise.resolve();
-  private cancelResolve = () => {};
-
-  constructor(
-    readonly xMin: number,
-    readonly xMax: number,
-    readonly yMin: number,
-    readonly yMax: number,
-    readonly device: IDevice,
-    readonly selectors: number[] = [0, 1, 2, 3]) {
-    super();
-    this.selectorId = device.getId('selector');
-    this.moduleSelectId = device.getId('moduleSelect');
-    // console.log('LOADER', xMin, xMax, yMin, yMax);
-  }
-
-  cancel() {
-    this.isCanceled = true;
-    return this.cancelPromise;
-  }
-
-  private async readColumn(x: number) {
-    const { device, yMin, yMax } = this;
-    const columnInfo: Module3InfoType[] = [];
-    let y = yMin;
-    try {
-      while (y < yMax) {
-        const info: Minihost3InfoType = {};
-        for (const selector of this.selectors) {
-          device.selector = selector;
-          device.moduleSelect = (x & 0xFF) << 8 + (y & 0xFF);
-          await device.write(this.selectorId, this.moduleSelectId);
-          if (this.isCanceled) {
-            this.isRunning = false;
-            this.cancelResolve();
-            break;
-          }
-          const data = await device.upload(Minihost3Loader.DOMAIN, 0, 6);
-          // console.log(x, y, selector, printBuffer(data));
-          parseData(info, selector, data);
-        }
-        const module: Module3InfoType = {
-          x,
-          y,
-          info,
-        };
-        columnInfo.push(module);
-        y += 1;
-      }
-    } catch (error) {
-      console.error('load', error.message);
-      while (y < yMax) {
-        const module: Module3InfoType = {
-          x,
-          y,
-          error,
-        };
-        // this.emit('module', module);
-        columnInfo.push(module);
-        y += 1;
-      }
-    }
-    return columnInfo;
-  }
-
-  async start() {
-    // if (this.device === null) throw new Error('Invalid device');
-    if (this.isRunning) {
-      await this.cancel();
-    }
-    this.isCanceled = false;
-    this.cancelPromise = new Promise(resolve => this.cancelResolve = resolve);
-    this.isRunning = true;
-
-    try {
-      const dirv: boolean = this.device.getRawValue('dirv');
-      const dirh: boolean = this.device.getRawValue('dirh');
-      const modules: Module3InfoType[] = [];
-      const { xMin, xMax } = this;
-      let x: number;
-      let step: number;
-      let check: (val: number) => boolean;
-      if (dirh) {
-        x = xMax - 1;
-        step = -1;
-        check = i => i >= xMin;
-      } else {
-        x = xMin;
-        step = 1;
-        check = i => i < xMax;
-      }
-      while (check(x)) {
-        let column = await this.readColumn(x);
-        if (dirv) {
-          column = column.reverse();
-        }
-        this.emit('column', column);
-        // console.log(column);
-        modules.push(...column);
-        x += step;
-      }
-      return modules;
-    } finally {
-      this.isRunning = false;
-    }
-  }
-}
-
 type InnerProps = Props & WithStyles<typeof styles>;
-const Telemetry: React.FC<InnerProps> = (
-  { classes, xMin = 0, xMax, yMin = 0, yMax, id, active = true },
-) => {
+const Telemetry: React.FC<InnerProps> = ({ classes, id, active = true }) => {
   const { props, device } = useDevice(id);
-  const max = useMemo(
+  const mib = device ? Reflect.getMetadata('mib', device) : '';
+  const loader = useMemo(
     () => {
-      const { hres, vres, moduleHres, moduleVres, maxModulesH } = props;
-      // console.log(`${hres}x${vres} ${moduleHres}x${moduleVres}`);
-      const x = xMax === undefined
-        ? Math.ceil(hres / (moduleHres || hres))
-        : Math.min(Math.max(xMin, xMax), maxModulesH);
-      const y = yMax === undefined
-        ? Math.ceil(vres / (moduleVres || vres))
-        : Math.max(yMin, yMax);
-      // console.log('x,y', x, y);
-      return {
-        x,
-        y,
-      };
+      switch (mib) {
+        case 'minihost3':
+          return new Minihost3Loader(device!);
+        case 'minihost_v2.06b':
+          return new Minihost2Loader(device!);
+        default:
+          return null;
+      }
     },
-    [props],
+    [device],
   );
-  const [loader, setLoader] = useState<Minihost3Loader | null>(null);
-  const updateLoader = useCallback(
-    debounce(
-      (xmin, xmax, ymin, ymax) => {
-        setLoader(Number.isFinite(xmax)
-          ? new Minihost3Loader(xmin, xmax, ymin, ymax, device!)
-          : null);
-      },
-      100,
-    ),
-    [setLoader],
-  );
+  const { hres, vres, moduleHres, moduleVres, maxModulesH, maxModulesV } = props;
+  const [xMax, setXMax] = useState<number | undefined>();
+  const [xMin, setXMin] = useState<number>(0);
+  const [yMax, setYMax] = useState<number | undefined>();
+  const [yMin, setYMin] = useState(0);
+  const [dirv, setDirv] = useState(false);
+  const [dirh, setDirh] = useState(false);
+  const [style, setStyle] = useState({});
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => updateLoader(xMin, max.x, yMin, max.y), [max.x, max.y]);
-
-  const style = useMemo(
+  useEffect(
     () => {
-      return {
-        gridTemplateRows: `repeat(${max.y - yMin}, 1fr)`,
-      };
+      if (!hres || !vres) return;
+      setXMax(Math.min(Math.ceil(hres / (moduleHres || hres)), maxModulesH || 24) - 1);
+      setYMax(Math.min(Math.ceil(vres / (moduleVres || vres)), maxModulesV || 32) - 1);
     },
-    [max.y, yMin],
+    [[hres, vres, moduleHres, moduleVres, maxModulesH]
+      .reduce((result, prop) => result && Number.isFinite(prop), true)],
   );
 
-  const [modules, setModules] = useState<Module3InfoType[]>([]);
+  useEffect(
+    () => {
+      setDirv(!!loader && loader.isInvertV());
+      setDirh(!!loader && loader.isInvertH());
+    },
+    [props.dirv, props.dirh, props.vinvert, props.hinvert],
+  );
+
+  const [modules, setModules] = useState<any[]>([]);
+  const refRange = useRef({
+    xMin,
+    xMax,
+    yMin,
+    yMax,
+  });
   const start = useCallback(
     () => {
+      const { xMin, xMax, yMin, yMax } = refRange.current;
+      setStyle({
+        gridTemplateRows: `repeat(${yMax! - yMin + 1}, 1fr)`,
+      });
       setModules([]);
-      loader && loader.start();
+      loader && loader.start(xMin, xMax!, yMin, yMax!);
     },
-    [!!loader],
+    [loader, refRange],
+  );
+  useEffect(
+    () => {
+      refRange.current = {
+        xMin,
+        yMin,
+        xMax,
+        yMax,
+      };
+    },
+    [xMin, xMax, yMin, yMax],
   );
   const cancel = useCallback(() => loader && loader.cancel(), []);
   const telemetryToolbar = useMemo(
-    () => (
-      <IconButton onClick={start} color="inherit">
-        <StartIcon />
-      </IconButton>
-    ),
-    [start],
+    () => loading ? (
+        <IconButton onClick={cancel} color="inherit">
+          <CancelIcon/>
+        </IconButton>
+      )
+      : (
+        <IconButton onClick={start} color="inherit">
+          <StartIcon />
+        </IconButton>
+      ),
+    [start, cancel, loading],
   );
   const [, setToolbar] = useToolbar();
   const { current } = useDevicesContext();
@@ -268,50 +176,69 @@ const Telemetry: React.FC<InnerProps> = (
       if (active && current === id) return telemetryToolbar;
       return toolbar === telemetryToolbar ? null : toolbar;
     }),
-    [active, current],
+    [active, current, telemetryToolbar],
   );
-
-  // useEffect(
-  //   () => {
-  //     setStart && setStart(start);
-  //   },
-  //   [setStart, start],
-  // );
-  // useEffect(
-  //   () => {
-  //     setCancel && setCancel(cancel);
-  //   },
-  //   [setCancel, cancel],
-  // );
   useEffect(
     () => {
-      // console.log('CHECK', !!loader);
       if (!loader) return;
-      const columnHandler = (column: Module3InfoType[]) => {
-        // console.log(module, module);
+      const columnHandler = (column: any[]) => {
         setModules(modules => modules.concat(column));
       };
+      const startHandler = () => setLoading(true);
+      const finishHandler = () => setLoading(false);
       loader.on('column', columnHandler);
-      // setModules([]);
-      // console.log('START');
-      // loader.start();
+      loader.on('start', startHandler);
+      loader.on('finish', finishHandler);
       return () => {
+        loader.off('finish', finishHandler);
+        loader.off('start', startHandler);
         loader.off('column', columnHandler);
       };
     },
     [loader],
   );
 
-  // console.log('STYLE', style);
   return (
     <div className={classes.root}>
-      <div className={classes.grid} style={style}>
-        {modules.map(props => (
-          <ModuleInfo
-            key={`${props.y}:${props.x}`}
-            {...props}
-          />
-        ))}
+      <Paper className={classes.corner}>
+        <div className={classes.xpos}>
+          <Typography variant="caption" color="inherit"><b>{xMin}..{xMax}</b></Typography>
+        </div>
+        <div className={classes.ypos}>
+          <Typography variant="caption" color="inherit"><b>{yMin}..{yMax}</b></Typography>
+        </div>
+      </Paper>
+      <Range
+        min={0}
+        max={maxModulesH || 24}
+        values={[xMin, xMax || 0]}
+        className={classes.hRange}
+        setMin={setXMin}
+        setMax={setXMax}
+        reverse={dirh}
+      />
+      <Range
+        min={0}
+        max={32}
+        values={[yMin, yMax || 0]}
+        className={classes.vRange}
+        setMin={setYMin}
+        setMax={setYMax}
+        vertical
+        reverse={!dirv}
+        tooltipPos={'right'}
+      />
+      <div className={classes.main}>
+        <div className={classes.wrapper}>
+          <div className={classes.grid} style={style}>
+            {modules.map(props => (
+              <ModuleInfo
+                key={`${props.y}:${props.x}`}
+                {...props}
+              />
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

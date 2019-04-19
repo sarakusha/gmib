@@ -8,7 +8,6 @@
  * the EULA file that was distributed with this source code.
  */
 
-require('@babel/register')({
-  extensions: ['.ts', '.js'],
-});
-require('./daemon.ts');
+import service from './index';
+
+service.start();

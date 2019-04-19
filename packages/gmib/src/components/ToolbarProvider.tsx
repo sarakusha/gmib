@@ -8,7 +8,7 @@
  * the EULA file that was distributed with this source code.
  */
 import React, { createContext, useContext, useState } from 'react';
-import { tuplify } from './helpers';
+import { tuplify } from '../util/helpers';
 
 type ToolbarElement = React.ReactNode;
 

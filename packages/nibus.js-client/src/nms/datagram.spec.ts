@@ -33,7 +33,7 @@ describe('NmsDatagram tests', () => {
     expect(nms).toHaveProperty('notReply', options.notReply);
     expect(nms).toHaveProperty('nms', options.nms);
     expect(nms).toHaveProperty('priority', options.priority);
-    expect(nms).toHaveProperty('service', options.service);
+    expect(nms).toHaveProperty('index.ts', options.service);
     expect(nms).toHaveProperty('source', options.source);
     expect(nms).toHaveProperty('protocol', 1);
   });

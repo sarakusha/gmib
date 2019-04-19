@@ -17,11 +17,13 @@ import compose from 'recompose/compose';
 
 const styles = (theme: Theme) => createStyles({
   root: {
-    flexShrink: 1,
-    flexGrow: 1,
+    // flexShrink: 1,
+    // flexGrow: 1,
     // maxWidth: 'none',
-    // width: '100%',
+    width: '100%',
     display: 'flex',
+    // height: '100%',
+    // overflow: 'hidden',
   },
   hidden: {
     display: 'none',

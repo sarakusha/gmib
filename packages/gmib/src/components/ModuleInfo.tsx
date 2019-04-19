@@ -13,22 +13,24 @@ import React from 'react';
 import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
 import { hot } from 'react-hot-loader/root';
 import compose from 'recompose/compose';
-import grey from '@material-ui/core/colors/grey';
+// import grey from '@material-ui/core/colors/grey';
 import ErrorIcon from '@material-ui/icons/clear';
 
-const bg = grey[100];
+// const bg = grey[100];
 
 const styles = (theme: Theme) => createStyles({
   root: {
     margin: theme.spacing.unit / 2,
     display: 'flex',
     flexDirection: 'row',
-    minWidth: '12ch',
+    flexShrink: 0,
     // marginTop: theme.spacing.unit,
   },
   pos: {
-    backgroundColor: bg,
-    color: grey[500], // theme.palette.getContrastText(bg),
+    // backgroundColor: bg,
+    // color: grey[500], // theme.palette.getContrastText(bg),
+    backgroundColor: theme.palette.grey[100],
+    color: theme.palette.grey[500],
     flex: 0,
     display: 'flex',
     flexDirection: 'column',
@@ -48,7 +50,8 @@ const styles = (theme: Theme) => createStyles({
   ypos: {},
   table: {
     // backgroundColor: 'gray',
-    flex: 1,
+    minWidth: '5ch',
+    flex: 0,
     borderCollapse: 'collapse',
     margin: 2,
   },
@@ -129,17 +132,20 @@ const Voltage: React.FC<ValueType> = ({ classes, value, index }) => (
   </tr>
 );
 
-const Row: React.FC<ValueType> = ({ classes, value, name }) => (
-  <tr>
-    <td className={classes.name}>
-      <Typography variant="body2">{name}</Typography>
-    </td>
-    <td className={classes.value}>
-      <Typography variant="body2"><strong>{value}</strong></Typography>
-    </td>
-    <td className={classes.unit}>&nbsp;</td>
-  </tr>
-);
+const Row: React.FC<ValueType> = ({ classes, value, name }) => {
+  const [, title, sub] = name && name.match(/([^(]*)(?:\(?(.*)\))?/) || [null, name, null];
+  return (
+    <tr>
+      <td className={classes.name}>
+        <Typography variant="body2">{title}<sub>{sub}</sub></Typography>
+      </td>
+      <td className={classes.value}>
+        <Typography variant="body2"><strong>{value}</strong></Typography>
+      </td>
+      <td className={classes.unit}>&nbsp;</td>
+    </tr>
+  );
+};
 
 type PropRenderType = Record<string,
   (props: ValueType) => React.ReactElement>;
@@ -166,7 +172,7 @@ const ModuleInfo: React.FC<InnerProps> = ({ classes, info, error, x, y }: InnerP
   return (
     <Paper className={classes.root} elevation={1}>
       <Position x={x} y={y} classes={classes} />
-      {error && <div className={classes.error}><ErrorIcon/></div>}
+      {error && <div className={classes.error}><ErrorIcon /></div>}
       {info && <table className={classes.table}>
         <tbody>
         {Object.entries(info).map(([name, value]) => {

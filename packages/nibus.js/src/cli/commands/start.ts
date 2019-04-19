@@ -22,7 +22,7 @@ const debug = debugFactory('nibus:start');
 
 export const startOptions: StartOptions = {
   name: 'nibus.service',
-  script: 'service/demon.js',
+  script: 'service/daemon.js',
   cwd: path.resolve(__dirname, '../..'),
   max_restarts: 3,
   env: {

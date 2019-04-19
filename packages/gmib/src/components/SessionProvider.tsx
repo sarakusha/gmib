@@ -9,7 +9,7 @@
  */
 import session, { FoundListener, mib } from '@nata/nibus.js-client';
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
-
+import { ipcRenderer } from 'electron';
 const { devices } = mib;
 
 const context = {
@@ -23,13 +23,14 @@ export const useSessionContext = () => useContext(SessionContext);
 const useSessionStart = () => {
   const [ports, setPorts] = useState<number | null>(null);
   const [error, setError] = useState<Error | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const updatePortsHandler = useCallback(
     () => setPorts(session.ports),
     [],
   );
   const foundHandler = useCallback<FoundListener>(
     async ({ address, connection }) => {
-      console.log('FOUND', connection.description, address.toString());
+      // console.log('FOUND', connection.description, address.toString());
       try {
         if (connection.description.mib) {
           const device = devices.create(address, connection.description.mib);
@@ -51,11 +52,22 @@ const useSessionStart = () => {
     session.start().then(
       (ports) => {
         setPorts(ports);
+        setError(null);
         session.on('add', updatePortsHandler);
         session.on('remove', updatePortsHandler);
         session.on('found', foundHandler);
       },
-      error => setError(error),
+      (error) => {
+        setError(error);
+        ipcRenderer.send('startLocalNibus');
+        setTimeout(
+          () => {
+            setAttempt(attempt => attempt + 1);
+            console.log('try connect', attempt);
+          },
+          3000,
+        );
+      },
     );
     return () => {
       session.off('add', updatePortsHandler);
@@ -64,7 +76,7 @@ const useSessionStart = () => {
       session.close();
     };
   };
-  useEffect(request, []);
+  useEffect(request, [attempt, setPorts, setError, setAttempt]);
   return {
     ports,
     error,
@@ -72,10 +84,10 @@ const useSessionStart = () => {
 };
 
 export const SessionProvider: React.FC<{}> = ({ children }) => {
-  useSessionStart();
+  const { error } = useSessionStart();
   return (
     <SessionContext.Provider value={context}>
-      {children}
+      {error && error.message || children}
     </SessionContext.Provider>
   );
 };

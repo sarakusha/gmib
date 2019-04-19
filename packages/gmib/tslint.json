@@ -8,6 +8,12 @@
   ],
   "jsRules": {},
   "rules": {
+    "no-this-assignment": [
+      true,
+      {
+        "allow-destructuring": true
+      }
+    ],
     "no-unused-variable": false,
     "import-name": false,
     "jsx-boolean-value": false,

@@ -12,12 +12,11 @@ import { AppBar } from '@material-ui/core';
 import { createStyles, Theme, withStyles, WithStyles } from '@material-ui/core/styles';
 import Tab from '@material-ui/core/Tab';
 import Tabs from '@material-ui/core/Tabs';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { hot } from 'react-hot-loader/root';
 import SwipeableViews from 'react-swipeable-views';
 import compose from 'recompose/compose';
 import { useDevicesContext } from './DevicesProvier';
-import HostMap from './HostMap';
 import PropertyGrid from './PropertyGrid';
 import TabContainer from './TabContainer';
 import Telemetry from './Telemetry';
@@ -29,27 +28,22 @@ const styles = (theme: Theme) => createStyles({
     flexGrow: 1,
     maxWidth: 'none',
     flexDirection: 'column',
-    height: '100%',
+    // height: '100%',
     // overflow: 'hidden',
     // position: 'relative',
   },
   appBarSpacer: {
-    // ...theme.mixins.toolbar,
     flex: '0 0 auto',
     height: 48,
   },
-  header: {
-    // flex: '0 0 auto',
-    // left: 0,
-    // top: 0,
-    // right: 0,
-  },
+  header: {},
   content: {
     flex: '1 1 auto',
-    width: '100%',
-    // padding: theme.spacing.unit,
+    // width: '100%',
+    // height: '100%',
+    display: 'flex',
     WebkitOverflowScrolling: 'touch', // Add iOS momentum scrolling.
-    overflowY: 'auto',
+    // overflow: 'hidden',
   },
 });
 type Props = {
@@ -73,7 +67,9 @@ const DeviceTabs: React.FC<InnerProps> = ({ classes, id }) => {
     },
     [],
   );
-  const mib = Reflect.getMetadata('mib', proto) as string;
+  const mib = proto && Reflect.getMetadata('mib', proto) as string;
+  const isMinihost = mib && mib.startsWith('minihost');
+  if (!isMinihost && value > 0) setValue(0);
   // console.log(mib, id);
   if (!id) return null;
   return (
@@ -87,20 +83,28 @@ const DeviceTabs: React.FC<InnerProps> = ({ classes, id }) => {
           variant="fullWidth"
         >
           <Tab label="Свойства" />
-          {mib === 'minihost3' && <Tab label="Телеметрия" />}
+          {isMinihost && <Tab label="Телеметрия" />}
         </Tabs>
       </AppBar>
       <div className={classes.appBarSpacer} />
       <div className={classes.content}>
-        <SwipeableViews index={value} onChangeIndex={swipeHandler}>
-          <TabContainer value={0}>
-            <PropertyGrid id={id} active={value === 0} />
-          </TabContainer>
-          <TabContainer value={1}>
-            <Telemetry id={id} active={value === 1} />
-            {/*<HostMap />*/}
-          </TabContainer>
-        </SwipeableViews>
+        {isMinihost ? (
+            <>
+              {/*<SwipeableViews index={value} onChangeIndex={swipeHandler}>*/}
+              <TabContainer value={0} selected={value === 0}>
+                <PropertyGrid id={id} active={value === 0} />
+              </TabContainer>
+              <TabContainer value={1} selected={value === 1}>
+                <Telemetry id={id} active={value === 1} />
+              </TabContainer>
+              {/*</SwipeableViews>*/}
+            </>
+          )
+          : (
+            <TabContainer value={0} selected={true}>
+              <PropertyGrid id={id} active={true} />
+            </TabContainer>
+          )}
       </div>
     </div>
   );

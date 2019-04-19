@@ -45,4 +45,5 @@ if (ANALYZE) {
   }));
 }
 
-module.exports = isProduction ? {} : config;
+// module.exports = isProduction ? {} : config;
+module.exports = {};

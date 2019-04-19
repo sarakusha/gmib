@@ -196,13 +196,14 @@ class NibusSession extends EventEmitter {
   // }
   //
   start() {
-    return new Promise<number>((resolve) => {
+    return new Promise<number>((resolve, reject) => {
       if (this.isStarted) return resolve(this.connections.length);
       this.isStarted = true;
       this.socket = Client.connect(PATH);
       this.socket.once('error', (error) => {
         console.error('error while start nibus.service', error.message);
         this.close();
+        reject(error);
       });
       this.socket.on('ports', this.reloadHandler);
       this.socket.on('add', this.addHandler);

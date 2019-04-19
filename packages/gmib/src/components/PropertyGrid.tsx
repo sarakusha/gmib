@@ -8,7 +8,6 @@
  * the EULA file that was distributed with this source code.
  */
 import { IconButton } from '@material-ui/core';
-// import Fab from '@material-ui/core/Fab';
 import {
   createStyles,
   Theme,
@@ -37,22 +36,14 @@ import { useToolbar } from './ToolbarProvider';
 
 const styles = (theme: Theme) => createStyles({
   root: {
-    // width: '100%',
-    // display: 'flex',
-    // justifyContent: 'center',
+    width: '100%',
+    display: 'flex',
     paddingLeft: theme.spacing.unit,
     paddingRight: theme.spacing.unit,
+    overflow: 'auto',
   },
-  table: {
-    // marginRight: theme.spacing.unit,
-    // marginLeft: theme.spacing.unit,
-  },
-  fab: {
-    position: 'fixed',
-    top: theme.spacing.unit, // + Number(theme.mixins.toolbar.minHeight),
-    right: theme.spacing.unit * 2,
-    zIndex: 10000,
-  },
+  wrapper: {},
+  table: {},
 });
 
 type Props = {
@@ -82,13 +73,9 @@ const PropertyGrid: React.FC<InnerProps> = ({ classes, id, active = true }) => {
         return toolbar === reloadToolbar ? null : toolbar;
       })
     ,
-    [active, current],
+    [active, current, reloadToolbar],
   );
 
-  // useEffect(() => {
-  //   console.log('PROPS CHANGED', id);
-  // }, [props]);
-  // console.log('PropGrid', id);
   const categories = useMemo(
     () => groupBy(
       Object.entries(props),
@@ -108,37 +95,39 @@ const PropertyGrid: React.FC<InnerProps> = ({ classes, id, active = true }) => {
   }
   return (
     <div className={classes.root}>
-      <Table className={classes.table}>
-        <TableHead>
-          <TableRow>
-            <TableCell>Имя</TableCell>
-            <TableCell>Значение</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {Object.entries(categories).map(([category, props]) => (
-            <React.Fragment key={category}>
-              {category && (<TableRow>
-                <TableCell colSpan={2}>
-                  <Typography variant="h6">{category}</Typography>
-                </TableCell>
-              </TableRow>) || null}
-              {props.map(([name, value]) => (
-                <TableRow key={name}>
-                  <TableCell>{Reflect.getMetadata('displayName', proto, name)}</TableCell>
-                  <PropertyValueCell
-                    proto={proto}
-                    name={name}
-                    value={value}
-                    dirty={isDirty(name)}
-                    onChangeProperty={setValue}
-                  />
-                </TableRow>
-              ))}
-            </React.Fragment>
-          ))}
-        </TableBody>
-      </Table>
+      <div className={classes.wrapper}>
+        <Table className={classes.table}>
+          <TableHead>
+            <TableRow>
+              <TableCell>Имя</TableCell>
+              <TableCell>Значение</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {Object.entries(categories).map(([category, props]) => (
+              <React.Fragment key={category}>
+                {category && (<TableRow>
+                  <TableCell colSpan={2}>
+                    <Typography variant="h6">{category}</Typography>
+                  </TableCell>
+                </TableRow>) || null}
+                {props.map(([name, value]) => (
+                  <TableRow key={name}>
+                    <TableCell>{Reflect.getMetadata('displayName', proto, name)}</TableCell>
+                    <PropertyValueCell
+                      proto={proto}
+                      name={name}
+                      value={value}
+                      dirty={isDirty(name)}
+                      onChangeProperty={setValue}
+                    />
+                  </TableRow>
+                ))}
+              </React.Fragment>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 };

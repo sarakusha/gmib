@@ -8,10 +8,10 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, ipcMain } from 'electron';
 import * as path from 'path';
 import { format as formatUrl } from 'url';
-import { Socket } from 'net';
+import service from '@nata/nibus.js/lib/service';
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
@@ -82,3 +82,8 @@ app.on('ready', () => {
   mainWindow = createMainWindow();
 });
 
+ipcMain.on('startLocalNibus', () => {
+  console.log('START LOCAL NIBUS');
+  service.start();
+  // import('@nata/nibus.js/lib/service/service').then(service => service.default.start());
+});

@@ -613,9 +613,12 @@ class DevicePrototype extends EventEmitter implements IDevice {
     // debug(`setRawValue(${idOrName}, ${JSON.stringify(safeNumber(value))})`);
     const id = this.getId(idOrName);
     const { [$values]: values, [$errors]: errors } = this;
-    values[id] = safeNumber(value);
-    delete errors[id];
-    this.setDirty(id, isDirty);
+    const newVal = safeNumber(value);
+    if (newVal !== values[id] || errors[id]) {
+      values[id] = newVal;
+      delete errors[id];
+      this.setDirty(id, isDirty);
+    }
   }
 
   public getError(idOrName: number | string): any {

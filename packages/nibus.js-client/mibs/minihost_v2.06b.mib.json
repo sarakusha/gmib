@@ -557,7 +557,7 @@
           "annotation": "Адрес модуля по горизонтали",
           "appinfo": {
             "nms_id": "0x39A",
-            "access": "r\nw",
+            "access": "w",
             "category": "Параметры EPCS"
           }
         },
@@ -566,7 +566,7 @@
           "annotation": "Адрес модуля по вертикали",
           "appinfo": {
             "nms_id": "0x39B",
-            "access": "r\nw",
+            "access": "w",
             "category": "Параметры EPCS"
           }
         }
