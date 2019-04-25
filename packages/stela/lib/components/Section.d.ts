@@ -11,6 +11,6 @@ export interface SectionProps extends WithStyles<typeof styles> {
     actions?: ReactNode;
 }
 declare const styles: (theme: Theme) => Record<"title", import("@material-ui/core/styles/withStyles").CSSProperties>;
-declare const _default: React.ComponentType<Pick<SectionProps, "onChange" | "className" | "title" | "children" | "disabled" | "expanded" | "actions" | "defaultExpanded"> & import("@material-ui/core/styles").StyledComponentProps<"title">>;
+declare const _default: React.ComponentType<Pick<SectionProps, "expanded" | "disabled" | "title" | "children" | "className" | "onChange" | "actions" | "defaultExpanded"> & import("@material-ui/core/styles").StyledComponentProps<"title">>;
 export default _default;
 //# sourceMappingURL=Section.d.ts.map

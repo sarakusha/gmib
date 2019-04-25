@@ -20,6 +20,7 @@ import { IMibDeviceType, MibDeviceV } from '@nata/nibus.js-client/lib/mib/device
 import { NibusDatagram, NibusDecoder } from '@nata/nibus.js-client/lib/nibus';
 import { printBuffer } from '@nata/nibus.js-client/lib/nibus/helper';
 import { createInterface } from 'readline';
+import fs from 'fs';
 import { Config, LogLevel, PATH } from '@nata/nibus.js-client';
 import detector from './detector';
 import { IKnownPort } from '@nata/nibus.js-client/lib/session/KnownPorts';
@@ -65,7 +66,7 @@ async function updateMibTypes() {
   const mibTypes: Config['mibTypes'] = {};
   mibs.forEach((mib) => {
     const mibfile = getMibFile(mib);
-    const validation = MibDeviceV.decode(require(mibfile));
+    const validation = MibDeviceV.decode(JSON.parse(fs.readFileSync(mibfile).toString()));
     if (validation.isLeft()) {
       debug(`<error>: Invalid mib file ${mibfile}`);
     } else {

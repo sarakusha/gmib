@@ -12,6 +12,7 @@ import debugFactory from 'debug';
 import { EventEmitter } from 'events';
 import _ from 'lodash';
 import { Socket } from 'net';
+import fs from 'fs';
 import Address, { AddressParam, AddressType } from '../Address';
 import { Client, IPortArg } from '../ipc';
 import { devices, IDevice, toInt } from '../mib';
@@ -24,6 +25,8 @@ import { Category } from './KnownPorts';
 
 const debug = debugFactory('nibus:session');
 const noop = () => {};
+export const delay = (seconds: number) =>
+  new Promise(resolve => setTimeout(resolve, seconds * 1000));
 
 export type FoundListener =
   (arg: { connection: NibusConnection, category: Category, address: Address }) => void;
@@ -69,11 +72,12 @@ class NibusSession extends EventEmitter {
     prev.forEach(connection => this.closeConnection(connection));
   };
 
-  private addHandler = ({ portInfo: { comName }, description }: IPortArg) => {
+  private addHandler = async ({ portInfo: { comName }, description }: IPortArg) => {
     debug('add');
     const connection = new NibusConnection(comName, description);
     this.connections.push(connection);
     this.emit('add', connection);
+    if (process.platform === 'win32') await delay(2);
     this.find(connection);
     devices.get()
       .filter(device => device.connection == null)
@@ -104,7 +108,7 @@ class NibusSession extends EventEmitter {
       .forEach((device) => {
         device.connection = undefined;
         this.emit('disconnected', device);
-        debug(`mib-device ${device.address} was disconnected`);
+        debug(`mib-device ${connection.path}#${device.address} was disconnected`);
       });
     this.emit('remove', connection);
   }
@@ -126,7 +130,7 @@ class NibusSession extends EventEmitter {
         case 'sarp': {
           let { type } = description;
           if (type === undefined) {
-            const mib = require(getMibFile(description.mib!));
+            const mib = JSON.parse(fs.readFileSync(getMibFile(description.mib!)).toString());
             const { types } = mib;
             const device = types[mib.device] as IMibDeviceType;
             type = toInt(device.appinfo.device_type);
@@ -301,10 +305,13 @@ devices.on('delete', (device: IDevice) => {
 });
 
 session.on('found', ({ address, connection }) => {
-  console.assert(address.type === AddressType.mac, 'mac-address expected');
-  const device = devices.find(address);
-  if (device) {
-    session._connectDevice(device, connection);
+  console.assert(
+    address.type === AddressType.mac || address.type === 'empty',
+    'mac-address expected',
+  );
+  const devs = devices.find(address);
+  if (devs && devs.length === 1) {
+    session._connectDevice(devs[0], connection);
   }
 });
 

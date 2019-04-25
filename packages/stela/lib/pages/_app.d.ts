@@ -27,7 +27,7 @@ declare class StelaApp extends App<{
         session?: undefined;
     }>;
     constructor(props: any);
-    handleChanged: <K extends "title" | "backgroundColor" | "height" | "lineHeight" | "paddingTop" | "width" | "username" | "isCondensed" | "isBold" | "titleColor" | "titleSize" | "nameColor" | "nameSize" | "subColor" | "subSize" | "priceColor" | "priceSize" | "items" | "fontName">(props: Pick<State, K>) => void;
+    handleChanged: <K extends "backgroundColor" | "height" | "lineHeight" | "paddingTop" | "width" | "fontName" | "items" | "isCondensed" | "isBold" | "title" | "titleColor" | "titleSize" | "nameColor" | "nameSize" | "subColor" | "subSize" | "priceColor" | "priceSize" | "username">(props: Pick<State, K>) => void;
     update: (props: Partial<StelaProps>) => void;
     handleSubmitLogin: (values: LoginProps) => Promise<[boolean, {
         message?: string | undefined;

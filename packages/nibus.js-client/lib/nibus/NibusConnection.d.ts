@@ -33,7 +33,7 @@ declare class NibusConnection extends EventEmitter {
     sendDatagram(datagram: NibusDatagram): Promise<NmsDatagram | NmsDatagram[] | undefined>;
     ping(address: AddressParam): Promise<number>;
     findByType(type?: number): Promise<NmsDatagram | NmsDatagram[] | undefined>;
-    getVersion(address: AddressParam): Promise<number[]>;
+    getVersion(address: AddressParam): Promise<[number?, number?]>;
     close: () => void;
 }
 export default NibusConnection;

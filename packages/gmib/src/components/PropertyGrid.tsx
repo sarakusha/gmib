@@ -7,7 +7,7 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import { IconButton } from '@material-ui/core';
+import { CircularProgress, IconButton, Tooltip } from '@material-ui/core';
 import {
   createStyles,
   Theme,
@@ -23,7 +23,7 @@ import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
 import Typography from '@material-ui/core/Typography';
 import groupBy from 'lodash/groupBy';
-import React, { useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { hot } from 'react-hot-loader/root';
 import compose from 'recompose/compose';
 import ReloadIcon from '@material-ui/icons/refresh';
@@ -43,6 +43,17 @@ const styles = (theme: Theme) => createStyles({
     overflow: 'auto',
   },
   wrapper: {},
+  toolbarWrapper: {
+    position: 'relative',
+  },
+  fabProgress: {
+    color: theme.palette.secondary.light,
+    position: 'absolute',
+    pointerEvents: 'none',
+    top: 0,
+    left: 0,
+    zIndex: 1,
+  },
   table: {},
 });
 
@@ -55,13 +66,27 @@ type InnerProps = Props & WithStyles<typeof styles> & WithTheme;
 const PropertyGrid: React.FC<InnerProps> = ({ classes, id, active = true }) => {
   const { current } = useDevicesContext();
   const { props, setValue, error, reload, proto, isDirty } = useDevice(id);
+  const [busy, setBusy] = useState(false);
+  const reloadHandler = useCallback(
+    async () => {
+      setBusy(true);
+      await reload();
+      setBusy(false);
+    },
+    [reload, setBusy],
+  );
   const reloadToolbar = useMemo(
     () => (
-      <IconButton color="inherit" onClick={reload}>
-        <ReloadIcon />
-      </IconButton>
+      <Tooltip title="Обновить свойства" enterDelay={1000}>
+        <div className={classes.toolbarWrapper}>
+          <IconButton color="inherit" onClick={reloadHandler} disabled={busy}>
+            <ReloadIcon />
+          </IconButton>
+          {busy && <CircularProgress size={48} className={classes.fabProgress}/>}
+        </div>
+      </Tooltip>
     ),
-    [reload],
+    [reloadHandler, busy],
   );
 
   const [, setToolbar] = useToolbar();

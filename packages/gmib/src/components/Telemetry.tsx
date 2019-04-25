@@ -7,7 +7,7 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import { IconButton, Paper, Typography } from '@material-ui/core';
+import { CircularProgress, IconButton, Paper, Tooltip, Typography } from '@material-ui/core';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
 import { hot } from 'react-hot-loader/root';
@@ -38,7 +38,6 @@ const styles = (theme: Theme) => createStyles({
     display: 'flex',
     overflow: 'auto',
   },
-  wrapper: {},
   grid: {
     display: 'grid',
     gridAutoFlow: 'column',
@@ -74,6 +73,18 @@ const styles = (theme: Theme) => createStyles({
     borderBottom: '1px solid white',
   },
   ypos: {},
+  fabProgress: {
+    color: theme.palette.secondary.light,
+    position: 'absolute',
+    pointerEvents: 'none',
+    top: 0,
+    left: 0,
+    zIndex: 1,
+  },
+  wrapper: {
+    // margin: theme.spacing.unit,
+    position: 'relative',
+  },
 });
 
 type Props = {
@@ -158,14 +169,23 @@ const Telemetry: React.FC<InnerProps> = ({ classes, id, active = true }) => {
   const cancel = useCallback(() => loader && loader.cancel(), []);
   const telemetryToolbar = useMemo(
     () => loading ? (
-        <IconButton onClick={cancel} color="inherit">
-          <CancelIcon/>
-        </IconButton>
+        <Tooltip title="Отменить опрос">
+          <div className={classes.wrapper}>
+            <IconButton onClick={cancel} color="inherit">
+              <CancelIcon />
+            </IconButton>
+            <CircularProgress size={48} className={classes.fabProgress}/>
+          </div>
+        </Tooltip>
       )
       : (
-        <IconButton onClick={start} color="inherit">
-          <StartIcon />
-        </IconButton>
+        <Tooltip title="Запустить опрос модулей" enterDelay={500}>
+          <div className={classes.wrapper}>
+            <IconButton onClick={start} color="inherit">
+              <StartIcon />
+            </IconButton>
+          </div>
+        </Tooltip>
       ),
     [start, cancel, loading],
   );
@@ -229,7 +249,7 @@ const Telemetry: React.FC<InnerProps> = ({ classes, id, active = true }) => {
         tooltipPos={'right'}
       />
       <div className={classes.main}>
-        <div className={classes.wrapper}>
+        <div>
           <div className={classes.grid} style={style}>
             {modules.map(props => (
               <ModuleInfo

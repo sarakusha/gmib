@@ -17,7 +17,7 @@ import yaml from 'js-yaml';
 import _ from 'lodash';
 import path from 'path';
 import SerialPort from 'serialport';
-import UsbDetection from 'usb-detection';
+import usbDetection from 'usb-detection';
 import { IMibDescription } from '@nata/nibus.js-client/lib/MibDescription';
 import {
   Category,
@@ -27,7 +27,7 @@ import {
   KnownPortV,
 } from '@nata/nibus.js-client/lib/session/KnownPorts';
 
-let usbDetection: typeof UsbDetection;
+// let usbDetection: typeof UsbDetection;
 const debug = debugFactory('nibus:detector');
 const detectionPath = path.resolve(__dirname, '../../detection.yml');
 let knownPorts: Promise<IKnownPort[]> = Promise.resolve([]);
@@ -69,7 +69,7 @@ const loadDetection = (): IDetection | undefined => {
 
 let detection = loadDetection();
 
-function reloadDevices(lastAdded?: UsbDetection.IDevice) {
+function reloadDevices(lastAdded?: usbDetection.IDevice) {
   knownPorts = knownPorts.then(ports => reloadDevicesAsync(ports, lastAdded));
 }
 
@@ -89,7 +89,7 @@ const detectionListener = (curr: Stats, prev: Stats) => {
  */
 class Detector extends EventEmitter {
   start() {
-    usbDetection = require('usb-detection');
+    // usbDetection = require('usb-detection');
     usbDetection.startMonitoring();
     debug(`start watching the detector file ${detectionPath}`);
     fs.watchFile(detectionPath, { persistent: false }, detectionListener);
@@ -144,15 +144,15 @@ const detector = new Detector();
 
 const getId = (id?: HexOrNumber) => typeof id === 'string' ? parseInt(id, 16) : id;
 
-function equals(port: SerialPort.PortInfo, device: UsbDetection.IDevice): boolean {
+function equals(port: SerialPort.PortInfo, device: usbDetection.IDevice): boolean {
   return getId(port.productId) === device.productId
     && getId(port.vendorId) === device.vendorId
     && port.serialNumber === device.serialNumber;
 }
 
-async function detectDevice(port: SerialPort.PortInfo, lastAdded?: UsbDetection.IDevice)
+async function detectDevice(port: SerialPort.PortInfo, lastAdded?: usbDetection.IDevice)
   : Promise<IKnownPort> {
-  let detected: UsbDetection.IDevice | undefined;
+  let detected: usbDetection.IDevice | undefined;
   if (lastAdded && equals(port, lastAdded)) {
     detected = lastAdded;
   } else {
@@ -221,7 +221,7 @@ const matchCategory = (port: IKnownPort): Category => {
   if (match) return CategoryV.decode(match.category).getOrElse(undefined);
 };
 
-async function reloadDevicesAsync(prevPorts: IKnownPort[], lastAdded?: UsbDetection.IDevice) {
+async function reloadDevicesAsync(prevPorts: IKnownPort[], lastAdded?: usbDetection.IDevice) {
   const ports: IKnownPort[] = [];
   try {
     if (detection == null) {

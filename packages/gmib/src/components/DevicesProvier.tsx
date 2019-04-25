@@ -34,6 +34,7 @@ const useDevices = () => {
         if (device.id === current) {
           setCurrent(null);
         }
+        console.log('RELEASE', device.address.toString());
         device.release();
       };
       session.on('disconnected', disconnectHandler);
@@ -45,6 +46,7 @@ const useDevices = () => {
         session.off('disconnected', disconnectHandler);
       };
     },
+    [setDevices, setCurrent, devices],
   );
 
   return {

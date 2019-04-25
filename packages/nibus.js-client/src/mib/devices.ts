@@ -12,13 +12,14 @@
 import { crc16ccitt } from 'crc';
 import debugFactory from 'debug';
 import { EventEmitter } from 'events';
+import fs from 'fs';
 import * as t from 'io-ts';
 import { PathReporter } from 'io-ts/lib/PathReporter';
 import _ from 'lodash';
 import path from 'path';
 import 'reflect-metadata';
 import { config as configDir } from 'xdg-basedir';
-import Address, { AddressParam } from '../Address';
+import Address, { AddressParam, AddressType } from '../Address';
 import { NibusError } from '../errors';
 import { NMS_MAX_DATA_LENGTH } from '../nbconst';
 import { NibusConnection } from '../nibus';
@@ -82,7 +83,7 @@ enum PrivateProps {
   connection = -1,
 }
 
-const deviceMap: { [address: string]: DevicePrototype } = {};
+const deviceMap: { [address: string]: IDevice[] } = {};
 
 const mibTypesCache: { [mibname: string]: Function } = {};
 
@@ -223,6 +224,7 @@ export interface IDevice {
   [mibProperty: string]: any;
 
   on(event: 'connected' | 'disconnected', listener: () => void): this;
+  // on(event: 'serno', listener: () => void): this;
   on(event: 'changing' | 'changed', listener: ChangeListener): this;
   on(event: 'uploadStart', listener: UploadStartListener): this;
   on(event: 'uploadData', listener: UploadDataListener): this;
@@ -232,6 +234,7 @@ export interface IDevice {
   on(event: 'downloadFinish', listener: DownloadFinishListener): this;
 
   once(event: 'connected' | 'disconnected', listener: () => void): this;
+  // once(event: 'serno', listener: () => void): this;
   once(event: 'changing' | 'changed', listener: ChangeListener): this;
   once(event: 'uploadStart', listener: UploadStartListener): this;
   once(event: 'uploadData', listener: UploadDataListener): this;
@@ -241,6 +244,7 @@ export interface IDevice {
   once(event: 'downloadFinish', listener: DownloadFinishListener): this;
 
   addListener(event: 'connected' | 'disconnected', listener: () => void): this;
+  // addListener(event: 'serno', listener: () => void): this;
   addListener(event: 'changing' | 'changed', listener: ChangeListener): this;
   addListener(event: 'uploadStart', listener: UploadStartListener): this;
   addListener(event: 'uploadData', listener: UploadDataListener): this;
@@ -250,6 +254,7 @@ export interface IDevice {
   addListener(event: 'downloadFinish', listener: DownloadFinishListener): this;
 
   off(event: 'connected' | 'disconnected', listener: () => void): this;
+  // off(event: 'serno', listener: () => void): this;
   off(event: 'changing' | 'changed', listener: ChangeListener): this;
   off(event: 'uploadStart', listener: UploadStartListener): this;
   off(event: 'uploadData', listener: UploadDataListener): this;
@@ -259,6 +264,7 @@ export interface IDevice {
   off(event: 'downloadFinish', listener: DownloadFinishListener): this;
 
   removeListener(event: 'connected' | 'disconnected', listener: () => void): this;
+  // removeListener(event: 'serno', listener: () => void): this;
   removeListener(event: 'changing' | 'changed', listener: ChangeListener): this;
   removeListener(event: 'uploadStart', listener: UploadStartListener): this;
   removeListener(event: 'uploadData', listener: UploadDataListener): this;
@@ -268,6 +274,7 @@ export interface IDevice {
   removeListener(event: 'downloadFinish', listener: DownloadFinishListener): this;
 
   emit(event: 'connected' | 'disconnected'): boolean;
+  // emit(event: 'serno'): boolean;
   emit(event: 'changing' | 'changed', arg: ChangeArg): boolean;
   emit(event: 'uploadStart', arg: UploadStartArg): boolean;
   emit(event: 'uploadData', arg: UploadDataArg): boolean;
@@ -468,7 +475,7 @@ class DevicePrototype extends EventEmitter implements IDevice {
   constructor(mibname: string) {
     super();
     const mibfile = getMibFile(mibname);
-    const mibValidation = MibDeviceV.decode(require(mibfile));
+    const mibValidation = MibDeviceV.decode(JSON.parse(fs.readFileSync(mibfile).toString()));
     if (mibValidation.isLeft()) {
       throw new Error(`Invalid mib file ${mibfile} ${PathReporter.report(mibValidation)}`);
     }
@@ -666,6 +673,14 @@ class DevicePrototype extends EventEmitter implements IDevice {
         names,
       },
     );
+    if (names.includes('serno') && !isDirty
+      && this.address.type === AddressType.mac && typeof this.serno === 'string') {
+      const value = this.serno;
+      const prevAddress = this.address;
+      const address = Buffer.from(value.padStart(12, '0').substring(value.length - 12), 'hex');
+      Reflect.defineProperty(this, 'address', withValue(new Address(address), false, true));
+      devices.emit('serno', prevAddress, this.address);
+    }
   }
 
   public addref() {
@@ -677,7 +692,11 @@ class DevicePrototype extends EventEmitter implements IDevice {
   public release() {
     this.$countRef -= 1;
     if (this.$countRef <= 0) {
-      delete deviceMap[this.address.toString()];
+      const key = this.address.toString();
+      deviceMap[key] = _.without(deviceMap[key], this);
+      if (deviceMap[key].length === 0) {
+        delete deviceMap[key];
+      }
       /**
        * @event Devices#delete
        */
@@ -999,7 +1018,8 @@ interface DevicePrototype {
 
 function findMibByType(type: number, version?: number): string | undefined {
   const conf = path.resolve(configDir || '/tmp', 'configstore', pkgName);
-  const validate = ConfigV.decode(require(conf));
+  const validate = ConfigV.decode(JSON.parse(fs.readFileSync(`${conf}.json`).toString()));
+//   const validate = ConfigV.decode(require(conf));
   if (validate.isLeft()) {
     throw new Error(`Invalid config file ${conf}
   ${PathReporter.report(validate)}`);
@@ -1031,6 +1051,9 @@ export declare interface Devices {
   on(event: 'new' | 'delete', deviceListener: (device: IDevice) => void): this;
   once(event: 'new' | 'delete', deviceListener: (device: IDevice) => void): this;
   addListener(event: 'new' | 'delete', deviceListener: (device: IDevice) => void): this;
+  on(event: 'serno', listener: (prevAddress: Address, newAddress: Address) => void): this;
+  once(event: 'serno', listener: (prevAddress: Address, newAddress: Address) => void): this;
+  addListener(event: 'serno', listener: (prevAddress: Address, newAddress: Address) => void): this;
 }
 
 function getConstructor(mib: string): Function {
@@ -1042,7 +1065,7 @@ function getConstructor(mib: string): Function {
       this[$values] = {};
       this[$errors] = {};
       this[$dirties] = {};
-      Reflect.defineProperty(this, 'address', withValue(address));
+      Reflect.defineProperty(this, 'address', withValue(address, false, true));
       this.$countRef = 1;
       (this as any).id = timeid() as DeviceId;
       // debug(new Error('CREATE').stack);
@@ -1062,9 +1085,9 @@ export function getMibPrototype(mib: string): Object {
 }
 
 export class Devices extends EventEmitter {
-  get = (): IDevice[] => _.values(deviceMap);
+  get = (): IDevice[] => _.flatten(_.values(deviceMap));
 
-  find = (address: AddressParam): IDevice | undefined => {
+  find = (address: AddressParam): IDevice[] | undefined => {
     const targetAddress = new Address(address);
     return deviceMap[targetAddress.toString()];
   };
@@ -1082,20 +1105,21 @@ export class Devices extends EventEmitter {
       throw new Error(`mib or type expected, got ${mibOrType}`);
     }
     const targetAddress = new Address(address);
-    let device = deviceMap[targetAddress.toString()];
-    if (device) {
-      console.assert(
-        Reflect.getMetadata('mib', device) === mib,
-        `mibs are different, expected ${mib}`,
-      );
-      device.addref();
-      return device;
-    }
+    // let device = deviceMap[targetAddress.toString()];
+    // if (device) {
+    //   console.assert(
+    //     Reflect.getMetadata('mib', device) === mib,
+    //     `mibs are different, expected ${mib}`,
+    //   );
+    //   device.addref();
+    //   return device;
+    // }
 
     const constructor = getConstructor(mib);
-    device = Reflect.construct(constructor, [targetAddress]);
+    const device: IDevice = Reflect.construct(constructor, [targetAddress]);
     if (!targetAddress.isEmpty) {
-      deviceMap[targetAddress.toString()] = device;
+      const key = targetAddress.toString();
+      deviceMap[key] = (deviceMap[key] || []).concat(device);
       process.nextTick(() => this.emit('new', device));
     }
     return device;

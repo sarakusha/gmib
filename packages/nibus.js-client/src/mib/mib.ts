@@ -15,12 +15,13 @@ export function validJsName(name: string) {
   return name.replace(/(_\w)/g, (_, s) => s[1].toUpperCase());
 }
 
-export const withValue = (value: any, writable = false): PropertyDescriptor => ({
-  value,
-  writable,
-  configurable: false,
-  enumerable: true,
-});
+export const withValue =
+  (value: any, writable = false, configurable = false): PropertyDescriptor => ({
+    value,
+    writable,
+    configurable,
+    enumerable: true,
+  });
 const hex = /^0X[0-9A-F]+$/i;
 const isHex = (str: string) => hex.test(str)
   || parseInt(str, 10).toString(10) !== str.toLowerCase().replace(/^[0 ]+/, '');
@@ -212,7 +213,7 @@ export function getIntSize(type: string) {
 
 export function minInclusiveConverter(min: number): IConverter {
   return {
-    from: value => typeof value === 'number' ?  Math.max(value, min) : value,
+    from: value => typeof value === 'number' ? Math.max(value, min) : value,
     to: value => value,
   };
 }

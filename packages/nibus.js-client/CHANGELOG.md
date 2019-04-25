@@ -9,6 +9,17 @@
 > - [Polish]
 > - [Experimental]
 > - [Deprecation]
+# 1.3.6
+- **Breaking Change**
+  - свойство device.address меняется при изменении serno
+  - отказ от уникальности устройства с данным адресом. Devices.find(address): IDevice[]
+- **New Feature**
+  - при смене serno и device.address генерируется событие 'serno'
+- **Internal**
+  - значение gamma minihost3 приведено в соответствие с gamma minihost_2.06b (с точностью и границами)
+  - разрешены пустые mac-адреса
+  - замена require(.json) на JSON.parse(fs.readFileSync) для попытки собрать на electron
+
 # 1.3.5
 - **Braking Change**
   - если новое значение свойства не отличается от старого и нет ошибки, свойство не меняется и не становится dirty

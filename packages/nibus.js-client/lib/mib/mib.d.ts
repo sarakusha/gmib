@@ -1,6 +1,6 @@
 import { IMibType } from './devices';
 export declare function validJsName(name: string): string;
-export declare const withValue: (value: any, writable?: boolean) => PropertyDescriptor;
+export declare const withValue: (value: any, writable?: boolean, configurable?: boolean) => PropertyDescriptor;
 export declare const toInt: (value?: string | number | boolean) => number;
 declare type ResultType = string | number | boolean | undefined;
 declare type PresentType = string | number | boolean | undefined;

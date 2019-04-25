@@ -49,6 +49,7 @@ type Props = {
   unit?: string,
   min?: number,
   max?: number,
+  step?: number,
   dirty?: boolean,
   onChangeProperty?: (name: string, value: any) => void,
 } & TableCellProps;
@@ -56,7 +57,8 @@ type InnerProps = Props & WithStyles<typeof styles>;
 
 const EditCell: React.FC<InnerProps> =
   ({
-    value, classes, className, align, type, unit, min, max, name, onChangeProperty, dirty, ...props
+    value, classes, className, align,
+    type, unit, min, max, step, name, onChangeProperty, dirty, ...props
   }) => {
     const inputClasses = {
       input: classNames({
@@ -94,6 +96,7 @@ const EditCell: React.FC<InnerProps> =
           inputProps={{
             min,
             max,
+            step,
           }}
           onChange={changeHandler}
         />

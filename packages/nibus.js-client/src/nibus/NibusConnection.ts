@@ -187,7 +187,7 @@ class NibusConnection extends EventEmitter {
     return this.sendDatagram(sarp);
   }
 
-  public async getVersion(address: AddressParam): Promise<number[]> {
+  public async getVersion(address: AddressParam): Promise<[number?, number?]> {
     const nmsRead = createNmsRead(address, VERSION_ID);
     try {
       const { value, status } = await this.sendDatagram(nmsRead) as NmsDatagram;

@@ -427,7 +427,7 @@
           }
         },
         "gamma": {
-          "type": "float32",
+          "type": "gammaType",
           "annotation": "Гамма",
           "appinfo": {
             "nms_id": "0x30B",
@@ -1007,13 +1007,13 @@
     "packed8Float": {
       "base": "xs:unsignedByte"
     },
-    "float32": {
-      "base": "xs:float"
-    },
     "gammaType": {
-      "base": "xs:unsignedShort",
-      "minInclusive": "0",
-      "maxInclusive": "1023"
+      "appinfo": {
+        "precision": "2"
+      },
+      "base": "xs:float",
+      "minInclusive": "0.01",
+      "maxInclusive": "4.0"
     },
     "percentsType": {
       "appinfo": {

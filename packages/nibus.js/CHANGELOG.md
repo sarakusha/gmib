@@ -9,6 +9,12 @@
 > - [Polish]
 > - [Experimental]
 > - [Deprecation]
+# 1.3.6
+- **Internal**
+  - замена require(.json) на JSON.parse(fs.readFileSync) для попытки сборки под electron
+
+# 1.3.5
+- skipped
 # 1.3.4
 - **Bug Fix**
   - увеличен таймаут для Windows при определении устройства

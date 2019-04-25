@@ -89,7 +89,7 @@ class StelaApp extends app_1.default {
             return {
                 isNeedLogin,
                 pageProps: query,
-                session: req.index,
+                session: req.session,
             };
         }
         return { pageProps: {} };

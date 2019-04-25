@@ -4,6 +4,7 @@ import Address, { AddressParam } from '../Address';
 import { IDevice } from '../mib';
 import { NibusConnection } from '../nibus';
 import { Category } from './KnownPorts';
+export declare const delay: (seconds: number) => Promise<{}>;
 export declare type FoundListener = (arg: {
     connection: NibusConnection;
     category: Category;

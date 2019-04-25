@@ -224,11 +224,14 @@ export declare interface Devices {
     on(event: 'new' | 'delete', deviceListener: (device: IDevice) => void): this;
     once(event: 'new' | 'delete', deviceListener: (device: IDevice) => void): this;
     addListener(event: 'new' | 'delete', deviceListener: (device: IDevice) => void): this;
+    on(event: 'serno', listener: (prevAddress: Address, newAddress: Address) => void): this;
+    once(event: 'serno', listener: (prevAddress: Address, newAddress: Address) => void): this;
+    addListener(event: 'serno', listener: (prevAddress: Address, newAddress: Address) => void): this;
 }
 export declare function getMibPrototype(mib: string): Object;
 export declare class Devices extends EventEmitter {
     get: () => IDevice[];
-    find: (address: AddressParam) => IDevice | undefined;
+    find: (address: AddressParam) => IDevice[] | undefined;
     create(address: AddressParam, mib: string): IDevice;
     create(address: AddressParam, type: number, version?: number): IDevice;
 }

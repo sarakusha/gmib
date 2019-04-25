@@ -70,8 +70,9 @@ export const useDevice = (id: DeviceId) => {
   const [error, setError] = useState<Error | string | undefined>();
   const reload = useCallback(
     () => {
-      if (!device) return;
-      device.read().then(
+      if (!device) return Promise.resolve();
+      setError(undefined);
+      return device.read().then(
         update,
         err => setError(err),
       );

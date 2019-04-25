@@ -11,7 +11,6 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import * as path from 'path';
 import { format as formatUrl } from 'url';
-import service from '@nata/nibus.js/lib/service';
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
@@ -19,7 +18,10 @@ const isDevelopment = process.env.NODE_ENV !== 'production';
 let mainWindow: BrowserWindow | null;
 
 function createMainWindow() {
-  const window = new BrowserWindow();
+  const window = new BrowserWindow({
+    width: 800,
+    height: 650,
+  });
 
   if (isDevelopment) {
     import('electron-devtools-installer').then(
@@ -84,6 +86,5 @@ app.on('ready', () => {
 
 ipcMain.on('startLocalNibus', () => {
   console.log('START LOCAL NIBUS');
-  service.start();
   // import('@nata/nibus.js/lib/service/service').then(service => service.default.start());
 });

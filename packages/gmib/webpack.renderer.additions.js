@@ -12,26 +12,41 @@ const { ANALYZE } = process.env;
 const path = require('path');
 
 const config = {
-  module: {
-    rules: [
-      {
-        test: /\.tsx$/,
-        use:
-          [
-            { loader: 'react-hot-loader/webpack' },
-            {
-              loader: 'ts-loader',
-              options:
-                {
-                  transpileOnly: true,
-                  appendTsSuffixTo: [/\.vue$/],
-                  configFile: path.relative(__dirname, 'tsconfig.json'),
-                    // '/Users/sarakusha/WebstormProjects/@nata/packages/gmib/tsconfig.json',
-                },
-            }, // { loader: 'ts-loader' },
-          ],
-      }],
-  },
+  externals: [
+    (function () {
+      var IGNORES = [
+        'electron'
+      ];
+      return function (context, request, callback) {
+        if (IGNORES.indexOf(request) >= 0) {
+          console.log('@@@@@@@@@@@@@@', request);
+          return callback(null, "require('" + request + "')");
+        }
+        return callback();
+      };
+    })(),
+    'worker_threads',
+  ],
+  // module: {
+  //   rules: [
+  //     {
+  //       test: /\.tsx$/,
+  //       use:
+  //         [
+  //           { loader: 'react-hot-loader/webpack' },
+  //           {
+  //             loader: 'ts-loader',
+  //             options:
+  //               {
+  //                 transpileOnly: true,
+  //                 appendTsSuffixTo: [/\.vue$/],
+  //                 configFile: path.relative(__dirname, 'tsconfig.json'),
+  //                   // '/Users/sarakusha/WebstormProjects/@nata/packages/gmib/tsconfig.json',
+  //               },
+  //           }, // { loader: 'ts-loader' },
+  //         ],
+  //     }],
+  // },
   plugins: [],
 };
 
@@ -45,5 +60,5 @@ if (ANALYZE) {
   }));
 }
 
-// module.exports = isProduction ? {} : config;
-module.exports = {};
+module.exports = config;
+// module.exports = {};

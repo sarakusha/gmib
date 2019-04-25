@@ -38,7 +38,7 @@ const useSessionStart = () => {
           device.connection = connection;
         } else {
           const [version, type] = await connection.getVersion(address);
-          const device = devices.create(address, type, version);
+          const device = devices.create(address, type!, version);
           connection.description.mib = Reflect.getMetadata('mib', device);
           device.connection = connection;
         }

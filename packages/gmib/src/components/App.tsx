@@ -8,19 +8,30 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { AppBar, Divider, Drawer, IconButton, List, Toolbar, Typography } from '@material-ui/core';
+import {
+  AppBar,
+  Divider,
+  Drawer,
+  IconButton,
+  List,
+  Toolbar,
+  Tooltip,
+  Typography,
+} from '@material-ui/core';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import { createStyles, Theme, withStyles, WithStyles } from '@material-ui/core/styles';
 import ChevronLeftIcon from '@material-ui/icons/ChevronLeft';
+import SearchIcon from '@material-ui/icons/search';
 import MenuIcon from '@material-ui/icons/Menu';
 import classNames from 'classnames';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { hot } from 'react-hot-loader/root';
 import compose from 'recompose/compose';
+import some from 'lodash/some';
 import DeviceListItems from './DeviceListItems';
 import { useDevicesContext } from './DevicesProvier';
-// import DeviceToolbarItems from './DeviceToolbarItems';
 import GmibTabs from './GmibTabs';
+import SearchDialog from './SearchDialog';
 import { useToolbar } from './ToolbarProvider';
 
 const version = require('../../package.json').version;
@@ -122,6 +133,18 @@ const App: React.FC<InnerProps> = ({ classes }) => {
   const [open, setOpen] = useState(true);
   const handleDrawerOpen = useCallback(() => setOpen(true), []);
   const handleDrawerClose = useCallback(() => setOpen(false), []);
+  const [isSearchOpen, setSearchOpen] = useState(false);
+  const searchOpen = useCallback(() => setSearchOpen(true), [setSearchOpen]);
+  const searchClose = useCallback(() => setSearchOpen(false), [setSearchOpen]);
+  const [link, setLink] = useState(false);
+  const { devices } = useDevicesContext();
+  useEffect(
+    () => {
+      setLink(some(devices, device => device.connection
+        && device.connection.description && device.connection.description.link));
+    },
+    [devices, setLink],
+  );
   // const { current } = useDevicesContext();
   const [toolbar] = useToolbar();
   // console.log('RENDER APP');
@@ -165,14 +188,14 @@ const App: React.FC<InnerProps> = ({ classes }) => {
               {version}
             </Typography>
           </div>
+          <Tooltip title="Поиск новых устройств" enterDelay={500}>
+            <div>
+              <IconButton color="inherit" onClick={searchOpen} disabled={!link}>
+                <SearchIcon />
+              </IconButton>
+            </div>
+          </Tooltip>
           {toolbar}
-          {/*<DeviceToolbarItems current={current}/>*/}
-          {/*<Typography variant="subtitle1" color="inherit">*/}
-          {/* {current && `${Reflect.getMetadata('mib', current)} ${current.address.toString()}`}*/}
-          {/*</Typography>*/}
-          {/*{reload && <IconButton color="inherit" onClick={reload}>*/}
-          {/*  <ReloadIcon />*/}
-          {/*</IconButton>}*/}
         </Toolbar>
       </AppBar>
       <Drawer
@@ -197,6 +220,7 @@ const App: React.FC<InnerProps> = ({ classes }) => {
           <GmibTabs />
         </div>
       </main>
+      <SearchDialog open={isSearchOpen} close={searchClose} />
     </div>
   );
 };
