@@ -10,7 +10,7 @@
 
 import { EventEmitter } from 'events';
 
-export interface IRunnable<T, R = void> {
+declare interface Runnable<T, R = void> {
   on(event: 'start', listener: () => void): this;
   on(event: 'finish', listener: () => void): this;
   once(event: 'start', listener: () => void): this;
@@ -24,7 +24,7 @@ export interface IRunnable<T, R = void> {
   emit(event: 'start'): boolean;
   emit(event: 'finish'): boolean;
   run(options: T): Promise<R>;
-  cancel(): void;
+  cancel(): Promise<void>;
 }
 
 abstract class Runnable<T, R = void> extends EventEmitter {

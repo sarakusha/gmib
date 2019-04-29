@@ -9,6 +9,10 @@
 > - [Polish]
 > - [Experimental]
 > - [Deprecation]
+# 1.3.7
+- **Bug Fix**
+  - при поиске по типу проверяется тип ответившего устройства  
+  - C22 even применяется только для win32
 # 1.3.6
 - **Internal**
   - замена require(.json) на JSON.parse(fs.readFileSync) для попытки сборки под electron

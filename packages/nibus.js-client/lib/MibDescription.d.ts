@@ -23,5 +23,6 @@ export interface IMibDescription {
     find?: FindKind;
     disableBatchReading?: boolean;
     select?: IMibDescription[];
+    win32?: IMibDescription;
 }
 //# sourceMappingURL=MibDescription.d.ts.map

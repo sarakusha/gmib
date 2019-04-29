@@ -44,17 +44,19 @@ export const MibDescriptionV: t.Type<IMibDescription> = t.recursion('MibDescript
     find: FindKindV,
     disableBatchReading: t.boolean,
     select: t.array(MibDescriptionV),
+    win32: t.union([MibDescriptionV, t.undefined]),
   }),
 );
 
 export interface IMibDescription {
-  type?: number,
-  mib?: string,
-  link?: boolean,
-  baudRate?: NibusBaudRate,
-  parity?: NibusParity,
-  category?: string,
-  find?: FindKind,
-  disableBatchReading?: boolean,
-  select?: IMibDescription[],
+  type?: number;
+  mib?: string;
+  link?: boolean;
+  baudRate?: NibusBaudRate;
+  parity?: NibusParity;
+  category?: string;
+  find?: FindKind;
+  disableBatchReading?: boolean;
+  select?: IMibDescription[];
+  win32?: IMibDescription;
 }

@@ -9,14 +9,17 @@
  */
 
 import { Address } from '@nata/nibus.js-client';
+import { AddressType } from '@nata/nibus.js-client/lib/Address';
 import { NibusConnection } from '@nata/nibus.js-client/lib/nibus';
-import { delay } from './helpers';
-import Runnable, { IRunnable } from './Runnable';
+import { createSarp, SarpDatagram } from '@nata/nibus.js-client/lib/sarp';
+import SarpQueryType from '@nata/nibus.js-client/lib/sarp/SarpQueryType';
+import { delay, tuplify } from './helpers';
+import Runnable from './Runnable';
 
 export type DeviceInfo = {
   address: Address,
   connection: NibusConnection,
-  version: number,
+  version?: number,
   type: number,
 };
 
@@ -26,10 +29,11 @@ type AddressListener = (info: DeviceInfo) => void;
 
 export type FinderOptions = {
   address?: string,
+  type?: number,
   connections?: NibusConnection[],
 };
 
-export interface IFinder extends IRunnable<FinderOptions> {
+declare interface Finder extends Runnable<FinderOptions> {
   on(event: 'start', listener: () => void): this;
   on(event: 'finish', listener: () => void): this;
   once(event: 'start', listener: () => void): this;
@@ -47,19 +51,16 @@ export interface IFinder extends IRunnable<FinderOptions> {
   addListener(event: 'found', listener: AddressListener): this;
   off(event: 'found', listener: AddressListener): this;
   removeListener(event: 'found', listener: AddressListener): this;
-  emit(event: 'found', address: Address, connection: NibusConnection): boolean;
+  emit(event: 'found', info: DeviceInfo): boolean;
 }
 
-export class AddressFinder extends Runnable<FinderOptions> implements IFinder {
-  $error?: string;
-
-  get error() { return this.$error; }
-
-  protected async runImpl({ address, connections }: FinderOptions) {
-    if (!connections) throw new Error('Invalid connections');
-    if (!address) throw new Error('Invalid address');
+class Finder extends Runnable<FinderOptions> {
+  protected async macFinder(address: Address, connections: NibusConnection[]) {
     let rest = connections.slice(0);
-    while (!this.isCanceled) {
+    let first = true;
+    while (!this.isCanceled && rest.length > 0) {
+      if (first) first = false;
+      else await delay(1);
       const results = await Promise.all(rest.map(connection => connection.getVersion(address)));
       results
         .filter(tuple => tuple.length === 2)
@@ -67,17 +68,92 @@ export class AddressFinder extends Runnable<FinderOptions> implements IFinder {
           'found',
           {
             address,
-            type,
             version,
+            type: type!,
             connection: rest[index],
           },
         ));
       rest = rest.filter((_, index) => results[index].length === 0);
-      if (rest.length === 0) {
-        this.emit('finish');
-        break;
+    }
+  }
+
+  protected async runImpl({ connections, type, address }: FinderOptions): Promise<void> {
+    if (!connections) throw new Error('Invalid connections');
+    const addr = new Address(address);
+    let counter = 0;
+    let createRequest: () => SarpDatagram;
+    let queryType = SarpQueryType.All;
+    if (type) {
+      queryType = SarpQueryType.ByType;
+      createRequest = () =>
+        createSarp(queryType, [0, 0, 0, (type! >> 8) & 0xFF, type! & 0xFF]);
+    } else {
+      switch (addr.type) {
+        case AddressType.net:
+          // Не реализовано, используем запрос по адресу
+          if (false) {
+            queryType = SarpQueryType.ByNet;
+            createRequest = () =>
+              createSarp(queryType, [...addr.raw.slice(0, 5)].reverse());
+            break;
+          } else {
+            return this.macFinder(addr, connections);
+          }
+        case AddressType.group:
+          queryType = SarpQueryType.ByGrpup;
+          createRequest = () =>
+            createSarp(queryType, [...addr.raw.slice(0, 5)].reverse());
+          break;
+        case AddressType.mac:
+          return this.macFinder(addr, connections);
+        default:
+          queryType = SarpQueryType.All;
+          createRequest = () =>
+            createSarp(queryType, [0, 0, 0, 0, 0]);
+          break;
       }
-      await delay(1);
+    }
+    const createSarpListener = (connection: NibusConnection) => {
+      const detected = new Set<string>();
+      return (datagram: SarpDatagram) => {
+        if (datagram.queryType !== queryType) return;
+        if (queryType === SarpQueryType.ByType && datagram.deviceType !== type) return;
+        const address = new Address(datagram.mac);
+        const key = address.toString();
+        if (detected.has(key)) return;
+        counter = 0;
+        detected.add(key);
+        this.emit(
+          'found',
+          {
+            connection,
+            address,
+            type: datagram.deviceType!,
+          },
+        );
+      };
+    };
+    let listeners: [NibusConnection, (datagram: SarpDatagram) => void][] = [];
+    try {
+      listeners = connections.map((connection) => {
+        const listener = createSarpListener(connection);
+        connection.on('sarp', listener);
+        return tuplify(connection, listener);
+      });
+
+      let first = true;
+
+      while (!this.isCanceled && counter < 3) {
+        if (first) first = false;
+        else await delay(3);
+        counter += 1;
+        await Promise.all(connections.map(connection => connection.sendDatagram(createRequest())));
+      }
+    } finally {
+      listeners
+        .forEach(([connection, listener]) => connection.off('sarp', listener));
     }
   }
 }
+
+export default Finder;

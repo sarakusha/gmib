@@ -1016,7 +1016,7 @@ interface DevicePrototype {
   [$dirties]: { [id: number]: boolean };
 }
 
-function findMibByType(type: number, version?: number): string | undefined {
+export const getMibTypes = () => {
   const conf = path.resolve(configDir || '/tmp', 'configstore', pkgName);
   const validate = ConfigV.decode(JSON.parse(fs.readFileSync(`${conf}.json`).toString()));
 //   const validate = ConfigV.decode(require(conf));
@@ -1025,6 +1025,11 @@ function findMibByType(type: number, version?: number): string | undefined {
   ${PathReporter.report(validate)}`);
   }
   const { mibTypes } = validate.value;
+  return mibTypes;
+}
+
+export function findMibByType(type: number, version?: number): string | undefined {
+  const mibTypes = getMibTypes();
   const mibs = mibTypes![type];
   if (mibs && mibs.length) {
     let mibType = mibs[0];

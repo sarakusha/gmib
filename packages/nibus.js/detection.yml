@@ -12,9 +12,11 @@ mibCategories:
     link: true
   c22:
     link: true
-    baudRate: 57600
+    # baudRate: 57600
     # В случае прямого подключения для эмуляции 9 бита любой even/odd (mark, space только на Windows)
-    parity: even
+#    parity: even
+    win32:
+      parity: even
   sensor:
     mib: ti_lux_2_3
     find: sarp

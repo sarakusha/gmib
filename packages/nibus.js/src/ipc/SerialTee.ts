@@ -50,19 +50,20 @@ export default class SerialTee extends EventEmitter {
   constructor(public readonly portInfo: IKnownPort, public readonly description: IMibDescription) {
     super();
     const { comName: path } = portInfo;
+    const win32 = process.platform === 'win32' && description.win32 || {};
     this.serial = new SerialPort(
       path,
       {
         ...portOptions,
         baudRate: description.baudRate || 115200,
-        parity: description.parity || portOptions.parity,
+        parity: win32.parity || description.parity || portOptions.parity,
       },
     );
     this.serial.on('close', this.close);
     this.server = new Server(ipc.getSocketPath(path), true);
     this.server.pipe(this.serial);
     this.serial.pipe(this.server);
-    debug(`new connection on ${path} (${description.category})`);
+    debug(`new connection on ${path} baud: ${this.serial.baudRate} (${description.category})`);
   }
 
   public get path() {

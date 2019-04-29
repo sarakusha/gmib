@@ -87,16 +87,15 @@ type NmsListener = (datagram: NmsDatagram) => void;
 
 declare interface NibusConnection {
   on(event: 'sarp', listener: SarpListner): this;
-
   on(event: 'nms', listener: NmsListener): this;
-
   once(event: 'sarp', listener: SarpListner): this;
-
   once(event: 'nms', listener: NmsListener): this;
-
   addListener(event: 'sarp', listener: SarpListner): this;
-
   addListener(event: 'nms', listener: NmsListener): this;
+  off(event: 'sarp', listener: SarpListner): this;
+  off(event: 'nms', listener: NmsListener): this;
+  removeListener(event: 'sarp', listener: SarpListner): this;
+  removeListener(event: 'nms', listener: NmsListener): this;
 }
 
 class NibusConnection extends EventEmitter {

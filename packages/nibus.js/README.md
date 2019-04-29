@@ -35,7 +35,7 @@ npm set registry https://npm.nata-info.ru
 2. [Xcode](https://developer.apple.com/xcode/download/)
 3. Command Line Tools `xcode-select --install`
 
-### Windows
+### Windows 7 и выше
 * Устанвите [git](https://gitforwindows.org/)
 * #### Опция 1 (автоматически)
   Установка всех утилит используя [windows-build-tools](https://github.com/felixrieseberg/windows-build-tools)

@@ -26,7 +26,7 @@ import groupBy from 'lodash/groupBy';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { hot } from 'react-hot-loader/root';
 import compose from 'recompose/compose';
-import ReloadIcon from '@material-ui/icons/refresh';
+import ReloadIcon from '@material-ui/icons/Refresh';
 import { useDevicesContext } from './DevicesProvier';
 
 import ErrorCard from './ErrorCard';
@@ -41,6 +41,12 @@ const styles = (theme: Theme) => createStyles({
     paddingLeft: theme.spacing.unit,
     paddingRight: theme.spacing.unit,
     overflow: 'auto',
+  },
+  error: {
+    display: 'flex',
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   wrapper: {},
   toolbarWrapper: {
@@ -65,7 +71,7 @@ type InnerProps = Props & WithStyles<typeof styles> & WithTheme;
 
 const PropertyGrid: React.FC<InnerProps> = ({ classes, id, active = true }) => {
   const { current } = useDevicesContext();
-  const { props, setValue, error, reload, proto, isDirty } = useDevice(id);
+  const { props, setValue, error, reload, proto, isDirty, device } = useDevice(id);
   const [busy, setBusy] = useState(false);
   const reloadHandler = useCallback(
     async () => {
@@ -82,7 +88,7 @@ const PropertyGrid: React.FC<InnerProps> = ({ classes, id, active = true }) => {
           <IconButton color="inherit" onClick={reloadHandler} disabled={busy}>
             <ReloadIcon />
           </IconButton>
-          {busy && <CircularProgress size={48} className={classes.fabProgress}/>}
+          {busy && <CircularProgress size={48} className={classes.fabProgress} />}
         </div>
       </Tooltip>
     ),
@@ -101,6 +107,13 @@ const PropertyGrid: React.FC<InnerProps> = ({ classes, id, active = true }) => {
     [active, current, reloadToolbar],
   );
 
+  const release = useMemo(
+    () => device && Reflect.getMetadata('parent', device)
+      ? () => device.release()
+      : undefined,
+    [device],
+  );
+
   const categories = useMemo(
     () => groupBy(
       Object.entries(props),
@@ -116,7 +129,11 @@ const PropertyGrid: React.FC<InnerProps> = ({ classes, id, active = true }) => {
   // });
   // console.log('RENDER');
   if (error) {
-    return <ErrorCard error={error} onAction={reload} />;
+    return (
+      <div className={classes.error}>
+        <ErrorCard error={error} onAction={reload} onRelease={release} />
+      </div>
+    );
   }
   return (
     <div className={classes.root}>

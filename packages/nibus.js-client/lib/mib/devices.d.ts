@@ -220,6 +220,14 @@ export interface IDevice {
     emit(event: 'downloadFinish', arg: DownloadFinishArg): boolean;
 }
 export declare function getMibFile(mibname: string): string;
+export declare const getMibTypes: () => {
+    [x: string]: ({
+        mib: string;
+    } & {
+        minVersion?: number | undefined;
+    })[];
+} | undefined;
+export declare function findMibByType(type: number, version?: number): string | undefined;
 export declare interface Devices {
     on(event: 'new' | 'delete', deviceListener: (device: IDevice) => void): this;
     once(event: 'new' | 'delete', deviceListener: (device: IDevice) => void): this;

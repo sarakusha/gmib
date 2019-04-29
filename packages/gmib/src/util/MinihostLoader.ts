@@ -8,58 +8,70 @@
  * the EULA file that was distributed with this source code.
  */
 
+import { NibusError } from '@nata/nibus.js-client';
 import { IDevice } from '@nata/nibus.js-client/lib/mib';
-import { EventEmitter } from 'events';
+import Runnable from './Runnable';
 
-type ModuleInfo<T> = {
+export type IModuleInfo<T> = {
   x: number,
   y: number,
   info?: T,
-  error?: Error | string,
+  error?: string,
 };
 
-abstract class MinihostLoader<T> extends EventEmitter {
-  protected isCanceled = false;
-  protected isRunning = false;
-  private cancelPromise = Promise.resolve();
-  private cancelResolve = () => {};
+type LoaderOptions = {
+  xMin: number,
+  xMax: number,
+  yMin: number,
+  yMax: number,
+};
+
+declare interface MinihostLoader<T> {
+  on(event: 'start', listener: () => void): this;
+  on(event: 'finish', listener: () => void): this;
+  once(event: 'start', listener: () => void): this;
+  once(event: 'finish', listener: () => void): this;
+  addListener(event: 'start', listener: () => void): this;
+  addListener(event: 'finish', listener: () => void): this;
+  off(event: 'start', listener: () => void): this;
+  off(event: 'finish', listener: () => void): this;
+  removeListener(event: 'start', listener: () => void): this;
+  removeListener(event: 'finish', listener: () => void): this;
+  emit(event: 'start'): boolean;
+  emit(event: 'finish'): boolean;
+  on(event: 'column', listener: (column: IModuleInfo<T>[]) => void): this;
+  once(event: 'column', listener: (column: IModuleInfo<T>[]) => void): this;
+  addListener(event: 'column', listener: (column: IModuleInfo<T>[]) => void): this;
+  off(event: 'column', listener: (column: IModuleInfo<T>[]) => void): this;
+  removeListener(event: 'column', listener: (column: IModuleInfo<T>[]) => void): this;
+  emit(event: 'column', column: IModuleInfo<T>[]): boolean;
+}
+
+abstract class MinihostLoader<T>
+  extends Runnable<LoaderOptions, IModuleInfo<T>[]> {
   protected xMin?: number;
   protected xMax?: number;
   protected yMin?: number;
   protected yMax?: number;
 
-  // static abstract getResolutions(props?: Record<string, any>): {
-  //   hres?: number,
-  //   vres?: number,
-  // }
   constructor(readonly device: IDevice) {
     super();
   }
 
-  cancel() {
-    if (!this.isRunning) return Promise.resolve();
-    this.isCanceled = true;
-    return this.cancelPromise;
-  }
-
   abstract async getInfo(x: number, y: number): Promise<T>;
+
   abstract isInvertH(): boolean;
+
   abstract isInvertV(): boolean;
 
   private async readColumn(x: number) {
     const { yMin, yMax } = this;
-    const columnInfo: ModuleInfo<T>[] = [];
+    const columnInfo: IModuleInfo<T>[] = [];
     let y = yMin!;
     try {
-      while (y <= yMax!) {
-        if (this.isCanceled) {
-          this.isRunning = false;
-          this.cancelResolve();
-          this.emit('finish');
-          break;
-        }
+      while (y <= yMax! && !this.isCanceled) {
         const info = await this.getInfo(x, y);
-        const module: ModuleInfo<T> = {
+        const module: IModuleInfo<T> = {
           x,
           y,
           info,
@@ -68,11 +80,12 @@ abstract class MinihostLoader<T> extends EventEmitter {
         y += 1;
       }
     } catch (error) {
+      if (!(error instanceof NibusError)) throw error;
       while (y <= yMax!) {
-        const module: ModuleInfo<T> = {
+        const module: IModuleInfo<T> = {
           x,
           y,
-          error,
+          error: error.message,
         };
         columnInfo.push(module);
         y += 1;
@@ -81,48 +94,34 @@ abstract class MinihostLoader<T> extends EventEmitter {
     return columnInfo;
   }
 
-  async start(xMin: number, xMax: number, yMin: number, yMax: number) {
-    if (this.isRunning) {
-      await this.cancel();
-    }
+  async runImpl({ xMin, xMax, yMin, yMax }: LoaderOptions) {
     this.xMin = xMin;
     this.xMax = xMax;
     this.yMin = yMin;
     this.yMax = yMax;
-    this.isCanceled = false;
-    this.cancelPromise = new Promise(resolve => this.cancelResolve = resolve);
-    this.isRunning = true;
-    this.emit('start');
-
-    try {
-      const modules: ModuleInfo<T>[] = [];
-      const { xMin, xMax } = this;
-      let x: number;
-      let step: number;
-      let check: (val: number) => boolean;
-      if (this.isInvertH()) {
-        x = xMax;
-        step = -1;
-        check = i => i >= xMin;
-      } else {
-        x = xMin;
-        step = 1;
-        check = i => i <= xMax;
-      }
-      while (check(x)) {
-        let column = await this.readColumn(x);
-        if (this.isInvertV()) {
-          column = column.reverse();
-        }
-        this.emit('column', column);
-        modules.push(...column);
-        x += step;
-      }
-      return modules;
-    } finally {
-      this.isRunning = false;
-      this.emit('finish');
+    const modules: IModuleInfo<T>[] = [];
+    let x: number;
+    let step: number;
+    let check: (val: number) => boolean;
+    if (this.isInvertH()) {
+      x = xMax;
+      step = -1;
+      check = i => i >= xMin;
+    } else {
+      x = xMin;
+      step = 1;
+      check = i => i <= xMax;
     }
+    while (check(x)) {
+      let column = await this.readColumn(x);
+      if (this.isInvertV()) {
+        column = column.reverse();
+      }
+      this.emit('column', column);
+      modules.push(...column);
+      x += step;
+    }
+    return modules;
   }
 }
 

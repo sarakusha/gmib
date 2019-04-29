@@ -8,16 +8,16 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { Tooltip, Typography } from '@material-ui/core';
+import { Tooltip } from '@material-ui/core';
 import ListItem from '@material-ui/core/ListItem';
 import ListItemIcon from '@material-ui/core/ListItemIcon';
 import ListItemText from '@material-ui/core/ListItemText';
 import ListSubheader from '@material-ui/core/ListSubheader';
-import DeviceHubIcon from '@material-ui/icons/DeviceHub';
-import DeviceIcon from '@material-ui/icons/Memory';
-import TvIcon from '@material-ui/icons/Tv';
-import UsbIcon from '@material-ui/icons/usb';
-import LinkIcon from '@material-ui/icons/link';
+// import DeviceHubIcon from '@material-ui/icons/DeviceHub';
+// import DeviceIcon from '@material-ui/icons/Memory';
+// import TvIcon from '@material-ui/icons/Tv';
+import UsbIcon from '@material-ui/icons/Usb';
+import LinkIcon from '@material-ui/icons/Link';
 import { DeviceId } from '@nata/nibus.js-client/lib/mib';
 import React, { useCallback, useEffect, useState } from 'react';
 import { hot } from 'react-hot-loader/root';
@@ -26,6 +26,7 @@ import compose from 'recompose/compose';
 
 import { useDevicesContext } from './DevicesProvier';
 import { useSessionContext } from './SessionProvider';
+import DeviceIcon from './DeviceIcon';
 
 const styles = (theme: Theme) => createStyles({
   wrapper: {
@@ -70,14 +71,14 @@ const DeviceListItems: React.FC<InnerProps> = ({ classes }) => {
       <ListSubheader inset>Устройства</ListSubheader>
       {devices.map((device) => {
         const parent = Reflect.getMetadata('parent', device);
-        const mib = Reflect.getMetadata('mib', device);
+        // const mib = Reflect.getMetadata('mib', device);
         const desc = device.connection && device.connection.description || {};
-        let Icon = DeviceIcon;
-        if (!parent && desc.link) {
-          Icon = DeviceHubIcon;
-        } else if (mib && mib.startsWith('minihost')) {
-          Icon = TvIcon;
-        }
+        // let Icon = DeviceIcon;
+        // if (!parent && desc.link) {
+        //   Icon = DeviceHubIcon;
+        // } else if (mib && mib.startsWith('minihost')) {
+        //   Icon = TvIcon;
+        // }
         return (
           <ListItem
             button
@@ -85,23 +86,25 @@ const DeviceListItems: React.FC<InnerProps> = ({ classes }) => {
             onClick={clickHandler}
             data-id={device.id}
             selected={device.id === current}
-            disabled={!device.connection}
+            disabled={!device.connection || device.address.isEmpty}
           >
             <ListItemIcon>
               <div className={classes.wrapper}>
-                <Icon color="inherit" />
+                <DeviceIcon color="inherit" device={device}/>
                 {parent
                   ? (<Tooltip title={parent.address.toString()}>
                     <LinkIcon className={classes.kind} />
                   </Tooltip>)
-                  : (<Tooltip title={device.connection!.path}>
-                      <UsbIcon className={classes.kind} />
-                  </Tooltip>)}
+                  : device.connection && (<Tooltip title={device.connection.path}>
+                  <UsbIcon className={classes.kind} />
+                </Tooltip>)}
               </div>
             </ListItemIcon>
             <ListItemText
-              primary={device.address.toString()}
-              secondary={Reflect.getMetadata('mib', device)}
+              primary={device.address.isEmpty ? desc.category : device.address.toString()}
+              secondary={device.address.isEmpty
+                ? device.id
+                : Reflect.getMetadata('mib', device)}
             />
           </ListItem>
         );

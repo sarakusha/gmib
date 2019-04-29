@@ -24,7 +24,7 @@ module.exports = {
     })(),
     'worker_threads',
   ],
-  optimization: {
-    minimize: false
-  },
+  // optimization: {
+  //   minimize: false
+  // },
 };

@@ -8,13 +8,13 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { Paper, Typography } from '@material-ui/core';
+import { Paper, Tooltip, Typography } from '@material-ui/core';
 import React from 'react';
 import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
 import { hot } from 'react-hot-loader/root';
 import compose from 'recompose/compose';
 // import grey from '@material-ui/core/colors/grey';
-import ErrorIcon from '@material-ui/icons/clear';
+import ErrorIcon from '@material-ui/icons/Clear';
 
 // const bg = grey[100];
 
@@ -172,7 +172,11 @@ const ModuleInfo: React.FC<InnerProps> = ({ classes, info, error, x, y }: InnerP
   return (
     <Paper className={classes.root} elevation={1}>
       <Position x={x} y={y} classes={classes} />
-      {error && <div className={classes.error}><ErrorIcon /></div>}
+      {error && (
+        <Tooltip title={error} enterDelay={300}>
+          <div className={classes.error}><ErrorIcon /></div>
+        </Tooltip>
+      )}
       {info && <table className={classes.table}>
         <tbody>
         {Object.entries(info).map(([name, value]) => {

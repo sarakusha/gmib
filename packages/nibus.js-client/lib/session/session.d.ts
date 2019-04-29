@@ -17,18 +17,22 @@ declare interface NibusSession {
     on(event: 'found', listener: FoundListener): this;
     on(event: 'add' | 'remove', listener: ConnectionListener): this;
     on(event: 'connected' | 'disconnected', listener: DeviceListener): this;
+    on(event: 'pureConnection', listener: (connection: NibusConnection) => void): this;
     once(event: 'start' | 'close', listener: Function): this;
     once(event: 'found', listener: FoundListener): this;
     once(event: 'add' | 'remove', listener: ConnectionListener): this;
     once(event: 'connected' | 'disconnected', listener: DeviceListener): this;
+    once(event: 'pureConnection', listener: (connection: NibusConnection) => void): this;
     off(event: 'start' | 'close', listener: Function): this;
     off(event: 'found', listener: FoundListener): this;
     off(event: 'add' | 'remove', listener: ConnectionListener): this;
     off(event: 'connected' | 'disconnected', listener: DeviceListener): this;
+    off(event: 'pureConnection', listener: (connection: NibusConnection) => void): this;
     removeListener(event: 'start' | 'close', listener: Function): this;
     removeListener(event: 'found', listener: FoundListener): this;
     removeListener(event: 'add' | 'remove', listener: ConnectionListener): this;
     removeListener(event: 'connected' | 'disconnected', listener: DeviceListener): this;
+    removeListener(event: 'pureConnection', listener: (connection: NibusConnection) => void): this;
 }
 declare class NibusSession extends EventEmitter {
     private readonly connections;

@@ -12,15 +12,16 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
 import { hot } from 'react-hot-loader/root';
 import compose from 'recompose/compose';
-import StartIcon from '@material-ui/icons/refresh';
-import CancelIcon from '@material-ui/icons/cancel';
+import StartIcon from '@material-ui/icons/Refresh';
+import CancelIcon from '@material-ui/icons/Cancel';
+import MinihostLoader, { IModuleInfo } from '../util/MinihostLoader';
 import { useDevicesContext } from './DevicesProvier';
 import { useDevice } from './DevicesStateProvider';
 import ModuleInfo from './ModuleInfo';
 import { useToolbar } from './ToolbarProvider';
 import Range from './Range';
-import Minihost3Loader from '../util/Minihost3Loader';
-import Minihost2Loader from '../util/Minihost2Loader';
+import Minihost3Loader, { Minihost3Info } from '../util/Minihost3Loader';
+import Minihost2Loader, { Minihost2Info } from '../util/Minihost2Loader';
 
 const styles = (theme: Theme) => createStyles({
   root: {
@@ -96,7 +97,7 @@ type InnerProps = Props & WithStyles<typeof styles>;
 const Telemetry: React.FC<InnerProps> = ({ classes, id, active = true }) => {
   const { props, device } = useDevice(id);
   const mib = device ? Reflect.getMetadata('mib', device) : '';
-  const loader = useMemo(
+  const loader = useMemo<MinihostLoader<Minihost2Info|Minihost3Info> | null>(
     () => {
       switch (mib) {
         case 'minihost3':
@@ -151,7 +152,12 @@ const Telemetry: React.FC<InnerProps> = ({ classes, id, active = true }) => {
         gridTemplateRows: `repeat(${yMax! - yMin + 1}, 1fr)`,
       });
       setModules([]);
-      loader && loader.start(xMin, xMax!, yMin, yMax!);
+      loader && loader.run({
+        xMin,
+        yMin,
+        xMax: xMax!,
+        yMax: yMax!,
+      });
     },
     [loader, refRange],
   );
@@ -174,7 +180,7 @@ const Telemetry: React.FC<InnerProps> = ({ classes, id, active = true }) => {
             <IconButton onClick={cancel} color="inherit">
               <CancelIcon />
             </IconButton>
-            <CircularProgress size={48} className={classes.fabProgress}/>
+            <CircularProgress size={48} className={classes.fabProgress} />
           </div>
         </Tooltip>
       )
@@ -201,7 +207,7 @@ const Telemetry: React.FC<InnerProps> = ({ classes, id, active = true }) => {
   useEffect(
     () => {
       if (!loader) return;
-      const columnHandler = (column: any[]) => {
+      const columnHandler = (column: IModuleInfo<Minihost2Info|Minihost3Info>[]) => {
         setModules(modules => modules.concat(column));
       };
       const startHandler = () => setLoading(true);

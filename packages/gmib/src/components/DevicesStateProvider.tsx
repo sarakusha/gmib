@@ -48,7 +48,7 @@ const DevicesStateProvider: React.FC<{}> = ({ children }) => {
         {children}
       </DevicesStateContext.Provider>
     ),
-    [state, setState],
+    [state, setState, children],
   );
 };
 
@@ -59,7 +59,14 @@ export const useDevice = (id: DeviceId) => {
   const { state, setDeviceState, setDeviceValue } = useDevicesState();
   const deviceState: DeviceState | null = id && state[id] || null;
   const { devices } = useDevicesContext();
-  const device = id && devices.find(device => device.id === id) || null;
+  const [device, setDevice] = useState(id && devices.find(device => device.id === id) || null);
+  useEffect(
+    () => {
+      if (!device || devices.includes(device)) return;
+      setDevice(null);
+    },
+    [devices, device],
+  );
   const names: string[] = useMemo(
     () => Object.entries<string[]>(Reflect.getMetadata('map', device || {}) || {})
       .sort((a, b) => Number(a[0]) - Number(b[0]))
@@ -77,13 +84,12 @@ export const useDevice = (id: DeviceId) => {
         err => setError(err),
       );
     },
-    // [device, setDeviceState, setNames],
-    [],
+    [device],
   );
   const isDirty = useCallback((name: string) => device && device.isDirty(name) || false, [device]);
   useEffect(
     () => { deviceState || reload(); },
-    [device],
+    [reload],
   );
   const update = useCallback(
     () => {
@@ -103,9 +109,8 @@ export const useDevice = (id: DeviceId) => {
     [device],
   );
   const drain = useCallback(
-    debounce(() => device && device.drain().then(update), 100),
-    // [device, update, names],
-    [],
+    debounce(() => device && device.drain().then(update), 200),
+    [device],
   );
 
   const setValue = useCallback(
@@ -115,9 +120,7 @@ export const useDevice = (id: DeviceId) => {
       device[name] = value;
       drain();
     },
-    // [names],
-    // [device, drain, setDeviceValue, names],
-    [],
+    [device],
   );
 
   return useMemo(
@@ -131,7 +134,7 @@ export const useDevice = (id: DeviceId) => {
       id: device && device.id,
       proto: device && Reflect.getPrototypeOf(device) || {},
     }),
-    [deviceState, id, error],
+    [deviceState, id, error, device],
   );
 };
 

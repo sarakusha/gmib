@@ -39,18 +39,22 @@ declare interface NibusSession {
   on(event: 'found', listener: FoundListener): this;
   on(event: 'add' | 'remove', listener: ConnectionListener): this;
   on(event: 'connected' | 'disconnected', listener: DeviceListener): this;
+  on(event: 'pureConnection', listener: (connection: NibusConnection) => void): this;
   once(event: 'start' | 'close', listener: Function): this;
   once(event: 'found', listener: FoundListener): this;
   once(event: 'add' | 'remove', listener: ConnectionListener): this;
   once(event: 'connected' | 'disconnected', listener: DeviceListener): this;
+  once(event: 'pureConnection', listener: (connection: NibusConnection) => void): this;
   off(event: 'start' | 'close', listener: Function): this;
   off(event: 'found', listener: FoundListener): this;
   off(event: 'add' | 'remove', listener: ConnectionListener): this;
   off(event: 'connected' | 'disconnected', listener: DeviceListener): this;
+  off(event: 'pureConnection', listener: (connection: NibusConnection) => void): this;
   removeListener(event: 'start' | 'close', listener: Function): this;
   removeListener(event: 'found', listener: FoundListener): this;
   removeListener(event: 'add' | 'remove', listener: ConnectionListener): this;
   removeListener(event: 'connected' | 'disconnected', listener: DeviceListener): this;
+  removeListener(event: 'pureConnection', listener: (connection: NibusConnection) => void): this;
 }
 
 class NibusSession extends EventEmitter {
@@ -124,21 +128,23 @@ class NibusSession extends EventEmitter {
   private find(connection: NibusConnection) {
     const { description } = connection;
     const descriptions = Array.isArray(description.select) ? description.select : [description];
-    descriptions.forEach((description) => {
-      const { category } = description;
-      switch (description.find) {
+    const baseCategory = Array.isArray(description.select) ? description.category : null;
+    descriptions.forEach((descr) => {
+      const { category } = descr;
+      switch (descr.find) {
         case 'sarp': {
-          let { type } = description;
+          let { type } = descr;
           if (type === undefined) {
-            const mib = JSON.parse(fs.readFileSync(getMibFile(description.mib!)).toString());
+            const mib = JSON.parse(fs.readFileSync(getMibFile(descr.mib!)).toString());
             const { types } = mib;
             const device = types[mib.device] as IMibDeviceType;
             type = toInt(device.appinfo.device_type);
           }
           connection.once('sarp', (sarpDatagram: SarpDatagram) => {
-            if (connection.description.category === 'ftdi') {
+            if (baseCategory && connection.description.category !== baseCategory) return;
+            if (baseCategory && connection.description.category === baseCategory) {
               debug(`category was changed: ${connection.description.category} => ${category}`);
-              connection.description = description;
+              connection.description = descr;
             }
             const address = new Address(sarpDatagram.mac);
             debug(`device ${category}[${address}] was found on ${connection.path}`);
@@ -160,7 +166,7 @@ class NibusSession extends EventEmitter {
               if (!datagram || Array.isArray(datagram)) return;
               if (connection.description.category === 'ftdi') {
                 debug(`category was changed: ${connection.description.category} => ${category}`);
-                connection.description = description;
+                connection.description = descr;
               }
               const address = new Address(datagram.source.mac);
               this.emit(
@@ -175,6 +181,7 @@ class NibusSession extends EventEmitter {
             }, noop);
           break;
         default:
+          this.emit('pureConnection', connection);
           break;
       }
     });
@@ -216,6 +223,7 @@ class NibusSession extends EventEmitter {
         resolve(ports.length);
         this.emit('start');
       });
+      this.socket.once('close', () => this.close());
     });
   }
 
@@ -242,7 +250,7 @@ class NibusSession extends EventEmitter {
       .splice(0, this.connections.length)
       .forEach(connection => this.closeConnection(connection));
     this.socket && this.socket.destroy();
-    this.removeAllListeners();
+    // this.removeAllListeners();
   }
 
   //

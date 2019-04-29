@@ -10,7 +10,7 @@
 import { IDevice } from '@nata/nibus.js-client/lib/mib';
 import MinihostLoader from './MinihostLoader';
 
-type Minihost3Info = {
+export type Minihost3Info = {
   t?: number,
   v1?: number,
   v2?: number,
@@ -44,7 +44,7 @@ const parseData = (info: Minihost3Info, selector: number, data: Buffer) => {
 export default class Minihost3Loader extends MinihostLoader<Minihost3Info> {
   selectorId: number;
   moduleSelectId: number;
-  static DOMAIN = 'MODUL';
+  static readonly DOMAIN = 'MODUL';
   constructor(device: IDevice, readonly selectors = [0, 1, 2, 3]) {
     super(device);
     this.selectorId = device.getId('selector');

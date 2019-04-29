@@ -14,5 +14,6 @@ export default class SarpDatagram extends NibusDatagram implements ISarpOptions 
     readonly queryParam: Buffer;
     readonly mac: Buffer;
     constructor(frameOrOptions: ISarpOptions | Buffer);
+    readonly deviceType: number | undefined;
 }
 //# sourceMappingURL=SarpDatagram.d.ts.map

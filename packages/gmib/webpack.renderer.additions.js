@@ -15,18 +15,29 @@ const config = {
   externals: [
     (function () {
       var IGNORES = [
-        'electron'
+        'electron',
       ];
       return function (context, request, callback) {
         if (IGNORES.indexOf(request) >= 0) {
           console.log('@@@@@@@@@@@@@@', request);
-          return callback(null, "require('" + request + "')");
+          return callback(null, 'require(\'' + request + '\')');
         }
         return callback();
       };
     })(),
     'worker_threads',
   ],
+  module: {
+    rules: [
+      // Нужно для iconv-lite
+      {
+        test: /node_modules[\/\\](iconv-lite)[\/\\].+/,
+        resolve: {
+          aliasFields: ['main'],
+        },
+      },
+    ],
+  },
   // module: {
   //   rules: [
   //     {
@@ -55,7 +66,7 @@ if (ANALYZE) {
 
   config.plugins.push(new BundleAnalyzerPlugin({
     analyzerMode: 'server',
-    analyzerPort: 8888 ,
+    analyzerPort: 8888,
     openAnalyzer: true,
   }));
 }

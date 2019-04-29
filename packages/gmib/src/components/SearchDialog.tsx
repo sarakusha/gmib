@@ -1,3 +1,4 @@
+/* tslint:disable:react-a11y-role-has-required-aria-props */
 /*
  * @license
  * Copyright (c) 2019. Nata-Info
@@ -15,35 +16,39 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  FormControl, IconButton,
+  FormControl, IconButton, Input,
   InputLabel, LinearProgress,
   List,
-  ListItem,
+  ListItem, ListItemIcon,
   ListItemSecondaryAction,
   ListItemText,
-  MenuItem,
-  Select,
+  NativeSelect,
   Tab,
   Tabs,
   TextField,
 } from '@material-ui/core';
-import { IDevice } from '@nata/nibus.js-client/lib/mib';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { IDevice, getMibTypes, findMibByType } from '@nata/nibus.js-client/lib/mib';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
 import { hot } from 'react-hot-loader/root';
 import compose from 'recompose/compose';
-import AddIcon from '@material-ui/icons/queue';
+import AddIcon from '@material-ui/icons/Add';
 import unionBy from 'lodash/unionBy';
 import without from 'lodash/without';
-import { AddressFinder, DeviceInfo, FinderOptions, IFinder } from '../util/finders';
+import classNames from 'classnames';
+import Finder, { DeviceInfo, FinderOptions, toVersion } from '../util/finders';
 import useDefaultKeys from '../util/useDefaultKeys';
+import DeviceIcon from './DeviceIcon';
 import { useDevicesContext } from './DevicesProvier';
 
 const styles = (theme: Theme) => createStyles({
+  hidden: {
+    display: 'none',
+  },
   formControl: {
     marginLeft: theme.spacing.unit,
     marginRight: theme.spacing.unit,
-    minWidth: 120,
+    width: '30ch',
   },
   tabContent: {
     padding: theme.spacing.unit * 2,
@@ -52,31 +57,21 @@ const styles = (theme: Theme) => createStyles({
     justifyContent: 'space-between',
   },
   content: {
-    // backgroundColor: theme.palette.background.paper,
     position: 'relative',
     paddingLeft: 0,
     paddingRight: 0,
   },
   detectedList: {
-    height: '20ch',
-    width: '20ch',
-    backgroundColor: theme.palette.background.paper,
+    minWidth: '40ch',
   },
   detectedContainer: {
     width: '100%',
     display: 'flex',
+    height: '20ch',
     justifyContent: 'center',
+    overflowY: 'auto',
   },
   detectedItem: {},
-  // buttonProgress: {
-  //   color: theme.palette.primary.light,
-  //   position: 'absolute',
-  //   top: '50%',
-  //   left: '50%',
-  //   marginTop: -12,
-  //   marginLeft: -12,
-  //   pointerEvents: 'none',
-  // },
   linearProgress: {
     position: 'absolute',
     bottom: 0,
@@ -94,11 +89,6 @@ type Props = {
 };
 type InnerProps = Props & WithStyles<typeof styles>;
 
-const selectInputProps = {
-  id: 'connection',
-  name: 'connection',
-};
-
 const deviceKey = ({ address, connection }: DeviceInfo) =>
   `${connection.path}#${address.toString()}`;
 const union = (prev: DeviceInfo[], item: DeviceInfo) => unionBy(prev, [item], deviceKey);
@@ -107,13 +97,33 @@ const SearchDialog: React.FC<InnerProps> = ({ open, close, classes }) => {
   const [isSearching, setSearching] = useState(false);
   const [kind, setKind] = useState(0);
   const [connections, setConnections] = useState<IDevice[]>([]);
-  const [connection, setConnection] = useState('0');
-  const { devices, createDevice } = useDevicesContext();
+  const connectionRef = useRef<HTMLInputElement>(null as any);
+  const mibTypeRef = useRef<HTMLInputElement>(null as any);
   const addressRef = useRef<HTMLInputElement>(null as any);
+  const { devices, createDevice } = useDevicesContext();
   const [detected, setDetected] = useState<DeviceInfo[]>([]);
-  const addressFinder = useRef(new AddressFinder());
-  const [currentFinder, setCurrentFinder] = useState<IFinder | null>(null);
   const [invalidAddress, setInvalidAddress] = useState(false);
+  const defaultValues = useRef({
+    address: '',
+    type: '0',
+  });
+  const finder = useMemo(() => new Finder(), []);
+  useEffect(
+    () => {
+      const startListener = () => setSearching(true);
+      const finishListener = () => setSearching(false);
+      const foundListener = (info: DeviceInfo) => setDetected(prev => union(prev, info));
+      finder.on('start', startListener);
+      finder.on('finish', finishListener);
+      finder.on('found', foundListener);
+      return () => {
+        finder.off('start', startListener);
+        finder.off('finish', finishListener);
+        finder.off('found', foundListener);
+      };
+    },
+    [finder, setSearching, setDetected],
+  );
   useEffect(
     () => {
       setConnections(
@@ -128,63 +138,49 @@ const SearchDialog: React.FC<InnerProps> = ({ open, close, classes }) => {
     (_, newValue) => setKind(newValue),
     [setKind],
   );
-  useEffect(
-    () => {
-      let finder: IFinder | null;
-      switch (kind) {
-        case 0:
-          finder = addressFinder.current;
-          break;
-        default:
-          finder = null;
-          break;
-      }
-      if (!finder) return;
-      const startListener = () => setSearching(true);
-      const finishListener = () => setSearching(false);
-      const foundListener = (info: DeviceInfo) => {
-        setDetected(prev => union(prev, info));
-      };
-      finder.on('start', startListener);
-      finder.on('finish', finishListener);
-      finder.on('found', foundListener);
-      setCurrentFinder(finder);
-      return () => {
-        finder!.cancel();
-        setSearching(false);
-        finder!.off('start', startListener);
-        finder!.off('finish', finishListener);
-        finder!.off('found', foundListener);
-      };
-    },
-    [kind],
-  );
   const startStop = useCallback(
     () => {
-      if (!currentFinder) return;
-      if (!isSearching) {
-        const devs: IDevice[] = connection === '0'
-          ? connections
-          : [connections.find(dev => dev.id === connection)!];
-        const options: FinderOptions = {
-          address: addressRef.current.value,
-          connections: devs.map(dev => dev.connection!),
-        };
-        currentFinder.run(options).then(
-          () => setInvalidAddress(false),
-          () => setInvalidAddress(true),
-        );
+      const connection = connectionRef.current.value;
+      const devs: IDevice[] = connection === '0'
+        ? connections
+        : [connections.find(dev => dev.id === connection)!];
+      const options: FinderOptions = {
+        connections: devs.map(dev => dev.connection!),
+      };
+      switch (kind) {
+        case 0:
+          options.address = addressRef.current.value;
+          break;
+        case 1:
+          options.type = Number(mibTypeRef.current.value);
+          break;
+        default:
+          return;
+      }
+      if (isSearching) {
+        finder.cancel();
+        setSearching(false);
       } else {
-        currentFinder.cancel();
+        finder.run(options).then(
+          () => setInvalidAddress(false),
+          (e: Error) => {
+            console.error(e.stack);
+            setInvalidAddress(true);
+          },
+        );
       }
     },
-    [isSearching, connections, connection, currentFinder],
+    [isSearching, connections, kind],
   );
-  const connectionChangeHandler = useCallback(
-    (event: React.ChangeEvent<HTMLSelectElement>) => {
-      setConnection(event.target.value);
+  useEffect(
+    () => {
+      finder.cancel();
+      if (!open) {
+        addressRef.current && (defaultValues.current.address = addressRef.current.value);
+        mibTypeRef.current && (defaultValues.current.type = mibTypeRef.current.value);
+      }
     },
-    [setConnection],
+    [open, kind],
   );
   const addDevice = useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -204,6 +200,17 @@ const SearchDialog: React.FC<InnerProps> = ({ open, close, classes }) => {
     },
     [setDetected, devices, connections],
   );
+  const mibTypes = useMemo(
+    () =>
+      Object.entries(getMibTypes()!)
+        .map(([type, mibs]) => ({
+          value: type,
+          name: mibs.map(mib => mib.mib).join() as string,
+        }))
+        .filter(types => types.value !== '0')
+        .sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0),
+    [],
+  );
   useDefaultKeys({
     enterHandler: startStop,
     cancelHandler: close,
@@ -221,53 +228,87 @@ const SearchDialog: React.FC<InnerProps> = ({ open, close, classes }) => {
           >
             <Tab label="По адресу" />
             <Tab label="По типу" />
-            <Tab label="По групповому адресу" />
-            <Tab label="Всех" />
           </Tabs>
         </AppBar>
         <form className={classes.tabContent} noValidate autoComplete="off">
-          <FormControl className={classes.formControl} margin="normal">
-            <InputLabel htmlFor="connections">Соединение</InputLabel>
-            <Select
-              value={connection}
-              onChange={connectionChangeHandler}
-              inputProps={selectInputProps}
+          <FormControl className={classes.formControl} margin="normal" disabled={isSearching}>
+            <InputLabel htmlFor="connection">Соединение</InputLabel>
+            <NativeSelect
+              defaultValue={'0'}
+              input={<Input name="connection" id="connection" inputRef={connectionRef} />}
             >
-              <MenuItem value={'0'}>Все</MenuItem>
+              <option value={'0'}>Все</option>
               {connections.map(device => (
-                <MenuItem key={device.id} value={device.id}>{device.address.toString()}</MenuItem>
+                <option
+                  key={device.id}
+                  value={device.id}
+                >
+                  {device.address.isEmpty
+                    ? device.connection && `${device.connection.description.category}-${device.id}`
+                    : device.address.toString()}
+                </option>
               ))}
-            </Select>
+            </NativeSelect>
           </FormControl>
           <TextField
             id="address"
+            className={classNames(classes.formControl, { [classes.hidden]: kind !== 0 })}
             error={invalidAddress}
-            required
-            label={kind === 0 ? 'Адрес' : 'Группа'}
+            label="Адрес"
             inputRef={addressRef}
+            defaultValue={defaultValues.current.address}
             margin="normal"
+            disabled={isSearching}
           />
+          <FormControl
+            className={classNames(classes.formControl, { [classes.hidden]: kind !== 1 })}
+            margin="normal"
+            disabled={isSearching}
+          >
+            <InputLabel htmlFor="mibtype">Тип</InputLabel>
+            <NativeSelect
+              defaultValue={defaultValues.current.type}
+              input={<Input name="mibtype" id="mibtype" inputRef={mibTypeRef} />}
+            >
+              <option value={'0'}>Не выбран</option>
+              {mibTypes.map(({ value, name }) => (
+                <option
+                  key={value}
+                  value={value}
+                >
+                  {name}
+                </option>
+              ))}
+            </NativeSelect>
+          </FormControl>
         </form>
         <div className={classes.detectedContainer}>
           <List className={classes.detectedList}>
-            {detected.map(info => (
-              <ListItem
-                key={deviceKey(info)}
-                className={classes.detectedItem}
-              >
-                <ListItemText primary={info.address.toString()} />
-                <ListItemSecondaryAction>
-                  <IconButton
-                    id={deviceKey(info)}
-                    aria-label="Add"
-                    onClick={addDevice}
-                    disabled={isSearching}
-                  >
-                    <AddIcon />
-                  </IconButton>
-                </ListItemSecondaryAction>
-              </ListItem>
-            ))}
+            {detected.map((info) => {
+              // const version = info.version && toVersion(info.version);
+              const mib = info.type > 0 ? findMibByType(info.type, info.version) : undefined;
+              return (
+                <ListItem
+                  key={deviceKey(info)}
+                  className={classes.detectedItem}
+                >
+                  <ListItemIcon>
+                    <DeviceIcon color="inherit" mib={mib} />
+                  </ListItemIcon>
+                  <ListItemText primary={info.address.toString()} secondary={mib} />
+                  <ListItemSecondaryAction>
+                    <IconButton
+                      id={deviceKey(info)}
+                      aria-label="Add"
+                      onClick={addDevice}
+                      disabled={isSearching}
+                    >
+                      <AddIcon />
+                    </IconButton>
+                  </ListItemSecondaryAction>
+                </ListItem>
+              );
+            })}
           </List>
         </div>
         {isSearching && <LinearProgress className={classes.linearProgress} />}

@@ -105,10 +105,7 @@ function findDevices(mib: string, connection: NibusConnection, argv: Arguments<D
   connection.findByType(type).catch(e => debug('error while findByType', e.stack));
   connection.on('sarp', (datagram) => {
     count += 1;
-    if (datagram.queryType !== SarpQueryType.ByType) return;
-    const responseType = datagram.queryParam.readUInt16BE(3);
-    // const item = types.find(({ type }) => responseType === type);
-    if (responseType !== type) return;
+    if (datagram.queryType !== SarpQueryType.ByType || datagram.deviceType !== type) return;
     const address = new Address(datagram.mac);
     dumpDevice(address, connection, argv, mib).catch(
       // () => {},

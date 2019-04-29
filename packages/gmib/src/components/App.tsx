@@ -21,7 +21,7 @@ import {
 import CssBaseline from '@material-ui/core/CssBaseline';
 import { createStyles, Theme, withStyles, WithStyles } from '@material-ui/core/styles';
 import ChevronLeftIcon from '@material-ui/icons/ChevronLeft';
-import SearchIcon from '@material-ui/icons/search';
+import SearchIcon from '@material-ui/icons/Search';
 import MenuIcon from '@material-ui/icons/Menu';
 import classNames from 'classnames';
 import React, { useCallback, useEffect, useState } from 'react';

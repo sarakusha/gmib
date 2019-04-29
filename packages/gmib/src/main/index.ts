@@ -85,6 +85,6 @@ app.on('ready', () => {
 });
 
 ipcMain.on('startLocalNibus', () => {
-  console.log('START LOCAL NIBUS');
+  // console.log('START LOCAL NIBUS');
   // import('@nata/nibus.js/lib/service/service').then(service => service.default.start());
 });

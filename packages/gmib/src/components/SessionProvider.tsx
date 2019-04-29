@@ -10,6 +10,8 @@
 import session, { FoundListener, mib } from '@nata/nibus.js-client';
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { ipcRenderer } from 'electron';
+import StartNibusDialog from './StartNibusDialog';
+
 const { devices } = mib;
 
 const context = {
@@ -32,6 +34,10 @@ const useSessionStart = () => {
     async ({ address, connection }) => {
       // console.log('FOUND', connection.description, address.toString());
       try {
+        if (address.isEmpty) {
+          console.log('EMPTY', connection.description);
+          return;
+        }
         if (connection.description.mib) {
           const device = devices.create(address, connection.description.mib);
           // devices.create('::3', connection.description.mib).connection = connection;
@@ -49,6 +55,15 @@ const useSessionStart = () => {
     [],
   );
   const request = () => {
+    const reconnect = () => setTimeout(
+      () => {
+        setAttempt((attempt) => {
+          console.log('try connect', attempt + 1);
+          return attempt + 1;
+        });
+      },
+      3000,
+    );
     session.start().then(
       (ports) => {
         setPorts(ports);
@@ -56,27 +71,23 @@ const useSessionStart = () => {
         session.on('add', updatePortsHandler);
         session.on('remove', updatePortsHandler);
         session.on('found', foundHandler);
+        session.on('close', reconnect);
       },
       (error) => {
         setError(error);
         ipcRenderer.send('startLocalNibus');
-        setTimeout(
-          () => {
-            setAttempt(attempt => attempt + 1);
-            console.log('try connect', attempt);
-          },
-          3000,
-        );
+        reconnect();
       },
     );
     return () => {
       session.off('add', updatePortsHandler);
       session.off('remove', updatePortsHandler);
       session.off('found', foundHandler);
+      session.off('close', reconnect);
       session.close();
     };
   };
-  useEffect(request, [attempt, setPorts, setError, setAttempt]);
+  useEffect(request, [setPorts, setError, setAttempt, attempt]);
   return {
     ports,
     error,
@@ -87,7 +98,8 @@ export const SessionProvider: React.FC<{}> = ({ children }) => {
   const { error } = useSessionStart();
   return (
     <SessionContext.Provider value={context}>
-      {error && error.message || children}
+      <StartNibusDialog open={!!error}/>
+      {children}
     </SessionContext.Provider>
   );
 };

@@ -64,5 +64,10 @@ export default class SarpDatagram extends NibusDatagram implements ISarpOptions 
     this.queryType = (data[0] & 0x0f);
     this.queryParam = data.slice(1, 6);
     this.mac = data.slice(6);
+    Object.freeze(this);
+  }
+
+  get deviceType(): number | undefined {
+    if (this.isResponse) return this.queryParam.readUInt16BE(3);
   }
 }

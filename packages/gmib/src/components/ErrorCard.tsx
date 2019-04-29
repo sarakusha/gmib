@@ -37,12 +37,13 @@ const styles = (theme: Theme) => createStyles({
 
 type Props = {
   error: Error | string,
-  onAction?: Function,
+  onAction?: () => void,
+  onRelease?: () => void,
 };
 type InnerProps = Props & WithStyles<typeof styles>;
 
-const ErrorCard: React.FC<InnerProps> = ({ error, classes, onAction }) => {
-  const clickHandler = useCallback((event: MouseEvent) => onAction && onAction(), [onAction]);
+const ErrorCard: React.FC<InnerProps> = ({ error, classes, onAction, onRelease }) => {
+  // const clickHandler = useCallback((event: MouseEvent) => onAction && onAction(), [onAction]);
   return (
     <Card className={classes.card}>
       <CardContent>
@@ -54,7 +55,8 @@ const ErrorCard: React.FC<InnerProps> = ({ error, classes, onAction }) => {
         </Typography>
       </CardContent>
       <CardActions>
-        <Button size="small" onClick={clickHandler}>Обновить</Button>
+        {onAction && <Button size="small" onClick={onAction}>Обновить</Button>}
+        {onRelease && <Button size="small" onClick={onRelease}>Удалить</Button>}
       </CardActions>
     </Card>
   );

@@ -9,6 +9,16 @@
 > - [Polish]
 > - [Experimental]
 > - [Deprecation]
+# 1.3.7
+- **New Feature**
+  - SarpDatagram::deviceType
+  - getMibTypes()
+  - NibusSession::event('pureConnection')
+- **Internal**
+  - изменен webpack.renderer.config для поддержки iconv-lite
+  - session.close() на закрытие сокета
+  - IMibDescripton.win32
+  
 # 1.3.6
 - **Breaking Change**
   - свойство device.address меняется при изменении serno

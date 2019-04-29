@@ -10,7 +10,7 @@
 
 import MinihostLoader from './MinihostLoader';
 
-type Minihost2Info = {
+export type Minihost2Info = {
   t?: number,
   ver?: string,
 };
@@ -29,12 +29,12 @@ function getFraction(byte: number) {
 }
 
 export default class Minihost2Loader extends MinihostLoader<Minihost2Info> {
-  static DOMAIN: 'MODUL';
+  static readonly DOMAIN = 'MODUL';
 
   async getInfo(x: number, y: number): Promise<{}> {
     const { device } = this;
-    device.epcs_h = x;
-    device.epcs_v = y;
+    device.epcsH = x;
+    device.epcsV = y;
     await device.drain();
     const info: Minihost2Info = {};
     const data = await device.upload(Minihost2Loader.DOMAIN, 0, 4);
