@@ -16,7 +16,6 @@ module.exports = {
       ];
       return function (context, request, callback) {
         if (IGNORES.indexOf(request) >= 0) {
-          console.log('@@@@@@@@@@@@@@', request);
           return callback(null, "require('" + request + "')");
         }
         return callback();

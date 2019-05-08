@@ -22,18 +22,25 @@ import TableCell from '@material-ui/core/TableCell';
 import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
 import Typography from '@material-ui/core/Typography';
+import { IDevice } from '@nata/nibus.js-client/lib/mib';
 import groupBy from 'lodash/groupBy';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { hot } from 'react-hot-loader/root';
 import compose from 'recompose/compose';
 import ReloadIcon from '@material-ui/icons/Refresh';
-import { useDevicesContext } from './DevicesProvier';
+import SaveIcon from '@material-ui/icons/Save';
+import LoadIcon from '@material-ui/icons/OpenInBrowser';
+import { remote } from 'electron';
+import fs from 'fs';
+import { useDevicesContext } from '../providers/DevicesProvier';
 
 import ErrorCard from './ErrorCard';
 import PropertyValueCell from './PropertyValueCell';
-import { useDevice } from './DevicesStateProvider';
-import { useToolbar } from './ToolbarProvider';
+import { useDevice } from '../providers/DevicesStateProvider';
+import SaveDialog from '../dialogs/SaveDialog';
+import { useToolbar } from '../providers/ToolbarProvider';
 
+const { dialog } = remote;
 const styles = (theme: Theme) => createStyles({
   root: {
     width: '100%',
@@ -69,10 +76,42 @@ type Props = {
 };
 type InnerProps = Props & WithStyles<typeof styles> & WithTheme;
 
+const load = async (device: IDevice): Promise<boolean> => {
+  const fileNames = dialog.showOpenDialog({
+    title: 'Загрузить из',
+    filters: [{
+      name: 'JSON',
+      extensions: ['json'],
+    }],
+    properties: ['openFile'],
+  });
+  if (fileNames) {
+    try {
+      const data = JSON.parse(fs.readFileSync(fileNames[0]).toString());
+      const mib = Reflect.getMetadata('mib', device);
+      if (data.$mib !== mib) {
+        dialog.showErrorBox('Ошибка загрузки', 'Тип устройства не совпадает');
+        return false;
+      }
+      delete data.$mib;
+      Object.assign(device, data);
+      await device.drain();
+      return true;
+    } catch (e) {
+      dialog.showErrorBox('Ошибка загрузки', 'Файл испорчен');
+      return false;
+    }
+  }
+  return false;
+};
+
 const PropertyGrid: React.FC<InnerProps> = ({ classes, id, active = true }) => {
   const { current } = useDevicesContext();
   const { props, setValue, error, reload, proto, isDirty, device } = useDevice(id);
   const [busy, setBusy] = useState(false);
+  const [saveIsOpen, setSaveOpen] = useState(false);
+  const closeSaveDialog = useCallback(() => setSaveOpen(false), [setSaveOpen]);
+  const saveHandler = useCallback(() => setSaveOpen(true), [setSaveOpen]);
   const reloadHandler = useCallback(
     async () => {
       setBusy(true);
@@ -81,16 +120,36 @@ const PropertyGrid: React.FC<InnerProps> = ({ classes, id, active = true }) => {
     },
     [reload, setBusy],
   );
+  const loadHandler = useCallback(
+    async () => {
+      if (await load(device!)) {
+        await reload();
+      }
+    },
+    [device, reload],
+  );
   const reloadToolbar = useMemo(
     () => (
-      <Tooltip title="Обновить свойства" enterDelay={1000}>
-        <div className={classes.toolbarWrapper}>
-          <IconButton color="inherit" onClick={reloadHandler} disabled={busy}>
-            <ReloadIcon />
+      <>
+        <Tooltip title="Загрузить свойства из файла" enterDelay={1000}>
+          <IconButton color="inherit" onClick={loadHandler} disabled={!device}>
+            <LoadIcon />
           </IconButton>
-          {busy && <CircularProgress size={48} className={classes.fabProgress} />}
-        </div>
-      </Tooltip>
+        </Tooltip>
+        <Tooltip title="Сохранить выбранные свойства в файл" enterDelay={1000}>
+          <IconButton color="inherit" onClick={saveHandler} disabled={!device}>
+            <SaveIcon />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Обновить свойства" enterDelay={1000}>
+          <div className={classes.toolbarWrapper}>
+            <IconButton color="inherit" onClick={reloadHandler} disabled={busy}>
+              <ReloadIcon />
+            </IconButton>
+            {busy && <CircularProgress size={48} className={classes.fabProgress} />}
+          </div>
+        </Tooltip>
+      </>
     ),
     [reloadHandler, busy],
   );
@@ -170,6 +229,7 @@ const PropertyGrid: React.FC<InnerProps> = ({ classes, id, active = true }) => {
           </TableBody>
         </Table>
       </div>
+      <SaveDialog open={saveIsOpen} close={closeSaveDialog} device={device!} />
     </div>
   );
 };

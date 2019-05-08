@@ -12,21 +12,18 @@ import { createStyles, Theme, withStyles, WithStyles } from '@material-ui/core/s
 import React, { useEffect, useState } from 'react';
 import { hot } from 'react-hot-loader/root';
 import compose from 'recompose/compose';
-import { useDevicesContext } from './DevicesProvier';
+import { useDevicesContext } from '../providers/DevicesProvier';
+import { useTests } from '../providers/TestProvider';
 import DeviceTabs from './DeviceTabs';
 
 import TabContainer, { Props as ChildProps } from './TabContainer';
+import TestParams from './TestParams';
 
 const styles = (theme: Theme) => createStyles({
   root: {
     display: 'flex',
     width: '100%',
-    // flexDirection: 'column',
     overflow: 'auto',
-    // alignContent: 'space-around',
-    // alignItems: 'center',
-    // width: '100%',
-    // height: '100%',
     padding: 0,
   },
 });
@@ -35,27 +32,31 @@ type Props = {};
 type InnerProps = Props & WithStyles<typeof styles>;
 
 const Tabs: React.FC<InnerProps> = ({ classes }) => {
-  const [children, setChildren] =
+  const [devChildren, setDevChildren] =
     useState<React.ReactElement<ChildProps, typeof TabContainer>[]>([]);
-  const { current, devices } = useDevicesContext();
-  if (current) {
-    let curChild = children.find(({ props }) => props.value === current);
+  const { current: currentDevice, devices } = useDevicesContext();
+  if (currentDevice) {
+    let curChild = devChildren.find(({ props }) => props.value === currentDevice);
     if (!curChild) {
       curChild = (
         <TabContainer
-          key={current}
-          value={current}
+          key={currentDevice}
+          value={currentDevice}
         >
-          <DeviceTabs id={current} />
+          <DeviceTabs id={currentDevice} />
         </TabContainer>
       );
-      setChildren(children => children.concat(curChild!));
+      setDevChildren(children => children.concat(curChild!));
     }
   }
+  const { current: currentTest } = useTests();
 
+  /**
+   * Показываем только актуальный список
+   */
   useEffect(
     () => {
-      setChildren((children) => {
+      setDevChildren((children) => {
         const newChildren = children
           .filter(({ props }) => devices.findIndex(device => device.id === props.value));
         return newChildren.length === children.length ? children : newChildren;
@@ -64,11 +65,13 @@ const Tabs: React.FC<InnerProps> = ({ classes }) => {
     [devices],
   );
 
-  // console.log('CHILDREN', children.length);
   return (
     <div className={classes.root}>
-      {children.map(
-        child => React.cloneElement(child, { selected: current === child.props.value }))}
+      {devChildren.map(
+        child => React.cloneElement(child, { selected: currentDevice === child.props.value }))}
+      <TabContainer value="test" selected={!!currentTest}>
+        <TestParams/>
+      </TabContainer>
     </div>
   );
 };

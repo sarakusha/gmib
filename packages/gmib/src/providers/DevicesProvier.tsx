@@ -20,7 +20,7 @@ import React, {
 import { getState } from '../util/helpers';
 import { useSessionContext } from './SessionProvider';
 import { NibusConnection } from '@nata/nibus.js-client/lib/nibus';
-import StubDevice from './StubDevice';
+import StubDevice from '../components/StubDevice';
 
 export type DeviceId = string | null;
 const emptyProto = Object.freeze({});

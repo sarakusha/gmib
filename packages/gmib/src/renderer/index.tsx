@@ -14,10 +14,11 @@ import ReactDOM from 'react-dom';
 import { AppContainer } from 'react-hot-loader';
 import 'typeface-roboto/index.css';
 import App from '../components/App';
-import DevicesProvider from '../components/DevicesProvier';
-import DevicesStateProvider from '../components/DevicesStateProvider';
-import SessionProvider from '../components/SessionProvider';
-import ToolbarProvider from '../components/ToolbarProvider';
+import DevicesProvider from '../providers/DevicesProvier';
+import DevicesStateProvider from '../providers/DevicesStateProvider';
+import SessionProvider from '../providers/SessionProvider';
+import TestsProvider from '../providers/TestProvider';
+import ToolbarProvider from '../providers/ToolbarProvider';
 
 const theme = createMuiTheme({
   typography: {
@@ -36,7 +37,9 @@ const render = () => {
             <DevicesProvider>
               <DevicesStateProvider>
                 <ToolbarProvider>
-                  <App />
+                  <TestsProvider>
+                    <App />
+                  </TestsProvider>
                 </ToolbarProvider>
               </DevicesStateProvider>
             </DevicesProvider>

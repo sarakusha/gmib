@@ -16,7 +16,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { hot } from 'react-hot-loader/root';
 import SwipeableViews from 'react-swipeable-views';
 import compose from 'recompose/compose';
-import { useDevicesContext } from './DevicesProvier';
+import { useDevicesContext } from '../providers/DevicesProvier';
 import PropertyGrid from './PropertyGrid';
 import TabContainer from './TabContainer';
 import Telemetry from './Telemetry';

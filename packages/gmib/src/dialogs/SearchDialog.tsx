@@ -1,4 +1,3 @@
-/* tslint:disable:react-a11y-role-has-required-aria-props */
 /*
  * @license
  * Copyright (c) 2019. Nata-Info
@@ -9,6 +8,7 @@
  * the EULA file that was distributed with this source code.
  */
 
+/* tslint:disable:react-a11y-role-has-required-aria-props */
 import {
   AppBar,
   Button,
@@ -38,8 +38,8 @@ import without from 'lodash/without';
 import classNames from 'classnames';
 import Finder, { DeviceInfo, FinderOptions, toVersion } from '../util/finders';
 import useDefaultKeys from '../util/useDefaultKeys';
-import DeviceIcon from './DeviceIcon';
-import { useDevicesContext } from './DevicesProvier';
+import DeviceIcon from '../components/DeviceIcon';
+import { useDevicesContext } from '../providers/DevicesProvier';
 
 const styles = (theme: Theme) => createStyles({
   hidden: {

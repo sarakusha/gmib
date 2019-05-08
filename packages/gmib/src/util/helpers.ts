@@ -20,4 +20,7 @@ type SetterType<T> = Dispatch<SetStateAction<T>>;
 type Callback<T> = (state: T) => void;
 
 export const getState = <T>(setter: SetterType<T>) =>
-  (cb: Callback<T>) => setter(state => (cb(state), state));
+  (cb: Callback<T>) => setter((state) => {
+    cb(state);
+    return state;
+  });

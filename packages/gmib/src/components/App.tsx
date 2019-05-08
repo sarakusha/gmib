@@ -29,10 +29,11 @@ import { hot } from 'react-hot-loader/root';
 import compose from 'recompose/compose';
 import some from 'lodash/some';
 import DeviceListItems from './DeviceListItems';
-import { useDevicesContext } from './DevicesProvier';
+import { useDevicesContext } from '../providers/DevicesProvier';
 import GmibTabs from './GmibTabs';
-import SearchDialog from './SearchDialog';
-import { useToolbar } from './ToolbarProvider';
+import SearchDialog from '../dialogs/SearchDialog';
+import { useToolbar } from '../providers/ToolbarProvider';
+import TestItems from './TestItems';
 
 const version = require('../../package.json').version;
 const drawerWidth = 240;
@@ -79,7 +80,10 @@ const styles = (theme: Theme) => createStyles({
   drawerPaper: {
     position: 'relative',
     whiteSpace: 'nowrap',
+    height: '100vh',
+    overflow: 'hidden',
     width: drawerWidth,
+    display: 'flex',
     transition: theme.transitions.create('width', {
       easing: theme.transitions.easing.sharp,
       duration: theme.transitions.duration.enteringScreen,
@@ -95,6 +99,10 @@ const styles = (theme: Theme) => createStyles({
     [theme.breakpoints.up('sm')]: {
       width: theme.spacing.unit * 9,
     },
+  },
+  drawerContent: {
+    flex: 1,
+    overflow: 'auto',
   },
   appBarSpacer: {
     ...theme.mixins.toolbar,
@@ -188,6 +196,7 @@ const App: React.FC<InnerProps> = ({ classes }) => {
               {version}
             </Typography>
           </div>
+          {toolbar}
           <Tooltip title="Поиск новых устройств" enterDelay={500}>
             <div>
               <IconButton color="inherit" onClick={searchOpen} disabled={!link}>
@@ -195,7 +204,6 @@ const App: React.FC<InnerProps> = ({ classes }) => {
               </IconButton>
             </div>
           </Tooltip>
-          {toolbar}
         </Toolbar>
       </AppBar>
       <Drawer
@@ -211,8 +219,12 @@ const App: React.FC<InnerProps> = ({ classes }) => {
           </IconButton>
         </div>
         <Divider />
-        <List><DeviceListItems /></List>
-        <Divider />
+        <div className={classes.drawerContent}>
+          <List><DeviceListItems /></List>
+          <Divider />
+          <List><TestItems /></List>
+          <Divider />
+        </div>
       </Drawer>
       <main className={classes.content}>
         <div className={classes.appBarSpacer} />

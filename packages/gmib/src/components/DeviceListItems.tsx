@@ -24,8 +24,9 @@ import { hot } from 'react-hot-loader/root';
 import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
 import compose from 'recompose/compose';
 
-import { useDevicesContext } from './DevicesProvier';
-import { useSessionContext } from './SessionProvider';
+import { useDevicesContext } from '../providers/DevicesProvier';
+import { useSessionContext } from '../providers/SessionProvider';
+import useCurrent from '../providers/useCurrent';
 import DeviceIcon from './DeviceIcon';
 
 const styles = (theme: Theme) => createStyles({
@@ -38,15 +39,20 @@ const styles = (theme: Theme) => createStyles({
     // pointerEvents: 'none',
     bottom: 0,
     right: -16,
-    zIndex: 1000,
     fontSize: '1em',
+  },
+  header: {
+    backgroundColor: theme.palette.background.paper,
+    borderBottom: `1px solid ${theme.palette.divider}`,
+    backgroundClip: 'padding-box',
   },
 });
 type Props = {};
 type InnerProps = Props & WithStyles<typeof styles>;
 
 const DeviceListItems: React.FC<InnerProps> = ({ classes }) => {
-  const { devices, setCurrent, current } = useDevicesContext();
+  const { devices, current } = useDevicesContext();
+  const setCurrent = useCurrent('device');
   const devs = useSessionContext().devices;
   const [, setUpdate] = useState(false);
   useEffect(
@@ -68,7 +74,7 @@ const DeviceListItems: React.FC<InnerProps> = ({ classes }) => {
   );
   return (
     <>
-      <ListSubheader inset>Устройства</ListSubheader>
+      <ListSubheader className={classes.header} inset>Устройства</ListSubheader>
       {devices.map((device) => {
         const parent = Reflect.getMetadata('parent', device);
         // const mib = Reflect.getMetadata('mib', device);

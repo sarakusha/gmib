@@ -29,6 +29,10 @@ npm set registry https://npm.nata-info.ru
   ```bash
   sudo apt install -y python2.7 python-pip build-essential libudev-dev
   ```
+2. Добавьте себя в группу dialout <sub><sup>(если вы еще не там)</sup></sub> и <strong>перезагрузитесь</strong>
+  ```bash
+  sudo usermod -a -G dialout $USER
+  ```
 
 ### macOS
 1. [Python 2.7](https://www.python.org/downloads/)

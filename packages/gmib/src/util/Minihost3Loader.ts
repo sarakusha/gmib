@@ -22,8 +22,8 @@ const parseData = (info: Minihost3Info, selector: number, data: Buffer) => {
   switch (selector) {
     case 0:
       info.t = data[2] / 2;
-      if (info.t > 127) {
-        info.t -= 256;
+      if (data[3] & 1) {
+        info.t -= 128;
       }
       return;
     case 1:

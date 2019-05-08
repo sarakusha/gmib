@@ -10,7 +10,7 @@
 import session, { FoundListener, mib } from '@nata/nibus.js-client';
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { ipcRenderer } from 'electron';
-import StartNibusDialog from './StartNibusDialog';
+import StartNibusDialog from '../dialogs/StartNibusDialog';
 
 const { devices } = mib;
 

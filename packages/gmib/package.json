@@ -1,6 +1,6 @@
 {
   "name": "@nata/gmib",
-  "version": "0.2.1",
+  "version": "0.3.3",
   "description": "Nata-Info gmib tool",
   "keywords": [
     "nata-info",
@@ -22,11 +22,12 @@
   "scripts": {
     "dev": "cross-env electron-webpack dev",
     "compile": "cross-env NODE_ENV=production electron-webpack",
-    "dist": "yarn compile && electron-builder",
+    "dist": "electron-builder",
     "dist:dir": "yarn dist --dir -c.compression=store -c.mac.identity=null",
     "dist:linux": "yarn dist -l",
-    "dist:win": "yarn dist -w",
-    "dist:win32": "yarn dist -w --ia32",
+    "dist:win": "yarn dist -w --x64",
+    "publish": "electron-builder -p onTag",
+    "release": "env-cmd .env build -wl --x64",
     "type": "tsc --project tsconfig.json --noEmit",
     "showMainConfig": "node src/util/show-config.js main",
     "showRendererConfig": "node src/util/show-config.js renderer",
@@ -39,6 +40,8 @@
     "@nata/nibus.js-client": "^1.2.6",
     "classnames": "^2.2.6",
     "electron-json-storage": "^4.1.6",
+    "electron-log": "^3.0.5",
+    "electron-updater": "^4.0.6",
     "hotkeys-js": "^3.6.2",
     "immer": "^2.1.5",
     "lerna": "^3.11.1",
@@ -69,14 +72,16 @@
     "@types/react-input-mask": "^2.0.1",
     "@types/react-swipeable-views": "^0.13.0",
     "@types/recompose": "^0.30.5",
+    "@types/semver": "^6.0.0",
     "@types/warning": "^3.0.0",
     "cross-env": "^5.2.0",
     "css-loader": "^2.1.1",
-    "electron": "^4.1.1",
+    "electron": "^5.0.1",
     "electron-builder": "^20.39.0",
     "electron-devtools-installer": "^2.2.4",
     "electron-webpack": "^2.6.2",
     "electron-webpack-ts": "^3.1.1",
+    "env-cmd": "^8.0.2",
     "tslint": "^5.15.0",
     "tslint-config-airbnb": "^5.11.1",
     "tslint-react": "^4.0.0",
@@ -90,13 +95,33 @@
     "copyright": "Copyright © Nata-Info, 2019",
     "productName": "gmib",
     "mac": {
-      "category": "public.app-category.developer-tools"
+      "category": "public.app-category.developer-tools",
+      "target": [
+        "zip",
+        "dmg"
+      ]
     },
     "linux": {
-      "category": "Development"
+      "category": "Development",
+      "target": "AppImage",
+      "executableName": "gmib",
+      "publish": "github"
+    },
+    "nsis": {
+      "artifactName": "${productName}-setup-${version}.${ext}",
+      "publish": "github"
     },
     "directories": {
       "output": "build"
-    }
+    },
+    "extraResources": [
+      {
+        "from": "./src/extraResources/",
+        "to": "extraResources",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ]
   }
 }
