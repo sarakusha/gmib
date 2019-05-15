@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head lang="ru">
+  <meta data-id="5568562c44a3583f1bf1749b">
+  <meta charset="UTF-8">
+  <title>Градиент</title>
+  <style>
+    html, body, #wrapper {
+      background-color: #000000;
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    #wrapper div {
+      height: 33%;
+      border: 1px solid black;
+    }
+
+    .red {
+      background: linear-gradient(to left, #ff0000, #080000);
+    }
+
+    .green {
+      background: linear-gradient(to left, #00ff00, #000800);
+    }
+
+    .blue {
+      background: linear-gradient(to left, #0000ff, #000008);
+    }
+
+    /*#wrapper {*/
+    /*position: absolute;*/
+    /*top: 0;*/
+    /*left: 0;*/
+    /*right: 0;*/
+    /*bottom: 0;*/
+    /*-webkit-animation:spin 30s linear infinite;*/
+    /*}*/
+    /*@-webkit-keyframes spin { 100% { -webkit-transform: rotate(360deg); } }*/
+  </style>
+</head>
+<body>
+<div id="wrapper">
+  <div class="red"></div>
+  <div class="green"></div>
+  <div class="blue"></div>
+</div>
+</body>
+</html>

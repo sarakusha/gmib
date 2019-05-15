@@ -1,0 +1,130 @@
+{
+  "name": "@nibus/gmib",
+  "version": "1.5.0",
+  "description": "Nata-Info gmib tool",
+  "keywords": [
+    "nata-info",
+    "nibus",
+    "sarakusha"
+  ],
+  "license": "MIT",
+  "author": "Andrei Sarakeev <avs@nata-info.ru>",
+  "publishConfig": {
+    "registry": "https://npm.nata-info.ru"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sarakusha/nibus.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sarakusha/nibus/issues"
+  },
+  "scripts": {
+    "dev": "cross-env electron-webpack dev",
+    "compile": "cross-env NODE_ENV=production electron-webpack",
+    "dist": "electron-builder",
+    "dist:mac": "yarn dist -c.mac.identity=null",
+    "dist:dir": "yarn dist --dir -c.compression=store -c.mac.identity=null",
+    "dist:linux": "yarn dist -l",
+    "dist:win": "yarn dist -w --x64",
+    "publish": "electron-builder -p onTag",
+    "build": "env-cmd .env build -lwm --x64 -c.mac.identity=null",
+    "type": "tsc --project tsconfig.json --noEmit",
+    "showMainConfig": "node src/util/show-config.js main",
+    "showRendererConfig": "node src/util/show-config.js renderer",
+    "analyze": "cross-env ANALYZE=1 electron-webpack dev",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "@material-ui/core": "^3.9.2",
+    "@material-ui/icons": "^3.0.2",
+    "@nata/nibus.js-client": "^1.2.6",
+    "classnames": "^2.2.6",
+    "electron-json-storage": "^4.1.6",
+    "electron-log": "^3.0.5",
+    "electron-updater": "^4.0.6",
+    "hotkeys-js": "^3.6.2",
+    "immer": "^2.1.5",
+    "lerna": "^3.11.1",
+    "lodash": "^4.17.11",
+    "rc-slider": "^8.6.9",
+    "react": "^16.8.6",
+    "react-dom": "npm:@hot-loader/react-dom",
+    "react-hot-loader": "^4.8.2",
+    "react-input-mask": "^2.0.4",
+    "react-swipeable-views": "^0.13.1",
+    "recompose": "^0.30.0",
+    "remove": "^0.1.5",
+    "source-map-support": "^0.5.11",
+    "typeface-roboto": "^0.0.54",
+    "warning": "^4.0.3"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.4.0",
+    "@babel/plugin-proposal-class-properties": "^7.4.0",
+    "@babel/preset-react": "^7.0.0",
+    "@types/classnames": "^2.2.7",
+    "@types/electron-devtools-installer": "^2.2.0",
+    "@types/electron-json-storage": "^4.0.0",
+    "@types/material-ui": "^0.21.6",
+    "@types/rc-slider": "^8.6.3",
+    "@types/react": "^16.8.10",
+    "@types/react-dom": "^16.8.3",
+    "@types/react-input-mask": "^2.0.1",
+    "@types/react-swipeable-views": "^0.13.0",
+    "@types/recompose": "^0.30.5",
+    "@types/semver": "^6.0.0",
+    "@types/warning": "^3.0.0",
+    "cross-env": "^5.2.0",
+    "css-loader": "^2.1.1",
+    "electron": "^5.0.1",
+    "electron-builder": "^20.39.0",
+    "electron-devtools-installer": "^2.2.4",
+    "electron-webpack": "^2.6.2",
+    "electron-webpack-ts": "^3.1.1",
+    "env-cmd": "^8.0.2",
+    "tslint": "^5.15.0",
+    "tslint-config-airbnb": "^5.11.1",
+    "tslint-react": "^4.0.0",
+    "tslint-react-hooks": "^2.0.0",
+    "typescript": "^3.3.4000",
+    "webpack": "^4.29.6",
+    "webpack-build-notifier": "^1.0.1"
+  },
+  "build": {
+    "appId": "ru.nata-info.gmib",
+    "copyright": "Copyright © Nata-Info, 2019",
+    "productName": "gmib",
+    "publish": "github",
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": [
+        "dmg"
+      ]
+    },
+    "linux": {
+      "category": "Development",
+      "target": "AppImage",
+      "executableName": "gmib"
+    },
+    "nsis": {
+      "artifactName": "${productName}-setup-${version}.${ext}"
+    },
+    "appImage": {
+      "artifactName": "${productName}-${version}.${ext}"
+    },
+    "directories": {
+      "buildResources": "resources"
+    },
+    "extraResources": [
+      {
+        "from": "./src/extraResources/",
+        "to": "extraResources",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ]
+  },
+  "gitHead": "d099dc6b9635e561c637dc09878384b9e907b2c2"
+}
