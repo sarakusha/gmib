@@ -24,7 +24,7 @@ import ChevronLeftIcon from '@material-ui/icons/ChevronLeft';
 import SearchIcon from '@material-ui/icons/Search';
 import MenuIcon from '@material-ui/icons/Menu';
 import classNames from 'classnames';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { hot } from 'react-hot-loader/root';
 import compose from 'recompose/compose';
 import some from 'lodash/some';
@@ -35,8 +35,13 @@ import SearchDialog from '../dialogs/SearchDialog';
 import { useToolbar } from '../providers/ToolbarProvider';
 import TestItems from './TestItems';
 
-const version = require('../../package.json').version;
 const drawerWidth = 240;
+// @ts-ignore
+// const packagePromise = import('../../package.json');
+// package  Promise.then(
+//   json => console.log('JSON', json && json.version),
+//   err => console.error('JSON', err.stack),
+// );
 
 const styles = (theme: Theme) => createStyles({
   root: {
@@ -155,6 +160,7 @@ const App: React.FC<InnerProps> = ({ classes }) => {
   );
   // const { current } = useDevicesContext();
   const [toolbar] = useToolbar();
+  const version = useMemo(() => require('../../package.json').version, []);
   // console.log('RENDER APP');
   return (
     <div className={classes.root}>
