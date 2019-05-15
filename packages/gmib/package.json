@@ -1,6 +1,6 @@
 {
   "name": "@nibus/gmib",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "Nata-Info gmib tool",
   "keywords": [
     "nata-info",
@@ -37,7 +37,7 @@
   "dependencies": {
     "@material-ui/core": "^3.9.2",
     "@material-ui/icons": "^3.0.2",
-    "@nibus/core": "^1.5.0",
+    "@nibus/core": "^1.5.1",
     "classnames": "^2.2.6",
     "electron-json-storage": "^4.1.6",
     "electron-log": "^3.0.5",
