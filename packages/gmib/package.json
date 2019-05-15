@@ -14,10 +14,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sarakusha/nata.git"
+    "url": "git+https://github.com/sarakusha/nibus.git"
   },
   "bugs": {
-    "url": "https://github.com/sarakusha/nata/issues"
+    "url": "https://github.com/sarakusha/nibus/issues"
   },
   "scripts": {
     "dev": "cross-env electron-webpack dev",
@@ -28,7 +28,7 @@
     "dist:linux": "yarn dist -l",
     "dist:win": "yarn dist -w --x64",
     "publish": "electron-builder -p onTag",
-    "release": "env-cmd .env build -lwm --x64 -c.mac.identity=null",
+    "build": "env-cmd .env build -lwm --x64 -c.mac.identity=null",
     "type": "tsc --project tsconfig.json --noEmit",
     "showMainConfig": "node src/util/show-config.js main",
     "showRendererConfig": "node src/util/show-config.js renderer",
@@ -125,5 +125,6 @@
         ]
       }
     ]
-  }
+  },
+  "gitHead": "d099dc6b9635e561c637dc09878384b9e907b2c2"
 }
