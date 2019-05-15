@@ -7,7 +7,7 @@
     "nibus",
     "sarakusha"
   ],
-  "license": "SEE LICENSE IN EULA.md",
+  "license": "MIT",
   "author": "Andrei Sarakeev <avs@nata-info.ru>",
   "publishConfig": {
     "registry": "https://npm.nata-info.ru"
