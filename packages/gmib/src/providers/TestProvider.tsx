@@ -65,22 +65,24 @@ const reloadTests = () => new Promise<Record<string, string>>((resolve, reject) 
       console.error('error while readdir', err.stack);
       return reject(err);
     }
-    Promise.all(filenames.map(filename => new Promise<[string, string] | undefined>((res) => {
-      const pathname = path.join(testDir, filename);
-      if (fs.lstatSync(pathname).isDirectory()) return res();
-      fs.readFile(pathname, (err, buffer) => {
-        if (err) {
-          console.error('error while readFile', pathname, err.stack);
-          return res();
-        }
-        const matches = buffer.toString().match(reTitle);
-        if (!matches) {
-          console.warn('Отсутствует заголовок', filename);
-          return res();
-        }
-        return res(tuplify(matches[1], pathname));
-      });
-    })))
+
+    const promise = Promise.all(filenames.map(
+      filename => new Promise<[string, string] | undefined>((res) => {
+        const pathname = path.join(testDir, filename);
+        if (fs.lstatSync(pathname).isDirectory()) return res();
+        fs.readFile(pathname, (err, buffer) => {
+          if (err) {
+            console.error('error while readFile', pathname, err.stack);
+            return res();
+          }
+          const matches = buffer.toString().match(reTitle);
+          if (!matches) {
+            console.warn('Отсутствует заголовок', filename);
+            return res();
+          }
+          return res(tuplify(matches[1], pathname));
+        });
+      })))
       .then(results => results.filter(item => item !== undefined).reduce(
         (acc, cur) => {
           const [name, value] = cur!;
@@ -89,6 +91,7 @@ const reloadTests = () => new Promise<Record<string, string>>((resolve, reject) 
         },
         {} as Record<string, string>,
       ));
+    resolve(promise);
   });
 });
 

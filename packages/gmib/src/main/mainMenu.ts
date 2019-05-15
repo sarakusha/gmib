@@ -12,9 +12,6 @@ import { app, Menu, MenuItem, MenuItemConstructorOptions, shell } from 'electron
 
 const template: (MenuItemConstructorOptions | MenuItem)[] = [
   {
-    role: 'editMenu' as any,
-  },
-  {
     role: 'viewMenu' as any,
   },
   {
@@ -25,7 +22,7 @@ const template: (MenuItemConstructorOptions | MenuItem)[] = [
     submenu: [
       {
         label: 'nibus.js',
-        click: () => shell.openExternal('https://npm.nata-info.ru/#/detail/@nata/nibus.js'),
+        click: () => shell.openExternal('https://npm.nata-info.ru/#/detail/@nibus/cli'),
       },
     ],
   },

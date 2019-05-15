@@ -27,7 +27,7 @@
     "dist:dir": "yarn dist --dir -c.compression=store -c.mac.identity=null",
     "dist:linux": "yarn dist -l",
     "dist:win": "yarn dist -w --x64",
-    "publish": "electron-builder -p onTag",
+    "publish": "yarn release",
     "release": "env-cmd .env build -lwm --x64 -c.mac.identity=null",
     "type": "tsc --project tsconfig.json --noEmit",
     "showMainConfig": "node src/util/show-config.js main",
@@ -126,5 +126,5 @@
       }
     ]
   },
-  "gitHead": "d099dc6b9635e561c637dc09878384b9e907b2c2"
+  "gitHead": "90c44fc5669d84c5ecbcbb68675b06aae1208572"
 }
