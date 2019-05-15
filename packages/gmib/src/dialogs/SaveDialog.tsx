@@ -8,7 +8,7 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { IDevice } from '@nata/nibus.js-client/lib/mib';
+import { IDevice } from '@nibus/core/lib/mib';
 import React, { useCallback, useMemo, useReducer } from 'react';
 import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
 import {

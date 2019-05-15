@@ -8,12 +8,12 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { IDevice } from '@nata/nibus.js-client/lib/mib';
-import { Address } from '@nata/nibus.js-client';
+import { IDevice } from '@nibus/core/lib/mib';
+import { Address } from '@nibus/core';
 import { EventEmitter } from 'events';
-import { NibusConnection } from '@nata/nibus.js-client/lib/nibus';
-import { DeviceId } from '@nata/nibus.js-client/lib/mib/devices';
-import { NmsDatagram } from '@nata/nibus.js-client/lib/nms';
+import { NibusConnection } from '@nibus/core/lib/nibus';
+import { DeviceId } from '@nibus/core/lib/mib/devices';
+import { NmsDatagram } from '@nibus/core/lib/nms';
 import timeid from '../util/timeid';
 
 export default class StubDevice extends EventEmitter implements IDevice {

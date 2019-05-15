@@ -22,7 +22,7 @@ import TableCell from '@material-ui/core/TableCell';
 import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
 import Typography from '@material-ui/core/Typography';
-import { IDevice } from '@nata/nibus.js-client/lib/mib';
+import { IDevice } from '@nibus/core/lib/mib';
 import groupBy from 'lodash/groupBy';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { hot } from 'react-hot-loader/root';

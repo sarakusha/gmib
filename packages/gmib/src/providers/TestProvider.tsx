@@ -60,6 +60,7 @@ const reTitle = /<\s*title[^>]*>(.+)<\s*\/\s*title>/i;
 const reloadTests = () => {
   tests = {};
   const testDir = path.resolve(__dirname, '../extraResources/tests');
+  console.log('TESTDIR', testDir);
   fs.readdir(testDir, (err, filenames) => {
     if (err) {
       console.error('error while readdir', err.stack);

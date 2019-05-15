@@ -1,3 +1,3 @@
 <component name="DependencyValidationManager">
-  <scope name="nibus.js" pattern="file[@nata]:packages/nibus.js//*||file:lerna.json||file:package.json" />
+  <scope name="nibus.js" pattern="file[@nibus]:packages/cli//*||file:lerna.json||file:package.json" />
 </component>

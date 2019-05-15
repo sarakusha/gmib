@@ -1,6 +1,6 @@
 {
-  "name": "@nata/gmib",
-  "version": "0.3.3",
+  "name": "@nibus/gmib",
+  "version": "0.4.1",
   "description": "Nata-Info gmib tool",
   "keywords": [
     "nata-info",
@@ -23,11 +23,12 @@
     "dev": "cross-env electron-webpack dev",
     "compile": "cross-env NODE_ENV=production electron-webpack",
     "dist": "electron-builder",
+    "dist:mac": "yarn dist -c.mac.identity=null",
     "dist:dir": "yarn dist --dir -c.compression=store -c.mac.identity=null",
     "dist:linux": "yarn dist -l",
     "dist:win": "yarn dist -w --x64",
     "publish": "electron-builder -p onTag",
-    "release": "env-cmd .env build -wl --x64",
+    "release": "env-cmd .env build -lwm --x64 -c.mac.identity=null",
     "type": "tsc --project tsconfig.json --noEmit",
     "showMainConfig": "node src/util/show-config.js main",
     "showRendererConfig": "node src/util/show-config.js renderer",
@@ -94,25 +95,26 @@
     "appId": "ru.nata-info.gmib",
     "copyright": "Copyright © Nata-Info, 2019",
     "productName": "gmib",
+    "publish": "github",
     "mac": {
       "category": "public.app-category.developer-tools",
       "target": [
-        "zip",
         "dmg"
       ]
     },
     "linux": {
       "category": "Development",
       "target": "AppImage",
-      "executableName": "gmib",
-      "publish": "github"
+      "executableName": "gmib"
     },
     "nsis": {
-      "artifactName": "${productName}-setup-${version}.${ext}",
-      "publish": "github"
+      "artifactName": "${productName}-setup-${version}.${ext}"
+    },
+    "appImage": {
+      "artifactName": "${productName}-${version}.${ext}"
     },
     "directories": {
-      "output": "build"
+      "buildResources": "resources"
     },
     "extraResources": [
       {

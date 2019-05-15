@@ -8,7 +8,7 @@
  * the EULA file that was distributed with this source code.
  */
 import { SvgIconProps } from '@material-ui/core/SvgIcon';
-import { IDevice } from '@nata/nibus.js-client/lib/mib';
+import { IDevice } from '@nibus/core/lib/mib';
 import React from 'react';
 import { hot } from 'react-hot-loader/root';
 import compose from 'recompose/compose';

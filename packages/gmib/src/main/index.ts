@@ -11,12 +11,8 @@
 import {
   app,
   BrowserWindow,
-  Menu,
   ipcMain,
   Event,
-  protocol,
-  MenuItem,
-  MenuItemConstructorOptions,
 } from 'electron';
 import * as path from 'path';
 import { format as formatUrl } from 'url';
@@ -27,29 +23,7 @@ import { TestQuery } from '../providers/TestProvider';
 autoUpdater.logger = log;
 log.transports.file.level = 'info';
 log.transports.console.level = false;
-// autoUpdater.logger.transports.file.level = 'info';
 log.info('App starting...');
-// console.log('LOG', log.transports.file.findLogPath());
-
-const template: (MenuItemConstructorOptions | MenuItem)[] = [];
-if (process.platform === 'darwin') {
-  // OS X
-  const name = app.getName();
-  template.unshift({
-    label: name,
-    submenu: [
-      {
-        label: `About ${name}`,
-        role: 'about',
-      },
-      {
-        label: 'Quit',
-        accelerator: 'Command+Q',
-        click() { app.quit(); },
-      },
-    ],
-  });
-}
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
@@ -108,7 +82,6 @@ function createMainWindow() {
   return window;
 }
 
-
 function createTestWindow() {
   const { width, height, x = 0, y = 0 } = currentQuery;
   const window = new BrowserWindow({
@@ -119,7 +92,7 @@ function createTestWindow() {
     frame: false,
     backgroundColor: '#000',
     focusable: false,
-    show: true,
+    show: false,
     alwaysOnTop: true,
     skipTaskbar: true,
     // webPreferences: {
@@ -134,9 +107,6 @@ function createTestWindow() {
           .then((name) => {
             window.webContents.once('did-frame-finish-load', () => {
               window.webContents.openDevTools();
-              // window.webContents.on('devtools-opened', () => {
-              //   window.focus();
-              // });
             });
             console.log(`Added Extension:  ${name}`);
           })
@@ -144,6 +114,7 @@ function createTestWindow() {
       });
   }
   window.on('closed', () => testWindow = null);
+  window.on('ready-to-show', () => window.show());
   window.setIgnoreMouseEvents(true);
   return window;
 }
@@ -182,22 +153,8 @@ app.on('activate', () => {
 
 // create main BrowserWindow when electron is ready
 app.on('ready', () => {
-  log.info('1111Starting...');
-  // Create the Menu
-  const menu = Menu.buildFromTemplate(template);
-  Menu.setApplicationMenu(menu);
-  // protocol.interceptFileProtocol(
-  //   'file',
-  //   (request, callback) => {
-  //     log.info('URL', request.url);
-  //     const url = request.url.substr(7);    /* all urls start with 'file://' */
-  //     callback(request.url);
-  //   },
-  //   (err) => {
-  //     if (err) console.error('Failed to register protocol');
-  //   },
-  // );
   mainWindow = createMainWindow();
+  import('./mainMenu');
   isDevelopment || autoUpdater.checkForUpdatesAndNotify();
 });
 
@@ -209,27 +166,28 @@ function sendStatusToWindow(text: string) {
 autoUpdater.on('checking-for-update', () => {
   sendStatusToWindow('Checking for update...');
 });
+
 autoUpdater.on('update-available', (info) => {
   sendStatusToWindow('Update available.');
 });
+
 autoUpdater.on('update-not-available', (info) => {
   sendStatusToWindow('Update not available.');
 });
+
 autoUpdater.on('error', (err) => {
   sendStatusToWindow(`Error in auto-updater. ${err}`);
 });
+
 autoUpdater.on('download-progress', (progressObj) => {
   let logMessage = `Download speed: ${progressObj.bytesPerSecond}`;
   logMessage = `${logMessage} - Downloaded ${progressObj.percent}%`;
   logMessage = `${logMessage} (${progressObj.transferred}/${progressObj.total})`;
   sendStatusToWindow(logMessage);
 });
+
 autoUpdater.on('update-downloaded', (info) => {
   sendStatusToWindow('Update downloaded');
-});
-ipcMain.on('startLocalNibus', () => {
-  // console.log('START LOCAL NIBUS');
-  // import('@nata/nibus.js/lib/service/service').then(service => service.default.start());
 });
 
 let currentQuery: TestQuery = {

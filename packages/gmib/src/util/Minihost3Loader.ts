@@ -7,7 +7,7 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import { IDevice } from '@nata/nibus.js-client/lib/mib';
+import { IDevice } from '@nibus/core/lib/mib';
 import MinihostLoader from './MinihostLoader';
 
 export type Minihost3Info = {

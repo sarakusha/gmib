@@ -27,7 +27,7 @@ import {
   Tabs,
   TextField,
 } from '@material-ui/core';
-import { IDevice, getMibTypes, findMibByType } from '@nata/nibus.js-client/lib/mib';
+import { IDevice, getMibTypes, findMibByType } from '@nibus/core/lib/mib';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
 import { hot } from 'react-hot-loader/root';

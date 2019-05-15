@@ -1,11 +1,11 @@
 {
   "files": [],
   "references": [
-    { "path": "nibus.js" },
+    { "path": "cli"},
     { "path": "stela" }
   ],
   "include": [
     "./stela/**/*",
-    "./nibus.js/**/*"
+    "./cli/**/*"
   ]
 }

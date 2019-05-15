@@ -8,11 +8,11 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { Address } from '@nata/nibus.js-client';
-import { AddressType } from '@nata/nibus.js-client/lib/Address';
-import { NibusConnection } from '@nata/nibus.js-client/lib/nibus';
-import { createSarp, SarpDatagram } from '@nata/nibus.js-client/lib/sarp';
-import SarpQueryType from '@nata/nibus.js-client/lib/sarp/SarpQueryType';
+import { Address } from '@nibus/core';
+import { AddressType } from '@nibus/core/lib/Address';
+import { NibusConnection } from '@nibus/core/lib/nibus';
+import { createSarp, SarpDatagram } from '@nibus/core/lib/sarp';
+import SarpQueryType from '@nibus/core/lib/sarp/SarpQueryType';
 import { delay, tuplify } from './helpers';
 import Runnable from './Runnable';
 

@@ -7,7 +7,7 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import session, { FoundListener, mib } from '@nata/nibus.js-client';
+import session, { FoundListener, mib } from '@nibus/core';
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { ipcRenderer } from 'electron';
 import StartNibusDialog from '../dialogs/StartNibusDialog';

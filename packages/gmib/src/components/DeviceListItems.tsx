@@ -18,7 +18,7 @@ import ListSubheader from '@material-ui/core/ListSubheader';
 // import TvIcon from '@material-ui/icons/Tv';
 import UsbIcon from '@material-ui/icons/Usb';
 import LinkIcon from '@material-ui/icons/Link';
-import { DeviceId } from '@nata/nibus.js-client/lib/mib';
+import { DeviceId } from '@nibus/core/lib/mib';
 import React, { useCallback, useEffect, useState } from 'react';
 import { hot } from 'react-hot-loader/root';
 import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';

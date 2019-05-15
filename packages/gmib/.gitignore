@@ -458,3 +458,4 @@ fabric.properties
 
 /build/
 .env
+/dist/

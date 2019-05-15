@@ -8,8 +8,8 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { NibusError } from '@nata/nibus.js-client';
-import { IDevice } from '@nata/nibus.js-client/lib/mib';
+import { NibusError } from '@nibus/core';
+import { IDevice } from '@nibus/core/lib/mib';
 import Runnable from './Runnable';
 
 export type IModuleInfo<T> = {

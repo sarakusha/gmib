@@ -1,1 +1,0 @@
-{"version":3,"file":"NibusEncoder.d.ts","sourceRoot":"","sources":["../../src/nibus/NibusEncoder.ts"],"names":[],"mappings":";AAUA,OAAO,EAAE,SAAS,EAAE,iBAAiB,EAAE,gBAAgB,EAAE,MAAM,QAAQ,CAAC;AAOxE,MAAM,CAAC,OAAO,OAAO,YAAa,SAAQ,SAAS;gBACrC,OAAO,CAAC,EAAE,gBAAgB;IAQ/B,UAAU,CAAC,KAAK,EAAE,GAAG,EAAE,SAAS,EAAE,MAAM,EAAE,QAAQ,EAAE,iBAAiB;CAQ7E"}
