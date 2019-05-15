@@ -22,6 +22,7 @@ import debounce from 'lodash/debounce';
 import { ipcRenderer } from 'electron';
 import path from 'path';
 import fs from 'fs';
+import { tuplify } from '../util/helpers';
 
 export type TestQuery = {
   width: number,
@@ -51,44 +52,47 @@ const key = 'testParams';
 export const useTests = () => useContext(TestContext);
 
 type testTuple = [string, string];
-let tests: Record<string, string> = {};
 const sortByPath = ([, pathA]: testTuple, [, pathB]: testTuple) => pathA < pathB
   ? -1
   : pathA > pathB ? 1 : 0;
 
 const reTitle = /<\s*title[^>]*>(.+)<\s*\/\s*title>/i;
-const reloadTests = () => {
-  tests = {};
+const reloadTests = () => new Promise<Record<string, string>>((resolve, reject) => {
   const testDir = path.resolve(__dirname, '../extraResources/tests');
-  console.log('TESTDIR', testDir);
+  // console.log('TESTDIR', testDir);
   fs.readdir(testDir, (err, filenames) => {
     if (err) {
       console.error('error while readdir', err.stack);
-      return;
+      return reject(err);
     }
-    filenames.forEach((filename) => {
+    Promise.all(filenames.map(filename => new Promise<[string, string] | undefined>((res) => {
       const pathname = path.join(testDir, filename);
-      if (fs.lstatSync(pathname).isDirectory()) return;
+      if (fs.lstatSync(pathname).isDirectory()) return res();
       fs.readFile(pathname, (err, buffer) => {
         if (err) {
           console.error('error while readFile', pathname, err.stack);
-          return;
+          return res();
         }
         const matches = buffer.toString().match(reTitle);
         if (!matches) {
           console.warn('Отсутствует заголовок', filename);
-          return;
+          return res();
         }
-        tests = {
-          ...tests,
-          [matches[1]]: pathname,
-        };
+        return res(tuplify(matches[1], pathname));
       });
-    });
+    })))
+      .then(results => results.filter(item => item !== undefined).reduce(
+        (acc, cur) => {
+          const [name, value] = cur!;
+          acc[name] = value;
+          return acc;
+        },
+        {} as Record<string, string>,
+      ));
   });
-};
+});
 
-reloadTests();
+const testsPromise = reloadTests();
 
 const updateQuery = debounce(
   (query: TestQuery) => {
@@ -100,6 +104,7 @@ const updateQuery = debounce(
 const TestsProvider: React.FC<{}> = ({ children }) => {
   const [current, setCurrent] = useState<TestId | null>(null);
   const [visible, setVisible] = useState<TestId | null>(null);
+  const [tests, setTests] = useState<Record<string, string>>({});
   const [query, setQuery] = useState<TestQuery>({
     width: 640,
     height: 320,
@@ -113,7 +118,7 @@ const TestsProvider: React.FC<{}> = ({ children }) => {
       setVisible(id);
       ipcRenderer.send('test:show', tests[id]);
     },
-    [setVisible],
+    [setVisible, tests],
   );
   const hideAll = useCallback(
     () => {
@@ -142,20 +147,12 @@ const TestsProvider: React.FC<{}> = ({ children }) => {
           setQuery(data as TestQuery);
         }
       });
-      // return () => {
-      //   getState(setQuery)(query =>
-      //     storage.set(key, query, err => err && console.error(err.stack)));
-      // };
     },
     [setQuery],
   );
   useEffect(() => updateQuery(query), [query]);
-  useEffect(
-    () => {
-      if (!visible) hideAll();
-    },
-    [visible],
-  );
+  useEffect(() => { visible || hideAll(); }, [visible]);
+  useEffect(() => { testsPromise.then(setTests); });
   return (
     <TestContext.Provider value={value}>
       {children}
