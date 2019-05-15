@@ -1,6 +1,6 @@
 {
   "name": "@nibus/gmib",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "description": "Nata-Info gmib tool",
   "keywords": [
     "nata-info",
@@ -128,5 +128,5 @@
       }
     ]
   },
-  "gitHead": "90c44fc5669d84c5ecbcbb68675b06aae1208572"
+  "gitHead": "522054682a29e66b40cfa80e765780ff654be82b"
 }
