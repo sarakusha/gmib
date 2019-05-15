@@ -17,8 +17,9 @@ import compose from 'recompose/compose';
 import setDisplayName from 'recompose/setDisplayName';
 import MenuItem from '@material-ui/core/MenuItem';
 import EditCell from './EditCell';
+import SerialNoCell from './SerialNoCell';
 
-const capitalize = (str: string) => str.charAt(0).toUpperCase() + str.slice(1);
+const capitalize = (str: string) => str && (str.charAt(0).toUpperCase() + str.slice(1));
 const safeParseNumber = (value: any) => {
   const num = parseFloat(value);
   return Number.isNaN(num) ? value : num;
@@ -58,8 +59,8 @@ type InnerProps = Props & WithStyles<typeof styles>;
 type CellProps = { value: any, dirty?: boolean };
 type CellComponent = React.FunctionComponent<CellProps>;
 
-const PropertyValueCell =
-  ({ proto, name, value, classes, onChangeProperty, dirty }: InnerProps) => {
+const PropertyValueCell: React.FC<InnerProps> =
+  ({ proto, name, value, classes, onChangeProperty, dirty }) => {
     // console.log(name, value, dirty);
     const cellFactory = useCallback<() => CellComponent>(
       () => {
@@ -83,6 +84,7 @@ const PropertyValueCell =
         const unit = Reflect.getMetadata('unit', proto, name);
         const min = Reflect.getMetadata('min', proto, name);
         const max = Reflect.getMetadata('max', proto, name);
+        const step = simpleType === 'xs:float' || simpleType === 'xs.double' ? 0.01 : 1;
         const selectChanged = (event: ChangeEvent<HTMLSelectElement>) => {
           onChangeProperty(name, event.target.value);
         };
@@ -119,6 +121,18 @@ const PropertyValueCell =
             },
           );
         }
+        if (simpleType === 'xs:unsignedLong' && name === 'serno') {
+          return setDisplayName(componentName)(
+            ({ value, dirty }: CellProps) => (
+              <SerialNoCell
+                name={name}
+                onChangeProperty={onChangeProperty}
+                value={value}
+                dirty={dirty}
+              />
+            ),
+          );
+        }
         const [convert, type] = simpleType === 'xs:string'
           ? [String, 'text']
           : [unit ? rawValue : safeParseNumber, 'number'];
@@ -131,6 +145,7 @@ const PropertyValueCell =
               align="right"
               min={min}
               max={max}
+              step={step}
               unit={unit}
               onChangeProperty={onChangeProperty}
               dirty={dirty}

@@ -8,33 +8,34 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { DeviceListener } from '@nata/nibus.js-client';
-import { IDevice } from '@nata/nibus.js-client/lib/mib';
-import React, { useCallback, useState } from 'react';
-import { hot } from 'react-hot-loader/root';
-import classNames from 'classnames';
-import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
+import {
+  AppBar,
+  Divider,
+  Drawer,
+  IconButton,
+  List,
+  Toolbar,
+  Tooltip,
+  Typography,
+} from '@material-ui/core';
 import CssBaseline from '@material-ui/core/CssBaseline';
-import Drawer from '@material-ui/core/Drawer';
-import AppBar from '@material-ui/core/AppBar';
-import Toolbar from '@material-ui/core/Toolbar';
-import List from '@material-ui/core/List';
-import Typography from '@material-ui/core/Typography';
-import Divider from '@material-ui/core/Divider';
-import IconButton from '@material-ui/core/IconButton';
-import Badge from '@material-ui/core/Badge';
-import MenuIcon from '@material-ui/icons/Menu';
+import { createStyles, Theme, withStyles, WithStyles } from '@material-ui/core/styles';
 import ChevronLeftIcon from '@material-ui/icons/ChevronLeft';
-import UsbIcon from '@material-ui/icons/Usb';
+import SearchIcon from '@material-ui/icons/Search';
+import MenuIcon from '@material-ui/icons/Menu';
+import classNames from 'classnames';
+import React, { useCallback, useEffect, useState } from 'react';
+import { hot } from 'react-hot-loader/root';
 import compose from 'recompose/compose';
+import some from 'lodash/some';
 import DeviceListItems from './DeviceListItems';
-import PropertyGrid from './PropertyGrid';
-import { useDevices, useSession } from './SessionContext';
-// import { useDevices, useSession } from ''
-// import { mainListItems, secondaryListItems } from './listItems';
-// import SimpleLineChart from './SimpleLineChart';
-// import SimpleTable from './SimpleTable';
+import { useDevicesContext } from '../providers/DevicesProvier';
+import GmibTabs from './GmibTabs';
+import SearchDialog from '../dialogs/SearchDialog';
+import { useToolbar } from '../providers/ToolbarProvider';
+import TestItems from './TestItems';
 
+const version = require('../../package.json').version;
 const drawerWidth = 240;
 
 const styles = (theme: Theme) => createStyles({
@@ -79,7 +80,10 @@ const styles = (theme: Theme) => createStyles({
   drawerPaper: {
     position: 'relative',
     whiteSpace: 'nowrap',
+    height: '100vh',
+    overflow: 'hidden',
     width: drawerWidth,
+    display: 'flex',
     transition: theme.transitions.create('width', {
       easing: theme.transitions.easing.sharp,
       duration: theme.transitions.duration.enteringScreen,
@@ -96,12 +100,28 @@ const styles = (theme: Theme) => createStyles({
       width: theme.spacing.unit * 9,
     },
   },
-  appBarSpacer: theme.mixins.toolbar,
+  drawerContent: {
+    flex: 1,
+    overflow: 'auto',
+  },
+  appBarSpacer: {
+    ...theme.mixins.toolbar,
+    flex: '0 0 auto',
+  },
   content: {
     flexGrow: 1,
-    padding: theme.spacing.unit * 3,
+    padding: 0, // theme.spacing.unit * 2,
     height: '100vh',
-    overflow: 'auto',
+    overflow: 'hidden',
+    display: 'flex',
+    flexDirection: 'column',
+    // position: 'relative',
+  },
+  gmib: {
+    flex: 1,
+    overflow: 'hidden',
+    display: 'flex',
+    position: 'relative',
   },
   chartContainer: {
     marginLeft: -22,
@@ -117,27 +137,32 @@ const styles = (theme: Theme) => createStyles({
 type Props = {};
 type InnerProps = Props & WithStyles<typeof styles>;
 
-const App = ({ classes }: InnerProps) => {
+const App: React.FC<InnerProps> = ({ classes }) => {
   const [open, setOpen] = useState(true);
   const handleDrawerOpen = useCallback(() => setOpen(true), []);
   const handleDrawerClose = useCallback(() => setOpen(false), []);
-  const { ports } = useSession();
-  const [current, setCurrent] = useState<IDevice | null>(null);
-  const resetCurrent = useCallback<DeviceListener>(
-    (device) => {
-      if (current === device) {
-        setCurrent(null);
-      }
+  const [isSearchOpen, setSearchOpen] = useState(false);
+  const searchOpen = useCallback(() => setSearchOpen(true), [setSearchOpen]);
+  const searchClose = useCallback(() => setSearchOpen(false), [setSearchOpen]);
+  const [link, setLink] = useState(false);
+  const { devices } = useDevicesContext();
+  useEffect(
+    () => {
+      setLink(some(devices, device => device.connection
+        && device.connection.description && device.connection.description.link));
     },
-    [current],
+    [devices, setLink],
   );
-  useDevices({ onDelete: resetCurrent });
+  // const { current } = useDevicesContext();
+  const [toolbar] = useToolbar();
+  // console.log('RENDER APP');
   return (
     <div className={classes.root}>
       <CssBaseline />
       <AppBar
         position="absolute"
         className={classNames(classes.appBar, open && classes.appBarShift)}
+        elevation={0}
       >
         <Toolbar disableGutters={!open} className={classes.toolbar}>
           <IconButton
@@ -151,23 +176,34 @@ const App = ({ classes }: InnerProps) => {
           >
             <MenuIcon />
           </IconButton>
-          <Typography
-            component="h1"
-            variant="h6"
-            color="inherit"
-            noWrap
-            className={classes.title}
-          >
-            gMIB
-          </Typography>
-          <Typography variant="subtitle1" color="inherit">
-            {current && `${Reflect.getMetadata('mib', current)} ${current.address.toString()}`}
-          </Typography>
-          <IconButton color="inherit">
-            <Badge badgeContent={ports} color="secondary">
-              <UsbIcon />
-            </Badge>
-          </IconButton>
+          <div className={classes.title}>
+            <Typography
+              component="h1"
+              variant="h6"
+              color="inherit"
+              noWrap
+              inline
+            >
+              gMIB
+            </Typography>
+            &nbsp;
+            <Typography
+              component="h1"
+              variant="subtitle1"
+              color="inherit"
+              inline
+            >
+              {version}
+            </Typography>
+          </div>
+          {toolbar}
+          <Tooltip title="Поиск новых устройств" enterDelay={500}>
+            <div>
+              <IconButton color="inherit" onClick={searchOpen} disabled={!link}>
+                <SearchIcon />
+              </IconButton>
+            </div>
+          </Tooltip>
         </Toolbar>
       </AppBar>
       <Drawer
@@ -183,19 +219,37 @@ const App = ({ classes }: InnerProps) => {
           </IconButton>
         </div>
         <Divider />
-        <List><DeviceListItems setCurrent={setCurrent} /></List>
-        <Divider />
-        <List>list</List>
+        <div className={classes.drawerContent}>
+          <List><DeviceListItems /></List>
+          <Divider />
+          <List><TestItems /></List>
+          <Divider />
+        </div>
       </Drawer>
       <main className={classes.content}>
         <div className={classes.appBarSpacer} />
-        {current && <PropertyGrid device={current} />}
+        <div className={classes.gmib}>
+          <GmibTabs />
+        </div>
       </main>
+      <SearchDialog open={isSearchOpen} close={searchClose} />
     </div>
   );
 };
 
+export const pipe = <T extends any[], R>(
+  fn1: (...args: T) => R,
+  ...fns: ((a: R) => R)[]
+) => {
+  const piped = fns.reduce(
+    (prevFn, nextFn) => (value: R) => nextFn(prevFn(value)),
+    value => value,
+  );
+  return (...args: T) => piped(fn1(...args));
+};
+
 export default compose<InnerProps, Props>(
   hot,
+  React.memo,
   withStyles(styles),
 )(App);

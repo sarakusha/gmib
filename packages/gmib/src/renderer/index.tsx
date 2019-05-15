@@ -8,12 +8,17 @@
  * the EULA file that was distributed with this source code.
  */
 
+import { createMuiTheme, MuiThemeProvider } from '@material-ui/core/styles';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { AppContainer } from 'react-hot-loader';
+import 'typeface-roboto/index.css';
 import App from '../components/App';
-import { SessionProvider } from '../components/SessionContext';
-import { MuiThemeProvider, createMuiTheme } from '@material-ui/core/styles';
+import DevicesProvider from '../providers/DevicesProvier';
+import DevicesStateProvider from '../providers/DevicesStateProvider';
+import SessionProvider from '../providers/SessionProvider';
+import TestsProvider from '../providers/TestProvider';
+import ToolbarProvider from '../providers/ToolbarProvider';
 
 const theme = createMuiTheme({
   typography: {
@@ -29,7 +34,15 @@ const render = () => {
       <AppContainer>
         <MuiThemeProvider theme={theme}>
           <SessionProvider>
-            <App />
+            <DevicesProvider>
+              <DevicesStateProvider>
+                <ToolbarProvider>
+                  <TestsProvider>
+                    <App />
+                  </TestsProvider>
+                </ToolbarProvider>
+              </DevicesStateProvider>
+            </DevicesProvider>
           </SessionProvider>
         </MuiThemeProvider>
       </AppContainer>

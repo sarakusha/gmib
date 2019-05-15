@@ -8,26 +8,67 @@
  */
 
 const isProduction = process.env.NODE_ENV === 'production';
+const { ANALYZE } = process.env;
+const path = require('path');
 
-module.exports = isProduction ? {} : {
+const config = {
+  externals: [
+    (function () {
+      var IGNORES = [
+        'electron',
+      ];
+      return function (context, request, callback) {
+        if (IGNORES.indexOf(request) >= 0) {
+          return callback(null, 'require(\'' + request + '\')');
+        }
+        return callback();
+      };
+    })(),
+    'worker_threads',
+  ],
   module: {
     rules: [
+      // Нужно для iconv-lite
       {
-        test: /\.tsx$/,
-        use:
-          [
-            { loader: 'react-hot-loader/webpack' },
-            {
-              loader: 'ts-loader',
-              options:
-                {
-                  transpileOnly: true,
-                  appendTsSuffixTo: [/\.vue$/],
-                  configFile:
-                    '/Users/sarakusha/WebstormProjects/@nata/packages/gmib/tsconfig.json',
-                },
-            }, // { loader: 'ts-loader' },
-          ],
-      }],
+        test: /node_modules[\/\\](iconv-lite)[\/\\].+/,
+        resolve: {
+          aliasFields: ['main'],
+        },
+      },
+    ],
   },
+  // module: {
+  //   rules: [
+  //     {
+  //       test: /\.tsx$/,
+  //       use:
+  //         [
+  //           { loader: 'react-hot-loader/webpack' },
+  //           {
+  //             loader: 'ts-loader',
+  //             options:
+  //               {
+  //                 transpileOnly: true,
+  //                 appendTsSuffixTo: [/\.vue$/],
+  //                 configFile: path.relative(__dirname, 'tsconfig.json'),
+  //                   // '/Users/sarakusha/WebstormProjects/@nata/packages/gmib/tsconfig.json',
+  //               },
+  //           }, // { loader: 'ts-loader' },
+  //         ],
+  //     }],
+  // },
+  plugins: [],
 };
+
+if (ANALYZE) {
+  const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
+
+  config.plugins.push(new BundleAnalyzerPlugin({
+    analyzerMode: 'server',
+    analyzerPort: 8888,
+    openAnalyzer: true,
+  }));
+}
+
+module.exports = config;
+// module.exports = {};

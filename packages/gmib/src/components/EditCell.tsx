@@ -49,15 +49,17 @@ type Props = {
   unit?: string,
   min?: number,
   max?: number,
+  step?: number,
   dirty?: boolean,
   onChangeProperty?: (name: string, value: any) => void,
 } & TableCellProps;
 type InnerProps = Props & WithStyles<typeof styles>;
 
-const EditCell =
+const EditCell: React.FC<InnerProps> =
   ({
-    value, classes, className, align, type, unit, min, max, name, onChangeProperty, dirty, ...props
-  }: InnerProps) => {
+    value, classes, className, align,
+    type, unit, min, max, step, name, onChangeProperty, dirty, ...props
+  }) => {
     const inputClasses = {
       input: classNames({
         [classes.inputRight]: align === 'right',
@@ -94,6 +96,7 @@ const EditCell =
           inputProps={{
             min,
             max,
+            step,
           }}
           onChange={changeHandler}
         />
@@ -103,5 +106,6 @@ const EditCell =
 
 export default compose<InnerProps, Props>(
   hot,
+  React.memo,
   withStyles(styles),
 )(EditCell);
