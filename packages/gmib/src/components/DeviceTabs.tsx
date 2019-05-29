@@ -28,9 +28,6 @@ const styles = (theme: Theme) => createStyles({
     flexGrow: 1,
     maxWidth: 'none',
     flexDirection: 'column',
-    // height: '100%',
-    // overflow: 'hidden',
-    // position: 'relative',
   },
   appBarSpacer: {
     flex: '0 0 auto',
@@ -40,7 +37,7 @@ const styles = (theme: Theme) => createStyles({
   content: {
     flex: '1 1 auto',
     // width: '100%',
-    // height: '100%',
+    height: 'calc(100% - 48px)',
     display: 'flex',
     WebkitOverflowScrolling: 'touch', // Add iOS momentum scrolling.
     // overflow: 'hidden',

@@ -1,6 +1,6 @@
 {
   "name": "@nibus/gmib",
-  "version": "1.5.4",
+  "version": "1.5.5",
   "description": "Nata-Info gmib tool",
   "keywords": [
     "nata-info",
@@ -27,7 +27,7 @@
     "dist:dir": "yarn dist --dir -c.compression=store -c.mac.identity=null",
     "dist:linux": "yarn dist -l",
     "dist:win": "yarn dist -w --x64",
-    "publish": "yarn release",
+    "publish": "yarn compile && yarn release",
     "release": "env-cmd .env build -lwm --x64 -c.mac.identity=null",
     "type": "tsc --project tsconfig.json --noEmit",
     "showMainConfig": "node src/util/show-config.js main",

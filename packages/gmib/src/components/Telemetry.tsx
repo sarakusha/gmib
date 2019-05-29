@@ -126,8 +126,7 @@ const Telemetry: React.FC<InnerProps> = ({ classes, id, active = true }) => {
       setXMax(Math.min(Math.ceil(hres / (moduleHres || hres)), maxModulesH || 24) - 1);
       setYMax(Math.min(Math.ceil(vres / (moduleVres || vres)), maxModulesV || 32) - 1);
     },
-    [[hres, vres, moduleHres, moduleVres, maxModulesH]
-      .reduce((result, prop) => result && Number.isFinite(prop), true)],
+    [hres, vres, moduleHres, moduleVres, maxModulesH, maxModulesV],
   );
 
   useEffect(
