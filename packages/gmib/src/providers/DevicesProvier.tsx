@@ -17,7 +17,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { getState } from '../util/helpers';
+// import { getState } from '../util/helpers';
 import { useSessionContext } from './SessionProvider';
 import { NibusConnection } from '@nibus/core/lib/nibus';
 import StubDevice from '../components/StubDevice';
