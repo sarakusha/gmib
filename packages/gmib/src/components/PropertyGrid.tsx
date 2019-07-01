@@ -237,6 +237,6 @@ const PropertyGrid: React.FC<InnerProps> = ({ classes, id, active = true }) => {
 export default compose<InnerProps, Props>(
   hot,
   React.memo,
-  withTheme(),
+  // withTheme,
   withStyles(styles),
 )(PropertyGrid);

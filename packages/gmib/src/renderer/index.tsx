@@ -8,10 +8,10 @@
  * the EULA file that was distributed with this source code.
  */
 
+import { AppContainer } from 'react-hot-loader';
 import { createMuiTheme, MuiThemeProvider } from '@material-ui/core/styles';
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { AppContainer } from 'react-hot-loader';
 import 'typeface-roboto/index.css';
 import App from '../components/App';
 import DevicesProvider from '../providers/DevicesProvier';
