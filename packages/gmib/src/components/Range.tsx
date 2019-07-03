@@ -202,6 +202,6 @@ const Range: React.FC<InnerProps> = (props) => {
 export default compose<InnerProps, Props>(
   hot,
   React.memo,
-  withTheme,
+  withTheme(),
   withStyles(styles),
 )(Range);

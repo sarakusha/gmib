@@ -98,7 +98,8 @@ type PosProps = {
 
 type StylesType = WithStyles<typeof styles>;
 type InnerProps = Props & StylesType;
-type ValueType = { name?: string, value?: string | number, index?: number, aux?: any } & StylesType;
+type ValueType = { name?: string, value?: any, index?: number | string, aux?: any }
+  & StylesType;
 
 const Temperature: React.FC<ValueType> = ({ classes, value }) => (
   <tr>
@@ -110,6 +111,19 @@ const Temperature: React.FC<ValueType> = ({ classes, value }) => (
     </td>
     <td className={classes.unit}>
       <Typography variant="body2">&deg;C</Typography>
+    </td>
+  </tr>
+);
+
+const VertexElement: React.FC<ValueType> = ({ classes, name, value, index }) => (
+  <tr>
+    <td className={classes.name}>
+      <Typography variant="body2">{name}<sub>{index}</sub></Typography>
+    </td>
+    <td className={classes.value}>
+      <Typography variant="body2">
+        <strong>{value}</strong>
+      </Typography>
     </td>
   </tr>
 );
@@ -130,6 +144,13 @@ const Voltage: React.FC<ValueType> = ({ classes, value, index }) => (
       </Typography>
     </td>
   </tr>
+);
+
+const Vertex: React.FC<ValueType> = ({ classes, name, value }) => (
+  <React.Fragment>
+    <VertexElement value={value && value.x} classes={classes} index={name} name="X" />
+    <VertexElement value={value && value.y} classes={classes} index={name} name="Y" />
+  </React.Fragment>
 );
 
 const Row: React.FC<ValueType> = ({ classes, value, name }) => {
@@ -154,6 +175,9 @@ const propMap: PropRenderType = {
   t: ({ value, classes }) => <Temperature value={value} classes={classes} />,
   v1: ({ value, classes }) => <Voltage value={value} classes={classes} index={1} />,
   v2: ({ value, classes }) => <Voltage value={value} classes={classes} index={2} />,
+  redVertex: ({ value, classes }) => <Vertex value={value} classes={classes} name="R" />,
+  greenVertex: ({ value, classes }) => <Vertex value={value} classes={classes} name="G" />,
+  blueVertex: ({ value, classes }) => <Vertex value={value} classes={classes} name="B" />,
   default: props => <Row {...props} />,
 };
 

@@ -84,7 +84,10 @@ const PropertyValueCell: React.FC<InnerProps> =
         const unit = Reflect.getMetadata('unit', proto, name);
         const min = Reflect.getMetadata('min', proto, name);
         const max = Reflect.getMetadata('max', proto, name);
-        const step = simpleType === 'xs:float' || simpleType === 'xs.double' ? 0.01 : 1;
+        let step = Reflect.getMetadata('step', proto, name);
+        if (step === undefined) {
+          step = (simpleType === 'xs:float' || simpleType === 'xs.double') ? 0.01 : 1;
+        }
         const selectChanged = (event: ChangeEvent<HTMLSelectElement>) => {
           onChangeProperty(name, event.target.value);
         };

@@ -112,7 +112,6 @@ export const useDevice = (id: DeviceId) => {
     debounce(
       () => device && device.drain()
         .then((ids) => {
-          console.log('DRAIN', ids);
           const failed = ids.filter(id => id < 0).map(id => -id);
           return failed && failed.length ? device.read(...failed) : Promise.resolve({});
         })

@@ -1,6 +1,6 @@
 {
   "name": "@nibus/gmib",
-  "version": "1.5.7",
+  "version": "1.5.8",
   "description": "Nata-Info gmib tool",
   "keywords": [
     "nata-info",
@@ -36,8 +36,8 @@
   },
   "dependencies": {
     "@hot-loader/react-dom": "^16.8.6",
-    "@material-ui/core": "^3.9.2",
-    "@material-ui/icons": "^3.0.2",
+    "@material-ui/core": "3",
+    "@material-ui/icons": "3",
     "@nibus/core": "^1.5.7",
     "classnames": "^2.2.6",
     "electron-json-storage": "^4.1.6",
@@ -61,7 +61,7 @@
     "warning": "^4.0.3"
   },
   "devDependencies": {
-    "@babel/core": "7.4.4",
+    "@babel/core": "^7.4.5",
     "@babel/plugin-proposal-class-properties": "^7.4.0",
     "@babel/preset-react": "^7.0.0",
     "@types/classnames": "^2.2.7",
@@ -92,7 +92,8 @@
     "tslint-react-hooks": "^2.0.0",
     "typescript": "^3.3.4000",
     "webpack": "^4.29.6",
-    "webpack-build-notifier": "^1.0.1"
+    "webpack-build-notifier": "^1.0.1",
+    "webpack-bundle-analyzer": "^3.3.2"
   },
   "build": {
     "appId": "ru.nata-info.gmib",

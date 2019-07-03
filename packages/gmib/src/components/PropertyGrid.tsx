@@ -13,8 +13,6 @@ import {
   Theme,
   withStyles,
   WithStyles,
-  withTheme,
-  WithTheme,
 } from '@material-ui/core/styles';
 import Table from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
@@ -74,7 +72,7 @@ type Props = {
   id: string,
   active?: boolean,
 };
-type InnerProps = Props & WithStyles<typeof styles> & WithTheme;
+type InnerProps = Props & WithStyles<typeof styles>;
 
 const load = async (device: IDevice): Promise<boolean> => {
   const fileNames = dialog.showOpenDialog({
@@ -237,6 +235,5 @@ const PropertyGrid: React.FC<InnerProps> = ({ classes, id, active = true }) => {
 export default compose<InnerProps, Props>(
   hot,
   React.memo,
-  // withTheme,
   withStyles(styles),
 )(PropertyGrid);

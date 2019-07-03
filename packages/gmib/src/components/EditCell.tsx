@@ -98,11 +98,9 @@ const EditCell: React.FC<InnerProps> =
     );
     const blurHandler = useCallback(
       () => {
-        console.log('BLUR');
         setControlled(true);
         setVal((val) => {
           onChangeProperty && onChangeProperty(name, val);
-          console.log('BBB', val);
           return val;
         });
       },

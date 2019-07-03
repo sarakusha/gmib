@@ -35,7 +35,7 @@ const useSessionStart = () => {
       // console.log('FOUND', connection.description, address.toString());
       try {
         if (address.isEmpty) {
-          console.log('EMPTY', connection.description);
+          // console.log('EMPTY', connection.description);
           return;
         }
         if (connection.description.mib) {
