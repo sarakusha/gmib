@@ -49,22 +49,28 @@ const parseData = (info: Minihost3Info, selector: number, data: Buffer) => {
       info.MCU = `${data[3]}.${data[2]}`;
       return;
     case 4:
-      info.redVertex = {
-        x: digits3(640 / 1024 + data[3] / 2048),
-        y: digits3(256 / 1024 + data[2] / 2048),
-      };
+      if (data[2] && data[3]) {
+        info.redVertex = {
+          x: digits3(640 / 1024 + data[3] / 2048),
+          y: digits3(256 / 1024 + data[2] / 2048),
+        };
+      }
       break;
     case 5:
-      info.greenVertex = {
-        x: digits3(128 / 1024 + data[3] / 2048),
-        y: digits3(640 / 1024 + data[2] / 2048),
-      };
+      if (data[2] && data[3]) {
+        info.greenVertex = {
+          x: digits3(128 / 1024 + data[3] / 2048),
+          y: digits3(640 / 1024 + data[2] / 2048),
+        };
+      }
       break;
     case 6:
-      info.blueVertex = {
-        x: digits3(64 / 1024 + data[3] / 2048),
-        y: digits3(data[2] / 2048),
-      };
+      if (data[2] && data[3]) {
+        info.blueVertex = {
+          x: digits3(64 / 1024 + data[3] / 2048),
+          y: digits3(data[2] / 2048),
+        };
+      }
       break;
     default:
       throw new Error(`Unknown selector ${selector}`);
