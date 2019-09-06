@@ -84,7 +84,7 @@ const SaveDialog: React.FC<InnerProps> = ({ classes, device, open, close }) => {
   const showDialog = useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
       const mib = Reflect.getMetadata('mib', device);
-      const fileName = dialog.showSaveDialog({
+      const fileName = dialog.showSaveDialogSync({
         title: 'Сохранить как',
         defaultPath: mib,
         filters: [{

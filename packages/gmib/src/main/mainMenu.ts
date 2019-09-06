@@ -8,9 +8,9 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { app, Menu, MenuItem, MenuItemConstructorOptions, shell } from 'electron';
+import { app, Menu, MenuItemConstructorOptions, shell } from 'electron';
 
-const template: (MenuItemConstructorOptions | MenuItem)[] = [
+const template: (MenuItemConstructorOptions)[] = [
   {
     role: 'viewMenu' as any,
   },
@@ -49,7 +49,7 @@ if (process.platform === 'darwin') {
         role: 'hide',
       },
       {
-        role: 'hideothers',
+        role: 'hideOthers',
       },
       {
         role: 'unhide',

@@ -75,7 +75,7 @@ type Props = {
 type InnerProps = Props & WithStyles<typeof styles>;
 
 const load = async (device: IDevice): Promise<boolean> => {
-  const fileNames = dialog.showOpenDialog({
+  const fileNames = dialog.showOpenDialogSync({
     title: 'Загрузить из',
     filters: [{
       name: 'JSON',

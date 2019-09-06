@@ -1,6 +1,6 @@
 {
   "name": "@nibus/gmib",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "Nata-Info gmib tool",
   "keywords": [
     "nata-info",
@@ -28,7 +28,7 @@
     "dist:linux": "yarn dist -l",
     "dist:win": "yarn dist -w --x64",
     "publish": "yarn compile && yarn release",
-    "release": "env-cmd -f ./.env build -lwm --x64 -c.mac.identity=null",
+    "release": "env-cmd -f ./.env electron-builder -lwm --x64 -c.mac.identity=null",
     "type": "tsc --project tsconfig.json --noEmit",
     "showMainConfig": "node src/util/show-config.js main",
     "showRendererConfig": "node src/util/show-config.js renderer",
@@ -56,6 +56,7 @@
     "recompose": "^0.30.0",
     "reflect-metadata": "^0.1.13",
     "remove": "^0.1.5",
+    "rimraf": "^2.6.3",
     "source-map-support": "^0.5.11",
     "typeface-roboto": "^0.0.54",
     "warning": "^4.0.3"
@@ -79,12 +80,13 @@
     "@types/warning": "^3.0.0",
     "cross-env": "^5.2.0",
     "css-loader": "^3.0.0",
-    "electron": "^5.0.6",
-    "electron-builder": "^20.44.4",
+    "electron": "^6.0.7",
+    "electron-builder": "^21.0.15",
     "electron-devtools-installer": "^2.2.4",
-    "electron-webpack": "^2.7.2",
+    "electron-webpack": "^2.7.4",
     "electron-webpack-ts": "^3.1.1",
-    "env-cmd": "^9.0.3",
+    "env-cmd": "^10.0.1",
+    "eslint-config-airbnb-base": "^14.0.0",
     "tslint": "^5.15.0",
     "tslint-config-airbnb": "^5.11.1",
     "tslint-react": "^4.0.0",
@@ -128,7 +130,8 @@
           "**/*"
         ]
       }
-    ]
+    ],
+    "electronVersion": "6.0.7"
   },
   "gitHead": "522054682a29e66b40cfa80e765780ff654be82b"
 }

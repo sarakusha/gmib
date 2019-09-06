@@ -155,7 +155,7 @@ const TestsProvider: React.FC<{}> = ({ children }) => {
   );
   useEffect(() => updateQuery(query), [query]);
   useEffect(() => { visible || hideAll(); }, [visible]);
-  useEffect(() => { testsPromise.then(setTests); });
+  useEffect(() => { testsPromise.then(setTests); }, []);
   return (
     <TestContext.Provider value={value}>
       {children}
