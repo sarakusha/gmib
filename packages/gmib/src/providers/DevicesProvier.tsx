@@ -17,7 +17,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { getState } from '../util/helpers';
+// import { getState } from '../util/helpers';
 import { useSessionContext } from './SessionProvider';
 import { NibusConnection } from '@nibus/core/lib/nibus';
 import StubDevice from '../components/StubDevice';
@@ -50,6 +50,7 @@ const useDevices = () => {
         });
       };
       const pureConnectionHandler = (connection: NibusConnection) => {
+        if (devices.get().findIndex(dev => dev && dev.connection === connection) !== -1) return;
         stubDevices.current.push(new StubDevice(connection));
         updateHandler();
       };

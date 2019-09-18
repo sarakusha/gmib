@@ -58,6 +58,11 @@ const config = {
   //     }],
   // },
   plugins: [],
+  resolve: {
+    alias: {
+      'react-dom': '@hot-loader/react-dom',
+    },
+  },
 };
 
 if (ANALYZE) {

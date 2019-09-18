@@ -99,7 +99,7 @@ export const useDevice = (id: DeviceId) => {
         id!,
         names.reduce(
           (props, name) => {
-            props[name] = device[name];
+            props[name] = device.getError(name) || device[name];
             return props;
           },
           {} as Record<string, any>,
@@ -109,7 +109,15 @@ export const useDevice = (id: DeviceId) => {
     [device],
   );
   const drain = useCallback(
-    debounce(() => device && device.drain().then(update), 200),
+    debounce(
+      () => device && device.drain()
+        .then((ids) => {
+          const failed = ids.filter(id => id < 0).map(id => -id);
+          return failed && failed.length ? device.read(...failed) : Promise.resolve({});
+        })
+        .then(update),
+      200,
+    ),
     [device],
   );
 

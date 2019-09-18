@@ -57,7 +57,7 @@ const reducer = (state: Record<string, boolean>, { name, value }: Action) =>
 
 const SaveDialog: React.FC<InnerProps> = ({ classes, device, open, close }) => {
   const names = useMemo(
-    () => Object.entries<string[]>(Reflect.getMetadata('map', device) || {})
+    () => !device ? [] : Object.entries<string[]>(Reflect.getMetadata('map', device) || {})
       .sort((a, b) => Number(a[0]) - Number(b[0]))
       .map(([id, names]) =>
         tuplify(
@@ -84,7 +84,7 @@ const SaveDialog: React.FC<InnerProps> = ({ classes, device, open, close }) => {
   const showDialog = useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
       const mib = Reflect.getMetadata('mib', device);
-      const fileName = dialog.showSaveDialog({
+      const fileName = dialog.showSaveDialogSync({
         title: 'Сохранить как',
         defaultPath: mib,
         filters: [{

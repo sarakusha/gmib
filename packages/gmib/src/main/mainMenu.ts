@@ -8,12 +8,9 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { app, Menu, MenuItem, MenuItemConstructorOptions, shell } from 'electron';
+import { app, Menu, MenuItemConstructorOptions, shell } from 'electron';
 
-const template: (MenuItemConstructorOptions | MenuItem)[] = [
-  {
-    role: 'editMenu' as any,
-  },
+const template: (MenuItemConstructorOptions)[] = [
   {
     role: 'viewMenu' as any,
   },
@@ -25,7 +22,7 @@ const template: (MenuItemConstructorOptions | MenuItem)[] = [
     submenu: [
       {
         label: 'nibus.js',
-        click: () => shell.openExternal('https://npm.nata-info.ru/#/detail/@nata/nibus.js'),
+        click: () => shell.openExternal('https://npm.nata-info.ru/#/detail/@nibus/cli'),
       },
     ],
   },
@@ -52,7 +49,7 @@ if (process.platform === 'darwin') {
         role: 'hide',
       },
       {
-        role: 'hideothers',
+        role: 'hideOthers',
       },
       {
         role: 'unhide',

@@ -115,7 +115,7 @@ function createTestWindow() {
   }
   window.on('closed', () => testWindow = null);
   window.on('ready-to-show', () => window.show());
-  window.setIgnoreMouseEvents(true);
+  process.platform === 'win32' || window.setIgnoreMouseEvents(true);
   return window;
 }
 

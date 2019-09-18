@@ -18,12 +18,14 @@
     "newLine": "lf",
 
     "noEmitOnError": true,
-    "jsx": "react"
+    "jsx": "react",
+    "resolveJsonModule": true
   },
   "exclude": [
     "node_modules"
   ],
   "include": [
-    "src"
+    "src",
+    "package.json"
   ]
 }

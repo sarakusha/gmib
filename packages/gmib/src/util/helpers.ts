@@ -11,7 +11,7 @@ import { Dispatch, SetStateAction } from 'react';
 
 export function tuplify<T extends any[]>(...args: T) {
   return args;
-};
+}
 
 export const delay = (seconds: number) =>
   new Promise(resolve => setTimeout(resolve, seconds * 1000));
