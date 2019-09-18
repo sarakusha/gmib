@@ -16,6 +16,7 @@ import { hot } from 'react-hot-loader/root';
 import compose from 'recompose/compose';
 import setDisplayName from 'recompose/setDisplayName';
 import MenuItem from '@material-ui/core/MenuItem';
+import classNames from 'classnames';
 import EditCell from './EditCell';
 import SerialNoCell from './SerialNoCell';
 
@@ -44,7 +45,9 @@ const styles = (theme: Theme) => createStyles({
     },
     color: theme.palette.text.disabled,
   },
-
+  error: {
+    color: 'red',
+  },
 });
 
 type Props = {
@@ -76,9 +79,17 @@ const PropertyValueCell: React.FC<InnerProps> =
         ) as ([string, number][]);
         const isWritable = Reflect.getMetadata('isWritable', proto, name);
         if (!isWritable) {
+          // console.log(name, value);
           return setDisplayName(componentName)(
-            ({ value }: CellProps) =>
-              <TableCell align="right" classes={{ root: classes.cellRoot }}>{value}</TableCell>,
+            ({ value }: CellProps) => (
+              <TableCell
+                align="right"
+                className={classNames({ [classes.error]: value instanceof Error })}
+                classes={{ root: classes.cellRoot }}
+              >
+                {value instanceof Error ? value.message : value}
+              </TableCell>
+            ),
           );
         }
         const unit = Reflect.getMetadata('unit', proto, name);
@@ -92,7 +103,9 @@ const PropertyValueCell: React.FC<InnerProps> =
           onChangeProperty(name, event.target.value);
         };
         const rawValue = (value: any) =>
-          Reflect.getMetadata('convertFrom', proto, name)(value);
+          value instanceof Error
+            ? value.message
+            : Reflect.getMetadata('convertFrom', proto, name)(value);
         if (enumeration && enumeration.length > 0) {
           return setDisplayName(componentName)(
             ({ value, dirty = false }) => {
@@ -107,17 +120,20 @@ const PropertyValueCell: React.FC<InnerProps> =
                     onChange={selectChanged}
                   >
                     {(value === '' || value === undefined) &&
-                    (<MenuItem value="" className={classes.menuItem}>
-                      <em>Не задано</em>
-                    </MenuItem>)}
-                    {enumeration.map(([name, val], index) =>
+                    (
+                      <MenuItem value="" className={classes.menuItem}>
+                        <em>Не задано</em>
+                      </MenuItem>
+                    )}
+                    {enumeration.map(([name, val], index) => (
                       <MenuItem
                         className={classes.menuItem}
                         key={index}
                         value={val}
                       >
                         {name}
-                      </MenuItem>)}
+                      </MenuItem>
+                    ))}
                   </Select>
                 </TableCell>
               );
@@ -132,6 +148,7 @@ const PropertyValueCell: React.FC<InnerProps> =
                 onChangeProperty={onChangeProperty}
                 value={value}
                 dirty={dirty}
+                align="right"
               />
             ),
           );

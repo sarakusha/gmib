@@ -50,6 +50,7 @@ const useDevices = () => {
         });
       };
       const pureConnectionHandler = (connection: NibusConnection) => {
+        if (devices.get().findIndex(dev => dev && dev.connection === connection) !== -1) return;
         stubDevices.current.push(new StubDevice(connection));
         updateHandler();
       };

@@ -36,6 +36,12 @@ const styles = (theme: Theme) => createStyles({
   inputCenter: {
     textAlign: 'center',
   },
+  cellRoot: {
+    '&:last-child': {
+      paddingRight: 38,
+    },
+    color: theme.palette.text.disabled,
+  },
 });
 type Props = {
   name: string,
@@ -83,7 +89,12 @@ const SerialNoCell: React.FC<InnerProps> =
       }),
     };
     return (
-      <TableCell className={classNames(classes.cell, className)} {...props}>
+      <TableCell
+        className={classNames(classes.cell, className)}
+        align={align}
+        classes={{ root: classes.cellRoot }}
+        {...props}
+      >
         <MaskedInput
           name={name}
           mask="0000XXXXXXXXXXXX"
