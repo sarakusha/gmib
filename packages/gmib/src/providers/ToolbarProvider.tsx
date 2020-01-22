@@ -17,12 +17,12 @@ const ToolbarContext = createContext({
   setToolbar: (() => {}) as (toolbar: ToolbarElement) => void,
 });
 
-export const useToolbar = () => {
+export const useToolbar = (): [ToolbarElement, (toolbar: ToolbarElement) => void] => {
   const { toolbar, setToolbar } = useContext(ToolbarContext);
   return tuplify(toolbar, setToolbar);
 };
 
-const ToolbarProvider: React.FC<{}> = ({ children }) => {
+const ToolbarProvider: React.FC = ({ children }) => {
   const [toolbar, setToolbar] = useState<ToolbarElement>(null);
   return (
     <ToolbarContext.Provider

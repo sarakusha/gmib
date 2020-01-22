@@ -27,31 +27,33 @@ import {
   Tabs,
   TextField,
 } from '@material-ui/core';
-import { IDevice, getMibTypes, findMibByType } from '@nibus/core/lib/mib';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
+import { IDevice, getMibTypes, findMibByType } from '@nibus/core';
+import React, {
+  useCallback, useEffect, useMemo, useRef, useState,
+} from 'react';
+import { makeStyles } from '@material-ui/core/styles';
 import { hot } from 'react-hot-loader/root';
 import compose from 'recompose/compose';
 import AddIcon from '@material-ui/icons/Add';
 import unionBy from 'lodash/unionBy';
 import without from 'lodash/without';
 import classNames from 'classnames';
-import Finder, { DeviceInfo, FinderOptions, toVersion } from '../util/finders';
+import Finder, { DeviceInfo, FinderOptions } from '../util/finders';
 import useDefaultKeys from '../util/useDefaultKeys';
 import DeviceIcon from '../components/DeviceIcon';
 import { useDevicesContext } from '../providers/DevicesProvier';
 
-const styles = (theme: Theme) => createStyles({
+const useStyles = makeStyles(theme => ({
   hidden: {
     display: 'none',
   },
   formControl: {
-    marginLeft: theme.spacing.unit,
-    marginRight: theme.spacing.unit,
+    marginLeft: theme.spacing(1),
+    marginRight: theme.spacing(1),
     width: '30ch',
   },
   tabContent: {
-    padding: theme.spacing.unit * 2,
+    padding: theme.spacing(2),
     display: 'flex',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
@@ -82,24 +84,28 @@ const styles = (theme: Theme) => createStyles({
     // margin: theme.spacing.unit,
     position: 'relative',
   },
-});
+}));
+
 type Props = {
-  open: boolean,
-  close: () => void,
+  open: boolean;
+  close: () => void;
 };
-type InnerProps = Props & WithStyles<typeof styles>;
 
-const deviceKey = ({ address, connection }: DeviceInfo) =>
-  `${connection.path}#${address.toString()}`;
-const union = (prev: DeviceInfo[], item: DeviceInfo) => unionBy(prev, [item], deviceKey);
+const deviceKey = ({
+  address, connection,
+}: DeviceInfo): string => `${connection.path}#${address.toString()}`;
+const union = (
+  prev: DeviceInfo[], item: DeviceInfo,
+): DeviceInfo[] => unionBy(prev, [item], deviceKey);
 
-const SearchDialog: React.FC<InnerProps> = ({ open, close, classes }) => {
+const SearchDialog: React.FC<Props> = ({ open, close }) => {
+  const classes = useStyles();
   const [isSearching, setSearching] = useState(false);
   const [kind, setKind] = useState(0);
   const [connections, setConnections] = useState<IDevice[]>([]);
-  const connectionRef = useRef<HTMLInputElement>(null as any);
-  const mibTypeRef = useRef<HTMLInputElement>(null as any);
-  const addressRef = useRef<HTMLInputElement>(null as any);
+  const connectionRef = useRef<HTMLInputElement>(null);
+  const mibTypeRef = useRef<HTMLInputElement>(null);
+  const addressRef = useRef<HTMLInputElement>(null);
   const { devices, createDevice } = useDevicesContext();
   const [detected, setDetected] = useState<DeviceInfo[]>([]);
   const [invalidAddress, setInvalidAddress] = useState(false);
@@ -110,9 +116,9 @@ const SearchDialog: React.FC<InnerProps> = ({ open, close, classes }) => {
   const finder = useMemo(() => new Finder(), []);
   useEffect(
     () => {
-      const startListener = () => setSearching(true);
-      const finishListener = () => setSearching(false);
-      const foundListener = (info: DeviceInfo) => setDetected(prev => union(prev, info));
+      const startListener = (): void => setSearching(true);
+      const finishListener = (): void => setSearching(false);
+      const foundListener = (info: DeviceInfo): void => setDetected(prev => union(prev, info));
       finder.on('start', startListener);
       finder.on('finish', finishListener);
       finder.on('found', foundListener);
@@ -140,7 +146,7 @@ const SearchDialog: React.FC<InnerProps> = ({ open, close, classes }) => {
   );
   const startStop = useCallback(
     () => {
-      const connection = connectionRef.current.value;
+      const connection = connectionRef.current!.value;
       const devs: IDevice[] = connection === '0'
         ? connections
         : [connections.find(dev => dev.id === connection)!];
@@ -149,10 +155,10 @@ const SearchDialog: React.FC<InnerProps> = ({ open, close, classes }) => {
       };
       switch (kind) {
         case 0:
-          options.address = addressRef.current.value;
+          options.address = addressRef.current!.value;
           break;
         case 1:
-          options.type = Number(mibTypeRef.current.value);
+          options.type = Number(mibTypeRef.current!.value);
           break;
         default:
           return;
@@ -170,7 +176,7 @@ const SearchDialog: React.FC<InnerProps> = ({ open, close, classes }) => {
         );
       }
     },
-    [isSearching, connections, kind],
+    [connections, kind, isSearching, finder],
   );
   useEffect(
     () => {
@@ -180,35 +186,34 @@ const SearchDialog: React.FC<InnerProps> = ({ open, close, classes }) => {
         mibTypeRef.current && (defaultValues.current.type = mibTypeRef.current.value);
       }
     },
-    [open, kind],
+    [open, kind, finder],
   );
   const addDevice = useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
       const key = event.currentTarget.id;
-      setDetected((devs) => {
-        const dev = devs.find(dev => deviceKey(dev) === key);
+      setDetected(devs => {
+        const dev = devs.find(item => deviceKey(item) === key);
         if (!dev) return devs;
         if (devices.findIndex(device => device.address.equals(dev.address)
           && device.connection === dev.connection) === -1) {
           const device = createDevice(dev.address, dev.type, dev.version);
           device.connection = dev.connection;
-          const parent = connections.find(device => device.connection === dev.connection);
+          const parent = connections.find(item => item.connection === dev.connection);
           Reflect.defineMetadata('parent', parent, device);
         }
         return without(devs, dev);
       });
     },
-    [setDetected, devices, connections],
+    [devices, createDevice, connections],
   );
   const mibTypes = useMemo(
-    () =>
-      Object.entries(getMibTypes()!)
-        .map(([type, mibs]) => ({
-          value: type,
-          name: mibs.map(mib => mib.mib).join() as string,
-        }))
-        .filter(types => types.value !== '0')
-        .sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0),
+    () => Object.entries(getMibTypes()!)
+      .map(([type, mibs]) => ({
+        value: type,
+        name: mibs.map(mib => mib.mib).join() as string,
+      }))
+      .filter(types => types.value !== '0')
+      .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0)),
     [],
   );
   useDefaultKeys({
@@ -284,7 +289,7 @@ const SearchDialog: React.FC<InnerProps> = ({ open, close, classes }) => {
         </form>
         <div className={classes.detectedContainer}>
           <List className={classes.detectedList}>
-            {detected.map((info) => {
+            {detected.map(info => {
               // const version = info.version && toVersion(info.version);
               const mib = info.type > 0 ? findMibByType(info.type, info.version) : undefined;
               return (
@@ -323,8 +328,7 @@ const SearchDialog: React.FC<InnerProps> = ({ open, close, classes }) => {
   );
 };
 
-export default compose<InnerProps, Props>(
+export default compose<Props, Props>(
   hot,
   React.memo,
-  withStyles(styles),
 )(SearchDialog);

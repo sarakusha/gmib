@@ -8,28 +8,32 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { ListItem, ListItemText, ListSubheader, Switch } from '@material-ui/core';
+import {
+  ListItem, ListItemText, ListSubheader, Switch,
+} from '@material-ui/core';
 import React, { useCallback } from 'react';
-import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
+import { makeStyles } from '@material-ui/core/styles';
 import { hot } from 'react-hot-loader/root';
 import compose from 'recompose/compose';
 import { useTests } from '../providers/TestProvider';
 import useCurrent from '../providers/useCurrent';
 
-const styles = (theme: Theme) => createStyles({
+const useStyles = makeStyles(theme => ({
   header: {
     backgroundColor: theme.palette.background.paper,
     borderBottom: `1px solid ${theme.palette.divider}`,
     backgroundClip: 'padding-box',
   },
-});
-type Props = {};
-type InnerProps = Props & WithStyles<typeof styles>;
-const TestItems: React.FC<InnerProps> = ({ classes }) => {
-  const { current, tests, visible, showTest, hideAll } = useTests();
+}));
+
+const TestItems: React.FC = () => {
+  const classes = useStyles();
+  const {
+    current, tests, visible, showTest, hideAll,
+  } = useTests();
   const setCurrent = useCurrent('test');
   const currentHandler = useCallback(
-    (event: React.MouseEvent<HTMLButtonElement>) => {
+    (event: React.MouseEvent<HTMLDivElement>) => {
       setCurrent(event.currentTarget.id);
     },
     [setCurrent],
@@ -47,7 +51,7 @@ const TestItems: React.FC<InnerProps> = ({ classes }) => {
   return (
     <>
       <ListSubheader className={classes.header} inset>Тестирование</ListSubheader>
-      {tests.map((test) => {
+      {tests.map(test => {
         const [primary, secondary] = test.split('/', 2);
         return (
           <ListItem
@@ -66,8 +70,7 @@ const TestItems: React.FC<InnerProps> = ({ classes }) => {
   );
 };
 
-export default compose<InnerProps, Props>(
+export default compose(
   hot,
   React.memo,
-  withStyles(styles),
 )(TestItems);

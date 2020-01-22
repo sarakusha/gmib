@@ -10,66 +10,70 @@
 
 import { FormControl, Input, InputLabel } from '@material-ui/core';
 import React, { useCallback } from 'react';
-import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
+import { makeStyles } from '@material-ui/core/styles';
 import { hot } from 'react-hot-loader/root';
 import compose from 'recompose/compose';
 import produce from 'immer';
 import { TestQuery, useTests } from '../providers/TestProvider';
 
-const styles = (theme: Theme) => createStyles({
+const useStyles = makeStyles(theme => ({
   root: {
-    padding: 2 * theme.spacing.unit,
+    padding: 2 * theme.spacing(1),
   },
   params: {
     display: 'grid',
     gridTemplateColumns: '16ch 16ch',
     gridTemplateRows: 'auto auto auto',
-    gridColumnGap: `${3 * theme.spacing.unit}px`,
-    gridRowGap: `${4 * theme.spacing.unit}px`,
+    gridColumnGap: `${3 * theme.spacing(1)}px`,
+    gridRowGap: `${4 * theme.spacing(1)}px`,
   },
   formControl: {},
   input: {
     textAlign: 'right',
   },
-});
-type Props = {};
-type InnerProps = Props & WithStyles<typeof styles>;
+}));
 
 type ParamProps = {
-  id: string,
-  name: string,
-  value: number,
-  min?: number,
-  onChange: (event: React.ChangeEvent<HTMLInputElement>) => void,
-} & WithStyles<typeof styles>;
+  id: string;
+  name: string;
+  value: number;
+  min?: number;
+  onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+};
 
-const Param = ({ id, name, value, classes, onChange, min = 2 }: ParamProps) => (
-  <FormControl className={classes.formControl}>
-    <InputLabel htmlFor={id}>{name}</InputLabel>
-    <Input
-      id={id}
-      value={value}
-      onChange={onChange}
-      type="number"
-      inputProps={{
-        min,
-        step: 2,
-      }}
-      classes={{ input: classes.input }}
-    />
-  </FormControl>
-);
+const Param: React.FC<ParamProps> = ({
+  id, name, value, onChange, min = 2,
+}) => {
+  const classes = useStyles();
+  return (
+    <FormControl className={classes.formControl}>
+      <InputLabel htmlFor={id}>{name}</InputLabel>
+      <Input
+        id={id}
+        value={value}
+        onChange={onChange}
+        type="number"
+        inputProps={{
+          min,
+          step: 2,
+        }}
+        classes={{ input: classes.input }}
+      />
+    </FormControl>
+  );
+};
 
 type Names = keyof TestQuery;
 
-const TestParams: React.FC<InnerProps> = ({ classes }) => {
+const TestParams: React.FC = () => {
+  const classes = useStyles();
   const { query, setQuery } = useTests();
   const changeHandler = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const name = event.currentTarget.id as Names;
       const value = Number(event.currentTarget.value);
-      setQuery(produce((query) => {
-        query[name] = value;
+      setQuery(produce(prev => {
+        prev[name] = value;
       }));
     },
     [setQuery],
@@ -79,35 +83,30 @@ const TestParams: React.FC<InnerProps> = ({ classes }) => {
       <div className={classes.params}>
         <Param
           id="width"
-          classes={classes}
           name="Ширина экрана"
           value={query.width}
           onChange={changeHandler}
         />
         <Param
           id="height"
-          classes={classes}
           name="Высота экрана"
           value={query.height}
           onChange={changeHandler}
         />
         <Param
           id="moduleHres"
-          classes={classes}
           name="Ширина модуля"
           value={query.moduleHres}
           onChange={changeHandler}
         />
         <Param
           id="moduleVres"
-          classes={classes}
           name="Высота модуля"
           value={query.moduleVres}
           onChange={changeHandler}
         />
         <Param
           id="x"
-          classes={classes}
           name="Отступ слева"
           value={query.x}
           onChange={changeHandler}
@@ -115,7 +114,6 @@ const TestParams: React.FC<InnerProps> = ({ classes }) => {
         />
         <Param
           id="y"
-          classes={classes}
           name="Отступ сверху"
           value={query.y}
           onChange={changeHandler}
@@ -126,8 +124,7 @@ const TestParams: React.FC<InnerProps> = ({ classes }) => {
   );
 };
 
-export default compose<InnerProps, Props>(
+export default compose(
   hot,
   React.memo,
-  withStyles(styles),
 )(TestParams);

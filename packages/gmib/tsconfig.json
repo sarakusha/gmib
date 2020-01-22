@@ -1,31 +1,42 @@
 {
+  "compileOnSave": false,
   "compilerOptions": {
-    "target": "es2017",
+    "target": "es2018",
     "module": "esnext",
-    "moduleResolution": "node",
-
-    "strict": true,
-//    "noUnusedLocals": true,
-    "noFallthroughCasesInSwitch": true,
-    "noImplicitReturns": true,
-
-    "inlineSources": true,
-    "sourceMap": true,
-
-    "allowSyntheticDefaultImports": true,
-    "experimentalDecorators": true,
-
-    "newLine": "lf",
-
-    "noEmitOnError": true,
     "jsx": "react",
-    "resolveJsonModule": true
+    "allowJs": true,
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "removeComments": true,
+    "preserveConstEnums": true,
+    "sourceMap": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "typeRoots": [
+      "./node_modules/@types"
+    ],
+    "types": [
+      "node"
+    ],
+    "lib": [
+      "dom",
+      "es2018"
+    ],
+    "strict": false,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "strictNullChecks": true
   },
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "bak"
   ],
   "include": [
-    "src",
-    "package.json"
+    "src"
   ]
 }

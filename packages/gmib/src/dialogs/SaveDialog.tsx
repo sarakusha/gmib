@@ -8,9 +8,9 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { IDevice } from '@nibus/core/lib/mib';
+import { IDevice } from '@nibus/core';
 import React, { useCallback, useMemo, useReducer } from 'react';
-import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
+import { makeStyles } from '@material-ui/core/styles';
 import {
   Button,
   Checkbox,
@@ -29,44 +29,47 @@ import FormFieldSet from '../components/FormFieldSet';
 
 const { dialog } = remote;
 
-const styles = (theme: Theme) => createStyles({
+const useStyles = makeStyles(theme => ({
   root: {
     display: 'flex',
   },
   formControl: {
-    margin: theme.spacing.unit * 3,
+    margin: theme.spacing(3),
   },
-});
+}));
 
 type Props = {
-  device: IDevice,
-  open: boolean,
-  close: () => void,
+  device: IDevice;
+  open: boolean;
+  close: () => void;
 };
-type InnerProps = Props & WithStyles<typeof styles>;
+
 type Action = {
-  name: string,
-  value: boolean,
+  name: string;
+  value: boolean;
 };
 
-const reducer = (state: Record<string, boolean>, { name, value }: Action) =>
-  ({
-    ...state,
-    [name]: value,
-  });
+type State = Record<string, boolean>;
 
-const SaveDialog: React.FC<InnerProps> = ({ classes, device, open, close }) => {
+const reducer = (state: State, { name, value }: Action): State => ({
+  ...state,
+  [name]: value,
+});
+
+const SaveDialog: React.FC<Props> = ({
+  device, open, close,
+}) => {
+  const classes = useStyles();
   const names = useMemo(
-    () => !device ? [] : Object.entries<string[]>(Reflect.getMetadata('map', device) || {})
+    () => (!device ? [] : Object.entries<string[]>(Reflect.getMetadata('map', device) || {})
       .sort((a, b) => Number(a[0]) - Number(b[0]))
-      .map(([id, names]) =>
-        tuplify(
-          Number(id),
-          names[0] as string,
-          Reflect.getMetadata('displayName', device, names[0]) as string,
-        ))
+      .map(([id, key]) => tuplify(
+        Number(id),
+          key[0] as string,
+          Reflect.getMetadata('displayName', device, key[0]) as string,
+      ))
       .filter(([, name]) => Reflect.getMetadata('isReadable', device, name)
-        && Reflect.getMetadata('isWritable', device, name)),
+        && Reflect.getMetadata('isWritable', device, name))),
     [device],
   );
 
@@ -103,7 +106,7 @@ const SaveDialog: React.FC<InnerProps> = ({ classes, device, open, close }) => {
         close();
       }
     },
-    [state],
+    [close, device, names, state],
   );
 
   const hasSelected = some(Object.values(state), Boolean);
@@ -120,11 +123,13 @@ const SaveDialog: React.FC<InnerProps> = ({ classes, device, open, close }) => {
           {names.map(([id, name, displayName]) => (
             <FormControlLabel
               key={id}
-              control={<Checkbox
-                checked={state[name] || false}
-                value={name}
-                onChange={changeHandler}
-              />}
+              control={(
+<Checkbox
+  checked={state[name] || false}
+  value={name}
+  onChange={changeHandler}
+/>
+)}
               label={displayName}
             />
           ))}
@@ -144,8 +149,7 @@ const SaveDialog: React.FC<InnerProps> = ({ classes, device, open, close }) => {
   );
 };
 
-export default compose<InnerProps, Props>(
+export default compose<Props, Props>(
   hot,
   React.memo,
-  withStyles(styles),
 )(SaveDialog);

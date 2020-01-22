@@ -12,7 +12,7 @@ import { useCallback } from 'react';
 import { useDevicesContext } from './DevicesProvier';
 import { useTests } from './TestProvider';
 
-const useCurrent = (scope: 'test' | 'device') => {
+const useCurrent = (scope: 'test' | 'device'): (id: string | null) => void => {
   const { setCurrent: setCurrentDevice } = useDevicesContext();
   const { setCurrent: setCurrentTest } = useTests();
   return useCallback(
@@ -25,7 +25,7 @@ const useCurrent = (scope: 'test' | 'device') => {
         setCurrentTest(null);
       }
     },
-    [setCurrentDevice, setCurrentTest],
+    [scope, setCurrentDevice, setCurrentTest],
   );
 };
 

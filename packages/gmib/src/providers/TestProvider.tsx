@@ -25,64 +25,72 @@ import fs from 'fs';
 import { tuplify } from '../util/helpers';
 
 export type TestQuery = {
-  width: number,
-  height: number,
-  moduleHres: number,
-  moduleVres: number,
-  x: number,
-  y: number,
+  width: number;
+  height: number;
+  moduleHres: number;
+  moduleVres: number;
+  x: number;
+  y: number;
 };
 
 type TestId = string;
 
 type ContextType = {
-  current: TestId | null,
-  visible: TestId | null,
-  setCurrent: (id: TestId | null) => void,
-  showTest: (id: TestId) => void,
-  query: TestQuery,
-  setQuery: Dispatch<SetStateAction<TestQuery>>,
-  hideAll: () => void,
-  tests: TestId[],
+  current: TestId | null;
+  visible: TestId | null;
+  setCurrent: (id: TestId | null) => void;
+  showTest: (id: TestId) => void;
+  query: TestQuery;
+  setQuery: Dispatch<SetStateAction<TestQuery>>;
+  hideAll: () => void;
+  tests: TestId[];
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const TestContext = createContext<ContextType>(null as any);
 const key = 'testParams';
 
-export const useTests = () => useContext(TestContext);
+export const useTests = (): ContextType => useContext(TestContext);
 
 type testTuple = [string, string];
-const sortByPath = ([, pathA]: testTuple, [, pathB]: testTuple) => pathA < pathB
+const sortByPath = ([, pathA]: testTuple, [, pathB]: testTuple): number => (pathA < pathB
   ? -1
-  : pathA > pathB ? 1 : 0;
+  : pathA > pathB ? 1 : 0);
 
 const reTitle = /<\s*title[^>]*>(.+)<\s*\/\s*title>/i;
-const reloadTests = () => new Promise<Record<string, string>>((resolve, reject) => {
+const reloadTests = (): Promise<Record<string, string>> => new Promise((resolve, reject) => {
   const testDir = path.resolve(__dirname, '../extraResources/tests');
   // console.log('TESTDIR', testDir);
   fs.readdir(testDir, (err, filenames) => {
     if (err) {
       console.error('error while readdir', err.stack);
-      return reject(err);
+      reject(err);
+      return;
     }
 
     const promise = Promise.all(filenames.map(
-      filename => new Promise<[string, string] | undefined>((res) => {
+      filename => new Promise<[string, string] | undefined>(res => {
         const pathname = path.join(testDir, filename);
-        if (fs.lstatSync(pathname).isDirectory()) return res();
-        fs.readFile(pathname, (err, buffer) => {
-          if (err) {
-            console.error('error while readFile', pathname, err.stack);
-            return res();
+        if (fs.lstatSync(pathname).isDirectory()) {
+          res();
+          return;
+        }
+        fs.readFile(pathname, (error, buffer) => {
+          if (error) {
+            console.error('error while readFile', pathname, error.stack);
+            res();
+            return;
           }
           const matches = buffer.toString().match(reTitle);
           if (!matches) {
             console.warn('Отсутствует заголовок', filename);
-            return res();
+            res();
+            return;
           }
-          return res(tuplify(matches[1], pathname));
+          res(tuplify(matches[1], pathname));
         });
-      })))
+      }),
+    ))
       .then(results => results.filter(item => item !== undefined).reduce(
         (acc, cur) => {
           const [name, value] = cur!;
@@ -104,7 +112,7 @@ const updateQuery = debounce(
   },
   1000,
 );
-const TestsProvider: React.FC<{}> = ({ children }) => {
+const TestsProvider: React.FC = ({ children }) => {
   const [current, setCurrent] = useState<TestId | null>(null);
   const [visible, setVisible] = useState<TestId | null>(null);
   const [tests, setTests] = useState<Record<string, string>>({});
@@ -141,7 +149,7 @@ const TestsProvider: React.FC<{}> = ({ children }) => {
       hideAll,
       tests: Object.entries(tests).sort(sortByPath).map(([id]) => id),
     }),
-    [current, visible, query, setQuery, tests],
+    [current, visible, query, showTest, hideAll, tests],
   );
   useEffect(
     () => {
@@ -154,7 +162,7 @@ const TestsProvider: React.FC<{}> = ({ children }) => {
     [setQuery],
   );
   useEffect(() => updateQuery(query), [query]);
-  useEffect(() => { visible || hideAll(); }, [visible]);
+  useEffect(() => { visible || hideAll(); }, [hideAll, visible]);
   useEffect(() => { testsPromise.then(setTests); }, []);
   return (
     <TestContext.Provider value={value}>

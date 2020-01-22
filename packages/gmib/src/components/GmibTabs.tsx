@@ -8,7 +8,7 @@
  * the EULA file that was distributed with this source code.
  */
 // import warning from 'warning';
-import { createStyles, Theme, withStyles, WithStyles } from '@material-ui/core/styles';
+import { makeStyles } from '@material-ui/core/styles';
 import React, { useEffect, useState } from 'react';
 import { hot } from 'react-hot-loader/root';
 import compose from 'recompose/compose';
@@ -19,7 +19,7 @@ import DeviceTabs from './DeviceTabs';
 import TabContainer, { Props as ChildProps } from './TabContainer';
 import TestParams from './TestParams';
 
-const styles = (theme: Theme) => createStyles({
+const useStyles = makeStyles({
   root: {
     display: 'flex',
     width: '100%',
@@ -28,12 +28,11 @@ const styles = (theme: Theme) => createStyles({
   },
 });
 
-type Props = {};
-type InnerProps = Props & WithStyles<typeof styles>;
-
-const Tabs: React.FC<InnerProps> = ({ classes }) => {
-  const [devChildren, setDevChildren] =
-    useState<React.ReactElement<ChildProps, typeof TabContainer>[]>([]);
+const Tabs: React.FC = () => {
+  const classes = useStyles();
+  const [
+    devChildren, setDevChildren,
+  ] = useState<React.ReactElement<ChildProps, typeof TabContainer>[]>([]);
   const { current: currentDevice, devices } = useDevicesContext();
   if (currentDevice) {
     let curChild = devChildren.find(({ props }) => props.value === currentDevice);
@@ -56,7 +55,7 @@ const Tabs: React.FC<InnerProps> = ({ classes }) => {
    */
   useEffect(
     () => {
-      setDevChildren((children) => {
+      setDevChildren(children => {
         const newChildren = children
           .filter(({ props }) => devices.findIndex(device => device.id === props.value));
         return newChildren.length === children.length ? children : newChildren;
@@ -68,16 +67,16 @@ const Tabs: React.FC<InnerProps> = ({ classes }) => {
   return (
     <div className={classes.root}>
       {devChildren.map(
-        child => React.cloneElement(child, { selected: currentDevice === child.props.value }))}
+        child => React.cloneElement(child, { selected: currentDevice === child.props.value }),
+      )}
       <TabContainer value="test" selected={!!currentTest}>
-        <TestParams/>
+        <TestParams />
       </TabContainer>
     </div>
   );
 };
 
-export default compose<InnerProps, Props>(
+export default compose(
   hot,
   React.memo,
-  withStyles(styles),
 )(Tabs);

@@ -7,9 +7,11 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-const configPath = `electron-webpack/webpack.${process.argv[2]}.config.js`;
-const webpackMain = require(configPath);
+const fs = require('fs');
 const { inspect } = require('util');
+
+const configPath = `electron-webpack/webpack.${process.argv[2]}.config.js`;
+const webpackMain = JSON.parse(fs.readFileSync(configPath).toString());
 
 webpackMain().then(config => {
   console.log(configPath);
@@ -19,4 +21,3 @@ webpackMain().then(config => {
     colors: false,
   }));
 });
-

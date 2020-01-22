@@ -10,21 +10,19 @@
 
 import InputAdornment from '@material-ui/core/InputAdornment';
 import { InputBaseProps } from '@material-ui/core/InputBase';
-import { instanceOf } from 'prop-types';
-import React, { ChangeEvent, useCallback, useMemo, useState } from 'react';
+import React, {
+  ChangeEvent, useCallback, useMemo, useState,
+} from 'react';
 import { hot } from 'react-hot-loader/root';
 import Input from '@material-ui/core/Input';
 import TableCell, { TableCellProps } from '@material-ui/core/TableCell';
-import { createStyles, Theme, WithStyles, withStyles } from '@material-ui/core/styles';
+import { makeStyles } from '@material-ui/core/styles';
 import compose from 'recompose/compose';
 import classNames from 'classnames';
 
-const safeParseNumber = (value: any) => {
-  const num = parseFloat(value);
-  return Number.isNaN(num) ? value : num;
-};
+const safeParseNumber = (value: unknown): number => parseFloat(value as string);
 
-const styles = (theme: Theme) => createStyles({
+const useStyles = makeStyles(theme => ({
   inputRoot: {
     // width: '100%',
     fontSize: theme.typography.pxToRem(13),
@@ -36,8 +34,8 @@ const styles = (theme: Theme) => createStyles({
     textAlign: 'center',
   },
   cell: {
-    paddingRight: theme.spacing.unit,
-    paddingLeft: theme.spacing.unit,
+    paddingRight: theme.spacing(1),
+    paddingLeft: theme.spacing(1),
   },
   positionEnd: {
     marginLeft: 0,
@@ -46,70 +44,70 @@ const styles = (theme: Theme) => createStyles({
   inputDirty: {
     fontWeight: 'bold',
   },
-});
+}));
 
 type Props = {
-  name: string,
-  value?: InputBaseProps['value'] | Error,
-  type?: InputBaseProps['type'],
-  unit?: string,
-  min?: number,
-  max?: number,
-  step?: number,
-  dirty?: boolean,
-  onChangeProperty?: (name: string, value: any) => void,
+  name: string;
+  value?: InputBaseProps['value'] | Error;
+  type?: InputBaseProps['type'];
+  unit?: string;
+  min?: number;
+  max?: number;
+  step?: number;
+  dirty?: boolean;
+  onChangeProperty?: (name: string, value: unknown) => void;
 } & TableCellProps;
-type InnerProps = Props & WithStyles<typeof styles>;
 
-const EditCell: React.FC<InnerProps> =
-  ({
-    value, classes, className, align,
-    type, unit, min, max, step, name, onChangeProperty, dirty, ...props
-  }) => {
-    const [controlled, setControlled] = useState(value !== undefined);
-    const inputClasses = {
-      input: classNames({
-        [classes.inputRight]: align === 'right',
-        [classes.inputCenter]: align === 'center',
-        [classes.inputDirty]: dirty || !controlled,
-      }),
-    };
-    const endAdornment = useMemo(
-      () => unit
-        ? (
+const EditCell: React.FC<Props> = ({
+  value, className, align,
+  type, unit, min, max, step, name, onChangeProperty, dirty, ...props
+}) => {
+  const classes = useStyles();
+  const [controlled, setControlled] = useState(value !== undefined);
+  const inputClasses = {
+    input: classNames({
+      [classes.inputRight]: align === 'right',
+      [classes.inputCenter]: align === 'center',
+      [classes.inputDirty]: dirty || !controlled,
+    }),
+  };
+  const endAdornment = useMemo(
+    () => (unit
+      ? (
           <InputAdornment position="end" classes={{ positionEnd: classes.positionEnd }}>
             {unit}
           </InputAdornment>
-        )
-        : null,
-      [unit],
-    );
+      )
+      : null),
+    [classes.positionEnd, unit],
+  );
     // let controlled = value !== undefined;
-    const [val, setVal] = useState(value === undefined || value instanceof Error ? '' : value);
-    const changeHandler = useCallback(
-      (event: ChangeEvent<HTMLInputElement>) => {
-        const controlled = ((min === undefined || safeParseNumber(event.target.value) >= min) &&
-          (max === undefined || safeParseNumber(event.target.value) <= max));
-        setControlled(controlled);
-        controlled && onChangeProperty && onChangeProperty(name, event.target.value);
-        setVal(event.target.value);
-      },
-      [onChangeProperty, setControlled],
-    );
-    const blurHandler = useCallback(
-      () => {
-        setControlled(true);
-        setVal((val) => {
-          onChangeProperty && onChangeProperty(name, val);
-          return val;
-        });
-      },
-      [setControlled, setVal],
-    );
-    const hasError = value instanceof Error ? value.message : undefined;
-    const current = hasError || value === undefined ? '' : controlled ? value : val;
-    return (
-      <TableCell className={classNames(classes.cell, className)}{...props}>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [val, setVal] = useState<unknown>(value === undefined || value instanceof Error ? '' : value);
+  const changeHandler = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const ctrl = ((min === undefined || safeParseNumber(event.target.value) >= min)
+          && (max === undefined || safeParseNumber(event.target.value) <= max));
+      setControlled(ctrl);
+      ctrl && onChangeProperty && onChangeProperty(name, event.target.value);
+      setVal(event.target.value);
+    },
+    [max, min, name, onChangeProperty],
+  );
+  const blurHandler = useCallback(
+    () => {
+      setControlled(true);
+      setVal((v: unknown) => {
+        onChangeProperty && onChangeProperty(name, v);
+        return v;
+      });
+    },
+    [name, onChangeProperty],
+  );
+  const hasError = value instanceof Error ? value.message : undefined;
+  const current = hasError || value === undefined ? '' : controlled ? value : val;
+  return (
+      <TableCell className={classNames(classes.cell, className)} {...props}>
         <Input
           error={!!hasError}
           name={name}
@@ -129,11 +127,10 @@ const EditCell: React.FC<InnerProps> =
           onChange={changeHandler}
         />
       </TableCell>
-    );
-  };
+  );
+};
 
-export default compose<InnerProps, Props>(
+export default compose<Props, Props>(
   hot,
   React.memo,
-  withStyles(styles),
 )(EditCell);
