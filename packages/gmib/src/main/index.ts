@@ -8,6 +8,7 @@
  * the EULA file that was distributed with this source code.
  */
 
+// eslint-disable-next-line import/no-extraneous-dependencies
 import {
   app,
   BrowserWindow,
@@ -18,9 +19,14 @@ import * as path from 'path';
 import { format as formatUrl } from 'url';
 import log from 'electron-log';
 import { autoUpdater } from 'electron-updater';
+import NibusService from '@nibus/cli/lib/service';
 import { TestQuery } from '../providers/TestProvider';
 
 let currentPath: string;
+
+let service: typeof NibusService | null = null;
+
+process.env.DEBUG = 'nibus:*';
 
 autoUpdater.logger = log;
 log.transports.file.level = 'info';
@@ -42,6 +48,19 @@ let currentQuery: TestQuery = {
   y: 0,
 };
 
+const closeNibus = (): void => {
+  if (service) {
+    try {
+      log.info('tray to close nibus');
+      service.stop();
+      service = null;
+      log.info('nibus is closed');
+    } catch (e) {
+      log.error('error while close nibus');
+    }
+  }
+};
+
 function createMainWindow(): BrowserWindow {
   const window = new BrowserWindow({
     width: 800,
@@ -50,6 +69,10 @@ function createMainWindow(): BrowserWindow {
   });
 
   if (isDevelopment) {
+    // import('electron-debug').then(({ default: install }) => {
+    //   console.log('ELECTRON_DEBUG', install);
+    //   install();
+    // });
     import('electron-devtools-installer').then(
       ({ default: installExtension, REACT_DEVELOPER_TOOLS }) => {
         installExtension(REACT_DEVELOPER_TOOLS)
@@ -109,24 +132,16 @@ function createTestWindow(): BrowserWindow {
     show: false,
     alwaysOnTop: true,
     skipTaskbar: true,
+    webPreferences: { nodeIntegration: true },
     // webPreferences: {
     //   webSecurity: false,
     // },
   });
 
   if (isDevelopment) {
-    import('electron-devtools-installer').then(
-      ({ default: installExtension, REACT_DEVELOPER_TOOLS }) => {
-        installExtension(REACT_DEVELOPER_TOOLS)
-          .then(name => {
-            window.webContents.once('did-frame-finish-load', () => {
-              window.webContents.openDevTools();
-            });
-            log.info(`Added Extension:  ${name}`);
-          })
-          .catch(err => log.info('An error occurred: ', err));
-      },
-    );
+    window.webContents.once('did-frame-finish-load', () => {
+      window.webContents.openDevTools();
+    });
   }
   window.on('closed', () => { testWindow = null; });
   window.on('ready-to-show', () => window.show());
@@ -156,9 +171,10 @@ const reloadTest = (pathname: string): void => {
 // quit application when all windows are closed
 app.on('window-all-closed', () => {
   // on macOS it is common for applications to stay open until the user explicitly quits
-  if (process.platform !== 'darwin' || isDevelopment) {
-    app.quit();
-  }
+  // if (process.platform !== 'darwin' || isDevelopment) {
+  closeNibus();
+  app.quit();
+  // }
 });
 
 app.on('activate', () => {
@@ -239,4 +255,20 @@ ipcMain.on('test:hide', () => {
     testWindow.hide();
   }
   return true;
+});
+
+ipcMain.on('startLocalNibus', () => {
+  import('@nibus/cli/lib/service').then(({ default: svc }) => {
+    service = svc;
+    log.info('START LOCAL NIBUS');
+    try {
+      service.start();
+    } catch (e) {
+      log.error('error while nibus start', e.stack);
+    }
+  })
+    .catch(e => {
+      log.error('error while nibus load', e.stack);
+    });
+  // import('@nata/nibus.js/lib/service/service').then(service => service.default.start());
 });

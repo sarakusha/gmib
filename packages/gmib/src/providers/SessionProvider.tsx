@@ -11,6 +11,7 @@ import session, { FoundListener, devices } from '@nibus/core';
 import React, {
   createContext, useCallback, useContext, useEffect, useState,
 } from 'react';
+// eslint-disable-next-line import/no-extraneous-dependencies
 import { ipcRenderer } from 'electron';
 import StartNibusDialog from '../dialogs/StartNibusDialog';
 

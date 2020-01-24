@@ -14,49 +14,30 @@ const path = require('path');
 const config = {
   externals: [
     (function () {
-      var IGNORES = [
+      const IGNORES = [
         'electron',
       ];
       return function (context, request, callback) {
         if (IGNORES.indexOf(request) >= 0) {
-          return callback(null, 'require(\'' + request + '\')');
+          return callback(null, `require('${request}')`);
         }
         return callback();
       };
-    })(),
+    }()),
     'worker_threads',
+    'usb-detection',
   ],
   module: {
     rules: [
       // Нужно для iconv-lite
       {
-        test: /node_modules[\/\\](iconv-lite)[\/\\].+/,
+        test: /node_modules[/\\](iconv-lite)[/\\].+/,
         resolve: {
           aliasFields: ['main'],
         },
       },
     ],
   },
-  // module: {
-  //   rules: [
-  //     {
-  //       test: /\.tsx$/,
-  //       use:
-  //         [
-  //           { loader: 'react-hot-loader/webpack' },
-  //           {
-  //             loader: 'ts-loader',
-  //             options:
-  //               {
-  //                 transpileOnly: true,
-  //                 appendTsSuffixTo: [/\.vue$/],
-  //                 configFile: path.relative(__dirname, 'tsconfig.json'),
-  //                   // '/Users/sarakusha/WebstormProjects/@nata/packages/gmib/tsconfig.json',
-  //               },
-  //           }, // { loader: 'ts-loader' },
-  //         ],
-  //     }],
-  // },
   plugins: [],
   resolve: {
     alias: {

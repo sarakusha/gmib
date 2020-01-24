@@ -8,7 +8,9 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { FormControl, Input, InputLabel } from '@material-ui/core';
+import FormControl from '@material-ui/core/FormControl';
+import Input from '@material-ui/core/Input';
+import InputLabel from '@material-ui/core/InputLabel';
 import React, { useCallback } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import { hot } from 'react-hot-loader/root';

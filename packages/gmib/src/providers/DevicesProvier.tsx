@@ -18,7 +18,9 @@ import React, {
   useState,
 } from 'react';
 // import { getState } from '../util/helpers';
-import { NibusConnection, CreateDevice, IDevice, devices as coreDevices } from '@nibus/core';
+import {
+  NibusConnection, CreateDevice, IDevice, devices as coreDevices,
+} from '@nibus/core';
 import { useSessionContext } from './SessionProvider';
 import StubDevice from '../components/StubDevice';
 

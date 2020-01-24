@@ -9,24 +9,26 @@
  */
 
 /* tslint:disable:react-a11y-role-has-required-aria-props */
-import {
-  AppBar,
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  FormControl, IconButton, Input,
-  InputLabel, LinearProgress,
-  List,
-  ListItem, ListItemIcon,
-  ListItemSecondaryAction,
-  ListItemText,
-  NativeSelect,
-  Tab,
-  Tabs,
-  TextField,
-} from '@material-ui/core';
+import AppBar from '@material-ui/core/AppBar';
+import Button from '@material-ui/core/Button';
+import Dialog from '@material-ui/core/Dialog';
+import DialogActions from '@material-ui/core/DialogActions';
+import DialogContent from '@material-ui/core/DialogContent';
+import DialogTitle from '@material-ui/core/DialogTitle';
+import FormControl from '@material-ui/core/FormControl';
+import IconButton from '@material-ui/core/IconButton';
+import Input from '@material-ui/core/Input';
+import InputLabel from '@material-ui/core/InputLabel';
+import LinearProgress from '@material-ui/core/LinearProgress';
+import List from '@material-ui/core/List';
+import ListItem from '@material-ui/core/ListItem';
+import ListItemIcon from '@material-ui/core/ListItemIcon';
+import ListItemSecondaryAction from '@material-ui/core/ListItemSecondaryAction';
+import ListItemText from '@material-ui/core/ListItemText';
+import NativeSelect from '@material-ui/core/NativeSelect';
+import Tab from '@material-ui/core/Tab';
+import Tabs from '@material-ui/core/Tabs';
+import TextField from '@material-ui/core/TextField';
 import { IDevice, getMibTypes, findMibByType } from '@nibus/core';
 import React, {
   useCallback, useEffect, useMemo, useRef, useState,

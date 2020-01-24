@@ -7,17 +7,14 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-
-import {
-  AppBar,
-  Divider,
-  Drawer,
-  IconButton,
-  List,
-  Toolbar,
-  Tooltip,
-  Typography,
-} from '@material-ui/core';
+import AppBar from '@material-ui/core/AppBar';
+import Divider from '@material-ui/core/Divider';
+import Drawer from '@material-ui/core/Drawer';
+import IconButton from '@material-ui/core/IconButton';
+import List from '@material-ui/core/List';
+import Toolbar from '@material-ui/core/Toolbar';
+import Tooltip from '@material-ui/core/Tooltip';
+import Typography from '@material-ui/core/Typography';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import { makeStyles } from '@material-ui/core/styles';
 import ChevronLeftIcon from '@material-ui/icons/ChevronLeft';
@@ -25,7 +22,7 @@ import SearchIcon from '@material-ui/icons/Search';
 import MenuIcon from '@material-ui/icons/Menu';
 import classNames from 'classnames';
 import React, {
-  useCallback, useEffect, useState,
+  useCallback, useEffect, useMemo, useState,
 } from 'react';
 import { hot } from 'react-hot-loader/root';
 import compose from 'recompose/compose';
@@ -160,10 +157,12 @@ const App: React.FC = () => {
   );
   // const { current } = useDevicesContext();
   const [toolbar] = useToolbar();
-  // const version = useMemo(() => require('../../package.json').version, []);
+  // eslint-disable-next-line global-require
+  const version = useMemo(() => require('../../package.json').version, []);
   // console.log('RENDER APP');
   return (
     <div className={classes.root}>
+
       <CssBaseline />
       <AppBar
         position="absolute"
@@ -199,7 +198,9 @@ const App: React.FC = () => {
               color="inherit"
               display="inline"
             >
-              VERSION
+              {`${version} modules: ${process.versions.modules}
+              node: ${process.versions.node}
+              electron: ${(process.versions as any).electron}`}
             </Typography>
           </div>
           {toolbar}

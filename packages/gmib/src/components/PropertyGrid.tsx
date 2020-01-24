@@ -7,7 +7,9 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import { CircularProgress, IconButton, Tooltip } from '@material-ui/core';
+import CircularProgress from '@material-ui/core/CircularProgress';
+import IconButton from '@material-ui/core/IconButton';
+import Tooltip from '@material-ui/core/Tooltip';
 import { makeStyles } from '@material-ui/core/styles';
 import Table from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';

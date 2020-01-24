@@ -11,13 +11,13 @@
 import { IDevice } from '@nibus/core';
 import React, { useCallback, useMemo, useReducer } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
-import {
-  Button,
-  Checkbox,
-  Dialog, DialogActions,
-  DialogContent,
-  DialogTitle, FormControlLabel,
-} from '@material-ui/core';
+import Button from '@material-ui/core/Button';
+import Checkbox from '@material-ui/core/Checkbox';
+import Dialog from '@material-ui/core/Dialog';
+import DialogActions from '@material-ui/core/DialogActions';
+import DialogContent from '@material-ui/core/DialogContent';
+import DialogTitle from '@material-ui/core/DialogTitle';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
 import { hot } from 'react-hot-loader/root';
 import compose from 'recompose/compose';
 import { remote } from 'electron';

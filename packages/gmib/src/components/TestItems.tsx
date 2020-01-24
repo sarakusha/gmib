@@ -8,9 +8,10 @@
  * the EULA file that was distributed with this source code.
  */
 
-import {
-  ListItem, ListItemText, ListSubheader, Switch,
-} from '@material-ui/core';
+import ListItem from '@material-ui/core/ListItem';
+import ListItemText from '@material-ui/core/ListItemText';
+import ListSubheader from '@material-ui/core/ListSubheader';
+import Switch from '@material-ui/core/Switch';
 import React, { useCallback } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import { hot } from 'react-hot-loader/root';

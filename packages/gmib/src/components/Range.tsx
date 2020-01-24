@@ -7,7 +7,6 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import { TooltipProps } from '@material-ui/core/Tooltip';
 import React, {
   CSSProperties,
   ReactNode, useCallback, useMemo, useState,
@@ -17,7 +16,7 @@ import { hot } from 'react-hot-loader/root';
 import compose from 'recompose/compose';
 import 'rc-slider/assets/index.css';
 import { Range as RCRange, Handle, HandleProps } from 'rc-slider';
-import { Tooltip } from '@material-ui/core';
+import Tooltip, { TooltipProps } from '@material-ui/core/Tooltip';
 import classNames from 'classnames';
 
 const arrowGenerator = (

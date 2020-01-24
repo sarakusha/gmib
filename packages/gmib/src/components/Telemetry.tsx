@@ -7,9 +7,11 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import {
-  CircularProgress, IconButton, Paper, Tooltip, Typography,
-} from '@material-ui/core';
+import CircularProgress from '@material-ui/core/CircularProgress';
+import IconButton from '@material-ui/core/IconButton';
+import Tooltip from '@material-ui/core/Tooltip';
+import Typography from '@material-ui/core/Typography';
+import Paper from '@material-ui/core/Paper';
 import React, {
   useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';

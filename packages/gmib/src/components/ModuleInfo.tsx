@@ -8,7 +8,9 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { Paper, Tooltip, Typography } from '@material-ui/core';
+import Paper from '@material-ui/core/Paper';
+import Tooltip from '@material-ui/core/Tooltip';
+import Typography from '@material-ui/core/Typography';
 import React from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import { hot } from 'react-hot-loader/root';

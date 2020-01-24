@@ -8,7 +8,7 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { AppBar } from '@material-ui/core';
+import AppBar from '@material-ui/core/AppBar';
 import { makeStyles } from '@material-ui/core/styles';
 import Tab from '@material-ui/core/Tab';
 import Tabs from '@material-ui/core/Tabs';
