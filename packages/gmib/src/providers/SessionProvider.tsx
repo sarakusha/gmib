@@ -7,12 +7,14 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import session, { FoundListener, mib } from '@nibus/core';
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import session, { FoundListener, devices } from '@nibus/core';
+import React, {
+  createContext, useCallback, useContext, useEffect, useState,
+} from 'react';
+// eslint-disable-next-line import/no-extraneous-dependencies
 import { ipcRenderer } from 'electron';
 import StartNibusDialog from '../dialogs/StartNibusDialog';
 
-const { devices } = mib;
 
 const context = {
   session,
@@ -21,8 +23,8 @@ const context = {
 
 const SessionContext = createContext(context);
 
-export const useSessionContext = () => useContext(SessionContext);
-const useSessionStart = () => {
+export const useSessionContext = (): typeof context => useContext(SessionContext);
+const useSessionStart = (): { ports: number | null; error: Error | null } => {
   const [ports, setPorts] = useState<number | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -54,27 +56,24 @@ const useSessionStart = () => {
     },
     [],
   );
-  const request = () => {
-    const reconnect = () => setTimeout(
+  const request = (): () => void => {
+    const reconnect = (): NodeJS.Timeout => setTimeout(
       () => {
-        setAttempt((attempt) => {
-          console.log('try connect', attempt + 1);
-          return attempt + 1;
-        });
+        setAttempt(prev => prev + 1);
       },
       3000,
     );
     session.start().then(
-      (ports) => {
-        setPorts(ports);
+      countPorts => {
+        setPorts(countPorts);
         setError(null);
         session.on('add', updatePortsHandler);
         session.on('remove', updatePortsHandler);
         session.on('found', foundHandler);
         session.on('close', reconnect);
       },
-      (error) => {
-        setError(error);
+      err => {
+        setError(err);
         ipcRenderer.send('startLocalNibus');
         reconnect();
       },
@@ -94,11 +93,11 @@ const useSessionStart = () => {
   };
 };
 
-export const SessionProvider: React.FC<{}> = ({ children }) => {
+const SessionProvider: React.FC = ({ children }) => {
   const { error } = useSessionStart();
   return (
     <SessionContext.Provider value={context}>
-      <StartNibusDialog open={!!error}/>
+      <StartNibusDialog open={!!error} />
       {children}
     </SessionContext.Provider>
   );

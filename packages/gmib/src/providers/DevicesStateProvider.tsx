@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
  * @license
  * Copyright (c) 2019. Nata-Info
@@ -8,32 +9,33 @@
  * the EULA file that was distributed with this source code.
  */
 
+import { IDevice } from '@nibus/core';
 import produce from 'immer';
 import debounce from 'lodash/debounce';
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, {
+  createContext, useCallback, useContext, useEffect, useMemo, useState,
+} from 'react';
 import { DeviceId, useDevicesContext } from './DevicesProvier';
 
 type DeviceState = Record<string, any>;
 type StateType = Record<NonNullable<DeviceId>, DeviceState | null>;
 type SetStateType = (id: NonNullable<DeviceId>, state: DeviceState | null) => void;
 type SetValueType = (id: NonNullable<DeviceId>, name: string, value: any) => void;
-type ContextType = { state: StateType, setDeviceState: SetStateType, setDeviceValue: SetValueType };
+type ContextType = { state: StateType; setDeviceState: SetStateType; setDeviceValue: SetValueType };
 
 const DevicesStateContext = createContext<ContextType>({} as any);
-const DevicesStateProvider: React.FC<{}> = ({ children }) => {
+const DevicesStateProvider: React.FC = ({ children }) => {
   const [state, setState] = useState<StateType>({});
   const setDeviceState = useCallback(
-    (id: NonNullable<DeviceId>, deviceState: DeviceState | null) =>
-      setState(produce((draft) => {
-        draft[id] = deviceState;
-      })),
+    (id: NonNullable<DeviceId>, deviceState: DeviceState | null) => setState(produce(draft => {
+      draft[id] = deviceState;
+    })),
     [setState],
   );
   const setDeviceValue = useCallback(
-    (id: NonNullable<DeviceId>, name: string, value: any) =>
-      setState(produce((draft) => {
-        (draft[id] || {})[name] = value;
-      })),
+    (id: NonNullable<DeviceId>, name: string, value: any) => setState(produce(draft => {
+      (draft[id] || {})[name] = value;
+    })),
     [setState],
   );
   return useMemo(
@@ -48,18 +50,28 @@ const DevicesStateProvider: React.FC<{}> = ({ children }) => {
         {children}
       </DevicesStateContext.Provider>
     ),
-    [state, setState, children],
+    [state, setDeviceState, setDeviceValue, children],
   );
 };
 
-const useDevicesState = () => useContext(DevicesStateContext);
+const useDevicesState = (): ContextType => useContext(DevicesStateContext);
 
-export const useDevice = (id: DeviceId) => {
+type CurrentDevice = {
+  readonly device?: IDevice | null;
+  setValue: (name: string, value: any) => void;
+  reload: () => Promise<void>;
+  readonly error?: Error | string;
+  isDirty: (name: string) => boolean;
+  readonly props: Record<string, any>;
+  readonly id?: DeviceId;
+  proto?: object;
+}
+export const useDevice = (id: DeviceId): CurrentDevice => {
   // console.log('deviceid', id);
   const { state, setDeviceState, setDeviceValue } = useDevicesState();
-  const deviceState: DeviceState | null = id && state[id] || null;
+  const deviceState: DeviceState | null = id ? state[id] : null;
   const { devices } = useDevicesContext();
-  const [device, setDevice] = useState(id && devices.find(device => device.id === id) || null);
+  const [device, setDevice] = useState(id ? devices.find(item => item.id === id) : null);
   useEffect(
     () => {
       if (!device || devices.includes(device)) return;
@@ -70,26 +82,14 @@ export const useDevice = (id: DeviceId) => {
   const names: string[] = useMemo(
     () => Object.entries<string[]>(Reflect.getMetadata('map', device || {}) || {})
       .sort((a, b) => Number(a[0]) - Number(b[0]))
-      .map(([, names]) => names[0])
+      .map(([, keys]) => keys[0])
       .filter(name => Reflect.getMetadata('isReadable', device!, name)),
     [device],
   );
   const [error, setError] = useState<Error | string | undefined>();
-  const reload = useCallback(
-    () => {
-      if (!device) return Promise.resolve();
-      setError(undefined);
-      return device.read().then(
-        update,
-        err => setError(err),
-      );
-    },
+  const isDirty = useCallback(
+    (name: string) => (device ? device.isDirty(name) : false),
     [device],
-  );
-  const isDirty = useCallback((name: string) => device && device.isDirty(name) || false, [device]);
-  useEffect(
-    () => { deviceState || reload(); },
-    [reload],
   );
   const update = useCallback(
     () => {
@@ -106,13 +106,28 @@ export const useDevice = (id: DeviceId) => {
         ),
       );
     },
-    [device],
+    [device, id, names, setDeviceState],
+  );
+  const reload = useCallback(
+    () => {
+      if (!device) return Promise.resolve();
+      setError(undefined);
+      return device.read().then(
+        update,
+        err => setError(err),
+      );
+    },
+    [device, update],
+  );
+  useEffect(
+    () => { deviceState || reload(); },
+    [deviceState, reload],
   );
   const drain = useCallback(
     debounce(
       () => device && device.drain()
-        .then((ids) => {
-          const failed = ids.filter(id => id < 0).map(id => -id);
+        .then(ids => {
+          const failed = ids.filter(ident => ident < 0).map(ident => -ident);
           return failed && failed.length ? device.read(...failed) : Promise.resolve({});
         })
         .then(update),
@@ -128,7 +143,7 @@ export const useDevice = (id: DeviceId) => {
       device[name] = value;
       drain();
     },
-    [device],
+    [device, drain, id, setDeviceValue],
   );
 
   return useMemo(
@@ -140,9 +155,9 @@ export const useDevice = (id: DeviceId) => {
       isDirty,
       props: deviceState || {},
       id: device && device.id,
-      proto: device && Reflect.getPrototypeOf(device) || {},
+      proto: device ? Reflect.getPrototypeOf(device) : {},
     }),
-    [deviceState, id, error, device],
+    [device, setValue, reload, error, isDirty, deviceState],
   );
 };
 

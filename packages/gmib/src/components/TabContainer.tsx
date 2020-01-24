@@ -9,12 +9,12 @@
  */
 
 import React from 'react';
-import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
+import { makeStyles } from '@material-ui/core/styles';
 import classNames from 'classnames';
 import { hot } from 'react-hot-loader/root';
 import compose from 'recompose/compose';
 
-const styles = (theme: Theme) => createStyles({
+const useStyles = makeStyles({
   root: {
     width: '100%',
     display: 'flex',
@@ -25,12 +25,13 @@ const styles = (theme: Theme) => createStyles({
 });
 
 export type Props = {
-  children?: React.ReactNode,
-  value: number | string,
-  selected?: boolean,
+  children?: React.ReactNode;
+  value: number | string;
+  selected?: boolean;
 };
-type InnerProps = Props & WithStyles<typeof styles>;
-const TabContainer: React.FC<InnerProps> = ({ children, classes, selected = true }) => {
+
+const TabContainer: React.FC<Props> = ({ children, selected = true }) => {
+  const classes = useStyles();
   return (
     <div className={classNames(classes.root, { [classes.hidden]: !selected })}>
       {children}
@@ -38,8 +39,7 @@ const TabContainer: React.FC<InnerProps> = ({ children, classes, selected = true
   );
 };
 
-export default compose<InnerProps, Props>(
+export default compose<Props, Props>(
   hot,
   React.memo,
-  withStyles(styles),
 )(TabContainer);

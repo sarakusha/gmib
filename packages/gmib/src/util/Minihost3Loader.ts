@@ -1,3 +1,4 @@
+/* eslint-disable no-bitwise */
 /*
  * @license
  * Copyright (c) 2019. Nata-Info
@@ -7,22 +8,22 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import { IDevice } from '@nibus/core/lib/mib';
+import { IDevice } from '@nibus/core';
 import MinihostLoader from './MinihostLoader';
 
-type Vertex = { x: number, y: number };
+type Vertex = { x: number; y: number };
 export type Minihost3Info = {
-  t?: number,
-  v1?: number,
-  v2?: number,
-  'MCU'?: string,
-  'PLD'?: string,
-  redVertex?: Vertex,
-  greenVertex?: Vertex,
-  blueVertex?: Vertex,
+  t?: number;
+  v1?: number;
+  v2?: number;
+  'MCU'?: string;
+  'PLD'?: string;
+  redVertex?: Vertex;
+  greenVertex?: Vertex;
+  blueVertex?: Vertex;
 };
 
-const digits = (len: number) => {
+const digits = (len: number): (val: number) => number => {
   const dec = 10 ** len;
   return (val: number) => Math.round(val * dec) / dec;
 };
@@ -30,7 +31,7 @@ const digits = (len: number) => {
 const digits3 = digits(3);
 
 // const digits3 = x => x;
-const parseData = (info: Minihost3Info, selector: number, data: Buffer) => {
+const parseData = (info: Minihost3Info, selector: number, data: Buffer): void => {
   switch (selector) {
     case 0:
       info.t = data[2] / 2;
@@ -79,23 +80,27 @@ const parseData = (info: Minihost3Info, selector: number, data: Buffer) => {
 
 export default class Minihost3Loader extends MinihostLoader<Minihost3Info> {
   selectorId: number;
+
   moduleSelectId: number;
+
   static readonly DOMAIN = 'MODUL';
 
   constructor(device: IDevice, readonly selectors = [0, 1, 2, 3, 4, 5, 6]) {
     super(device);
     this.selectorId = device.getId('selector');
     this.moduleSelectId = device.getId('moduleSelect');
-
   }
 
   async getInfo(x: number, y: number): Promise<Minihost3Info> {
     const { device, selectors } = this;
     const info: Minihost3Info = {};
+    // eslint-disable-next-line no-restricted-syntax
     for (const selector of selectors) {
       device.selector = selector;
       device.moduleSelect = ((x & 0xFF) << 8) + (y & 0xFF);
+      // eslint-disable-next-line no-await-in-loop
       await device.write(this.selectorId, this.moduleSelectId);
+      // eslint-disable-next-line no-await-in-loop
       const data = await device.upload(Minihost3Loader.DOMAIN, 0, 6);
       parseData(info, selector, data);
     }

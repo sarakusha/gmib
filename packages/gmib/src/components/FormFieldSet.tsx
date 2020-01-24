@@ -18,10 +18,13 @@ export interface FormFieldSetProps extends FormControlProps {
   title?: string;
 }
 
-export const FormLegend = (props: FormLabelProps) =>
-  <FormLabel {...props} component={'legend' as 'label'} />;
+export const FormLegend: React.FC<FormLabelProps> = props => (
+  <FormLabel {...props} component={'legend' as 'label'} />
+);
 
-const FormFieldSet = ({ legend, children, title, ...props }: FormFieldSetProps) => (
+const FormFieldSet: React.FC<FormFieldSetProps> = ({
+  legend, children, title, ...props
+}) => (
   <FormControl component={'fieldset' as 'div'} {...props} title={title || legend}>
     {legend && <FormLegend>{legend}</FormLegend>}
     {children}

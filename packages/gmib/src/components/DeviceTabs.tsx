@@ -8,20 +8,19 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { AppBar } from '@material-ui/core';
-import { createStyles, Theme, withStyles, WithStyles } from '@material-ui/core/styles';
+import AppBar from '@material-ui/core/AppBar';
+import { makeStyles } from '@material-ui/core/styles';
 import Tab from '@material-ui/core/Tab';
 import Tabs from '@material-ui/core/Tabs';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { hot } from 'react-hot-loader/root';
-import SwipeableViews from 'react-swipeable-views';
 import compose from 'recompose/compose';
 import { useDevicesContext } from '../providers/DevicesProvier';
 import PropertyGrid from './PropertyGrid';
 import TabContainer from './TabContainer';
 import Telemetry from './Telemetry';
 
-const styles = (theme: Theme) => createStyles({
+const useStyles = makeStyles({
   root: {
     display: 'flex',
     flexShrink: 1,
@@ -43,24 +42,19 @@ const styles = (theme: Theme) => createStyles({
     // overflow: 'hidden',
   },
 });
-type Props = {
-  id: string,
-};
-type InnerProps = Props & WithStyles<typeof styles>;
 
-const DeviceTabs: React.FC<InnerProps> = ({ classes, id }) => {
+type Props = {
+  id: string;
+};
+
+const DeviceTabs: React.FC<Props> = ({ id }) => {
+  const classes = useStyles();
   const { getProto } = useDevicesContext();
   const proto = getProto(id);
   const [value, setValue] = useState(0);
   const changeHandler = useCallback(
-    (_, newValue: any) => {
-      setValue(newValue);
-    },
-    [],
-  );
-  const swipeHandler = useCallback(
-    (newValue: any) => {
-      setValue(newValue);
+    (_, newValue: unknown) => {
+      setValue(Number(newValue));
     },
     [],
   );
@@ -86,20 +80,20 @@ const DeviceTabs: React.FC<InnerProps> = ({ classes, id }) => {
       <div className={classes.appBarSpacer} />
       <div className={classes.content}>
         {isMinihost ? (
-            <>
-              {/*<SwipeableViews index={value} onChangeIndex={swipeHandler}>*/}
+          <>
+              {/* <SwipeableViews index={value} onChangeIndex={swipeHandler}>*/}
               <TabContainer value={0} selected={value === 0}>
                 <PropertyGrid id={id} active={value === 0} />
               </TabContainer>
               <TabContainer value={1} selected={value === 1}>
                 <Telemetry id={id} active={value === 1} />
               </TabContainer>
-              {/*</SwipeableViews>*/}
-            </>
-          )
+              {/* </SwipeableViews>*/}
+          </>
+        )
           : (
-            <TabContainer value={0} selected={true}>
-              <PropertyGrid id={id} active={true} />
+            <TabContainer value={0} selected>
+              <PropertyGrid id={id} active />
             </TabContainer>
           )}
       </div>
@@ -107,8 +101,7 @@ const DeviceTabs: React.FC<InnerProps> = ({ classes, id }) => {
   );
 };
 
-export default compose<InnerProps, Props>(
+export default compose<Props, Props>(
   hot,
   React.memo,
-  withStyles(styles),
 )(DeviceTabs);

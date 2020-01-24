@@ -1,3 +1,4 @@
+/* eslint-disable import/first */
 /*
  * @license
  * Copyright (c) 2019. Nata-Info
@@ -7,12 +8,14 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
+process.env.DEBUG = 'nibus:*';
 
 import { AppContainer } from 'react-hot-loader';
 import { createMuiTheme, MuiThemeProvider } from '@material-ui/core/styles';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import 'typeface-roboto/index.css';
+
 import App from '../components/App';
 import DevicesProvider from '../providers/DevicesProvier';
 import DevicesStateProvider from '../providers/DevicesStateProvider';
@@ -20,15 +23,12 @@ import SessionProvider from '../providers/SessionProvider';
 import TestsProvider from '../providers/TestProvider';
 import ToolbarProvider from '../providers/ToolbarProvider';
 
-const theme = createMuiTheme({
-  typography: {
-    useNextVariants: true,
-  },
-});
+const theme = createMuiTheme({});
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 (window as any).ELECTRON_DISABLE_SECURITY_WARNINGS = 1;
 
-const render = () => {
+const render = (): void => {
   ReactDOM.render(
     (
       <AppContainer>

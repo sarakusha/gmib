@@ -8,7 +8,7 @@
  * the EULA file that was distributed with this source code.
  */
 import { SvgIconProps } from '@material-ui/core/SvgIcon';
-import { IDevice } from '@nibus/core/lib/mib';
+import { IDevice } from '@nibus/core';
 import React from 'react';
 import { hot } from 'react-hot-loader/root';
 import compose from 'recompose/compose';
@@ -18,22 +18,22 @@ import MinihostIcon from '@material-ui/icons/Tv';
 import ConsoleIcon from '@material-ui/icons/VideogameAsset';
 
 type Props = {
-  device?: IDevice,
-  mib?: string,
+  device?: IDevice;
+  mib?: string;
 } & SvgIconProps;
 const DeviceIcon: React.FC<Props> = ({ device, mib, ...props }) => {
   const parent = device && Reflect.getMetadata('parent', device);
   const safeMib: string = mib || Reflect.getMetadata('mib', device || {});
-  if (!safeMib) console.trace('Invalid mib or device');
+  if (!safeMib) console.warn('Invalid mib or device');
   let Icon = DefaultIcon;
   if (!parent && device && device.connection && device.connection.description.link) {
     Icon = HubIcon;
-  } else if (safeMib && safeMib.includes('cosole')) {
+  } else if (safeMib && safeMib.includes('console')) {
     Icon = ConsoleIcon;
   } else if (safeMib && safeMib.includes('minihost')) {
     Icon = MinihostIcon;
   }
-  return <Icon {...props}/>;
+  return <Icon {...props} />;
 };
 
 export default compose<Props, Props>(

@@ -7,22 +7,21 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import { CircularProgress, IconButton, Tooltip } from '@material-ui/core';
-import {
-  createStyles,
-  Theme,
-  withStyles,
-  WithStyles,
-} from '@material-ui/core/styles';
+import CircularProgress from '@material-ui/core/CircularProgress';
+import IconButton from '@material-ui/core/IconButton';
+import Tooltip from '@material-ui/core/Tooltip';
+import { makeStyles } from '@material-ui/core/styles';
 import Table from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
 import TableCell from '@material-ui/core/TableCell';
 import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
 import Typography from '@material-ui/core/Typography';
-import { IDevice } from '@nibus/core/lib/mib';
+import { IDevice } from '@nibus/core';
 import groupBy from 'lodash/groupBy';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, {
+  useCallback, useEffect, useMemo, useState,
+} from 'react';
 import { hot } from 'react-hot-loader/root';
 import compose from 'recompose/compose';
 import ReloadIcon from '@material-ui/icons/Refresh';
@@ -39,12 +38,12 @@ import SaveDialog from '../dialogs/SaveDialog';
 import { useToolbar } from '../providers/ToolbarProvider';
 
 const { dialog } = remote;
-const styles = (theme: Theme) => createStyles({
+const useStyles = makeStyles(theme => ({
   root: {
     width: '100%',
     display: 'flex',
-    paddingLeft: theme.spacing.unit,
-    paddingRight: theme.spacing.unit,
+    paddingLeft: theme.spacing(1),
+    paddingRight: theme.spacing(1),
     overflow: 'auto',
   },
   error: {
@@ -66,13 +65,12 @@ const styles = (theme: Theme) => createStyles({
     zIndex: 1,
   },
   table: {},
-});
+}));
 
 type Props = {
-  id: string,
-  active?: boolean,
+  id: string;
+  active?: boolean;
 };
-type InnerProps = Props & WithStyles<typeof styles>;
 
 const load = async (device: IDevice): Promise<boolean> => {
   const fileNames = dialog.showOpenDialogSync({
@@ -103,9 +101,12 @@ const load = async (device: IDevice): Promise<boolean> => {
   return false;
 };
 
-const PropertyGrid: React.FC<InnerProps> = ({ classes, id, active = true }) => {
+const PropertyGrid: React.FC<Props> = ({ id, active = true }) => {
+  const classes = useStyles();
   const { current } = useDevicesContext();
-  const { props, setValue, error, reload, proto, isDirty, device } = useDevice(id);
+  const {
+    props, setValue, error, reload, proto, isDirty, device,
+  } = useDevice(id);
   const [busy, setBusy] = useState(false);
   const [saveIsOpen, setSaveOpen] = useState(false);
   const closeSaveDialog = useCallback(() => setSaveOpen(false), [setSaveOpen]);
@@ -149,34 +150,36 @@ const PropertyGrid: React.FC<InnerProps> = ({ classes, id, active = true }) => {
         </Tooltip>
       </>
     ),
-    [reloadHandler, busy],
+    [
+      loadHandler, device, saveHandler,
+      classes.toolbarWrapper, classes.fabProgress,
+      reloadHandler, busy,
+    ],
   );
 
   const [, setToolbar] = useToolbar();
 
   useEffect(
-    () =>
-      setToolbar((toolbar: React.ReactNode) => {
-        if (active && current === id) return reloadToolbar;
-        return toolbar === reloadToolbar ? null : toolbar;
-      })
-    ,
-    [active, current, reloadToolbar],
+    () => setToolbar((toolbar: React.ReactNode) => {
+      if (active && current === id) return reloadToolbar;
+      return toolbar === reloadToolbar ? null : toolbar;
+    }),
+    [active, current, id, reloadToolbar, setToolbar],
   );
 
   const release = useMemo(
-    () => device && Reflect.getMetadata('parent', device)
+    () => (device && Reflect.getMetadata('parent', device)
       ? () => device.release()
-      : undefined,
+      : undefined),
     [device],
   );
 
   const categories = useMemo(
     () => groupBy(
       Object.entries(props),
-      ([name]) => Reflect.getMetadata('category', proto, name) as string || '',
+      ([name]) => (proto && Reflect.getMetadata('category', proto, name) as string) ?? '',
     ),
-    [props],
+    [props, proto],
   );
   // useEffect(() => {
   //   console.log('ON', document.documentElement.scrollTop);
@@ -203,16 +206,20 @@ const PropertyGrid: React.FC<InnerProps> = ({ classes, id, active = true }) => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {Object.entries(categories).map(([category, props]) => (
+            {Object.entries(categories).map(([category, catProps]) => (
               <React.Fragment key={category}>
-                {category && (<TableRow>
-                  <TableCell colSpan={2}>
-                    <Typography variant="h6">{category}</Typography>
-                  </TableCell>
-                </TableRow>) || null}
-                {props.map(([name, value]) => (
+                {category && (
+                  <TableRow>
+                    <TableCell colSpan={2}>
+                      <Typography variant="h6">{category}</Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
+                {proto && catProps.map(([name, value]) => (
                   <TableRow key={name}>
-                    <TableCell>{Reflect.getMetadata('displayName', proto, name)}</TableCell>
+                    <TableCell>
+                      {Reflect.getMetadata('displayName', proto, name) ?? ''}
+                    </TableCell>
                     <PropertyValueCell
                       proto={proto}
                       name={name}
@@ -232,8 +239,7 @@ const PropertyGrid: React.FC<InnerProps> = ({ classes, id, active = true }) => {
   );
 };
 
-export default compose<InnerProps, Props>(
+export default compose<Props, Props>(
   hot,
   React.memo,
-  withStyles(styles),
 )(PropertyGrid);
