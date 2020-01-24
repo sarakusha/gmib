@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PublishConfigData" serverName="levakov" preserveTimestamps="false">
+    <serverData>
+      <paths name="GIGABYTE">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/src/@nata" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+          <excludedPaths>
+            <excludedPath local="true" path="$PROJECT_DIR$/node_modules" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/stela/node_modules" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/nibus.js/node_modules" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/gmib/node_modules" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/node-gst-player/node_modules" />
+            <excludedPath local="true" path="/node_modules/" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/node-gst-player/build" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/node-gst-player/cmake-build-debug" />
+          </excludedPaths>
+        </serverdata>
+      </paths>
+      <paths name="levakov">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/src/@nibus" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+          <excludedPaths>
+            <excludedPath local="true" path="$PROJECT_DIR$/node_modules" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/stela/node_modules" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/nibus.js/node_modules" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/gmib/node_modules" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/node-gst-player/node_modules" />
+            <excludedPath local="true" path="/node_modules/" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/node-gst-player/build" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/node-gst-player/cmake-build-debug" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/gmib/build" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/gmib/dist" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/stela/.next" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/cli/lib" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/core/lib" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/cli/node_modules" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/core/node_modules" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/cli/tsconfig.tsbuildinfo" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/core/tsconfig.tsbuildinfo" />
+          </excludedPaths>
+        </serverdata>
+      </paths>
+      <paths name="sarakusha">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/src/@nata" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+          <excludedPaths>
+            <excludedPath local="true" path="$PROJECT_DIR$/node_modules" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/stela/node_modules" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/nibus.js/node_modules" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/gmib/node_modules" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/node-gst-player/node_modules" />
+            <excludedPath local="true" path="/node_modules/" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/node-gst-player/build" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/node-gst-player/cmake-build-debug" />
+          </excludedPaths>
+        </serverdata>
+      </paths>
+    </serverData>
+  </component>
+</project>

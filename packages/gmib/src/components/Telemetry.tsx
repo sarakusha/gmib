@@ -7,9 +7,15 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import { CircularProgress, IconButton, Paper, Tooltip, Typography } from '@material-ui/core';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
+import CircularProgress from '@material-ui/core/CircularProgress';
+import IconButton from '@material-ui/core/IconButton';
+import Tooltip from '@material-ui/core/Tooltip';
+import Typography from '@material-ui/core/Typography';
+import Paper from '@material-ui/core/Paper';
+import React, {
+  useCallback, useEffect, useMemo, useRef, useState,
+} from 'react';
+import { makeStyles } from '@material-ui/core/styles';
 import { hot } from 'react-hot-loader/root';
 import compose from 'recompose/compose';
 import StartIcon from '@material-ui/icons/Refresh';
@@ -23,7 +29,7 @@ import Range from './Range';
 import Minihost3Loader, { Minihost3Info } from '../util/Minihost3Loader';
 import Minihost2Loader, { Minihost2Info } from '../util/Minihost2Loader';
 
-const styles = (theme: Theme) => createStyles({
+const useStyles = makeStyles(theme => ({
   root: {
     width: '100%',
     display: 'grid',
@@ -46,15 +52,15 @@ const styles = (theme: Theme) => createStyles({
   hRange: {
     gridArea: 'hRange',
     width: '36ch',
-    marginBottom: theme.spacing.unit * 3,
-    marginTop: theme.spacing.unit * 3,
-    marginLeft: theme.spacing.unit * 2,
+    marginBottom: theme.spacing(3),
+    marginTop: theme.spacing(3),
+    marginLeft: theme.spacing(2),
   },
   vRange: {
     gridArea: 'vRange',
-    marginTop: theme.spacing.unit * 2,
-    marginLeft: theme.spacing.unit * 3,
-    marginRight: theme.spacing.unit * 3,
+    marginTop: theme.spacing(2),
+    marginLeft: theme.spacing(3),
+    marginRight: theme.spacing(3),
     height: '48ch',
   },
   corner: {
@@ -68,7 +74,7 @@ const styles = (theme: Theme) => createStyles({
       padding: 2,
       textAlign: 'center',
     },
-    margin: theme.spacing.unit / 2,
+    margin: theme.spacing(1) / 2,
   },
   xpos: {
     borderBottom: '1px solid white',
@@ -86,15 +92,15 @@ const styles = (theme: Theme) => createStyles({
     // margin: theme.spacing.unit,
     position: 'relative',
   },
-});
+}));
 
 type Props = {
-  id: string,
-  active?: boolean,
+  id: string;
+  active?: boolean;
 };
 
-type InnerProps = Props & WithStyles<typeof styles>;
-const Telemetry: React.FC<InnerProps> = ({ classes, id, active = true }) => {
+const Telemetry: React.FC<Props> = ({ id, active = true }) => {
+  const classes = useStyles();
   const { props, device } = useDevice(id);
   const mib = device ? Reflect.getMetadata('mib', device) : '';
   const loader = useMemo<MinihostLoader<Minihost2Info|Minihost3Info> | null>(
@@ -108,9 +114,11 @@ const Telemetry: React.FC<InnerProps> = ({ classes, id, active = true }) => {
           return null;
       }
     },
-    [device],
+    [device, mib],
   );
-  const { hres, vres, moduleHres, moduleVres, maxModulesH, maxModulesV } = props;
+  const {
+    hres, vres, moduleHres, moduleVres, maxModulesH, maxModulesV,
+  } = props;
   const [xMax, setXMax] = useState<number | undefined>();
   const [xMin, setXMin] = useState<number>(0);
   const [yMax, setYMax] = useState<number | undefined>();
@@ -134,9 +142,11 @@ const Telemetry: React.FC<InnerProps> = ({ classes, id, active = true }) => {
       setDirv(!!loader && loader.isInvertV());
       setDirh(!!loader && loader.isInvertH());
     },
-    [props.dirv, props.dirh, props.vinvert, props.hinvert],
+    // eslint-disable-next-line react/destructuring-assignment
+    [props.dirv, props.dirh, props.vinvert, props.hinvert, loader],
   );
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [modules, setModules] = useState<any[]>([]);
   const refRange = useRef({
     xMin,
@@ -146,7 +156,10 @@ const Telemetry: React.FC<InnerProps> = ({ classes, id, active = true }) => {
   });
   const start = useCallback(
     () => {
-      const { xMin, xMax, yMin, yMax } = refRange.current;
+      const {
+        // eslint-disable-next-line no-shadow
+        xMin, xMax, yMin, yMax,
+      } = refRange.current;
       setStyle({
         gridTemplateRows: `repeat(${yMax! - yMin + 1}, 1fr)`,
       });
@@ -171,9 +184,9 @@ const Telemetry: React.FC<InnerProps> = ({ classes, id, active = true }) => {
     },
     [xMin, xMax, yMin, yMax],
   );
-  const cancel = useCallback(() => loader && loader.cancel(), []);
+  const cancel = useCallback(() => loader && loader.cancel(), [loader]);
   const telemetryToolbar = useMemo(
-    () => loading ? (
+    () => (loading ? (
         <Tooltip title="Отменить опрос">
           <div className={classes.wrapper}>
             <IconButton onClick={cancel} color="inherit">
@@ -182,7 +195,7 @@ const Telemetry: React.FC<InnerProps> = ({ classes, id, active = true }) => {
             <CircularProgress size={48} className={classes.fabProgress} />
           </div>
         </Tooltip>
-      )
+    )
       : (
         <Tooltip title="Запустить опрос модулей" enterDelay={500}>
           <div className={classes.wrapper}>
@@ -191,8 +204,8 @@ const Telemetry: React.FC<InnerProps> = ({ classes, id, active = true }) => {
             </IconButton>
           </div>
         </Tooltip>
-      ),
-    [start, cancel, loading],
+      )),
+    [loading, classes.wrapper, classes.fabProgress, cancel, start],
   );
   const [, setToolbar] = useToolbar();
   const { current } = useDevicesContext();
@@ -201,16 +214,16 @@ const Telemetry: React.FC<InnerProps> = ({ classes, id, active = true }) => {
       if (active && current === id) return telemetryToolbar;
       return toolbar === telemetryToolbar ? null : toolbar;
     }),
-    [active, current, telemetryToolbar],
+    [active, current, id, setToolbar, telemetryToolbar],
   );
   useEffect(
     () => {
-      if (!loader) return;
-      const columnHandler = (column: IModuleInfo<Minihost2Info|Minihost3Info>[]) => {
-        setModules(modules => modules.concat(column));
+      if (!loader) return () => {};
+      const columnHandler = (column: IModuleInfo<Minihost2Info|Minihost3Info>[]): void => {
+        setModules(modls => modls.concat(column));
       };
-      const startHandler = () => setLoading(true);
-      const finishHandler = () => setLoading(false);
+      const startHandler = (): void => setLoading(true);
+      const finishHandler = (): void => setLoading(false);
       loader.on('column', columnHandler);
       loader.on('start', startHandler);
       loader.on('finish', finishHandler);
@@ -256,10 +269,10 @@ const Telemetry: React.FC<InnerProps> = ({ classes, id, active = true }) => {
       <div className={classes.main}>
         <div>
           <div className={classes.grid} style={style}>
-            {modules.map(props => (
+            {modules.map(moduleProps => (
               <ModuleInfo
-                key={`${props.y}:${props.x}`}
-                {...props}
+                key={`${moduleProps.y}:${moduleProps.x}`}
+                {...moduleProps}
               />
             ))}
           </div>
@@ -269,8 +282,7 @@ const Telemetry: React.FC<InnerProps> = ({ classes, id, active = true }) => {
   );
 };
 
-export default compose<InnerProps, Props>(
+export default compose<Props, Props>(
   hot,
   React.memo,
-  withStyles(styles),
 )(Telemetry);

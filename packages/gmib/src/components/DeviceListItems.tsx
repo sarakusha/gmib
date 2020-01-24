@@ -8,7 +8,7 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { Tooltip } from '@material-ui/core';
+import Tooltip from '@material-ui/core/Tooltip';
 import ListItem from '@material-ui/core/ListItem';
 import ListItemIcon from '@material-ui/core/ListItemIcon';
 import ListItemText from '@material-ui/core/ListItemText';
@@ -18,10 +18,10 @@ import ListSubheader from '@material-ui/core/ListSubheader';
 // import TvIcon from '@material-ui/icons/Tv';
 import UsbIcon from '@material-ui/icons/Usb';
 import LinkIcon from '@material-ui/icons/Link';
-import { DeviceId } from '@nibus/core/lib/mib';
+import { DeviceId } from '@nibus/core';
 import React, { useCallback, useEffect, useState } from 'react';
 import { hot } from 'react-hot-loader/root';
-import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
+import { makeStyles } from '@material-ui/core/styles';
 import compose from 'recompose/compose';
 
 import { useDevicesContext } from '../providers/DevicesProvier';
@@ -29,7 +29,7 @@ import { useSessionContext } from '../providers/SessionProvider';
 import useCurrent from '../providers/useCurrent';
 import DeviceIcon from './DeviceIcon';
 
-const styles = (theme: Theme) => createStyles({
+const useStyles = makeStyles(theme => ({
   wrapper: {
     position: 'relative',
   },
@@ -46,18 +46,17 @@ const styles = (theme: Theme) => createStyles({
     borderBottom: `1px solid ${theme.palette.divider}`,
     backgroundClip: 'padding-box',
   },
-});
-type Props = {};
-type InnerProps = Props & WithStyles<typeof styles>;
+}));
 
-const DeviceListItems: React.FC<InnerProps> = ({ classes }) => {
+const DeviceListItems: React.FC = () => {
+  const classes = useStyles();
   const { devices, current } = useDevicesContext();
   const setCurrent = useCurrent('device');
   const devs = useSessionContext().devices;
   const [, setUpdate] = useState(false);
   useEffect(
     () => {
-      const sernoListener = () => setUpdate(prev => !prev);
+      const sernoListener = (): void => setUpdate(prev => !prev);
       devs.on('serno', sernoListener);
       return () => {
         devs.off('serno', sernoListener);
@@ -66,19 +65,19 @@ const DeviceListItems: React.FC<InnerProps> = ({ classes }) => {
     [devs, setUpdate],
   );
   const clickHandler = useCallback(
-    (e: React.MouseEvent<HTMLButtonElement>) => {
+    (e: React.MouseEvent<HTMLDivElement>) => {
       const id = e.currentTarget.dataset.id as DeviceId || null;
       setCurrent(id);
     },
-    [],
+    [setCurrent],
   );
   return (
     <>
       <ListSubheader className={classes.header} inset>Устройства</ListSubheader>
-      {devices.map((device) => {
+      {devices.map(device => {
         const parent = Reflect.getMetadata('parent', device);
         // const mib = Reflect.getMetadata('mib', device);
-        const desc = device.connection && device.connection.description || {};
+        const desc = device.connection?.description ?? {};
         // let Icon = DeviceIcon;
         // if (!parent && desc.link) {
         //   Icon = DeviceHubIcon;
@@ -96,14 +95,18 @@ const DeviceListItems: React.FC<InnerProps> = ({ classes }) => {
           >
             <ListItemIcon>
               <div className={classes.wrapper}>
-                <DeviceIcon color="inherit" device={device}/>
+                <DeviceIcon color="inherit" device={device} />
                 {parent
-                  ? (<Tooltip title={parent.address.toString()}>
+                  ? (
+<Tooltip title={parent.address.toString()}>
                     <LinkIcon className={classes.kind} />
-                  </Tooltip>)
-                  : device.connection && (<Tooltip title={device.connection.path}>
+</Tooltip>
+                  )
+                  : device.connection && (
+<Tooltip title={device.connection.path}>
                   <UsbIcon className={classes.kind} />
-                </Tooltip>)}
+</Tooltip>
+                  )}
               </div>
             </ListItemIcon>
             <ListItemText
@@ -119,8 +122,7 @@ const DeviceListItems: React.FC<InnerProps> = ({ classes }) => {
   );
 };
 
-export default compose<InnerProps, Props>(
+export default compose(
   hot,
   React.memo,
-  withStyles(styles),
 )(DeviceListItems);

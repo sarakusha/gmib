@@ -13,20 +13,22 @@ import { useEffect } from 'react';
 import timeid from './timeid';
 
 type Props = {
-  enterHandler?: Function,
-  cancelHandler?: Function,
+  enterHandler?: Function;
+  cancelHandler?: Function;
 };
-const noop = () => {};
-const useDefaultKeys = ({ enterHandler = noop, cancelHandler = noop }: Props) => {
+const noop = (): void => {};
+const useDefaultKeys = (
+  { enterHandler = noop, cancelHandler = noop }: Props,
+): void => {
   useEffect(
     () => {
       const scope = timeid();
       hotkeys.setScope(scope);
-      hotkeys('enter', scope, (event) => {
+      hotkeys('enter', scope, event => {
         event.preventDefault();
         enterHandler();
       });
-      hotkeys('esc', scope, (event) => {
+      hotkeys('esc', scope, event => {
         event.preventDefault();
         cancelHandler();
       });

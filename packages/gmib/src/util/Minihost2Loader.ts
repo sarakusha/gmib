@@ -1,3 +1,4 @@
+/* eslint-disable no-bitwise */
 /*
  * @license
  * Copyright (c) 2019. Nata-Info
@@ -11,11 +12,11 @@
 import MinihostLoader from './MinihostLoader';
 
 export type Minihost2Info = {
-  t?: number,
-  ver?: string,
+  t?: number;
+  ver?: string;
 };
 
-function getFraction(byte: number) {
+function getFraction(byte: number): number {
   let two = 2;
   let fraction = 0;
   let test;
@@ -56,5 +57,4 @@ export default class Minihost2Loader extends MinihostLoader<Minihost2Info> {
   isInvertV(): boolean {
     return this.device.getRawValue('vinvert') || false;
   }
-
 }

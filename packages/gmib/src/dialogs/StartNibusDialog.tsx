@@ -7,27 +7,31 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import { Dialog, DialogContent, DialogContentText, DialogTitle, Paper } from '@material-ui/core';
+import Dialog from '@material-ui/core/Dialog';
+import DialogContent from '@material-ui/core/DialogContent';
+import DialogContentText from '@material-ui/core/DialogContentText';
+import DialogTitle from '@material-ui/core/DialogTitle';
+import Paper from '@material-ui/core/Paper';
 import React from 'react';
-import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
+import { makeStyles } from '@material-ui/core/styles';
 import { hot } from 'react-hot-loader/root';
 import compose from 'recompose/compose';
 
-const styles = (theme: Theme) => createStyles({
+const useStyles = makeStyles(theme => ({
   command: {
-    padding: theme.spacing.unit * 2,
-    marginTop: theme.spacing.unit,
+    padding: theme.spacing(2),
+    marginTop: theme.spacing(1),
   },
   paperRoot: {
     backgroundColor: theme.palette.grey[900],
     fontFamily: 'Courier, Monaco, monospace',
     color: 'white',
   },
-});
-type Props = { open: boolean };
-type InnerProps = Props & WithStyles<typeof styles>;
-const StartNibusDialog: React.FC<InnerProps> = ({ classes, open }) => {
+}));
 
+type Props = { open: boolean };
+const StartNibusDialog: React.FC<Props> = ({ open }) => {
+  const classes = useStyles();
   return (
     <Dialog
       open={open}
@@ -44,15 +48,14 @@ const StartNibusDialog: React.FC<InnerProps> = ({ classes, open }) => {
           classes={{ root: classes.paperRoot }}
           elevation={1}
         >
-          > nibus start
+          &gt; nibus start
         </Paper>
       </DialogContent>
     </Dialog>
   );
 };
 
-export default compose<InnerProps, Props>(
+export default compose<Props, Props>(
   hot,
-  React.memo,
-  withStyles(styles),
+  // React.memo,
 )(StartNibusDialog);

@@ -8,8 +8,8 @@
  * the EULA file that was distributed with this source code.
  */
 
-import React, { useCallback, MouseEvent } from 'react';
-import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
+import React from 'react';
+import { makeStyles } from '@material-ui/core/styles';
 import Card from '@material-ui/core/Card';
 import CardActions from '@material-ui/core/CardActions';
 import CardContent from '@material-ui/core/CardContent';
@@ -18,7 +18,7 @@ import Typography from '@material-ui/core/Typography';
 import { hot } from 'react-hot-loader/root';
 import compose from 'recompose/compose';
 
-const styles = (theme: Theme) => createStyles({
+const useStyles = makeStyles({
   card: {
     minWidth: 275,
   },
@@ -36,14 +36,15 @@ const styles = (theme: Theme) => createStyles({
 });
 
 type Props = {
-  error: Error | string,
-  onAction?: () => void,
-  onRelease?: () => void,
+  error: Error | string;
+  onAction?: () => void;
+  onRelease?: () => void;
 };
-type InnerProps = Props & WithStyles<typeof styles>;
 
-const ErrorCard: React.FC<InnerProps> = ({ error, classes, onAction, onRelease }) => {
-  // const clickHandler = useCallback((event: MouseEvent) => onAction && onAction(), [onAction]);
+const ErrorCard: React.FC<Props> = ({
+  error, onAction, onRelease,
+}) => {
+  const classes = useStyles();
   return (
     <Card className={classes.card}>
       <CardContent>
@@ -62,8 +63,7 @@ const ErrorCard: React.FC<InnerProps> = ({ error, classes, onAction, onRelease }
   );
 };
 
-export default compose<InnerProps, Props>(
+export default compose<Props, Props>(
   hot,
   React.memo,
-  withStyles(styles),
 )(ErrorCard);

@@ -1,3 +1,5 @@
+/* eslint-disable class-methods-use-this,@typescript-eslint/no-explicit-any,
+ @typescript-eslint/no-unused-vars */
 /*
  * @license
  * Copyright (c) 2019. Nata-Info
@@ -8,16 +10,18 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { IDevice } from '@nibus/core/lib/mib';
-import { Address } from '@nibus/core';
+import {
+  IDevice, Address, NibusConnection, DeviceId, NmsDatagram,
+} from '@nibus/core';
+
 import { EventEmitter } from 'events';
-import { NibusConnection } from '@nibus/core/lib/nibus';
-import { DeviceId } from '@nibus/core/lib/mib/devices';
-import { NmsDatagram } from '@nibus/core/lib/nms';
+
+
 import timeid from '../util/timeid';
 
 export default class StubDevice extends EventEmitter implements IDevice {
   readonly address = Address.empty;
+
   readonly id: DeviceId;
 
   constructor(public connection?: NibusConnection) {
@@ -35,7 +39,8 @@ export default class StubDevice extends EventEmitter implements IDevice {
 
   execute(
     program: string,
-    args?: Record<string, any>): Promise<NmsDatagram | NmsDatagram[] | undefined> {
+    args?: Record<string, any>,
+  ): Promise<NmsDatagram | NmsDatagram[] | undefined> {
     return Promise.reject(new Error('Not realized'));
   }
 

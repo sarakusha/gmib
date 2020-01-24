@@ -7,24 +7,23 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-
-import {
-  AppBar,
-  Divider,
-  Drawer,
-  IconButton,
-  List,
-  Toolbar,
-  Tooltip,
-  Typography,
-} from '@material-ui/core';
+import AppBar from '@material-ui/core/AppBar';
+import Divider from '@material-ui/core/Divider';
+import Drawer from '@material-ui/core/Drawer';
+import IconButton from '@material-ui/core/IconButton';
+import List from '@material-ui/core/List';
+import Toolbar from '@material-ui/core/Toolbar';
+import Tooltip from '@material-ui/core/Tooltip';
+import Typography from '@material-ui/core/Typography';
 import CssBaseline from '@material-ui/core/CssBaseline';
-import { createStyles, Theme, withStyles, WithStyles } from '@material-ui/core/styles';
+import { makeStyles } from '@material-ui/core/styles';
 import ChevronLeftIcon from '@material-ui/icons/ChevronLeft';
 import SearchIcon from '@material-ui/icons/Search';
 import MenuIcon from '@material-ui/icons/Menu';
 import classNames from 'classnames';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, {
+  useCallback, useEffect, useMemo, useState,
+} from 'react';
 import { hot } from 'react-hot-loader/root';
 import compose from 'recompose/compose';
 import some from 'lodash/some';
@@ -43,7 +42,7 @@ const drawerWidth = 240;
 //   err => console.error('JSON', err.stack),
 // );
 
-const styles = (theme: Theme) => createStyles({
+const useStyles = makeStyles(theme => ({
   root: {
     display: 'flex',
   },
@@ -100,9 +99,9 @@ const styles = (theme: Theme) => createStyles({
       easing: theme.transitions.easing.sharp,
       duration: theme.transitions.duration.leavingScreen,
     }),
-    width: theme.spacing.unit * 7,
+    width: theme.spacing(7),
     [theme.breakpoints.up('sm')]: {
-      width: theme.spacing.unit * 9,
+      width: theme.spacing(9),
     },
   },
   drawerContent: {
@@ -135,14 +134,12 @@ const styles = (theme: Theme) => createStyles({
     height: 320,
   },
   h5: {
-    marginBottom: theme.spacing.unit * 2,
+    marginBottom: theme.spacing(2),
   },
-});
+}));
 
-type Props = {};
-type InnerProps = Props & WithStyles<typeof styles>;
-
-const App: React.FC<InnerProps> = ({ classes }) => {
+const App: React.FC = () => {
+  const classes = useStyles();
   const [open, setOpen] = useState(true);
   const handleDrawerOpen = useCallback(() => setOpen(true), []);
   const handleDrawerClose = useCallback(() => setOpen(false), []);
@@ -160,10 +157,12 @@ const App: React.FC<InnerProps> = ({ classes }) => {
   );
   // const { current } = useDevicesContext();
   const [toolbar] = useToolbar();
+  // eslint-disable-next-line global-require
   const version = useMemo(() => require('../../package.json').version, []);
   // console.log('RENDER APP');
   return (
     <div className={classes.root}>
+
       <CssBaseline />
       <AppBar
         position="absolute"
@@ -188,7 +187,7 @@ const App: React.FC<InnerProps> = ({ classes }) => {
               variant="h6"
               color="inherit"
               noWrap
-              inline
+              display="inline"
             >
               gMIB
             </Typography>
@@ -197,9 +196,11 @@ const App: React.FC<InnerProps> = ({ classes }) => {
               component="h1"
               variant="subtitle1"
               color="inherit"
-              inline
+              display="inline"
             >
-              {version}
+              {`${version} modules: ${process.versions.modules}
+              node: ${process.versions.node}
+              electron: ${(process.versions as any).electron}`}
             </Typography>
           </div>
           {toolbar}
@@ -243,19 +244,18 @@ const App: React.FC<InnerProps> = ({ classes }) => {
   );
 };
 
-export const pipe = <T extends any[], R>(
-  fn1: (...args: T) => R,
-  ...fns: ((a: R) => R)[]
-) => {
-  const piped = fns.reduce(
-    (prevFn, nextFn) => (value: R) => nextFn(prevFn(value)),
-    value => value,
-  );
-  return (...args: T) => piped(fn1(...args));
-};
+// export const pipe = <T extends any[], R>(
+//   fn1: (...args: T) => R,
+//   ...fns: ((a: R) => R)[]
+// ) => {
+//   const piped = fns.reduce(
+//     (prevFn, nextFn) => (value: R) => nextFn(prevFn(value)),
+//     value => value,
+//   );
+//   return (...args: T) => piped(fn1(...args));
+// };
 
-export default compose<InnerProps, Props>(
+export default compose(
   hot,
   React.memo,
-  withStyles(styles),
 )(App);

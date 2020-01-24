@@ -9,18 +9,18 @@
  */
 import { Dispatch, SetStateAction } from 'react';
 
-export function tuplify<T extends any[]>(...args: T) {
+export function tuplify<T extends unknown[]>(...args: T): T {
   return args;
 }
 
-export const delay = (seconds: number) =>
-  new Promise(resolve => setTimeout(resolve, seconds * 1000));
+export const delay = (
+  seconds: number,
+): Promise<void> => new Promise(resolve => setTimeout(resolve, seconds * 1000));
 
 type SetterType<T> = Dispatch<SetStateAction<T>>;
 type Callback<T> = (state: T) => void;
 
-export const getState = <T>(setter: SetterType<T>) =>
-  (cb: Callback<T>) => setter((state) => {
-    cb(state);
-    return state;
-  });
+export const getState = <T>(setter: SetterType<T>) => (cb: Callback<T>) => setter(state => {
+  cb(state);
+  return state;
+});

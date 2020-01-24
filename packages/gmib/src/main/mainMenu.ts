@@ -8,14 +8,16 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { app, Menu, MenuItemConstructorOptions, shell } from 'electron';
+import {
+  app, Menu, MenuItemConstructorOptions, shell,
+} from 'electron';
 
 const template: (MenuItemConstructorOptions)[] = [
   {
-    role: 'viewMenu' as any,
+    role: 'viewMenu',
   },
   {
-    role: 'windowMenu' as any,
+    role: 'windowMenu',
   },
   {
     role: 'help',

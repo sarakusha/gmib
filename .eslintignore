@@ -1,0 +1,6 @@
+.next/
+bak/
+node_modules/
+lib/
+next.config.js
+converter.js

@@ -18,15 +18,33 @@ import React, {
   useState,
 } from 'react';
 // import { getState } from '../util/helpers';
+import {
+  NibusConnection, CreateDevice, IDevice, devices as coreDevices,
+} from '@nibus/core';
 import { useSessionContext } from './SessionProvider';
-import { NibusConnection } from '@nibus/core/lib/nibus';
 import StubDevice from '../components/StubDevice';
+
+type Devices = {
+  createDevice: CreateDevice;
+  setCurrent: (device: DeviceId) => void;
+  readonly current: DeviceId;
+  getProto: (device: DeviceId) => object;
+  devices: ReadonlyArray<IDevice>;
+};
+
+const stubDeviceAPI: Devices = {
+  createDevice: coreDevices.create.bind(coreDevices),
+  setCurrent: () => {},
+  current: null,
+  getProto: () => ({}),
+  devices: [],
+};
 
 export type DeviceId = string | null;
 const emptyProto = Object.freeze({});
-const useDevices = () => {
+const useDevices = (): Devices => {
   const { devices, session } = useSessionContext();
-  const createDevice = useCallback(devices.create.bind(devices), []);
+  const createDevice = useCallback<CreateDevice>(devices.create.bind(devices), []);
   type DeviceType = ReturnType<typeof createDevice>;
   const [devs, setDevices] = useState(devices.get());
   const [current, setCurrent] = useState<DeviceId>(null);
@@ -34,27 +52,27 @@ const useDevices = () => {
   const getProto = useCallback(
     (id: DeviceId) => {
       if (!id) return emptyProto;
-      const device = devices.get().find(device => device.id === id);
+      const device = devices.get().find(item => item.id === id);
       return device ? Reflect.getPrototypeOf(device) : emptyProto;
     },
     [devices],
   );
   useEffect(
     () => {
-      const updateHandler = () => setDevices(devices.get().concat(stubDevices.current));
-      const disconnectHandler = (device: DeviceType) => {
-        setCurrent((current) => {
-          const result = device.id === current ? null : current;
+      const updateHandler = (): void => setDevices(devices.get().concat(stubDevices.current));
+      const disconnectHandler = (device: DeviceType): void => {
+        setCurrent(cur => {
+          const result = device.id === cur ? null : cur;
           device.release();
           return result;
         });
       };
-      const pureConnectionHandler = (connection: NibusConnection) => {
+      const pureConnectionHandler = (connection: NibusConnection): void => {
         if (devices.get().findIndex(dev => dev && dev.connection === connection) !== -1) return;
         stubDevices.current.push(new StubDevice(connection));
         updateHandler();
       };
-      const removeStubHandler = (connection: NibusConnection) => {
+      const removeStubHandler = (connection: NibusConnection): void => {
         const index = stubDevices.current.findIndex(dev => dev.connection === connection);
         if (index !== -1) {
           const [stub] = stubDevices.current.splice(index, 1);
@@ -62,7 +80,7 @@ const useDevices = () => {
           updateHandler();
         }
       };
-      const closeHandler = () => {
+      const closeHandler = (): void => {
         stubDevices.current.length = 0;
         updateHandler();
       };
@@ -101,12 +119,14 @@ const useDevices = () => {
       getProto,
       devices: devs,
     }),
-    [current, devs],
+    [createDevice, current, devs, getProto],
   );
 };
-const DevicesContext = createContext<ReturnType<typeof useDevices>>(undefined as any);
-export const useDevicesContext = () => useContext(DevicesContext);
-const DevicesProvider: React.FC<{}> = ({ children }) => {
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const DevicesContext = createContext<Devices>(stubDeviceAPI);
+export const useDevicesContext = (): Devices => useContext(DevicesContext);
+const DevicesProvider: React.FC = ({ children }) => {
   const context = useDevices();
   // const value = useMemo(() => context, [context.current, context.devices]);
   return (

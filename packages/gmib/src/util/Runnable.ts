@@ -29,22 +29,25 @@ declare interface Runnable<T, R = void> {
 
 abstract class Runnable<T, R = void> extends EventEmitter {
   protected isCanceled = false;
-  protected isRunning = false;
-  private cancelPromise = Promise.resolve();
-  private cancelResolve = () => {};
 
-  cancel() {
+  protected isRunning = false;
+
+  private cancelPromise = Promise.resolve();
+
+  private cancelResolve = (): void => {};
+
+  cancel(): Promise<void> {
     if (!this.isRunning) return Promise.resolve();
     this.isCanceled = true;
     return this.cancelPromise;
   }
 
-  async run(options: T) {
+  async run(options: T): Promise<R> {
     if (this.isRunning) {
       await this.cancel();
     }
     this.isCanceled = false;
-    this.cancelPromise = new Promise(resolve => this.cancelResolve = resolve);
+    this.cancelPromise = new Promise(resolve => { this.cancelResolve = resolve; });
     this.isRunning = true;
     this.emit('start');
     try {
