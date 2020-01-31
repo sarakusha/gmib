@@ -1,6 +1,6 @@
 {
   "name": "@nibus/gmib",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Nata-Info gmib tool",
   "keywords": [
     "nata-info",
@@ -44,8 +44,8 @@
     "@hot-loader/react-dom": "^16.11.0",
     "@material-ui/core": "^4.8.3",
     "@material-ui/icons": "^4.5.1",
-    "@nibus/cli": "^2",
-    "@nibus/core": "^2",
+    "@nibus/cli": "^2.0.1",
+    "@nibus/core": "^2.0.1",
     "@serialport/bindings": "^8.0.6",
     "@types/jest": "^24.9.0",
     "classnames": "^2.2.6",
@@ -99,7 +99,6 @@
     "webpack-build-notifier": "^2.0.0",
     "webpack-bundle-analyzer": "^3.3.2"
   },
-  "private": true,
   "workspaces": {
     "nohoist": [
       "usb-detection",
