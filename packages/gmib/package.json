@@ -21,7 +21,7 @@
   },
   "scripts": {
     "rebuild": "yarn run rebuild:usb-detction && yarn run rebuild:serialport",
-    "rebuild:serialport": "electron-rebuild -f --module-dir node_modules/@serialport/bindings",
+    "rebuild:serialport": "electron-rebuild -f --module-dir node_modules/@serialport/bindings --arch win32",
     "rebuild:usb-detction": "electron-rebuild -f -w usb-detection",
     "dev": "electron-webpack dev",
     "compile": "cross-env NODE_ENV=production electron-webpack",
@@ -107,7 +107,7 @@
     ]
   },
   "build": {
-    "npmRebuild": false,
+    "npmRebuild": true,
     "appId": "ru.nata-info.gmib",
     "copyright": "Copyright © Nata-Info, 2019",
     "productName": "gmib",
