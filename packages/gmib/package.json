@@ -2,6 +2,7 @@
   "name": "@nibus/gmib",
   "version": "2.0.1",
   "description": "Nata-Info gmib tool",
+  "private": true,
   "keywords": [
     "nata-info",
     "nibus",
@@ -21,7 +22,7 @@
   },
   "scripts": {
     "rebuild": "yarn run rebuild:usb-detction && yarn run rebuild:serialport",
-    "rebuild:serialport": "electron-rebuild -f --module-dir node_modules/@serialport/bindings --arch win32",
+    "rebuild:serialport": "electron-rebuild -f --module-dir node_modules/@serialport/bindings",
     "rebuild:usb-detction": "electron-rebuild -f -w usb-detection",
     "dev": "electron-webpack dev",
     "compile": "cross-env NODE_ENV=production electron-webpack",
@@ -31,7 +32,9 @@
     "dist:linux": "yarn dist -l",
     "dist:win": "yarn dist -w --x64",
     "publish": "yarn compile && yarn release",
-    "release": "env-cmd -f ./.env electron-builder -lwm --x64 -c.mac.identity=null",
+    "release:mac": "env-cmd -f ./.env electron-builder -m --x64 -c.mac.identity=null",
+    "release:linux": "env-cmd -f ./.env electron-builder -l --x64 -c.mac.identity=null",
+    "release:win": "env-cmd -f ./.env electron-builder -w --x64 -c.mac.identity=null",
     "type": "tsc --project tsconfig.json --noEmit",
     "showMainConfig": "node show-config.js main > maincfg",
     "showRendererConfig": "node show-config.js renderer > ./rendercfg",
@@ -106,7 +109,7 @@
     ]
   },
   "build": {
-    "npmRebuild": true,
+    "npmRebuild": false,
     "appId": "ru.nata-info.gmib",
     "copyright": "Copyright © Nata-Info, 2019",
     "productName": "gmib",
@@ -141,5 +144,5 @@
       }
     ]
   },
-  "gitHead": "522054682a29e66b40cfa80e765780ff654be82b"
+  "gitHead": "bff51a5d48e72aa5cb4acefd176d0026346fe532"
 }
