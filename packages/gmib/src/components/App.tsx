@@ -198,9 +198,7 @@ const App: React.FC = () => {
               color="inherit"
               display="inline"
             >
-              {`${version} modules: ${process.versions.modules}
-              node: ${process.versions.node}
-              electron: ${(process.versions as any).electron}`}
+              {`${version} modules: ${process.versions.modules}`}
             </Typography>
           </div>
           {toolbar}

@@ -2,8 +2,8 @@
 <project version="4">
   <component name="WebServers">
     <option name="servers">
-      <webServer id="b13fb38e-eb13-4043-a3e6-cf40fbbd8144" name="GIGABYTE" url="http://192.168.23.30:3000">
-        <fileTransfer host="192.168.23.23" port="22" privateKey="$USER_HOME$/.ssh/id_rsa" rootFolder="/home/user" accessType="SFTP" keyPair="true">
+      <webServer id="b13fb38e-eb13-4043-a3e6-cf40fbbd8144" name="GIGABYTE" url="http://192.168.23.27:3000">
+        <fileTransfer host="192.168.23.27" port="22" privateKey="$USER_HOME$/.ssh/id_rsa" rootFolder="/home/user" accessType="SFTP" keyPair="true">
           <advancedOptions>
             <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
           </advancedOptions>

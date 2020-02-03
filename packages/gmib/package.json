@@ -1,7 +1,8 @@
 {
   "name": "@nibus/gmib",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Nata-Info gmib tool",
+  "private": true,
   "keywords": [
     "nata-info",
     "nibus",
@@ -31,7 +32,9 @@
     "dist:linux": "yarn dist -l",
     "dist:win": "yarn dist -w --x64",
     "publish": "yarn compile && yarn release",
-    "release": "env-cmd -f ./.env electron-builder -lwm --x64 -c.mac.identity=null",
+    "release:mac": "env-cmd -f ./.env electron-builder -m --x64 -c.mac.identity=null",
+    "release:linux": "env-cmd -f ./.env electron-builder -l --x64 -c.mac.identity=null",
+    "release:win": "env-cmd -f ./.env electron-builder -w --x64 -c.mac.identity=null",
     "type": "tsc --project tsconfig.json --noEmit",
     "showMainConfig": "node show-config.js main > maincfg",
     "showRendererConfig": "node show-config.js renderer > ./rendercfg",
@@ -44,8 +47,8 @@
     "@hot-loader/react-dom": "^16.11.0",
     "@material-ui/core": "^4.8.3",
     "@material-ui/icons": "^4.5.1",
-    "@nibus/cli": "^2",
-    "@nibus/core": "^2",
+    "@nibus/cli": "^2.0.1",
+    "@nibus/core": "^2.0.1",
     "@serialport/bindings": "^8.0.6",
     "@types/jest": "^24.9.0",
     "classnames": "^2.2.6",
@@ -99,7 +102,6 @@
     "webpack-build-notifier": "^2.0.0",
     "webpack-bundle-analyzer": "^3.3.2"
   },
-  "private": true,
   "workspaces": {
     "nohoist": [
       "usb-detection",
@@ -142,5 +144,5 @@
       }
     ]
   },
-  "gitHead": "522054682a29e66b40cfa80e765780ff654be82b"
+  "gitHead": "bff51a5d48e72aa5cb4acefd176d0026346fe532"
 }
