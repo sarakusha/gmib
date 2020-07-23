@@ -51,29 +51,37 @@ type Action = {
 
 type State = Record<string, boolean>;
 
-const reducer = (state: State, { name, value }: Action): State => ({
-  ...state,
-  [name]: value,
-});
+const reducer = (state: State, { name, value }: Action): State => {
+  if (name === '$all$') {
+    return Object.keys(state).reduce<State>((result, key) => ({ ...result, [key]: value }), {});
+  }
+  return {
+    ...state,
+    [name]: value,
+  };
+};
 
 const SaveDialog: React.FC<Props> = ({
   device, open, close,
 }) => {
   const classes = useStyles();
-  const names = useMemo(
-    () => (!device ? [] : Object.entries<string[]>(Reflect.getMetadata('map', device) || {})
-      .sort((a, b) => Number(a[0]) - Number(b[0]))
-      .map(([id, key]) => tuplify(
-        Number(id),
+  const [names, initial] = useMemo(
+    () => {
+      const keys = (!device ? [] : Object.entries<string[]>(Reflect.getMetadata('map', device) || {})
+        .sort((a, b) => Number(a[0]) - Number(b[0]))
+        .map(([id, key]) => tuplify(
+          Number(id),
           key[0] as string,
           Reflect.getMetadata('displayName', device, key[0]) as string,
-      ))
-      .filter(([, name]) => Reflect.getMetadata('isReadable', device, name)
-        && Reflect.getMetadata('isWritable', device, name))),
+        ))
+        .filter(([, name]) => Reflect.getMetadata('isReadable', device, name)
+          && Reflect.getMetadata('isWritable', device, name)));
+      return [keys, keys.reduce((res, [, name]) => ({ ...res, [name]: false }), {})];
+    },
     [device],
   );
 
-  const [state, dispatch] = useReducer(reducer, {});
+  const [state, dispatch] = useReducer(reducer, initial);
   const changeHandler = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       dispatch({
@@ -110,6 +118,7 @@ const SaveDialog: React.FC<Props> = ({
   );
 
   const hasSelected = some(Object.values(state), Boolean);
+  console.log(state, Object.values(state));
 
   return (
     <Dialog
@@ -120,6 +129,17 @@ const SaveDialog: React.FC<Props> = ({
       <DialogTitle id="select-properties-title">Сохранить значения</DialogTitle>
       <DialogContent className={classes.root}>
         <FormFieldSet className={classes.formControl} legend="Укажите свойства для сохранения">
+          <FormControlLabel
+            key="all"
+            control={(
+              <Checkbox
+                checked={names.reduce((acc, [, name]) => acc && state[name], true)}
+                value="$all$"
+                onChange={changeHandler}
+              />
+            )}
+            label="Все свойства"
+          />
           {names.map(([id, name, displayName]) => (
             <FormControlLabel
               key={id}
@@ -136,9 +156,11 @@ const SaveDialog: React.FC<Props> = ({
         </FormFieldSet>
       </DialogContent>
       <DialogActions>
+{/*
         <Button id="all" color="primary" type="submit" onClick={showDialog}>
           Сохранить все
         </Button>
+*/}
         <Button color="primary" type="submit" onClick={showDialog} disabled={!hasSelected}>
           Сохранить
         </Button>

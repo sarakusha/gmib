@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always" serverName="GIGABYTE" preserveTimestamps="false">
+  <component name="PublishConfigData" serverName="levakov" preserveTimestamps="false">
     <serverData>
       <paths name="GIGABYTE">
         <serverdata>
@@ -41,6 +41,21 @@
           </excludedPaths>
         </serverdata>
       </paths>
+      <paths name="pertab">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/src/mcd" local="$PROJECT_DIR$/../mcd" web="/" />
+          </mappings>
+          <excludedPaths>
+            <excludedPath local="true" path="$PROJECT_DIR$/../mcd/node_modules" />
+            <excludedPath local="true" path="$PROJECT_DIR$/../mcd/packages/common/node_modules" />
+            <excludedPath local="true" path="$PROJECT_DIR$/../mcd/packages/ggd/node_modules" />
+            <excludedPath local="true" path="$PROJECT_DIR$/../mcd/packages/serial/node_modules" />
+            <excludedPath local="true" path="$PROJECT_DIR$/../mcd/packages/serial-server/node_modules" />
+            <excludedPath local="true" path="$PROJECT_DIR$/../mcd/bak" />
+          </excludedPaths>
+        </serverdata>
+      </paths>
       <paths name="sarakusha">
         <serverdata>
           <mappings>
@@ -59,6 +74,5 @@
         </serverdata>
       </paths>
     </serverData>
-    <option name="myAutoUpload" value="ALWAYS" />
   </component>
 </project>
