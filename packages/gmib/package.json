@@ -1,6 +1,6 @@
 {
   "name": "@nibus/gmib",
-  "version": "2.0.2",
+  "version": "2.0.5",
   "description": "Nata-Info gmib tool",
   "private": true,
   "keywords": [
@@ -32,9 +32,9 @@
     "dist:linux": "yarn dist -l",
     "dist:win": "yarn dist -w --x64",
     "publish": "yarn compile && yarn release",
-    "release:mac": "env-cmd -f ./.env electron-builder -m --x64 -c.mac.identity=null",
-    "release:linux": "env-cmd -f ./.env electron-builder -l --x64 -c.mac.identity=null",
-    "release:win": "env-cmd -f ./.env electron-builder -w --x64 -c.mac.identity=null",
+    "release:mac": "env-cmd -f ./.env electron-builder -p always -m --x64 -c.mac.identity=null",
+    "release:linux": "env-cmd -f ./.env electron-builder -p always -l --x64 -c.mac.identity=null",
+    "release:win": "env-cmd -f ./.env electron-builder -p always -w --x64 -c.mac.identity=null",
     "type": "tsc --project tsconfig.json --noEmit",
     "showMainConfig": "node show-config.js main > maincfg",
     "showRendererConfig": "node show-config.js renderer > ./rendercfg",

@@ -198,7 +198,7 @@ const App: React.FC = () => {
               color="inherit"
               display="inline"
             >
-              {`${version} modules: ${process.versions.modules}`}
+              {`${version} [${process.versions.modules}]`}
             </Typography>
           </div>
           {toolbar}

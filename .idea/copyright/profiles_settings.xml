@@ -1,3 +1,7 @@
 <component name="CopyrightManager">
-  <settings default="Nata-Info" />
+  <settings default="Nata-Info">
+    <module2copyright>
+      <element module="Project Files" copyright="Nata-Info" />
+    </module2copyright>
+  </settings>
 </component>
