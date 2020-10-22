@@ -1,17 +1,15 @@
 /*
  * @license
- * Copyright (c) 2019. Nata-Info
+ * Copyright (c) 2020. Nata-Info
  * @author Andrei Sarakeev <avs@nata-info.ru>
  *
- * This file is part of the "@nata" project.
+ * This file is part of the "@nibus" project.
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
 // import warning from 'warning';
 import { makeStyles } from '@material-ui/core/styles';
 import React, { useEffect, useState } from 'react';
-import { hot } from 'react-hot-loader/root';
-import compose from 'recompose/compose';
 import { useDevicesContext } from '../providers/DevicesProvier';
 import { useTests } from '../providers/TestProvider';
 import DeviceTabs from './DeviceTabs';
@@ -30,18 +28,15 @@ const useStyles = makeStyles({
 
 const Tabs: React.FC = () => {
   const classes = useStyles();
-  const [
-    devChildren, setDevChildren,
-  ] = useState<React.ReactElement<ChildProps, typeof TabContainer>[]>([]);
+  const [devChildren, setDevChildren] = useState<
+    React.ReactElement<ChildProps, typeof TabContainer>[]
+  >([]);
   const { current: currentDevice, devices } = useDevicesContext();
   if (currentDevice) {
-    let curChild = devChildren.find(({ props }) => props.value === currentDevice);
+    let curChild = devChildren.find(({ props }) => props.id === currentDevice);
     if (!curChild) {
       curChild = (
-        <TabContainer
-          key={currentDevice}
-          value={currentDevice}
-        >
+        <TabContainer key={currentDevice} id={currentDevice}>
           <DeviceTabs id={currentDevice} />
         </TabContainer>
       );
@@ -53,30 +48,25 @@ const Tabs: React.FC = () => {
   /**
    * Показываем только актуальный список
    */
-  useEffect(
-    () => {
-      setDevChildren(children => {
-        const newChildren = children
-          .filter(({ props }) => devices.findIndex(device => device.id === props.value));
-        return newChildren.length === children.length ? children : newChildren;
-      });
-    },
-    [devices],
-  );
+  useEffect(() => {
+    setDevChildren(children => {
+      const newChildren = children.filter(({ props }) =>
+        devices.findIndex(device => device.id === props.id)
+      );
+      return newChildren.length === children.length ? children : newChildren;
+    });
+  }, [devices]);
 
   return (
     <div className={classes.root}>
-      {devChildren.map(
-        child => React.cloneElement(child, { selected: currentDevice === child.props.value }),
+      {devChildren.map(child =>
+        React.cloneElement(child, { selected: currentDevice === child.props.id })
       )}
-      <TabContainer value="test" selected={!!currentTest}>
+      <TabContainer id="test" selected={!!currentTest}>
         <TestParams />
       </TabContainer>
     </div>
   );
 };
 
-export default compose(
-  hot,
-  React.memo,
-)(Tabs);
+export default Tabs;

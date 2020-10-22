@@ -1,32 +1,32 @@
 /*
  * @license
- * Copyright (c) 2019. Nata-Info
+ * Copyright (c) 2020. Nata-Info
  * @author Andrei Sarakeev <avs@nata-info.ru>
  *
- * This file is part of the "@nata" project.
+ * This file is part of the "@nibus" project.
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
 
-import Tooltip from '@material-ui/core/Tooltip';
+import Box from '@material-ui/core/Box';
 import ListItem from '@material-ui/core/ListItem';
 import ListItemIcon from '@material-ui/core/ListItemIcon';
 import ListItemText from '@material-ui/core/ListItemText';
-import ListSubheader from '@material-ui/core/ListSubheader';
-// import DeviceHubIcon from '@material-ui/icons/DeviceHub';
-// import DeviceIcon from '@material-ui/icons/Memory';
-// import TvIcon from '@material-ui/icons/Tv';
-import UsbIcon from '@material-ui/icons/Usb';
-import LinkIcon from '@material-ui/icons/Link';
-import { DeviceId } from '@nibus/core';
-import React, { useCallback, useEffect, useState } from 'react';
-import { hot } from 'react-hot-loader/root';
 import { makeStyles } from '@material-ui/core/styles';
-import compose from 'recompose/compose';
+import Tooltip from '@material-ui/core/Tooltip';
+import LinkIcon from '@material-ui/icons/Link';
+import UsbIcon from '@material-ui/icons/Usb';
+import { DeviceId } from '@nibus/core';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import Typography from '@material-ui/core/Typography';
+import IconButton from '@material-ui/core/IconButton';
+import ReloadIcon from '@material-ui/icons/Refresh';
+import { ipcRenderer } from 'electron';
 
 import { useDevicesContext } from '../providers/DevicesProvier';
 import { useSessionContext } from '../providers/SessionProvider';
 import useCurrent from '../providers/useCurrent';
+import AccordionList, { useAccordion } from './AccordionList';
 import DeviceIcon from './DeviceIcon';
 
 const useStyles = makeStyles(theme => ({
@@ -41,39 +41,50 @@ const useStyles = makeStyles(theme => ({
     right: -16,
     fontSize: '1em',
   },
-  header: {
-    backgroundColor: theme.palette.background.paper,
-    borderBottom: `1px solid ${theme.palette.divider}`,
-    backgroundClip: 'padding-box',
-  },
 }));
 
-const DeviceListItems: React.FC = () => {
+const reloadHandler: React.MouseEventHandler<HTMLButtonElement> = e => {
+  ipcRenderer.send('reloadNibus');
+  e.stopPropagation();
+};
+
+const name = 'devices';
+
+const Devices: React.FC = () => {
   const classes = useStyles();
   const { devices, current } = useDevicesContext();
   const setCurrent = useCurrent('device');
   const devs = useSessionContext().devices;
+  const [, setAccordion] = useAccordion();
   const [, setUpdate] = useState(false);
-  useEffect(
-    () => {
-      const sernoListener = (): void => setUpdate(prev => !prev);
-      devs.on('serno', sernoListener);
-      return () => {
-        devs.off('serno', sernoListener);
-      };
-    },
-    [devs, setUpdate],
-  );
+  useEffect(() => {
+    const sernoListener = (): void => setUpdate(prev => !prev);
+    devs.on('serno', sernoListener);
+    return () => {
+      devs.off('serno', sernoListener);
+    };
+  }, [devs]);
+  useEffect(() => setAccordion(name), [devices, setAccordion]);
   const clickHandler = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
-      const id = e.currentTarget.dataset.id as DeviceId || null;
+      const id = (e.currentTarget.dataset.id as DeviceId) || null;
       setCurrent(id);
     },
-    [setCurrent],
+    [setCurrent]
+  );
+  const title = useMemo(
+    () => (
+      <Box display="flex" alignItems="center" justifyContent="space-between" width={1}>
+        <Typography>Устройства</Typography>
+        <IconButton size="small" title="Повторить поиск" onClick={reloadHandler}>
+          <ReloadIcon />
+        </IconButton>
+      </Box>
+    ),
+    []
   );
   return (
-    <>
-      <ListSubheader className={classes.header} inset>Устройства</ListSubheader>
+    <AccordionList name={name} title={title}>
       {devices.map(device => {
         const parent = Reflect.getMetadata('parent', device);
         // const mib = Reflect.getMetadata('mib', device);
@@ -87,7 +98,7 @@ const DeviceListItems: React.FC = () => {
         return (
           <ListItem
             button
-            key={device.id}
+            key={device.connection?.path ?? device.id}
             onClick={clickHandler}
             data-id={device.id}
             selected={device.id === current}
@@ -96,33 +107,28 @@ const DeviceListItems: React.FC = () => {
             <ListItemIcon>
               <div className={classes.wrapper}>
                 <DeviceIcon color="inherit" device={device} />
-                {parent
-                  ? (
-<Tooltip title={parent.address.toString()}>
+                {parent ? (
+                  <Tooltip title={parent.address.toString()}>
                     <LinkIcon className={classes.kind} />
-</Tooltip>
+                  </Tooltip>
+                ) : (
+                  device.connection && (
+                    <Tooltip title={device.connection.path}>
+                      <UsbIcon className={classes.kind} />
+                    </Tooltip>
                   )
-                  : device.connection && (
-<Tooltip title={device.connection.path}>
-                  <UsbIcon className={classes.kind} />
-</Tooltip>
-                  )}
+                )}
               </div>
             </ListItemIcon>
             <ListItemText
               primary={device.address.isEmpty ? desc.category : device.address.toString()}
-              secondary={device.address.isEmpty
-                ? device.id
-                : Reflect.getMetadata('mib', device)}
+              secondary={device.address.isEmpty ? device.id : Reflect.getMetadata('mib', device)}
             />
           </ListItem>
         );
       })}
-    </>
+    </AccordionList>
   );
 };
 
-export default compose(
-  hot,
-  React.memo,
-)(DeviceListItems);
+export default Devices;

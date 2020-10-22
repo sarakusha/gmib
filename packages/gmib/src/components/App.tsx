@@ -1,9 +1,9 @@
 /*
  * @license
- * Copyright (c) 2019. Nata-Info
+ * Copyright (c) 2020. Nata-Info
  * @author Andrei Sarakeev <avs@nata-info.ru>
  *
- * This file is part of the "@nata" project.
+ * This file is part of the "@nibus" project.
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
@@ -11,7 +11,6 @@ import AppBar from '@material-ui/core/AppBar';
 import Divider from '@material-ui/core/Divider';
 import Drawer from '@material-ui/core/Drawer';
 import IconButton from '@material-ui/core/IconButton';
-import List from '@material-ui/core/List';
 import Toolbar from '@material-ui/core/Toolbar';
 import Tooltip from '@material-ui/core/Tooltip';
 import Typography from '@material-ui/core/Typography';
@@ -21,13 +20,10 @@ import ChevronLeftIcon from '@material-ui/icons/ChevronLeft';
 import SearchIcon from '@material-ui/icons/Search';
 import MenuIcon from '@material-ui/icons/Menu';
 import classNames from 'classnames';
-import React, {
-  useCallback, useEffect, useMemo, useState,
-} from 'react';
-import { hot } from 'react-hot-loader/root';
-import compose from 'recompose/compose';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import some from 'lodash/some';
-import DeviceListItems from './DeviceListItems';
+import { AccordionProvider } from './AccordionList';
+import Devices from './Devices';
 import { useDevicesContext } from '../providers/DevicesProvier';
 import GmibTabs from './GmibTabs';
 import SearchDialog from '../dialogs/SearchDialog';
@@ -35,7 +31,6 @@ import { useToolbar } from '../providers/ToolbarProvider';
 import TestItems from './TestItems';
 
 const drawerWidth = 240;
-// @ts-ignore
 // const packagePromise = import('../../package.json');
 // package  Promise.then(
 //   json => console.log('JSON', json && json.version),
@@ -45,6 +40,7 @@ const drawerWidth = 240;
 const useStyles = makeStyles(theme => ({
   root: {
     display: 'flex',
+    width: '100%',
   },
   toolbar: {
     paddingRight: 24, // keep right padding when drawer closed
@@ -119,6 +115,7 @@ const useStyles = makeStyles(theme => ({
     overflow: 'hidden',
     display: 'flex',
     flexDirection: 'column',
+    width: '100%',
     // position: 'relative',
   },
   gmib: {
@@ -148,21 +145,20 @@ const App: React.FC = () => {
   const searchClose = useCallback(() => setSearchOpen(false), [setSearchOpen]);
   const [link, setLink] = useState(false);
   const { devices } = useDevicesContext();
-  useEffect(
-    () => {
-      setLink(some(devices, device => device.connection
-        && device.connection.description && device.connection.description.link));
-    },
-    [devices, setLink],
-  );
-  // const { current } = useDevicesContext();
+  useEffect(() => {
+    setLink(
+      some(
+        devices,
+        device =>
+          device.connection && device.connection.description && device.connection.description.link
+      )
+    );
+  }, [devices, setLink]);
   const [toolbar] = useToolbar();
-  // eslint-disable-next-line global-require
+  // eslint-disable-next-line global-require,@typescript-eslint/no-var-requires
   const version = useMemo(() => require('../../package.json').version, []);
-  // console.log('RENDER APP');
   return (
     <div className={classes.root}>
-
       <CssBaseline />
       <AppBar
         position="absolute"
@@ -174,30 +170,16 @@ const App: React.FC = () => {
             color="inherit"
             aria-label="Open drawer"
             onClick={handleDrawerOpen}
-            className={classNames(
-              classes.menuButton,
-              open && classes.menuButtonHidden,
-            )}
+            className={classNames(classes.menuButton, open && classes.menuButtonHidden)}
           >
             <MenuIcon />
           </IconButton>
           <div className={classes.title}>
-            <Typography
-              component="h1"
-              variant="h6"
-              color="inherit"
-              noWrap
-              display="inline"
-            >
+            <Typography component="h1" variant="h6" color="inherit" noWrap display="inline">
               gMIB
             </Typography>
             &nbsp;
-            <Typography
-              component="h1"
-              variant="subtitle1"
-              color="inherit"
-              display="inline"
-            >
+            <Typography component="h1" variant="subtitle1" color="inherit" display="inline">
               {`${version} [${process.versions.modules}]`}
             </Typography>
           </div>
@@ -225,10 +207,10 @@ const App: React.FC = () => {
         </div>
         <Divider />
         <div className={classes.drawerContent}>
-          <List><DeviceListItems /></List>
-          <Divider />
-          <List><TestItems /></List>
-          <Divider />
+          <AccordionProvider>
+            <Devices />
+            <TestItems />
+          </AccordionProvider>
         </div>
       </Drawer>
       <main className={classes.content}>
@@ -253,7 +235,5 @@ const App: React.FC = () => {
 //   return (...args: T) => piped(fn1(...args));
 // };
 
-export default compose(
-  hot,
-  React.memo,
-)(App);
+// export default compose(hot, React.memo)(App);
+export default App;

@@ -1,9 +1,9 @@
 /*
  * @license
- * Copyright (c) 2019. Nata-Info
+ * Copyright (c) 2020. Nata-Info
  * @author Andrei Sarakeev <avs@nata-info.ru>
  *
- * This file is part of the "@nata" project.
+ * This file is part of the "@nibus" project.
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
@@ -13,8 +13,6 @@ import Input from '@material-ui/core/Input';
 import InputLabel from '@material-ui/core/InputLabel';
 import React, { useCallback } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
-import { hot } from 'react-hot-loader/root';
-import compose from 'recompose/compose';
 import produce from 'immer';
 import { TestQuery, useTests } from '../providers/TestProvider';
 
@@ -43,9 +41,7 @@ type ParamProps = {
   onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
 };
 
-const Param: React.FC<ParamProps> = ({
-  id, name, value, onChange, min = 2,
-}) => {
+const Param: React.FC<ParamProps> = ({ id, name, value, onChange, min = 2 }) => {
   const classes = useStyles();
   return (
     <FormControl className={classes.formControl}>
@@ -74,27 +70,19 @@ const TestParams: React.FC = () => {
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const name = event.currentTarget.id as Names;
       const value = Number(event.currentTarget.value);
-      setQuery(produce(prev => {
-        prev[name] = value;
-      }));
+      setQuery(
+        produce(prev => {
+          prev[name] = value;
+        })
+      );
     },
-    [setQuery],
+    [setQuery]
   );
   return (
     <div className={classes.root}>
       <div className={classes.params}>
-        <Param
-          id="width"
-          name="Ширина экрана"
-          value={query.width}
-          onChange={changeHandler}
-        />
-        <Param
-          id="height"
-          name="Высота экрана"
-          value={query.height}
-          onChange={changeHandler}
-        />
+        <Param id="width" name="Ширина экрана" value={query.width} onChange={changeHandler} />
+        <Param id="height" name="Высота экрана" value={query.height} onChange={changeHandler} />
         <Param
           id="moduleHres"
           name="Ширина модуля"
@@ -107,26 +95,11 @@ const TestParams: React.FC = () => {
           value={query.moduleVres}
           onChange={changeHandler}
         />
-        <Param
-          id="x"
-          name="Отступ слева"
-          value={query.x}
-          onChange={changeHandler}
-          min={-65000}
-        />
-        <Param
-          id="y"
-          name="Отступ сверху"
-          value={query.y}
-          onChange={changeHandler}
-          min={-65000}
-        />
+        <Param id="x" name="Отступ слева" value={query.x} onChange={changeHandler} min={-65000} />
+        <Param id="y" name="Отступ сверху" value={query.y} onChange={changeHandler} min={-65000} />
       </div>
     </div>
   );
 };
 
-export default compose(
-  hot,
-  React.memo,
-)(TestParams);
+export default TestParams;

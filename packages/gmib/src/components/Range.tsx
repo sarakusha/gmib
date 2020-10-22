@@ -1,26 +1,24 @@
 /*
  * @license
- * Copyright (c) 2019. Nata-Info
+ * Copyright (c) 2020. Nata-Info
  * @author Andrei Sarakeev <avs@nata-info.ru>
  *
- * This file is part of the "@nata" project.
+ * This file is part of the "@nibus" project.
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import React, {
-  CSSProperties,
-  ReactNode, useCallback, useMemo, useState,
-} from 'react';
+// eslint-disable-next-line no-use-before-define
+import React, { FC, CSSProperties, useCallback, useMemo, useState } from 'react';
 import { makeStyles, useTheme } from '@material-ui/core/styles';
-import { hot } from 'react-hot-loader/root';
-import compose from 'recompose/compose';
 import 'rc-slider/assets/index.css';
-import { Range as RCRange, Handle, HandleProps } from 'rc-slider';
+import { Range as RCRange, Handle } from 'rc-slider';
+import { RangeProps } from 'rc-slider/lib/Range';
+
 import Tooltip, { TooltipProps } from '@material-ui/core/Tooltip';
 import classNames from 'classnames';
 
 const arrowGenerator = (
-  color: string,
+  color: string
 ): Record<string, CSSProperties | Record<string, CSSProperties>> => ({
   '&[x-placement*="bottom"] $arrow': {
     top: 0,
@@ -68,13 +66,11 @@ const arrowGenerator = (
   },
 });
 
-type TooltipHandleProps = {
-  value: number;
-  dragging: boolean;
-  index: number;
-} & HandleProps;
+// type TooltipHandleProps = RangeProps['handle']['props'];
 
-type TooltipHandleCallback = (props: TooltipHandleProps) => ReactNode;
+type TooltipHandleCallback = Exclude<RangeProps['handle'], undefined>; // (props:
+// TooltipHandleProps) =>
+// ReactNode;
 
 const useStyles = makeStyles(theme => ({
   range: {},
@@ -109,29 +105,32 @@ type Props = {
 
 const reverseFactory = (min: number, max: number) => (value: number) => max - value + min;
 
-const Range: React.FC<Props> = props => {
+const Range: FC<Props> = props => {
   const {
-    min = 0, max = 100, values, className, reverse = false,
-    setMin, setMax, vertical, tooltipPos,
+    min = 0,
+    max = 100,
+    values,
+    className,
+    reverse = false,
+    setMin,
+    setMax,
+    vertical,
+    tooltipPos,
   } = props;
   const classes = useStyles();
   const theme = useTheme();
   const [arrowRef, setArrowRef] = useState<HTMLSpanElement | null>(null);
   const reverseValue = reverseFactory(min, max);
-  const convertedValues = reverse
-    ? [reverseValue(values[1]), reverseValue(values[0])]
-    : values;
+  const convertedValues = reverse ? [reverseValue(values[1]), reverseValue(values[0])] : values;
   const handle = useCallback<TooltipHandleCallback>(
-    ({
-      value, dragging, index, ...restProps
-    }: TooltipHandleProps) => (
+    ({ value, dragging, index, ariaValueTextFormatter, ...restProps }) => (
       <Tooltip
-        title={(
+        title={
           <>
             {reverse ? reverseValue(value) : value}
             <span className={classes.arrow} ref={setArrowRef} />
           </>
-        )}
+        }
         disableFocusListener
         disableHoverListener
         disableTouchListener
@@ -150,10 +149,10 @@ const Range: React.FC<Props> = props => {
           },
         }}
       >
-        <Handle {...restProps} />
+        <Handle {...restProps} ariaValueTextFormatter={() => ariaValueTextFormatter} />
       </Tooltip>
     ),
-    [reverse, reverseValue, classes.arrow, classes.arrowPopper, tooltipPos, arrowRef],
+    [reverse, reverseValue, classes.arrow, classes.arrowPopper, tooltipPos, arrowRef]
   );
   const handleChange = useCallback(
     ([minValue, maxValue]) => {
@@ -165,10 +164,10 @@ const Range: React.FC<Props> = props => {
         setMax(reverseValue(minValue));
       }
     },
-    [reverse, setMin, setMax, reverseValue],
+    [reverse, setMin, setMax, reverseValue]
   );
-  const [trackStyle, handleStyle] = useMemo<React.CSSProperties[][]>(
-    () => ([
+  const [trackStyle, handleStyle] = useMemo<CSSProperties[][]>(
+    () => [
       [{ backgroundColor: theme.palette.primary.light }],
       [
         {
@@ -177,8 +176,8 @@ const Range: React.FC<Props> = props => {
         },
         { borderColor: theme.palette.primary.light },
       ],
-    ]),
-    [theme],
+    ],
+    [theme]
   );
   return (
     <RCRange
@@ -195,7 +194,4 @@ const Range: React.FC<Props> = props => {
   );
 };
 
-export default compose<Props, Props>(
-  hot,
-  React.memo,
-)(Range);
+export default Range;

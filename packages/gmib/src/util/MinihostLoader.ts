@@ -1,9 +1,9 @@
 /*
  * @license
- * Copyright (c) 2019. Nata-Info
+ * Copyright (c) 2020. Nata-Info
  * @author Andrei Sarakeev <avs@nata-info.ru>
  *
- * This file is part of the "@nata" project.
+ * This file is part of the "@nibus" project.
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
@@ -24,6 +24,7 @@ type LoaderOptions = {
   xMax: number;
   yMin: number;
   yMax: number;
+  selectors?: Set<number>;
 };
 
 declare interface MinihostLoader<T> {
@@ -47,8 +48,7 @@ declare interface MinihostLoader<T> {
   emit(event: 'column', column: IModuleInfo<T>[]): boolean;
 }
 
-abstract class MinihostLoader<T>
-  extends Runnable<LoaderOptions, IModuleInfo<T>[]> {
+abstract class MinihostLoader<T> extends Runnable<LoaderOptions, IModuleInfo<T>[]> {
   protected xMin?: number;
 
   protected xMax?: number;
@@ -56,6 +56,8 @@ abstract class MinihostLoader<T>
   protected yMin?: number;
 
   protected yMax?: number;
+
+  protected selectors?: Set<number>;
 
   constructor(readonly device: IDevice) {
     super();
@@ -98,13 +100,12 @@ abstract class MinihostLoader<T>
     return columnInfo;
   }
 
-  async runImpl({
-    xMin, xMax, yMin, yMax,
-  }: LoaderOptions): Promise<IModuleInfo<T>[]> {
+  async runImpl({ xMin, xMax, yMin, yMax, selectors }: LoaderOptions): Promise<IModuleInfo<T>[]> {
     this.xMin = xMin;
     this.xMax = xMax;
     this.yMin = yMin;
     this.yMax = yMax;
+    this.selectors = new Set(selectors);
     const modules: IModuleInfo<T>[] = [];
     let x: number;
     let step: number;

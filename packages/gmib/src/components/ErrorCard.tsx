@@ -1,9 +1,9 @@
 /*
  * @license
- * Copyright (c) 2019. Nata-Info
+ * Copyright (c) 2020. Nata-Info
  * @author Andrei Sarakeev <avs@nata-info.ru>
  *
- * This file is part of the "@nata" project.
+ * This file is part of the "@nibus" project.
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
@@ -15,8 +15,6 @@ import CardActions from '@material-ui/core/CardActions';
 import CardContent from '@material-ui/core/CardContent';
 import Button from '@material-ui/core/Button';
 import Typography from '@material-ui/core/Typography';
-import { hot } from 'react-hot-loader/root';
-import compose from 'recompose/compose';
 
 const useStyles = makeStyles({
   card: {
@@ -41,9 +39,7 @@ type Props = {
   onRelease?: () => void;
 };
 
-const ErrorCard: React.FC<Props> = ({
-  error, onAction, onRelease,
-}) => {
+const ErrorCard: React.FC<Props> = ({ error, onAction, onRelease }) => {
   const classes = useStyles();
   return (
     <Card className={classes.card}>
@@ -51,19 +47,27 @@ const ErrorCard: React.FC<Props> = ({
         <Typography className={classes.title} color="textSecondary" gutterBottom>
           Возникла ошибка!
         </Typography>
-        <Typography variant="h6">
-          {(error as Error).message || error}
-        </Typography>
+        <Typography variant="h6">{(error as Error).message || error}</Typography>
       </CardContent>
       <CardActions>
-        {onAction && <Button size="small" onClick={onAction}>Обновить</Button>}
-        {onRelease && <Button size="small" onClick={onRelease}>Удалить</Button>}
+        {onAction && (
+          <Button size="small" onClick={onAction}>
+            Обновить
+          </Button>
+        )}
+        {onRelease && (
+          <Button size="small" onClick={onRelease}>
+            Удалить
+          </Button>
+        )}
       </CardActions>
     </Card>
   );
 };
 
-export default compose<Props, Props>(
-  hot,
-  React.memo,
-)(ErrorCard);
+// export default compose<Props, Props>(
+//   hot,
+//   React.memo,
+// )(ErrorCard);
+
+export default ErrorCard;

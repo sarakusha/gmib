@@ -1,14 +1,14 @@
-/* eslint-disable no-bitwise */
 /*
  * @license
- * Copyright (c) 2019. Nata-Info
+ * Copyright (c) 2020. Nata-Info
  * @author Andrei Sarakeev <avs@nata-info.ru>
  *
- * This file is part of the "@nata" project.
+ * This file is part of the "@nibus" project.
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
 
+/* eslint-disable no-bitwise */
 import MinihostLoader from './MinihostLoader';
 
 export type Minihost2Info = {
@@ -21,7 +21,7 @@ function getFraction(byte: number): number {
   let fraction = 0;
   let test;
   for (let i = 0; i < 4; i += 1, two *= 2) {
-    test = 1 << 7 - i;
+    test = 1 << (7 - i);
     if (byte & test) {
       fraction += 1 / two;
     }
@@ -32,7 +32,7 @@ function getFraction(byte: number): number {
 export default class Minihost2Loader extends MinihostLoader<Minihost2Info> {
   static readonly DOMAIN = 'MODUL';
 
-  async getInfo(x: number, y: number): Promise<{}> {
+  async getInfo(x: number, y: number): Promise<Minihost2Info> {
     const { device } = this;
     device.epcsH = x;
     device.epcsV = y;

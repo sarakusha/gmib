@@ -459,3 +459,4 @@ fabric.properties
 /build/
 .env
 /dist/
+!/@types/

@@ -1,18 +1,22 @@
-/* eslint-disable no-bitwise,no-await-in-loop */
 /*
  * @license
- * Copyright (c) 2019. Nata-Info
+ * Copyright (c) 2020. Nata-Info
  * @author Andrei Sarakeev <avs@nata-info.ru>
  *
- * This file is part of the "@nata" project.
+ * This file is part of the "@nibus" project.
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
 
+/* eslint-disable no-bitwise,no-await-in-loop */
 import {
-  SarpQueryType, Address, AddressType, NibusConnection, createSarp, SarpDatagram,
+  SarpQueryType,
+  Address,
+  AddressType,
+  NibusConnection,
+  createSarp,
+  SarpDatagram,
 } from '@nibus/core';
-
 
 import { delay, tuplify } from './helpers';
 import Runnable from './Runnable';
@@ -24,7 +28,7 @@ export type DeviceInfo = {
   type: number;
 };
 
-export const toVersion = (ver: number): string => `${(ver >> 8) & 0xFF}.${ver & 0xFF}`;
+export const toVersion = (ver: number): string => `${(ver >> 8) & 0xff}.${ver & 0xff}`;
 
 type AddressListener = (info: DeviceInfo) => void;
 
@@ -66,22 +70,19 @@ class Finder extends Runnable<FinderOptions> {
       results
         .filter(tuple => tuple.length === 2)
         // eslint-disable-next-line no-loop-func
-        .forEach(([version, type], index) => this.emit(
-          'found',
-          {
+        .forEach(([version, type], index) =>
+          this.emit('found', {
             address,
             version,
             type: type!,
             connection: rest[index],
-          },
-        ));
+          })
+        );
       rest = rest.filter((_, index) => results[index].length === 0);
     }
   }
 
-  protected async runImpl(
-    { connections, type, address }: FinderOptions,
-  ): Promise<void> {
+  protected async runImpl({ connections, type, address }: FinderOptions): Promise<void> {
     if (!connections) throw new Error('Invalid connections');
     const addr = new Address(address);
     let counter = 0;
@@ -89,7 +90,7 @@ class Finder extends Runnable<FinderOptions> {
     let queryType = SarpQueryType.All;
     if (type) {
       queryType = SarpQueryType.ByType;
-      createRequest = () => createSarp(queryType, [0, 0, 0, (type! >> 8) & 0xFF, type! & 0xFF]);
+      createRequest = () => createSarp(queryType, [0, 0, 0, (type! >> 8) & 0xff, type! & 0xff]);
     } else {
       switch (addr.type) {
         case AddressType.net:
@@ -101,7 +102,7 @@ class Finder extends Runnable<FinderOptions> {
           // } else {
           this.macFinder(addr, connections);
           return;
-          // }
+        // }
         case AddressType.group:
           queryType = SarpQueryType.ByGrpup;
           createRequest = () => createSarp(queryType, [...addr.raw.slice(0, 5)].reverse());
@@ -115,7 +116,9 @@ class Finder extends Runnable<FinderOptions> {
           break;
       }
     }
-    const createSarpListener = (connection: NibusConnection): (datagram: SarpDatagram) => void => {
+    const createSarpListener = (
+      connection: NibusConnection
+    ): ((datagram: SarpDatagram) => void) => {
       const detected = new Set<string>();
       return (datagram: SarpDatagram) => {
         if (datagram.queryType !== queryType) return;
@@ -125,14 +128,11 @@ class Finder extends Runnable<FinderOptions> {
         if (detected.has(key)) return;
         counter = 0;
         detected.add(key);
-        this.emit(
-          'found',
-          {
-            connection,
-            address: mac,
-            type: datagram.deviceType!,
-          },
-        );
+        this.emit('found', {
+          connection,
+          address: mac,
+          type: datagram.deviceType!,
+        });
       };
     };
     let listeners: [NibusConnection, (datagram: SarpDatagram) => void][] = [];
@@ -152,8 +152,7 @@ class Finder extends Runnable<FinderOptions> {
         await Promise.all(connections.map(connection => connection.sendDatagram(createRequest())));
       }
     } finally {
-      listeners
-        .forEach(([connection, listener]) => connection.off('sarp', listener));
+      listeners.forEach(([connection, listener]) => connection.off('sarp', listener));
     }
   }
 }

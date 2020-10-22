@@ -1,21 +1,18 @@
-/* eslint-disable class-methods-use-this,@typescript-eslint/no-explicit-any,
- @typescript-eslint/no-unused-vars */
 /*
  * @license
- * Copyright (c) 2019. Nata-Info
+ * Copyright (c) 2020. Nata-Info
  * @author Andrei Sarakeev <avs@nata-info.ru>
  *
- * This file is part of the "@nata" project.
+ * This file is part of the "@nibus" project.
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
 
-import {
-  IDevice, Address, NibusConnection, DeviceId, NmsDatagram,
-} from '@nibus/core';
+/* eslint-disable class-methods-use-this,@typescript-eslint/no-explicit-any,
+ @typescript-eslint/no-unused-vars */
+import { IDevice, Address, NibusConnection, DeviceId, NmsDatagram } from '@nibus/core';
 
 import { EventEmitter } from 'events';
-
 
 import timeid from '../util/timeid';
 
@@ -39,13 +36,12 @@ export default class StubDevice extends EventEmitter implements IDevice {
 
   execute(
     program: string,
-    args?: Record<string, any>,
+    args?: Record<string, any>
   ): Promise<NmsDatagram | NmsDatagram[] | undefined> {
     return Promise.reject(new Error('Not realized'));
   }
 
-  getError(idOrName: number | string): any {
-  }
+  getError(idOrName: number | string): any {}
 
   getId(idOrName: string | number): number {
     return 0;
@@ -55,8 +51,7 @@ export default class StubDevice extends EventEmitter implements IDevice {
     return '';
   }
 
-  getRawValue(idOrName: number | string): any {
-  }
+  getRawValue(idOrName: number | string): any {}
 
   isDirty(idOrName: string | number): boolean {
     return false;

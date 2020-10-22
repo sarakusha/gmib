@@ -16,8 +16,8 @@
           </advancedOptions>
         </fileTransfer>
       </webServer>
-      <webServer id="e2b5f410-4bd9-4daa-8bcd-e219f747b3e6" name="levakov" url="http://192.168.23.15">
-        <fileTransfer rootFolder="/C:/Users/sarakusha" accessType="SFTP" host="192.168.23.31" port="22" sshConfigId="11a6e461-91f8-4a1c-b9c6-b48dba1a9b69" sshConfig="levakov" keyPair="true">
+      <webServer id="e2b5f410-4bd9-4daa-8bcd-e219f747b3e6" name="levakov" url="http://192.168.23.16">
+        <fileTransfer rootFolder="/C:/Users/sarakusha" accessType="SFTP" host="192.168.23.16" port="22" sshConfigId="11a6e461-91f8-4a1c-b9c6-b48dba1a9b69" sshConfig="levakov" keyPair="true">
           <advancedOptions>
             <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
           </advancedOptions>

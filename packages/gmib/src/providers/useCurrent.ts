@@ -1,9 +1,9 @@
 /*
  * @license
- * Copyright (c) 2019. Nata-Info
+ * Copyright (c) 2020. Nata-Info
  * @author Andrei Sarakeev <avs@nata-info.ru>
  *
- * This file is part of the "@nata" project.
+ * This file is part of the "@nibus" project.
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
@@ -12,7 +12,7 @@ import { useCallback } from 'react';
 import { useDevicesContext } from './DevicesProvier';
 import { useTests } from './TestProvider';
 
-const useCurrent = (scope: 'test' | 'device'): (id: string | null) => void => {
+const useCurrent = (scope: 'test' | 'device'): ((id: string | null) => void) => {
   const { setCurrent: setCurrentDevice } = useDevicesContext();
   const { setCurrent: setCurrentTest } = useTests();
   return useCallback(
@@ -25,7 +25,7 @@ const useCurrent = (scope: 'test' | 'device'): (id: string | null) => void => {
         setCurrentTest(null);
       }
     },
-    [scope, setCurrentDevice, setCurrentTest],
+    [scope, setCurrentDevice, setCurrentTest]
   );
 };
 

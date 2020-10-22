@@ -1,17 +1,15 @@
 /*
  * @license
- * Copyright (c) 2019. Nata-Info
+ * Copyright (c) 2020. Nata-Info
  * @author Andrei Sarakeev <avs@nata-info.ru>
  *
- * This file is part of the "@nata" project.
+ * This file is part of the "@nibus" project.
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
 import { SvgIconProps } from '@material-ui/core/SvgIcon';
 import { IDevice } from '@nibus/core';
 import React from 'react';
-import { hot } from 'react-hot-loader/root';
-import compose from 'recompose/compose';
 import HubIcon from '@material-ui/icons/DeviceHub';
 import DefaultIcon from '@material-ui/icons/Memory';
 import MinihostIcon from '@material-ui/icons/Tv';
@@ -36,7 +34,5 @@ const DeviceIcon: React.FC<Props> = ({ device, mib, ...props }) => {
   return <Icon {...props} />;
 };
 
-export default compose<Props, Props>(
-  hot,
-  React.memo,
-)(DeviceIcon);
+// export default compose<Props, Props>(hot, React.memo)(DeviceIcon);
+export default DeviceIcon;

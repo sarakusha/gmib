@@ -1,9 +1,9 @@
 /*
  * @license
- * Copyright (c) 2019. Nata-Info
+ * Copyright (c) 2020. Nata-Info
  * @author Andrei Sarakeev <avs@nata-info.ru>
  *
- * This file is part of the "@nata" project.
+ * This file is part of the "@nibus" project.
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
@@ -13,32 +13,27 @@ import { useEffect } from 'react';
 import timeid from './timeid';
 
 type Props = {
-  enterHandler?: Function;
-  cancelHandler?: Function;
+  enterHandler?: () => void;
+  cancelHandler?: () => void;
 };
 const noop = (): void => {};
-const useDefaultKeys = (
-  { enterHandler = noop, cancelHandler = noop }: Props,
-): void => {
-  useEffect(
-    () => {
-      const scope = timeid();
-      hotkeys.setScope(scope);
-      hotkeys('enter', scope, event => {
-        event.preventDefault();
-        enterHandler();
-      });
-      hotkeys('esc', scope, event => {
-        event.preventDefault();
-        cancelHandler();
-      });
-      return () => {
-        hotkeys.unbind('enter', scope);
-        hotkeys.unbind('esc', scope);
-      };
-    },
-    [enterHandler, cancelHandler],
-  );
+const useDefaultKeys = ({ enterHandler = noop, cancelHandler = noop }: Props): void => {
+  useEffect(() => {
+    const scope = timeid();
+    hotkeys.setScope(scope);
+    hotkeys('enter', scope, event => {
+      event.preventDefault();
+      enterHandler();
+    });
+    hotkeys('esc', scope, event => {
+      event.preventDefault();
+      cancelHandler();
+    });
+    return () => {
+      hotkeys.unbind('enter', scope);
+      hotkeys.unbind('esc', scope);
+    };
+  }, [enterHandler, cancelHandler]);
 };
 
 export default useDefaultKeys;
