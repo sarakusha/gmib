@@ -52,6 +52,7 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: 12
+      - run: yarn workspace @nibus/gmib install
       - run: yarn workspace @nibus/gmib rebuild
       - run: yarn workspace @nibus/gmib compile
       - run: yarn workspace @nibus/gmib release:win
@@ -64,6 +65,7 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: 12
+      - run: yarn workspace @nibus/gmib install
       - run: yarn workspace @nibus/gmib rebuild
       - run: yarn workspace @nibus/gmib compile
       - run: yarn workspace @nibus/gmib release:linux
@@ -76,6 +78,7 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: 12
+      - run: yarn workspace @nibus/gmib install
       - run: yarn workspace @nibus/gmib rebuild
       - run: yarn workspace @nibus/gmib compile
       - run: yarn workspace @nibus/gmib release:mac
