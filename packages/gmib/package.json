@@ -1,6 +1,6 @@
 {
   "name": "@nibus/gmib",
-  "version": "2.1.0",
+  "version": "2.1.2",
   "description": "Nata-Info gmib tool",
   "private": true,
   "keywords": [
@@ -10,9 +10,6 @@
   ],
   "license": "MIT",
   "author": "Andrei Sarakeev <avs@nata-info.ru>",
-  "publishConfig": {
-    "registry": "https://npm.nata-info.ru"
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/sarakusha/nibus.git"
@@ -25,7 +22,7 @@
     "rebuild": "yarn run rebuild:usb-detction && yarn run rebuild:serialport",
     "rebuild:serialport": "electron-rebuild -f --module-dir node_modules/@serialport/bindings",
     "rebuild:usb-detction": "electron-rebuild -f -w usb-detection",
-    "dev": "electron-webpack dev",
+    "dev": "cross-env MOCKED_NIBUS=1 electron-webpack dev",
     "compile": "cross-env NODE_ENV=production ELECTRON_ENABLE_LOGGING=1 electron-webpack",
     "dist": "electron-builder",
     "dist:mac": "yarn dist -c.mac.identity=null",
@@ -76,7 +73,6 @@
     "warning": "^4.0.3"
   },
   "devDependencies": {
-    "@material-ui/codemod": "^4.5.0",
     "@pmmmwh/react-refresh-webpack-plugin": "^0.4.2",
     "@types/classnames": "^2.2.7",
     "@types/dotenv": "^8.2.0",
@@ -91,7 +87,7 @@
     "@types/recompose": "^0.30.5",
     "@types/warning": "^3.0.0",
     "css-loader": "^5.0.0",
-    "electron": "^10.1.4",
+    "electron": "10.1.4",
     "electron-builder": "^22.2.0",
     "electron-debug": "^3.0.1",
     "electron-devtools-installer": "^3.1.1",
@@ -100,7 +96,6 @@
     "electron-webpack-ts": "^4.0.1",
     "env-cmd": "^10.0.1",
     "import-plugin-babel": "npm:babel-plugin-import",
-    "jscodeshift": "^0.11.0",
     "react-refresh": "^0.9.0",
     "webpack": "4",
     "webpack-build-notifier": "^2.0.0",

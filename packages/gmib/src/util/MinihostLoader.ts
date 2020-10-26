@@ -63,7 +63,7 @@ abstract class MinihostLoader<T> extends Runnable<LoaderOptions, IModuleInfo<T>[
     super();
   }
 
-  abstract async getInfo(x: number, y: number): Promise<T>;
+  abstract getInfo(x: number, y: number): Promise<T>;
 
   abstract isInvertH(): boolean;
 

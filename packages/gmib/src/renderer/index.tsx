@@ -24,13 +24,7 @@ import SessionProvider from '../providers/SessionProvider';
 import TestsProvider from '../providers/TestProvider';
 import ToolbarProvider from '../providers/ToolbarProvider';
 
-// const r = require('react');
-// console.assert((window as any).React1 === r, 'Multiple React versions');
-// console.log(window.React1, r);
 const theme = createMuiTheme({});
-
-// console.log('RECAT', (window as any).React1 === React);
-// console.log('REACT', React === (window));
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (window as any).ELECTRON_DISABLE_SECURITY_WARNINGS = 1;
@@ -50,6 +44,7 @@ const render = (): void => {
                   }}
                   maxSnack={10}
                   dense
+                  preventDuplicate
                 >
                   <App />
                 </SnackbarProvider>

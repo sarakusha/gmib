@@ -18,7 +18,7 @@ import React, {
   useState,
 } from 'react';
 // import { getState } from '../util/helpers';
-import { NibusConnection, CreateDevice, IDevice, devices as coreDevices } from '@nibus/core';
+import { INibusConnection, CreateDevice, IDevice, devices as coreDevices } from '@nibus/core';
 import { useSessionContext } from './SessionProvider';
 import StubDevice from '../components/StubDevice';
 
@@ -65,12 +65,12 @@ const useDevices = (): Devices => {
         return result;
       });
     };
-    const pureConnectionHandler = (connection: NibusConnection): void => {
+    const pureConnectionHandler = (connection: INibusConnection): void => {
       if (devices.get().findIndex(dev => dev && dev.connection === connection) !== -1) return;
       stubDevices.current.push(new StubDevice(connection));
       updateHandler();
     };
-    const removeStubHandler = (connection: NibusConnection): void => {
+    const removeStubHandler = (connection: INibusConnection): void => {
       const index = stubDevices.current.findIndex(dev => dev.connection === connection);
       if (index !== -1) {
         const [stub] = stubDevices.current.splice(index, 1);

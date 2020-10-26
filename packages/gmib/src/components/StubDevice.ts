@@ -10,7 +10,7 @@
 
 /* eslint-disable class-methods-use-this,@typescript-eslint/no-explicit-any,
  @typescript-eslint/no-unused-vars */
-import { IDevice, Address, NibusConnection, DeviceId, NmsDatagram } from '@nibus/core';
+import { IDevice, Address, INibusConnection, DeviceId, NmsDatagram } from '@nibus/core';
 
 import { EventEmitter } from 'events';
 
@@ -21,7 +21,7 @@ export default class StubDevice extends EventEmitter implements IDevice {
 
   readonly id: DeviceId;
 
-  constructor(public connection?: NibusConnection) {
+  constructor(public connection?: INibusConnection) {
     super();
     this.id = timeid() as DeviceId;
   }

@@ -13,7 +13,7 @@ import {
   SarpQueryType,
   Address,
   AddressType,
-  NibusConnection,
+  INibusConnection,
   createSarp,
   SarpDatagram,
 } from '@nibus/core';
@@ -23,7 +23,7 @@ import Runnable from './Runnable';
 
 export type DeviceInfo = {
   address: Address;
-  connection: NibusConnection;
+  connection: INibusConnection;
   version?: number;
   type: number;
 };
@@ -35,7 +35,7 @@ type AddressListener = (info: DeviceInfo) => void;
 export type FinderOptions = {
   address?: string;
   type?: number;
-  connections?: NibusConnection[];
+  connections?: INibusConnection[];
 };
 
 declare interface Finder extends Runnable<FinderOptions> {
@@ -60,7 +60,7 @@ declare interface Finder extends Runnable<FinderOptions> {
 }
 
 class Finder extends Runnable<FinderOptions> {
-  protected async macFinder(address: Address, connections: NibusConnection[]): Promise<void> {
+  protected async macFinder(address: Address, connections: INibusConnection[]): Promise<void> {
     let rest = connections.slice(0);
     let first = true;
     while (!this.isCanceled && rest.length > 0) {
@@ -117,7 +117,7 @@ class Finder extends Runnable<FinderOptions> {
       }
     }
     const createSarpListener = (
-      connection: NibusConnection
+      connection: INibusConnection
     ): ((datagram: SarpDatagram) => void) => {
       const detected = new Set<string>();
       return (datagram: SarpDatagram) => {
@@ -135,7 +135,7 @@ class Finder extends Runnable<FinderOptions> {
         });
       };
     };
-    let listeners: [NibusConnection, (datagram: SarpDatagram) => void][] = [];
+    let listeners: [INibusConnection, (datagram: SarpDatagram) => void][] = [];
     try {
       listeners = connections.map(connection => {
         const listener = createSarpListener(connection);

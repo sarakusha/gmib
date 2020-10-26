@@ -10,17 +10,21 @@
 
 import Backdrop from '@material-ui/core/Backdrop';
 import Box from '@material-ui/core/Box';
-import { makeStyles } from '@material-ui/core/styles';
-import { Flasher, FlashKinds, Kind, KindMap } from '@nibus/core';
-import { useSnackbar } from 'notistack';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import LinearProgress from '@material-ui/core/LinearProgress';
-import RadioGroup from '@material-ui/core/RadioGroup';
-import Radio from '@material-ui/core/Radio';
+import Button from '@material-ui/core/Button';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
+import LinearProgress from '@material-ui/core/LinearProgress';
+import Radio from '@material-ui/core/Radio';
+import RadioGroup from '@material-ui/core/RadioGroup';
+import { makeStyles } from '@material-ui/core/styles';
+import CloseIcon from '@material-ui/icons/Close';
+import ReplayIcon from '@material-ui/icons/Replay';
+import { Flasher, FlashKinds, Kind, KindMap } from '@nibus/core';
+import { SnackbarAction, useSnackbar } from 'notistack';
+import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useDevice } from '../providers/DevicesStateProvider';
+// import { useFlashState, useGlobalFlashState } from '../providers/FlashStateProvider';
 import CircularProgressWithLabel from './CircularProgressWithLabel';
-import FlashUpgrade, { Props as FlashUpgradeProps } from './FlashUpgrade';
+import FlashUpgrade, { displayName, Props as FlashUpgradeProps } from './FlashUpgrade';
 import FormFieldSet from './FormFieldSet';
 import type { Props } from './TabContainer';
 
@@ -34,7 +38,22 @@ const useStyles = makeStyles(theme => ({
   },
   kinds: {
     padding: theme.spacing(1),
+    borderRadius: theme.shape.borderRadius,
+    borderColor: 'rgba(0, 0, 0, 0.23)',
+    borderWidth: 1,
+    borderStyle: 'solid',
+    display: 'block',
+    flexDirection: 'row',
+    '&:not(:last-child)': {
+      marginRight: theme.spacing(2),
+    },
+    // width: '100%',
   },
+  kind: {
+    marginLeft: theme.spacing(1),
+    marginRight: theme.spacing(1),
+  },
+  // kindsRoot: {},
   progress: {
     width: '80%',
   },
@@ -42,7 +61,7 @@ const useStyles = makeStyles(theme => ({
 
 const OFFSET_SUCCESS = 0x1800;
 
-function* generateSuccessKey(maxSuccess = 2): Generator<number, number> {
+function* generateSuccessKey(maxSuccess = 3): Generator<number, number> {
   let id = 0;
   while (true) {
     yield id + OFFSET_SUCCESS;
@@ -59,17 +78,19 @@ const FirmwareTab: React.FC<Props> = ({ id, selected }) => {
   const [progress, setProgress] = useState(0);
   const [flashing, setFleshing] = useState(false);
   const snacksRef = useRef<number[]>([]);
+  const [kind, setKind] = useState<Kind>('fpga');
   useEffect(() => {
     return () => snacksRef.current.forEach(closeSnackbar);
-  }, [closeSnackbar]);
+  }, [closeSnackbar, kind]);
+  // const [, dispatch] = useGlobalFlashState();
   const flashHandler = useCallback<FlashUpgradeProps['onFlash']>(
-    (kind, filename, moduleSelect) => {
+    (currentKind, filename, moduleSelect) => {
       if (!device) return;
       snacksRef.current.forEach(closeSnackbar);
       snacksRef.current = [];
       setProgress(0);
       const flasher = new Flasher(device);
-      const { total } = flasher.flash(kind, filename, moduleSelect);
+      const { total } = flasher.flash(currentKind, filename, moduleSelect);
       setFleshing(true);
       let current = 0;
       const normalize = (value: number): number => (value * 100) / total;
@@ -82,44 +103,73 @@ const FirmwareTab: React.FC<Props> = ({ id, selected }) => {
         current += length;
         setProgress(normalize(current));
       });
+      const action: SnackbarAction = key => (
+        <>
+          <Button title="Повторить">
+            <ReplayIcon
+              onClick={() => {
+                flashHandler(currentKind, filename, key as number);
+                // setKind(currentKind);
+                // row !== undefined && dispatch({ kind: currentKind, type: 'row', payload: row });
+                // column !== undefined &&
+                //   dispatch({ kind: currentKind, type: 'column', payload: column });
+                // filename !== undefined &&
+                //   dispatch({ kind: currentKind, type: 'file', payload: filename });
+                // closeSnackbar(key);
+              }}
+            />
+          </Button>
+          <Button title="Закрыть">
+            <CloseIcon onClick={() => closeSnackbar(key)} />
+          </Button>
+        </>
+      );
       flasher.on('module', ({ x, y, msg, moduleSelect: ms }) => {
         let key = ms;
         if (!msg) {
           key = successId.next().value;
-          enqueueSnackbar(`Модуль ${x},${y}: Ok`, { key, variant: 'success' });
+          enqueueSnackbar(`Модуль ${x},${y}: Ok`, {
+            key,
+            variant: 'success',
+          });
         } else {
-          enqueueSnackbar(msg, { key, persist: true, variant: 'error' });
+          enqueueSnackbar(msg, { key, persist: true, variant: 'error', action });
         }
         snacksRef.current.push(key);
       });
     },
     [device, closeSnackbar, enqueueSnackbar]
   );
-  const [kind, setKind] = useState<Kind>('fpga');
   const kindHandler = useCallback<React.ChangeEventHandler<HTMLInputElement>>(
     e => setKind(e.target.value as Kind),
     []
   );
-  const [, isModule, legacy] = KindMap[kind];
+  // const [, isModule, legacy] = KindMap[kind];
   return (
-    <Box display={selected ? 'block' : 'none'} width={1} p={1} bgcolor="background.paper">
-      <FormFieldSet
-        legend="Тип прошивки"
-        helper={`Для ${isModule ? 'модулей' : 'процессора'}${legacy ? ' (устаревшая)' : ''}`}
-        className={classes.kinds}
-      >
-        <RadioGroup row aria-label="firmware kind" value={kind} onChange={kindHandler}>
-          {FlashKinds.map(value => (
-            <FormControlLabel
-              key={value}
-              value={value}
-              control={<Radio />}
-              label={value.toUpperCase()}
-              labelPlacement="top"
-            />
-          ))}
-        </RadioGroup>
-      </FormFieldSet>
+    <Box display={selected ? 'block' : 'none'} width={1} p={1}>
+      <RadioGroup row aria-label="firmware kind" value={kind} onChange={kindHandler}>
+        {[false, true].map(isModule => (
+          <FormFieldSet
+            legend={isModule ? 'Модуль' : 'Хост'}
+            // helper={`Для ${isModule ? 'модулей' : 'процессора'}${legacy ? ' (устаревшая)' : ''}`}
+            className={classes.kinds}
+          >
+            {Object.entries(KindMap)
+              .filter(([, [, module]]) => isModule === module)
+              .map(([value]) => (
+                // <label key={value}>{value}</label>
+                <FormControlLabel
+                  key={value}
+                  value={value}
+                  control={<Radio />}
+                  label={displayName(value)}
+                  labelPlacement="top"
+                  className={classes.kind}
+                />
+              ))}
+          </FormFieldSet>
+        ))}
+      </RadioGroup>
       {FlashKinds.map(value => (
         <FlashUpgrade key={value} kind={value} onFlash={flashHandler} hidden={value !== kind} />
       ))}
@@ -131,4 +181,4 @@ const FirmwareTab: React.FC<Props> = ({ id, selected }) => {
   );
 };
 
-export default FirmwareTab;
+export default memo(FirmwareTab);

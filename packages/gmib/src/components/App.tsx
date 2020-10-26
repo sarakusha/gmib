@@ -158,69 +158,71 @@ const App: React.FC = () => {
   // eslint-disable-next-line global-require,@typescript-eslint/no-var-requires
   const version = useMemo(() => require('../../package.json').version, []);
   return (
-    <div className={classes.root}>
+    <>
       <CssBaseline />
-      <AppBar
-        position="absolute"
-        className={classNames(classes.appBar, open && classes.appBarShift)}
-        elevation={0}
-      >
-        <Toolbar disableGutters={!open} className={classes.toolbar}>
-          <IconButton
-            color="inherit"
-            aria-label="Open drawer"
-            onClick={handleDrawerOpen}
-            className={classNames(classes.menuButton, open && classes.menuButtonHidden)}
-          >
-            <MenuIcon />
-          </IconButton>
-          <div className={classes.title}>
-            <Typography component="h1" variant="h6" color="inherit" noWrap display="inline">
-              gMIB
-            </Typography>
-            &nbsp;
-            <Typography component="h1" variant="subtitle1" color="inherit" display="inline">
-              {`${version} [${process.versions.modules}]`}
-            </Typography>
-          </div>
-          {toolbar}
-          <Tooltip title="Поиск новых устройств" enterDelay={500}>
-            <div>
-              <IconButton color="inherit" onClick={searchOpen} disabled={!link}>
-                <SearchIcon />
-              </IconButton>
+      <div className={classes.root}>
+        <AppBar
+          position="absolute"
+          className={classNames(classes.appBar, open && classes.appBarShift)}
+          elevation={0}
+        >
+          <Toolbar disableGutters={!open} className={classes.toolbar}>
+            <IconButton
+              color="inherit"
+              aria-label="Open drawer"
+              onClick={handleDrawerOpen}
+              className={classNames(classes.menuButton, open && classes.menuButtonHidden)}
+            >
+              <MenuIcon />
+            </IconButton>
+            <div className={classes.title}>
+              <Typography component="h1" variant="h6" color="inherit" noWrap display="inline">
+                gMIB
+              </Typography>
+              &nbsp;
+              <Typography component="h1" variant="subtitle1" color="inherit" display="inline">
+                {`${version} [${process.versions.modules}]`}
+              </Typography>
             </div>
-          </Tooltip>
-        </Toolbar>
-      </AppBar>
-      <Drawer
-        variant="permanent"
-        classes={{
-          paper: classNames(classes.drawerPaper, !open && classes.drawerPaperClose),
-        }}
-        open={open}
-      >
-        <div className={classes.toolbarIcon}>
-          <IconButton onClick={handleDrawerClose}>
-            <ChevronLeftIcon />
-          </IconButton>
-        </div>
-        <Divider />
-        <div className={classes.drawerContent}>
-          <AccordionProvider>
-            <Devices />
-            <TestItems />
-          </AccordionProvider>
-        </div>
-      </Drawer>
-      <main className={classes.content}>
-        <div className={classes.appBarSpacer} />
-        <div className={classes.gmib}>
-          <GmibTabs />
-        </div>
-      </main>
-      <SearchDialog open={isSearchOpen} close={searchClose} />
-    </div>
+            {toolbar}
+            <Tooltip title="Поиск новых устройств" enterDelay={500}>
+              <div>
+                <IconButton color="inherit" onClick={searchOpen} disabled={!link}>
+                  <SearchIcon />
+                </IconButton>
+              </div>
+            </Tooltip>
+          </Toolbar>
+        </AppBar>
+        <Drawer
+          variant="permanent"
+          classes={{
+            paper: classNames(classes.drawerPaper, !open && classes.drawerPaperClose),
+          }}
+          open={open}
+        >
+          <div className={classes.toolbarIcon}>
+            <IconButton onClick={handleDrawerClose}>
+              <ChevronLeftIcon />
+            </IconButton>
+          </div>
+          <Divider />
+          <div className={classes.drawerContent}>
+            <AccordionProvider>
+              <Devices />
+              <TestItems />
+            </AccordionProvider>
+          </div>
+        </Drawer>
+        <main className={classes.content}>
+          <div className={classes.appBarSpacer} />
+          <div className={classes.gmib}>
+            <GmibTabs />
+          </div>
+        </main>
+        <SearchDialog open={isSearchOpen} close={searchClose} />
+      </div>
+    </>
   );
 };
 

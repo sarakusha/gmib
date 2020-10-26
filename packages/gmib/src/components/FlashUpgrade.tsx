@@ -9,14 +9,15 @@
  * the EULA file that was distributed with this source code.
  */
 import Button from '@material-ui/core/Button';
-import SaveAltIcon from '@material-ui/icons/SaveAlt';
-import FolderIcon from '@material-ui/icons/FolderOpen';
 import IconButton from '@material-ui/core/IconButton';
 import { makeStyles } from '@material-ui/core/styles';
-import { KindMap, Kind } from '@nibus/core';
+import FolderIcon from '@material-ui/icons/FolderOpen';
+import SaveAltIcon from '@material-ui/icons/SaveAlt';
+import { Kind, KindMap } from '@nibus/core';
 import classNames from 'classnames';
 import { ipcRenderer } from 'electron';
-import React, { useCallback, useState } from 'react';
+import React, { memo, useCallback, useState } from 'react';
+// import { useFlashState } from '../providers/FlashStateProvider';
 import { getStatesAsync } from '../util/helpers';
 import FilenameEllipsis from './FilenameEllipsis';
 import FormFieldSet from './FormFieldSet';
@@ -24,7 +25,13 @@ import Selector from './Selector';
 
 export type Props = {
   kind: Kind;
-  onFlash: (kind: Kind, filename: string, moduleSelect?: number) => void;
+  onFlash: (
+    kind: Kind,
+    filename: string,
+    moduleSelect?: number,
+    column?: number,
+    row?: number
+  ) => void;
   hidden?: boolean;
 };
 
@@ -70,13 +77,29 @@ const useStyles = makeStyles(theme => ({
   set: {
     width: '100%',
   },
+  invisible: {
+    visibility: 'hidden',
+  },
 }));
+
+export const displayName = (kind: string): string => {
+  switch (kind) {
+    case 'rbf':
+      return 'FPGA';
+    case 'ctrl':
+      return 'MCU';
+    default:
+      return kind.toUpperCase();
+  }
+};
 
 const FlashUpgrade: React.FC<Props> = ({ kind, onFlash, hidden = false }) => {
   const classes = useStyles();
   const [ext, isModule] = KindMap[kind];
-  const [file, setFile] = useState<string>('');
-  // const [progress, setProgress] = useState(0);
+  // const { column, row, file, setColumn, setRow, setFile } = useFlashState(kind);
+  const [file, setFile] = useState('');
+  const [column, setColumn] = useState(0);
+  const [row, setRow] = useState(0);
   const selectFileHandler = useCallback<React.MouseEventHandler<HTMLButtonElement>>(
     _ => {
       const fileNames: string[] | undefined = ipcRenderer.sendSync('showOpenDialogSync', {
@@ -89,27 +112,25 @@ const FlashUpgrade: React.FC<Props> = ({ kind, onFlash, hidden = false }) => {
         setFile(firmware);
       }
     },
-    [ext, kind]
+    [ext, kind, setFile]
   );
-  const [row, setRow] = useState<number>(0);
-  const [column, setColumn] = useState<number>(0);
-  // const { device } = useDevice(id);
   const flashHandler = useCallback<React.MouseEventHandler>(
     async _ => {
       const [, needModuleSelect] = KindMap[kind];
       const [x, y, filename] = await getStatesAsync(setColumn, setRow, setFile);
-      onFlash(kind, filename, needModuleSelect ? (x << 8) | (y & 0xff) : undefined);
+      const moduleArgs = needModuleSelect ? [(x << 8) | (y & 0xff), x, y] : [];
+      onFlash(kind, filename, ...moduleArgs);
     },
-    [kind, onFlash]
+    [kind, onFlash, setColumn, setRow, setFile]
   );
   return (
     <div className={classNames(classes.root, { [classes.hidden]: hidden })}>
-      <FormFieldSet className={classes.set} legend={kind.toUpperCase()}>
+      <FormFieldSet className={classes.set} legend={displayName(kind)}>
         <div className={classes.file}>
           <FilenameEllipsis
             filename={file}
             className={classes.name}
-            placeholder={`Выберите файл (*${ext})`}
+            placeholder={`Выберите файл (*.${ext ?? '*'})`}
           />
           <IconButton
             aria-label={`upgrade-${kind}`}
@@ -120,18 +141,22 @@ const FlashUpgrade: React.FC<Props> = ({ kind, onFlash, hidden = false }) => {
           </IconButton>
         </div>
         <div className={classes.selectors}>
-          {isModule && (
-            <>
-              <Selector
-                label="Столб"
-                groupName="Все"
-                value={column}
-                onChange={setColumn}
-                max={23}
-              />
-              <Selector label="Ряд" groupName="Все" value={row} onChange={setRow} max={255} />
-            </>
-          )}
+          <Selector
+            label="Столб"
+            groupName="Все"
+            value={column}
+            onChange={setColumn}
+            max={23}
+            className={classNames({ [classes.invisible]: !isModule })}
+          />
+          <Selector
+            label="Ряд"
+            groupName="Все"
+            value={row}
+            onChange={setRow}
+            max={255}
+            className={classNames({ [classes.invisible]: !isModule })}
+          />
           <Button
             variant="contained"
             color="default"
@@ -147,5 +172,4 @@ const FlashUpgrade: React.FC<Props> = ({ kind, onFlash, hidden = false }) => {
     </div>
   );
 };
-
-export default FlashUpgrade;
+export default memo(FlashUpgrade);

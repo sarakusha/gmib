@@ -54,12 +54,14 @@ const myConfig = {
 // module.exports = {};
 
 module.exports = config => {
-  if (isProduction) return config;
   const babel = config.module.rules.find(rule => rule.use.loader === 'babel-loader');
   const babelOptions = babel.use.options;
-  babelOptions.plugins.push(
-    require.resolve('react-refresh/babel'),
-    /*
+  if (!isProduction) {
+    babelOptions.plugins.push(require.resolve('react-refresh/babel'));
+    // Несовместим с React DevTools в main
+    config.plugins.push(new ReactRefreshWebpackPlugin());
+  }
+  /*
     [
       require.resolve('transform-imports'),
       {
@@ -76,6 +78,8 @@ module.exports = config => {
       },
     ]
 */
+  // Не работает. Хрень какая-то
+  babelOptions.plugins.push(
     [
       require.resolve('import-plugin-babel'),
       {
@@ -96,8 +100,6 @@ module.exports = config => {
       'icons',
     ]
   );
-  // Несовместим с React DevTools в main
-  config.plugins.push(new ReactRefreshWebpackPlugin());
   // Нужно для iconv-lite
   config.module.rules.push({
     test: /node_modules[/\\](iconv-lite)[/\\].+/,
@@ -105,8 +107,8 @@ module.exports = config => {
       aliasFields: ['main'],
     },
   });
-  // Помогает избежать дублирования react electron-ом и webpack-ом
-  config.externals = [...config.externals, 'react'];
+  // !!! Помогает избежать дублирования react electron-ом и webpack-ом
+  config.externals = [...config.externals, 'react', 'react-dom'];
   if (ANALYZE) {
     config.plugins.push(
       new BundleAnalyzerPlugin({

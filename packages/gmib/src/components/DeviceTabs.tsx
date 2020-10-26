@@ -8,17 +8,19 @@
  * the EULA file that was distributed with this source code.
  */
 
+import Container from '@material-ui/core/Container';
 import AppBar from '@material-ui/core/AppBar';
 import { makeStyles } from '@material-ui/core/styles';
 import Tab from '@material-ui/core/Tab';
 import Tabs from '@material-ui/core/Tabs';
 import React, { useCallback, useState } from 'react';
 import { useDevicesContext } from '../providers/DevicesProvier';
+// import FlashStateProvider from '../providers/FlashStateProvider';
 import FirmwareTab from './FirmwareTab';
 import PropertyGridTab from './PropertyGridTab';
 import TelemetryTab from './TelemetryTab';
 
-const useStyles = makeStyles({
+const useStyles = makeStyles(theme => ({
   root: {
     display: 'flex',
     // flexShrink: 1,
@@ -37,10 +39,11 @@ const useStyles = makeStyles({
     // width: '100%',
     height: 'calc(100% - 48px)',
     display: 'flex',
+    paddingTop: theme.spacing(1),
     WebkitOverflowScrolling: 'touch', // Add iOS momentum scrolling.
     // overflow: 'hidden',
   },
-});
+}));
 
 type Props = {
   id: string;
@@ -77,15 +80,21 @@ const DeviceTabs: React.FC<Props> = ({ id }) => {
       </AppBar>
       <div className={classes.appBarSpacer} />
       <div className={classes.content}>
-        {isMinihost ? (
-          <>
-            <PropertyGridTab id={id} selected={value === 0} />
-            <TelemetryTab id={id} selected={value === 1} />
-            {isMinihost3 && <FirmwareTab id={id} selected={value === 2} />}
-          </>
-        ) : (
-          <PropertyGridTab id={id} selected />
-        )}
+        <Container maxWidth={value !== 1 ? 'sm' : undefined} className={classes.root}>
+          {isMinihost ? (
+            <>
+              <PropertyGridTab id={id} selected={value === 0} />
+              <TelemetryTab id={id} selected={value === 1} />
+              {isMinihost3 && (
+                // <FlashStateProvider>
+                <FirmwareTab id={id} selected={value === 2} />
+                // </FlashStateProvider>
+              )}
+            </>
+          ) : (
+            <PropertyGridTab id={id} selected />
+          )}
+        </Container>
       </div>
     </div>
   );
