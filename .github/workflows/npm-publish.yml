@@ -52,9 +52,9 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: 12
-      - run: yarn rebuild
-      - run: yarn compile
-      - run: yarn release:win
+      - run: yarn workspace @nibus/gmib rebuild
+      - run: yarn workspace @nibus/gmib compile
+      - run: yarn workspace @nibus/gmib release:win
 
   release-linux:
     needs: build
@@ -64,9 +64,9 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: 12
-      - run: yarn rebuild
-      - run: yarn compile
-      - run: yarn release:linux
+      - run: yarn workspace @nibus/gmib rebuild
+      - run: yarn workspace @nibus/gmib compile
+      - run: yarn workspace @nibus/gmib release:linux
 
   release-mac:
     needs: build
@@ -76,6 +76,6 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: 12
-      - run: yarn rebuild
-      - run: yarn compile
-      - run: yarn release:mac
+      - run: yarn workspace @nibus/gmib rebuild
+      - run: yarn workspace @nibus/gmib compile
+      - run: yarn workspace @nibus/gmib release:mac
