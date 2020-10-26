@@ -18,7 +18,7 @@
     "url": "https://github.com/sarakusha/nibus/issues"
   },
   "scripts": {
-    "install": "yarn rebuild",
+    "_install": "yarn rebuild",
     "rebuild": "yarn run rebuild:usb-detction && yarn run rebuild:serialport",
     "rebuild:serialport": "electron-rebuild -f --module-dir node_modules/@serialport/bindings",
     "rebuild:usb-detction": "electron-rebuild -f -w usb-detection",
@@ -29,7 +29,7 @@
     "dist:dir": "yarn dist --dir -c.compression=store -c.mac.identity=null",
     "dist:linux": "yarn dist -l",
     "dist:win": "yarn dist -w --x64",
-    "publish": "yarn compile && yarn release",
+    "_publish": "yarn compile && yarn release",
     "release:mac": "env-cmd -f ./.env electron-builder -p always -m --x64 -c.mac.identity=null",
     "release:linux": "env-cmd -f ./.env electron-builder -p always -l --x64 -c.mac.identity=null",
     "release:win": "env-cmd -f ./.env electron-builder -p always -w --x64 -c.mac.identity=null",
@@ -87,7 +87,7 @@
     "@types/recompose": "^0.30.5",
     "@types/warning": "^3.0.0",
     "css-loader": "^5.0.0",
-    "electron": "10.1.4",
+    "electron": "9.3.2",
     "electron-builder": "^22.2.0",
     "electron-debug": "^3.0.1",
     "electron-devtools-installer": "^3.1.1",
