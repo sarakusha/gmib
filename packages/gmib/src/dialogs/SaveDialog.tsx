@@ -1,9 +1,9 @@
 /*
  * @license
- * Copyright (c) 2019. Nata-Info
+ * Copyright (c) 2020. Nata-Info
  * @author Andrei Sarakeev <avs@nata-info.ru>
  *
- * This file is part of the "@nata" project.
+ * This file is part of the "@nibus" project.
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
@@ -18,16 +18,12 @@ import DialogActions from '@material-ui/core/DialogActions';
 import DialogContent from '@material-ui/core/DialogContent';
 import DialogTitle from '@material-ui/core/DialogTitle';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
-import { hot } from 'react-hot-loader/root';
-import compose from 'recompose/compose';
-import { remote } from 'electron';
+import { ipcRenderer } from 'electron';
 import fs from 'fs';
 import some from 'lodash/some';
 import pick from 'lodash/pick';
 import { tuplify } from '../util/helpers';
 import FormFieldSet from '../components/FormFieldSet';
-
-const { dialog } = remote;
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -61,25 +57,27 @@ const reducer = (state: State, { name, value }: Action): State => {
   };
 };
 
-const SaveDialog: React.FC<Props> = ({
-  device, open, close,
-}) => {
+const SaveDialog: React.FC<Props> = ({ device, open, close }) => {
   const classes = useStyles();
-  const [names, initial] = useMemo(
-    () => {
-      const keys = (!device ? [] : Object.entries<string[]>(Reflect.getMetadata('map', device) || {})
-        .sort((a, b) => Number(a[0]) - Number(b[0]))
-        .map(([id, key]) => tuplify(
-          Number(id),
-          key[0] as string,
-          Reflect.getMetadata('displayName', device, key[0]) as string,
-        ))
-        .filter(([, name]) => Reflect.getMetadata('isReadable', device, name)
-          && Reflect.getMetadata('isWritable', device, name)));
-      return [keys, keys.reduce((res, [, name]) => ({ ...res, [name]: false }), {})];
-    },
-    [device],
-  );
+  const [names, initial] = useMemo(() => {
+    const keys = !device
+      ? []
+      : Object.entries<string[]>(Reflect.getMetadata('map', device) || {})
+          .sort((a, b) => Number(a[0]) - Number(b[0]))
+          .map(([id, key]) =>
+            tuplify(
+              Number(id),
+              key[0] as string,
+              Reflect.getMetadata('displayName', device, key[0]) as string
+            )
+          )
+          .filter(
+            ([, name]) =>
+              Reflect.getMetadata('isReadable', device, name) &&
+              Reflect.getMetadata('isWritable', device, name)
+          );
+    return [keys, keys.reduce((res, [, name]) => ({ ...res, [name]: false }), {})];
+  }, [device]);
 
   const [state, dispatch] = useReducer(reducer, initial);
   const changeHandler = useCallback(
@@ -89,36 +87,41 @@ const SaveDialog: React.FC<Props> = ({
         value: event.currentTarget.checked,
       });
     },
-    [dispatch],
+    [dispatch]
   );
   const closeHandler = useCallback(() => close(), [close]);
   const showDialog = useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
       const mib = Reflect.getMetadata('mib', device);
-      const fileName = dialog.showSaveDialogSync({
+      const fileName: string | undefined = ipcRenderer.sendSync('showSaveDialogSync', {
         title: 'Сохранить как',
         defaultPath: mib,
-        filters: [{
-          name: 'JSON',
-          extensions: ['json'],
-        }],
+        filters: [
+          {
+            name: 'JSON',
+            extensions: ['json'],
+          },
+        ],
       });
 
       if (fileName) {
-        const props = event.currentTarget.id === 'all'
-          ? names.map(([, name]) => name)
-          : Object.entries(state).filter(([, checked]) => checked).map(([name]) => name);
+        const props =
+          event.currentTarget.id === 'all'
+            ? names.map(([, name]) => name)
+            : Object.entries(state)
+                .filter(([, checked]) => checked)
+                .map(([name]) => name);
         const data = pick(device, props);
         data.$mib = mib;
         fs.writeFileSync(fileName, JSON.stringify(data));
         close();
       }
     },
-    [close, device, names, state],
+    [close, device, names, state]
   );
 
   const hasSelected = some(Object.values(state), Boolean);
-  console.log(state, Object.values(state));
+  // console.log(state, Object.values(state));
 
   return (
     <Dialog
@@ -131,32 +134,28 @@ const SaveDialog: React.FC<Props> = ({
         <FormFieldSet className={classes.formControl} legend="Укажите свойства для сохранения">
           <FormControlLabel
             key="all"
-            control={(
+            control={
               <Checkbox
                 checked={names.reduce((acc, [, name]) => acc && state[name], true)}
                 value="$all$"
                 onChange={changeHandler}
               />
-            )}
+            }
             label="Все свойства"
           />
           {names.map(([id, name, displayName]) => (
             <FormControlLabel
               key={id}
-              control={(
-<Checkbox
-  checked={state[name] || false}
-  value={name}
-  onChange={changeHandler}
-/>
-)}
+              control={
+                <Checkbox checked={state[name] || false} value={name} onChange={changeHandler} />
+              }
               label={displayName}
             />
           ))}
         </FormFieldSet>
       </DialogContent>
       <DialogActions>
-{/*
+        {/*
         <Button id="all" color="primary" type="submit" onClick={showDialog}>
           Сохранить все
         </Button>
@@ -164,14 +163,12 @@ const SaveDialog: React.FC<Props> = ({
         <Button color="primary" type="submit" onClick={showDialog} disabled={!hasSelected}>
           Сохранить
         </Button>
-        <Button onClick={closeHandler} color="primary">Отмена</Button>
+        <Button onClick={closeHandler} color="primary">
+          Отмена
+        </Button>
       </DialogActions>
     </Dialog>
-
   );
 };
 
-export default compose<Props, Props>(
-  hot,
-  React.memo,
-)(SaveDialog);
+export default SaveDialog;

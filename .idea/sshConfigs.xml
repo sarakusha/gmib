@@ -2,10 +2,19 @@
 <project version="4">
   <component name="SshConfigs">
     <configs>
-      <sshConfig host="192.168.23.30" id="c8135efe-6c91-4b20-8593-365b71e5b226" keyPath="$USER_HOME$/.ssh/id_rsa" port="22" customName="GIGABYTE" nameFormat="CUSTOM" username="user" />
-      <sshConfig host="192.168.1.108" id="6432fa09-eb99-4ea4-bd20-4b180feac210" keyPath="$USER_HOME$/.ssh/id_rsa" port="22" customName="sarakusha" nameFormat="CUSTOM" username="sarakusha" />
-      <sshConfig host="192.168.23.31" id="11a6e461-91f8-4a1c-b9c6-b48dba1a9b69" keyPath="$USER_HOME$/.ssh/id_rsa" port="22" customName="levakov" nameFormat="CUSTOM" username="sarakusha" />
+      <sshConfig host="192.168.23.30" id="c8135efe-6c91-4b20-8593-365b71e5b226" keyPath="$USER_HOME$/.ssh/id_rsa" port="22" customName="GIGABYTE" nameFormat="CUSTOM" username="user">
+        <option name="customName" value="GIGABYTE" />
+      </sshConfig>
+      <sshConfig host="192.168.1.108" id="6432fa09-eb99-4ea4-bd20-4b180feac210" keyPath="$USER_HOME$/.ssh/id_rsa" port="22" customName="sarakusha" nameFormat="CUSTOM" username="sarakusha">
+        <option name="customName" value="sarakusha" />
+      </sshConfig>
+      <sshConfig host="192.168.23.16" id="11a6e461-91f8-4a1c-b9c6-b48dba1a9b69" keyPath="$USER_HOME$/.ssh/id_rsa" port="22" customName="levakov" nameFormat="CUSTOM" username="sarakusha">
+        <option name="customName" value="levakov" />
+      </sshConfig>
       <sshConfig host="192.168.23.27" id="c5c479d0-ce09-44f8-a20b-879d6a631ad1" keyPath="$USER_HOME$/.ssh/id_rsa" port="22" nameFormat="DESCRIPTIVE" username="user" />
+      <sshConfig host="localhost" id="48dd1553-c896-4c3e-9cc8-1d2a10b8977c" keyPath="$USER_HOME$/.ssh/id_rsa" port="8022" customName="localhost" nameFormat="CUSTOM" username="sarakusha">
+        <option name="customName" value="localhost" />
+      </sshConfig>
     </configs>
   </component>
 </project>

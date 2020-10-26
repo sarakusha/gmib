@@ -11,14 +11,15 @@
 const path = require('path');
 
 module.exports = {
-  parser: '@typescript-eslint/parser',  // Specifies the ESLint parser
-  plugins: ['import', '@typescript-eslint', 'react-hooks', 'eslint-plugin-tsdoc'],
+  parser: '@typescript-eslint/parser', // Specifies the ESLint parser
+  plugins: ['import', '@typescript-eslint', 'react-hooks', 'eslint-plugin-tsdoc', 'prettier'],
   extends: [
     'airbnb',
     // 'plugin:react/recommended',
+    'prettier',
     'plugin:@typescript-eslint/eslint-recommended',
-    'plugin:@typescript-eslint/recommended',  // Uses the recommended rules from the
-                                              // @typescript-eslint/eslint-plugin
+    'plugin:@typescript-eslint/recommended', // Uses the recommended rules from the
+    // @typescript-eslint/eslint-plugin
     'plugin:import/errors',
     'plugin:import/warnings',
     'plugin:import/typescript',
@@ -26,10 +27,10 @@ module.exports = {
     // 'plugin:prettier/recommended',
   ],
   parserOptions: {
-    ecmaVersion: 2018,  // Allows for the parsing of modern ECMAScript features
-    sourceType: 'module',  // Allows for the use of imports
+    ecmaVersion: 2018, // Allows for the parsing of modern ECMAScript features
+    sourceType: 'module', // Allows for the use of imports
     ecmaFeatures: {
-      jsx: true,  // Allows for the parsing of JSX
+      jsx: true, // Allows for the parsing of JSX
     },
   },
   rules: {
@@ -45,36 +46,46 @@ module.exports = {
     'react/state-in-constructor': 'off',
     'react-hooks/rules-of-hooks': 'error',
     'react-hooks/exhaustive-deps': 'warn',
-    'spaced-comment': ['error', 'always', { 'markers': ['/'] }],
+    'spaced-comment': ['error', 'always', { markers: ['/'] }],
     '@typescript-eslint/no-non-null-assertion': 'off',
     '@typescript-eslint/interface-name-prefix': 'off',
-    '@typescript-eslint/no-unused-vars': ['error', {
-      'argsIgnorePattern': '^_',
-      'ignoreRestSiblings': true,
-      'args': 'after-used',
-    }],
+    '@typescript-eslint/no-unused-vars': [
+      'error',
+      {
+        argsIgnorePattern: '^_',
+        ignoreRestSiblings: true,
+        args: 'after-used',
+      },
+    ],
     '@typescript-eslint/no-empty-function': 'off',
     '@typescript-eslint/no-empty-interface': 'off',
-    '@typescript-eslint/explicit-function-return-type': ['warn', {
-      allowExpressions: true,
-      allowTypedFunctionExpressions: true,
-      allowHigherOrderFunctions: true,
-    }],
+    '@typescript-eslint/explicit-function-return-type': [
+      'warn',
+      {
+        allowExpressions: true,
+        allowTypedFunctionExpressions: true,
+        allowHigherOrderFunctions: true,
+      },
+    ],
     '@typescript-eslint/ban-ts-ignore': 'off',
     'arrow-parens': ['error', 'as-needed'],
     'no-console': ['error', { allow: ['warn', 'error', 'info', 'assert'] }],
     'no-nested-ternary': 'off',
-    'import/no-unresolved': [2, { 'ignore': ['\.png\?inline'] }],
-    'no-unused-expressions': ['error', { 'allowShortCircuit': true, allowTernary: true }],
+    'import/no-unresolved': [2, { ignore: ['.png?inline'] }],
+    'no-unused-expressions': ['error', { allowShortCircuit: true, allowTernary: true }],
     'no-useless-constructor': 'off',
     '@typescript-eslint/no-useless-constructor': 'error',
     'tsdoc/syntax': 'warn',
-    'no-param-reassign': ["error", { "props": false }],
+    'no-param-reassign': ['error', { props: false }],
+    'no-use-before-define': 'off',
+    '@typescript-eslint/no-use-before-define': 'error',
+    'react/require-default-props': 'off',
+    'react/jsx-wrap-multilines': ['error', { declaration: false, assignment: false }],
   },
-  'overrides': [
+  overrides: [
     {
-      'files': ['*.js'],
-      'rules': {
+      files: ['*.js'],
+      rules: {
         '@typescript-eslint/no-var-requires': 'off',
         '@typescript-eslint/ban-ts-ignore': 'off',
       },
@@ -82,8 +93,8 @@ module.exports = {
   ],
   settings: {
     react: {
-      version: 'detect',  // Tells eslint-plugin-react to automatically detect the version of React
-                          // to use
+      version: 'detect', // Tells eslint-plugin-react to automatically detect the version of React
+      // to use
     },
     'import/parsers': {
       '@typescript-eslint/parser': ['.ts', '.tsx'],
@@ -92,9 +103,10 @@ module.exports = {
       'eslint-import-resolver-lerna': {
         packages: path.resolve(__dirname, './packages'),
       },
-      'node': {
-        'extensions': ['.js', '.jsx', '.ts', '.tsx'],
+      node: {
+        extensions: ['.js', '.jsx', '.ts', '.tsx'],
       },
     },
+    'import/core-modules': ['electron'],
   },
 };

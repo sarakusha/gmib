@@ -16,9 +16,35 @@ const webpackMain = require(configPath); // JSON.parse(fs.readFileSync(configPat
 
 webpackMain().then(config => {
   console.info(configPath);
-  console.info(inspect(config, {
-    showHidden: false,
-    depth: null,
-    colors: false,
-  }));
+  const print = (obj, level = 0) => {
+    const pad = ' '.repeat(level * 4);
+    if (typeof obj !== 'object' || !obj) {
+      console.info(`${pad}${JSON.stringify(obj)}`);
+      return;
+    }
+    for (const [name, value] of Object.entries(obj)) {
+      if (typeof value === 'function') {
+        const fstr = value.toString().trim();
+        if (fstr.startsWith('function') || fstr[0] === '(') {
+          console.info(`${pad}${name.trim()}: ${fstr}`);
+        } else {
+          console.info(`${pad}${fstr}`); // probably a method
+        }
+      } else if (typeof value === 'object') {
+        console.info(`${pad}${name}: {`);
+        print(value, level + 1);
+        console.log(`${pad}}`);
+      } else {
+        console.info(`${pad}${name.trim()}: ${JSON.stringify(value)}`);
+      }
+    }
+  };
+  print(config);
+  // console.info(
+  //   inspect(config, {
+  //     showHidden: false,
+  //     depth: null,
+  //     colors: false,
+  //   })
+  // );
 });

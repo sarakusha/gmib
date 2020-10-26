@@ -7,7 +7,6 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-// @ts-ignore
 declare interface NodeModule {
   hot: {
     accept(path?: string, fn?: () => void, callback?: () => void): void;

@@ -1,20 +1,19 @@
 /*
  * @license
- * Copyright (c) 2019. Nata-Info
+ * Copyright (c) 2020. Nata-Info
  * @author Andrei Sarakeev <avs@nata-info.ru>
  *
- * This file is part of the "@nata" project.
+ * This file is part of the "@nibus" project.
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
+import { makeStyles } from '@material-ui/core/styles';
 import session, { FoundListener, devices } from '@nibus/core';
-import React, {
-  createContext, useCallback, useContext, useEffect, useState,
-} from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { ipcRenderer } from 'electron';
-import StartNibusDialog from '../dialogs/StartNibusDialog';
-
+import CircularProgress from '@material-ui/core/CircularProgress';
+import Backdrop from '@material-ui/core/Backdrop';
 
 const context = {
   session,
@@ -28,41 +27,33 @@ const useSessionStart = (): { ports: number | null; error: Error | null } => {
   const [ports, setPorts] = useState<number | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [attempt, setAttempt] = useState(0);
-  const updatePortsHandler = useCallback(
-    () => setPorts(session.ports),
-    [],
-  );
-  const foundHandler = useCallback<FoundListener>(
-    async ({ address, connection }) => {
-      // console.log('FOUND', connection.description, address.toString());
-      try {
-        if (address.isEmpty) {
-          // console.log('EMPTY', connection.description);
-          return;
-        }
-        if (connection.description.mib) {
-          const device = devices.create(address, connection.description.mib);
-          // devices.create('::3', connection.description.mib).connection = connection;
-          device.connection = connection;
-        } else {
-          const [version, type] = await connection.getVersion(address);
-          const device = devices.create(address, type!, version);
-          connection.description.mib = Reflect.getMetadata('mib', device);
-          device.connection = connection;
-        }
-      } catch (e) {
-        console.error('error in found handler', e);
+  const updatePortsHandler = useCallback(() => setPorts(session.ports), []);
+  const foundHandler = useCallback<FoundListener>(async ({ address, connection }) => {
+    // console.log('FOUND', connection.description, address.toString());
+    try {
+      if (address.isEmpty) {
+        // console.log('EMPTY', connection.description);
+        return;
       }
-    },
-    [],
-  );
-  const request = (): () => void => {
-    const reconnect = (): NodeJS.Timeout => setTimeout(
-      () => {
+      if (connection.description.mib) {
+        const device = devices.create(address, connection.description.mib);
+        // devices.create('::3', connection.description.mib).connection = connection;
+        device.connection = connection;
+      } else {
+        const [version, type] = await connection.getVersion(address);
+        const device = devices.create(address, type!, version);
+        connection.description.mib = Reflect.getMetadata('mib', device);
+        device.connection = connection;
+      }
+    } catch (e) {
+      console.error('error in found handler', e);
+    }
+  }, []);
+  const request = (): (() => void) => {
+    const reconnect = (): NodeJS.Timeout =>
+      setTimeout(() => {
         setAttempt(prev => prev + 1);
-      },
-      3000,
-    );
+      }, 3000);
     session.start().then(
       countPorts => {
         setPorts(countPorts);
@@ -76,7 +67,7 @@ const useSessionStart = (): { ports: number | null; error: Error | null } => {
         setError(err);
         ipcRenderer.send('startLocalNibus');
         reconnect();
-      },
+      }
     );
     return () => {
       session.off('add', updatePortsHandler);
@@ -86,19 +77,29 @@ const useSessionStart = (): { ports: number | null; error: Error | null } => {
       session.close();
     };
   };
-  useEffect(request, [setPorts, setError, setAttempt, attempt]);
+  useEffect(request, [attempt, foundHandler, updatePortsHandler]);
   return {
     ports,
     error,
   };
 };
 
+const useStyles = makeStyles(theme => ({
+  backdrop: {
+    zIndex: theme.zIndex.drawer + 1,
+    color: '#fff',
+  },
+}));
+
 const SessionProvider: React.FC = ({ children }) => {
   const { error } = useSessionStart();
+  const classes = useStyles();
   return (
     <SessionContext.Provider value={context}>
-      <StartNibusDialog open={!!error} />
       {children}
+      <Backdrop open={!!error} className={classes.backdrop}>
+        <CircularProgress color="inherit" />
+      </Backdrop>
     </SessionContext.Provider>
   );
 };

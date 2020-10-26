@@ -1,15 +1,16 @@
 /*
  * @license
- * Copyright (c) 2019. Nata-Info
+ * Copyright (c) 2020. Nata-Info
  * @author Andrei Sarakeev <avs@nata-info.ru>
  *
- * This file is part of the "@nata" project.
+ * This file is part of the "@nibus" project.
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
 
 import React, {
-  createContext, Dispatch,
+  createContext,
+  Dispatch,
   SetStateAction,
   useCallback,
   useContext,
@@ -17,12 +18,14 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import storage from 'electron-json-storage';
 import debounce from 'lodash/debounce';
 import { ipcRenderer } from 'electron';
 import path from 'path';
 import fs from 'fs';
-import { tuplify } from '../util/helpers';
+import { promisify } from 'util';
+import { notEmpty } from '../util/helpers';
+
+// import storage from '../components/storage';
 
 export type TestQuery = {
   width: number;
@@ -48,70 +51,45 @@ type ContextType = {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const TestContext = createContext<ContextType>(null as any);
-const key = 'testParams';
+// const key = 'testParams';
 
 export const useTests = (): ContextType => useContext(TestContext);
 
-type testTuple = [string, string];
-const sortByPath = ([, pathA]: testTuple, [, pathB]: testTuple): number => (pathA < pathB
-  ? -1
-  : pathA > pathB ? 1 : 0);
+type TestTuple = [name: string, path: string];
+const sortByPath = ([, pathA]: TestTuple, [, pathB]: TestTuple): number =>
+  pathA < pathB ? -1 : pathA > pathB ? 1 : 0;
+
+const readAsync = promisify(fs.readFile);
+const readdirAsync = promisify(fs.readdir);
 
 const reTitle = /<\s*title[^>]*>(.+)<\s*\/\s*title>/i;
-const reloadTests = (): Promise<Record<string, string>> => new Promise((resolve, reject) => {
+const reloadTests = async (): Promise<Record<string, string>> => {
   const testDir = path.resolve(__dirname, '../extraResources/tests');
   // console.log('TESTDIR', testDir);
-  fs.readdir(testDir, (err, filenames) => {
-    if (err) {
-      console.error('error while readdir', err.stack);
-      reject(err);
-      return;
-    }
-
-    const promise = Promise.all(filenames.map(
-      filename => new Promise<[string, string] | undefined>(res => {
-        const pathname = path.join(testDir, filename);
-        if (fs.lstatSync(pathname).isDirectory()) {
-          res();
-          return;
-        }
-        fs.readFile(pathname, (error, buffer) => {
-          if (error) {
-            console.error('error while readFile', pathname, error.stack);
-            res();
-            return;
-          }
-          const matches = buffer.toString().match(reTitle);
-          if (!matches) {
-            console.warn('Отсутствует заголовок', filename);
-            res();
-            return;
-          }
-          res(tuplify(matches[1], pathname));
-        });
-      }),
-    ))
-      .then(results => results.filter(item => item !== undefined).reduce(
-        (acc, cur) => {
-          const [name, value] = cur!;
-          acc[name] = value;
-          return acc;
-        },
-        {} as Record<string, string>,
-      ));
-    resolve(promise);
-  });
-});
+  const filenames = (await readdirAsync(testDir))
+    .map(filename => path.join(testDir, filename))
+    .filter(filename => !fs.lstatSync(filename).isDirectory());
+  const tuples = await Promise.all<TestTuple | undefined>(
+    filenames.map(async filename => {
+      const buffer = await readAsync(filename);
+      const matches = buffer.toString().match(reTitle);
+      if (!matches) {
+        console.warn('Отсутствует заголовок', filename);
+        return undefined;
+      }
+      return [matches[1], filename];
+    })
+  );
+  return Object.fromEntries(tuples.filter(notEmpty));
+};
 
 const testsPromise = reloadTests();
 
-const updateQuery = debounce(
-  (query: TestQuery) => {
-    storage.set(key, query, err => err && console.error(err.stack));
-    ipcRenderer.send('test:query', query);
-  },
-  1000,
-);
+const updateQuery = debounce((query: TestQuery) => {
+  // storage.set(key, query, err => err && console.error(err.stack));
+  ipcRenderer.send('test:query', query);
+}, 1000);
+
 const TestsProvider: React.FC = ({ children }) => {
   const [current, setCurrent] = useState<TestId | null>(null);
   const [visible, setVisible] = useState<TestId | null>(null);
@@ -129,15 +107,12 @@ const TestsProvider: React.FC = ({ children }) => {
       setVisible(id);
       ipcRenderer.send('test:show', tests[id]);
     },
-    [setVisible, tests],
+    [tests]
   );
-  const hideAll = useCallback(
-    () => {
-      ipcRenderer.send('test:hide');
-      setVisible(null);
-    },
-    [setVisible],
-  );
+  const hideAll = useCallback(() => {
+    ipcRenderer.send('test:hide');
+    setVisible(null);
+  }, []);
   const value: ContextType = useMemo(
     () => ({
       current,
@@ -147,28 +122,20 @@ const TestsProvider: React.FC = ({ children }) => {
       setCurrent,
       showTest,
       hideAll,
-      tests: Object.entries(tests).sort(sortByPath).map(([id]) => id),
+      tests: Object.entries(tests)
+        .sort(sortByPath)
+        .map(([id]) => id),
     }),
-    [current, visible, query, showTest, hideAll, tests],
-  );
-  useEffect(
-    () => {
-      storage.get(key, (err, data) => {
-        if (Object.entries(data).length !== 0 && !err) {
-          setQuery(data as TestQuery);
-        }
-      });
-    },
-    [setQuery],
+    [current, visible, query, showTest, hideAll, tests]
   );
   useEffect(() => updateQuery(query), [query]);
-  useEffect(() => { visible || hideAll(); }, [hideAll, visible]);
-  useEffect(() => { testsPromise.then(setTests); }, []);
-  return (
-    <TestContext.Provider value={value}>
-      {children}
-    </TestContext.Provider>
-  );
+  useEffect(() => {
+    visible || hideAll();
+  }, [hideAll, visible]);
+  useEffect(() => {
+    testsPromise.then(setTests);
+  }, []);
+  return <TestContext.Provider value={value}>{children}</TestContext.Provider>;
 };
 
 export default TestsProvider;

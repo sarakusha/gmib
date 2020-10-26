@@ -1,9 +1,9 @@
 /*
  * @license
- * Copyright (c) 2019. Nata-Info
+ * Copyright (c) 2020. Nata-Info
  * @author Andrei Sarakeev <avs@nata-info.ru>
  *
- * This file is part of the "@nata" project.
+ * This file is part of the "@nibus" project.
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
@@ -13,9 +13,6 @@ import Tooltip from '@material-ui/core/Tooltip';
 import Typography from '@material-ui/core/Typography';
 import React from 'react';
 import { makeStyles } from '@material-ui/core/styles';
-import { hot } from 'react-hot-loader/root';
-import compose from 'recompose/compose';
-// import grey from '@material-ui/core/colors/grey';
 import ErrorIcon from '@material-ui/icons/Clear';
 
 // const bg = grey[100];
@@ -103,10 +100,14 @@ const Temperature: React.FC<ValueType> = ({ value }) => {
   return (
     <tr>
       <td className={classes.name}>
-        <Typography variant="body2" classes={{ root: classes.typo }}>T</Typography>
+        <Typography variant="body2" classes={{ root: classes.typo }}>
+          T
+        </Typography>
       </td>
       <td className={classes.value}>
-        <Typography variant="body2"><strong>{value}</strong></Typography>
+        <Typography variant="body2">
+          <strong>{value}</strong>
+        </Typography>
       </td>
       <td className={classes.unit}>
         <Typography variant="body2">&deg;C</Typography>
@@ -115,14 +116,15 @@ const Temperature: React.FC<ValueType> = ({ value }) => {
   );
 };
 
-const VertexElement: React.FC<ValueType> = ({
-  name, value, index,
-}) => {
+const VertexElement: React.FC<ValueType> = ({ name, value, index }) => {
   const classes = useStyles();
   return (
     <tr>
       <td className={classes.name}>
-        <Typography variant="body2">{name}<sub>{index}</sub></Typography>
+        <Typography variant="body2">
+          {name}
+          <sub>{index}</sub>
+        </Typography>
       </td>
       <td className={classes.value}>
         <Typography variant="body2">
@@ -138,7 +140,9 @@ const Voltage: React.FC<ValueType> = ({ value, index }) => {
   return (
     <tr>
       <td className={classes.name}>
-        <Typography variant="body2">V<sub>{index}</sub></Typography>
+        <Typography variant="body2">
+          V<sub>{index}</sub>
+        </Typography>
       </td>
       <td className={classes.value}>
         <Typography variant="body2">
@@ -146,9 +150,7 @@ const Voltage: React.FC<ValueType> = ({ value, index }) => {
         </Typography>
       </td>
       <td className={classes.unit}>
-        <Typography variant="body2">
-          В
-        </Typography>
+        <Typography variant="body2">В</Typography>
       </td>
     </tr>
   );
@@ -167,18 +169,22 @@ const Row: React.FC<ValueType> = ({ value, name }) => {
   return (
     <tr>
       <td className={classes.name}>
-        <Typography variant="body2">{title}<sub>{sub}</sub></Typography>
+        <Typography variant="body2">
+          {title}
+          <sub>{sub}</sub>
+        </Typography>
       </td>
       <td className={classes.value}>
-        <Typography variant="body2"><strong>{value}</strong></Typography>
+        <Typography variant="body2">
+          <strong>{value}</strong>
+        </Typography>
       </td>
       <td className={classes.unit}>&nbsp;</td>
     </tr>
   );
 };
 
-type PropRenderType = Record<string,
-  (props: ValueType) => React.ReactElement>;
+type PropRenderType = Record<string, (props: ValueType) => React.ReactElement>;
 
 const propMap: PropRenderType = {
   t: ({ value }) => <Temperature value={value} />,
@@ -195,34 +201,38 @@ const Position: React.FC<PosProps> = ({ x, y }) => {
   return (
     <div className={classes.pos}>
       <div className={classes.xpos}>
-        <Typography variant="caption" color="inherit"><b>{x}</b></Typography>
+        <Typography variant="caption" color="inherit">
+          <b>{x}</b>
+        </Typography>
       </div>
       <div className={classes.ypos}>
-        <Typography variant="caption" color="inherit"><b>{y}</b></Typography>
+        <Typography variant="caption" color="inherit">
+          <b>{y}</b>
+        </Typography>
       </div>
     </div>
   );
 };
 
-const ModuleInfo: React.FC<Props> = ({
-  info, error, x, y,
-}) => {
+const ModuleInfo: React.FC<Props> = ({ info, error, x, y }) => {
   const classes = useStyles();
   return (
     <Paper className={classes.root} elevation={1}>
       <Position x={x} y={y} />
       {error && (
         <Tooltip title={error} enterDelay={300}>
-          <div className={classes.error}><ErrorIcon /></div>
+          <div className={classes.error}>
+            <ErrorIcon />
+          </div>
         </Tooltip>
       )}
       {info && (
         <table className={classes.table}>
           <tbody>
-          {Object.entries(info).map(([name, value]) => {
-            const ModuleRow = propMap[name] ?? propMap.default;
-            return <ModuleRow key={name} name={name} value={value} />;
-          })}
+            {Object.entries(info).map(([name, value]) => {
+              const ModuleRow = propMap[name] ?? propMap.default;
+              return <ModuleRow key={name} name={name} value={value} />;
+            })}
           </tbody>
         </table>
       )}
@@ -230,7 +240,5 @@ const ModuleInfo: React.FC<Props> = ({
   );
 };
 
-export default compose<Props, Props>(
-  hot,
-  React.memo,
-)(ModuleInfo);
+// export default compose<Props, Props>(hot, React.memo)(ModuleInfo);
+export default ModuleInfo;

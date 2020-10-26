@@ -1,9 +1,9 @@
 /*
  * @license
- * Copyright (c) 2019. Nata-Info
+ * Copyright (c) 2020. Nata-Info
  * @author Andrei Sarakeev <avs@nata-info.ru>
  *
- * This file is part of the "@nata" project.
+ * This file is part of the "@nibus" project.
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
@@ -14,24 +14,30 @@ import {
   BrowserWindow,
   ipcMain,
   Event,
+  dialog,
+  // eslint-disable-next-line import/no-extraneous-dependencies
 } from 'electron';
 import * as path from 'path';
 import { format as formatUrl } from 'url';
 import log from 'electron-log';
 import { autoUpdater } from 'electron-updater';
-import NibusService from '@nibus/cli/lib/service';
+import type { NibusService } from '@nibus/cli';
+
 import { TestQuery } from '../providers/TestProvider';
+
+const USE_REACT_REFRESH_WEBPACK = true;
 
 let currentPath: string;
 
-let service: typeof NibusService | null = null;
+let service: NibusService | null = null;
 
-process.env.DEBUG = 'nibus:*';
+process.env.DEBUG = 'nibus:*,-nibus:<<<,-nibus:>>>';
+process.env.DEBUG_COLORS = 'no';
+process.env.DEBUG_HIDE_DATE = 'yes';
 
 autoUpdater.logger = log;
 log.transports.file.level = 'info';
 log.transports.console.level = false;
-log.info('App starting...');
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
@@ -61,44 +67,16 @@ const closeNibus = (): void => {
   }
 };
 
-function createMainWindow(): BrowserWindow {
+async function createMainWindow(): Promise<BrowserWindow> {
   const window = new BrowserWindow({
     width: 800,
     height: 650,
-    webPreferences: { nodeIntegration: true },
+    webPreferences: {
+      nodeIntegration: true,
+      worldSafeExecuteJavaScript: true,
+      // enableRemoteModule: true,
+    },
   });
-
-  if (isDevelopment) {
-    // import('electron-debug').then(({ default: install }) => {
-    //   console.log('ELECTRON_DEBUG', install);
-    //   install();
-    // });
-    import('electron-devtools-installer').then(
-      ({ default: installExtension, REACT_DEVELOPER_TOOLS }) => {
-        installExtension(REACT_DEVELOPER_TOOLS)
-          .then(name => {
-            window.webContents.once('did-frame-finish-load', () => {
-              window.webContents.openDevTools();
-              // window.webContents.on('devtools-opened', () => {
-              //   window.focus();
-              // });
-            });
-            log.info(`Added Extension:  ${name}`);
-          })
-          .catch(err => log.info('An error occurred: ', err));
-      },
-    );
-  }
-
-  if (isDevelopment) {
-    window.loadURL(`http://localhost:${process.env.ELECTRON_WEBPACK_WDS_PORT}`);
-  } else {
-    window.loadURL(formatUrl({
-      pathname: path.join(__dirname, 'index.html'),
-      protocol: 'file',
-      slashes: true,
-    }));
-  }
 
   window.on('closed', () => {
     mainWindow = null;
@@ -114,13 +92,38 @@ function createMainWindow(): BrowserWindow {
     });
   });
 
+  if (isDevelopment) {
+    window.webContents.once('did-frame-finish-load', () => {
+      window.webContents.openDevTools();
+    });
+  }
+
+  // Несовместим с ReactRefreshWebpackPlugin в webpack.renderer.additions.js
+  if (isDevelopment && !USE_REACT_REFRESH_WEBPACK) {
+    const { default: installExtension, REACT_DEVELOPER_TOOLS } = await import(
+      'electron-devtools-installer'
+    );
+    const name = await installExtension(REACT_DEVELOPER_TOOLS);
+    log.info(`Added Extension:  ${name}`);
+  }
+
+  if (isDevelopment) {
+    await window.loadURL(`http://localhost:${process.env.ELECTRON_WEBPACK_WDS_PORT}`);
+  } else {
+    await window.loadURL(
+      formatUrl({
+        pathname: path.join(__dirname, 'index.html'),
+        protocol: 'file',
+        slashes: true,
+      })
+    );
+  }
+
   return window;
 }
 
 function createTestWindow(): BrowserWindow {
-  const {
-    width, height, x = 0, y = 0,
-  } = currentQuery;
+  const { width, height, x = 0, y = 0 } = currentQuery;
   const window = new BrowserWindow({
     width,
     height,
@@ -132,7 +135,10 @@ function createTestWindow(): BrowserWindow {
     show: false,
     alwaysOnTop: true,
     skipTaskbar: true,
-    webPreferences: { nodeIntegration: true },
+    webPreferences: {
+      nodeIntegration: true,
+      worldSafeExecuteJavaScript: true,
+    },
     // webPreferences: {
     //   webSecurity: false,
     // },
@@ -143,7 +149,9 @@ function createTestWindow(): BrowserWindow {
       window.webContents.openDevTools();
     });
   }
-  window.on('closed', () => { testWindow = null; });
+  window.on('closed', () => {
+    testWindow = null;
+  });
   window.on('ready-to-show', () => window.show());
   process.platform === 'win32' || window.setIgnoreMouseEvents(true);
   return window;
@@ -151,20 +159,24 @@ function createTestWindow(): BrowserWindow {
 
 const reloadTest = (pathname: string): void => {
   if (!testWindow || !pathname) return;
-  const {
-    width, height, moduleHres, moduleVres,
-  } = currentQuery;
+  const { width, height, moduleHres, moduleVres } = currentQuery;
 
-  testWindow.loadURL(formatUrl({
-    pathname,
-    protocol: 'file',
-    query: {
-      width,
-      height,
-      moduleHres,
-      moduleVres,
-    },
-  }));
+  testWindow
+    .loadURL(
+      formatUrl({
+        pathname,
+        protocol: 'file',
+        query: {
+          width,
+          height,
+          moduleHres,
+          moduleVres,
+        },
+      })
+    )
+    .catch(e => {
+      log.error('error while load test', e.message);
+    });
   currentPath = pathname;
 };
 
@@ -174,27 +186,32 @@ app.on('window-all-closed', () => {
   // if (process.platform !== 'darwin' || isDevelopment) {
   closeNibus();
   app.quit();
+  log.info('App closed');
   // }
 });
 
-app.on('activate', () => {
+app.on('activate', async () => {
   // on macOS it is common to re-create a window even after all windows have been closed
   if (mainWindow === null) {
-    mainWindow = createMainWindow();
+    mainWindow = await createMainWindow();
   }
 });
 
 // create main BrowserWindow when electron is ready
-app.on('ready', () => {
-  mainWindow = createMainWindow();
+app.on('ready', async () => {
+  mainWindow = await createMainWindow();
   import('./mainMenu');
-  isDevelopment || autoUpdater.checkForUpdatesAndNotify();
+  isDevelopment ||
+    autoUpdater
+      .checkForUpdatesAndNotify()
+      .catch(e => log.error('error while check for updates', e.message));
 });
 
-function sendStatusToWindow(text: string): void {
-  log.info(text);
+function sendStatusToWindow(text: string, isError = false): void {
+  isError ? log.error(text) : log.info(text);
   mainWindow && mainWindow.webContents.send('message', text);
 }
+sendStatusToWindow('App starting...');
 
 autoUpdater.on('checking-for-update', () => {
   sendStatusToWindow('Checking for update...');
@@ -226,10 +243,12 @@ autoUpdater.on('update-downloaded', () => {
 ipcMain.on('test:query', (event: Event, query: TestQuery) => {
   let needReload = false;
   if (testWindow) {
-    if (currentQuery.width !== query.width
-      || currentQuery.height !== query.height
-      || currentQuery.moduleHres !== query.moduleHres
-      || currentQuery.moduleVres !== query.moduleVres) {
+    if (
+      currentQuery.width !== query.width ||
+      currentQuery.height !== query.height ||
+      currentQuery.moduleHres !== query.moduleHres ||
+      currentQuery.moduleVres !== query.moduleVres
+    ) {
       needReload = true;
     }
     testWindow.setPosition(query.x || 0, query.y || 0);
@@ -258,17 +277,30 @@ ipcMain.on('test:hide', () => {
 });
 
 ipcMain.on('startLocalNibus', () => {
-  import('@nibus/cli/lib/service').then(({ default: svc }) => {
-    service = svc;
-    log.info('START LOCAL NIBUS');
-    try {
-      service.start();
-    } catch (e) {
-      log.error('error while nibus start', e.stack);
-    }
-  })
+  import('@nibus/cli/lib/service')
+    .then(({ default: svc, detectionPath }) => {
+      service = svc;
+      sendStatusToWindow('Starting local NIBUS...');
+      return service.start().then(() => {
+        sendStatusToWindow(`NiBUS started. Detection file: ${detectionPath}`);
+      });
+    })
     .catch(e => {
-      log.error('error while nibus load', e.stack);
+      sendStatusToWindow(`Error while nibus starting ${e}`);
     });
   // import('@nata/nibus.js/lib/service/service').then(service => service.default.start());
+});
+
+ipcMain.on('reloadNibus', () => {
+  import('@nibus/cli/lib/service').then(({ default: svc }) => {
+    svc.reload();
+  });
+});
+
+ipcMain.on('showOpenDialogSync', (event, options: Electron.OpenDialogSyncOptions) => {
+  event.returnValue = dialog.showOpenDialogSync(options);
+});
+
+ipcMain.on('showErrorBox', (event, title: string, content: string) => {
+  dialog.showErrorBox(title, content);
 });
