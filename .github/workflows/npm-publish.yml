@@ -52,10 +52,14 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: 12
+      - name: Build Tools
+        run: yarn global add windows-build-tools
       - run: yarn workspace @nibus/gmib install
       - run: yarn workspace @nibus/gmib rebuild
       - run: yarn workspace @nibus/gmib compile
       - run: yarn workspace @nibus/gmib release:win
+        env:
+          GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
 
   release-linux:
     needs: build
@@ -65,10 +69,14 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: 12
+      - name: install build-essential libudev-dev
+        run: sudo apt install build-essential libudev-dev
       - run: yarn workspace @nibus/gmib install
       - run: yarn workspace @nibus/gmib rebuild
       - run: yarn workspace @nibus/gmib compile
       - run: yarn workspace @nibus/gmib release:linux
+        env:
+          GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
 
   release-mac:
     needs: build
@@ -82,3 +90,5 @@ jobs:
       - run: yarn workspace @nibus/gmib rebuild
       - run: yarn workspace @nibus/gmib compile
       - run: yarn workspace @nibus/gmib release:mac
+        env:
+          GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
