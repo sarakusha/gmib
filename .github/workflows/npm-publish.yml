@@ -3,7 +3,10 @@
 
 name: Node.js Package
 
-on: [push]
+on:
+  push:
+    branches:
+      - master
 #  release:
 #    types: [created]
 
@@ -52,8 +55,8 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: 12
-      - name: Build Tools
-        run: yarn global add windows-build-tools
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v1.0.2
       - run: yarn workspace @nibus/gmib install
       - run: yarn workspace @nibus/gmib rebuild
       - run: yarn workspace @nibus/gmib compile
