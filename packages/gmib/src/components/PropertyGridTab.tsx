@@ -55,6 +55,14 @@ const useStyles = makeStyles(theme => ({
     left: 0,
     zIndex: 1,
   },
+  name: {
+    paddingLeft: theme.spacing(3),
+  },
+  table: {
+    '& table': {
+      borderCollapse: 'separate',
+    },
+  },
 }));
 
 const useSummaryClasses = makeStyles(theme => ({
@@ -118,8 +126,8 @@ const PropertyGridTab: React.FC<Props> = ({ id, selected = false }) => {
       await reload();
     }
   }, [device, reload]);
-  const reloadToolbar = useMemo(() => {
-    return (
+  const reloadToolbar = useMemo(
+    () => (
       <>
         <Tooltip title="Загрузить свойства из файла" enterDelay={1000}>
           <IconButton color="inherit" onClick={loadHandler} disabled={!device}>
@@ -140,16 +148,17 @@ const PropertyGridTab: React.FC<Props> = ({ id, selected = false }) => {
           </div>
         </Tooltip>
       </>
-    );
-  }, [
-    loadHandler,
-    device,
-    reloadHandler,
-    busy,
-    classes.fabProgress,
-    classes.toolbarWrapper,
-    saveHandler,
-  ]);
+    ),
+    [
+      loadHandler,
+      device,
+      reloadHandler,
+      busy,
+      classes.fabProgress,
+      classes.toolbarWrapper,
+      saveHandler,
+    ]
+  );
 
   const [, setToolbar] = useToolbar();
 
@@ -198,15 +207,16 @@ const PropertyGridTab: React.FC<Props> = ({ id, selected = false }) => {
         {Object.entries(categories).map(([category, propNames]) => (
           <AccordionList
             key={category}
-            name={category ?? 'other'}
-            title={<Typography variant="button">{category ?? 'Другие'}</Typography>}
+            name={category || 'other'}
+            title={category}
             component={Table}
             summaryClasses={summaryClasses}
+            className={classes.table}
           >
             <TableBody>
               {propNames.map(([name, displayName]) => (
                 <TableRow key={name}>
-                  <TableCell>{displayName}</TableCell>
+                  <TableCell className={classes.name}>{displayName}</TableCell>
                   <PropertyValueCell
                     proto={proto}
                     name={name}

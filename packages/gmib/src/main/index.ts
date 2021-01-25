@@ -8,35 +8,29 @@
  * the EULA file that was distributed with this source code.
  */
 
-// eslint-disable-next-line import/no-extraneous-dependencies
-import {
-  app,
-  BrowserWindow,
-  ipcMain,
-  Event,
-  dialog,
-  // eslint-disable-next-line import/no-extraneous-dependencies
-} from 'electron';
-import * as path from 'path';
-import { format as formatUrl } from 'url';
+import { app, BrowserWindow, ipcMain, Event, dialog } from 'electron';
+import { URLSearchParams } from 'url';
 import log from 'electron-log';
 import { autoUpdater } from 'electron-updater';
 import type { NibusService } from '@nibus/cli';
+// import debug from 'electron-debug';
 
 import { TestQuery } from '../providers/TestProvider';
 
+// debug();
 const USE_REACT_REFRESH_WEBPACK = true;
 
 let currentPath: string;
 
 let service: NibusService | null = null;
 
-process.env.DEBUG = 'nibus:*,-nibus:<<<,-nibus:>>>';
-process.env.DEBUG_COLORS = 'no';
-process.env.DEBUG_HIDE_DATE = 'yes';
+// process.env.DEBUG = 'nibus:*,-nibus:<<<,-nibus:>>>';
+// process.env.DEBUG_COLORS = 'no';
+// process.env.DEBUG_HIDE_DATE = 'yes';
 
 autoUpdater.logger = log;
 log.transports.file.level = 'info';
+log.transports.file.fileName = process.env.NIBUS_LOG || 'gmib-main.log';
 log.transports.console.level = false;
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
@@ -110,13 +104,7 @@ async function createMainWindow(): Promise<BrowserWindow> {
   if (isDevelopment) {
     await window.loadURL(`http://localhost:${process.env.ELECTRON_WEBPACK_WDS_PORT}`);
   } else {
-    await window.loadURL(
-      formatUrl({
-        pathname: path.join(__dirname, 'index.html'),
-        protocol: 'file',
-        slashes: true,
-      })
-    );
+    await window.loadURL(`file://${__dirname}/index.html`);
   }
 
   return window;
@@ -159,20 +147,15 @@ function createTestWindow(): BrowserWindow {
 
 const reloadTest = (pathname: string): void => {
   if (!testWindow || !pathname) return;
-  const { width, height, moduleHres, moduleVres } = currentQuery;
 
   testWindow
     .loadURL(
-      formatUrl({
-        pathname,
-        protocol: 'file',
-        query: {
-          width,
-          height,
-          moduleHres,
-          moduleVres,
-        },
-      })
+      `file://${pathname}?${new URLSearchParams(
+        Object.entries(currentQuery).map<[string, string]>(([name, value]) => [
+          name,
+          value.toString(),
+        ])
+      )}`
     )
     .catch(e => {
       log.error('error while load test', e.message);
@@ -291,14 +274,19 @@ ipcMain.on('startLocalNibus', () => {
   // import('@nata/nibus.js/lib/service/service').then(service => service.default.start());
 });
 
-ipcMain.on('reloadNibus', () => {
-  import('@nibus/cli/lib/service').then(({ default: svc }) => {
-    svc.reload();
-  });
-});
+// ipcMain.on('reloadNibus', () => {
+//   service && service.reload();
+//   // import('@nibus/cli/lib/service').then(({ default: svc }) => {
+//   //   svc.reload();
+//   // });
+// });
 
 ipcMain.on('showOpenDialogSync', (event, options: Electron.OpenDialogSyncOptions) => {
   event.returnValue = dialog.showOpenDialogSync(options);
+});
+
+ipcMain.on('showSaveDialogSync', (event, options: Electron.SaveDialogSyncOptions) => {
+  event.returnValue = dialog.showSaveDialogSync(options);
 });
 
 ipcMain.on('showErrorBox', (event, title: string, content: string) => {

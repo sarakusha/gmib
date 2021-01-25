@@ -18,8 +18,8 @@ import React, {
   useState,
 } from 'react';
 // import { getState } from '../util/helpers';
-import { INibusConnection, CreateDevice, IDevice, devices as coreDevices } from '@nibus/core';
-import { useSessionContext } from './SessionProvider';
+import { INibusConnection, CreateDevice, IDevice } from '@nibus/core';
+import { useSession } from './SessionProvider';
 import StubDevice from '../components/StubDevice';
 
 type Devices = {
@@ -32,7 +32,7 @@ type Devices = {
 };
 
 const stubDeviceAPI: Devices = {
-  createDevice: coreDevices.create.bind(coreDevices),
+  createDevice: ((() => {}) as unknown) as CreateDevice, // coreDevices.create.bind(coreDevices),
   setCurrent: () => {},
   current: null,
   getProto: () => ({}),
@@ -42,7 +42,8 @@ const stubDeviceAPI: Devices = {
 export type DeviceId = string | null;
 const emptyProto = Object.freeze({});
 const useDevices = (): Devices => {
-  const { devices, session } = useSessionContext();
+  const session = useSession();
+  const { devices } = session;
   const createDevice = useMemo<CreateDevice>(() => devices.create.bind(devices), [devices]);
   type DeviceType = ReturnType<typeof createDevice>;
   const [devs, setDevices] = useState(devices.get());

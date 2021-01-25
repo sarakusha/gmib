@@ -22,7 +22,6 @@ import { Flasher, FlashKinds, Kind, KindMap } from '@nibus/core';
 import { SnackbarAction, useSnackbar } from 'notistack';
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useDevice } from '../providers/DevicesStateProvider';
-// import { useFlashState, useGlobalFlashState } from '../providers/FlashStateProvider';
 import CircularProgressWithLabel from './CircularProgressWithLabel';
 import FlashUpgrade, { displayName, Props as FlashUpgradeProps } from './FlashUpgrade';
 import FormFieldSet from './FormFieldSet';
@@ -75,13 +74,12 @@ const FirmwareTab: React.FC<Props> = ({ id, selected }) => {
   const classes = useStyles();
   const { closeSnackbar, enqueueSnackbar } = useSnackbar();
   const { device } = useDevice(id);
+  const isEmpty = !device || device.address.isEmpty;
   const [progress, setProgress] = useState(0);
-  const [flashing, setFleshing] = useState(false);
+  const [flashing, setFlashing] = useState(false);
   const snacksRef = useRef<number[]>([]);
-  const [kind, setKind] = useState<Kind>('fpga');
-  useEffect(() => {
-    return () => snacksRef.current.forEach(closeSnackbar);
-  }, [closeSnackbar, kind]);
+  const [kind, setKind] = useState<Kind>('mcu');
+  useEffect(() => () => snacksRef.current.forEach(closeSnackbar), [closeSnackbar, kind]);
   // const [, dispatch] = useGlobalFlashState();
   const flashHandler = useCallback<FlashUpgradeProps['onFlash']>(
     (currentKind, filename, moduleSelect) => {
@@ -90,17 +88,33 @@ const FirmwareTab: React.FC<Props> = ({ id, selected }) => {
       snacksRef.current = [];
       setProgress(0);
       const flasher = new Flasher(device);
-      const { total } = flasher.flash(currentKind, filename, moduleSelect);
-      setFleshing(true);
+      let total = 0;
+      try {
+        total = flasher.flash(currentKind, filename, moduleSelect).total;
+      } catch (e) {
+        enqueueSnackbar(`Invalid source file: ${filename} (${e.message})`, { variant: 'error' });
+        return;
+      }
+      flasher.once('error', e => {
+        flasher.removeAllListeners();
+        setFlashing(false);
+        setProgress(0);
+        enqueueSnackbar(`Error while flashing: ${e}`, { variant: 'error' });
+      });
+      setFlashing(true);
       let current = 0;
       const normalize = (value: number): number => (value * 100) / total;
       flasher.once('finish', () => {
         flasher.removeAllListeners();
-        setFleshing(false);
+        setFlashing(false);
         setProgress(0);
       });
-      flasher.on('tick', length => {
-        current += length;
+      flasher.on('tick', ({ length, offset }) => {
+        if (typeof offset === 'number') {
+          current = offset;
+        } else if (typeof length === 'number') {
+          current += length;
+        }
         setProgress(normalize(current));
       });
       const action: SnackbarAction = key => (
@@ -153,6 +167,7 @@ const FirmwareTab: React.FC<Props> = ({ id, selected }) => {
             legend={isModule ? 'Модуль' : 'Хост'}
             // helper={`Для ${isModule ? 'модулей' : 'процессора'}${legacy ? ' (устаревшая)' : ''}`}
             className={classes.kinds}
+            key={isModule.toString()}
           >
             {Object.entries(KindMap)
               .filter(([, [, module]]) => isModule === module)
@@ -165,6 +180,7 @@ const FirmwareTab: React.FC<Props> = ({ id, selected }) => {
                   label={displayName(value)}
                   labelPlacement="top"
                   className={classes.kind}
+                  disabled={(isEmpty && value !== 'mcu') || value === 'fpga'}
                 />
               ))}
           </FormFieldSet>

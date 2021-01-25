@@ -115,7 +115,8 @@ export const useDevice = (id: DeviceId): CurrentDevice => {
     setDeviceState(
       id!,
       names.reduce((props, name) => {
-        props[name] = device.getError(name) || device[name];
+        props[name] = device.getError(name) ?? device[name];
+        if (Number.isNaN(props[name])) console.log('NaN', name);
         return props;
       }, {} as Record<string, any>)
     );

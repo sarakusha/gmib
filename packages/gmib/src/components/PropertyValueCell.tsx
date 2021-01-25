@@ -21,7 +21,7 @@ import SerialNoCell from './SerialNoCell';
 
 const capitalize = (str?: string): string | undefined =>
   str && str.charAt(0).toUpperCase() + str.slice(1);
-const safeParseNumber = (value: unknown): number => parseFloat(value as string);
+const safeParseNumber = (value: unknown): number => parseFloat(value as string) || 0;
 
 const useStyles = makeStyles(_theme => ({
   select: {

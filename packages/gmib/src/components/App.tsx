@@ -7,6 +7,9 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
+import ListItemText from '@material-ui/core/ListItemText';
+import ListItem from '@material-ui/core/ListItem';
+import ListItemIcon from '@material-ui/core/ListItemIcon';
 import AppBar from '@material-ui/core/AppBar';
 import Divider from '@material-ui/core/Divider';
 import Drawer from '@material-ui/core/Drawer';
@@ -22,6 +25,8 @@ import MenuIcon from '@material-ui/icons/Menu';
 import classNames from 'classnames';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import some from 'lodash/some';
+import SettingsBrightnessIcon from '@material-ui/icons/SettingsBrightness';
+
 import { AccordionProvider } from './AccordionList';
 import Devices from './Devices';
 import { useDevicesContext } from '../providers/DevicesProvier';

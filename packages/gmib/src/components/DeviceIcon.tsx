@@ -24,12 +24,12 @@ const DeviceIcon: React.FC<Props> = ({ device, mib, ...props }) => {
   const safeMib: string = mib || Reflect.getMetadata('mib', device || {});
   if (!safeMib) console.warn('Invalid mib or device');
   let Icon = DefaultIcon;
-  if (!parent && device && device.connection && device.connection.description.link) {
-    Icon = HubIcon;
-  } else if (safeMib && safeMib.includes('console')) {
+  if (safeMib && safeMib.includes('console')) {
     Icon = ConsoleIcon;
   } else if (safeMib && safeMib.includes('minihost')) {
     Icon = MinihostIcon;
+  } else if (!parent && device && device.connection && device.connection.description.link) {
+    Icon = HubIcon;
   }
   return <Icon {...props} />;
 };

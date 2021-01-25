@@ -21,10 +21,9 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Typography from '@material-ui/core/Typography';
 import IconButton from '@material-ui/core/IconButton';
 import ReloadIcon from '@material-ui/icons/Refresh';
-import { ipcRenderer } from 'electron';
 
 import { useDevicesContext } from '../providers/DevicesProvier';
-import { useSessionContext } from '../providers/SessionProvider';
+import { useSession } from '../providers/SessionProvider';
 import useCurrent from '../providers/useCurrent';
 import AccordionList, { useAccordion } from './AccordionList';
 import DeviceIcon from './DeviceIcon';
@@ -43,20 +42,27 @@ const useStyles = makeStyles(theme => ({
   },
 }));
 
-const reloadHandler: React.MouseEventHandler<HTMLButtonElement> = e => {
-  ipcRenderer.send('reloadNibus');
-  e.stopPropagation();
-};
-
 const name = 'devices';
 
 const Devices: React.FC = () => {
   const classes = useStyles();
   const { devices, current } = useDevicesContext();
   const setCurrent = useCurrent('device');
-  const devs = useSessionContext().devices;
+  const session = useSession();
+  useEffect(() => {
+    session.setLogLevel('hex');
+  }, [session]);
+  const devs = session.devices;
   const [, setAccordion] = useAccordion();
   const [, setUpdate] = useState(false);
+  const reloadHandler = useCallback<React.MouseEventHandler<HTMLButtonElement>>(
+    e => {
+      session.reloadDevices();
+      e.stopPropagation();
+    },
+    [session]
+  );
+
   useEffect(() => {
     const sernoListener = (): void => setUpdate(prev => !prev);
     devs.on('serno', sernoListener);
@@ -81,7 +87,7 @@ const Devices: React.FC = () => {
         </IconButton>
       </Box>
     ),
-    []
+    [reloadHandler]
   );
   return (
     <AccordionList name={name} title={title}>
@@ -98,11 +104,11 @@ const Devices: React.FC = () => {
         return (
           <ListItem
             button
-            key={device.connection?.path ?? device.id}
+            key={device.id}
             onClick={clickHandler}
             data-id={device.id}
             selected={device.id === current}
-            disabled={!device.connection || device.address.isEmpty}
+            disabled={!device.connection}
           >
             <ListItemIcon>
               <div className={classes.wrapper}>

@@ -9,7 +9,8 @@
  */
 
 /* eslint-disable import/first */
-process.env.DEBUG = 'nibus:*';
+// process.env.DEBUG = 'nibus:*';
+window.localStorage.debug = process.env.DEBUG;
 
 import { createMuiTheme, MuiThemeProvider } from '@material-ui/core/styles';
 import React from 'react';

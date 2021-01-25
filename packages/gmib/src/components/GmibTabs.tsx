@@ -65,6 +65,7 @@ const Tabs: React.FC = () => {
       <TabContainer id="test" selected={!!currentTest}>
         <TestParams />
       </TabContainer>
+      <TabContainer id="autobrightness" selected={false}></TabContainer>
     </div>
   );
 };

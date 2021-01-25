@@ -8,21 +8,17 @@
  * the EULA file that was distributed with this source code.
  */
 import { makeStyles } from '@material-ui/core/styles';
-import session, { FoundListener, devices } from '@nibus/core';
+import session, { INibusSession } from '@nibus/core';
+import type { FoundListener } from '@nibus/core';
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { ipcRenderer } from 'electron';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import Backdrop from '@material-ui/core/Backdrop';
 
-const context = {
-  session,
-  devices,
-};
+const SessionContext = createContext(session);
 
-const SessionContext = createContext(context);
-
-export const useSessionContext = (): typeof context => useContext(SessionContext);
+export const useSession = (): INibusSession => useContext(SessionContext);
 const useSessionStart = (): { ports: number | null; error: Error | null } => {
   const [ports, setPorts] = useState<number | null>(null);
   const [error, setError] = useState<Error | null>(null);
@@ -31,20 +27,21 @@ const useSessionStart = (): { ports: number | null; error: Error | null } => {
   const foundHandler = useCallback<FoundListener>(async ({ address, connection }) => {
     // console.log('FOUND', connection.description, address.toString());
     try {
-      if (address.isEmpty) {
-        // console.log('EMPTY', connection.description);
-        return;
-      }
+      // if (address.isEmpty) {
+      //   // console.log('EMPTY', connection.description);
+      //   return;
+      // }
       if (connection.description.mib) {
-        const device = devices.create(address, connection.description.mib);
+        const device = session.devices.create(address, connection.description.mib);
         // devices.create('::3', connection.description.mib).connection = connection;
         device.connection = connection;
       } else {
         const [version, type] = await connection.getVersion(address);
-        const device = devices.create(address, type!, version);
+        const device = session.devices.create(address, type!, version);
         connection.description.mib = Reflect.getMetadata('mib', device);
         device.connection = connection;
       }
+      // console.log('devices', session.devices.get());
     } catch (e) {
       console.error('error in found handler', e);
     }
@@ -95,7 +92,7 @@ const SessionProvider: React.FC = ({ children }) => {
   const { error } = useSessionStart();
   const classes = useStyles();
   return (
-    <SessionContext.Provider value={context}>
+    <SessionContext.Provider value={session}>
       {children}
       <Backdrop open={!!error} className={classes.backdrop}>
         <CircularProgress color="inherit" />

@@ -15,6 +15,7 @@ import Tab from '@material-ui/core/Tab';
 import Tabs from '@material-ui/core/Tabs';
 import React, { useCallback, useState } from 'react';
 import { useDevicesContext } from '../providers/DevicesProvier';
+import { useDevice } from '../providers/DevicesStateProvider';
 // import FlashStateProvider from '../providers/FlashStateProvider';
 import FirmwareTab from './FirmwareTab';
 import PropertyGridTab from './PropertyGridTab';
@@ -51,8 +52,10 @@ type Props = {
 
 const DeviceTabs: React.FC<Props> = ({ id }) => {
   const classes = useStyles();
-  const { getProto } = useDevicesContext();
-  const proto = getProto(id);
+  // const { getProto } = useDevicesContext();
+  // const proto = getProto(id);
+  const { proto, device } = useDevice(id);
+  const isEmpty = !device || device.address.isEmpty;
   const [value, setValue] = useState(0);
   const changeHandler = useCallback((_, newValue: unknown) => {
     setValue(Number(newValue));
@@ -61,6 +64,7 @@ const DeviceTabs: React.FC<Props> = ({ id }) => {
   const isMinihost = mib && mib.startsWith('minihost');
   const isMinihost3 = mib === 'minihost3';
   if (!isMinihost && value > 0) setValue(0);
+  // if (isMinihost3 && isEmpty) setValue(2);
   // console.log(mib, id);
   if (!id) return null;
   return (
@@ -73,8 +77,8 @@ const DeviceTabs: React.FC<Props> = ({ id }) => {
           onChange={changeHandler}
           variant="fullWidth"
         >
-          <Tab label="Свойства" />
-          {isMinihost && <Tab label="Телеметрия" />}
+          {!isEmpty && <Tab label="Свойства" disabled={isEmpty} />}
+          {isMinihost && !isEmpty && <Tab label="Телеметрия" disabled={isEmpty} />}
           {isMinihost3 && <Tab label="Прошивка" />}
         </Tabs>
       </AppBar>
@@ -83,11 +87,15 @@ const DeviceTabs: React.FC<Props> = ({ id }) => {
         <Container maxWidth={value !== 1 ? 'sm' : undefined} className={classes.root}>
           {isMinihost ? (
             <>
-              <PropertyGridTab id={id} selected={value === 0} />
-              <TelemetryTab id={id} selected={value === 1} />
+              {!isEmpty && (
+                <>
+                  <PropertyGridTab id={id} selected={value === 0} />
+                  <TelemetryTab id={id} selected={value === 1} />
+                </>
+              )}
               {isMinihost3 && (
                 // <FlashStateProvider>
-                <FirmwareTab id={id} selected={value === 2} />
+                <FirmwareTab id={id} selected={value === 2 || isEmpty} />
                 // </FlashStateProvider>
               )}
             </>

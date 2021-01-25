@@ -56,4 +56,4 @@ const TestItems: React.FC = () => {
   );
 };
 
-export default TestItems;
+export default React.memo(TestItems);

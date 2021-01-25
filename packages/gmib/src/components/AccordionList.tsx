@@ -9,7 +9,9 @@
  */
 import { AccordionDetailsProps, AccordionSummaryProps } from '@material-ui/core';
 import Box from '@material-ui/core/Box';
+import { makeStyles } from '@material-ui/core/styles';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
+import classNames from 'classnames';
 import React, {
   Dispatch,
   ReactNode,
@@ -47,6 +49,12 @@ export const AccordionProvider: React.FC = ({ children }) => {
   return <Context.Provider value={value}>{children}</Context.Provider>;
 };
 
+const useStyles = makeStyles({
+  hidden: {
+    display: 'none',
+  },
+});
+
 const AccordionList: React.FC<AccordionListProps> = ({
   name,
   title,
@@ -60,16 +68,18 @@ const AccordionList: React.FC<AccordionListProps> = ({
   const changeHandler = useCallback(() => {
     setCurrent(prev => prev !== name && name);
   }, [name, setCurrent]);
-  const summary = title ?? name;
+  const classes = useStyles();
+  // const summary = title ?? name;
   // useEffect(() => setTopPos(name, ref.current?.offsetTop), [name]);
   return (
-    <Accordion expanded={current === name} onChange={changeHandler} className={className}>
+    <Accordion expanded={current === name || !title} onChange={changeHandler} className={className}>
       <AccordionSummary
         expandIcon={<ExpandMoreIcon />}
         aria-controls={name}
         classes={summaryClasses}
+        className={classNames({ [classes.hidden]: !title })}
       >
-        {typeof summary === 'string' ? <Typography>{summary}</Typography> : title}
+        {typeof title === 'string' ? <Typography>{title}</Typography> : title}
       </AccordionSummary>
       <AccordionDetails classes={detailsClasses}>
         <Box component={component} width={1}>

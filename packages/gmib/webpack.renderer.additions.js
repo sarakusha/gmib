@@ -9,8 +9,8 @@
  */
 
 const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
-const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
-const path = require('path');
+// const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
+// const path = require('path');
 
 const { ANALYZE } = process.env;
 const isProduction = process.env.NODE_ENV === 'production';
@@ -109,15 +109,15 @@ module.exports = config => {
   });
   // !!! Помогает избежать дублирования react electron-ом и webpack-ом
   config.externals = [...config.externals, 'react', 'react-dom'];
-  if (ANALYZE) {
-    config.plugins.push(
-      new BundleAnalyzerPlugin({
-        analyzerMode: 'server',
-        analyzerPort: 8888,
-        openAnalyzer: true,
-      })
-    );
-  }
+  // if (ANALYZE) {
+  //   config.plugins.push(
+  //     new BundleAnalyzerPlugin({
+  //       analyzerMode: 'server',
+  //       analyzerPort: 8888,
+  //       openAnalyzer: true,
+  //     })
+  //   );
+  // }
 
   return config;
 };
