@@ -8,7 +8,6 @@
  * the EULA file that was distributed with this source code.
  */
 import Box from '@material-ui/core/Box';
-import Typography from '@material-ui/core/Typography';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import IconButton from '@material-ui/core/IconButton';
 import Tooltip from '@material-ui/core/Tooltip';
@@ -16,27 +15,32 @@ import { makeStyles } from '@material-ui/core/styles';
 import Table from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
 import TableRow from '@material-ui/core/TableRow';
-import { IDevice } from '@nibus/core';
 import groupBy from 'lodash/groupBy';
-import isEmpty from 'lodash/isEmpty';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import ReloadIcon from '@material-ui/icons/Refresh';
 import SaveIcon from '@material-ui/icons/Save';
 import LoadIcon from '@material-ui/icons/OpenInBrowser';
 import { ipcRenderer } from 'electron';
 import fs from 'fs';
+import { useSelector, useDispatch, useDevice } from '../store';
+import type { AppDispatch } from '../store';
+import { selectCurrentDeviceId } from '../store/currentSlice';
+import { selectMibByName } from '../store/mibsSlice';
 import TableCell from './TableCell';
-import { useDevicesContext } from '../providers/DevicesProvier';
 import AccordionList, { AccordionProvider } from './AccordionList';
-
 import ErrorCard from './ErrorCard';
 import PropertyValueCell from './PropertyValueCell';
-import { useDevice } from '../providers/DevicesStateProvider';
 import SaveDialog from '../dialogs/SaveDialog';
 import { useToolbar } from '../providers/ToolbarProvider';
 import type { Props } from './TabContainer';
+import {
+  DeviceId,
+  PropTuple,
+  reloadDevice,
+  setDeviceValue,
+  ValueType,
+} from '../store/devicesSlice';
 
-// const { dialog } = remote;
 const useStyles = makeStyles(theme => ({
   error: {
     display: 'flex',
@@ -76,7 +80,7 @@ const useSummaryClasses = makeStyles(theme => ({
   },
 }));
 
-const load = async (device: IDevice): Promise<boolean> => {
+const load = (dispatch: AppDispatch, id: DeviceId, mib: string): boolean => {
   const fileNames: string[] | undefined = ipcRenderer.sendSync('showOpenDialogSync', {
     title: 'Загрузить из',
     filters: [
@@ -90,14 +94,13 @@ const load = async (device: IDevice): Promise<boolean> => {
   if (fileNames?.[0]) {
     try {
       const data = JSON.parse(fs.readFileSync(fileNames[0]).toString());
-      const mib = Reflect.getMetadata('mib', device);
       if (data.$mib !== mib) {
         ipcRenderer.sendSync('showErrorBox', 'Ошибка загрузки', 'Тип устройства не совпадает');
         return false;
       }
       delete data.$mib;
-      Object.assign(device, data);
-      await device.drain();
+      const setValue = setDeviceValue(id);
+      Object.entries(data).forEach(prop => dispatch(setValue(...(prop as PropTuple))));
       return true;
     } catch (e) {
       ipcRenderer.sendSync('showErrorBox', 'Ошибка загрузки', 'Файл испорчен');
@@ -109,51 +112,56 @@ const load = async (device: IDevice): Promise<boolean> => {
 
 const PropertyGridTab: React.FC<Props> = ({ id, selected = false }) => {
   const classes = useStyles();
-  const { current } = useDevicesContext();
-  const { props, setValue, error, reload, proto, isDirty, device, names } = useDevice(id);
-  // useEffect(() => console.log('CHANGED'), [names]);
-  const [busy, setBusy] = useState(false);
+  const current = useSelector(selectCurrentDeviceId); // useDevicesContext();
+  const device = useDevice(id);
+  const { mib, isBusy } = device ?? {};
+  const meta = useSelector(state => selectMibByName(state, mib ?? 0));
+  const dispatch = useDispatch();
+  const setValue = useMemo(() => {
+    const action = setDeviceValue(id);
+    return (name: string, value: ValueType) => {
+      dispatch(action(name, value));
+    };
+  }, [id, dispatch]);
   const [saveIsOpen, setSaveOpen] = useState(false);
   const closeSaveDialog = useCallback(() => setSaveOpen(false), []);
   const saveHandler = useCallback(() => setSaveOpen(true), []);
   const reloadHandler = useCallback(async () => {
-    setBusy(true);
-    await reload();
-    setBusy(false);
-  }, [reload]);
-  const loadHandler = useCallback(async () => {
-    if (await load(device!)) {
-      await reload();
-    }
-  }, [device, reload]);
+    dispatch(reloadDevice(id));
+  }, [dispatch, id]);
   const reloadToolbar = useMemo(
     () => (
       <>
         <Tooltip title="Загрузить свойства из файла" enterDelay={1000}>
-          <IconButton color="inherit" onClick={loadHandler} disabled={!device}>
+          <IconButton
+            color="inherit"
+            onClick={() => mib && load(dispatch, id, mib)}
+            disabled={!mib}
+          >
             <LoadIcon />
           </IconButton>
         </Tooltip>
         <Tooltip title="Сохранить выбранные свойства в файл" enterDelay={1000}>
-          <IconButton color="inherit" onClick={saveHandler} disabled={!device}>
+          <IconButton color="inherit" onClick={saveHandler} disabled={!mib}>
             <SaveIcon />
           </IconButton>
         </Tooltip>
         <Tooltip title="Обновить свойства" enterDelay={1000}>
           <div className={classes.toolbarWrapper}>
-            <IconButton color="inherit" onClick={reloadHandler} disabled={busy}>
+            <IconButton color="inherit" onClick={reloadHandler} disabled={!!isBusy}>
               <ReloadIcon />
             </IconButton>
-            {busy && <CircularProgress size={48} className={classes.fabProgress} />}
+            {isBusy && <CircularProgress size={48} className={classes.fabProgress} />}
           </div>
         </Tooltip>
       </>
     ),
     [
-      loadHandler,
-      device,
+      dispatch,
+      id,
+      mib,
       reloadHandler,
-      busy,
+      isBusy,
       classes.fabProgress,
       classes.toolbarWrapper,
       saveHandler,
@@ -171,35 +179,22 @@ const PropertyGridTab: React.FC<Props> = ({ id, selected = false }) => {
     [selected, current, id, reloadToolbar, setToolbar]
   );
 
-  const release = useMemo(
-    () => (device && Reflect.getMetadata('parent', device) ? () => device.release() : undefined),
-    [device]
+  const categories = useMemo(
+    () => (meta ? groupBy(Object.entries(meta.properties), ([, { category }]) => category) : null),
+    [meta]
   );
 
-  const categories = useMemo(() => {
-    if (!proto) return null;
-    const formatDisplayName = (name: string): string => {
-      const displayName = Reflect.getMetadata('displayName', proto, name);
-      const unit = Reflect.getMetadata('unit', proto, name);
-      return `${displayName}${unit ? ` в ${unit}` : ''}`;
-    };
-    return groupBy(
-      names.map(name => [name, formatDisplayName(name)]),
-      ([name]) => (proto && (Reflect.getMetadata('category', proto, name) as string)) ?? ''
-    );
-  }, [names, proto]);
-
   const summaryClasses = useSummaryClasses();
+  if (!device || !meta || !categories) return null;
+  const { props, error } = device;
 
   if (error) {
     return (
       <div className={classes.error}>
-        <ErrorCard error={error} onAction={reload} onRelease={release} />
+        <ErrorCard error={error} onAction={() => dispatch(reloadDevice(id))} />
       </div>
     );
   }
-
-  if (isEmpty(props) || !proto || !categories) return null;
 
   return (
     <Box px={1} width={1} fontSize="body1.fontSize" display={selected ? 'block' : 'none'}>
@@ -214,14 +209,15 @@ const PropertyGridTab: React.FC<Props> = ({ id, selected = false }) => {
             className={classes.table}
           >
             <TableBody>
-              {propNames.map(([name, displayName]) => (
+              {propNames.map(([name, info]) => (
                 <TableRow key={name}>
-                  <TableCell className={classes.name}>{displayName}</TableCell>
+                  <TableCell className={classes.name}>
+                    {`${info.displayName}${info.unit ? ` в ${info.unit}` : ''}`}
+                  </TableCell>
                   <PropertyValueCell
-                    proto={proto}
+                    meta={info}
                     name={name}
-                    value={props[name]}
-                    dirty={isDirty(name)}
+                    state={props[name]}
                     onChangeProperty={setValue}
                   />
                 </TableRow>
@@ -230,10 +226,9 @@ const PropertyGridTab: React.FC<Props> = ({ id, selected = false }) => {
           </AccordionList>
         ))}
       </AccordionProvider>
-      <SaveDialog open={saveIsOpen} close={closeSaveDialog} device={device!} />
+      <SaveDialog open={saveIsOpen} close={closeSaveDialog} device={device} />
     </Box>
   );
 };
 
-// export default compose<Props, Props>(hot, React.memo)(PropertyGrid);
-export default PropertyGridTab;
+export default React.memo(PropertyGridTab);

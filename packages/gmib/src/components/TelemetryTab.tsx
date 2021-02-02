@@ -25,9 +25,9 @@ import Filter5 from '@material-ui/icons/Filter5';
 import Filter6 from '@material-ui/icons/Filter6';
 import Filter7 from '@material-ui/icons/Filter7';
 import Minihost3SelectorDialog from '../dialogs/Minihost3SelectorDialog';
-import { useDevicesContext } from '../providers/DevicesProvier';
-import { useDevice } from '../providers/DevicesStateProvider';
 import { useToolbar } from '../providers/ToolbarProvider';
+import { useDevice, useSelector } from '../store';
+import { selectCurrentDeviceId } from '../store/currentSlice';
 import Minihost2Loader, { Minihost2Info } from '../util/Minihost2Loader';
 import Minihost3Loader, {
   initialSelectors,
@@ -102,7 +102,6 @@ const useStyles = makeStyles(theme => ({
     zIndex: 1,
   },
   wrapper: {
-    // margin: theme.spacing.unit,
     position: 'relative',
   },
 }));
@@ -111,8 +110,8 @@ const icons = [Filter1, Filter2, Filter3, Filter4, Filter5, Filter6, Filter7] as
 
 const TelemetryTab: React.FC<Props> = ({ id, selected = false }) => {
   const classes = useStyles();
-  const { props, device } = useDevice(id);
-  const mib = device ? Reflect.getMetadata('mib', device) : '';
+  const device = useDevice(id);
+  const { mib, props } = device ?? {};
   const [selectors, setSelectors] = useState<Set<Minihost3Selector>>(
     () => new Set(initialSelectors)
   );
@@ -125,14 +124,14 @@ const TelemetryTab: React.FC<Props> = ({ id, selected = false }) => {
   const loader = useMemo<MinihostLoader<Minihost2Info | Minihost3Info> | null>(() => {
     switch (mib) {
       case 'minihost3':
-        return new Minihost3Loader(device!);
+        return device ? new Minihost3Loader(device.id) : null;
       case 'minihost_v2.06b':
-        return new Minihost2Loader(device!);
+        return device ? new Minihost2Loader(device.id) : null;
       default:
         return null;
     }
   }, [device, mib]);
-  const { hres, vres, moduleHres, moduleVres, maxModulesH, maxModulesV } = props;
+  const { hres, vres, moduleHres, moduleVres, maxModulesH, maxModulesV } = props ?? {};
   const [xMax, setXMax] = useState<number>();
   const [xMin, setXMin] = useState<number>(0);
   const [yMax, setYMax] = useState<number>();
@@ -143,9 +142,24 @@ const TelemetryTab: React.FC<Props> = ({ id, selected = false }) => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!hres || !vres) return;
-    setXMax(Math.min(Math.ceil(hres / (moduleHres || hres)), maxModulesH || 24) - 1);
-    setYMax(Math.min(Math.ceil(vres / (moduleVres || vres)), maxModulesV || 32) - 1);
+    if (!hres?.value || !vres?.value || !moduleHres || !moduleVres || !maxModulesH || !maxModulesV)
+      return;
+    setXMax(
+      Math.min(
+        Math.ceil(
+          (hres.value as number) / ((moduleHres.value as number) || (hres.value as number))
+        ),
+        (maxModulesH.value as number) || 24
+      ) - 1
+    );
+    setYMax(
+      Math.min(
+        Math.ceil(
+          (vres.value as number) / ((moduleVres.value as number) || (vres.value as number))
+        ),
+        (maxModulesV.value as number) || 32
+      ) - 1
+    );
   }, [hres, vres, moduleHres, moduleVres, maxModulesH, maxModulesV]);
 
   useEffect(
@@ -154,7 +168,7 @@ const TelemetryTab: React.FC<Props> = ({ id, selected = false }) => {
       setDirh(!!loader && loader.isInvertH());
     },
     // eslint-disable-next-line react/destructuring-assignment
-    [props.dirv, props.dirh, props.vinvert, props.hinvert, loader]
+    [props?.dirv, props?.dirh, props?.vinvert, props?.hinvert, loader]
   );
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -220,7 +234,7 @@ const TelemetryTab: React.FC<Props> = ({ id, selected = false }) => {
     openSelectorHandler,
   ]);
   const [, setToolbar] = useToolbar();
-  const { current } = useDevicesContext();
+  const current = useSelector(selectCurrentDeviceId);
   useEffect(
     () =>
       setToolbar((toolbar: React.ReactNode) => {
@@ -271,7 +285,7 @@ const TelemetryTab: React.FC<Props> = ({ id, selected = false }) => {
       </Paper>
       <Range
         min={0}
-        max={maxModulesH || 24}
+        max={(maxModulesH?.value as number) || 24}
         values={[xMin, xMax || 0]}
         className={classes.hRange}
         setMin={setXMin}
@@ -302,4 +316,4 @@ const TelemetryTab: React.FC<Props> = ({ id, selected = false }) => {
   );
 };
 
-export default TelemetryTab;
+export default React.memo(TelemetryTab);

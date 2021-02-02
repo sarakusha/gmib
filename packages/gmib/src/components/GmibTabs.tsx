@@ -7,11 +7,10 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-// import warning from 'warning';
 import { makeStyles } from '@material-ui/core/styles';
 import React, { useEffect, useState } from 'react';
-import { useDevicesContext } from '../providers/DevicesProvier';
-import { useTests } from '../providers/TestProvider';
+import { useDevices, useSelector } from '../store';
+import { selectCurrentDeviceId, selectCurrentTab } from '../store/currentSlice';
 import DeviceTabs from './DeviceTabs';
 
 import TabContainer, { Props as ChildProps } from './TabContainer';
@@ -31,7 +30,8 @@ const Tabs: React.FC = () => {
   const [devChildren, setDevChildren] = useState<
     React.ReactElement<ChildProps, typeof TabContainer>[]
   >([]);
-  const { current: currentDevice, devices } = useDevicesContext();
+  const devices = useDevices();
+  const currentDevice = useSelector(selectCurrentDeviceId);
   if (currentDevice) {
     let curChild = devChildren.find(({ props }) => props.id === currentDevice);
     if (!curChild) {
@@ -43,7 +43,7 @@ const Tabs: React.FC = () => {
       setDevChildren(children => children.concat(curChild!));
     }
   }
-  const { current: currentTest } = useTests();
+  const tab = useSelector(selectCurrentTab);
 
   /**
    * Показываем только актуальный список
@@ -60,12 +60,14 @@ const Tabs: React.FC = () => {
   return (
     <div className={classes.root}>
       {devChildren.map(child =>
-        React.cloneElement(child, { selected: currentDevice === child.props.id })
+        React.cloneElement(child, {
+          selected: currentDevice === child.props.id && tab === 'devices',
+        })
       )}
-      <TabContainer id="test" selected={!!currentTest}>
+      <TabContainer id="test" selected={tab === 'tests'}>
         <TestParams />
       </TabContainer>
-      <TabContainer id="autobrightness" selected={false}></TabContainer>
+      {/* <TabContainer id="autobrightness" selected={false}></TabContainer> */}
     </div>
   );
 };

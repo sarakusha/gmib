@@ -17,14 +17,14 @@ import Tooltip from '@material-ui/core/Tooltip';
 import LinkIcon from '@material-ui/icons/Link';
 import UsbIcon from '@material-ui/icons/Usb';
 import { DeviceId } from '@nibus/core';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import Typography from '@material-ui/core/Typography';
 import IconButton from '@material-ui/core/IconButton';
 import ReloadIcon from '@material-ui/icons/Refresh';
-
-import { useDevicesContext } from '../providers/DevicesProvier';
-import { useSession } from '../providers/SessionProvider';
-import useCurrent from '../providers/useCurrent';
+import { useSelector, useDispatch } from '../store';
+import { selectAllDevicesWithParent } from '../store/devicesSlice';
+import { reloadAll } from '../store/sessionSlice';
+import { selectCurrentDeviceId, activateDevice } from '../store/currentSlice';
 import AccordionList, { useAccordion } from './AccordionList';
 import DeviceIcon from './DeviceIcon';
 
@@ -35,7 +35,6 @@ const useStyles = makeStyles(theme => ({
   kind: {
     color: theme.palette.primary.light,
     position: 'absolute',
-    // pointerEvents: 'none',
     bottom: 0,
     right: -16,
     fontSize: '1em',
@@ -46,23 +45,20 @@ const name = 'devices';
 
 const Devices: React.FC = () => {
   const classes = useStyles();
-  const { devices, current } = useDevicesContext();
-  const setCurrent = useCurrent('device');
-  const session = useSession();
-  useEffect(() => {
-    session.setLogLevel('hex');
-  }, [session]);
-  const devs = session.devices;
+  const dispatch = useDispatch();
+  const devices = useSelector(selectAllDevicesWithParent);
+  const current = useSelector(selectCurrentDeviceId);
   const [, setAccordion] = useAccordion();
-  const [, setUpdate] = useState(false);
   const reloadHandler = useCallback<React.MouseEventHandler<HTMLButtonElement>>(
     e => {
-      session.reloadDevices();
+      dispatch(reloadAll());
       e.stopPropagation();
     },
-    [session]
+    [dispatch]
   );
 
+  // TODO: serno listener
+  /*
   useEffect(() => {
     const sernoListener = (): void => setUpdate(prev => !prev);
     devs.on('serno', sernoListener);
@@ -70,13 +66,14 @@ const Devices: React.FC = () => {
       devs.off('serno', sernoListener);
     };
   }, [devs]);
+*/
   useEffect(() => setAccordion(name), [devices, setAccordion]);
   const clickHandler = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
-      const id = (e.currentTarget.dataset.id as DeviceId) || null;
-      setCurrent(id);
+      const id = e.currentTarget.dataset.id as DeviceId;
+      dispatch(activateDevice(id));
     },
-    [setCurrent]
+    [dispatch]
   );
   const title = useMemo(
     () => (
@@ -92,9 +89,9 @@ const Devices: React.FC = () => {
   return (
     <AccordionList name={name} title={title}>
       {devices.map(device => {
-        const parent = Reflect.getMetadata('parent', device);
+        const { parent } = device; // Reflect.getMetadata('parent', device);
         // const mib = Reflect.getMetadata('mib', device);
-        const desc = device.connection?.description ?? {};
+        // const desc = device.connection?.description ?? {};
         // let Icon = DeviceIcon;
         // if (!parent && desc.link) {
         //   Icon = DeviceHubIcon;
@@ -108,7 +105,7 @@ const Devices: React.FC = () => {
             onClick={clickHandler}
             data-id={device.id}
             selected={device.id === current}
-            disabled={!device.connection}
+            disabled={!device.connected}
           >
             <ListItemIcon>
               <div className={classes.wrapper}>
@@ -118,8 +115,8 @@ const Devices: React.FC = () => {
                     <LinkIcon className={classes.kind} />
                   </Tooltip>
                 ) : (
-                  device.connection && (
-                    <Tooltip title={device.connection.path}>
+                  device.path && (
+                    <Tooltip title={device.path}>
                       <UsbIcon className={classes.kind} />
                     </Tooltip>
                   )
@@ -127,8 +124,8 @@ const Devices: React.FC = () => {
               </div>
             </ListItemIcon>
             <ListItemText
-              primary={device.address.isEmpty ? desc.category : device.address.toString()}
-              secondary={device.address.isEmpty ? device.id : Reflect.getMetadata('mib', device)}
+              primary={device.isEmptyAddress ? device.category : device.address}
+              secondary={device.isEmptyAddress ? device.id : device.mib}
             />
           </ListItem>
         );

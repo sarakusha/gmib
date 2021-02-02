@@ -8,7 +8,6 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { IDevice } from '@nibus/core';
 import React, { useCallback, useMemo, useReducer } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Button from '@material-ui/core/Button';
@@ -22,8 +21,12 @@ import { ipcRenderer } from 'electron';
 import fs from 'fs';
 import some from 'lodash/some';
 import pick from 'lodash/pick';
-import { tuplify } from '../util/helpers';
+import sortBy from 'lodash/sortBy';
+import sortedUniqBy from 'lodash/sortedUniqBy';
+import { useSelector } from '../store';
+import type { DeviceState, ValueState, ValueType } from '../store/devicesSlice';
 import FormFieldSet from '../components/FormFieldSet';
+import { selectMibByName } from '../store/mibsSlice';
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -35,7 +38,7 @@ const useStyles = makeStyles(theme => ({
 }));
 
 type Props = {
-  device: IDevice;
+  device: DeviceState;
   open: boolean;
   close: () => void;
 };
@@ -57,27 +60,37 @@ const reducer = (state: State, { name, value }: Action): State => {
   };
 };
 
+type PropIds = [id: number, name: string, displayName: string];
+const byId = ([id]: PropIds): number => id;
+const selectValue = ({ value }: ValueState): ValueType => value;
+const extractValues = (props: Record<string, ValueState>): Record<string, ValueType> =>
+  Object.fromEntries(
+    Object.entries<ValueState>(props).map(([name, state]) => [name, selectValue(state)])
+  );
+
 const SaveDialog: React.FC<Props> = ({ device, open, close }) => {
   const classes = useStyles();
+  const { mib } = device;
+  const meta = useSelector(state => selectMibByName(state, mib));
   const [names, initial] = useMemo(() => {
-    const keys = !device
-      ? []
-      : Object.entries<string[]>(Reflect.getMetadata('map', device) || {})
-          .sort((a, b) => Number(a[0]) - Number(b[0]))
-          .map(([id, key]) =>
-            tuplify(
-              Number(id),
-              key[0] as string,
-              Reflect.getMetadata('displayName', device, key[0]) as string
-            )
-          )
-          .filter(
-            ([, name]) =>
-              Reflect.getMetadata('isReadable', device, name) &&
-              Reflect.getMetadata('isWritable', device, name)
-          );
-    return [keys, keys.reduce((res, [, name]) => ({ ...res, [name]: false }), {})];
-  }, [device]);
+    const keys: [id: number, name: string, displayName: string][] = meta
+      ? sortedUniqBy(
+          sortBy(
+            Object.entries(meta.properties).map<PropIds>(([name, { displayName, id }]) => [
+              id,
+              name,
+              displayName,
+            ]),
+            byId
+          ),
+          byId
+        )
+      : [];
+    return [
+      keys,
+      keys.reduce<Record<string, boolean>>((res, [, name]) => ({ ...res, [name]: false }), {}),
+    ];
+  }, [meta]);
 
   const [state, dispatch] = useReducer(reducer, initial);
   const changeHandler = useCallback(
@@ -92,7 +105,6 @@ const SaveDialog: React.FC<Props> = ({ device, open, close }) => {
   const closeHandler = useCallback(() => close(), [close]);
   const showDialog = useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
-      const mib = Reflect.getMetadata('mib', device);
       const fileName: string | undefined = ipcRenderer.sendSync('showSaveDialogSync', {
         title: 'Сохранить как',
         defaultPath: mib,
@@ -111,17 +123,16 @@ const SaveDialog: React.FC<Props> = ({ device, open, close }) => {
             : Object.entries(state)
                 .filter(([, checked]) => checked)
                 .map(([name]) => name);
-        const data = pick(device, props);
+        const data = extractValues(pick(device.props, props));
         data.$mib = mib;
         fs.writeFileSync(fileName, JSON.stringify(data));
         close();
       }
     },
-    [close, device, names, state]
+    [close, mib, names, state, device.props]
   );
 
   const hasSelected = some(Object.values(state), Boolean);
-  // console.log(state, Object.values(state));
 
   return (
     <Dialog

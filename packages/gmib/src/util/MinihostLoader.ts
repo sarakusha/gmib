@@ -10,7 +10,7 @@
 
 import { NibusError, IDevice } from '@nibus/core';
 
-import Runnable from './Runnable';
+import Runnable, { RunnableEvents } from './Runnable';
 
 export type IModuleInfo<T> = {
   x: number;
@@ -27,6 +27,11 @@ type LoaderOptions = {
   selectors?: Set<number>;
 };
 
+interface MinihostLoaderEvents<T> extends RunnableEvents {
+  column: (column: IModuleInfo<T>[]) => void;
+}
+
+/*
 declare interface MinihostLoader<T> {
   on(event: 'start', listener: () => void): this;
   on(event: 'finish', listener: () => void): this;
@@ -47,8 +52,13 @@ declare interface MinihostLoader<T> {
   emit(event: 'finish'): boolean;
   emit(event: 'column', column: IModuleInfo<T>[]): boolean;
 }
+*/
 
-abstract class MinihostLoader<T> extends Runnable<LoaderOptions, IModuleInfo<T>[]> {
+abstract class MinihostLoader<T> extends Runnable<
+  LoaderOptions,
+  MinihostLoaderEvents<T>,
+  IModuleInfo<T>[]
+> {
   protected xMin?: number;
 
   protected xMax?: number;
@@ -59,7 +69,7 @@ abstract class MinihostLoader<T> extends Runnable<LoaderOptions, IModuleInfo<T>[
 
   protected selectors?: Set<number>;
 
-  constructor(readonly device: IDevice) {
+  protected constructor(readonly device: IDevice) {
     super();
   }
 

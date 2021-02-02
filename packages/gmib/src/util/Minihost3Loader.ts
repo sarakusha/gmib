@@ -9,7 +9,8 @@
  */
 
 /* eslint-disable no-bitwise */
-import { IDevice } from '@nibus/core';
+import session from '@nibus/core';
+import { DeviceId } from '../store/devicesSlice';
 import MinihostLoader from './MinihostLoader';
 
 type Vertex = { x: number; y: number };
@@ -108,7 +109,9 @@ export default class Minihost3Loader extends MinihostLoader<Minihost3Info> {
 
   static readonly DOMAIN = 'MODUL';
 
-  constructor(device: IDevice) {
+  constructor(deviceId: DeviceId) {
+    const device = session.devices.get().find(({ id }) => id === deviceId);
+    if (!device) throw new Error(`Unknown device ${deviceId}`);
     super(device);
     this.selectorId = device.getId('selector');
     this.moduleSelectId = device.getId('moduleSelect');

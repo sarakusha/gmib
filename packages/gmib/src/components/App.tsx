@@ -7,9 +7,6 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import ListItemText from '@material-ui/core/ListItemText';
-import ListItem from '@material-ui/core/ListItem';
-import ListItemIcon from '@material-ui/core/ListItemIcon';
 import AppBar from '@material-ui/core/AppBar';
 import Divider from '@material-ui/core/Divider';
 import Drawer from '@material-ui/core/Drawer';
@@ -25,22 +22,15 @@ import MenuIcon from '@material-ui/icons/Menu';
 import classNames from 'classnames';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import some from 'lodash/some';
-import SettingsBrightnessIcon from '@material-ui/icons/SettingsBrightness';
-
+import { useDevices } from '../store';
 import { AccordionProvider } from './AccordionList';
 import Devices from './Devices';
-import { useDevicesContext } from '../providers/DevicesProvier';
 import GmibTabs from './GmibTabs';
 import SearchDialog from '../dialogs/SearchDialog';
 import { useToolbar } from '../providers/ToolbarProvider';
 import TestItems from './TestItems';
 
 const drawerWidth = 240;
-// const packagePromise = import('../../package.json');
-// package  Promise.then(
-//   json => console.log('JSON', json && json.version),
-//   err => console.error('JSON', err.stack),
-// );
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -149,16 +139,10 @@ const App: React.FC = () => {
   const searchOpen = useCallback(() => setSearchOpen(true), [setSearchOpen]);
   const searchClose = useCallback(() => setSearchOpen(false), [setSearchOpen]);
   const [link, setLink] = useState(false);
-  const { devices } = useDevicesContext();
+  const devices = useDevices();
   useEffect(() => {
-    setLink(
-      some(
-        devices,
-        device =>
-          device.connection && device.connection.description && device.connection.description.link
-      )
-    );
-  }, [devices, setLink]);
+    setLink(some(devices, device => !!device?.isLink));
+  }, [devices]);
   const [toolbar] = useToolbar();
   // eslint-disable-next-line global-require,@typescript-eslint/no-var-requires
   const version = useMemo(() => require('../../package.json').version, []);
@@ -231,16 +215,4 @@ const App: React.FC = () => {
   );
 };
 
-// export const pipe = <T extends any[], R>(
-//   fn1: (...args: T) => R,
-//   ...fns: ((a: R) => R)[]
-// ) => {
-//   const piped = fns.reduce(
-//     (prevFn, nextFn) => (value: R) => nextFn(prevFn(value)),
-//     value => value,
-//   );
-//   return (...args: T) => piped(fn1(...args));
-// };
-
-// export default compose(hot, React.memo)(App);
 export default App;

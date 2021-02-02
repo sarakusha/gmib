@@ -14,8 +14,7 @@ import SettingsBrightnessIcon from '@material-ui/icons/SettingsBrightness';
 import React from 'react';
 import AccordionList from './AccordionList';
 
-const OtherItems: React.FC = () => {
-  return (
+const OtherItems: React.FC = () => (
     <AccordionList name="other" title="Еще...">
       <ListItem button>
         <ListItemIcon>
@@ -25,4 +24,3 @@ const OtherItems: React.FC = () => {
       </ListItem>
     </AccordionList>
   );
-};

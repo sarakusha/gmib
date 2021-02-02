@@ -13,9 +13,10 @@ import { URLSearchParams } from 'url';
 import log from 'electron-log';
 import { autoUpdater } from 'electron-updater';
 import type { NibusService } from '@nibus/cli';
+import type { TestQuery } from '../store/testSlice';
 // import debug from 'electron-debug';
 
-import { TestQuery } from '../providers/TestProvider';
+// import { TestQuery } from '../providers/TestProvider';
 
 // debug();
 const USE_REACT_REFRESH_WEBPACK = true;
@@ -66,6 +67,7 @@ async function createMainWindow(): Promise<BrowserWindow> {
     width: 800,
     height: 650,
     webPreferences: {
+      contextIsolation: false,
       nodeIntegration: true,
       worldSafeExecuteJavaScript: true,
       // enableRemoteModule: true,
@@ -92,12 +94,14 @@ async function createMainWindow(): Promise<BrowserWindow> {
     });
   }
 
-  // Несовместим с ReactRefreshWebpackPlugin в webpack.renderer.additions.js
-  if (isDevelopment && !USE_REACT_REFRESH_WEBPACK) {
-    const { default: installExtension, REACT_DEVELOPER_TOOLS } = await import(
+  if (isDevelopment) {
+    const { default: installExtension, REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS } = await import(
       'electron-devtools-installer'
     );
-    const name = await installExtension(REACT_DEVELOPER_TOOLS);
+    // REACT_DEVELOPER_TOOLS несовместим с ReactRefreshWebpackPlugin в webpack.renderer.additions.js
+    const name = await installExtension(
+      USE_REACT_REFRESH_WEBPACK ? [REDUX_DEVTOOLS] : [REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS]
+    );
     log.info(`Added Extension:  ${name}`);
   }
 
@@ -124,7 +128,8 @@ function createTestWindow(): BrowserWindow {
     alwaysOnTop: true,
     skipTaskbar: true,
     webPreferences: {
-      nodeIntegration: true,
+      // nodeIntegration: true,
+      contextIsolation: true,
       worldSafeExecuteJavaScript: true,
     },
     // webPreferences: {

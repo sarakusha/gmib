@@ -14,9 +14,8 @@ import { makeStyles } from '@material-ui/core/styles';
 import Tab from '@material-ui/core/Tab';
 import Tabs from '@material-ui/core/Tabs';
 import React, { useCallback, useState } from 'react';
-import { useDevicesContext } from '../providers/DevicesProvier';
-import { useDevice } from '../providers/DevicesStateProvider';
-// import FlashStateProvider from '../providers/FlashStateProvider';
+import { useSelector } from '../store';
+import { selectCurrentDevice } from '../store/currentSlice';
 import FirmwareTab from './FirmwareTab';
 import PropertyGridTab from './PropertyGridTab';
 import TelemetryTab from './TelemetryTab';
@@ -24,9 +23,6 @@ import TelemetryTab from './TelemetryTab';
 const useStyles = makeStyles(theme => ({
   root: {
     display: 'flex',
-    // flexShrink: 1,
-    // flexGrow: 1,
-    // maxWidth: 'none',
     flexDirection: 'column',
     width: '100%',
   },
@@ -37,12 +33,10 @@ const useStyles = makeStyles(theme => ({
   header: {},
   content: {
     flex: '0 1 auto',
-    // width: '100%',
     height: 'calc(100% - 48px)',
     display: 'flex',
     paddingTop: theme.spacing(1),
     WebkitOverflowScrolling: 'touch', // Add iOS momentum scrolling.
-    // overflow: 'hidden',
   },
 }));
 
@@ -52,20 +46,16 @@ type Props = {
 
 const DeviceTabs: React.FC<Props> = ({ id }) => {
   const classes = useStyles();
-  // const { getProto } = useDevicesContext();
-  // const proto = getProto(id);
-  const { proto, device } = useDevice(id);
-  const isEmpty = !device || device.address.isEmpty;
+  const device = useSelector(selectCurrentDevice);
+  const isEmpty = !device || device.isEmptyAddress;
   const [value, setValue] = useState(0);
   const changeHandler = useCallback((_, newValue: unknown) => {
     setValue(Number(newValue));
   }, []);
-  const mib = proto && (Reflect.getMetadata('mib', proto) as string);
-  const isMinihost = mib && mib.startsWith('minihost');
+  const mib = device?.mib;
+  const isMinihost = mib?.startsWith('minihost');
   const isMinihost3 = mib === 'minihost3';
   if (!isMinihost && value > 0) setValue(0);
-  // if (isMinihost3 && isEmpty) setValue(2);
-  // console.log(mib, id);
   if (!id) return null;
   return (
     <div className={classes.root}>
@@ -93,11 +83,7 @@ const DeviceTabs: React.FC<Props> = ({ id }) => {
                   <TelemetryTab id={id} selected={value === 1} />
                 </>
               )}
-              {isMinihost3 && (
-                // <FlashStateProvider>
-                <FirmwareTab id={id} selected={value === 2 || isEmpty} />
-                // </FlashStateProvider>
-              )}
+              {isMinihost3 && <FirmwareTab id={id} selected={value === 2 || isEmpty} />}
             </>
           ) : (
             <PropertyGridTab id={id} selected />
@@ -108,4 +94,4 @@ const DeviceTabs: React.FC<Props> = ({ id }) => {
   );
 };
 
-export default DeviceTabs;
+export default React.memo(DeviceTabs);

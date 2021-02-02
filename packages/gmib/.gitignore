@@ -460,3 +460,4 @@ fabric.properties
 .env
 /dist/
 !/@types/
+/bak/

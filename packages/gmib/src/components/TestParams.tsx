@@ -13,8 +13,8 @@ import Input from '@material-ui/core/Input';
 import InputLabel from '@material-ui/core/InputLabel';
 import React, { useCallback } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
-import produce from 'immer';
-import { TestQuery, useTests } from '../providers/TestProvider';
+import { useDispatch, useSelector } from '../store';
+import { TestQuery, selectTestQuery, updateParam } from '../store/testSlice';
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -65,18 +65,15 @@ type Names = keyof TestQuery;
 
 const TestParams: React.FC = () => {
   const classes = useStyles();
-  const { query, setQuery } = useTests();
+  const dispatch = useDispatch();
+  const query = useSelector(selectTestQuery);
   const changeHandler = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const name = event.currentTarget.id as Names;
       const value = Number(event.currentTarget.value);
-      setQuery(
-        produce(prev => {
-          prev[name] = value;
-        })
-      );
+      dispatch(updateParam(name, value));
     },
-    [setQuery]
+    [dispatch]
   );
   return (
     <div className={classes.root}>
@@ -102,4 +99,4 @@ const TestParams: React.FC = () => {
   );
 };
 
-export default TestParams;
+export default React.memo(TestParams);

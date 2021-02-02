@@ -18,10 +18,10 @@ import RadioGroup from '@material-ui/core/RadioGroup';
 import { makeStyles } from '@material-ui/core/styles';
 import CloseIcon from '@material-ui/icons/Close';
 import ReplayIcon from '@material-ui/icons/Replay';
-import { Flasher, FlashKinds, Kind, KindMap } from '@nibus/core';
+import { Address, Flasher, FlashKinds, Kind, KindMap } from '@nibus/core';
 import { SnackbarAction, useSnackbar } from 'notistack';
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { useDevice } from '../providers/DevicesStateProvider';
+import { useDevice } from '../store';
 import CircularProgressWithLabel from './CircularProgressWithLabel';
 import FlashUpgrade, { displayName, Props as FlashUpgradeProps } from './FlashUpgrade';
 import FormFieldSet from './FormFieldSet';
@@ -46,13 +46,11 @@ const useStyles = makeStyles(theme => ({
     '&:not(:last-child)': {
       marginRight: theme.spacing(2),
     },
-    // width: '100%',
   },
   kind: {
     marginLeft: theme.spacing(1),
     marginRight: theme.spacing(1),
   },
-  // kindsRoot: {},
   progress: {
     width: '80%',
   },
@@ -73,21 +71,19 @@ const successId = generateSuccessKey();
 const FirmwareTab: React.FC<Props> = ({ id, selected }) => {
   const classes = useStyles();
   const { closeSnackbar, enqueueSnackbar } = useSnackbar();
-  const { device } = useDevice(id);
-  const isEmpty = !device || device.address.isEmpty;
+  const { address } = useDevice(id) ?? {};
+  const isEmpty = Address.empty.equals(address);
   const [progress, setProgress] = useState(0);
   const [flashing, setFlashing] = useState(false);
   const snacksRef = useRef<number[]>([]);
   const [kind, setKind] = useState<Kind>('mcu');
   useEffect(() => () => snacksRef.current.forEach(closeSnackbar), [closeSnackbar, kind]);
-  // const [, dispatch] = useGlobalFlashState();
   const flashHandler = useCallback<FlashUpgradeProps['onFlash']>(
     (currentKind, filename, moduleSelect) => {
-      if (!device) return;
       snacksRef.current.forEach(closeSnackbar);
       snacksRef.current = [];
       setProgress(0);
-      const flasher = new Flasher(device);
+      const flasher = new Flasher(id);
       let total = 0;
       try {
         total = flasher.flash(currentKind, filename, moduleSelect).total;
@@ -123,13 +119,6 @@ const FirmwareTab: React.FC<Props> = ({ id, selected }) => {
             <ReplayIcon
               onClick={() => {
                 flashHandler(currentKind, filename, key as number);
-                // setKind(currentKind);
-                // row !== undefined && dispatch({ kind: currentKind, type: 'row', payload: row });
-                // column !== undefined &&
-                //   dispatch({ kind: currentKind, type: 'column', payload: column });
-                // filename !== undefined &&
-                //   dispatch({ kind: currentKind, type: 'file', payload: filename });
-                // closeSnackbar(key);
               }}
             />
           </Button>
@@ -152,27 +141,24 @@ const FirmwareTab: React.FC<Props> = ({ id, selected }) => {
         snacksRef.current.push(key);
       });
     },
-    [device, closeSnackbar, enqueueSnackbar]
+    [id, closeSnackbar, enqueueSnackbar]
   );
   const kindHandler = useCallback<React.ChangeEventHandler<HTMLInputElement>>(
     e => setKind(e.target.value as Kind),
     []
   );
-  // const [, isModule, legacy] = KindMap[kind];
   return (
     <Box display={selected ? 'block' : 'none'} width={1} p={1}>
       <RadioGroup row aria-label="firmware kind" value={kind} onChange={kindHandler}>
         {[false, true].map(isModule => (
           <FormFieldSet
             legend={isModule ? 'Модуль' : 'Хост'}
-            // helper={`Для ${isModule ? 'модулей' : 'процессора'}${legacy ? ' (устаревшая)' : ''}`}
             className={classes.kinds}
             key={isModule.toString()}
           >
             {Object.entries(KindMap)
               .filter(([, [, module]]) => isModule === module)
               .map(([value]) => (
-                // <label key={value}>{value}</label>
                 <FormControlLabel
                   key={value}
                   value={value}

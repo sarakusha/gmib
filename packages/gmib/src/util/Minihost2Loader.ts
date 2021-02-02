@@ -1,3 +1,4 @@
+/* eslint-disable no-bitwise */
 /*
  * @license
  * Copyright (c) 2020. Nata-Info
@@ -8,7 +9,8 @@
  * the EULA file that was distributed with this source code.
  */
 
-/* eslint-disable no-bitwise */
+import session from '@nibus/core';
+import { DeviceId } from '../store/devicesSlice';
 import MinihostLoader from './MinihostLoader';
 
 export type Minihost2Info = {
@@ -22,6 +24,7 @@ function getFraction(byte: number): number {
   let test;
   for (let i = 0; i < 4; i += 1, two *= 2) {
     test = 1 << (7 - i);
+    // noinspection JSBitwiseOperatorUsage
     if (byte & test) {
       fraction += 1 / two;
     }
@@ -31,6 +34,12 @@ function getFraction(byte: number): number {
 
 export default class Minihost2Loader extends MinihostLoader<Minihost2Info> {
   static readonly DOMAIN = 'MODUL';
+
+  constructor(deviceId: DeviceId) {
+    const device = session.devices.get().find(({ id }) => id === deviceId);
+    if (!device) throw new Error(`Unknown device ${deviceId}`);
+    super(device);
+  }
 
   async getInfo(x: number, y: number): Promise<Minihost2Info> {
     const { device } = this;
