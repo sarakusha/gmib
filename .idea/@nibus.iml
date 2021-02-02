@@ -7,6 +7,9 @@
       <excludeFolder url="file://$MODULE_DIR$/packages/gmib/@types" />
       <excludeFolder url="file://$MODULE_DIR$/temp" />
       <excludeFolder url="file://$MODULE_DIR$/tmp" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/core/bak" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/gmib/bak" />
+      <excludeFolder url="file://$MODULE_DIR$/.idea/dictionaries" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
