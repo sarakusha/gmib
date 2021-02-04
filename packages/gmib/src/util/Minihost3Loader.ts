@@ -13,7 +13,7 @@ import session from '@nibus/core';
 import { DeviceId } from '../store/devicesSlice';
 import MinihostLoader from './MinihostLoader';
 
-type Vertex = { x: number; y: number };
+export type VertexType = { x: number; y: number };
 
 // eslint-disable-next-line no-shadow
 export enum Minihost3Selector {
@@ -32,9 +32,9 @@ export type Minihost3Info = {
   v2?: number;
   MCU?: string;
   PLD?: string;
-  redVertex?: Vertex;
-  greenVertex?: Vertex;
-  blueVertex?: Vertex;
+  redVertex?: VertexType;
+  greenVertex?: VertexType;
+  blueVertex?: VertexType;
 };
 
 export const initialSelectors = [

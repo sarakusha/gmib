@@ -9,6 +9,7 @@
  */
 
 import Box from '@material-ui/core/Box';
+import Divider from '@material-ui/core/Divider';
 import ListItem from '@material-ui/core/ListItem';
 import ListItemIcon from '@material-ui/core/ListItemIcon';
 import ListItemText from '@material-ui/core/ListItemText';
@@ -17,15 +18,21 @@ import Tooltip from '@material-ui/core/Tooltip';
 import LinkIcon from '@material-ui/icons/Link';
 import UsbIcon from '@material-ui/icons/Usb';
 import { DeviceId } from '@nibus/core';
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import Typography from '@material-ui/core/Typography';
 import IconButton from '@material-ui/core/IconButton';
 import ReloadIcon from '@material-ui/icons/Refresh';
 import { useSelector, useDispatch } from '../store';
 import { selectAllDevicesWithParent } from '../store/devicesSlice';
 import { reloadAll } from '../store/sessionSlice';
-import { selectCurrentDeviceId, activateDevice } from '../store/currentSlice';
-import AccordionList, { useAccordion } from './AccordionList';
+import {
+  selectCurrentDeviceId,
+  activateDevice,
+  selectCurrentTab,
+  setCurrentTab,
+  TabValues,
+} from '../store/currentSlice';
+import AccordionList from './AccordionList';
 import DeviceIcon from './DeviceIcon';
 
 const useStyles = makeStyles(theme => ({
@@ -48,7 +55,8 @@ const Devices: React.FC = () => {
   const dispatch = useDispatch();
   const devices = useSelector(selectAllDevicesWithParent);
   const current = useSelector(selectCurrentDeviceId);
-  const [, setAccordion] = useAccordion();
+  const tab = useSelector(selectCurrentTab);
+  // const [, setAccordion] = useAccordion();
   const reloadHandler = useCallback<React.MouseEventHandler<HTMLButtonElement>>(
     e => {
       dispatch(reloadAll());
@@ -56,18 +64,6 @@ const Devices: React.FC = () => {
     },
     [dispatch]
   );
-
-  // TODO: serno listener
-  /*
-  useEffect(() => {
-    const sernoListener = (): void => setUpdate(prev => !prev);
-    devs.on('serno', sernoListener);
-    return () => {
-      devs.off('serno', sernoListener);
-    };
-  }, [devs]);
-*/
-  useEffect(() => setAccordion(name), [devices, setAccordion]);
   const clickHandler = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       const id = e.currentTarget.dataset.id as DeviceId;
@@ -87,9 +83,15 @@ const Devices: React.FC = () => {
     [reloadHandler]
   );
   return (
-    <AccordionList name={name} title={title}>
+    <AccordionList
+      name={name}
+      title={title}
+      expanded={tab === 'devices' && devices.length > 0}
+      onChange={currentTab => dispatch(setCurrentTab(currentTab as TabValues))}
+    >
       {devices.map(device => {
-        const { parent } = device; // Reflect.getMetadata('parent', device);
+        const { id, connected, path, mib, isEmptyAddress, parent, address, category } = device;
+        // Reflect.getMetadata('parent', device);
         // const mib = Reflect.getMetadata('mib', device);
         // const desc = device.connection?.description ?? {};
         // let Icon = DeviceIcon;
@@ -101,22 +103,24 @@ const Devices: React.FC = () => {
         return (
           <ListItem
             button
-            key={device.id}
+            key={id}
             onClick={clickHandler}
-            data-id={device.id}
-            selected={device.id === current}
-            disabled={!device.connected}
+            data-id={id}
+            selected={id === current}
+            disabled={!connected}
+            id={`tab-${id}`}
+            aria-controls={`tabpanel-${id}`}
           >
             <ListItemIcon>
               <div className={classes.wrapper}>
                 <DeviceIcon color="inherit" device={device} />
                 {parent ? (
-                  <Tooltip title={parent.address.toString()}>
+                  <Tooltip title={parent.address}>
                     <LinkIcon className={classes.kind} />
                   </Tooltip>
                 ) : (
-                  device.path && (
-                    <Tooltip title={device.path}>
+                  path && (
+                    <Tooltip title={path}>
                       <UsbIcon className={classes.kind} />
                     </Tooltip>
                   )
@@ -124,12 +128,13 @@ const Devices: React.FC = () => {
               </div>
             </ListItemIcon>
             <ListItemText
-              primary={device.isEmptyAddress ? device.category : device.address}
-              secondary={device.isEmptyAddress ? device.id : device.mib}
+              primary={isEmptyAddress ? category : address}
+              secondary={isEmptyAddress ? id : mib}
             />
           </ListItem>
         );
       })}
+      <Divider />
     </AccordionList>
   );
 };

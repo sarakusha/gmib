@@ -18,6 +18,7 @@ import {
   PayloadAction,
 } from '@reduxjs/toolkit';
 import debounce from 'lodash/debounce';
+import pick from 'lodash/pick';
 import { notEmpty } from '../util/helpers';
 import type { AppDispatch, AppThunk, RootState } from './index';
 
@@ -27,6 +28,7 @@ export type ValueType = string | number | boolean | null;
 export type ValueState = {
   status: ValueStatus;
   value: ValueType;
+  raw: ValueType;
   error?: string;
 };
 type PropEntity = [name: string, state: ValueState];
@@ -60,6 +62,7 @@ const getDeviceProp = (device: IDevice) => (idOrName: string | number): PropEnti
       status: error ? 'failed' : device.isDirty(idOrName) ? 'pending' : 'succeeded',
       value: device[name],
       error: error?.message,
+      raw: device.getRawValue(idOrName),
     },
   ];
 };
@@ -80,10 +83,6 @@ const devicesAdapter = createEntityAdapter<DeviceState>({
 });
 
 const { selectById } = devicesAdapter.getSelectors();
-
-export const setDeviceError = createAction<[id: DeviceId, error?: string]>(
-  'devices/setDeviceError'
-);
 
 const updateProps = createAction<[id: DeviceId, ids?: number[]]>('devices/updateProps');
 
@@ -116,6 +115,7 @@ const devicesSlice = createSlice({
       const device = session.devices.findById(id);
       if (!device) return;
       const { address, connection } = device;
+
       const entity: DeviceState = {
         id,
         address: address.toString(),
@@ -157,34 +157,23 @@ const devicesSlice = createSlice({
         entity.props = { ...entity.props, [propName]: propValue };
       }
     },
-    /*
-    changeProp(
-      state,
-      { payload: [id, name, value] }: PayloadAction<[DeviceId, string, ValueType]>
-    ) {
-      // const device = session.devices.findById(id);
-      // if (!device) return;
-      // const [propName, propValue] = getDeviceProp(device)(name);
-      const entity = state.entities[id]; // selectById(state, id);
-      if (entity) {
-        entity.props = { ...entity.props, [name]: { status: 'pending', value } };
-      }
-    },
-*/
     setParent(
       state,
       { payload: [id, parentId] }: PayloadAction<[id: DeviceId, parentId: DeviceId]>
     ) {
       devicesAdapter.updateOne(state, { id, changes: { parent: parentId } });
     },
+    setDeviceError(state, { payload: [id, error] }: PayloadAction<[id: DeviceId, error?: string]>) {
+      devicesAdapter.updateOne(state, { id, changes: { error } });
+    },
+    changeAddress(
+      state,
+      { payload: [id, address] }: PayloadAction<[id: DeviceId, address: string]>
+    ) {
+      devicesAdapter.updateOne(state, { id, changes: { address } });
+    },
   },
   extraReducers: builder => {
-    builder.addCase(
-      setDeviceError,
-      (state, { payload: [id, error] }: PayloadAction<[id: DeviceId, error?: string]>) => {
-        devicesAdapter.updateOne(state, { id, changes: { error } });
-      }
-    );
     builder.addCase(
       updateProps,
       (state, { payload: [id, ids] }: PayloadAction<[id: DeviceId, ids?: number[]]>) => {
@@ -294,29 +283,9 @@ export const {
   updateProperty,
   setParent,
   deviceUpdated,
-  // changeProp,
-  // setBusy,
+  setDeviceError,
+  changeAddress,
 } = devicesSlice.actions;
-
-/**
- * Не совсем чисто, одна функция на все device
- */
-// const debounced = debounce((resolve: () => void, device: IDevice): void => {
-//   device
-//     .drain()
-//     .then(ids => {
-//       const failed = ids.filter(ident => ident < 0).map(ident => -ident);
-//       return failed && failed.length ? device.read(...failed) : Promise.resolve({});
-//     })
-//     .finally(resolve);
-// }, 400);
-//
-// const drain = (device: IDevice): Promise<void> =>
-//   new Promise(resolve => {
-//     debounced(resolve, device);
-//   });
-//
-// let count = 0;
 
 export const setDeviceValue = (
   deviceId: DeviceId
@@ -324,14 +293,13 @@ export const setDeviceValue = (
   const device = session.devices.findById(deviceId);
   if (!device) throw new Error(`Unknown device ${deviceId}`);
   const proto = Reflect.getPrototypeOf(device);
-  const propNames: string[] = Reflect.getMetadata('mibProperties', proto) ?? [];
-  // let drain: (dispatch: AppThunk) => void = Reflect.getMetadata('drainDevice', device);
-  // if (!drain) {
+  const propNames = ((Reflect.getMetadata('mibProperties', proto) as string[]) ?? []).filter(name =>
+    Reflect.getMetadata('isWritable', proto, name)
+  );
   const drain = debounce((dispatch: AppDispatch): void => {
     dispatch(drainDevice(deviceId));
   }, 400);
-  // Reflect.defineMetadata('drainDevice', drain, device);
-  // }
+
   return (name, value) => dispatch => {
     if (!propNames.includes(name)) {
       console.error(`Unknown property ${name}`);
@@ -340,13 +308,18 @@ export const setDeviceValue = (
     device[name] = value;
     dispatch(updateProperty([deviceId, name]));
     drain(dispatch);
-    // dispatch(action);
-    // dispatch(changeProp([deviceId, name, value]));
   };
 };
 
-export const selectProps = (state: RootState, id: DeviceId): DeviceProps | undefined =>
-  selectDeviceById(state, id)?.props;
+export const selectAllProps = (state: RootState, id: DeviceId): DeviceProps =>
+  selectDeviceById(state, id)?.props ?? {};
+
+export const selectProps = <P extends string>(
+  state: RootState,
+  id: DeviceId,
+  ...names: P[]
+): Record<P, ValueState | undefined> =>
+  pick(selectAllProps(state, id) as Record<P, ValueState | undefined>, names);
 
 export const selectLinkIds = (state: RootState): DeviceId[] =>
   Object.values(state.devices.entities)

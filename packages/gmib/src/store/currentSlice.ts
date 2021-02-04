@@ -13,7 +13,7 @@ import { ipcRenderer } from 'electron';
 import { DeviceId, DeviceState, selectDeviceById } from './devicesSlice';
 import type { AppThunk, RootState } from './index';
 
-export type TabValues = 'devices' | 'tests' | 'autobrightness';
+export type TabValues = 'devices' | 'tests' | 'autobrightness' | 'log';
 
 interface CurrentState {
   tab: TabValues | undefined;
@@ -22,7 +22,7 @@ interface CurrentState {
 }
 
 const initialState: CurrentState = {
-  tab: undefined,
+  tab: 'devices',
   device: undefined,
   test: undefined,
 };

@@ -8,7 +8,7 @@
  * the EULA file that was distributed with this source code.
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 // import MaskedInput from 'react-input-mask';
 import classNames from 'classnames';
@@ -54,34 +54,42 @@ const SerialNoCell: React.FC<Props> = ({
   value: initValue,
   name,
   className,
-  onChangeProperty,
-  dirty: initDirty,
+  onChangeProperty = () => {},
+  dirty,
   align,
   ...props
 }) => {
   const classes = useStyles();
   const [value, setValue] = useState(initValue);
-  const [dirty, setDirty] = useState(initDirty);
-  const changeHandler = useCallback((_, { unmaskedValue }) => {
-    setValue(unmaskedValue.padStart(16, '0'));
-    setDirty(true);
-  }, []);
+  const [changing, setChanging] = useState(false);
   const updateValue = useMemo(
     () =>
       debounce((key: string, val: string) => {
-        if (onChangeProperty && !isEmpty(val)) {
+        if (!isEmpty(val)) {
           onChangeProperty(key, val);
-          setDirty(false);
+          setChanging(false);
         }
       }, 5000),
     [onChangeProperty]
   );
-  useEffect(() => updateValue(name, value), [name, updateValue, value]);
+  const changeHandler = useCallback(
+    (_, { unmaskedValue }) => {
+      setValue(prev => {
+        const newValue = unmaskedValue.padStart(16, '0');
+        if (newValue !== prev) {
+          setChanging(true);
+          updateValue(name, newValue);
+        }
+        return newValue;
+      });
+    },
+    [name, updateValue]
+  );
   const inputClasses = {
     input: classNames({
       [classes.inputRight]: align === 'right',
       [classes.inputCenter]: align === 'center',
-      [classes.inputDirty]: dirty,
+      [classes.inputDirty]: dirty || changing,
     }),
   };
   return (
@@ -91,7 +99,6 @@ const SerialNoCell: React.FC<Props> = ({
         value={value.slice(-12).padStart(12, '0')}
         className={classes.inputRoot}
         classes={inputClasses}
-        // type="text"
         disableUnderline
         mask="XX:XX:XX:XX:XX:XX"
         definitions={formatChars}
@@ -105,5 +112,4 @@ const SerialNoCell: React.FC<Props> = ({
   );
 };
 
-export default SerialNoCell;
-// export default compose<Props, Props>(hot, React.memo)(SerialNoCell);
+export default React.memo(SerialNoCell);

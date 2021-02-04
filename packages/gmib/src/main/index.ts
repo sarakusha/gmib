@@ -13,32 +13,35 @@ import { URLSearchParams } from 'url';
 import log from 'electron-log';
 import { autoUpdater } from 'electron-updater';
 import type { NibusService } from '@nibus/cli';
+import { Tail } from 'tail';
 import type { TestQuery } from '../store/testSlice';
-// import debug from 'electron-debug';
 
-// import { TestQuery } from '../providers/TestProvider';
-
-// debug();
 const USE_REACT_REFRESH_WEBPACK = true;
 
 let currentPath: string;
 
 let service: NibusService | null = null;
 
-// process.env.DEBUG = 'nibus:*,-nibus:<<<,-nibus:>>>';
-// process.env.DEBUG_COLORS = 'no';
-// process.env.DEBUG_HIDE_DATE = 'yes';
+process.env.DEBUG = 'nibus:*';
+process.env.DEBUG_COLORS = 'yes';
+process.env.NIBUS_LOG = 'nibus-all.log';
 
 autoUpdater.logger = log;
 log.transports.file.level = 'info';
 log.transports.file.fileName = process.env.NIBUS_LOG || 'gmib-main.log';
 log.transports.console.level = false;
 
+const tail = new Tail(log.transports.file.getFile().path);
+
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
 // global reference to mainWindow (necessary to prevent window from being garbage collected)
 let mainWindow: BrowserWindow | null;
 let testWindow: BrowserWindow | null;
+
+tail.on('line', line => {
+  mainWindow?.webContents && mainWindow.webContents.send('log', line);
+});
 
 let currentQuery: TestQuery = {
   width: 640,
@@ -55,7 +58,7 @@ const closeNibus = (): void => {
       log.info('tray to close nibus');
       service.stop();
       service = null;
-      log.info('nibus is closed');
+      log.info('nibus closed');
     } catch (e) {
       log.error('error while close nibus');
     }

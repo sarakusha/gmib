@@ -27,10 +27,17 @@ export type Props = {
   selected?: boolean;
 };
 
-const TabContainer: React.FC<Props> = ({ children, selected = true }) => {
+const TabContainer: React.FC<Props> = ({ id, children, selected = true }) => {
   const classes = useStyles();
   return (
-    <div className={classNames(classes.root, { [classes.hidden]: !selected })}>{children}</div>
+    <div
+      id={`tabpanel-${id}`}
+      aria-labelledby={`tab-${id}`}
+      hidden={!selected}
+      className={classNames(classes.root, { [classes.hidden]: !selected })}
+    >
+      {children}
+    </div>
   );
 };
 

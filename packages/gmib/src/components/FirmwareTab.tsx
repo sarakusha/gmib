@@ -21,7 +21,8 @@ import ReplayIcon from '@material-ui/icons/Replay';
 import { Address, Flasher, FlashKinds, Kind, KindMap } from '@nibus/core';
 import { SnackbarAction, useSnackbar } from 'notistack';
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { useDevice } from '../store';
+import { useDevice, useSelector } from '../store';
+import { selectProps } from '../store/devicesSlice';
 import CircularProgressWithLabel from './CircularProgressWithLabel';
 import FlashUpgrade, { displayName, Props as FlashUpgradeProps } from './FlashUpgrade';
 import FormFieldSet from './FormFieldSet';
@@ -72,6 +73,7 @@ const FirmwareTab: React.FC<Props> = ({ id, selected }) => {
   const classes = useStyles();
   const { closeSnackbar, enqueueSnackbar } = useSnackbar();
   const { address } = useDevice(id) ?? {};
+  const { bootloader } = useSelector(state => selectProps(state, id, 'bootloader'));
   const isEmpty = Address.empty.equals(address);
   const [progress, setProgress] = useState(0);
   const [flashing, setFlashing] = useState(false);
@@ -166,7 +168,7 @@ const FirmwareTab: React.FC<Props> = ({ id, selected }) => {
                   label={displayName(value)}
                   labelPlacement="top"
                   className={classes.kind}
-                  disabled={(isEmpty && value !== 'mcu') || value === 'fpga'}
+                  disabled={(value === 'mcu' ? !bootloader?.raw : isEmpty) || value === 'fpga'}
                 />
               ))}
           </FormFieldSet>

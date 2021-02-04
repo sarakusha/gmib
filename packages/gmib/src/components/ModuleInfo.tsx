@@ -14,6 +14,7 @@ import Typography from '@material-ui/core/Typography';
 import React from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import ErrorIcon from '@material-ui/icons/Clear';
+import { VertexType } from '../util/Minihost3Loader';
 
 // const bg = grey[100];
 
@@ -83,7 +84,7 @@ const useStyles = makeStyles(theme => ({
 }));
 
 type Props = {
-  info?: Record<string, string | number | undefined>;
+  info?: Record<string, unknown>;
   error?: Error | string;
 } & PosProps;
 
@@ -93,7 +94,7 @@ type PosProps = {
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type ValueType = { name?: string; value?: any; index?: number | string; aux?: any };
+type ValueType<T = string | number> = { name?: string; value?: T; index?: number | string };
 
 const Temperature: React.FC<ValueType> = ({ value }) => {
   const classes = useStyles();
@@ -156,7 +157,7 @@ const Voltage: React.FC<ValueType> = ({ value, index }) => {
   );
 };
 
-const Vertex: React.FC<ValueType> = ({ name, value }) => (
+const Vertex: React.FC<ValueType<VertexType>> = ({ name, value }) => (
   <>
     <VertexElement value={value && value.x} index={name} name="X" />
     <VertexElement value={value && value.y} index={name} name="Y" />
@@ -184,16 +185,16 @@ const Row: React.FC<ValueType> = ({ value, name }) => {
   );
 };
 
-type PropRenderType = Record<string, (props: ValueType) => React.ReactElement>;
+type PropRenderType = Record<string, (props: ValueType<unknown>) => React.ReactElement>;
 
 const propMap: PropRenderType = {
-  t: ({ value }) => <Temperature value={value} />,
-  v1: ({ value }) => <Voltage value={value} index={1} />,
-  v2: ({ value }) => <Voltage value={value} index={2} />,
-  redVertex: ({ value }) => <Vertex value={value} name="R" />,
-  greenVertex: ({ value }) => <Vertex value={value} name="G" />,
-  blueVertex: ({ value }) => <Vertex value={value} name="B" />,
-  default: props => <Row {...props} />,
+  t: ({ value }) => <Temperature value={value as number} />,
+  v1: ({ value }) => <Voltage value={value as number} index={1} />,
+  v2: ({ value }) => <Voltage value={value as number} index={2} />,
+  redVertex: ({ value }) => <Vertex value={value as VertexType} name="R" />,
+  greenVertex: ({ value }) => <Vertex value={value as VertexType} name="G" />,
+  blueVertex: ({ value }) => <Vertex value={value as VertexType} name="B" />,
+  default: ({ value, ...props }) => <Row value={value as string | number | undefined} {...props} />,
 };
 
 const Position: React.FC<PosProps> = ({ x, y }) => {

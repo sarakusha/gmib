@@ -23,8 +23,8 @@ import some from 'lodash/some';
 import pick from 'lodash/pick';
 import sortBy from 'lodash/sortBy';
 import sortedUniqBy from 'lodash/sortedUniqBy';
-import { useSelector } from '../store';
-import type { DeviceState, ValueState, ValueType } from '../store/devicesSlice';
+import { useDevice, useSelector } from '../store';
+import type { DeviceId, ValueState, ValueType } from '../store/devicesSlice';
 import FormFieldSet from '../components/FormFieldSet';
 import { selectMibByName } from '../store/mibsSlice';
 
@@ -38,7 +38,7 @@ const useStyles = makeStyles(theme => ({
 }));
 
 type Props = {
-  device: DeviceState;
+  deviceId?: DeviceId;
   open: boolean;
   close: () => void;
 };
@@ -68,9 +68,9 @@ const extractValues = (props: Record<string, ValueState>): Record<string, ValueT
     Object.entries<ValueState>(props).map(([name, state]) => [name, selectValue(state)])
   );
 
-const SaveDialog: React.FC<Props> = ({ device, open, close }) => {
+const SaveDialog: React.FC<Props> = ({ deviceId = '', open, close }) => {
   const classes = useStyles();
-  const { mib } = device;
+  const { mib = 0, props = {} } = useDevice(deviceId) ?? {};
   const meta = useSelector(state => selectMibByName(state, mib));
   const [names, initial] = useMemo(() => {
     const keys: [id: number, name: string, displayName: string][] = meta
@@ -117,26 +117,26 @@ const SaveDialog: React.FC<Props> = ({ device, open, close }) => {
       });
 
       if (fileName) {
-        const props =
+        const properties =
           event.currentTarget.id === 'all'
             ? names.map(([, name]) => name)
             : Object.entries(state)
                 .filter(([, checked]) => checked)
                 .map(([name]) => name);
-        const data = extractValues(pick(device.props, props));
+        const data = extractValues(pick(props, properties));
         data.$mib = mib;
         fs.writeFileSync(fileName, JSON.stringify(data));
         close();
       }
     },
-    [close, mib, names, state, device.props]
+    [close, mib, names, state, props]
   );
 
   const hasSelected = some(Object.values(state), Boolean);
 
   return (
     <Dialog
-      open={open}
+      open={open && !!deviceId}
       aria-labelledby="select-properties-title"
       aria-describedby="select-properties-description"
     >

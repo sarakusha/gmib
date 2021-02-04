@@ -7,37 +7,25 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import CircularProgress from '@material-ui/core/CircularProgress';
-import IconButton from '@material-ui/core/IconButton';
 import Paper from '@material-ui/core/Paper';
 import { makeStyles } from '@material-ui/core/styles';
-import Tooltip from '@material-ui/core/Tooltip';
 import Typography from '@material-ui/core/Typography';
-import CancelIcon from '@material-ui/icons/Cancel';
-import StartIcon from '@material-ui/icons/Refresh';
 import classNames from 'classnames';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Filter1 from '@material-ui/icons/Filter1';
-import Filter2 from '@material-ui/icons/Filter2';
-import Filter3 from '@material-ui/icons/Filter3';
-import Filter4 from '@material-ui/icons/Filter4';
-import Filter5 from '@material-ui/icons/Filter5';
-import Filter6 from '@material-ui/icons/Filter6';
-import Filter7 from '@material-ui/icons/Filter7';
-import Minihost3SelectorDialog from '../dialogs/Minihost3SelectorDialog';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useDevice, useSelector } from '../store';
 import { selectCurrentDeviceId } from '../store/currentSlice';
+import { getStatesAsync } from '../util/helpers';
 import Minihost2Loader, { Minihost2Info } from '../util/Minihost2Loader';
-import Minihost3Loader, {
-  initialSelectors,
-  Minihost3Info,
-  Minihost3Selector,
-} from '../util/Minihost3Loader';
+import Minihost3Loader, { initialSelectors, Minihost3Info } from '../util/Minihost3Loader';
 import MinihostLoader, { IModuleInfo } from '../util/MinihostLoader';
 import ModuleInfo from './ModuleInfo';
 import Range from './Range';
 import type { Props } from './TabContainer';
+import TelemetryToolbar from './TelemetryToolbar';
+
+const XMAX = 24;
+const YMAX = 32;
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -93,52 +81,29 @@ const useStyles = makeStyles(theme => ({
     borderBottom: '1px solid white',
   },
   ypos: {},
-  fabProgress: {
-    color: theme.palette.secondary.light,
-    position: 'absolute',
-    pointerEvents: 'none',
-    top: 0,
-    left: 0,
-    zIndex: 1,
-  },
-  wrapper: {
-    position: 'relative',
-  },
 }));
-
-const icons = [Filter1, Filter2, Filter3, Filter4, Filter5, Filter6, Filter7] as const;
 
 const TelemetryTab: React.FC<Props> = ({ id, selected = false }) => {
   const classes = useStyles();
-  const device = useDevice(id);
-  const { mib, props } = device ?? {};
-  const [selectors, setSelectors] = useState<Set<Minihost3Selector>>(
-    () => new Set(initialSelectors)
-  );
-  const [selectorOpen, setSelectorOpen] = useState(false);
-  const openSelectorHandler = useCallback(() => setSelectorOpen(true), []);
-  const closeSelectorHandler = useCallback((value: Set<Minihost3Selector>) => {
-    setSelectors(value);
-    setSelectorOpen(false);
-  }, []);
+  const { mib, props } = useDevice(id) ?? {};
   const loader = useMemo<MinihostLoader<Minihost2Info | Minihost3Info> | null>(() => {
+    if (!mib || !id) return null;
     switch (mib) {
       case 'minihost3':
-        return device ? new Minihost3Loader(device.id) : null;
+        return new Minihost3Loader(id);
       case 'minihost_v2.06b':
-        return device ? new Minihost2Loader(device.id) : null;
+        return new Minihost2Loader(id);
       default:
         return null;
     }
-  }, [device, mib]);
+  }, [id, mib]);
   const { hres, vres, moduleHres, moduleVres, maxModulesH, maxModulesV } = props ?? {};
-  const [xMax, setXMax] = useState<number>();
+  const [xMax, setXMax] = useState<number>(XMAX - 1);
   const [xMin, setXMin] = useState<number>(0);
-  const [yMax, setYMax] = useState<number>();
+  const [yMax, setYMax] = useState<number>(YMAX - 1);
   const [yMin, setYMin] = useState(0);
-  const [dirv, setDirv] = useState(false);
-  const [dirh, setDirh] = useState(false);
   const [style, setStyle] = useState({});
+  const [selectors, setSelectors] = useState(new Set(initialSelectors));
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -149,7 +114,7 @@ const TelemetryTab: React.FC<Props> = ({ id, selected = false }) => {
         Math.ceil(
           (hres.value as number) / ((moduleHres.value as number) || (hres.value as number))
         ),
-        (maxModulesH.value as number) || 24
+        (maxModulesH.value as number) || XMAX
       ) - 1
     );
     setYMax(
@@ -157,96 +122,56 @@ const TelemetryTab: React.FC<Props> = ({ id, selected = false }) => {
         Math.ceil(
           (vres.value as number) / ((moduleVres.value as number) || (vres.value as number))
         ),
-        (maxModulesV.value as number) || 32
+        (maxModulesV.value as number) || YMAX
       ) - 1
     );
   }, [hres, vres, moduleHres, moduleVres, maxModulesH, maxModulesV]);
 
-  useEffect(
-    () => {
-      setDirv(!!loader && loader.isInvertV());
-      setDirh(!!loader && loader.isInvertH());
-    },
-    // eslint-disable-next-line react/destructuring-assignment
-    [props?.dirv, props?.dirh, props?.vinvert, props?.hinvert, loader]
-  );
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [modules, setModules] = useState<any[]>([]);
-  const refRange = useRef({ xMin, xMax, yMin, yMax });
-  const start = useCallback(() => {
+  const dirv = loader?.isInvertV() || false;
+  const dirh = loader?.isInvertH() || false;
+  const [modules, setModules] = useState<IModuleInfo<Minihost2Info | Minihost3Info>[]>([]);
+  const start = useCallback(async () => {
     /* eslint-disable no-shadow */
-    const { xMin, xMax, yMin, yMax } = refRange.current;
+    const [xMin, xMax, yMin, yMax, selectors] = await getStatesAsync(
+      setXMin,
+      setXMax,
+      setYMin,
+      setYMax,
+      setSelectors
+    );
     /* eslint-enable */
     setStyle({ gridTemplateRows: `repeat(${yMax! - yMin + 1}, 1fr)` });
     setModules([]);
-    loader &&
-      setSelectors(current => {
-        loader.run({ xMin, yMin, xMax: xMax!, yMax: yMax!, selectors: current });
-        return current;
-      });
-  }, [loader, refRange]);
-  useEffect(() => {
-    refRange.current = { xMin, yMin, xMax, yMax };
-  }, [xMin, xMax, yMin, yMax]);
+    loader && (await loader.run({ xMin, yMin, xMax, yMax, selectors }));
+  }, [loader]);
   const cancel = useCallback(() => loader && loader.cancel(), [loader]);
-  const telemetryToolbar = useMemo(() => {
-    const FilterIcon = icons[Math.max(selectors.size - 1, 0)];
-    return (
-      <>
-        {mib === 'minihost3' && (
-          <Tooltip title="Задать переменные">
-            <div className={classes.wrapper}>
-              <IconButton color="inherit" onClick={openSelectorHandler}>
-                <FilterIcon />
-              </IconButton>
-            </div>
-          </Tooltip>
-        )}
-        {loading ? (
-          <Tooltip title="Отменить опрос">
-            <div className={classes.wrapper}>
-              <IconButton onClick={cancel} color="inherit">
-                <CancelIcon />
-              </IconButton>
-              <CircularProgress size={48} className={classes.fabProgress} />
-            </div>
-          </Tooltip>
-        ) : (
-          <Tooltip title="Запустить опрос модулей" enterDelay={500}>
-            <div className={classes.wrapper}>
-              <IconButton onClick={start} color="inherit">
-                <StartIcon />
-              </IconButton>
-            </div>
-          </Tooltip>
-        )}
-      </>
-    );
-  }, [
-    loading,
-    classes.wrapper,
-    classes.fabProgress,
-    cancel,
-    start,
-    mib,
-    selectors.size,
-    openSelectorHandler,
-  ]);
   const [, setToolbar] = useToolbar();
-  const current = useSelector(selectCurrentDeviceId);
+  const active = useSelector(selectCurrentDeviceId) === id && selected;
+  const telemetryToolbar = useMemo(
+    () => (
+      <TelemetryToolbar
+        mib={mib}
+        selectors={selectors}
+        onSelectorChanged={setSelectors}
+        loading={loading}
+        start={start}
+        cancel={cancel}
+      />
+    ),
+    [mib, selectors, loading, start, cancel]
+  );
   useEffect(
     () =>
-      setToolbar((toolbar: React.ReactNode) => {
-        if (selected && current === id) return telemetryToolbar;
+      setToolbar(toolbar => {
+        if (active) return telemetryToolbar;
         return toolbar === telemetryToolbar ? null : toolbar;
       }),
-    [selected, current, id, setToolbar, telemetryToolbar]
+    [selected, active, id, setToolbar, telemetryToolbar]
   );
   useEffect(() => {
     if (!loader) return () => {};
     const columnHandler = (column: IModuleInfo<Minihost2Info | Minihost3Info>[]): void => {
-      setModules(modls => modls.concat(column));
+      setModules(prev => prev.concat(column));
     };
     const startHandler = (): void => setLoading(true);
     const finishHandler = (): void => setLoading(false);
@@ -262,11 +187,6 @@ const TelemetryTab: React.FC<Props> = ({ id, selected = false }) => {
 
   return (
     <div className={classNames(classes.root, { [classes.hidden]: !selected })}>
-      <Minihost3SelectorDialog
-        open={selectorOpen}
-        onClose={closeSelectorHandler}
-        initial={selectors}
-      />
       <Paper className={classes.corner}>
         <div className={classes.xpos}>
           <Typography variant="caption" color="inherit">

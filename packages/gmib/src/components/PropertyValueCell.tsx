@@ -36,6 +36,9 @@ const useStyles = makeStyles(_theme => ({
   error: {
     color: 'red',
   },
+  readonly: {
+    whiteSpace: 'nowrap',
+  },
 }));
 
 type Props = {
@@ -54,7 +57,10 @@ const PropertyValueCell: React.FC<Props> = ({ meta, name, state, onChangePropert
     const { simpleType, isWritable, enumeration, unit, min, max, convertFrom = x => x } = meta;
     if (!isWritable) {
       return setDisplayName(componentName)(({ value, status, error }: ValueState) => (
-        <TableCell align="right" className={classNames({ [classes.error]: status === 'failed' })}>
+        <TableCell
+          align="right"
+          className={classNames(classes.readonly, { [classes.error]: status === 'failed' })}
+        >
           {status === 'failed' ? error : value}
         </TableCell>
       ));
@@ -128,7 +134,7 @@ const PropertyValueCell: React.FC<Props> = ({ meta, name, state, onChangePropert
         dirty={props.status === 'pending'}
       />
     ));
-  }, [meta, name, classes.error, classes.select, classes.inputDirty, onChangeProperty]);
+  }, [meta, name, classes, onChangeProperty]);
   const Cell = useMemo(() => cellFactory(), [cellFactory]);
   return <Cell {...state} />;
 };

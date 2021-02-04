@@ -15,7 +15,7 @@ import { promisify } from 'util';
 import { ipcRenderer } from 'electron';
 
 import { notEmpty } from '../util/helpers';
-import { AsyncLoader } from './asyncInitialMiddleware';
+import { AsyncInitializer } from './asyncInitialMiddleware';
 import type { AppThunk, RootState } from './index';
 
 export type TestQuery = {
@@ -73,7 +73,7 @@ const testSlice = createSlice({
   },
 });
 
-export const testsLoader = (): AsyncLoader => async dispatch => {
+export const loadTests: AsyncInitializer = async dispatch => {
   const testDir = path.resolve(__dirname, '../extraResources/tests');
   const filenames = (await readdirAsync(testDir))
     .map(filename => path.join(testDir, filename))

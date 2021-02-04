@@ -10,17 +10,17 @@
 
 import { Action, AnyAction, Middleware, ThunkDispatch } from '@reduxjs/toolkit';
 
-export type AsyncLoader<
+export type AsyncInitializer<
   A extends Action = AnyAction,
   S = Record<string, unknown>,
   E = undefined
 > = (dispatch: ThunkDispatch<S, E, A>, getState: () => S) => void;
 
-export default function asyncLoader<A extends Action, S = Record<string, unknown>>(
-  loader: AsyncLoader<A, S>
+export default function asyncInitializer<A extends Action, S = Record<string, unknown>>(
+  initializer: AsyncInitializer<A, S>
 ): Middleware {
   return ({ dispatch, getState }) => {
-    setTimeout(() => loader(dispatch, getState), 0);
+    setTimeout(() => initializer(dispatch, getState), 0);
     return next => action => {
       next(action);
     };

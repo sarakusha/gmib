@@ -7,6 +7,9 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
+import List from '@material-ui/core/List';
+import ListItem from '@material-ui/core/ListItem';
+import ListItemText from '@material-ui/core/ListItemText';
 import AppBar from '@material-ui/core/AppBar';
 import Divider from '@material-ui/core/Divider';
 import Drawer from '@material-ui/core/Drawer';
@@ -22,8 +25,9 @@ import MenuIcon from '@material-ui/icons/Menu';
 import classNames from 'classnames';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import some from 'lodash/some';
-import { useDevices } from '../store';
-import { AccordionProvider } from './AccordionList';
+import { useDevices, useDispatch, useSelector } from '../store';
+import { selectCurrentTab, setCurrentTab } from '../store/currentSlice';
+// import { AccordionProvider } from './AccordionList';
 import Devices from './Devices';
 import GmibTabs from './GmibTabs';
 import SearchDialog from '../dialogs/SearchDialog';
@@ -98,6 +102,7 @@ const useStyles = makeStyles(theme => ({
   drawerContent: {
     flex: 1,
     overflow: 'auto',
+    padding: 0,
   },
   appBarSpacer: {
     ...theme.mixins.toolbar,
@@ -128,6 +133,12 @@ const useStyles = makeStyles(theme => ({
   h5: {
     marginBottom: theme.spacing(2),
   },
+  listItem: {
+    minHeight: 56,
+    borderStyle: 'solid',
+    borderColor: theme.palette.divider,
+    borderBottomWidth: 'thin',
+  },
 }));
 
 const App: React.FC = () => {
@@ -146,6 +157,8 @@ const App: React.FC = () => {
   const [toolbar] = useToolbar();
   // eslint-disable-next-line global-require,@typescript-eslint/no-var-requires
   const version = useMemo(() => require('../../package.json').version, []);
+  const dispatch = useDispatch();
+  const tab = useSelector(selectCurrentTab);
   return (
     <>
       <CssBaseline />
@@ -196,12 +209,26 @@ const App: React.FC = () => {
             </IconButton>
           </div>
           <Divider />
-          <div className={classes.drawerContent}>
-            <AccordionProvider>
-              <Devices />
-              <TestItems />
-            </AccordionProvider>
-          </div>
+          <List className={classes.drawerContent}>
+            <Devices />
+            <TestItems />
+            <ListItem
+              button
+              onClick={() => dispatch(setCurrentTab('autobrightness'))}
+              selected={tab === 'autobrightness'}
+              className={classes.listItem}
+            >
+              <ListItemText>Автояркость</ListItemText>
+            </ListItem>
+            <ListItem
+              button
+              onClick={() => dispatch(setCurrentTab('log'))}
+              selected={tab === 'log'}
+              className={classes.listItem}
+            >
+              <ListItemText>Журнал</ListItemText>
+            </ListItem>
+          </List>
         </Drawer>
         <main className={classes.content}>
           <div className={classes.appBarSpacer} />

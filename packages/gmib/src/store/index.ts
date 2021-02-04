@@ -13,7 +13,7 @@ import {
   useDispatch as origUseDispatch,
   useSelector as origUseSelector,
 } from 'react-redux';
-import asyncLoader from './asyncInitialMiddleware';
+import asyncInitializer from './asyncInitialMiddleware';
 import currentReducer from './currentSlice';
 import devicesReducer, {
   DeviceId,
@@ -22,8 +22,8 @@ import devicesReducer, {
   selectDeviceById,
 } from './devicesSlice';
 import mibsReducer from './mibsSlice';
-import sessionReducer, { nibusStart } from './sessionSlice';
-import testReducer, { testsLoader } from './testSlice';
+import sessionReducer, { startNibus } from './sessionSlice';
+import testReducer, { loadTests } from './testSlice';
 
 export const store = configureStore({
   reducer: {
@@ -38,7 +38,7 @@ export const store = configureStore({
       serializableCheck: {
         ignoredPaths: ['mibs.entities'],
       },
-    }).concat(asyncLoader(testsLoader()), asyncLoader(nibusStart())),
+    }).concat(asyncInitializer(loadTests), asyncInitializer(startNibus)),
 });
 
 export type RootState = ReturnType<typeof store.getState>;

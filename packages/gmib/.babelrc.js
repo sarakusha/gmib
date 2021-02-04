@@ -1,4 +1,5 @@
 const plugins = [
+  /*
   [
     'babel-plugin-transform-imports',
     {
@@ -16,6 +17,7 @@ const plugins = [
       },
     },
   ],
+*/
 ];
 
 module.exports = { plugins };
