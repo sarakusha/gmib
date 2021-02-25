@@ -12,6 +12,7 @@ import React, { useEffect, useState } from 'react';
 import { selectDeviceIds } from '../store/devicesSlice';
 import { useSelector } from '../store';
 import { selectCurrentDeviceId, selectCurrentTab } from '../store/currentSlice';
+import Autobrightness from './Autobrightness';
 import DeviceTabs from './DeviceTabs';
 import Log from './Log';
 
@@ -71,7 +72,7 @@ const Tabs: React.FC = () => {
         <TestParams />
       </TabContainer>
       <TabContainer id="autobrightness" selected={tab === 'autobrightness'}>
-        Autobrightness
+        <Autobrightness />
       </TabContainer>
       <TabContainer id="log" selected={tab === 'log'}>
         <Log />

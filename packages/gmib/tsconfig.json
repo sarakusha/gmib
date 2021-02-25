@@ -17,7 +17,8 @@
     "resolveJsonModule": true,
     "baseUrl": ".",
     "typeRoots": [
-      "./node_modules/@types"
+      "./node_modules/@types",
+      "./@types"
     ],
     "types": [
       "node"
@@ -33,10 +34,14 @@
   },
   "exclude": [
     "node_modules",
-    "bak",
-    "@types"
+    "bak"
   ],
   "include": [
-    "src"
-  ]
+    "src",
+    "@types/mdx.d.ts",
+    "**/*.mdx"
+  ],
+  "paths": {
+    "@mdx-js/react": ["mdx-js__react"]
+  }
 }

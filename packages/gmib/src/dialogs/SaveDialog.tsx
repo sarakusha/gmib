@@ -34,6 +34,8 @@ const useStyles = makeStyles(theme => ({
   },
   formControl: {
     margin: theme.spacing(3),
+    display: 'flex',
+    flexDirection: 'column',
   },
 }));
 
@@ -76,11 +78,9 @@ const SaveDialog: React.FC<Props> = ({ deviceId = '', open, close }) => {
     const keys: [id: number, name: string, displayName: string][] = meta
       ? sortedUniqBy(
           sortBy(
-            Object.entries(meta.properties).map<PropIds>(([name, { displayName, id }]) => [
-              id,
-              name,
-              displayName,
-            ]),
+            Object.entries(meta.properties)
+              .filter(([, { isWritable, isReadable }]) => isWritable && isReadable)
+              .map<PropIds>(([name, { displayName, id }]) => [id, name, displayName]),
             byId
           ),
           byId

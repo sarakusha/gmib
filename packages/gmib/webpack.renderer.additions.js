@@ -107,6 +107,10 @@ module.exports = config => {
       aliasFields: ['main'],
     },
   });
+  config.module.rules.push({
+    test: /\.mdx?$/,
+    use: ['babel-loader', '@mdx-js/loader'],
+  });
   // !!! Помогает избежать дублирования react electron-ом и webpack-ом
   config.externals = [...config.externals, 'react', 'react-dom'];
   // if (ANALYZE) {

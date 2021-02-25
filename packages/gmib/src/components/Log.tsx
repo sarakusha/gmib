@@ -17,11 +17,31 @@ import { useToolbar } from '../providers/ToolbarProvider';
 import { useSelector } from '../store';
 import { selectCurrentTab } from '../store/currentSlice';
 
-const useStyles = makeStyles(_theme => ({
-  root: {},
+const useStyles = makeStyles(theme => ({
+  root: {
+    padding: theme.spacing(1),
+  },
+  '@keyframes slideIn': {
+    '0%': {
+      marginLeft: '100%',
+      width: '300%',
+      backgroundColor: theme.palette.action.disabledBackground,
+    },
+    '5%': {
+      marginLeft: '0%',
+      width: '100%',
+    },
+    '100%': {
+      backgroundColor: theme.palette.background.paper,
+    },
+  },
   log: {
+    backgroundColor: theme.palette.action.disabledBackground,
     '& > div': {
       whiteSpace: 'nowrap',
+      animationDuration: '5s',
+      animationName: '$slideIn',
+      backgroundColor: theme.palette.background.paper,
     },
   },
 }));

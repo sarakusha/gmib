@@ -77,7 +77,8 @@ export const sessionSlice = createSlice({
   name: 'session',
   initialState,
   reducers: {
-    close: state => {
+    closeNibus: state => {
+      console.log('CLOSE NIBUS');
       state.status = 'closed';
       state.portCount = 0;
       session.close();
@@ -105,7 +106,7 @@ export const sessionSlice = createSlice({
   },
 });
 
-export const { close, reloadAll } = sessionSlice.actions;
+export const { closeNibus, reloadAll } = sessionSlice.actions;
 const { setStatus, setPortCount, setLogLevel } = sessionSlice.actions;
 
 export const startNibus: AsyncInitializer = (dispatch, getState) => {
@@ -131,9 +132,13 @@ export const startNibus: AsyncInitializer = (dispatch, getState) => {
       dispatch(reloadDevice(id));
     };
     const disconnectedHandler = (): void => {
-      const current = selectCurrentDeviceId(getState() as RootState);
-      if (current === id) {
-        dispatch(setCurrentDevice(undefined));
+      try {
+        const current = selectCurrentDeviceId(getState() as RootState);
+        if (current === id) {
+          dispatch(setCurrentDevice(undefined));
+        }
+      } catch (e) {
+        console.error(`error while disconnect: ${e.message}`);
       }
       device.release();
     };
@@ -158,7 +163,11 @@ export const startNibus: AsyncInitializer = (dispatch, getState) => {
     });
   };
   const deleteDeviceHandler = (device: IDevice): void => {
-    dispatch(removeDevice(device.id));
+    try {
+      dispatch(removeDevice(device.id));
+    } catch (e) {
+      console.error(e.message);
+    }
   };
   const logLevelHandler = (level: LogLevel): void => {
     dispatch(setLogLevel(level));
@@ -191,6 +200,7 @@ export const startNibus: AsyncInitializer = (dispatch, getState) => {
       });
   };
   start();
+  window.addEventListener('beforeunload', () => dispatch(closeNibus()));
 };
 
 export default sessionSlice.reducer;

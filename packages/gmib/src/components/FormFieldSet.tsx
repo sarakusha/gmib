@@ -25,10 +25,16 @@ export const FormLegend: React.FC<FormLabelProps> = props => (
   <FormLabel {...props} component={'legend' as 'label'} />
 );
 
-const FormFieldSet: React.FC<FormFieldSetProps> = ({ legend, helper, children, ...props }) => (
+const FormFieldSet: React.FC<FormFieldSetProps> = ({
+  legend,
+  helper,
+  children,
+  className,
+  ...props
+}) => (
   <FormControl component={'fieldset' as 'div'} {...props}>
     {legend && <FormLegend>{legend}</FormLegend>}
-    {children}
+    <div className={className}>{children}</div>
     {helper && <FormHelperText>{helper}</FormHelperText>}
   </FormControl>
 );

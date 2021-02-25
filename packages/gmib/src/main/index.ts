@@ -14,9 +14,14 @@ import log from 'electron-log';
 import { autoUpdater } from 'electron-updater';
 import type { NibusService } from '@nibus/cli';
 import { Tail } from 'tail';
+import Store from 'electron-store';
+import mdns from 'mdns';
 import type { TestQuery } from '../store/testSlice';
+import pkg from '../../package.json';
 
 const USE_REACT_REFRESH_WEBPACK = true;
+
+const PORT = 9000;
 
 let currentPath: string;
 
@@ -30,6 +35,16 @@ autoUpdater.logger = log;
 log.transports.file.level = 'info';
 log.transports.file.fileName = process.env.NIBUS_LOG || 'gmib-main.log';
 log.transports.console.level = false;
+
+Store.initRenderer();
+
+const ad = mdns.createAdvertisement(mdns.tcp('gmib'), PORT, {
+  txtRecord: {
+    version: pkg.version,
+  },
+});
+
+ad.start();
 
 const tail = new Tail(log.transports.file.getFile().path);
 
@@ -79,6 +94,7 @@ async function createMainWindow(): Promise<BrowserWindow> {
 
   window.on('closed', () => {
     mainWindow = null;
+    service && service.stop();
     if (testWindow) {
       testWindow.close();
     }
@@ -176,6 +192,7 @@ app.on('window-all-closed', () => {
   // on macOS it is common for applications to stay open until the user explicitly quits
   // if (process.platform !== 'darwin' || isDevelopment) {
   closeNibus();
+  ad.stop();
   app.quit();
   log.info('App closed');
   // }
@@ -299,4 +316,8 @@ ipcMain.on('showSaveDialogSync', (event, options: Electron.SaveDialogSyncOptions
 
 ipcMain.on('showErrorBox', (event, title: string, content: string) => {
   dialog.showErrorBox(title, content);
+});
+
+ipcMain.on('autoStart', (event, open: boolean) => {
+  app.setLoginItemSettings({ openAtLogin: open });
 });

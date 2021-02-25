@@ -14,7 +14,7 @@ import {
   useSelector as origUseSelector,
 } from 'react-redux';
 import asyncInitializer from './asyncInitialMiddleware';
-import currentReducer from './currentSlice';
+import currentReducer, { initializeCurrent } from './currentSlice';
 import devicesReducer, {
   DeviceId,
   DeviceState,
@@ -24,6 +24,8 @@ import devicesReducer, {
 import mibsReducer from './mibsSlice';
 import sessionReducer, { startNibus } from './sessionSlice';
 import testReducer, { loadTests } from './testSlice';
+import sensorsReducer, { startSensorListener } from './sensorsSlice';
+import locationReducer from './locationSlice';
 
 export const store = configureStore({
   reducer: {
@@ -32,13 +34,21 @@ export const store = configureStore({
     devices: devicesReducer,
     mibs: mibsReducer,
     test: testReducer,
+    sensors: sensorsReducer,
+    location: locationReducer,
   },
   middleware: getDefaultMiddleware =>
     getDefaultMiddleware({
       serializableCheck: {
         ignoredPaths: ['mibs.entities'],
       },
-    }).concat(asyncInitializer(loadTests), asyncInitializer(startNibus)),
+    }).concat(
+      asyncInitializer(loadTests),
+      asyncInitializer(startNibus),
+      asyncInitializer(startSensorListener),
+      asyncInitializer(initializeCurrent)
+      // asyncInitializer(updateCurrentLocation)
+    ),
 });
 
 export type RootState = ReturnType<typeof store.getState>;

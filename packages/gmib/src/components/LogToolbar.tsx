@@ -43,8 +43,6 @@ const levels = Object.keys(LogLevelV.keys) as LogLevel[];
 
 const LogToolbar: React.FC = () => {
   const classes = useStyles();
-  // const [open, setOpen] = useState(false);
-  // const triggerOpen = () => setOpen(prev => !prev);
   const logLevel = useSelector(selectLogLevel);
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
   const handleChange: React.ChangeEventHandler<HTMLInputElement> = e => {

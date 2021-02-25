@@ -25,9 +25,15 @@ import MenuIcon from '@material-ui/icons/Menu';
 import classNames from 'classnames';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import some from 'lodash/some';
+import ListItemSecondaryAction from '@material-ui/core/ListItemSecondaryAction';
+import Switch from '@material-ui/core/Switch';
 import { useDevices, useDispatch, useSelector } from '../store';
-import { selectCurrentTab, setCurrentTab } from '../store/currentSlice';
-// import { AccordionProvider } from './AccordionList';
+import {
+  selectAutobrightness,
+  selectCurrentTab,
+  setCurrentTab,
+  setAutobrightness,
+} from '../store/currentSlice';
 import Devices from './Devices';
 import GmibTabs from './GmibTabs';
 import SearchDialog from '../dialogs/SearchDialog';
@@ -70,7 +76,7 @@ const useStyles = makeStyles(theme => ({
     marginLeft: 12,
     marginRight: 36,
   },
-  menuButtonHidden: {
+  hidden: {
     display: 'none',
   },
   title: {
@@ -151,6 +157,7 @@ const App: React.FC = () => {
   const searchClose = useCallback(() => setSearchOpen(false), [setSearchOpen]);
   const [link, setLink] = useState(false);
   const devices = useDevices();
+  const autobrightness = useSelector(selectAutobrightness);
   useEffect(() => {
     setLink(some(devices, device => !!device?.isLink));
   }, [devices]);
@@ -173,7 +180,7 @@ const App: React.FC = () => {
               color="inherit"
               aria-label="Open drawer"
               onClick={handleDrawerOpen}
-              className={classNames(classes.menuButton, open && classes.menuButtonHidden)}
+              className={classNames(classes.menuButton, open && classes.hidden)}
             >
               <MenuIcon />
             </IconButton>
@@ -189,7 +196,13 @@ const App: React.FC = () => {
             {toolbar}
             <Tooltip title="Поиск новых устройств" enterDelay={500}>
               <div>
-                <IconButton color="inherit" onClick={searchOpen} disabled={!link}>
+                <IconButton
+                  color="inherit"
+                  onClick={searchOpen}
+                  disabled={!link}
+                  hidden={tab !== 'devices'}
+                  className={classNames({ [classes.hidden]: tab !== 'devices' })}
+                >
                   <SearchIcon />
                 </IconButton>
               </div>
@@ -218,7 +231,17 @@ const App: React.FC = () => {
               selected={tab === 'autobrightness'}
               className={classes.listItem}
             >
-              <ListItemText>Автояркость</ListItemText>
+              <ListItemText id="switch-autobrightness">Автояркость</ListItemText>
+              <ListItemSecondaryAction>
+                <Switch
+                  edge="end"
+                  onChange={() => dispatch(setAutobrightness(!autobrightness))}
+                  checked={autobrightness}
+                  // onChange={handleToggle('wifi')}
+                  // checked={checked.indexOf('wifi') !== -1}
+                  inputProps={{ 'aria-labelledby': 'switch-autobrightness' }}
+                />
+              </ListItemSecondaryAction>
             </ListItem>
             <ListItem
               button

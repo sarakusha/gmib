@@ -44,8 +44,13 @@ const useStyles = makeStyles(theme => ({
     borderStyle: 'solid',
     display: 'block',
     flexDirection: 'row',
-    '&:not(:last-child)': {
+    '& ~ $kinds': {
       marginRight: theme.spacing(2),
+    },
+  },
+  wrapper: {
+    '& > fieldset ~ fieldset': {
+      marginLeft: theme.spacing(2),
     },
   },
   kind: {
@@ -151,7 +156,13 @@ const FirmwareTab: React.FC<Props> = ({ id, selected }) => {
   );
   return (
     <Box display={selected ? 'block' : 'none'} width={1} p={1}>
-      <RadioGroup row aria-label="firmware kind" value={kind} onChange={kindHandler}>
+      <RadioGroup
+        row
+        aria-label="firmware kind"
+        value={kind}
+        onChange={kindHandler}
+        className={classes.wrapper}
+      >
         {[false, true].map(isModule => (
           <FormFieldSet
             legend={isModule ? 'Модуль' : 'Хост'}

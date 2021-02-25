@@ -277,7 +277,7 @@ export const selectDevicesByAddress = createSelector(
 );
 
 export const {
-  addDevice,
+  // addDevice,
   removeDevice,
   setConnected,
   updateProperty,
@@ -309,6 +309,15 @@ export const setDeviceValue = (
     dispatch(updateProperty([deviceId, name]));
     drain(dispatch);
   };
+};
+
+export const addDevice = (id: DeviceId): AppThunk => (dispatch, getState) => {
+  dispatch(devicesSlice.actions.addDevice(id));
+  const { brightness } = getState().current;
+  const { mib } = selectDeviceById(getState(), id) ?? {};
+  if (mib?.startsWith('minihost')) {
+    setDeviceValue(id)('brightness', brightness);
+  }
 };
 
 export const selectAllProps = (state: RootState, id: DeviceId): DeviceProps =>

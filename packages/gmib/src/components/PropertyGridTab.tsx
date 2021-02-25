@@ -8,6 +8,7 @@
  * the EULA file that was distributed with this source code.
  */
 import Box from '@material-ui/core/Box';
+import Paper from '@material-ui/core/Paper';
 import { makeStyles } from '@material-ui/core/styles';
 import Table from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
@@ -40,6 +41,7 @@ const useStyles = makeStyles(theme => ({
     '& table': {
       borderCollapse: 'separate',
     },
+    borderBottom: 0,
   },
 }));
 
@@ -106,34 +108,36 @@ const PropertyGridTab: React.FC<Props> = ({ id, selected = false }) => {
 
   return (
     <Box px={1} width={1} fontSize="body1.fontSize" display={selected ? 'block' : 'none'}>
-      {Object.entries(categories).map(([category, propNames]) => (
-        <AccordionList
-          key={category}
-          name={category || 'other'}
-          title={category}
-          component={Table}
-          summaryClasses={summaryClasses}
-          className={classes.table}
-          expanded={category === '' || currentCategory === category}
-          onChange={setCurrentCategory}
-        >
-          <TableBody>
-            {propNames.map(([name, info]) => (
-              <TableRow key={name}>
-                <TableCell className={classes.name}>
-                  {`${info.displayName}${info.unit && info.isWritable ? ` в ${info.unit}` : ''}`}
-                </TableCell>
-                <PropertyValueCell
-                  meta={info}
-                  name={name}
-                  state={props[name]}
-                  onChangeProperty={setValue}
-                />
-              </TableRow>
-            ))}
-          </TableBody>
-        </AccordionList>
-      ))}
+      <Paper>
+        {Object.entries(categories).map(([category, propNames]) => (
+          <AccordionList
+            key={category}
+            name={category || 'other'}
+            title={category}
+            component={Table}
+            summaryClasses={summaryClasses}
+            className={classes.table}
+            expanded={category === '' || currentCategory === category}
+            onChange={setCurrentCategory}
+          >
+            <TableBody>
+              {propNames.map(([name, info]) => (
+                <TableRow key={name}>
+                  <TableCell className={classes.name}>
+                    {`${info.displayName}${info.unit && info.isWritable ? ` в ${info.unit}` : ''}`}
+                  </TableCell>
+                  <PropertyValueCell
+                    meta={info}
+                    name={name}
+                    state={props[name]}
+                    onChangeProperty={setValue}
+                  />
+                </TableRow>
+              ))}
+            </TableBody>
+          </AccordionList>
+        ))}
+      </Paper>
     </Box>
   );
 };
