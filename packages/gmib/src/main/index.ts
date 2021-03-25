@@ -66,7 +66,7 @@ const localAddresses = ([] as os.NetworkInterfaceInfo[])
 const mdnsBrowser = bonjour.find({ type: 'nibus' });
 const tail = new Tail(log.transports.file.getFile().path);
 tail.on('line', line => {
-  service && service.server.broadcast('log', line);
+  service?.server?.broadcast('log', line);
 });
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
@@ -432,7 +432,7 @@ if (!gotTheLock) {
     });
     // screen.getAllDisplays().forEach(display => debug(JSON.stringify(display)));
     const broadcastDisplays = (): void => {
-      service?.server.broadcast('displays', getAllDisplays());
+      service?.server?.broadcast('displays', getAllDisplays());
       setTimeout(() => updateScreen(), 3000);
     };
 
@@ -527,7 +527,7 @@ ipcMain.on('showErrorBox', (event, title: string, content: string) => {
 });
 
 config.onDidAnyChange(newValue => {
-  service && service.server.broadcast('config', newValue);
+  service?.server?.broadcast('config', newValue);
 });
 
 config.onDidChange('test', (id: string | undefined): void => {
