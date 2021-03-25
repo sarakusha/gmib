@@ -9,15 +9,16 @@
  */
 
 /* eslint-disable no-bitwise,no-await-in-loop */
-import session, {
+import {
   SarpQueryType,
   Address,
   AddressType,
   INibusConnection,
   createSarp,
   SarpDatagram,
+  DeviceId,
+  findDeviceById,
 } from '@nibus/core';
-import { DeviceId } from '../store/devicesSlice';
 
 import { delay, tuplify } from './helpers';
 import Runnable, { RunnableEvents } from './Runnable';
@@ -42,7 +43,7 @@ interface FinderEvents extends RunnableEvents {
 }
 
 const getConnection = (owner: DeviceId): INibusConnection => {
-  const device = session.devices.get().find(({ id }) => id === owner);
+  const device = findDeviceById(owner);
   if (!device) throw new Error(`Unknown device ${owner}`);
   const { connection, address: ownerAddress } = device;
   if (!connection) throw new Error(`Device ${ownerAddress} not connected`);

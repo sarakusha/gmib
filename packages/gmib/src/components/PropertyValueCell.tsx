@@ -10,7 +10,7 @@
 
 /* eslint-disable indent,@typescript-eslint/no-explicit-any */
 import Select from '@material-ui/core/Select';
-import { makeStyles } from '@material-ui/core/styles';
+import makeStyles from '@material-ui/core/styles/makeStyles';
 import React, { memo, useCallback, useMemo } from 'react';
 import MenuItem from '@material-ui/core/MenuItem';
 import classNames from 'classnames';

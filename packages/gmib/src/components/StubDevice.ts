@@ -73,4 +73,8 @@ export default class StubDevice extends EventEmitter implements IDevice {
   write(...ids: number[]): Promise<number[]> {
     return Promise.reject(new Error('Not realized'));
   }
+
+  toJSON(): unknown {
+    return {};
+  }
 }

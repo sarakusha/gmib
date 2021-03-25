@@ -18,15 +18,20 @@ import Toolbar from '@material-ui/core/Toolbar';
 import Tooltip from '@material-ui/core/Tooltip';
 import Typography from '@material-ui/core/Typography';
 import CssBaseline from '@material-ui/core/CssBaseline';
-import { makeStyles } from '@material-ui/core/styles';
+import makeStyles from '@material-ui/core/styles/makeStyles';
 import ChevronLeftIcon from '@material-ui/icons/ChevronLeft';
 import SearchIcon from '@material-ui/icons/Search';
 import MenuIcon from '@material-ui/icons/Menu';
+import Backdrop from '@material-ui/core/Backdrop';
 import classNames from 'classnames';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ipcRenderer } from 'electron';
+import React, { useCallback, useEffect, useState } from 'react';
 import some from 'lodash/some';
 import ListItemSecondaryAction from '@material-ui/core/ListItemSecondaryAction';
 import Switch from '@material-ui/core/Switch';
+import SettingsEthernetIcon from '@material-ui/icons/SettingsEthernet';
+import HighlightOffIcon from '@material-ui/icons/HighlightOff';
+import RemoteHostsDialog from '../dialogs/RemoteHostsDialog';
 import { useDevices, useDispatch, useSelector } from '../store';
 import {
   selectAutobrightness,
@@ -34,6 +39,7 @@ import {
   setCurrentTab,
   setAutobrightness,
 } from '../store/currentSlice';
+import { selectIsClosed, selectIsOnline } from '../store/sessionsSlice';
 import Devices from './Devices';
 import GmibTabs from './GmibTabs';
 import SearchDialog from '../dialogs/SearchDialog';
@@ -41,6 +47,8 @@ import { useToolbar } from '../providers/ToolbarProvider';
 import TestItems from './TestItems';
 
 const drawerWidth = 240;
+// eslint-disable-next-line global-require,@typescript-eslint/no-var-requires
+const { version } = require('../../package.json');
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -100,10 +108,10 @@ const useStyles = makeStyles(theme => ({
       easing: theme.transitions.easing.sharp,
       duration: theme.transitions.duration.leavingScreen,
     }),
-    width: theme.spacing(7),
-    [theme.breakpoints.up('sm')]: {
-      width: theme.spacing(9),
-    },
+    width: 0,
+    // [theme.breakpoints.up('sm')]: {
+    //   width: theme.spacing(9),
+    // },
   },
   drawerContent: {
     flex: 1,
@@ -145,6 +153,18 @@ const useStyles = makeStyles(theme => ({
     borderColor: theme.palette.divider,
     borderBottomWidth: 'thin',
   },
+  backdrop: {
+    zIndex: theme.zIndex.drawer + 10,
+    color: '#fff',
+  },
+  blink: {
+    animation: '$blink-animation normal 1.5s infinite ease-in-out',
+  },
+  '@keyframes blink-animation': {
+    '50%': {
+      opacity: 0,
+    },
+  },
 }));
 
 const App: React.FC = () => {
@@ -162,18 +182,36 @@ const App: React.FC = () => {
     setLink(some(devices, device => !!device?.isLink));
   }, [devices]);
   const [toolbar] = useToolbar();
-  // eslint-disable-next-line global-require,@typescript-eslint/no-var-requires
-  const version = useMemo(() => require('../../package.json').version, []);
   const dispatch = useDispatch();
   const tab = useSelector(selectCurrentTab);
+  const online = useSelector(selectIsOnline);
+  const sessionClosed = useSelector(selectIsClosed);
+  const [remoteDialogOpen, setRemoteDialogOpen] = useState(false);
+  useEffect(() => {
+    const openRemoteDialog = (): void => setRemoteDialogOpen(true);
+    ipcRenderer.on('editRemoteHosts', openRemoteDialog);
+    return () => {
+      ipcRenderer.off('editRemoteHosts', openRemoteDialog);
+    };
+  }, []);
+  const closeRemoteDialog = (): void => setRemoteDialogOpen(false);
   return (
     <>
       <CssBaseline />
+      <Backdrop className={classes.backdrop} open={!online}>
+        {sessionClosed ? (
+          <HighlightOffIcon fontSize="large" />
+        ) : (
+          <SettingsEthernetIcon className={classes.blink} fontSize="large" />
+        )}
+      </Backdrop>
+      <RemoteHostsDialog open={remoteDialogOpen} close={closeRemoteDialog} />
       <div className={classes.root}>
         <AppBar
           position="absolute"
           className={classNames(classes.appBar, open && classes.appBarShift)}
           elevation={0}
+          color="primary"
         >
           <Toolbar disableGutters={!open} className={classes.toolbar}>
             <IconButton

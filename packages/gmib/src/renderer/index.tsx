@@ -8,9 +8,8 @@
  * the EULA file that was distributed with this source code.
  */
 
+// Не удалять, если нужны логи в production
 /* eslint-disable import/first */
-process.env.DEBUG = 'nibus:*';
-process.env.DEBUG_COLORS = 'yes';
 process.env.NIBUS_LOG = 'nibus-all.log';
 
 window.localStorage.debug = process.env.DEBUG;

@@ -15,12 +15,14 @@ import React from 'react';
 import AccordionList from './AccordionList';
 
 const OtherItems: React.FC = () => (
-    <AccordionList name="other" title="Еще...">
-      <ListItem button>
-        <ListItemIcon>
-          <SettingsBrightnessIcon />
-        </ListItemIcon>
-        <ListItemText>Автояркость</ListItemText>
-      </ListItem>
-    </AccordionList>
-  );
+  <AccordionList name="other" title="Еще...">
+    <ListItem button>
+      <ListItemIcon>
+        <SettingsBrightnessIcon />
+      </ListItemIcon>
+      <ListItemText>Автояркость</ListItemText>
+    </ListItem>
+  </AccordionList>
+);
+
+export default OtherItems;

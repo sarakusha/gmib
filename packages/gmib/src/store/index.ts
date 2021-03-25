@@ -7,6 +7,7 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
+import { DeviceId } from '@nibus/core';
 import { Action, configureStore, ThunkAction } from '@reduxjs/toolkit';
 import {
   TypedUseSelectorHook,
@@ -15,39 +16,37 @@ import {
 } from 'react-redux';
 import asyncInitializer from './asyncInitialMiddleware';
 import currentReducer, { initializeCurrent } from './currentSlice';
-import devicesReducer, {
-  DeviceId,
-  DeviceState,
-  selectAllDevices,
-  selectDeviceById,
-} from './devicesSlice';
+import sessionsReducer, { startNibus } from './sessionsSlice';
+import devicesReducer, { DeviceState, selectAllDevices, selectDeviceById } from './devicesSlice';
 import mibsReducer from './mibsSlice';
-import sessionReducer, { startNibus } from './sessionSlice';
-import testReducer, { loadTests } from './testSlice';
-import sensorsReducer, { startSensorListener } from './sensorsSlice';
-import locationReducer from './locationSlice';
+import nibusReducer from './nibusSlice';
+// import testsReducer, { loadTests } from './testsSlice';
+import sensorsReducer from './sensorsSlice';
+import remoteHostsReducer, { initializeRemoteHosts } from './remoteHostsSlice';
 
 export const store = configureStore({
   reducer: {
     current: currentReducer,
-    session: sessionReducer,
+    nibus: nibusReducer,
+    sessions: sessionsReducer,
     devices: devicesReducer,
     mibs: mibsReducer,
-    test: testReducer,
+    // tests: testsReducer,
     sensors: sensorsReducer,
-    location: locationReducer,
+    remoteHosts: remoteHostsReducer,
   },
   middleware: getDefaultMiddleware =>
     getDefaultMiddleware({
       serializableCheck: {
+        // `convertFrom` is a function
         ignoredPaths: ['mibs.entities'],
+        // ignoredActionPaths: ['payload.release'],
       },
     }).concat(
-      asyncInitializer(loadTests),
+      // asyncInitializer(loadTests),
       asyncInitializer(startNibus),
-      asyncInitializer(startSensorListener),
-      asyncInitializer(initializeCurrent)
-      // asyncInitializer(updateCurrentLocation)
+      asyncInitializer(initializeCurrent),
+      asyncInitializer(initializeRemoteHosts)
     ),
 });
 
@@ -64,5 +63,5 @@ export const useDispatch = (): AppDispatch => origUseDispatch<AppDispatch>();
 export const useSelector: TypedUseSelectorHook<RootState> = origUseSelector;
 
 export const useDevices = (): DeviceState[] => useSelector(selectAllDevices);
-export const useDevice = (id: DeviceId): DeviceState | undefined =>
-  useSelector(state => selectDeviceById(state, id));
+export const useDevice = (id?: DeviceId): DeviceState | undefined =>
+  useSelector(state => selectDeviceById(state, id ?? ''));

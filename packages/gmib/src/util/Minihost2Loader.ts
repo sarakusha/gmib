@@ -9,8 +9,7 @@
  * the EULA file that was distributed with this source code.
  */
 
-import session from '@nibus/core';
-import { DeviceId } from '../store/devicesSlice';
+import { DeviceId, findDeviceById } from '@nibus/core';
 import MinihostLoader from './MinihostLoader';
 
 export type Minihost2Info = {
@@ -36,7 +35,7 @@ export default class Minihost2Loader extends MinihostLoader<Minihost2Info> {
   static readonly DOMAIN = 'MODUL';
 
   constructor(deviceId: DeviceId) {
-    const device = session.devices.get().find(({ id }) => id === deviceId);
+    const device = findDeviceById(deviceId);
     if (!device) throw new Error(`Unknown device ${deviceId}`);
     super(device);
   }

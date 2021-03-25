@@ -8,9 +8,9 @@
  * the EULA file that was distributed with this source code.
  */
 
-import session from '@nibus/core';
+import { DeviceId, findDeviceById } from '@nibus/core';
 import { createEntityAdapter, createSlice, PayloadAction } from '@reduxjs/toolkit';
-import type { DeviceId, ValueType } from './devicesSlice';
+import type { ValueType } from './devicesSlice';
 import type { RootState } from './index';
 
 export interface PropMetaInfo {
@@ -45,7 +45,7 @@ const mibsSlice = createSlice({
   initialState: mibsAdapter.getInitialState(),
   reducers: {
     addMib(state, { payload: id }: PayloadAction<DeviceId>) {
-      const device = session.devices.findById(id);
+      const device = findDeviceById(id);
       if (!device) return;
       const mib = Reflect.getMetadata('mib', device);
       if (selectById(state, mib)) return;

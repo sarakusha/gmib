@@ -3,7 +3,7 @@
   <component name="WebServers">
     <option name="servers">
       <webServer id="b13fb38e-eb13-4043-a3e6-cf40fbbd8144" name="GIGABYTE" url="http://192.168.23.27:3000">
-        <fileTransfer rootFolder="/C:/Users/sarakusha" accessType="SFTP" host="192.168.23.26" port="22" sshConfigId="c8135efe-6c91-4b20-8593-365b71e5b226" sshConfig="GIGABYTE" keyPair="true">
+        <fileTransfer rootFolder="/home/sarakusha" accessType="SFTP" host="192.168.1.40" port="22" sshConfigId="20b01b0b-4c74-4e30-b343-f6155307388f" sshConfig="Keenetic" keyPair="true">
           <advancedOptions>
             <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
           </advancedOptions>

@@ -10,18 +10,23 @@
 
 import CircularProgress from '@material-ui/core/CircularProgress';
 import IconButton from '@material-ui/core/IconButton';
-import { makeStyles } from '@material-ui/core/styles';
+import makeStyles from '@material-ui/core/styles/makeStyles';
 import Tooltip from '@material-ui/core/Tooltip';
 import LoadIcon from '@material-ui/icons/OpenInBrowser';
 import ReloadIcon from '@material-ui/icons/Refresh';
 import SaveIcon from '@material-ui/icons/Save';
+import { DeviceId } from '@nibus/core';
 import { ipcRenderer } from 'electron';
 import fs from 'fs';
 import React, { useCallback, useState } from 'react';
 import SaveDialog from '../dialogs/SaveDialog';
 import { AppDispatch, useDispatch, useSelector } from '../store';
-import { selectCurrentDevice } from '../store/currentSlice';
-import { DeviceId, PropTuple, reloadDevice, setDeviceValue } from '../store/devicesSlice';
+import {
+  PropTuple,
+  reloadDevice,
+  selectCurrentDevice,
+  setDeviceValue,
+} from '../store/devicesSlice';
 
 const useStyles = makeStyles(theme => ({
   toolbarWrapper: {

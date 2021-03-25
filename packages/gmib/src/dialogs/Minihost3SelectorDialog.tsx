@@ -15,7 +15,7 @@ import DialogContent from '@material-ui/core/DialogContent';
 import DialogTitle from '@material-ui/core/DialogTitle';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import FormGroup from '@material-ui/core/FormGroup';
-import { makeStyles } from '@material-ui/core/styles';
+import makeStyles from '@material-ui/core/styles/makeStyles';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import FormFieldSet from '../components/FormFieldSet';
 import { initialSelectors, Minihost3Selector } from '../util/Minihost3Loader';

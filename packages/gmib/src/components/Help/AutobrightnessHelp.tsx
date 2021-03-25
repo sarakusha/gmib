@@ -10,13 +10,13 @@
 import React, { useRef } from 'react';
 import Container from '@material-ui/core/Container';
 import { MDXProvider } from '@mdx-js/react';
-import { makeStyles } from '@material-ui/core/styles';
+import makeStyles from '@material-ui/core/styles/makeStyles';
 
 import mdx from './mdx';
 
 import Content from './Autobrightness.mdx';
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles(_theme => ({
   root: {
     // '& svg': {
     //   fontSize: '1.5em',

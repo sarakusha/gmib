@@ -9,7 +9,7 @@
  */
 import Box from '@material-ui/core/Box';
 import Paper from '@material-ui/core/Paper';
-import { makeStyles } from '@material-ui/core/styles';
+import makeStyles from '@material-ui/core/styles/makeStyles';
 import Table from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
 import TableRow from '@material-ui/core/TableRow';
@@ -24,7 +24,7 @@ import AccordionList from './AccordionList';
 import ErrorCard from './ErrorCard';
 import PropertyValueCell from './PropertyValueCell';
 import { useToolbar } from '../providers/ToolbarProvider';
-import type { Props } from './TabContainer';
+import type { MinihostTabProps } from './TabContainer';
 import { reloadDevice, setDeviceValue, ValueType } from '../store/devicesSlice';
 
 const useStyles = makeStyles(theme => ({
@@ -59,7 +59,7 @@ const useSummaryClasses = makeStyles(theme => ({
 
 const propertyGridToolbar = <PropertyGridToolbar />;
 
-const PropertyGridTab: React.FC<Props> = ({ id, selected = false }) => {
+const PropertyGridTab: React.FC<MinihostTabProps> = ({ id, selected = false }) => {
   const classes = useStyles();
   const { mib, error, props } = useDevice(id) ?? {};
   const meta = useSelector(state => selectMibByName(state, mib ?? 0));

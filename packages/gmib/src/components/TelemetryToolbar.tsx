@@ -10,7 +10,7 @@
 
 import CircularProgress from '@material-ui/core/CircularProgress';
 import IconButton from '@material-ui/core/IconButton';
-import { makeStyles } from '@material-ui/core/styles';
+import makeStyles from '@material-ui/core/styles/makeStyles';
 import Tooltip from '@material-ui/core/Tooltip';
 import CancelIcon from '@material-ui/icons/Cancel';
 import Filter1 from '@material-ui/icons/Filter1';

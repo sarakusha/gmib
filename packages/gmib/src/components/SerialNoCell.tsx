@@ -9,7 +9,7 @@
  */
 
 import React, { useCallback, useMemo, useState } from 'react';
-import { makeStyles } from '@material-ui/core/styles';
+import makeStyles from '@material-ui/core/styles/makeStyles';
 // import MaskedInput from 'react-input-mask';
 import classNames from 'classnames';
 import Input from '@material-ui/core/Input';

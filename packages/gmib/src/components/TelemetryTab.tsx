@@ -8,7 +8,7 @@
  * the EULA file that was distributed with this source code.
  */
 import Paper from '@material-ui/core/Paper';
-import { makeStyles } from '@material-ui/core/styles';
+import makeStyles from '@material-ui/core/styles/makeStyles';
 import Typography from '@material-ui/core/Typography';
 import classNames from 'classnames';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -21,7 +21,7 @@ import Minihost3Loader, { initialSelectors, Minihost3Info } from '../util/Miniho
 import MinihostLoader, { IModuleInfo } from '../util/MinihostLoader';
 import ModuleInfo from './ModuleInfo';
 import Range from './Range';
-import type { Props } from './TabContainer';
+import type { MinihostTabProps } from './TabContainer';
 import TelemetryToolbar from './TelemetryToolbar';
 
 const XMAX = 24;
@@ -29,7 +29,9 @@ const YMAX = 32;
 
 const useStyles = makeStyles(theme => ({
   root: {
+    marginBottom: theme.spacing(1),
     width: '100%',
+    height: '100%',
     display: 'grid',
     gridTemplateColumns: 'auto 1fr',
     gridTemplateRows: 'auto 1fr',
@@ -83,7 +85,7 @@ const useStyles = makeStyles(theme => ({
   ypos: {},
 }));
 
-const TelemetryTab: React.FC<Props> = ({ id, selected = false }) => {
+const TelemetryTab: React.FC<MinihostTabProps> = ({ id, selected = false }) => {
   const classes = useStyles();
   const { mib, props } = useDevice(id) ?? {};
   const loader = useMemo<MinihostLoader<Minihost2Info | Minihost3Info> | null>(() => {
@@ -186,7 +188,7 @@ const TelemetryTab: React.FC<Props> = ({ id, selected = false }) => {
   }, [loader]);
 
   return (
-    <div className={classNames(classes.root, { [classes.hidden]: !selected })}>
+    <Paper className={classNames(classes.root, { [classes.hidden]: !selected })}>
       <Paper className={classes.corner}>
         <div className={classes.xpos}>
           <Typography variant="caption" color="inherit">
@@ -232,7 +234,7 @@ const TelemetryTab: React.FC<Props> = ({ id, selected = false }) => {
           </div>
         </div>
       </div>
-    </div>
+    </Paper>
   );
 };
 

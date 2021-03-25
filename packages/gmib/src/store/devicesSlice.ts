@@ -8,7 +8,7 @@
  * the EULA file that was distributed with this source code.
  */
 
-import session, { Address, AddressParam, IDevice } from '@nibus/core';
+import { Address, AddressParam, AddressType, DeviceId, findDeviceById, IDevice } from '@nibus/core';
 import {
   createAction,
   createAsyncThunk,
@@ -19,11 +19,21 @@ import {
 } from '@reduxjs/toolkit';
 import debounce from 'lodash/debounce';
 import pick from 'lodash/pick';
-import { notEmpty } from '../util/helpers';
+import { getSession, notEmpty } from '../util/helpers';
+import {
+  initializeMinihosts,
+  selectCurrent,
+  selectCurrentDeviceId,
+  setCurrentDevice,
+} from './currentSlice';
 import type { AppDispatch, AppThunk, RootState } from './index';
+import { addMib } from './mibsSlice';
+import type { SessionId } from './sessionsSlice';
+// import debugFactory from '../util/debug';
+
+// const debug = debugFactory('gmib:devicesSlice');
 
 type ValueStatus = 'succeeded' | 'failed' | 'pending';
-export type DeviceId = string;
 export type ValueType = string | number | boolean | null;
 export type ValueState = {
   status: ValueStatus;
@@ -49,9 +59,13 @@ export type DeviceState = {
   isLink?: boolean;
   error?: string;
   isBusy: number;
+  session?: SessionId;
 };
 
 export type DeviceStateWithParent = Omit<DeviceState, 'parent'> & { parent?: DeviceState };
+
+const getSessionId = ({ host, port }: { host?: string; port: number }): SessionId =>
+  `${host ?? ''}:${port}` as SessionId;
 
 const getDeviceProp = (device: IDevice) => (idOrName: string | number): PropEntity => {
   const error = device.getError(idOrName);
@@ -67,7 +81,7 @@ const getDeviceProp = (device: IDevice) => (idOrName: string | number): PropEnti
   ];
 };
 
-const getProps = (device: IDevice, idsOrNames?: (number | string)[]): DeviceState['props'] => {
+const getProps = (device: IDevice, idsOrNames?: (number | string)[]): DeviceProps => {
   const proto = Reflect.getPrototypeOf(device) ?? {};
   const names =
     idsOrNames ??
@@ -82,14 +96,14 @@ const devicesAdapter = createEntityAdapter<DeviceState>({
   selectId: device => device.id,
 });
 
-const { selectById } = devicesAdapter.getSelectors();
+// const { selectById } = devicesAdapter.getSelectors();
 
 const updateProps = createAction<[id: DeviceId, ids?: number[]]>('devices/updateProps');
 
 export const reloadDevice = createAsyncThunk<void, DeviceId>(
   'devices/reload',
   async (id, { dispatch }) => {
-    const device = session.devices.findById(id);
+    const device = findDeviceById(id);
     if (device?.connection) {
       await device.read();
       dispatch(updateProps([id]));
@@ -98,7 +112,7 @@ export const reloadDevice = createAsyncThunk<void, DeviceId>(
 );
 
 const drainDevice = createAsyncThunk<void, DeviceId>('devices/drain', async (id, { dispatch }) => {
-  const device = session.devices.findById(id);
+  const device = findDeviceById(id);
   if (!device) return;
   const ids = await device.drain();
   const failed = ids.filter(ident => ident < 0).map(ident => -ident);
@@ -110,10 +124,18 @@ const devicesSlice = createSlice({
   name: 'devices',
   initialState: devicesAdapter.getInitialState(),
   reducers: {
-    deviceUpdated: devicesAdapter.updateOne,
     addDevice(state, { payload: id }: PayloadAction<DeviceId>) {
-      const device = session.devices.findById(id);
-      if (!device) return;
+      const device = findDeviceById(id);
+      if (!device) {
+        // console.log(
+        //   'sessions',
+        //   getSessions().map(s => s.port)
+        // );
+        // const session = getSession(':9001');
+        console.error(`unknown Device id: ${id}`);
+        // setTimeout(() => console.warn(`devices ${session.devices.get().length}`), 100);
+        return;
+      }
       const { address, connection } = device;
 
       const entity: DeviceState = {
@@ -125,6 +147,7 @@ const devicesSlice = createSlice({
         isEmptyAddress: address.isEmpty,
         props: getProps(device),
         isBusy: 0,
+        session: connection?.session && getSessionId(connection.session),
       };
 
       if (connection?.owner === device) {
@@ -135,49 +158,67 @@ const devicesSlice = createSlice({
       devicesAdapter.addOne(state, entity);
     },
     removeDevice(state, { payload: id }: PayloadAction<DeviceId>) {
-      const entity = selectById(state, id);
+      const entity = state.entities[id];
       if (entity) {
         devicesAdapter.removeOne(state, id);
-        const device = session.devices.findById(id);
+        const device = findDeviceById(id);
         device && device.release();
       }
     },
     setConnected(state, { payload: id }: PayloadAction<DeviceId>) {
-      const device = session.devices.findById(id);
+      const device = findDeviceById(id);
       if (!device) return;
       const { connection } = device;
-      devicesAdapter.updateOne(state, { id, changes: { connected: !!connection } });
+      devicesAdapter.updateOne(state, {
+        id,
+        changes: {
+          connected: !!connection,
+          session: connection?.session && getSessionId(connection.session),
+        },
+      });
     },
     updateProperty(state, { payload: [id, name] }: PayloadAction<[DeviceId, string]>) {
-      const device = session.devices.findById(id);
+      const device = findDeviceById(id);
       if (!device) return;
       const [propName, propValue] = getDeviceProp(device)(name);
       const entity = state.entities[id]; // selectById(state, id);
       if (entity) {
-        entity.props = { ...entity.props, [propName]: propValue };
+        entity.props = {
+          ...entity.props,
+          [propName]: propValue,
+        };
       }
     },
     setParent(
       state,
       { payload: [id, parentId] }: PayloadAction<[id: DeviceId, parentId: DeviceId]>
     ) {
-      devicesAdapter.updateOne(state, { id, changes: { parent: parentId } });
+      devicesAdapter.updateOne(state, {
+        id,
+        changes: { parent: parentId },
+      });
     },
     setDeviceError(state, { payload: [id, error] }: PayloadAction<[id: DeviceId, error?: string]>) {
-      devicesAdapter.updateOne(state, { id, changes: { error } });
+      devicesAdapter.updateOne(state, {
+        id,
+        changes: { error },
+      });
     },
     changeAddress(
       state,
       { payload: [id, address] }: PayloadAction<[id: DeviceId, address: string]>
     ) {
-      devicesAdapter.updateOne(state, { id, changes: { address } });
+      devicesAdapter.updateOne(state, {
+        id,
+        changes: { address },
+      });
     },
   },
   extraReducers: builder => {
     builder.addCase(
       updateProps,
       (state, { payload: [id, ids] }: PayloadAction<[id: DeviceId, ids?: number[]]>) => {
-        const device = session.devices.findById(id);
+        const device = findDeviceById(id);
         const entity = state.entities[id];
         if (!device || !entity) return;
         devicesAdapter.updateOne(state, {
@@ -265,61 +306,6 @@ export const {
   selectIds: selectDeviceIds,
 } = devicesAdapter.getSelectors<RootState>(state => state.devices);
 
-export const selectAllDevicesWithParent = (state: RootState): DeviceStateWithParent[] =>
-  selectAllDevices(state).map(({ parent, ...props }) => ({
-    ...props,
-    parent: typeof parent !== 'undefined' ? selectDeviceById(state, parent) : undefined,
-  }));
-
-export const selectDevicesByAddress = createSelector(
-  [selectAllDevices, (state, address: AddressParam) => new Address(address)],
-  (devices, address) => devices.filter(device => address.equals(device.address))
-);
-
-export const {
-  // addDevice,
-  removeDevice,
-  setConnected,
-  updateProperty,
-  setParent,
-  deviceUpdated,
-  setDeviceError,
-  changeAddress,
-} = devicesSlice.actions;
-
-export const setDeviceValue = (
-  deviceId: DeviceId
-): ((name: string, value: ValueType) => AppThunk) => {
-  const device = session.devices.findById(deviceId);
-  if (!device) throw new Error(`Unknown device ${deviceId}`);
-  const proto = Reflect.getPrototypeOf(device);
-  const propNames = ((Reflect.getMetadata('mibProperties', proto) as string[]) ?? []).filter(name =>
-    Reflect.getMetadata('isWritable', proto, name)
-  );
-  const drain = debounce((dispatch: AppDispatch): void => {
-    dispatch(drainDevice(deviceId));
-  }, 400);
-
-  return (name, value) => dispatch => {
-    if (!propNames.includes(name)) {
-      console.error(`Unknown property ${name}`);
-      return;
-    }
-    device[name] = value;
-    dispatch(updateProperty([deviceId, name]));
-    drain(dispatch);
-  };
-};
-
-export const addDevice = (id: DeviceId): AppThunk => (dispatch, getState) => {
-  dispatch(devicesSlice.actions.addDevice(id));
-  const { brightness } = getState().current;
-  const { mib } = selectDeviceById(getState(), id) ?? {};
-  if (mib?.startsWith('minihost')) {
-    setDeviceValue(id)('brightness', brightness);
-  }
-};
-
 export const selectAllProps = (state: RootState, id: DeviceId): DeviceProps =>
   selectDeviceById(state, id)?.props ?? {};
 
@@ -340,5 +326,152 @@ export const selectLinks = (state: RootState): DeviceState[] =>
   selectLinkIds(state)
     .map(id => selectDeviceById(state, id))
     .filter(notEmpty);
+
+export const selectCurrentDevice = (state: RootState): DeviceState | undefined => {
+  const { device } = selectCurrent(state);
+  return device !== undefined ? selectDeviceById(state, device) : undefined;
+};
+
+export const selectAllDevicesWithParent = (state: RootState): DeviceStateWithParent[] =>
+  selectAllDevices(state).map(({ parent, ...props }) => ({
+    ...props,
+    parent: typeof parent !== 'undefined' ? selectDeviceById(state, parent) : undefined,
+  }));
+
+export const selectDevicesByAddress = createSelector(
+  [selectAllDevices, (state, address: AddressParam) => new Address(address)],
+  (devices, address) =>
+    devices.filter(device => {
+      if (address.type === AddressType.mac) return address.equals(device.address);
+      if (address.type === AddressType.net && device.mib.startsWith('minihost')) {
+        // debug(`${device.props.domain?.raw}.${device.props.subnet?.raw}.${device.props.did?.raw}`);
+        try {
+          const netAddress = new Address(
+            `${device.props.domain?.raw}.${device.props.subnet?.raw}.${device.props.did?.raw}`
+          );
+          // debug(`device: ${netAddress.toString()}`);
+          return address.equals(netAddress);
+        } catch {
+          return false;
+        }
+      }
+      return false;
+    })
+);
+
+const {
+  addDevice,
+  removeDevice,
+  setConnected,
+  updateProperty,
+  setParent,
+  // setDeviceError,
+  changeAddress,
+} = devicesSlice.actions;
+
+export const setDeviceValue = (
+  deviceId: DeviceId
+): ((name: string, value: ValueType) => AppThunk) => {
+  const device = findDeviceById(deviceId);
+  if (!device) {
+    console.error(`Unknown device ${deviceId}`);
+    return () => () => {};
+  }
+  const proto = Reflect.getPrototypeOf(device);
+  const propNames = (
+    (Reflect.getMetadata('mibProperties', proto!) as string[]) ?? []
+  ).filter(name => Reflect.getMetadata('isWritable', proto!, name));
+  const drain = debounce((dispatch: AppDispatch): void => {
+    dispatch(drainDevice(deviceId));
+  }, 400);
+
+  return (name, value) => dispatch => {
+    if (!propNames.includes(name)) {
+      console.error(`Unknown property ${name}`);
+      // console.log({ propNames });
+      return;
+    }
+    device[name] = value;
+    dispatch(updateProperty([deviceId, name]));
+    drain(dispatch);
+  };
+};
+
+export const addDevicesListener = (id: SessionId): AppThunk<() => void> => (dispatch, getState) => {
+  const newDeviceHandler = (device: IDevice): void => {
+    const { id: deviceId, mib } = device;
+    setTimeout(() => dispatch(initializeMinihosts(deviceId)), 100);
+    const connectedHandler = (): void => {
+      dispatch(setConnected(deviceId));
+      dispatch(reloadDevice(deviceId));
+    };
+    const disconnectedHandler = (): void => {
+      try {
+        const current = selectCurrentDeviceId(getState());
+        if (current === deviceId) {
+          dispatch(setCurrentDevice(undefined));
+        }
+      } catch (e) {
+        console.error(`error while disconnect: ${e.message}`);
+      }
+      device.release();
+    };
+    const addressHandler = (prev: Address, address: Address): void => {
+      dispatch(changeAddress([deviceId, address.toString()]));
+    };
+    const releaseHandler = (): void => {
+      device.off('connected', connectedHandler);
+      device.off('disconnected', disconnectedHandler);
+      device.off('release', releaseHandler);
+      device.off('addressChanged', addressHandler);
+    };
+    device.on('connected', connectedHandler);
+    device.on('disconnected', disconnectedHandler);
+    device.on('release', releaseHandler);
+    device.on('addressChanged', addressHandler);
+
+    device.read().finally(() => {
+      dispatch(addMib(deviceId));
+      dispatch(addDevice(deviceId));
+      selectCurrentDeviceId(getState()) || dispatch(setCurrentDevice(deviceId));
+      const { brightness } = getState().current;
+      if (mib?.startsWith('minihost')) {
+        setDeviceValue(deviceId)('brightness', brightness);
+      }
+    });
+  };
+  const deleteDeviceHandler = (device: IDevice): void => {
+    try {
+      dispatch(removeDevice(device.id));
+    } catch (e) {
+      console.error(e.message);
+    }
+  };
+  const session = getSession(id);
+  session.devices.on('new', newDeviceHandler);
+  session.devices.on('delete', deleteDeviceHandler);
+  return () => {
+    session.devices.off('new', newDeviceHandler);
+    session.devices.off('delete', deleteDeviceHandler);
+  };
+};
+
+export const createDevice = (
+  id: SessionId,
+  parent: DeviceId,
+  address: string,
+  type: number,
+  version?: number
+): AppThunk => dispatch => {
+  const session = getSession(id);
+  const device = session.devices.create(address, type!, version);
+  const parentDevice = session.devices.findById(parent);
+  if (parentDevice) {
+    device.connection = parentDevice.connection;
+  }
+  setImmediate(() => {
+    dispatch(setParent([device.id, parent]));
+  });
+};
 
 export default devicesSlice.reducer;

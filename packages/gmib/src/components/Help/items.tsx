@@ -27,6 +27,7 @@ const withRoundBorderStyles = withStyles(theme => ({
   },
 }));
 
+/*
 const withIconStyles = withStyles(theme => ({
   root: {
     fontSize: '1.5em',
@@ -39,10 +40,11 @@ const withIconStyles = withStyles(theme => ({
     color: theme.palette.action.active,
   },
 }));
+*/
 
 // eslint-disable-next-line import/prefer-default-export
 export const LocationOnIcon = withRoundBorderStyles(LocationOnIconMui);
-export const SaveButton = () => (
+export const SaveButton: React.FC = () => (
   <Button color="primary" startIcon={<CheckIcon />} variant="contained" size="small">
     Сохранить
   </Button>

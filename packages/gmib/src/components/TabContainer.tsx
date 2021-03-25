@@ -8,8 +8,9 @@
  * the EULA file that was distributed with this source code.
  */
 
+import { DeviceId } from '@nibus/core';
 import React from 'react';
-import { makeStyles } from '@material-ui/core/styles';
+import makeStyles from '@material-ui/core/styles/makeStyles';
 import classNames from 'classnames';
 
 const useStyles = makeStyles({
@@ -24,6 +25,11 @@ const useStyles = makeStyles({
 
 export type Props = {
   id: string;
+  selected?: boolean;
+};
+
+export type MinihostTabProps = {
+  id: DeviceId;
   selected?: boolean;
 };
 

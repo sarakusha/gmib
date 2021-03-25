@@ -1,7 +1,7 @@
 .next/
 bak/
 node_modules/
-lib/
+**/lib/
 next.config.js
 converter.js
 /packages/gmib/@types/

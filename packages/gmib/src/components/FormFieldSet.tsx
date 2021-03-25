@@ -16,7 +16,7 @@ import FormLabel, { FormLabelProps } from '@material-ui/core/FormLabel';
 export interface FormFieldSetProps extends FormControlProps {
   legend?: string;
   // form?: string;
-  title?: string;
+  // title?: string;
   helper?: string;
   radio?: boolean;
 }
@@ -32,9 +32,9 @@ const FormFieldSet: React.FC<FormFieldSetProps> = ({
   className,
   ...props
 }) => (
-  <FormControl component={'fieldset' as 'div'} {...props}>
+  <FormControl component={'fieldset' as 'div'} {...props} className={className}>
     {legend && <FormLegend>{legend}</FormLegend>}
-    <div className={className}>{children}</div>
+    <div>{children}</div>
     {helper && <FormHelperText>{helper}</FormHelperText>}
   </FormControl>
 );

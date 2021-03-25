@@ -9,7 +9,8 @@
  */
 
 /* tslint:disable:react-a11y-role-has-required-aria-props */
-import AppBar from '@material-ui/core/AppBar';
+// import AppBar from '@material-ui/core/AppBar';
+import Paper from '@material-ui/core/Paper';
 import Button from '@material-ui/core/Button';
 import Dialog from '@material-ui/core/Dialog';
 import DialogActions from '@material-ui/core/DialogActions';
@@ -29,17 +30,18 @@ import NativeSelect from '@material-ui/core/NativeSelect';
 import Tab from '@material-ui/core/Tab';
 import Tabs from '@material-ui/core/Tabs';
 import TextField from '@material-ui/core/TextField';
-import { findMibByType, Address } from '@nibus/core';
+import { findMibByType, Address, DeviceId, getDefaultSession } from '@nibus/core';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { makeStyles } from '@material-ui/core/styles';
+import makeStyles from '@material-ui/core/styles/makeStyles';
 import AddIcon from '@material-ui/icons/Add';
 import unionBy from 'lodash/unionBy';
 import without from 'lodash/without';
 import classNames from 'classnames';
 import { useDevices, useDispatch, useSelector } from '../store';
-import { DeviceId, selectLinks } from '../store/devicesSlice';
-import { createDevice, selectMibTypes } from '../store/sessionSlice';
+import { createDevice, selectLinks } from '../store/devicesSlice';
+import { selectMibTypes } from '../store/nibusSlice';
 import Finder, { DeviceInfo, FinderOptions } from '../util/finders';
+import { getSessionId } from '../util/helpers';
 import useDefaultKeys from '../util/useDefaultKeys';
 import DeviceIcon from '../components/DeviceIcon';
 
@@ -127,7 +129,8 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
   }, [finder, setSearching, setDetected]);
   const changeHandler = useCallback((_, newValue) => setKind(newValue), [setKind]);
   const startStop = useCallback(() => {
-    const connection = connectionRef.current!.value;
+    const connection = connectionRef.current?.value;
+    if (connection === undefined) return;
     const owners: DeviceId[] = (connection === '0'
       ? links
       : links.filter(({ id }) => id === connection)
@@ -176,7 +179,15 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
             device => dev.address.equals(device.address) && device.parent === dev.owner
           ) === -1
         ) {
-          dispatch(createDevice(dev.owner, dev.address.toString(), dev.type, dev.version));
+          dispatch(
+            createDevice(
+              getSessionId(getDefaultSession()),
+              dev.owner,
+              dev.address.toString(),
+              dev.type,
+              dev.version
+            )
+          );
         }
         return without(devs, dev);
       });
@@ -192,12 +203,14 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
     <Dialog open={open} aria-labelledby="search-title">
       <DialogTitle id="search-title">Поиск устройств</DialogTitle>
       <DialogContent className={classes.content}>
-        <AppBar position="static">
+        {/* <AppBar position="static">*/}
+        <Paper square>
           <Tabs value={kind} indicatorColor="primary" onChange={changeHandler} variant="fullWidth">
             <Tab label="По адресу" />
             <Tab label="По типу" />
           </Tabs>
-        </AppBar>
+        </Paper>
+        {/* </AppBar>*/}
         <form className={classes.tabContent} noValidate autoComplete="off">
           <FormControl className={classes.formControl} margin="normal" disabled={isSearching}>
             <InputLabel htmlFor="connection">Соединение</InputLabel>

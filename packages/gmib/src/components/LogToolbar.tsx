@@ -10,16 +10,16 @@
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Radio from '@material-ui/core/Radio';
 import RadioGroup from '@material-ui/core/RadioGroup';
-import { makeStyles } from '@material-ui/core/styles';
+import makeStyles from '@material-ui/core/styles/makeStyles';
 import Tooltip from '@material-ui/core/Tooltip';
 import IconButton from '@material-ui/core/IconButton';
 import TuneIcon from '@material-ui/icons/Tune';
 import Popover from '@material-ui/core/Popover';
-import session, { LogLevel, LogLevelV } from '@nibus/core';
+import { LogLevel, LogLevelV } from '@nibus/core';
 import React, { useState } from 'react';
 import FormFieldSet from './FormFieldSet';
-import { useSelector } from '../store';
-import { selectLogLevel } from '../store/sessionSlice';
+import { useDispatch, useSelector } from '../store';
+import { selectLogLevel, setLogLevel } from '../store/currentSlice';
 
 const useStyles = makeStyles(theme => ({
   content: {
@@ -31,11 +31,11 @@ const useStyles = makeStyles(theme => ({
     borderColor: 'rgba(0, 0, 0, 0.23)',
     borderWidth: 1,
     borderStyle: 'solid',
-    display: 'block',
-    flexDirection: 'row',
-    '&:not(:last-child)': {
-      marginRight: theme.spacing(2),
-    },
+    // display: 'block',
+    // flexDirection: 'row',
+    // '&:not(:last-child)': {
+    //   marginRight: theme.spacing(2),
+    // },
   },
 }));
 
@@ -44,9 +44,10 @@ const levels = Object.keys(LogLevelV.keys) as LogLevel[];
 const LogToolbar: React.FC = () => {
   const classes = useStyles();
   const logLevel = useSelector(selectLogLevel);
+  const dispatch = useDispatch();
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
   const handleChange: React.ChangeEventHandler<HTMLInputElement> = e => {
-    session.setLogLevel(e.target.value as LogLevel);
+    dispatch(setLogLevel(e.target.value as LogLevel));
     setAnchorEl(null);
   };
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>): void => {

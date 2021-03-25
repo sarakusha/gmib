@@ -20,13 +20,13 @@ import {
   selectCurrentTest,
   setCurrentTab,
   TabValues,
+  selectAllTests,
 } from '../store/currentSlice';
-import { selectTests } from '../store/testSlice';
 
 const TestItems: React.FC = () => {
   const dispatch = useDispatch();
   const current = useSelector(selectCurrentTest);
-  const tests = useSelector(selectTests);
+  const tests = useSelector(selectAllTests);
   const tab = useSelector(selectCurrentTab);
   const visibleHandler = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>, checked: boolean) => {
@@ -47,15 +47,15 @@ const TestItems: React.FC = () => {
   return (
     <AccordionList
       name="tests"
-      title="Тестирование"
+      title="Вывод"
       expanded={tab === 'tests'}
       onChange={currentTab => dispatch(setCurrentTab(currentTab as TabValues))}
     >
-      {tests.map(([test, path]) => {
-        const [primary, secondary = ''] = test.split('/', 2);
+      {tests.map(({ title, id }) => {
+        const [primary, secondary = ''] = title.split('/', 2);
         return (
-          <ListItem key={test}>
-            <Switch checked={current === path} id={path} onChange={visibleHandler} />
+          <ListItem key={id}>
+            <Switch checked={current === id} id={id} onChange={visibleHandler} />
             <ListItemText primary={primary} secondary={secondary} />
           </ListItem>
         );

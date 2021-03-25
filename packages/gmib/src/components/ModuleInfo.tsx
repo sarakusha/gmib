@@ -12,7 +12,7 @@ import Paper from '@material-ui/core/Paper';
 import Tooltip from '@material-ui/core/Tooltip';
 import Typography from '@material-ui/core/Typography';
 import React from 'react';
-import { makeStyles } from '@material-ui/core/styles';
+import makeStyles from '@material-ui/core/styles/makeStyles';
 import ErrorIcon from '@material-ui/icons/Clear';
 import { VertexType } from '../util/Minihost3Loader';
 

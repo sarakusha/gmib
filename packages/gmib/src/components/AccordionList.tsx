@@ -10,7 +10,7 @@
 import { AccordionDetailsProps } from '@material-ui/core/AccordionDetails';
 import { AccordionSummaryProps } from '@material-ui/core/AccordionSummary';
 import Box from '@material-ui/core/Box';
-import { makeStyles } from '@material-ui/core/styles';
+import makeStyles from '@material-ui/core/styles/makeStyles';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import classNames from 'classnames';
 import React from 'react';

@@ -8,8 +8,9 @@
  * the EULA file that was distributed with this source code.
  */
 
+import { DeviceId } from '@nibus/core';
 import React, { useCallback, useMemo, useReducer } from 'react';
-import { makeStyles } from '@material-ui/core/styles';
+import makeStyles from '@material-ui/core/styles/makeStyles';
 import Button from '@material-ui/core/Button';
 import Checkbox from '@material-ui/core/Checkbox';
 import Dialog from '@material-ui/core/Dialog';
@@ -24,7 +25,7 @@ import pick from 'lodash/pick';
 import sortBy from 'lodash/sortBy';
 import sortedUniqBy from 'lodash/sortedUniqBy';
 import { useDevice, useSelector } from '../store';
-import type { DeviceId, ValueState, ValueType } from '../store/devicesSlice';
+import type { ValueState, ValueType } from '../store/devicesSlice';
 import FormFieldSet from '../components/FormFieldSet';
 import { selectMibByName } from '../store/mibsSlice';
 
@@ -70,7 +71,7 @@ const extractValues = (props: Record<string, ValueState>): Record<string, ValueT
     Object.entries<ValueState>(props).map(([name, state]) => [name, selectValue(state)])
   );
 
-const SaveDialog: React.FC<Props> = ({ deviceId = '', open, close }) => {
+const SaveDialog: React.FC<Props> = ({ deviceId, open, close }) => {
   const classes = useStyles();
   const { mib = 0, props = {} } = useDevice(deviceId) ?? {};
   const meta = useSelector(state => selectMibByName(state, mib));

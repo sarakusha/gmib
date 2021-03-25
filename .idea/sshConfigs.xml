@@ -15,6 +15,9 @@
       <sshConfig host="localhost" id="48dd1553-c896-4c3e-9cc8-1d2a10b8977c" keyPath="$USER_HOME$/.ssh/id_rsa" port="8022" customName="localhost" nameFormat="CUSTOM" username="sarakusha">
         <option name="customName" value="localhost" />
       </sshConfig>
+      <sshConfig host="192.168.1.40" id="20b01b0b-4c74-4e30-b343-f6155307388f" keyPath="$USER_HOME$/.ssh/id_rsa" port="22" customName="Keenetic" nameFormat="CUSTOM" username="sarakusha">
+        <option name="customName" value="Keenetic" />
+      </sshConfig>
     </configs>
   </component>
 </project>

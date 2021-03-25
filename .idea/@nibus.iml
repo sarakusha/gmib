@@ -8,6 +8,9 @@
       <excludeFolder url="file://$MODULE_DIR$/packages/core/bak" />
       <excludeFolder url="file://$MODULE_DIR$/packages/gmib/bak" />
       <excludeFolder url="file://$MODULE_DIR$/.idea/dictionaries" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/core/lib" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/gmib/dist" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/gmib/temp" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

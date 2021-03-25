@@ -9,14 +9,12 @@
  * the EULA file that was distributed with this source code.
  */
 import { createSlice, PayloadAction, Draft } from '@reduxjs/toolkit';
-import session, { NibusSessionEvents } from '@nibus/core';
+import { NibusSessionEvents } from '@nibus/core';
 import sortBy from 'lodash/sortBy';
 import maxBy from 'lodash/maxBy';
-import { notEmpty } from '../util/helpers';
-import type { AsyncInitializer } from './asyncInitialMiddleware';
+import { getSession, notEmpty } from '../util/helpers';
 import type { AppThunk, RootState } from './index';
-// import config, { Altitude, HistoryItem } from '../util/config';
-// import { selectLocation } from './locationSlice';
+import type { SessionId } from './sessionsSlice';
 
 type SensorRecord = [timestamp: number, value: number];
 
@@ -154,7 +152,7 @@ export const pushSensorValue = (
   timeout = window.setTimeout(() => dispatch(calculate()), (MIN_INTERVAL + 1) * 1000);
 };
 
-export const startSensorListener: AsyncInitializer = dispatch => {
+export const addSensorsListener = (sessionId: SessionId): AppThunk<() => void> => dispatch => {
   const informationListener: NibusSessionEvents['informationReport'] = (
     connection,
     { id, value, source }
@@ -171,14 +169,16 @@ export const startSensorListener: AsyncInitializer = dispatch => {
     }
   };
 
-  // const closeListener = (): void => {
-  //   console.log('CLOSE SESSION');
-  //   session.off('close', closeListener);
-  //   session.off('informationReport', informationListener);
-  // };
-  //
   // session.on('close', closeListener);
+  const session = getSession(sessionId);
+
+  const closeListener = (): void => {
+    // console.log('CLOSE SESSION');
+    // session.off('close', closeListener);
+    session.off('informationReport', informationListener);
+  };
   session.on('informationReport', informationListener);
+  return closeListener;
 };
 
 const selectLast = (state: RootState, kind: SensorKind): SensorState | undefined => {
