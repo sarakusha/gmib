@@ -1,3 +1,4 @@
+/* eslint-disable import/first */
 /*
  * @license
  * Copyright (c) 2020. Nata-Info
@@ -8,36 +9,65 @@
  * the EULA file that was distributed with this source code.
  */
 
-// eslint-disable-next-line import/no-extraneous-dependencies
-import {
-  app,
-  BrowserWindow,
-  ipcMain,
-  Event,
-  dialog,
-  // eslint-disable-next-line import/no-extraneous-dependencies
-} from 'electron';
-import * as path from 'path';
-import { format as formatUrl } from 'url';
-import log from 'electron-log';
-import { autoUpdater } from 'electron-updater';
-import type { NibusService } from '@nibus/cli';
+process.env.NIBUS_LOG = 'nibus-all.log';
 
-import { TestQuery } from '../providers/TestProvider';
+import type { NibusService } from '@nibus/cli';
+import { app, BrowserWindow, dialog, Display, ipcMain, screen } from 'electron';
+import { autoUpdater } from 'electron-updater';
+import Bonjour, { RemoteService } from 'bonjour-hap';
+import { isIPv4 } from 'net';
+import os from 'os';
+import path from 'path';
+import { Tail } from 'tail';
+import { URLSearchParams } from 'url';
+import fs from 'fs';
+import readline from 'readline';
+import isEqual from 'lodash/isEqual';
+import uniqBy from 'lodash/uniqBy';
+import config, { Config, Screen, Test } from '../util/config';
+import { getRemoteLabel, getTitle, notEmpty, RemoteHost } from '../util/helpers';
+import { updateTray } from './tray';
+import localConfig, { CustomHost } from '../util/localConfig';
+import getAllDisplays from './getAllDisplays';
+import { linuxAutostart } from './linux';
+import {
+  addRemoteFactory,
+  CreateWindow,
+  removeRemote,
+  setRemoteEditClick,
+  setRemotesFactory,
+  updateMenu,
+} from './mainMenu';
+
+import windows, { showAll } from './windows';
+import debugFactory, { log } from '../util/debug';
 
 const USE_REACT_REFRESH_WEBPACK = true;
+const bonjour = Bonjour();
 
-let currentPath: string;
+let currentTest: string | undefined;
 
 let service: NibusService | null = null;
 
-process.env.DEBUG = 'nibus:*,-nibus:<<<,-nibus:>>>';
-process.env.DEBUG_COLORS = 'no';
-process.env.DEBUG_HIDE_DATE = 'yes';
+let isQuiting = false;
 
+log.log(`LOGGER ${log.transports.file.getFile().path}, DEBUG: ${process.env.DEBUG}`);
+// log.log(`${process.env.PORTABLE_EXECUTABLE_DIR}, ${app.getAppPath()}, ${app.getPath('exe')}`);
 autoUpdater.logger = log;
-log.transports.file.level = 'info';
-log.transports.console.level = false;
+
+const debug = debugFactory('gmib:main');
+
+const interfaces = Object.values(os.networkInterfaces()).filter(notEmpty);
+
+const localAddresses = ([] as os.NetworkInterfaceInfo[])
+  .concat(...interfaces)
+  .map(({ address }) => address);
+
+const mdnsBrowser = bonjour.find({ type: 'nibus' });
+const tail = new Tail(log.transports.file.getFile().path);
+tail.on('line', line => {
+  service && service.server.broadcast('log', line);
+});
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
@@ -45,85 +75,170 @@ const isDevelopment = process.env.NODE_ENV !== 'production';
 let mainWindow: BrowserWindow | null;
 let testWindow: BrowserWindow | null;
 
-let currentQuery: TestQuery = {
+const defaultScreen: Required<Screen> = {
   width: 640,
   height: 320,
   moduleHres: 40,
   moduleVres: 40,
   x: 0,
   y: 0,
+  display: true,
+  address: '',
+  dirh: false,
+  dirv: false,
 };
+
+let currentScreen = defaultScreen;
 
 const closeNibus = (): void => {
   if (service) {
     try {
-      log.info('tray to close nibus');
       service.stop();
       service = null;
-      log.info('nibus is closed');
     } catch (e) {
       log.error('error while close nibus');
     }
   }
 };
 
-async function createMainWindow(): Promise<BrowserWindow> {
-  const window = new BrowserWindow({
+const pickRemoteService = (svc: RemoteService): RemoteHost | undefined => {
+  if (!svc.addresses) {
+    return undefined;
+  }
+  const addresses = svc.addresses.filter(
+    address => !localAddresses.includes(address) && isIPv4(address)
+  );
+  if (addresses.length === 0) return undefined;
+  const { port, name, host, txt } = svc;
+  return {
+    host: host.replace(/\.local\.?$/, ''),
+    name,
+    version: txt.version ?? 'N/A',
+    address: addresses[0],
+    port,
+  };
+};
+
+const register = (svc: RemoteService, window = mainWindow): void => {
+  const remote = pickRemoteService(svc);
+  if (remote) {
+    debug(`${!!mainWindow} serviceUp ${JSON.stringify(remote)}}`);
+    window?.webContents.send('serviceUp', remote);
+    // eslint-disable-next-line @typescript-eslint/no-use-before-define
+    addRemote(remote.port, remote.address);
+  }
+};
+
+async function createWindow(
+  port = +(process.env.NIBUS_PORT ?? 9001),
+  host?: string,
+  random = false
+): Promise<BrowserWindow> {
+  const size = {
     width: 800,
-    height: 650,
+    height: 600,
+  };
+  const display = screen.getPrimaryDisplay().workAreaSize;
+  const pos = random
+    ? {
+        x: Math.round(Math.random() * Math.max(0, display.width - size.width)),
+        y: Math.round(Math.random() * Math.max(0, display.height - size.height)),
+      }
+    : {};
+  const window = new BrowserWindow({
+    ...size,
+    ...pos,
+    title: getTitle(port, host),
+    skipTaskbar: true,
+    show: false,
+    useContentSize: true,
     webPreferences: {
+      contextIsolation: false,
       nodeIntegration: true,
       worldSafeExecuteJavaScript: true,
       // enableRemoteModule: true,
     },
   });
 
+  windows.add(window);
+
   window.on('closed', () => {
-    mainWindow = null;
-    if (testWindow) {
-      testWindow.close();
+    windows.delete(window);
+    if (mainWindow === window) {
+      mainWindow = null;
+      if (testWindow) {
+        testWindow.close();
+      }
     }
   });
+  if (!host) {
+    window.once('ready-to-show', () => {
+      setRemoteEditClick(() => window.webContents.send('editRemoteHosts'));
+      // Нужно немного подождать
+      setTimeout(() => {
+        debug(`register remotes: ${mdnsBrowser.services.length}`);
+        mdnsBrowser.services.forEach(svc => register(svc, window));
+      }, 100);
+      // process.platform === 'linux' && window.show();
+    });
 
-  window.webContents.on('devtools-opened', () => {
-    window.focus();
-    setImmediate(() => {
+    window.webContents.on('devtools-opened', () => {
       window.focus();
+      setImmediate(() => {
+        window.focus();
+      });
     });
+
+    /*
+    if (isDevelopment) {
+      window.webContents.once('did-frame-finish-load', () => {
+        window.webContents.openDevTools();
+      });
+    }
+    */
+
+    if (isDevelopment) {
+      const { default: installExtension, REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS } = await import(
+        'electron-devtools-installer'
+      );
+      // REACT_DEVELOPER_TOOLS несовместим с ReactRefreshWebpackPlugin в webpack.renderer.additions.js
+      const name = await installExtension(
+        USE_REACT_REFRESH_WEBPACK ? [REDUX_DEVTOOLS] : [REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS]
+      );
+      debug(`Added Extension:  ${name}`);
+    }
+  }
+
+  window.on('show', () => {
+    window.setSkipTaskbar(false);
+    return false;
   });
+  window.on('hide', () => {
+    window.setSkipTaskbar(true);
+    return false;
+  });
+  window.on('minimize', event => {
+    event.preventDefault();
+    window.hide();
+    return false;
+  });
+  const query = `port=${port}${host ? `&host=${host}` : ''}`;
 
-  if (isDevelopment) {
-    window.webContents.once('did-frame-finish-load', () => {
-      window.webContents.openDevTools();
-    });
-  }
-
-  // Несовместим с ReactRefreshWebpackPlugin в webpack.renderer.additions.js
-  if (isDevelopment && !USE_REACT_REFRESH_WEBPACK) {
-    const { default: installExtension, REACT_DEVELOPER_TOOLS } = await import(
-      'electron-devtools-installer'
-    );
-    const name = await installExtension(REACT_DEVELOPER_TOOLS);
-    log.info(`Added Extension:  ${name}`);
-  }
-
-  if (isDevelopment) {
-    await window.loadURL(`http://localhost:${process.env.ELECTRON_WEBPACK_WDS_PORT}`);
-  } else {
-    await window.loadURL(
-      formatUrl({
-        pathname: path.join(__dirname, 'index.html'),
-        protocol: 'file',
-        slashes: true,
-      })
-    );
-  }
+  await window.loadURL(
+    isDevelopment
+      ? `http://localhost:${process.env.ELECTRON_WEBPACK_WDS_PORT}?${query}`
+      : `file://${__dirname}/index.html?${query}`
+  );
 
   return window;
 }
 
+const create: CreateWindow = (port, host) => createWindow(port, host, true);
+const addRemote = addRemoteFactory(create);
+const setRemotes = setRemotesFactory(create);
+
 function createTestWindow(): BrowserWindow {
-  const { width, height, x = 0, y = 0 } = currentQuery;
+  const { width, height, x = 0, y = 0 } = currentScreen;
   const window = new BrowserWindow({
     width,
     height,
@@ -135,8 +250,10 @@ function createTestWindow(): BrowserWindow {
     show: false,
     alwaysOnTop: true,
     skipTaskbar: true,
+    hasShadow: false,
     webPreferences: {
-      nodeIntegration: true,
+      // nodeIntegration: true,
+      contextIsolation: true,
       worldSafeExecuteJavaScript: true,
     },
     // webPreferences: {
@@ -144,73 +261,198 @@ function createTestWindow(): BrowserWindow {
     // },
   });
 
-  if (isDevelopment) {
-    window.webContents.once('did-frame-finish-load', () => {
-      window.webContents.openDevTools();
-    });
-  }
+  // if (isDevelopment) {
+  //   window.webContents.once('did-frame-finish-load', () => {
+  //     window.webContents.openDevTools();
+  //   });
+  // }
   window.on('closed', () => {
     testWindow = null;
   });
-  window.on('ready-to-show', () => window.show());
+  window.once('ready-to-show', () => window.show());
   process.platform === 'win32' || window.setIgnoreMouseEvents(true);
   return window;
 }
 
-const reloadTest = (pathname: string): void => {
-  if (!testWindow || !pathname) return;
-  const { width, height, moduleHres, moduleVres } = currentQuery;
+const reloadTest = (id?: string): void => {
+  currentTest = id;
+  const tests = config.get('tests');
+  const test = id ? tests.find(item => item.id === id) : undefined;
+  if (!testWindow) {
+    testWindow = createTestWindow();
+    // eslint-disable-next-line @typescript-eslint/no-use-before-define
+    updateScreen();
+  }
+  if (!test) {
+    testWindow.hide();
+    return;
+  }
 
   testWindow
     .loadURL(
-      formatUrl({
-        pathname,
-        protocol: 'file',
-        query: {
-          width,
-          height,
-          moduleHres,
-          moduleVres,
-        },
-      })
+      `${test.url}?${new URLSearchParams(
+        Object.entries(currentScreen)
+          .filter(([, value]) => value !== undefined)
+          .map<[string, string]>(([name, value]) => [name, value!.toString()])
+      )}`
     )
     .catch(e => {
       log.error('error while load test', e.message);
     });
-  currentPath = pathname;
+  testWindow.show();
 };
 
 // quit application when all windows are closed
 app.on('window-all-closed', () => {
-  // on macOS it is common for applications to stay open until the user explicitly quits
-  // if (process.platform !== 'darwin' || isDevelopment) {
+  isQuiting = true;
   closeNibus();
+  debug('App closed');
   app.quit();
-  log.info('App closed');
-  // }
 });
 
+/*
 app.on('activate', async () => {
   // on macOS it is common to re-create a window even after all windows have been closed
   if (mainWindow === null) {
-    mainWindow = await createMainWindow();
+    mainWindow = await createWindow();
   }
 });
+*/
 
-// create main BrowserWindow when electron is ready
-app.on('ready', async () => {
-  mainWindow = await createMainWindow();
-  import('./mainMenu');
-  isDevelopment ||
-    autoUpdater
-      .checkForUpdatesAndNotify()
-      .catch(e => log.error('error while check for updates', e.message));
+const createMainWindow = async (): Promise<BrowserWindow> => {
+  if (!mainWindow) {
+    mainWindow = await createWindow();
+    mainWindow.on('close', event => {
+      if (!isQuiting && localConfig.get('autostart')) {
+        event.preventDefault();
+        mainWindow?.hide();
+      }
+      return false;
+    });
+  }
+  return mainWindow;
+};
+
+const updateRemotes = (hosts: CustomHost[] | undefined): void => {
+  // debug(`hosts: ${JSON.stringify(hosts)}`);
+  const remotes: CustomHost[] = uniqBy(
+    [...mdnsBrowser.services.map(pickRemoteService).filter(notEmpty), ...(hosts ?? [])],
+    ({ port, address }) => getRemoteLabel(port, address)
+  );
+  // debug(`remotes: ${JSON.stringify(remotes)}`);
+  setRemotes(remotes);
+};
+
+localConfig.onDidChange('hosts', hosts => {
+  updateRemotes(hosts);
+  mdnsBrowser.update();
+});
+
+localConfig.onDidChange('autostart', (autostart = false) => {
+  debug(`autostart: ${autostart}`);
+  app.setLoginItemSettings({ openAtLogin: autostart, openAsHidden: true });
+  linuxAutostart(autostart);
+  updateMenu();
+  updateTray();
+});
+
+const isCustomHost = (remote: RemoteHost): boolean => {
+  const label = getRemoteLabel(remote.port, remote.address);
+  const customHosts = localConfig.get('hosts');
+  const custom = customHosts.find(({ port, address }) => getRemoteLabel(port, address) === label);
+  return Boolean(custom);
+};
+
+const updateScreen = (): void => {
+  const scr = config.get('screen') ?? {};
+  const needReload =
+    currentScreen.width !== scr.width ||
+    currentScreen.height !== scr.height ||
+    currentScreen.moduleHres !== scr.moduleHres ||
+    currentScreen.moduleVres !== scr.moduleVres;
+  app.whenReady().then(() => {
+    currentScreen = { ...defaultScreen, ...scr };
+    const primary = screen.getPrimaryDisplay();
+    let display: Display | undefined;
+    const displays = screen.getAllDisplays();
+    if (scr.display === true) {
+      display = primary;
+    } else if (scr.display === false) {
+      const index = displays.findIndex(({ id }) => id !== primary.id);
+      if (index !== -1) display = displays[index];
+    } else {
+      const index = displays.findIndex(({ id }) => id.toString() === scr.display);
+      if (index !== -1) display = displays[index];
+    }
+    if (!display) {
+      debug(`Not found display ${scr.display}, ${displays.length}`);
+      testWindow && testWindow.hide();
+      return;
+    }
+    currentScreen!.x += display.bounds.x;
+    currentScreen!.y += display.bounds.y;
+    if (testWindow) {
+      testWindow.setPosition(currentScreen.x, currentScreen.y);
+      testWindow.setSize(currentScreen.width, currentScreen.height);
+      currentTest && testWindow.show();
+    }
+    if (needReload) reloadTest(currentTest);
+  });
+};
+
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    // Someone tried to run a second instance, we should focus our window.
+    showAll();
+  });
+
+  app.on('ready', async () => {
+    addRemote();
+    updateRemotes(localConfig.get('hosts'));
+    await createMainWindow();
+    isDevelopment ||
+      autoUpdater
+        .checkForUpdatesAndNotify()
+        .catch(e => log.error('error while check for updates', e.message));
+    reloadTest(config.get('test'));
+    mdnsBrowser.on('up', register);
+    mdnsBrowser.on('down', svc => {
+      const remote = pickRemoteService(svc);
+      if (remote) {
+        debug(`serviceDown ${JSON.stringify(remote)}`);
+        mainWindow?.webContents.send('serviceDown', remote);
+        if (!isCustomHost(remote)) {
+          removeRemote(remote);
+        }
+      }
+    });
+    // screen.getAllDisplays().forEach(display => debug(JSON.stringify(display)));
+    const broadcastDisplays = (): void => {
+      service?.server.broadcast('displays', getAllDisplays());
+      setTimeout(() => updateScreen(), 3000);
+    };
+
+    screen.on('display-added', broadcastDisplays);
+    screen.on('display-removed', broadcastDisplays);
+  });
+}
+
+app.once('quit', () => {
+  isQuiting = true;
+  closeNibus();
+  mdnsBrowser.stop();
+  bonjour.destroy();
 });
 
 function sendStatusToWindow(text: string, isError = false): void {
   isError ? log.error(text) : log.info(text);
   mainWindow && mainWindow.webContents.send('message', text);
 }
+
 sendStatusToWindow('App starting...');
 
 autoUpdater.on('checking-for-update', () => {
@@ -240,67 +482,96 @@ autoUpdater.on('update-downloaded', () => {
   sendStatusToWindow('Update downloaded');
 });
 
-ipcMain.on('test:query', (event: Event, query: TestQuery) => {
-  let needReload = false;
-  if (testWindow) {
-    if (
-      currentQuery.width !== query.width ||
-      currentQuery.height !== query.height ||
-      currentQuery.moduleHres !== query.moduleHres ||
-      currentQuery.moduleVres !== query.moduleVres
-    ) {
-      needReload = true;
-    }
-    testWindow.setPosition(query.x || 0, query.y || 0);
-    testWindow.setSize(query.width, query.height);
-  }
-  currentQuery = query;
-  needReload && reloadTest(currentPath);
-});
-
-ipcMain.on('test:show', (event: Event, pathname: string) => {
-  if (!testWindow) {
-    testWindow = createTestWindow();
-  }
-  if (pathname !== currentPath) reloadTest(pathname);
-  testWindow.setPosition(currentQuery.x || 0, currentQuery.y || 0);
-  testWindow.setSize(currentQuery.width, currentQuery.height);
-  testWindow.show();
-  event.returnValue = true;
-});
-
-ipcMain.on('test:hide', () => {
-  if (testWindow) {
-    testWindow.hide();
-  }
-  return true;
-});
-
-ipcMain.on('startLocalNibus', () => {
-  import('@nibus/cli/lib/service')
-    .then(({ default: svc, detectionPath }) => {
-      service = svc;
-      sendStatusToWindow('Starting local NIBUS...');
-      return service.start().then(() => {
-        sendStatusToWindow(`NiBUS started. Detection file: ${detectionPath}`);
+ipcMain.on('startLocalNibus', async () => {
+  const { default: svc, detectionPath } = await import('@nibus/cli/lib/service');
+  service = svc;
+  service.server.on('connection', socket => {
+    const file = log.transports.file.getFile().path;
+    if (fs.existsSync(file)) {
+      const readLog = readline.createInterface({
+        input: fs.createReadStream(log.transports.file.getFile().path),
       });
-    })
-    .catch(e => {
-      sendStatusToWindow(`Error while nibus starting ${e}`);
-    });
-  // import('@nata/nibus.js/lib/service/service').then(service => service.default.start());
-});
-
-ipcMain.on('reloadNibus', () => {
-  import('@nibus/cli/lib/service').then(({ default: svc }) => {
-    svc.reload();
+      readLog.on('line', line => {
+        service?.server.send(socket, 'log', line);
+      });
+    }
+    service?.server.send(socket, 'config', config.store);
+    service?.server.send(socket, 'displays', getAllDisplays());
   });
+  service.server.on('client:config', (_, store) => {
+    try {
+      config.store = store as Config;
+    } catch (err) {
+      sendStatusToWindow(`Error while save config: ${err.message}`, true);
+    }
+  });
+  sendStatusToWindow('Starting local NIBUS...');
+  try {
+    await service.start();
+    sendStatusToWindow(`NiBUS started. Detection file: ${detectionPath}`);
+  } catch (e) {
+    sendStatusToWindow(`Error while nibus starting ${e}`, true);
+  }
 });
 
 ipcMain.on('showOpenDialogSync', (event, options: Electron.OpenDialogSyncOptions) => {
   event.returnValue = dialog.showOpenDialogSync(options);
 });
 
+ipcMain.on('showSaveDialogSync', (event, options: Electron.SaveDialogSyncOptions) => {
+  event.returnValue = dialog.showSaveDialogSync(options);
+});
+
 ipcMain.on('showErrorBox', (event, title: string, content: string) => {
   dialog.showErrorBox(title, content);
 });
+
+config.onDidAnyChange(newValue => {
+  service && service.server.broadcast('config', newValue);
+});
+
+config.onDidChange('test', (id: string | undefined): void => {
+  if (!id) {
+    testWindow && testWindow.hide();
+    currentTest = undefined;
+    return;
+  }
+  if (!testWindow) {
+    testWindow = createTestWindow();
+  }
+  if (id !== currentTest) reloadTest(id);
+  // updateScreen();
+  // testWindow.setPosition(currentScreen.x || 0, currentScreen.y || 0);
+  // testWindow.setSize(currentScreen.width ?? 640, currentScreen.height ?? 320);
+  // testWindow.show();
+});
+
+config.onDidChange('screen', updateScreen);
+
+const reTitle = /<\s*title[^>]*>(.+)<\s*\/\s*title>/i;
+const reId = /<\s*meta\s*data-id=['"](.+?)['"]>/i;
+
+(async function updateTests() {
+  const testDir = path.resolve(__dirname, '../extraResources/tests');
+  const filenames = (await fs.promises.readdir(testDir))
+    .map(filename => path.join(testDir, filename))
+    .filter(filename => !fs.lstatSync(filename).isDirectory());
+  const tests = await Promise.all<Test | undefined>(
+    filenames.map(async filename => {
+      const html = await fs.promises.readFile(filename, 'utf-8');
+      const titleMatches = html.match(reTitle);
+      const idMatches = html.match(reId);
+      if (!titleMatches || !idMatches) {
+        console.warn('Отсутствует заголовок или id', filename);
+        return undefined;
+      }
+      return {
+        id: idMatches[1],
+        title: titleMatches[1],
+        url: `file://${filename}`,
+      };
+    })
+  );
+  const prev = config.get('tests');
+  if (!isEqual(prev, tests)) config.set('tests', tests);
+})();

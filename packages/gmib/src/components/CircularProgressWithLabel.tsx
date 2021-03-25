@@ -12,10 +12,9 @@ import CircularProgress, { CircularProgressProps } from '@material-ui/core/Circu
 import Typography from '@material-ui/core/Typography';
 import Box from '@material-ui/core/Box';
 
-type Props = CircularProgressProps & { value: number };
-const CircularProgressWithLabel: React.FC<Props> = ({ value, ...props }) => (
+const CircularProgressWithLabel: React.FC<CircularProgressProps> = ({ value, size, ...props }) => (
   <Box position="relative" display="inline-flex">
-    <CircularProgress {...props} value={value} />
+    <CircularProgress {...props} value={value} size={size} />
     <Box
       top={0}
       left={0}
@@ -25,12 +24,13 @@ const CircularProgressWithLabel: React.FC<Props> = ({ value, ...props }) => (
       display="flex"
       alignItems="center"
       justifyContent="center"
+      fontSize={size}
     >
-      <Typography variant="caption" component="div" color="inherit">
-        {`${Math.round(value)}%`}
+      <Typography component="div" color="inherit">
+        {value !== undefined ? `${Math.round(value)}%` : undefined}
       </Typography>
     </Box>
   </Box>
 );
 
-export default CircularProgressWithLabel;
+export default React.memo(CircularProgressWithLabel);

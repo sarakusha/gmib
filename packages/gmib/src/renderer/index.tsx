@@ -8,21 +8,22 @@
  * the EULA file that was distributed with this source code.
  */
 
+// Не удалять, если нужны логи в production
 /* eslint-disable import/first */
-process.env.DEBUG = 'nibus:*';
+process.env.NIBUS_LOG = 'nibus-all.log';
+
+window.localStorage.debug = process.env.DEBUG;
 
 import { createMuiTheme, MuiThemeProvider } from '@material-ui/core/styles';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import 'typeface-roboto/index.css';
 import { SnackbarProvider } from 'notistack';
+import { Provider } from 'react-redux';
 
 import App from '../components/App';
-import DevicesProvider from '../providers/DevicesProvier';
-import DevicesStateProvider from '../providers/DevicesStateProvider';
-import SessionProvider from '../providers/SessionProvider';
-import TestsProvider from '../providers/TestProvider';
 import ToolbarProvider from '../providers/ToolbarProvider';
+import { store } from '../store';
 
 const theme = createMuiTheme({});
 
@@ -31,29 +32,23 @@ const theme = createMuiTheme({});
 
 const render = (): void => {
   ReactDOM.render(
-    <MuiThemeProvider theme={theme}>
-      <SessionProvider>
-        <DevicesProvider>
-          <DevicesStateProvider>
-            <ToolbarProvider>
-              <TestsProvider>
-                <SnackbarProvider
-                  anchorOrigin={{
-                    vertical: 'top',
-                    horizontal: 'right',
-                  }}
-                  maxSnack={10}
-                  dense
-                  preventDuplicate
-                >
-                  <App />
-                </SnackbarProvider>
-              </TestsProvider>
-            </ToolbarProvider>
-          </DevicesStateProvider>
-        </DevicesProvider>
-      </SessionProvider>
-    </MuiThemeProvider>,
+    <Provider store={store}>
+      <MuiThemeProvider theme={theme}>
+        <ToolbarProvider>
+          <SnackbarProvider
+            anchorOrigin={{
+              vertical: 'top',
+              horizontal: 'right',
+            }}
+            maxSnack={10}
+            dense
+            preventDuplicate
+          >
+            <App />
+          </SnackbarProvider>
+        </ToolbarProvider>
+      </MuiThemeProvider>
+    </Provider>,
     document.getElementById('app')
   );
 };
@@ -65,7 +60,3 @@ if (module.hot) {
     render();
   });
 }
-
-// ipcRenderer.on('message', (e, ...args) => {
-//   console.info('INFO:', ...args);
-// });

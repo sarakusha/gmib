@@ -8,26 +8,18 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { EventEmitter } from 'events';
+import { DefaultListener, TypedEmitter } from 'tiny-typed-emitter';
 
-declare interface Runnable<T, R = void> {
-  on(event: 'start', listener: () => void): this;
-  on(event: 'finish', listener: () => void): this;
-  once(event: 'start', listener: () => void): this;
-  once(event: 'finish', listener: () => void): this;
-  addListener(event: 'start', listener: () => void): this;
-  addListener(event: 'finish', listener: () => void): this;
-  off(event: 'start', listener: () => void): this;
-  off(event: 'finish', listener: () => void): this;
-  removeListener(event: 'start', listener: () => void): this;
-  removeListener(event: 'finish', listener: () => void): this;
-  emit(event: 'start'): boolean;
-  emit(event: 'finish'): boolean;
-  run(options: T): Promise<R>;
-  cancel(): Promise<void>;
+export interface RunnableEvents extends DefaultListener {
+  start: () => void;
+  finish: () => void;
 }
 
-abstract class Runnable<T, R = void> extends EventEmitter {
+abstract class Runnable<
+  T,
+  E extends RunnableEvents = RunnableEvents,
+  R = void
+> extends TypedEmitter<E> {
   protected isCanceled = false;
 
   protected isRunning = false;
@@ -43,6 +35,7 @@ abstract class Runnable<T, R = void> extends EventEmitter {
   }
 
   async run(options: T): Promise<R> {
+    const self = this as TypedEmitter<RunnableEvents>;
     if (this.isRunning) {
       await this.cancel();
     }
@@ -51,12 +44,12 @@ abstract class Runnable<T, R = void> extends EventEmitter {
       this.cancelResolve = resolve;
     });
     this.isRunning = true;
-    this.emit('start');
+    self.emit('start');
     try {
       return await this.runImpl(options);
     } finally {
       this.isRunning = false;
-      this.emit('finish');
+      self.emit('finish');
     }
   }
 

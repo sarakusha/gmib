@@ -17,7 +17,8 @@
     "resolveJsonModule": true,
     "baseUrl": ".",
     "typeRoots": [
-      "./node_modules/@types"
+      "./node_modules/@types",
+      "./@types"
     ],
     "types": [
       "node"
@@ -29,14 +30,25 @@
     "strict": false,
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
-    "strictNullChecks": true
+    "strictNullChecks": true,
+    "paths": {
+      "bonjour-hap": ["@types/bonjour-hap"],
+      "debug/src/node": [
+        "../../node_modules/@types/debug"
+      ],
+      "iput": ["@types/iput"],
+    }
   },
   "exclude": [
     "node_modules",
-    "bak",
-    "@types"
+    "bak"
   ],
   "include": [
-    "src"
-  ]
+    "src",
+    "@types/mdx.d.ts",
+    "**/*.mdx"
+  ],
+  "paths": {
+    "@mdx-js/react": ["mdx-js__react"]
+  }
 }

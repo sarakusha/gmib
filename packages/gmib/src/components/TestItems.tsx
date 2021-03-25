@@ -12,42 +12,50 @@ import ListItem from '@material-ui/core/ListItem';
 import ListItemText from '@material-ui/core/ListItemText';
 import Switch from '@material-ui/core/Switch';
 import React, { useCallback } from 'react';
-import { useTests } from '../providers/TestProvider';
-import useCurrent from '../providers/useCurrent';
+import { useDispatch, useSelector } from '../store';
 import AccordionList from './AccordionList';
+import {
+  activateTest,
+  selectCurrentTab,
+  selectCurrentTest,
+  setCurrentTab,
+  TabValues,
+  selectAllTests,
+} from '../store/currentSlice';
 
 const TestItems: React.FC = () => {
-  const { current, tests, visible, showTest, hideAll } = useTests();
-  const setCurrent = useCurrent('test');
-  const currentHandler = useCallback(
-    (event: React.MouseEvent<HTMLDivElement>) => {
-      setCurrent(event.currentTarget.id);
-    },
-    [setCurrent]
-  );
+  const dispatch = useDispatch();
+  const current = useSelector(selectCurrentTest);
+  const tests = useSelector(selectAllTests);
+  const tab = useSelector(selectCurrentTab);
   const visibleHandler = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>, checked: boolean) => {
-      if (!checked) {
-        hideAll();
-      } else {
-        showTest(event.currentTarget.value);
-      }
+      dispatch(activateTest(checked ? event.currentTarget.id : undefined));
     },
-    [showTest, hideAll]
+    [dispatch]
   );
+  /*
+  const currentHandler = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      // event.stopPropagation();
+      // event.preventDefault();
+      dispatch(setCurrentTab('tests'));
+    },
+    [dispatch]
+  );
+*/
   return (
-    <AccordionList name="tests" title="Тестирование">
-      {tests.map(test => {
-        const [primary, secondary] = test.split('/', 2);
+    <AccordionList
+      name="tests"
+      title="Вывод"
+      expanded={tab === 'tests'}
+      onChange={currentTab => dispatch(setCurrentTab(currentTab as TabValues))}
+    >
+      {tests.map(({ title, id }) => {
+        const [primary, secondary = ''] = title.split('/', 2);
         return (
-          <ListItem
-            id={test}
-            button
-            key={test}
-            onClick={currentHandler}
-            selected={test === current}
-          >
-            <Switch checked={visible === test} value={test} onChange={visibleHandler} />
+          <ListItem key={id}>
+            <Switch checked={current === id} id={id} onChange={visibleHandler} />
             <ListItemText primary={primary} secondary={secondary} />
           </ListItem>
         );
@@ -56,4 +64,4 @@ const TestItems: React.FC = () => {
   );
 };
 
-export default TestItems;
+export default React.memo(TestItems);

@@ -9,10 +9,10 @@
  */
 
 /* eslint-disable no-bitwise */
-import { IDevice } from '@nibus/core';
+import { findDeviceById, DeviceId } from '@nibus/core';
 import MinihostLoader from './MinihostLoader';
 
-type Vertex = { x: number; y: number };
+export type VertexType = { x: number; y: number };
 
 // eslint-disable-next-line no-shadow
 export enum Minihost3Selector {
@@ -31,9 +31,9 @@ export type Minihost3Info = {
   v2?: number;
   MCU?: string;
   PLD?: string;
-  redVertex?: Vertex;
-  greenVertex?: Vertex;
-  blueVertex?: Vertex;
+  redVertex?: VertexType;
+  greenVertex?: VertexType;
+  blueVertex?: VertexType;
 };
 
 export const initialSelectors = [
@@ -108,7 +108,9 @@ export default class Minihost3Loader extends MinihostLoader<Minihost3Info> {
 
   static readonly DOMAIN = 'MODUL';
 
-  constructor(device: IDevice) {
+  constructor(deviceId: DeviceId) {
+    const device = findDeviceById(deviceId);
+    if (!device) throw new Error(`Unknown device ${deviceId}`);
     super(device);
     this.selectorId = device.getId('selector');
     this.moduleSelectId = device.getId('moduleSelect');

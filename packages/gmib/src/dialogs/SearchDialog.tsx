@@ -9,7 +9,8 @@
  */
 
 /* tslint:disable:react-a11y-role-has-required-aria-props */
-import AppBar from '@material-ui/core/AppBar';
+// import AppBar from '@material-ui/core/AppBar';
+import Paper from '@material-ui/core/Paper';
 import Button from '@material-ui/core/Button';
 import Dialog from '@material-ui/core/Dialog';
 import DialogActions from '@material-ui/core/DialogActions';
@@ -29,17 +30,20 @@ import NativeSelect from '@material-ui/core/NativeSelect';
 import Tab from '@material-ui/core/Tab';
 import Tabs from '@material-ui/core/Tabs';
 import TextField from '@material-ui/core/TextField';
-import { IDevice, getMibTypes, findMibByType } from '@nibus/core';
+import { findMibByType, Address, DeviceId, getDefaultSession } from '@nibus/core';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { makeStyles } from '@material-ui/core/styles';
+import makeStyles from '@material-ui/core/styles/makeStyles';
 import AddIcon from '@material-ui/icons/Add';
 import unionBy from 'lodash/unionBy';
 import without from 'lodash/without';
 import classNames from 'classnames';
+import { useDevices, useDispatch, useSelector } from '../store';
+import { createDevice, selectLinks } from '../store/devicesSlice';
+import { selectMibTypes } from '../store/nibusSlice';
 import Finder, { DeviceInfo, FinderOptions } from '../util/finders';
+import { getSessionId } from '../util/helpers';
 import useDefaultKeys from '../util/useDefaultKeys';
 import DeviceIcon from '../components/DeviceIcon';
-import { useDevicesContext } from '../providers/DevicesProvier';
 
 const useStyles = makeStyles(theme => ({
   hidden: {
@@ -79,7 +83,6 @@ const useStyles = makeStyles(theme => ({
     right: 0,
   },
   wrapper: {
-    // margin: theme.spacing.unit,
     position: 'relative',
   },
 }));
@@ -89,8 +92,8 @@ type Props = {
   close: () => void;
 };
 
-const deviceKey = ({ address, connection }: DeviceInfo): string =>
-  `${connection.path}#${address.toString()}`;
+const deviceKey = ({ address, owner }: DeviceInfo): string => `${owner}#${address.toString()}`;
+
 const union = (prev: DeviceInfo[], item: DeviceInfo): DeviceInfo[] =>
   unionBy(prev, [item], deviceKey);
 
@@ -98,11 +101,12 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
   const classes = useStyles();
   const [isSearching, setSearching] = useState(false);
   const [kind, setKind] = useState(0);
-  const [connections, setConnections] = useState<IDevice[]>([]);
+  const links = useSelector(selectLinks);
+  const devices = useDevices();
+  const dispatch = useDispatch();
   const connectionRef = useRef<HTMLInputElement>(null);
   const mibTypeRef = useRef<HTMLInputElement>(null);
   const addressRef = useRef<HTMLInputElement>(null);
-  const { devices, createDevice } = useDevicesContext();
   const [detected, setDetected] = useState<DeviceInfo[]>([]);
   const [invalidAddress, setInvalidAddress] = useState(false);
   const defaultValues = useRef({
@@ -123,20 +127,16 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
       finder.off('found', foundListener);
     };
   }, [finder, setSearching, setDetected]);
-  useEffect(() => {
-    setConnections(
-      devices
-        .filter(device => device.connection && device.connection.description.link)
-        .filter(device => !Reflect.getMetadata('parent', device))
-    );
-  }, [devices]);
   const changeHandler = useCallback((_, newValue) => setKind(newValue), [setKind]);
   const startStop = useCallback(() => {
-    const connection = connectionRef.current!.value;
-    const devs: IDevice[] =
-      connection === '0' ? connections : [connections.find(dev => dev.id === connection)!];
+    const connection = connectionRef.current?.value;
+    if (connection === undefined) return;
+    const owners: DeviceId[] = (connection === '0'
+      ? links
+      : links.filter(({ id }) => id === connection)
+    ).map(({ id }) => id);
     const options: FinderOptions = {
-      connections: devs.map(dev => dev.connection!),
+      owners,
     };
     switch (kind) {
       case 0:
@@ -160,7 +160,7 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
         }
       );
     }
-  }, [connections, kind, isSearching, finder]);
+  }, [links, kind, isSearching, finder]);
   useEffect(() => {
     finder.cancel();
     if (!open) {
@@ -173,33 +173,28 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
       const key = event.currentTarget.id;
       setDetected(devs => {
         const dev = devs.find(item => deviceKey(item) === key);
-        if (!dev) return devs;
+        if (!dev?.owner) return devs;
         if (
           devices.findIndex(
-            device => device.address.equals(dev.address) && device.connection === dev.connection
+            device => dev.address.equals(device.address) && device.parent === dev.owner
           ) === -1
         ) {
-          const device = createDevice(dev.address, dev.type, dev.version);
-          device.connection = dev.connection;
-          const parent = connections.find(item => item.connection === dev.connection);
-          Reflect.defineMetadata('parent', parent, device);
+          dispatch(
+            createDevice(
+              getSessionId(getDefaultSession()),
+              dev.owner,
+              dev.address.toString(),
+              dev.type,
+              dev.version
+            )
+          );
         }
         return without(devs, dev);
       });
     },
-    [devices, createDevice, connections]
+    [devices, dispatch]
   );
-  const mibTypes = useMemo(
-    () =>
-      Object.entries(getMibTypes()!)
-        .map(([type, mibs]) => ({
-          value: type,
-          name: mibs.map(mib => mib.mib).join() as string,
-        }))
-        .filter(types => types.value !== '0')
-        .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0)),
-    []
-  );
+  const mibTypes = useSelector(selectMibTypes);
   useDefaultKeys({
     enterHandler: startStop,
     cancelHandler: close,
@@ -208,12 +203,14 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
     <Dialog open={open} aria-labelledby="search-title">
       <DialogTitle id="search-title">Поиск устройств</DialogTitle>
       <DialogContent className={classes.content}>
-        <AppBar position="static">
+        {/* <AppBar position="static">*/}
+        <Paper square>
           <Tabs value={kind} indicatorColor="primary" onChange={changeHandler} variant="fullWidth">
             <Tab label="По адресу" />
             <Tab label="По типу" />
           </Tabs>
-        </AppBar>
+        </Paper>
+        {/* </AppBar>*/}
         <form className={classes.tabContent} noValidate autoComplete="off">
           <FormControl className={classes.formControl} margin="normal" disabled={isSearching}>
             <InputLabel htmlFor="connection">Соединение</InputLabel>
@@ -222,11 +219,11 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
               input={<Input name="connection" id="connection" inputRef={connectionRef} />}
             >
               <option value={'0'}>Все</option>
-              {connections.map(device => (
+              {links.map(device => (
                 <option key={device.id} value={device.id}>
-                  {device.address.isEmpty
-                    ? device.connection && `${device.connection.description.category}-${device.id}`
-                    : device.address.toString()}
+                  {Address.empty.equals(device.address)
+                    ? `${device.mib}-${device.id}`
+                    : device.address}
                 </option>
               ))}
             </NativeSelect>
@@ -263,14 +260,13 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
         <div className={classes.detectedContainer}>
           <List className={classes.detectedList}>
             {detected.map(info => {
-              // const version = info.version && toVersion(info.version);
               const mib = info.type > 0 ? findMibByType(info.type, info.version) : undefined;
               return (
                 <ListItem key={deviceKey(info)} className={classes.detectedItem}>
                   <ListItemIcon>
                     <DeviceIcon color="inherit" mib={mib} />
                   </ListItemIcon>
-                  <ListItemText primary={info.address.toString()} secondary={mib} />
+                  <ListItemText primary={info.address} secondary={mib} />
                   <ListItemSecondaryAction>
                     <IconButton
                       id={deviceKey(info)}
@@ -300,4 +296,4 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
   );
 };
 
-export default SearchDialog;
+export default React.memo(SearchDialog);

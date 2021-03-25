@@ -70,7 +70,7 @@ interface ChangeDetails {
   readonly offset: number;
 }
 
-export interface MaskedOptions<T> {
+export interface MaskedOptions<T extends Mask> {
   mask: T;
   parent: Masked;
   prepare(src: string, masked: Masked<T>, flags: AppendFlags): string;
@@ -93,11 +93,11 @@ export interface Masked<T extends Mask = any> extends MaskedOptions<T> {
   rawInputValue: string;
   readonly isComplete: string;
   nearestInputPos(cursorPos: number, direction?: Direction): number;
-  extractInput(fromPos? = 0, toPos?: number, flags?: ExtractFlags): string;
-  extractTail(fromPos?: number = 0, toPos?: number): TailDetails;
+  extractInput(fromPos?, toPos?: number, flags?: ExtractFlags): string;
+  extractTail(fromPos?: number, toPos?: number): TailDetails;
   appendTail(tail: string | TailDetails): ChangeDetails;
   append(str: string, flags?: AppendFlags, tail?: string | TailDetails): ChangeDetails;
-  remove(fromPos? = 0, toPos?: number): ChangeDetails;
+  remove(fromPos?, toPos?: number): ChangeDetails;
   withValueRefresh<U>(fn: () => U): U;
   runIsolated<U>(fn: (masked: any) => U): U;
   doFormat(value: any): any;

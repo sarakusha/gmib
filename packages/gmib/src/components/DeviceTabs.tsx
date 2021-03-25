@@ -8,14 +8,15 @@
  * the EULA file that was distributed with this source code.
  */
 
+import Paper from '@material-ui/core/Paper';
 import Container from '@material-ui/core/Container';
-import AppBar from '@material-ui/core/AppBar';
-import { makeStyles } from '@material-ui/core/styles';
+import makeStyles from '@material-ui/core/styles/makeStyles';
 import Tab from '@material-ui/core/Tab';
 import Tabs from '@material-ui/core/Tabs';
-import React, { useCallback, useState } from 'react';
-import { useDevicesContext } from '../providers/DevicesProvier';
-// import FlashStateProvider from '../providers/FlashStateProvider';
+import { DeviceId } from '@nibus/core';
+import React, { useState } from 'react';
+import { useSelector } from '../store';
+import { selectCurrentDevice } from '../store/devicesSlice';
 import FirmwareTab from './FirmwareTab';
 import PropertyGridTab from './PropertyGridTab';
 import TelemetryTab from './TelemetryTab';
@@ -23,81 +24,69 @@ import TelemetryTab from './TelemetryTab';
 const useStyles = makeStyles(theme => ({
   root: {
     display: 'flex',
-    // flexShrink: 1,
-    // flexGrow: 1,
-    // maxWidth: 'none',
     flexDirection: 'column',
     width: '100%',
   },
-  appBarSpacer: {
-    flex: '0 0 auto',
-    height: 48,
-  },
-  header: {},
+  // appBarSpacer: {
+  //   flex: '0 0 auto',
+  //   height: 48,
+  // },
+  // header: {},
   content: {
     flex: '0 1 auto',
-    // width: '100%',
-    height: 'calc(100% - 48px)',
+    height: '100%',
+    // height: 'calc(100% - 48px)',
     display: 'flex',
     paddingTop: theme.spacing(1),
     WebkitOverflowScrolling: 'touch', // Add iOS momentum scrolling.
-    // overflow: 'hidden',
   },
 }));
 
 type Props = {
-  id: string;
+  id: DeviceId;
 };
+
+type TabState = 'props' | 'telemetry' | 'firmware';
 
 const DeviceTabs: React.FC<Props> = ({ id }) => {
   const classes = useStyles();
-  const { getProto } = useDevicesContext();
-  const proto = getProto(id);
-  const [value, setValue] = useState(0);
-  const changeHandler = useCallback((_, newValue: unknown) => {
-    setValue(Number(newValue));
-  }, []);
-  const mib = proto && (Reflect.getMetadata('mib', proto) as string);
-  const isMinihost = mib && mib.startsWith('minihost');
+  const device = useSelector(selectCurrentDevice);
+  const isEmpty = !device || device.isEmptyAddress;
+  const [value, setValue] = useState<TabState>('props');
+  // const changeHandler = useCallback((_, newValue: unknown) => {
+  //   setValue(Number(newValue));
+  // }, []);
+  const mib = device?.mib;
+  const isMinihost = mib?.startsWith('minihost');
   const isMinihost3 = mib === 'minihost3';
-  if (!isMinihost && value > 0) setValue(0);
-  // console.log(mib, id);
+  // if (!isMinihost && value > 0) setValue(0);
   if (!id) return null;
   return (
     <div className={classes.root}>
-      <AppBar position="absolute" color="default" className={classes.header}>
+      <Paper square>
         <Tabs
           value={value}
           indicatorColor="primary"
           textColor="primary"
-          onChange={changeHandler}
+          onChange={(_, newValue) => setValue(newValue ?? 'props')}
           variant="fullWidth"
         >
-          <Tab label="Свойства" />
-          {isMinihost && <Tab label="Телеметрия" />}
-          {isMinihost3 && <Tab label="Прошивка" />}
-        </Tabs>
-      </AppBar>
-      <div className={classes.appBarSpacer} />
-      <div className={classes.content}>
-        <Container maxWidth={value !== 1 ? 'sm' : undefined} className={classes.root}>
-          {isMinihost ? (
-            <>
-              <PropertyGridTab id={id} selected={value === 0} />
-              <TelemetryTab id={id} selected={value === 1} />
-              {isMinihost3 && (
-                // <FlashStateProvider>
-                <FirmwareTab id={id} selected={value === 2} />
-                // </FlashStateProvider>
-              )}
-            </>
-          ) : (
-            <PropertyGridTab id={id} selected />
+          {!isEmpty && <Tab label="Свойства" disabled={isEmpty} value="props" />}
+          {isMinihost && !isEmpty && (
+            <Tab label="Телеметрия" disabled={isEmpty} value="telemetry" />
           )}
+          {isMinihost3 && <Tab label="Прошивка" value="firmware" />}
+        </Tabs>
+      </Paper>
+      <div className={classes.content}>
+        <Container maxWidth={value !== 'telemetry' ? 'sm' : undefined} className={classes.root}>
+          <PropertyGridTab id={id} selected={value === 'props'} />
+          <TelemetryTab id={id} selected={value === 'telemetry'} />
+          <FirmwareTab id={id} selected={value === 'firmware'} />
         </Container>
       </div>
     </div>
   );
 };
 
-export default DeviceTabs;
+export default React.memo(DeviceTabs);

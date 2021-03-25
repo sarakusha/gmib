@@ -3,7 +3,7 @@
   <component name="WebServers">
     <option name="servers">
       <webServer id="b13fb38e-eb13-4043-a3e6-cf40fbbd8144" name="GIGABYTE" url="http://192.168.23.27:3000">
-        <fileTransfer rootFolder="/home/user" accessType="SFTP" host="192.168.23.30" port="22" sshConfigId="c8135efe-6c91-4b20-8593-365b71e5b226" sshConfig="GIGABYTE" keyPair="true">
+        <fileTransfer rootFolder="/home/sarakusha" accessType="SFTP" host="192.168.1.40" port="22" sshConfigId="20b01b0b-4c74-4e30-b343-f6155307388f" sshConfig="Keenetic" keyPair="true">
           <advancedOptions>
             <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
           </advancedOptions>
@@ -17,7 +17,7 @@
         </fileTransfer>
       </webServer>
       <webServer id="e2b5f410-4bd9-4daa-8bcd-e219f747b3e6" name="levakov" url="http://192.168.23.16">
-        <fileTransfer rootFolder="/C:/Users/sarakusha" accessType="SFTP" host="localhost" port="8022" sshConfigId="48dd1553-c896-4c3e-9cc8-1d2a10b8977c" sshConfig="localhost" keyPair="true">
+        <fileTransfer rootFolder="/C:/Users/sarakusha" accessType="SFTP" host="192.168.23.16" port="22" sshConfigId="11a6e461-91f8-4a1c-b9c6-b48dba1a9b69" sshConfig="levakov" keyPair="true">
           <advancedOptions>
             <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
           </advancedOptions>

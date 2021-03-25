@@ -10,7 +10,7 @@
  */
 import Button from '@material-ui/core/Button';
 import IconButton from '@material-ui/core/IconButton';
-import { makeStyles } from '@material-ui/core/styles';
+import makeStyles from '@material-ui/core/styles/makeStyles';
 import FolderIcon from '@material-ui/icons/FolderOpen';
 import SaveAltIcon from '@material-ui/icons/SaveAlt';
 import { Kind, KindMap } from '@nibus/core';

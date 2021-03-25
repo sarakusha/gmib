@@ -71,11 +71,12 @@ export default function useInputs<T>(
   // Используется после submit и может быть размонтирована к этому моменту,
   // поэтому нельзя запускать setChanged
   const safeSetChanged = useRef(setChanged);
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       safeSetChanged.current = () => {};
-    };
-  }, []);
+    },
+    []
+  );
   const [inputs, setInputs] = useState<T>(initial);
   const [requiredInputs, setRequiredInputs] = useState<RequiredInputs<T>>({});
   const handleInputChange = useCallback<ChangeInputHandler>(

@@ -7,12 +7,14 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-// import warning from 'warning';
-import { makeStyles } from '@material-ui/core/styles';
+import makeStyles from '@material-ui/core/styles/makeStyles';
 import React, { useEffect, useState } from 'react';
-import { useDevicesContext } from '../providers/DevicesProvier';
-import { useTests } from '../providers/TestProvider';
+import { selectDeviceIds } from '../store/devicesSlice';
+import { useSelector } from '../store';
+import { selectCurrentDeviceId, selectCurrentTab } from '../store/currentSlice';
+import Autobrightness from './Autobrightness';
 import DeviceTabs from './DeviceTabs';
+import Log from './Log';
 
 import TabContainer, { Props as ChildProps } from './TabContainer';
 import TestParams from './TestParams';
@@ -31,9 +33,13 @@ const Tabs: React.FC = () => {
   const [devChildren, setDevChildren] = useState<
     React.ReactElement<ChildProps, typeof TabContainer>[]
   >([]);
-  const { current: currentDevice, devices } = useDevicesContext();
+  const ids = useSelector(selectDeviceIds);
+  const currentDevice = useSelector(selectCurrentDeviceId);
   if (currentDevice) {
     let curChild = devChildren.find(({ props }) => props.id === currentDevice);
+    /**
+     * Создаем только те вкладки с устройствами, которые выбрали
+     */
     if (!curChild) {
       curChild = (
         <TabContainer key={currentDevice} id={currentDevice}>
@@ -43,27 +49,33 @@ const Tabs: React.FC = () => {
       setDevChildren(children => children.concat(curChild!));
     }
   }
-  const { current: currentTest } = useTests();
+  const tab = useSelector(selectCurrentTab);
 
   /**
    * Показываем только актуальный список
    */
   useEffect(() => {
     setDevChildren(children => {
-      const newChildren = children.filter(({ props }) =>
-        devices.findIndex(device => device.id === props.id)
-      );
+      const newChildren = children.filter(({ props }) => ids.includes(props.id));
       return newChildren.length === children.length ? children : newChildren;
     });
-  }, [devices]);
+  }, [ids]);
 
   return (
     <div className={classes.root}>
       {devChildren.map(child =>
-        React.cloneElement(child, { selected: currentDevice === child.props.id })
+        React.cloneElement(child, {
+          selected: currentDevice === child.props.id && tab === 'devices',
+        })
       )}
-      <TabContainer id="test" selected={!!currentTest}>
+      <TabContainer id="test" selected={tab === 'tests'}>
         <TestParams />
+      </TabContainer>
+      <TabContainer id="autobrightness" selected={tab === 'autobrightness'}>
+        <Autobrightness />
+      </TabContainer>
+      <TabContainer id="log" selected={tab === 'log'}>
+        <Log />
       </TabContainer>
     </div>
   );

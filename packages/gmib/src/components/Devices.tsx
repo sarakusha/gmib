@@ -12,22 +12,28 @@ import Box from '@material-ui/core/Box';
 import ListItem from '@material-ui/core/ListItem';
 import ListItemIcon from '@material-ui/core/ListItemIcon';
 import ListItemText from '@material-ui/core/ListItemText';
-import { makeStyles } from '@material-ui/core/styles';
+import makeStyles from '@material-ui/core/styles/makeStyles';
 import Tooltip from '@material-ui/core/Tooltip';
 import LinkIcon from '@material-ui/icons/Link';
 import UsbIcon from '@material-ui/icons/Usb';
-import { DeviceId } from '@nibus/core';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { DeviceId, getDefaultSession } from '@nibus/core';
+import React, { useCallback, useMemo } from 'react';
 import Typography from '@material-ui/core/Typography';
 import IconButton from '@material-ui/core/IconButton';
 import ReloadIcon from '@material-ui/icons/Refresh';
-import { ipcRenderer } from 'electron';
-
-import { useDevicesContext } from '../providers/DevicesProvier';
-import { useSessionContext } from '../providers/SessionProvider';
-import useCurrent from '../providers/useCurrent';
-import AccordionList, { useAccordion } from './AccordionList';
+import { useSelector, useDispatch } from '../store';
+import { selectAllDevicesWithParent } from '../store/devicesSlice';
+import {
+  selectCurrentDeviceId,
+  activateDevice,
+  selectCurrentTab,
+  setCurrentTab,
+  TabValues,
+} from '../store/currentSlice';
+import { getSessionId } from '../util/helpers';
+import AccordionList from './AccordionList';
 import DeviceIcon from './DeviceIcon';
+import { reloadSession } from '../store/sessionsSlice';
 
 const useStyles = makeStyles(theme => ({
   wrapper: {
@@ -36,41 +42,34 @@ const useStyles = makeStyles(theme => ({
   kind: {
     color: theme.palette.primary.light,
     position: 'absolute',
-    // pointerEvents: 'none',
     bottom: 0,
     right: -16,
     fontSize: '1em',
   },
 }));
 
-const reloadHandler: React.MouseEventHandler<HTMLButtonElement> = e => {
-  ipcRenderer.send('reloadNibus');
-  e.stopPropagation();
-};
-
 const name = 'devices';
 
 const Devices: React.FC = () => {
   const classes = useStyles();
-  const { devices, current } = useDevicesContext();
-  const setCurrent = useCurrent('device');
-  const devs = useSessionContext().devices;
-  const [, setAccordion] = useAccordion();
-  const [, setUpdate] = useState(false);
-  useEffect(() => {
-    const sernoListener = (): void => setUpdate(prev => !prev);
-    devs.on('serno', sernoListener);
-    return () => {
-      devs.off('serno', sernoListener);
-    };
-  }, [devs]);
-  useEffect(() => setAccordion(name), [devices, setAccordion]);
+  const dispatch = useDispatch();
+  const devices = useSelector(selectAllDevicesWithParent);
+  const current = useSelector(selectCurrentDeviceId);
+  const tab = useSelector(selectCurrentTab);
+  // const [, setAccordion] = useAccordion();
+  const reloadHandler = useCallback<React.MouseEventHandler<HTMLButtonElement>>(
+    e => {
+      dispatch(reloadSession(getSessionId(getDefaultSession())));
+      e.stopPropagation();
+    },
+    [dispatch]
+  );
   const clickHandler = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
-      const id = (e.currentTarget.dataset.id as DeviceId) || null;
-      setCurrent(id);
+      const id = e.currentTarget.dataset.id as DeviceId;
+      dispatch(activateDevice(id));
     },
-    [setCurrent]
+    [dispatch]
   );
   const title = useMemo(
     () => (
@@ -81,14 +80,20 @@ const Devices: React.FC = () => {
         </IconButton>
       </Box>
     ),
-    []
+    [reloadHandler]
   );
   return (
-    <AccordionList name={name} title={title}>
+    <AccordionList
+      name={name}
+      title={title}
+      expanded={tab === 'devices' && devices.length > 0}
+      onChange={currentTab => dispatch(setCurrentTab(currentTab as TabValues))}
+    >
       {devices.map(device => {
-        const parent = Reflect.getMetadata('parent', device);
+        const { id, connected, path, mib, isEmptyAddress, parent, address, category } = device;
+        // Reflect.getMetadata('parent', device);
         // const mib = Reflect.getMetadata('mib', device);
-        const desc = device.connection?.description ?? {};
+        // const desc = device.connection?.description ?? {};
         // let Icon = DeviceIcon;
         // if (!parent && desc.link) {
         //   Icon = DeviceHubIcon;
@@ -98,22 +103,24 @@ const Devices: React.FC = () => {
         return (
           <ListItem
             button
-            key={device.connection?.path ?? device.id}
+            key={id}
             onClick={clickHandler}
-            data-id={device.id}
-            selected={device.id === current}
-            disabled={!device.connection || device.address.isEmpty}
+            data-id={id}
+            selected={id === current}
+            disabled={!connected}
+            id={`tab-${id}`}
+            aria-controls={`tabpanel-${id}`}
           >
             <ListItemIcon>
               <div className={classes.wrapper}>
                 <DeviceIcon color="inherit" device={device} />
                 {parent ? (
-                  <Tooltip title={parent.address.toString()}>
+                  <Tooltip title={parent.address}>
                     <LinkIcon className={classes.kind} />
                   </Tooltip>
                 ) : (
-                  device.connection && (
-                    <Tooltip title={device.connection.path}>
+                  path && (
+                    <Tooltip title={path}>
                       <UsbIcon className={classes.kind} />
                     </Tooltip>
                   )
@@ -121,8 +128,8 @@ const Devices: React.FC = () => {
               </div>
             </ListItemIcon>
             <ListItemText
-              primary={device.address.isEmpty ? desc.category : device.address.toString()}
-              secondary={device.address.isEmpty ? device.id : Reflect.getMetadata('mib', device)}
+              primary={isEmptyAddress ? category : address}
+              secondary={isEmptyAddress ? id : mib}
             />
           </ListItem>
         );

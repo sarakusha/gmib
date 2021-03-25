@@ -8,27 +8,31 @@
  * the EULA file that was distributed with this source code.
  */
 
+import Paper from '@material-ui/core/Paper';
 import Backdrop from '@material-ui/core/Backdrop';
-import Box from '@material-ui/core/Box';
 import Button from '@material-ui/core/Button';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import LinearProgress from '@material-ui/core/LinearProgress';
 import Radio from '@material-ui/core/Radio';
 import RadioGroup from '@material-ui/core/RadioGroup';
-import { makeStyles } from '@material-ui/core/styles';
+import makeStyles from '@material-ui/core/styles/makeStyles';
 import CloseIcon from '@material-ui/icons/Close';
 import ReplayIcon from '@material-ui/icons/Replay';
-import { Flasher, FlashKinds, Kind, KindMap } from '@nibus/core';
+import { Address, Flasher, FlashKinds, Kind, KindMap } from '@nibus/core';
+import classNames from 'classnames';
 import { SnackbarAction, useSnackbar } from 'notistack';
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { useDevice } from '../providers/DevicesStateProvider';
-// import { useFlashState, useGlobalFlashState } from '../providers/FlashStateProvider';
+import { useDevice, useSelector } from '../store';
+import { selectProps } from '../store/devicesSlice';
 import CircularProgressWithLabel from './CircularProgressWithLabel';
 import FlashUpgrade, { displayName, Props as FlashUpgradeProps } from './FlashUpgrade';
 import FormFieldSet from './FormFieldSet';
-import type { Props } from './TabContainer';
+import type { MinihostTabProps } from './TabContainer';
 
 const useStyles = makeStyles(theme => ({
+  root: {
+    padding: theme.spacing(1),
+  },
   backdrop: {
     zIndex: theme.zIndex.drawer + 1,
     color: '#fff',
@@ -44,18 +48,24 @@ const useStyles = makeStyles(theme => ({
     borderStyle: 'solid',
     display: 'block',
     flexDirection: 'row',
-    '&:not(:last-child)': {
+    '& ~ $kinds': {
       marginRight: theme.spacing(2),
     },
-    // width: '100%',
+  },
+  wrapper: {
+    '& > fieldset ~ fieldset': {
+      marginLeft: theme.spacing(2),
+    },
   },
   kind: {
     marginLeft: theme.spacing(1),
     marginRight: theme.spacing(1),
   },
-  // kindsRoot: {},
   progress: {
     width: '80%',
+  },
+  hidden: {
+    display: 'none',
   },
 }));
 
@@ -71,36 +81,50 @@ function* generateSuccessKey(maxSuccess = 3): Generator<number, number> {
 
 const successId = generateSuccessKey();
 
-const FirmwareTab: React.FC<Props> = ({ id, selected }) => {
+const FirmwareTab: React.FC<MinihostTabProps> = ({ id, selected = false }) => {
   const classes = useStyles();
   const { closeSnackbar, enqueueSnackbar } = useSnackbar();
-  const { device } = useDevice(id);
+  const { address } = useDevice(id) ?? {};
+  const { bootloader } = useSelector(state => selectProps(state, id, 'bootloader'));
+  const isEmpty = Address.empty.equals(address);
   const [progress, setProgress] = useState(0);
-  const [flashing, setFleshing] = useState(false);
+  const [flashing, setFlashing] = useState(false);
   const snacksRef = useRef<number[]>([]);
-  const [kind, setKind] = useState<Kind>('fpga');
-  useEffect(() => {
-    return () => snacksRef.current.forEach(closeSnackbar);
-  }, [closeSnackbar, kind]);
-  // const [, dispatch] = useGlobalFlashState();
+  const [kind, setKind] = useState<Kind>('rbf');
+  useEffect(() => () => snacksRef.current.forEach(closeSnackbar), [closeSnackbar, kind]);
   const flashHandler = useCallback<FlashUpgradeProps['onFlash']>(
     (currentKind, filename, moduleSelect) => {
-      if (!device) return;
       snacksRef.current.forEach(closeSnackbar);
       snacksRef.current = [];
       setProgress(0);
-      const flasher = new Flasher(device);
-      const { total } = flasher.flash(currentKind, filename, moduleSelect);
-      setFleshing(true);
+      const flasher = new Flasher(id);
+      let total = 0;
+      try {
+        total = flasher.flash(currentKind, filename, moduleSelect).total;
+      } catch (e) {
+        enqueueSnackbar(`Invalid source file: ${filename} (${e.message})`, { variant: 'error' });
+        return;
+      }
+      flasher.once('error', e => {
+        flasher.removeAllListeners();
+        setFlashing(false);
+        setProgress(0);
+        enqueueSnackbar(`Error while flashing: ${e}`, { variant: 'error' });
+      });
+      setFlashing(true);
       let current = 0;
       const normalize = (value: number): number => (value * 100) / total;
       flasher.once('finish', () => {
         flasher.removeAllListeners();
-        setFleshing(false);
+        setFlashing(false);
         setProgress(0);
       });
-      flasher.on('tick', length => {
-        current += length;
+      flasher.on('tick', ({ length, offset }) => {
+        if (typeof offset === 'number') {
+          current = offset;
+        } else if (typeof length === 'number') {
+          current += length;
+        }
         setProgress(normalize(current));
       });
       const action: SnackbarAction = key => (
@@ -109,13 +133,6 @@ const FirmwareTab: React.FC<Props> = ({ id, selected }) => {
             <ReplayIcon
               onClick={() => {
                 flashHandler(currentKind, filename, key as number);
-                // setKind(currentKind);
-                // row !== undefined && dispatch({ kind: currentKind, type: 'row', payload: row });
-                // column !== undefined &&
-                //   dispatch({ kind: currentKind, type: 'column', payload: column });
-                // filename !== undefined &&
-                //   dispatch({ kind: currentKind, type: 'file', payload: filename });
-                // closeSnackbar(key);
               }}
             />
           </Button>
@@ -138,26 +155,30 @@ const FirmwareTab: React.FC<Props> = ({ id, selected }) => {
         snacksRef.current.push(key);
       });
     },
-    [device, closeSnackbar, enqueueSnackbar]
+    [id, closeSnackbar, enqueueSnackbar]
   );
   const kindHandler = useCallback<React.ChangeEventHandler<HTMLInputElement>>(
     e => setKind(e.target.value as Kind),
     []
   );
-  // const [, isModule, legacy] = KindMap[kind];
   return (
-    <Box display={selected ? 'block' : 'none'} width={1} p={1}>
-      <RadioGroup row aria-label="firmware kind" value={kind} onChange={kindHandler}>
+    <Paper className={classNames(classes.root, { [classes.hidden]: !selected })}>
+      <RadioGroup
+        row
+        aria-label="firmware kind"
+        value={kind}
+        onChange={kindHandler}
+        className={classes.wrapper}
+      >
         {[false, true].map(isModule => (
           <FormFieldSet
             legend={isModule ? 'Модуль' : 'Хост'}
-            // helper={`Для ${isModule ? 'модулей' : 'процессора'}${legacy ? ' (устаревшая)' : ''}`}
             className={classes.kinds}
+            key={isModule.toString()}
           >
             {Object.entries(KindMap)
               .filter(([, [, module]]) => isModule === module)
               .map(([value]) => (
-                // <label key={value}>{value}</label>
                 <FormControlLabel
                   key={value}
                   value={value}
@@ -165,6 +186,7 @@ const FirmwareTab: React.FC<Props> = ({ id, selected }) => {
                   label={displayName(value)}
                   labelPlacement="top"
                   className={classes.kind}
+                  disabled={(value === 'mcu' ? !bootloader?.raw : isEmpty) || value === 'fpga'}
                 />
               ))}
           </FormFieldSet>
@@ -177,7 +199,7 @@ const FirmwareTab: React.FC<Props> = ({ id, selected }) => {
         <CircularProgressWithLabel color="inherit" value={progress} />
         <LinearProgress variant="determinate" value={progress} className={classes.progress} />
       </Backdrop>
-    </Box>
+    </Paper>
   );
 };
 

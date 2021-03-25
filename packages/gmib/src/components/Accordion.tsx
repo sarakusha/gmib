@@ -7,7 +7,7 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-
+import React from 'react';
 import { withStyles } from '@material-ui/core/styles';
 import MuiAccordion from '@material-ui/core/Accordion';
 
@@ -16,9 +16,9 @@ const Accordion = withStyles({
   root: {
     // border: '1px solid rgba(0, 0, 0, .125)',
     boxShadow: 'none',
-    '&:not(:last-child)': {
-      borderBottom: 0,
-    },
+    // '&:not(:last-child)': {
+    //   borderBottom: 0,
+    // },
     '&:before': {
       display: 'none',
     },
@@ -26,7 +26,9 @@ const Accordion = withStyles({
       margin: 'auto',
     },
   },
-  expanded: {},
+  expanded: {
+    borderBottom: '1px solid rgba(0, 0, 0, .12)',
+  },
 })(MuiAccordion);
 
-export default Accordion;
+export default React.memo(Accordion);

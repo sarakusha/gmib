@@ -9,10 +9,10 @@
  */
 
 const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
-const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
-const path = require('path');
+// const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
+// const path = require('path');
 
-const { ANALYZE } = process.env;
+// const { ANALYZE } = process.env;
 const isProduction = process.env.NODE_ENV === 'production';
 
 /*
@@ -107,17 +107,22 @@ module.exports = config => {
       aliasFields: ['main'],
     },
   });
+  config.module.rules.push({
+    test: /\.mdx?$/,
+    use: ['babel-loader', '@mdx-js/loader'],
+  });
   // !!! Помогает избежать дублирования react electron-ом и webpack-ом
   config.externals = [...config.externals, 'react', 'react-dom'];
-  if (ANALYZE) {
-    config.plugins.push(
-      new BundleAnalyzerPlugin({
-        analyzerMode: 'server',
-        analyzerPort: 8888,
-        openAnalyzer: true,
-      })
-    );
-  }
+  // config.resolve.alias.debug = path.join(require.resolve('debug'), 'src', 'node');
+  // if (ANALYZE) {
+  //   config.plugins.push(
+  //     new BundleAnalyzerPlugin({
+  //       analyzerMode: 'server',
+  //       analyzerPort: 8888,
+  //       openAnalyzer: true,
+  //     })
+  //   );
+  // }
 
   return config;
 };

@@ -9,7 +9,8 @@
  */
 // eslint-disable-next-line no-use-before-define
 import React, { FC, CSSProperties, useCallback, useMemo, useState } from 'react';
-import { makeStyles, useTheme } from '@material-ui/core/styles';
+import makeStyles from '@material-ui/core/styles/makeStyles';
+import useTheme from '@material-ui/core/styles/useTheme';
 import 'rc-slider/assets/index.css';
 import { Range as RCRange, Handle } from 'rc-slider';
 import { RangeProps } from 'rc-slider/lib/Range';

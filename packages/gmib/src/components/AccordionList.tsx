@@ -7,17 +7,13 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import { AccordionDetailsProps, AccordionSummaryProps } from '@material-ui/core';
+import { AccordionDetailsProps } from '@material-ui/core/AccordionDetails';
+import { AccordionSummaryProps } from '@material-ui/core/AccordionSummary';
 import Box from '@material-ui/core/Box';
+import makeStyles from '@material-ui/core/styles/makeStyles';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
-import React, {
-  Dispatch,
-  ReactNode,
-  SetStateAction,
-  useCallback,
-  useContext,
-  useState,
-} from 'react';
+import classNames from 'classnames';
+import React from 'react';
 import List from '@material-ui/core/List';
 import Typography from '@material-ui/core/Typography';
 
@@ -27,25 +23,20 @@ import AccordionSummary from './AccordionSummary';
 
 export type AccordionListProps = {
   name: string;
-  title?: ReactNode;
+  title?: React.ReactNode;
   component?: React.ElementType;
   className?: string;
   summaryClasses?: AccordionSummaryProps['classes'];
   detailsClasses?: AccordionDetailsProps['classes'];
+  expanded?: boolean;
+  onChange?: (name?: string) => void;
 };
 
-export type AccordionContext = [
-  current: string | false,
-  setCurrent: Dispatch<SetStateAction<string | false>>
-];
-
-const Context = React.createContext<AccordionContext>([false, () => {} /* , () => {}*/]);
-export const useAccordion = (): AccordionContext => useContext(Context);
-
-export const AccordionProvider: React.FC = ({ children }) => {
-  const value = useState<string | false>(false);
-  return <Context.Provider value={value}>{children}</Context.Provider>;
-};
+const useStyles = makeStyles({
+  hidden: {
+    display: 'none',
+  },
+});
 
 const AccordionList: React.FC<AccordionListProps> = ({
   name,
@@ -55,21 +46,23 @@ const AccordionList: React.FC<AccordionListProps> = ({
   children,
   summaryClasses,
   detailsClasses,
+  expanded = false,
+  onChange = () => {},
 }) => {
-  const [current, setCurrent] = useAccordion();
-  const changeHandler = useCallback(() => {
-    setCurrent(prev => prev !== name && name);
-  }, [name, setCurrent]);
-  const summary = title ?? name;
-  // useEffect(() => setTopPos(name, ref.current?.offsetTop), [name]);
+  const classes = useStyles();
   return (
-    <Accordion expanded={current === name} onChange={changeHandler} className={className}>
+    <Accordion
+      expanded={expanded}
+      onChange={() => onChange(expanded ? undefined : name)}
+      className={className}
+    >
       <AccordionSummary
         expandIcon={<ExpandMoreIcon />}
         aria-controls={name}
         classes={summaryClasses}
+        className={classNames({ [classes.hidden]: !title })}
       >
-        {typeof summary === 'string' ? <Typography>{summary}</Typography> : title}
+        {typeof title === 'string' ? <Typography>{title}</Typography> : title}
       </AccordionSummary>
       <AccordionDetails classes={detailsClasses}>
         <Box component={component} width={1}>

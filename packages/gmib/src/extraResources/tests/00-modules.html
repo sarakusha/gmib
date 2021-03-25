@@ -9,8 +9,8 @@
   -->
 
 <!DOCTYPE html>
-<html>
-<head lang="ru">
+<html lang="ru">
+<head>
   <meta data-id="5568562c44a3583f1bf174c9">
   <meta charset="UTF-8">
   <title>Скатерть</title>
@@ -99,27 +99,23 @@
 <body>
   <div class="grid"></div>
 <script>
-  function getParameterByName(name) {
-    name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
-    var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"),
-      results = regex.exec(location.search);
-    return results === null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
-  }
-  var width = +getParameterByName('width');
-  var height = +getParameterByName('height');
-  var moduleHres = +getParameterByName('moduleHres') || 32;
-  var moduleVres = +getParameterByName('moduleVres') || 32;
-  var i = 0, xPos = 0, yPos = 0, opacity = 0, xy = 0;
-  var grid = document.getElementsByClassName('grid')[0];
+  const params = new URLSearchParams(window.location.search);
+  const width = +params.get('width');
+  const height = +params.get('height');
+  const moduleHres = +params.get('moduleHres') || 32;
+  const moduleVres = +params.get('moduleVres') || 32;
+  const i = 0;
+  let xPos = 0, yPos = 0, opacity = 0, xy = 0;
+  const grid = document.getElementsByClassName('grid')[0];
   grid.style['background-size'] = (moduleHres * 2) + 'px ' + (moduleVres * 2) + 'px';
   document.body.style['font-size'] = moduleHres / (Math.log10(moduleHres) * 1.6) + 'px';
   if (width && height) {
-    var rows = Math.ceil(height / moduleVres);
-    var cols = Math.ceil(width / moduleHres);
-    document.write('<table width="' + (cols * moduleHres) + '" height="' + (rows * moduleVres) + '">');
-    for (var y = 0; y < rows; y++) {
+    const rows = Math.ceil(height / moduleVres);
+    const cols = Math.ceil(width / moduleHres);
+    document.write(`<table width="${cols * moduleHres}" height="${rows * moduleVres}">`);
+    for (let y = 0; y < rows; y++) {
       document.write('<tr>');
-      for (var x = 0; x < cols; x++) {
+      for (let x = 0; x < cols; x++) {
         document.write('<td></td>');
       }
       document.write('</tr>');

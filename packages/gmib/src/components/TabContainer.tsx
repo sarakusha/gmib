@@ -8,8 +8,9 @@
  * the EULA file that was distributed with this source code.
  */
 
+import { DeviceId } from '@nibus/core';
 import React from 'react';
-import { makeStyles } from '@material-ui/core/styles';
+import makeStyles from '@material-ui/core/styles/makeStyles';
 import classNames from 'classnames';
 
 const useStyles = makeStyles({
@@ -27,10 +28,22 @@ export type Props = {
   selected?: boolean;
 };
 
-const TabContainer: React.FC<Props> = ({ children, selected = true }) => {
+export type MinihostTabProps = {
+  id: DeviceId;
+  selected?: boolean;
+};
+
+const TabContainer: React.FC<Props> = ({ id, children, selected = true }) => {
   const classes = useStyles();
   return (
-    <div className={classNames(classes.root, { [classes.hidden]: !selected })}>{children}</div>
+    <div
+      id={`tabpanel-${id}`}
+      aria-labelledby={`tab-${id}`}
+      hidden={!selected}
+      className={classNames(classes.root, { [classes.hidden]: !selected })}
+    >
+      {children}
+    </div>
   );
 };
 

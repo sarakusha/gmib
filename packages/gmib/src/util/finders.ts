@@ -16,50 +16,43 @@ import {
   INibusConnection,
   createSarp,
   SarpDatagram,
+  DeviceId,
+  findDeviceById,
 } from '@nibus/core';
 
 import { delay, tuplify } from './helpers';
-import Runnable from './Runnable';
+import Runnable, { RunnableEvents } from './Runnable';
 
 export type DeviceInfo = {
   address: Address;
-  connection: INibusConnection;
+  owner: DeviceId | undefined;
   version?: number;
   type: number;
 };
 
 export const toVersion = (ver: number): string => `${(ver >> 8) & 0xff}.${ver & 0xff}`;
 
-type AddressListener = (info: DeviceInfo) => void;
-
 export type FinderOptions = {
   address?: string;
   type?: number;
-  connections?: INibusConnection[];
+  owners: DeviceId[];
 };
 
-declare interface Finder extends Runnable<FinderOptions> {
-  on(event: 'start', listener: () => void): this;
-  on(event: 'finish', listener: () => void): this;
-  on(event: 'found', listener: AddressListener): this;
-  once(event: 'start', listener: () => void): this;
-  once(event: 'finish', listener: () => void): this;
-  once(event: 'found', listener: AddressListener): this;
-  addListener(event: 'start', listener: () => void): this;
-  addListener(event: 'finish', listener: () => void): this;
-  addListener(event: 'found', listener: AddressListener): this;
-  off(event: 'start', listener: () => void): this;
-  off(event: 'finish', listener: () => void): this;
-  off(event: 'found', listener: AddressListener): this;
-  removeListener(event: 'start', listener: () => void): this;
-  removeListener(event: 'finish', listener: () => void): this;
-  removeListener(event: 'found', listener: AddressListener): this;
-  emit(event: 'start'): boolean;
-  emit(event: 'finish'): boolean;
-  emit(event: 'found', info: DeviceInfo): boolean;
+interface FinderEvents extends RunnableEvents {
+  found: (info: DeviceInfo) => void;
 }
 
-class Finder extends Runnable<FinderOptions> {
+const getConnection = (owner: DeviceId): INibusConnection => {
+  const device = findDeviceById(owner);
+  if (!device) throw new Error(`Unknown device ${owner}`);
+  const { connection, address: ownerAddress } = device;
+  if (!connection) throw new Error(`Device ${ownerAddress} not connected`);
+  if (connection.owner !== device)
+    throw new Error(`Device ${ownerAddress} does not own the connection`);
+  return connection;
+};
+
+class Finder extends Runnable<FinderOptions, FinderEvents> {
   protected async macFinder(address: Address, connections: INibusConnection[]): Promise<void> {
     let rest = connections.slice(0);
     let first = true;
@@ -75,14 +68,15 @@ class Finder extends Runnable<FinderOptions> {
             address,
             version,
             type: type!,
-            connection: rest[index],
+            owner: rest[index].owner?.id,
           })
         );
       rest = rest.filter((_, index) => results[index].length === 0);
     }
   }
 
-  protected async runImpl({ connections, type, address }: FinderOptions): Promise<void> {
+  protected async runImpl({ owners, type, address }: FinderOptions): Promise<void> {
+    const connections = owners.map(getConnection);
     if (!connections) throw new Error('Invalid connections');
     const addr = new Address(address);
     let counter = 0;
@@ -129,7 +123,7 @@ class Finder extends Runnable<FinderOptions> {
         counter = 0;
         detected.add(key);
         this.emit('found', {
-          connection,
+          owner: connection.owner?.id,
           address: mac,
           type: datagram.deviceType!,
         });
