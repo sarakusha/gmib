@@ -16,10 +16,11 @@ import { log } from './debug';
 
 export type SplineItem = [lux: number, brightness: number];
 export const SPLINE_COUNT = 4;
-export type Test = {
+export type Page = {
   id: string;
-  url: string;
-  title: string;
+  url?: string;
+  title?: string;
+  permanent?: true;
 };
 export type Location = {
   latitude?: number;
@@ -48,7 +49,7 @@ export type Config = {
   test?: string;
   screen: Screen;
   logLevel: LogLevel;
-  tests: Test[];
+  tests: Page[];
 };
 
 export const configSchema: Schema<Config> = {
@@ -171,7 +172,7 @@ export const configSchema: Schema<Config> = {
         url: { type: 'string' },
         title: { type: 'string' },
       },
-      required: ['id', 'url', 'title'],
+      required: ['id', 'title'],
     },
     default: [],
   },

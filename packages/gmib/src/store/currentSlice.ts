@@ -14,7 +14,7 @@ import type { DebouncedFunc } from 'lodash';
 import sortBy from 'lodash/sortBy';
 import SunCalc from 'suncalc';
 import Ajv from 'ajv';
-import { configSchema, Config, Location, Screen, Test } from '../util/config';
+import { configSchema, Config, Location, Screen, Page } from '../util/config';
 import { getSession, notEmpty, PropPayloadAction } from '../util/helpers';
 import MonotonicCubicSpline, { Point } from '../util/MonotonicCubicSpline';
 import type { AsyncInitializer } from './asyncInitialMiddleware';
@@ -143,6 +143,19 @@ export const currentSlice = createSlice({
       session.setLogLevel(logLevel);
       saveConfig(current(state));
     },
+    upsertHttpPage(state, { payload: page }: PayloadAction<Page>) {
+      const found = state.tests.find(({ id }) => id === page.id);
+      if (found) {
+        Object.assign(found, page);
+      } else {
+        state.tests.push(page);
+      }
+      saveConfig(current(state));
+    },
+    removeHttpPage(state, { payload: id }: PayloadAction<string>) {
+      state.tests = state.tests.filter(page => page.id !== id);
+      saveConfig(current(state));
+    },
   },
 });
 
@@ -175,9 +188,9 @@ export const selectScreen = (state: RootState): Screen => selectCurrent(state).s
 
 export const selectLogLevel = (state: RootState): LogLevel => selectCurrent(state).logLevel;
 
-export const selectAllTests = (state: RootState): Test[] => selectCurrent(state).tests;
+export const selectAllTests = (state: RootState): Page[] => selectCurrent(state).tests;
 
-export const selectTestById = (state: RootState, id: string): Test | undefined =>
+export const selectTestById = (state: RootState, id: string): Page | undefined =>
   selectAllTests(state).find(test => test.id === id);
 
 export const {
@@ -192,6 +205,8 @@ export const {
   setLocationProp,
   setScreenProp,
   setLogLevel,
+  upsertHttpPage,
+  removeHttpPage,
 } = currentSlice.actions;
 
 export const activateDevice = (id: DeviceId | undefined): AppThunk => dispatch => {
@@ -265,6 +280,9 @@ export const loadConfig = (id: SessionId, config: Config): AppThunk => dispatch 
   dispatch(updateBrightness);
 };
 
+const getValue = (value: number, min: number, max: number): number =>
+  Math.min(Math.max(value, min), max);
+
 const calculateBrightness: AppThunk = (dispatch, getState) => {
   const state = getState();
   const autobrightness = selectAutobrightness(state);
@@ -281,6 +299,7 @@ const calculateBrightness: AppThunk = (dispatch, getState) => {
     const max = safeData[safeData.length - 1];
     const [minLux, minBrightness] = min;
     const [maxLux, maxBrightness] = max;
+    // debug(`min: ${minBrightness}, max: ${maxBrightness}`);
     if (illuminance !== undefined) {
       // На показаниях датчика
       const illuminanceSpline = new MonotonicCubicSpline(
@@ -299,18 +318,25 @@ const calculateBrightness: AppThunk = (dispatch, getState) => {
       const getBrightness = (aspect: number): number =>
         minBrightness + (maxBrightness - minBrightness) * aspect;
       const {
-        nadir,
+        dawn,
         sunriseEnd,
         goldenHourEnd,
         solarNoon,
         goldenHour,
         sunsetStart,
-        night,
+        dusk,
       } = SunCalc.getTimes(now, latitude!, longitude!);
+      debug(
+        `dawn: ${dawn.toLocaleTimeString()}, sunriseEnd: ${sunriseEnd.toLocaleTimeString()}, goldenHourEnd: ${goldenHourEnd.toLocaleTimeString()}, noon: ${solarNoon.toLocaleTimeString()}`
+      );
+      debug(
+        `goldenHour: ${goldenHour.toLocaleTimeString()}, sunsetStart: ${sunsetStart.toLocaleTimeString()}, dusk: ${dusk.toLocaleTimeString()}`
+      );
+      // debug(`now: ${getTime(now)}`);
       const sunSpline =
         now <= solarNoon
           ? new MonotonicCubicSpline([
-              [getTime(nadir), getBrightness(0)],
+              [getTime(dawn), getBrightness(0)],
               [getTime(sunriseEnd), getBrightness(1 / 2)],
               [getTime(goldenHourEnd), getBrightness(3 / 4)],
               [getTime(solarNoon), getBrightness(1)],
@@ -319,9 +345,13 @@ const calculateBrightness: AppThunk = (dispatch, getState) => {
               [getTime(solarNoon), getBrightness(1)],
               [getTime(goldenHour), getBrightness(3 / 4)],
               [getTime(sunsetStart), getBrightness(1 / 2)],
-              [getTime(night), getBrightness(0)],
+              [getTime(dusk), getBrightness(0)],
             ]);
-      brightness = Math.round(sunSpline.interpolate(getTime(now)));
+      brightness = getValue(
+        Math.round(sunSpline.interpolate(getTime(now))),
+        minBrightness,
+        maxBrightness
+      );
     }
   }
   dispatch(setCurrentBrightness(brightness));

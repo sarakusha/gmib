@@ -1,6 +1,6 @@
 {
   "name": "gmib",
-  "version": "3.0.4",
+  "version": "3.0.5",
   "description": "Nata-Info gmib tool",
   "private": true,
   "keywords": [
@@ -63,6 +63,7 @@
     "electron-store": "^7.0.1",
     "electron-updater": "^4.2.0",
     "eslint": "^7.10.0",
+    "eslint-plugin-react": "^7.17.0",
     "highcharts": "^9.0.0",
     "highcharts-react-official": "^3.0.0",
     "hotkeys-js": "^3.7.3",
@@ -81,7 +82,8 @@
     "ts-jest": "^26.4.1",
     "typeface-roboto": "^1.1.13",
     "typescript": "^4.0.3",
-    "usb-detection": "^4.7.0"
+    "usb-detection": "^4.7.0",
+    "valid-url": "^1.0.9"
   },
   "devDependencies": {
     "@babel/core": "^7.13.1",
@@ -101,11 +103,12 @@
     "@types/react-redux": "^7.1.16",
     "@types/sanitize-html": "^1.27.1",
     "@types/suncalc": "^1.8.0",
+    "@types/valid-url": "^1.0.3",
     "babel-loader": "^8.2.2",
     "babel-plugin-macros": "^3.0.1",
     "css-loader": "^5.0.0",
     "devtron": "^1.4.0",
-    "electron": "12.0.1",
+    "electron": "12.0.2",
     "electron-builder": "^22.2.0",
     "electron-devtools-installer": "^3.1.1",
     "electron-react-devtools": "^0.5.3",
