@@ -86,7 +86,7 @@ const useStyles = makeStyles(theme => ({
 
 export type RemoteHostsDialogProps = {
   open?: boolean;
-  close?: () => void;
+  onClose?: () => void;
 };
 
 type CustomHostItem = {
@@ -104,7 +104,7 @@ const portProps = {
 
 const RemoteHostsDialog: React.FC<RemoteHostsDialogProps> = ({
   open = false,
-  close = () => {},
+  onClose = () => {},
 }) => {
   const classes = useStyles();
   const remoteHosts = useSelector(selectAllRemoteHosts);
@@ -118,9 +118,9 @@ const RemoteHostsDialog: React.FC<RemoteHostsDialogProps> = ({
       }))
       .filter(({ address, port }) => !!address && !!port);
     localConfig.set('hosts', valid);
-    close();
+    onClose();
   };
-  const cancelHandler = close;
+  const cancelHandler = onClose;
   // const dispatch = useDispatch();
   useEffect(() => {
     const updateHosts = (hosts: CustomHost[]): void => {

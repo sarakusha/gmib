@@ -44,7 +44,7 @@ import Devices from './Devices';
 import GmibTabs from './GmibTabs';
 import SearchDialog from '../dialogs/SearchDialog';
 import { useToolbar } from '../providers/ToolbarProvider';
-import TestItems from './TestItems';
+import HttpPages from './HttpPages';
 
 const drawerWidth = 240;
 // eslint-disable-next-line global-require,@typescript-eslint/no-var-requires
@@ -205,7 +205,7 @@ const App: React.FC = () => {
           <SettingsEthernetIcon className={classes.blink} fontSize="large" />
         )}
       </Backdrop>
-      <RemoteHostsDialog open={remoteDialogOpen} close={closeRemoteDialog} />
+      <RemoteHostsDialog open={remoteDialogOpen} onClose={closeRemoteDialog} />
       <div className={classes.root}>
         <AppBar
           position="absolute"
@@ -262,7 +262,7 @@ const App: React.FC = () => {
           <Divider />
           <List className={classes.drawerContent}>
             <Devices />
-            <TestItems />
+            <HttpPages />
             <ListItem
               button
               onClick={() => dispatch(setCurrentTab('autobrightness'))}

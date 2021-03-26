@@ -24,7 +24,7 @@ import fs from 'fs';
 import readline from 'readline';
 import isEqual from 'lodash/isEqual';
 import uniqBy from 'lodash/uniqBy';
-import config, { Config, Screen, Test } from '../util/config';
+import config, { Config, Screen, Page } from '../util/config';
 import { getRemoteLabel, getTitle, notEmpty, RemoteHost } from '../util/helpers';
 import { updateTray } from './tray';
 import localConfig, { CustomHost } from '../util/localConfig';
@@ -156,7 +156,7 @@ async function createWindow(
       contextIsolation: false,
       nodeIntegration: true,
       worldSafeExecuteJavaScript: true,
-      // enableRemoteModule: true,
+      enableRemoteModule: false,
     },
   });
 
@@ -251,21 +251,25 @@ function createTestWindow(): BrowserWindow {
     alwaysOnTop: true,
     skipTaskbar: true,
     hasShadow: false,
+    transparent: true,
+    // Еще не работает
+    // roundedCorners: false,
     webPreferences: {
       // nodeIntegration: true,
       contextIsolation: true,
       worldSafeExecuteJavaScript: true,
+      enableRemoteModule: false,
     },
     // webPreferences: {
     //   webSecurity: false,
     // },
   });
 
-  // if (isDevelopment) {
-  //   window.webContents.once('did-frame-finish-load', () => {
-  //     window.webContents.openDevTools();
-  //   });
-  // }
+  if (isDevelopment) {
+    window.webContents.once('did-frame-finish-load', () => {
+      window.webContents.openDevTools();
+    });
+  }
   window.on('closed', () => {
     testWindow = null;
   });
@@ -283,22 +287,22 @@ const reloadTest = (id?: string): void => {
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
     updateScreen();
   }
-  if (!test) {
+  if (!test || !test.url) {
     testWindow.hide();
     return;
   }
 
-  testWindow
-    .loadURL(
-      `${test.url}?${new URLSearchParams(
+  const url = test.permanent
+    ? `${test.url}?${new URLSearchParams(
         Object.entries(currentScreen)
           .filter(([, value]) => value !== undefined)
           .map<[string, string]>(([name, value]) => [name, value!.toString()])
       )}`
-    )
-    .catch(e => {
-      log.error('error while load test', e.message);
-    });
+    : test.url;
+
+  testWindow.loadURL(url).catch(e => {
+    log.error('error while load test', e.message);
+  });
   testWindow.show();
 };
 
@@ -556,7 +560,7 @@ const reId = /<\s*meta\s*data-id=['"](.+?)['"]>/i;
   const filenames = (await fs.promises.readdir(testDir))
     .map(filename => path.join(testDir, filename))
     .filter(filename => !fs.lstatSync(filename).isDirectory());
-  const tests = await Promise.all<Test | undefined>(
+  const tests = await Promise.all<Page | undefined>(
     filenames.map(async filename => {
       const html = await fs.promises.readFile(filename, 'utf-8');
       const titleMatches = html.match(reTitle);
@@ -569,9 +573,11 @@ const reId = /<\s*meta\s*data-id=['"](.+?)['"]>/i;
         id: idMatches[1],
         title: titleMatches[1],
         url: `file://${filename}`,
+        permanent: true,
       };
     })
   );
   const prev = config.get('tests');
-  if (!isEqual(prev, tests)) config.set('tests', tests);
+  const items = uniqBy(tests.concat(prev), 'id');
+  if (!isEqual(prev, items)) config.set('tests', items);
 })();
