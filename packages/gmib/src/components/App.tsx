@@ -7,28 +7,29 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import List from '@material-ui/core/List';
-import ListItem from '@material-ui/core/ListItem';
-import ListItemText from '@material-ui/core/ListItemText';
-import AppBar from '@material-ui/core/AppBar';
-import Divider from '@material-ui/core/Divider';
-import Drawer from '@material-ui/core/Drawer';
-import IconButton from '@material-ui/core/IconButton';
-import Toolbar from '@material-ui/core/Toolbar';
-import Tooltip from '@material-ui/core/Tooltip';
-import Typography from '@material-ui/core/Typography';
-import CssBaseline from '@material-ui/core/CssBaseline';
-import makeStyles from '@material-ui/core/styles/makeStyles';
+import { makeStyles } from '@material-ui/core/styles';
+import {
+  List,
+  ListItem,
+  ListItemText,
+  AppBar,
+  Divider,
+  Drawer,
+  IconButton,
+  Toolbar,
+  Tooltip,
+  Typography,
+  Backdrop,
+  ListItemSecondaryAction,
+  Switch,
+} from '@material-ui/core';
 import ChevronLeftIcon from '@material-ui/icons/ChevronLeft';
 import SearchIcon from '@material-ui/icons/Search';
 import MenuIcon from '@material-ui/icons/Menu';
-import Backdrop from '@material-ui/core/Backdrop';
 import classNames from 'classnames';
 import { ipcRenderer } from 'electron';
 import React, { useCallback, useEffect, useState } from 'react';
 import some from 'lodash/some';
-import ListItemSecondaryAction from '@material-ui/core/ListItemSecondaryAction';
-import Switch from '@material-ui/core/Switch';
 import SettingsEthernetIcon from '@material-ui/icons/SettingsEthernet';
 import HighlightOffIcon from '@material-ui/icons/HighlightOff';
 import RemoteHostsDialog from '../dialogs/RemoteHostsDialog';
@@ -197,7 +198,6 @@ const App: React.FC = () => {
   const closeRemoteDialog = (): void => setRemoteDialogOpen(false);
   return (
     <>
-      <CssBaseline />
       <Backdrop className={classes.backdrop} open={!online}>
         {sessionClosed ? (
           <HighlightOffIcon fontSize="large" />

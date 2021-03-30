@@ -8,14 +8,16 @@
  * the EULA file that was distributed with this source code.
  */
 
-import Paper from '@material-ui/core/Paper';
-import Backdrop from '@material-ui/core/Backdrop';
-import Button from '@material-ui/core/Button';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import LinearProgress from '@material-ui/core/LinearProgress';
-import Radio from '@material-ui/core/Radio';
-import RadioGroup from '@material-ui/core/RadioGroup';
-import makeStyles from '@material-ui/core/styles/makeStyles';
+import { makeStyles } from '@material-ui/core/styles';
+import {
+  Paper,
+  Backdrop,
+  Button,
+  FormControlLabel,
+  LinearProgress,
+  Radio,
+  RadioGroup,
+} from '@material-ui/core';
 import CloseIcon from '@material-ui/icons/Close';
 import ReplayIcon from '@material-ui/icons/Replay';
 import { Address, Flasher, FlashKinds, Kind, KindMap } from '@nibus/core';

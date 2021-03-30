@@ -7,7 +7,7 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import { SvgIconProps } from '@material-ui/core/SvgIcon';
+import type { SvgIconProps } from '@material-ui/core';
 import React from 'react';
 import HubIcon from '@material-ui/icons/DeviceHub';
 import DefaultIcon from '@material-ui/icons/Memory';

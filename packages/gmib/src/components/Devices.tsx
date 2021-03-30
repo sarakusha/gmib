@@ -8,18 +8,20 @@
  * the EULA file that was distributed with this source code.
  */
 
-import Box from '@material-ui/core/Box';
-import ListItem from '@material-ui/core/ListItem';
-import ListItemIcon from '@material-ui/core/ListItemIcon';
-import ListItemText from '@material-ui/core/ListItemText';
-import makeStyles from '@material-ui/core/styles/makeStyles';
-import Tooltip from '@material-ui/core/Tooltip';
+import { makeStyles } from '@material-ui/core/styles';
+import {
+  Box,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Tooltip,
+  Typography,
+  IconButton,
+} from '@material-ui/core';
 import LinkIcon from '@material-ui/icons/Link';
 import UsbIcon from '@material-ui/icons/Usb';
 import { DeviceId, getDefaultSession } from '@nibus/core';
 import React, { useCallback, useMemo } from 'react';
-import Typography from '@material-ui/core/Typography';
-import IconButton from '@material-ui/core/IconButton';
 import ReloadIcon from '@material-ui/icons/Refresh';
 import { useSelector, useDispatch } from '../store';
 import { selectAllDevicesWithParent } from '../store/devicesSlice';

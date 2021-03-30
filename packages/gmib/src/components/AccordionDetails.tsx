@@ -9,7 +9,7 @@
  */
 
 import { withStyles } from '@material-ui/core/styles';
-import MuiAccordionDetails from '@material-ui/core/AccordionDetails';
+import { AccordionDetails as MuiAccordionDetails } from '@material-ui/core';
 
 const AccordionDetails = withStyles({
   root: {

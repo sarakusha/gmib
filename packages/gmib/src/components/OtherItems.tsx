@@ -7,9 +7,7 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import ListItem from '@material-ui/core/ListItem';
-import ListItemIcon from '@material-ui/core/ListItemIcon';
-import ListItemText from '@material-ui/core/ListItemText';
+import { ListItem, ListItemIcon, ListItemText } from '@material-ui/core';
 import SettingsBrightnessIcon from '@material-ui/icons/SettingsBrightness';
 import React from 'react';
 import AccordionList from './AccordionList';

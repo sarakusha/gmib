@@ -9,9 +9,8 @@
  */
 import React from 'react';
 import { withStyles } from '@material-ui/core/styles';
-import MuiAccordion from '@material-ui/core/Accordion';
+import { Accordion as MuiAccordion } from '@material-ui/core';
 
-export type { AccordionProps } from '@material-ui/core/Accordion';
 const Accordion = withStyles({
   root: {
     // border: '1px solid rgba(0, 0, 0, .125)',

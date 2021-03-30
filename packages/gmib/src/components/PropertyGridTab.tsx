@@ -7,12 +7,8 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import Box from '@material-ui/core/Box';
-import Paper from '@material-ui/core/Paper';
-import makeStyles from '@material-ui/core/styles/makeStyles';
-import Table from '@material-ui/core/Table';
-import TableBody from '@material-ui/core/TableBody';
-import TableRow from '@material-ui/core/TableRow';
+import { makeStyles } from '@material-ui/core/styles';
+import { Box, Paper, Table, TableBody, TableRow } from '@material-ui/core';
 import groupBy from 'lodash/groupBy';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSelector, useDispatch, useDevice } from '../store';

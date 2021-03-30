@@ -7,9 +7,8 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import Paper from '@material-ui/core/Paper';
-import makeStyles from '@material-ui/core/styles/makeStyles';
-import Typography from '@material-ui/core/Typography';
+import { makeStyles } from '@material-ui/core/styles';
+import { Paper, Typography } from '@material-ui/core';
 import classNames from 'classnames';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useToolbar } from '../providers/ToolbarProvider';

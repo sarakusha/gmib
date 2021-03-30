@@ -8,11 +8,9 @@
  * the EULA file that was distributed with this source code.
  */
 
-import InputAdornment from '@material-ui/core/InputAdornment';
-import { InputBaseProps } from '@material-ui/core/InputBase';
+import { makeStyles } from '@material-ui/core/styles';
+import { InputAdornment, InputBaseProps, Input } from '@material-ui/core';
 import React, { ChangeEvent, useCallback, useMemo, useState } from 'react';
-import Input from '@material-ui/core/Input';
-import makeStyles from '@material-ui/core/styles/makeStyles';
 import classNames from 'classnames';
 import TableCell, { TableCellProps } from './TableCell';
 

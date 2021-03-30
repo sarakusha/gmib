@@ -8,10 +8,8 @@
  * the EULA file that was distributed with this source code.
  */
 import React from 'react';
-import Dialog from '@material-ui/core/Dialog';
-import DialogContent from '@material-ui/core/DialogContent';
-import makeStyles from '@material-ui/core/styles/makeStyles';
-import TextField from '@material-ui/core/TextField';
+// import { makeStyles } from '@material-ui/core/styles';
+import { Dialog, DialogContent, TextField } from '@material-ui/core';
 import DialogTitle from '../components/DialogTitle';
 import { useSelector } from '../store';
 import { selectTestById } from '../store/currentSlice';
@@ -24,9 +22,9 @@ type Props = {
   onChange?: (name: keyof Page, value: string) => void;
 };
 
-const useStyles = makeStyles(theme => ({
-  root: {},
-}));
+// const useStyles = makeStyles(theme => ({
+//   root: {},
+// }));
 
 const noop = (): void => {};
 
@@ -36,7 +34,7 @@ const HttpPageDialog: React.FC<Props> = ({
   onClose = noop,
   onChange = noop,
 }) => {
-  const classes = useStyles();
+  // const classes = useStyles();
   const changeHandler: React.ChangeEventHandler<HTMLInputElement> = event => {
     const { name, value } = event.target;
     onChange(name as keyof Page, value);

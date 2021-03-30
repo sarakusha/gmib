@@ -7,14 +7,16 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import Radio from '@material-ui/core/Radio';
-import RadioGroup from '@material-ui/core/RadioGroup';
-import makeStyles from '@material-ui/core/styles/makeStyles';
-import Tooltip from '@material-ui/core/Tooltip';
-import IconButton from '@material-ui/core/IconButton';
+import { makeStyles } from '@material-ui/core/styles';
+import {
+  FormControlLabel,
+  Radio,
+  RadioGroup,
+  Tooltip,
+  IconButton,
+  Popover,
+} from '@material-ui/core';
 import TuneIcon from '@material-ui/icons/Tune';
-import Popover from '@material-ui/core/Popover';
 import { LogLevel, LogLevelV } from '@nibus/core';
 import React, { useState } from 'react';
 import FormFieldSet from './FormFieldSet';

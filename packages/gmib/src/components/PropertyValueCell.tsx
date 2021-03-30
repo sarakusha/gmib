@@ -9,10 +9,9 @@
  */
 
 /* eslint-disable indent,@typescript-eslint/no-explicit-any */
-import Select from '@material-ui/core/Select';
-import makeStyles from '@material-ui/core/styles/makeStyles';
+import { makeStyles } from '@material-ui/core/styles';
+import { Select, MenuItem } from '@material-ui/core';
 import React, { memo, useCallback, useMemo } from 'react';
-import MenuItem from '@material-ui/core/MenuItem';
 import classNames from 'classnames';
 import { ValueState, ValueType } from '../store/devicesSlice';
 import { PropMetaInfo } from '../store/mibsSlice';

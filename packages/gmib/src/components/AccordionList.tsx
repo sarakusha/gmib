@@ -7,15 +7,17 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import { AccordionDetailsProps } from '@material-ui/core/AccordionDetails';
-import { AccordionSummaryProps } from '@material-ui/core/AccordionSummary';
-import Box from '@material-ui/core/Box';
-import makeStyles from '@material-ui/core/styles/makeStyles';
+import { makeStyles } from '@material-ui/core/styles';
+import {
+  Box,
+  List,
+  Typography,
+  AccordionDetailsProps,
+  AccordionSummaryProps,
+} from '@material-ui/core';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import classNames from 'classnames';
 import React from 'react';
-import List from '@material-ui/core/List';
-import Typography from '@material-ui/core/Typography';
 
 import Accordion from './Accordion';
 import AccordionDetails from './AccordionDetails';

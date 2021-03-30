@@ -7,14 +7,10 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import Badge from '@material-ui/core/Badge';
-import makeStyles from '@material-ui/core/styles/makeStyles';
+import { makeStyles } from '@material-ui/core/styles';
+import { Badge, Tooltip, Popover, IconButton, TextField } from '@material-ui/core';
 import React, { useEffect, useReducer } from 'react';
-import Tooltip from '@material-ui/core/Tooltip';
-import Popover from '@material-ui/core/Popover';
-import IconButton from '@material-ui/core/IconButton';
 import LocationOnIcon from '@material-ui/icons/LocationOn';
-import TextField from '@material-ui/core/TextField';
 import HelpIcon from '@material-ui/icons/Help';
 
 import { selectCurrentLocation, setLocationProp } from '../store/currentSlice';

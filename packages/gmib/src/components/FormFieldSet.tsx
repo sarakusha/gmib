@@ -8,10 +8,14 @@
  * the EULA file that was distributed with this source code.
  */
 
-import FormHelperText from '@material-ui/core/FormHelperText';
+import {
+  FormHelperText,
+  FormControl,
+  FormLabel,
+  FormControlProps,
+  FormLabelProps,
+} from '@material-ui/core';
 import React from 'react';
-import FormControl, { FormControlProps } from '@material-ui/core/FormControl';
-import FormLabel, { FormLabelProps } from '@material-ui/core/FormLabel';
 
 export interface FormFieldSetProps extends FormControlProps {
   legend?: string;

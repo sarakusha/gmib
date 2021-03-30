@@ -81,6 +81,12 @@ module.exports = {
     '@typescript-eslint/no-use-before-define': 'error',
     'react/require-default-props': 'off',
     'react/jsx-wrap-multilines': ['error', { declaration: false, assignment: false }],
+    'no-restricted-imports': [
+      'error',
+      {
+        patterns: ['@material-ui/core/*', '!@material-ui/core/styles'],
+      },
+    ],
   },
   overrides: [
     {

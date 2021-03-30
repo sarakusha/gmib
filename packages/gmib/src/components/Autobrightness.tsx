@@ -8,19 +8,15 @@
  * the EULA file that was distributed with this source code.
  */
 // import FormHelperText from '@material-ui/core/FormHelperText';
-import Paper from '@material-ui/core/Paper';
-import makeStyles from '@material-ui/core/styles/makeStyles';
+import { Paper, TextField, IconButton, InputAdornment, Button } from '@material-ui/core';
+import { makeStyles } from '@material-ui/core/styles';
 import classNames from 'classnames';
 import React, { useCallback, useEffect, useState } from 'react';
 import Highcharts, { SeriesSolidgaugeOptions } from 'highcharts';
 import highchartsMore from 'highcharts/highcharts-more';
 import highchartsSolidGauge from 'highcharts/modules/solid-gauge';
 import HighchartsReact from 'highcharts-react-official';
-import TextField from '@material-ui/core/TextField';
-import IconButton from '@material-ui/core/IconButton';
 import CloseIcon from '@material-ui/icons/Close';
-import InputAdornment from '@material-ui/core/InputAdornment';
-import Button from '@material-ui/core/Button';
 import CheckIcon from '@material-ui/icons/Check';
 import sortBy from 'lodash/sortBy';
 
@@ -126,7 +122,10 @@ const highChartsOptions = (classes: ReturnType<typeof useStyles>): Highcharts.Op
     enabled: false,
   },
   exporting: { enabled: false },
-  title: { text: `<div class="${classes.unit}">Освещенность</div>`, useHTML: true },
+  title: {
+    text: `<div class="${classes.unit}">Освещенность</div>`,
+    useHTML: true,
+  },
 
   pane: {
     center: ['50%', '95%'],
@@ -316,7 +315,10 @@ const Autobrightness: React.FC = () => {
                     type="number"
                     InputProps={{
                       startAdornment: <InputAdornment position="start">lux</InputAdornment>,
-                      inputProps: { min: 0, max: 65535 },
+                      inputProps: {
+                        min: 0,
+                        max: 65535,
+                      },
                     }}
                     onChange={handleChange}
                     // margin="dense"
@@ -329,7 +331,10 @@ const Autobrightness: React.FC = () => {
                     type="number"
                     InputProps={{
                       startAdornment: <InputAdornment position="start">%</InputAdornment>,
-                      inputProps: { min: 0, max: 100 },
+                      inputProps: {
+                        min: 0,
+                        max: 100,
+                      },
                     }}
                     onChange={handleChange}
                     // margin="dense"

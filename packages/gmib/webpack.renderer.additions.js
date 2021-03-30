@@ -116,7 +116,7 @@ module.exports = config => {
     use: ['babel-loader', '@mdx-js/loader'],
   });
   // !!! Помогает избежать дублирования react electron-ом и webpack-ом
-  config.externals = [...config.externals, 'react', 'react-dom'];
+  config.externals = [...config.externals, 'react', 'react-dom', '@material-ui/core'];
   // config.resolve.alias.debug = path.join(require.resolve('debug'), 'src', 'node');
   // if (ANALYZE) {
   //   config.plugins.push(

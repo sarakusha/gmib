@@ -7,9 +7,9 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import Paper from '@material-ui/core/Paper';
-import makeStyles from '@material-ui/core/styles/makeStyles';
 import React, { useEffect, useRef, useState } from 'react';
+import { Paper } from '@material-ui/core';
+import { makeStyles } from '@material-ui/core/styles';
 import { parse } from 'ansicolor';
 import sanitizeHtml from 'sanitize-html';
 import { getSession } from '../util/helpers';

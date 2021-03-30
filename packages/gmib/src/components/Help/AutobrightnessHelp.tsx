@@ -8,9 +8,9 @@
  * the EULA file that was distributed with this source code.
  */
 import React, { useRef } from 'react';
-import Container from '@material-ui/core/Container';
+import { Container } from '@material-ui/core';
 import { MDXProvider } from '@mdx-js/react';
-import makeStyles from '@material-ui/core/styles/makeStyles';
+import { makeStyles } from '@material-ui/core/styles';
 
 import mdx from './mdx';
 

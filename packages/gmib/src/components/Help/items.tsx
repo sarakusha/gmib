@@ -7,9 +7,8 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import Button from '@material-ui/core/Button';
-import { withStyles } from '@material-ui/core/styles';
-import { fade } from '@material-ui/core/styles/colorManipulator';
+import { Button } from '@material-ui/core';
+import { withStyles, fade } from '@material-ui/core/styles';
 import CheckIcon from '@material-ui/icons/Check';
 import LocationOnIconMui from '@material-ui/icons/LocationOn';
 import React from 'react';

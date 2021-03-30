@@ -8,14 +8,16 @@
  * the EULA file that was distributed with this source code.
  */
 
-import ListItemIcon from '@material-ui/core/ListItemIcon';
-import ListItemSecondaryAction from '@material-ui/core/ListItemSecondaryAction';
-import MuiListItem from '@material-ui/core/ListItem';
-import ListItemText from '@material-ui/core/ListItemText';
 import { withStyles } from '@material-ui/core/styles';
-import Switch from '@material-ui/core/Switch';
+import {
+  ListItemIcon,
+  ListItemSecondaryAction,
+  ListItem as MuiListItem,
+  ListItemText,
+  Switch,
+  IconButton,
+} from '@material-ui/core';
 import React, { useCallback, useState } from 'react';
-import IconButton from '@material-ui/core/IconButton';
 import CloseIcon from '@material-ui/icons/Close';
 import EditIcon from '@material-ui/icons/Edit';
 import AddCircleOutlineIcon from '@material-ui/icons/AddCircleOutline';

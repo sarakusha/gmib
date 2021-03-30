@@ -15,6 +15,7 @@ process.env.NIBUS_LOG = 'nibus-all.log';
 window.localStorage.debug = process.env.DEBUG;
 
 import { createMuiTheme, MuiThemeProvider } from '@material-ui/core/styles';
+import { CssBaseline } from '@material-ui/core';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import 'typeface-roboto/index.css';
@@ -32,23 +33,26 @@ const theme = createMuiTheme({});
 
 const render = (): void => {
   ReactDOM.render(
-    <Provider store={store}>
-      <MuiThemeProvider theme={theme}>
-        <ToolbarProvider>
-          <SnackbarProvider
-            anchorOrigin={{
-              vertical: 'top',
-              horizontal: 'right',
-            }}
-            maxSnack={10}
-            dense
-            preventDuplicate
-          >
-            <App />
-          </SnackbarProvider>
-        </ToolbarProvider>
-      </MuiThemeProvider>
-    </Provider>,
+    <>
+      <CssBaseline />
+      <Provider store={store}>
+        <MuiThemeProvider theme={theme}>
+          <ToolbarProvider>
+            <SnackbarProvider
+              anchorOrigin={{
+                vertical: 'top',
+                horizontal: 'right',
+              }}
+              maxSnack={10}
+              dense
+              preventDuplicate
+            >
+              <App />
+            </SnackbarProvider>
+          </ToolbarProvider>
+        </MuiThemeProvider>
+      </Provider>
+    </>,
     document.getElementById('app')
   );
 };

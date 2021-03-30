@@ -9,14 +9,12 @@
  */
 
 import React, { useCallback, useMemo, useState } from 'react';
-import makeStyles from '@material-ui/core/styles/makeStyles';
-// import MaskedInput from 'react-input-mask';
+import { makeStyles } from '@material-ui/core/styles';
 import classNames from 'classnames';
-import Input from '@material-ui/core/Input';
+import { Input } from '@material-ui/core';
 import { IMaskMixin } from 'react-imask/dist/react-imask';
 import debounce from 'lodash/debounce';
 import TableCell, { TableCellProps } from './TableCell';
-// import ErrorBoundary from './ErrorBoundary';
 
 const useStyles = makeStyles(_theme => ({
   inputDirty: {

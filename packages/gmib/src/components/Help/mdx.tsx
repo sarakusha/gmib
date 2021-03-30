@@ -9,17 +9,19 @@
  */
 
 import React from 'react';
-import Checkbox from '@material-ui/core/Checkbox';
-import Divider from '@material-ui/core/Divider';
-import Paper from '@material-ui/core/Paper';
-import MuiTable from '@material-ui/core/Table';
-import TableBody from '@material-ui/core/TableBody';
-import TableCell from '@material-ui/core/TableCell';
-import TableHead from '@material-ui/core/TableHead';
-import TableRow from '@material-ui/core/TableRow';
-import Typography from '@material-ui/core/Typography';
-import Box from '@material-ui/core/Box';
 import { withStyles } from '@material-ui/core/styles';
+import {
+  Checkbox,
+  Divider,
+  Paper,
+  Table as MuiTable,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  Typography,
+  Box,
+} from '@material-ui/core';
 
 const Blockquote = withStyles(theme => ({
   root: {

@@ -8,9 +8,8 @@
  * the EULA file that was distributed with this source code.
  */
 
-import Box from '@material-ui/core/Box';
+import { Box, Slider, SliderProps } from '@material-ui/core';
 import React from 'react';
-import Slider, { SliderProps } from '@material-ui/core/Slider';
 import BrightnessHighIcon from '@material-ui/icons/BrightnessHigh';
 import Brightness4Icon from '@material-ui/icons/Brightness4';
 import CircularProgressWithLabel from './CircularProgressWithLabel';

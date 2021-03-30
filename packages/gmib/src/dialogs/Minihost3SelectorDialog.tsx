@@ -7,15 +7,17 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import Button from '@material-ui/core/Button';
-import Checkbox from '@material-ui/core/Checkbox';
-import Dialog from '@material-ui/core/Dialog';
-import DialogActions from '@material-ui/core/DialogActions';
-import DialogContent from '@material-ui/core/DialogContent';
-import DialogTitle from '@material-ui/core/DialogTitle';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import FormGroup from '@material-ui/core/FormGroup';
-import makeStyles from '@material-ui/core/styles/makeStyles';
+import { makeStyles } from '@material-ui/core/styles';
+import {
+  Button,
+  Checkbox,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  FormControlLabel,
+  FormGroup,
+} from '@material-ui/core';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import FormFieldSet from '../components/FormFieldSet';
 import { initialSelectors, Minihost3Selector } from '../util/Minihost3Loader';

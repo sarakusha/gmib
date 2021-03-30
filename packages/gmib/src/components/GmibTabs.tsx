@@ -7,8 +7,8 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import makeStyles from '@material-ui/core/styles/makeStyles';
 import React, { useEffect, useState } from 'react';
+import { makeStyles } from '@material-ui/core/styles';
 import { selectDeviceIds } from '../store/devicesSlice';
 import { useSelector } from '../store';
 import { selectCurrentDeviceId, selectCurrentTab } from '../store/currentSlice';

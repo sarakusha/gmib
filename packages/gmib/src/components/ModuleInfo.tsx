@@ -8,11 +8,9 @@
  * the EULA file that was distributed with this source code.
  */
 
-import Paper from '@material-ui/core/Paper';
-import Tooltip from '@material-ui/core/Tooltip';
-import Typography from '@material-ui/core/Typography';
+import { makeStyles } from '@material-ui/core/styles';
+import { Paper, Tooltip, Typography } from '@material-ui/core';
 import React from 'react';
-import makeStyles from '@material-ui/core/styles/makeStyles';
 import ErrorIcon from '@material-ui/icons/Clear';
 import { VertexType } from '../util/Minihost3Loader';
 

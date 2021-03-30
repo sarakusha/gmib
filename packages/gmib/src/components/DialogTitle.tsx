@@ -9,12 +9,13 @@
  */
 import React, { PropsWithChildren } from 'react';
 import { createStyles, Theme, withStyles, WithStyles } from '@material-ui/core/styles';
-import MuiDialogTitle, {
+import {
+  DialogTitle as MuiDialogTitle,
+  IconButton,
+  Typography,
   DialogTitleProps as MuiDialogTitleProps,
-} from '@material-ui/core/DialogTitle';
-import IconButton from '@material-ui/core/IconButton';
+} from '@material-ui/core';
 import CloseIcon from '@material-ui/icons/Close';
-import Typography from '@material-ui/core/Typography';
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 const styles = (theme: Theme) =>

@@ -8,11 +8,8 @@
  * the EULA file that was distributed with this source code.
  */
 
-import Paper from '@material-ui/core/Paper';
-import Container from '@material-ui/core/Container';
-import makeStyles from '@material-ui/core/styles/makeStyles';
-import Tab from '@material-ui/core/Tab';
-import Tabs from '@material-ui/core/Tabs';
+import { makeStyles } from '@material-ui/core/styles';
+import { Paper, Container, Tab, Tabs } from '@material-ui/core';
 import { DeviceId } from '@nibus/core';
 import React, { useState } from 'react';
 import { useSelector } from '../store';

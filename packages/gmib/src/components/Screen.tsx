@@ -7,15 +7,17 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import Container from '@material-ui/core/Container';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import MenuItem from '@material-ui/core/MenuItem';
-import Checkbox from '@material-ui/core/Checkbox';
-import Paper from '@material-ui/core/Paper';
-import Select from '@material-ui/core/Select';
-import makeStyles from '@material-ui/core/styles/makeStyles';
-import TextField from '@material-ui/core/TextField';
-import Typography from '@material-ui/core/Typography';
+import { makeStyles } from '@material-ui/core/styles';
+import {
+  Container,
+  FormControlLabel,
+  MenuItem,
+  Checkbox,
+  Paper,
+  Select,
+  TextField,
+  Typography,
+} from '@material-ui/core';
 import ChipInput from 'material-ui-chip-input';
 import React, { useCallback, useEffect, useMemo, useReducer } from 'react';
 import { useDispatch, useSelector } from '../store';

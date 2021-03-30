@@ -8,9 +8,9 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import Button from '@material-ui/core/Button';
-import IconButton from '@material-ui/core/IconButton';
-import makeStyles from '@material-ui/core/styles/makeStyles';
+
+import { makeStyles } from '@material-ui/core/styles';
+import { Button, IconButton } from '@material-ui/core';
 import FolderIcon from '@material-ui/icons/FolderOpen';
 import SaveAltIcon from '@material-ui/icons/SaveAlt';
 import { Kind, KindMap } from '@nibus/core';

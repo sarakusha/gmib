@@ -8,7 +8,7 @@
  * the EULA file that was distributed with this source code.
  */
 
-import MuiAccordionSummary from '@material-ui/core/AccordionSummary';
+import { AccordionSummary as MuiAccordionSummary } from '@material-ui/core';
 import { withStyles } from '@material-ui/core/styles';
 
 const AccordionSummary = withStyles(theme => ({

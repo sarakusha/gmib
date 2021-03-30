@@ -8,10 +8,8 @@
  * the EULA file that was distributed with this source code.
  */
 
-import CircularProgress from '@material-ui/core/CircularProgress';
-import IconButton from '@material-ui/core/IconButton';
-import makeStyles from '@material-ui/core/styles/makeStyles';
-import Tooltip from '@material-ui/core/Tooltip';
+import { makeStyles } from '@material-ui/core/styles';
+import { CircularProgress, IconButton, Tooltip } from '@material-ui/core';
 import CancelIcon from '@material-ui/icons/Cancel';
 import Filter1 from '@material-ui/icons/Filter1';
 import Filter2 from '@material-ui/icons/Filter2';
