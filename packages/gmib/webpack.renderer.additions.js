@@ -79,6 +79,7 @@ module.exports = config => {
     ]
 */
   // Не работает. Хрень какая-то
+  /*
   babelOptions.plugins.push(
     [
       require.resolve('import-plugin-babel'),
@@ -100,13 +101,16 @@ module.exports = config => {
       'icons',
     ]
   );
+*/
   // Нужно для iconv-lite
+  /*
   config.module.rules.push({
     test: /node_modules[/\\](iconv-lite)[/\\].+/,
     resolve: {
       aliasFields: ['main'],
     },
   });
+*/
   config.module.rules.push({
     test: /\.mdx?$/,
     use: ['babel-loader', '@mdx-js/loader'],

@@ -8,9 +8,7 @@
  * the EULA file that was distributed with this source code.
  */
 import Container from '@material-ui/core/Container';
-import FormControl from '@material-ui/core/FormControl';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
-import InputLabel from '@material-ui/core/InputLabel';
 import MenuItem from '@material-ui/core/MenuItem';
 import Checkbox from '@material-ui/core/Checkbox';
 import Paper from '@material-ui/core/Paper';
@@ -18,12 +16,12 @@ import Select from '@material-ui/core/Select';
 import makeStyles from '@material-ui/core/styles/makeStyles';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
-import { Address, AddressType } from '@nibus/core';
-import React, { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
+import ChipInput from 'material-ui-chip-input';
+import React, { useCallback, useEffect, useMemo, useReducer } from 'react';
 import { useDispatch, useSelector } from '../store';
-import { selectCurrentTab, selectScreen, setScreenProp } from '../store/currentSlice';
+import { addAddress, removeAddress, selectScreen, setScreenProp } from '../store/currentSlice';
 import { selectDisplays } from '../store/sessionsSlice';
-import { Screen } from '../util/config';
+import { reAddress, Screen } from '../util/config';
 import { createPropsReducer, FilterNames, toNumber } from '../util/helpers';
 import FormFieldSet from './FormFieldSet';
 
@@ -42,6 +40,7 @@ const useStyles = makeStyles(theme => ({
     display: 'flex',
     flexWrap: 'wrap',
     gap: theme.spacing(1),
+    // justifyContent: 'center',
   },
   fieldset: {
     padding: theme.spacing(1),
@@ -114,12 +113,11 @@ const screenReducer = createPropsReducer<Record<NumberProps, string>>();
 
 const inputSize = { min: 8, step: 4 };
 
-const TestParams: React.FC = () => {
+const Screen: React.FC = () => {
   const classes = useStyles();
   const dispatch = useDispatch();
   const current = useSelector(selectScreen);
   const displays = useSelector(selectDisplays);
-  const isActive = useSelector(selectCurrentTab) === 'tests';
   const [screen, setScreen] = useReducer(screenReducer, {
     width: '',
     height: '',
@@ -127,8 +125,11 @@ const TestParams: React.FC = () => {
     moduleVres: '',
     x: '',
     y: '',
+    borderTop: '',
+    borderBottom: '',
+    borderLeft: '',
+    borderRight: '',
   });
-  const [invalidAddress, setInvalidAddress] = useState<string>();
   useEffect(() => {
     Object.entries(current).forEach(([name, value]) =>
       setScreen([name as NumberProps, value?.toString() ?? ''])
@@ -145,7 +146,7 @@ const TestParams: React.FC = () => {
     },
     [dispatch]
   );
-  const [displayChanged, changeHandler, validateAddress, resetError] = useMemo(
+  const [displayChanged, changeHandler, onBeforeAddAddress] = useMemo(
     () => [
       (event: React.ChangeEvent<{ value: string }>): void => {
         dispatch(setScreenProp(['display', toDisplay(event.target.value)]));
@@ -154,24 +155,15 @@ const TestParams: React.FC = () => {
         const { value, id, type, checked } = event.target;
         dispatch(setScreenProp([id as keyof Screen, type === 'checkbox' ? checked : value]));
       },
-      (event: { target: { value: string | undefined } }): void => {
-        try {
-          const address = new Address(event.target.value);
-          setInvalidAddress(address.type === AddressType.group ? 'Неверный адрес' : undefined);
-          // console.log({ address: address.toString() });
-        } catch {
-          setInvalidAddress('Неверный адрес');
-        }
-      },
-      () => setInvalidAddress(undefined),
+      (value: string): boolean => reAddress.test(value),
     ],
     [dispatch]
   );
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => validateAddress({ target: { value: current.address } }), [
-    isActive,
-    validateAddress,
-  ]);
+  // // eslint-disable-next-line react-hooks/exhaustive-deps
+  // useEffect(() => validateAddress({ target: { value: current.address } }), [
+  //   isActive,
+  //   validateAddress,
+  // ]);
   return (
     <Container maxWidth="md" className={classes.root}>
       <Paper className={classes.content}>
@@ -228,6 +220,46 @@ const TestParams: React.FC = () => {
               className={classes.item}
             />
           </FormFieldSet>
+          <FormFieldSet legend="Рамка X" className={classes.fieldset}>
+            <TextField
+              id="borderLeft"
+              label="Слева"
+              value={screen.borderLeft}
+              onChange={changeNumberHandler}
+              type="number"
+              inputProps={inputSize}
+              className={classes.item}
+            />
+            <TextField
+              id="borderRight"
+              label="Справа"
+              value={screen.borderRight}
+              onChange={changeNumberHandler}
+              type="number"
+              inputProps={inputSize}
+              className={classes.item}
+            />
+          </FormFieldSet>
+          <FormFieldSet legend="Рамка Y" className={classes.fieldset}>
+            <TextField
+              id="borderTop"
+              label="Сверху"
+              value={screen.borderTop}
+              onChange={changeNumberHandler}
+              type="number"
+              inputProps={inputSize}
+              className={classes.item}
+            />
+            <TextField
+              id="borderBottom"
+              label="Снизу"
+              value={screen.borderBottom}
+              onChange={changeNumberHandler}
+              type="number"
+              inputProps={inputSize}
+              className={classes.item}
+            />
+          </FormFieldSet>
           <FormFieldSet legend="Отступ" className={classes.fieldset}>
             <TextField
               id="x"
@@ -246,45 +278,43 @@ const TestParams: React.FC = () => {
               className={classes.item}
             />
           </FormFieldSet>
+          <FormFieldSet legend="Дисплей" className={classes.fieldset}>
+            <Select
+              labelId="display-label"
+              value={(current.display ?? true).toString()}
+              onChange={displayChanged}
+              fullWidth
+            >
+              <MenuItem value="true">Основной</MenuItem>
+              <MenuItem value="false">Второстепенный</MenuItem>
+              {displays.map(({ id, bounds, primary, internal }) => (
+                <MenuItem value={id.toString()} key={id}>
+                  <Typography variant="subtitle1" noWrap>
+                    id:{id}&nbsp;
+                  </Typography>
+                  <Typography variant="subtitle2" noWrap>
+                    {bounds.width}x{bounds.height} {primary ? ' основной' : ''}
+                    {internal ? ' встроенный' : ''}
+                  </Typography>
+                </MenuItem>
+              ))}
+              {typeof current.display === 'string' &&
+                displays.findIndex(({ id }) => id.toString() === current.display) === -1 && (
+                  <MenuItem value={current.display}>{current.display} (отключен)</MenuItem>
+                )}
+            </Select>
+          </FormFieldSet>
         </div>
-        <FormControl className={classes.formControl}>
-          <InputLabel id="display-label">Дисплей</InputLabel>
-          <Select
-            labelId="display-label"
-            value={(current.display ?? true).toString()}
-            onChange={displayChanged}
-          >
-            <MenuItem value="true">Основной</MenuItem>
-            <MenuItem value="false">Второстепенный</MenuItem>
-            {displays.map(({ id, bounds, primary, internal }) => (
-              <MenuItem value={id.toString()} key={id}>
-                <Typography variant="subtitle1">id:{id}&nbsp;</Typography>
-                <Typography variant="subtitle2">
-                  {bounds.width}x{bounds.height} {primary ? ' основной' : ''}
-                  {internal ? ' встроенный' : ''}
-                </Typography>
-              </MenuItem>
-            ))}
-            {typeof current.display === 'string' &&
-              displays.findIndex(({ id }) => id.toString() === current.display) === -1 && (
-                <MenuItem value={current.display}>{current.display} (отключен)</MenuItem>
-              )}
-          </Select>
-        </FormControl>
-        <TextField
-          id="address"
-          className={classes.formControl}
-          label="Адрес устройства"
-          value={current.address ?? ''}
-          onChange={changeHandler}
-          onBlur={validateAddress}
-          onFocus={resetError}
-          error={!!invalidAddress}
-          helperText={invalidAddress}
+
+        <ChipInput
+          value={current.addresses}
+          onBeforeAdd={onBeforeAddAddress}
+          onAdd={chip => dispatch(addAddress(chip))}
+          onDelete={(chip, index) => dispatch(removeAddress([chip, index]))}
         />
       </Paper>
     </Container>
   );
 };
 
-export default React.memo(TestParams);
+export default React.memo(Screen);

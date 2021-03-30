@@ -34,9 +34,13 @@ export type Screen = {
   x?: number;
   y?: number;
   display?: boolean | string;
-  address?: string;
+  addresses?: string[];
   dirh?: boolean;
   dirv?: boolean;
+  borderTop?: number;
+  borderBottom?: number;
+  borderLeft?: number;
+  borderRight?: number;
 };
 
 export type Config = {
@@ -51,6 +55,13 @@ export type Config = {
   logLevel: LogLevel;
   tests: Page[];
 };
+
+/**
+ * domain.sub.device+X,Y:WxH
+ */
+const addressPattern =
+  '^(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})(?:([+-]+\\d+)(?:,([+-]?\\d+)(?::(\\d+)(?:x(\\d+))?)?)?)?$';
+export const reAddress = new RegExp(addressPattern);
 
 export const configSchema: Schema<Config> = {
   // aliases: {
@@ -145,9 +156,14 @@ export const configSchema: Schema<Config> = {
         anyOf: [{ type: 'string' }, { type: 'boolean' }],
         default: true,
       },
-      address: {
-        type: 'string',
-        default: '',
+      addresses: {
+        type: 'array',
+        uniqueItems: true,
+        items: {
+          type: 'string',
+          pattern: addressPattern,
+        },
+        default: [],
       },
       dirh: {
         type: 'boolean',
@@ -156,6 +172,22 @@ export const configSchema: Schema<Config> = {
       dirv: {
         type: 'boolean',
         default: false,
+      },
+      borderTop: {
+        type: 'integer',
+        default: 0,
+      },
+      borderBottom: {
+        type: 'integer',
+        default: 0,
+      },
+      borderLeft: {
+        type: 'integer',
+        default: 0,
+      },
+      borderRight: {
+        type: 'integer',
+        default: 0,
       },
     },
   },
@@ -182,6 +214,17 @@ const config = new Store<Config>({
   name: 'gmib',
   schema: configSchema,
   watch: true,
+  migrations: {
+    '>3.0.6': store => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const screen: any = store.get('screen');
+      if (screen.address) {
+        screen.addresses = [screen.address];
+        delete screen.address;
+        store.set('screen', screen);
+      }
+    },
+  },
 });
 
 log.log(`Config: ${config.path}`);

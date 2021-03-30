@@ -3,9 +3,11 @@ mibCategories:
     mib: siolynx
     link: true
     find: version
+    type: 7
   minihost:
     type: 0xabc6
     find: sarp
+    link: true
   fancontrol:
     mib: fan_control
     find: version
@@ -24,8 +26,8 @@ mibCategories:
     disableBatchReading: true
   ftdi:
     select:
-      - siolynx
       - minihost
+      - siolynx
 knownDevices:
   - vid: '2047'
     pid: '0a3d'
@@ -83,7 +85,7 @@ knownDevices:
     vid: '0403'
     pid: '6015'
     manufacturer: FTDI
-    category: minihost
+    category: ftdi
   - device: 'Ke-USB24R'
     vid: 1240
     pid: 10

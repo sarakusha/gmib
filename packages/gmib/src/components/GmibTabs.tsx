@@ -17,7 +17,7 @@ import DeviceTabs from './DeviceTabs';
 import Log from './Log';
 
 import TabContainer, { Props as ChildProps } from './TabContainer';
-import TestParams from './TestParams';
+import Screen from './Screen';
 
 const useStyles = makeStyles({
   root: {
@@ -69,7 +69,7 @@ const Tabs: React.FC = () => {
         })
       )}
       <TabContainer id="test" selected={tab === 'tests'}>
-        <TestParams />
+        <Screen />
       </TabContainer>
       <TabContainer id="autobrightness" selected={tab === 'autobrightness'}>
         <Autobrightness />

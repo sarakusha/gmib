@@ -1,6 +1,6 @@
 {
   "name": "gmib",
-  "version": "3.0.5",
+  "version": "3.0.7",
   "description": "Nata-Info gmib tool",
   "private": true,
   "keywords": [
@@ -27,19 +27,20 @@
     "dist:mac": "yarn dist -c.mac.identity=null",
     "dist:dir": "yarn dist --dir -c.compression=store -c.mac.identity=null",
     "dist:linux": "yarn dist -l",
-    "dist:win": "yarn dist -w --x64",
+    "dist:win": "yarn dist -w --x64 --ia32",
     "dist:win:dir": "yarn dist -w --x64 --dir",
     "_publish": "yarn compile && yarn release",
     "release:mac": "electron-builder -p always -m --x64 -c.mac.identity=null",
     "release:linux": "electron-builder -p always -l --x64 -c.mac.identity=null",
-    "release:win": "electron-builder -p always -w --x64 -c.mac.identity=null",
+    "release:win": "electron-builder -p always -w --x64 --ia32 -c.mac.identity=null",
     "type-check": "tsc --project tsconfig.json --noEmit",
     "showMainConfig": "node show-config.js main > maincfg",
     "showRendererConfig": "node show-config.js renderer > ./rendercfg",
     "analyze": "cross-env ANALYZE=1 electron-webpack dev",
     "lint:dev": "eslint --ext .js,.ts,.tsx src/",
     "lint": "eslint -c ../../.eslintrc-prod.js --ext .js,.ts,.tsx src/",
-    "lint:fix": "eslint -c ../../.eslintrc-prod.js --ext .js,.ts,.tsx --fix src/"
+    "lint:fix": "eslint -c ../../.eslintrc-prod.js --ext .js,.ts,.tsx --fix src/",
+    "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
     "@material-ui/core": "^4.8.3",
@@ -69,6 +70,7 @@
     "hotkeys-js": "^3.7.3",
     "iput": "^1.1.2",
     "lodash": "^4.17.15",
+    "material-ui-chip-input": "^2.0.0-beta.2",
     "notistack": "^1.0.1",
     "rc-slider": "^9.1.0",
     "react": "^17.0.0",
@@ -128,7 +130,7 @@
     ]
   },
   "build": {
-    "npmRebuild": false,
+    "npmRebuild": true,
     "appId": "ru.nata-info.gmib",
     "copyright": "Copyright © Nata-Info, 2021",
     "productName": "gmib",
@@ -151,7 +153,7 @@
       "artifactName": "${productName}-setup-${version}.${ext}"
     },
     "appImage": {
-      "artifactName": "${productName}-${version}.${ext}"
+      "artifactName": "${productName}.${ext}"
     },
     "directories": {
       "buildResources": "resources"

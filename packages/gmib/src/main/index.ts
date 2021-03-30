@@ -83,9 +83,13 @@ const defaultScreen: Required<Screen> = {
   x: 0,
   y: 0,
   display: true,
-  address: '',
+  addresses: [],
   dirh: false,
   dirv: false,
+  borderTop: 0,
+  borderBottom: 0,
+  borderLeft: 0,
+  borderRight: 0,
 };
 
 let currentScreen = defaultScreen;
@@ -148,6 +152,7 @@ async function createWindow(
   const window = new BrowserWindow({
     ...size,
     ...pos,
+    backgroundColor: '#fff', // Лучше сглаживание не некоторых экранах
     title: getTitle(port, host),
     skipTaskbar: true,
     show: false,
@@ -487,30 +492,30 @@ autoUpdater.on('update-downloaded', () => {
 });
 
 ipcMain.on('startLocalNibus', async () => {
-  const { default: svc, detectionPath } = await import('@nibus/cli/lib/service');
-  service = svc;
-  service.server.on('connection', socket => {
-    const file = log.transports.file.getFile().path;
-    if (fs.existsSync(file)) {
-      const readLog = readline.createInterface({
-        input: fs.createReadStream(log.transports.file.getFile().path),
-      });
-      readLog.on('line', line => {
-        service?.server.send(socket, 'log', line);
-      });
-    }
-    service?.server.send(socket, 'config', config.store);
-    service?.server.send(socket, 'displays', getAllDisplays());
-  });
-  service.server.on('client:config', (_, store) => {
-    try {
-      config.store = store as Config;
-    } catch (err) {
-      sendStatusToWindow(`Error while save config: ${err.message}`, true);
-    }
-  });
-  sendStatusToWindow('Starting local NIBUS...');
   try {
+    const { default: svc, detectionPath } = await import('@nibus/cli/lib/service');
+    service = svc;
+    service.server.on('connection', socket => {
+      const file = log.transports.file.getFile().path;
+      if (fs.existsSync(file)) {
+        const readLog = readline.createInterface({
+          input: fs.createReadStream(log.transports.file.getFile().path),
+        });
+        readLog.on('line', line => {
+          service?.server.send(socket, 'log', line);
+        });
+      }
+      service?.server.send(socket, 'config', config.store);
+      service?.server.send(socket, 'displays', getAllDisplays());
+    });
+    service.server.on('client:config', (_, store) => {
+      try {
+        config.store = store as Config;
+      } catch (err) {
+        sendStatusToWindow(`Error while save config: ${err.message}`, true);
+      }
+    });
+    sendStatusToWindow('Starting local NIBUS...');
     await service.start();
     sendStatusToWindow(`NiBUS started. Detection file: ${detectionPath}`);
   } catch (e) {

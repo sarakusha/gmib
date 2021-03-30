@@ -14,7 +14,7 @@ import type { DebouncedFunc } from 'lodash';
 import sortBy from 'lodash/sortBy';
 import SunCalc from 'suncalc';
 import Ajv from 'ajv';
-import { configSchema, Config, Location, Screen, Page } from '../util/config';
+import { configSchema, Config, Location, Screen, Page, reAddress } from '../util/config';
 import { getSession, notEmpty, PropPayloadAction } from '../util/helpers';
 import MonotonicCubicSpline, { Point } from '../util/MonotonicCubicSpline';
 import type { AsyncInitializer } from './asyncInitialMiddleware';
@@ -156,6 +156,16 @@ export const currentSlice = createSlice({
       state.tests = state.tests.filter(page => page.id !== id);
       saveConfig(current(state));
     },
+    addAddress(state, { payload: address }: PayloadAction<string>) {
+      if (!state.screen.addresses) state.screen.addresses = [];
+      state.screen.addresses = [...state.screen.addresses, address];
+      saveConfig(current(state));
+    },
+    removeAddress(state, { payload: [chip, index] }: PayloadAction<[string, number]>) {
+      if (!state.screen.addresses) return;
+      if (state.screen.addresses[index] === chip) state.screen.addresses.splice(index, 1);
+      saveConfig(current(state));
+    },
   },
 });
 
@@ -207,6 +217,8 @@ export const {
   setLogLevel,
   upsertHttpPage,
   removeHttpPage,
+  addAddress,
+  removeAddress,
 } = currentSlice.actions;
 
 export const activateDevice = (id: DeviceId | undefined): AppThunk => dispatch => {
@@ -214,38 +226,72 @@ export const activateDevice = (id: DeviceId | undefined): AppThunk => dispatch =
   dispatch(setCurrentTab('devices'));
 };
 
+type HostParams = {
+  address: Address;
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+};
+
+type Input = Pick<Required<Screen>, 'width' | 'height' | 'x' | 'y'>;
+
+const getHostParams = (screen: Input) => (expr: string): HostParams | undefined => {
+  const matches = expr.match(reAddress);
+  if (!matches) return undefined;
+  const [, address, l, t, w, h] = matches;
+  const left = l ? +l : 0;
+  const top = t ? +(+t) : 0;
+  const width = w ? +w : Math.max(screen.width - left, 0);
+  const height = h ? +h : Math.max(screen.height - top, 0);
+  return {
+    address: new Address(address),
+    left: screen.x + left,
+    top: screen.y + top,
+    width,
+    height,
+  };
+};
+
 export const initializeMinihosts = (deviceId?: DeviceId): AppThunk => (dispatch, getState) => {
   const state = getState();
-  const { address, width, height, x, y, moduleHres, moduleVres, dirh, dirv } = selectScreen(state);
+  const screen = selectScreen(state);
+  const { addresses, moduleHres, moduleVres, dirh, dirv } = screen;
+  const getParams = getHostParams(screen as Input);
   try {
-    if (address) {
-      const target = new Address(address);
-      devicesSlice.then(({ selectDevicesByAddress, selectDeviceById, setDeviceValue }) => {
-        const devices = deviceId
-          ? [selectDeviceById(state, deviceId)]
-          : selectDevicesByAddress(state, target);
-        devices
-          .filter(notEmpty)
-          .filter(({ mib }) => mib.startsWith('minihost'))
-          .forEach(({ id, address: devAddress }) => {
-            debug(`initialize minihost ${devAddress}`);
-            const setValue = setDeviceValue(id);
-            Object.entries({
-              hoffs: x,
-              voffs: y,
-              hres: width,
-              vres: height,
-              moduleHres,
-              moduleVres,
-              indication: 0,
-              dirh,
-              dirv,
-            }).forEach(([name, value]) => {
-              // debug(`setValue ${name} = ${value}`);
-              value !== undefined && dispatch(setValue(name, value));
-            });
+    if (addresses) {
+      addresses
+        .map(getParams)
+        .filter(notEmpty)
+        .forEach(({ address, left, top, width, height }) => {
+          const target = new Address(address);
+          devicesSlice.then(({ selectDevicesByAddress, selectDeviceById, setDeviceValue }) => {
+            const devices = deviceId
+              ? [selectDeviceById(state, deviceId)]
+              : selectDevicesByAddress(state, target);
+            devices
+              .filter(notEmpty)
+              .filter(({ mib }) => mib.startsWith('minihost'))
+              .forEach(({ id, address: devAddress }) => {
+                debug(`initialize minihost ${devAddress}`);
+                const setValue = setDeviceValue(id);
+                Object.entries({
+                  hoffs: left,
+                  voffs: top,
+                  hres: width,
+                  vres: height,
+                  moduleHres,
+                  moduleVres,
+                  indication: 0,
+                  dirh,
+                  dirv,
+                }).forEach(([name, value]) => {
+                  // debug(`setValue ${name} = ${value}`);
+                  value !== undefined && dispatch(setValue(name, value));
+                });
+              });
           });
-      });
+        });
     }
   } catch (err) {
     console.error('error while activate test', err.message);
@@ -326,12 +372,12 @@ const calculateBrightness: AppThunk = (dispatch, getState) => {
         sunsetStart,
         dusk,
       } = SunCalc.getTimes(now, latitude!, longitude!);
-      debug(
-        `dawn: ${dawn.toLocaleTimeString()}, sunriseEnd: ${sunriseEnd.toLocaleTimeString()}, goldenHourEnd: ${goldenHourEnd.toLocaleTimeString()}, noon: ${solarNoon.toLocaleTimeString()}`
-      );
-      debug(
-        `goldenHour: ${goldenHour.toLocaleTimeString()}, sunsetStart: ${sunsetStart.toLocaleTimeString()}, dusk: ${dusk.toLocaleTimeString()}`
-      );
+      // debug(
+      //   `dawn: ${dawn.toLocaleTimeString()}, sunriseEnd: ${sunriseEnd.toLocaleTimeString()}, goldenHourEnd: ${goldenHourEnd.toLocaleTimeString()}, noon: ${solarNoon.toLocaleTimeString()}`
+      // );
+      // debug(
+      //   `goldenHour: ${goldenHour.toLocaleTimeString()}, sunsetStart: ${sunsetStart.toLocaleTimeString()}, dusk: ${dusk.toLocaleTimeString()}`
+      // );
       // debug(`now: ${getTime(now)}`);
       const sunSpline =
         now <= solarNoon
