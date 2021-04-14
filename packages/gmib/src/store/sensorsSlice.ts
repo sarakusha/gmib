@@ -1,4 +1,3 @@
-/* eslint-disable no-bitwise */
 /*
  * @license
  * Copyright (c) 2021. Nata-Info
@@ -8,6 +7,8 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
+
+/* eslint-disable no-bitwise */
 import { createSlice, PayloadAction, Draft } from '@reduxjs/toolkit';
 import { NibusSessionEvents } from '@nibus/core';
 import sortBy from 'lodash/sortBy';

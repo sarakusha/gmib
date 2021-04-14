@@ -1,13 +1,14 @@
-/* eslint-disable import/first */
 /*
  * @license
- * Copyright (c) 2020. Nata-Info
+ * Copyright (c) 2021. Nata-Info
  * @author Andrei Sarakeev <avs@nata-info.ru>
  *
  * This file is part of the "@nibus" project.
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
+
+/* eslint-disable import/first */
 process.env.NIBUS_LOG = 'nibus-all.log';
 
 import debugFactory, { Debugger } from 'debug/src/node';

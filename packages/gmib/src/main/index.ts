@@ -1,7 +1,6 @@
-/* eslint-disable import/first */
 /*
  * @license
- * Copyright (c) 2020. Nata-Info
+ * Copyright (c) 2021. Nata-Info
  * @author Andrei Sarakeev <avs@nata-info.ru>
  *
  * This file is part of the "@nibus" project.
@@ -9,11 +8,12 @@
  * the EULA file that was distributed with this source code.
  */
 
+/* eslint-disable import/first */
 process.env.NIBUS_LOG = 'nibus-all.log';
 
 import type { NibusService } from '@nibus/cli';
 import Bonjour, { RemoteService } from 'bonjour-hap';
-import { app, BrowserWindow, dialog, Display, ipcMain, screen } from 'electron';
+import { app, BrowserWindow, dialog, Display, ipcMain, screen, powerSaveBlocker } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import fs from 'fs';
 import isEqual from 'lodash/isEqual';
@@ -265,6 +265,17 @@ function createTestWindow(width: number, height: number, x: number, y: number): 
   window.once('ready-to-show', () => window.show());
   /* process.platform === 'win32' ||*/
   window.setIgnoreMouseEvents(true);
+  let saveBlocker = 0;
+  window.on('show', () => {
+    if (!powerSaveBlocker.isStarted(saveBlocker)) {
+      saveBlocker = powerSaveBlocker.start('prevent-display-sleep');
+    }
+  });
+  window.on('hide', () => {
+    if (powerSaveBlocker.isStarted(saveBlocker)) {
+      powerSaveBlocker.stop(saveBlocker);
+    }
+  });
   return window;
 }
 

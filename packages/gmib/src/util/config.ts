@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
  * @license
  * Copyright (c) 2021. Nata-Info
@@ -8,6 +7,8 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { LogLevel, LogLevelV } from '@nibus/core';
 import { Schema } from 'electron-store';
 

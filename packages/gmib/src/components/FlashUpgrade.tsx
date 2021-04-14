@@ -1,7 +1,6 @@
-/* eslint-disable no-bitwise */
 /*
  * @license
- * Copyright (c) 2020. Nata-Info
+ * Copyright (c) 2021. Nata-Info
  * @author Andrei Sarakeev <avs@nata-info.ru>
  *
  * This file is part of the "@nibus" project.
@@ -9,6 +8,7 @@
  * the EULA file that was distributed with this source code.
  */
 
+/* eslint-disable no-bitwise */
 import { makeStyles } from '@material-ui/core/styles';
 import { Button, IconButton } from '@material-ui/core';
 import FolderIcon from '@material-ui/icons/FolderOpen';
