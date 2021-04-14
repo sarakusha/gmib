@@ -103,20 +103,24 @@ module.exports = config => {
   );
 */
   // Нужно для iconv-lite
-  /*
   config.module.rules.push({
     test: /node_modules[/\\](iconv-lite)[/\\].+/,
     resolve: {
       aliasFields: ['main'],
     },
   });
-*/
   config.module.rules.push({
     test: /\.mdx?$/,
     use: ['babel-loader', '@mdx-js/loader'],
   });
   // !!! Помогает избежать дублирования react electron-ом и webpack-ом
-  config.externals = [...config.externals, 'react', 'react-dom', '@material-ui/core'];
+  config.externals = [
+    ...config.externals,
+    'react',
+    'react-dom',
+    '@material-ui/core',
+    '@material-ui/styles',
+  ];
   // config.resolve.alias.debug = path.join(require.resolve('debug'), 'src', 'node');
   // if (ANALYZE) {
   //   config.plugins.push(

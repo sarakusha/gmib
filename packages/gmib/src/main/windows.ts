@@ -12,6 +12,8 @@ import { BrowserWindow } from 'electron';
 
 const windows = new Set<BrowserWindow>();
 
+export const screenWindows = new Map<string, BrowserWindow>();
+
 export const showAll = (): void =>
   [...windows].forEach(window => {
     if (window.isMinimized()) window.restore();

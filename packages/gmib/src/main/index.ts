@@ -12,22 +12,25 @@
 process.env.NIBUS_LOG = 'nibus-all.log';
 
 import type { NibusService } from '@nibus/cli';
+import Bonjour, { RemoteService } from 'bonjour-hap';
 import { app, BrowserWindow, dialog, Display, ipcMain, screen } from 'electron';
 import { autoUpdater } from 'electron-updater';
-import Bonjour, { RemoteService } from 'bonjour-hap';
+import fs from 'fs';
+import isEqual from 'lodash/isEqual';
+import uniqBy from 'lodash/uniqBy';
 import { isIPv4 } from 'net';
 import os from 'os';
 import path from 'path';
+import readline from 'readline';
 import { Tail } from 'tail';
 import { URLSearchParams } from 'url';
-import fs from 'fs';
-import readline from 'readline';
-import isEqual from 'lodash/isEqual';
-import uniqBy from 'lodash/uniqBy';
-import config, { Config, Screen, Page } from '../util/config';
-import { getRemoteLabel, getTitle, notEmpty, RemoteHost } from '../util/helpers';
-import { updateTray } from './tray';
+import tcpPortUsed from 'tcp-port-used';
+import { Config, defaultScreen, Page, Screen } from '../util/config';
+import debugFactory, { log } from '../util/debug';
+import { findById, getRemoteLabel, getTitle, notEmpty, RemoteHost } from '../util/helpers';
 import localConfig, { CustomHost } from '../util/localConfig';
+import config from './config';
+import { getBrightnessHistory } from './db';
 import getAllDisplays from './getAllDisplays';
 import { linuxAutostart } from './linux';
 import {
@@ -38,20 +41,18 @@ import {
   setRemotesFactory,
   updateMenu,
 } from './mainMenu';
+import { updateTray } from './tray';
 
-import windows, { showAll } from './windows';
-import debugFactory, { log } from '../util/debug';
+import windows, { screenWindows, showAll } from './windows';
 
 const USE_REACT_REFRESH_WEBPACK = true;
 const bonjour = Bonjour();
-
-let currentTest: string | undefined;
 
 let service: NibusService | null = null;
 
 let isQuiting = false;
 
-log.log(`LOGGER ${log.transports.file.getFile().path}, DEBUG: ${process.env.DEBUG}`);
+process.nextTick(() => log.log(`Log: ${log.transports.file.getFile().path}`));
 // log.log(`${process.env.PORTABLE_EXECUTABLE_DIR}, ${app.getAppPath()}, ${app.getPath('exe')}`);
 autoUpdater.logger = log;
 
@@ -73,26 +74,6 @@ const isDevelopment = process.env.NODE_ENV !== 'production';
 
 // global reference to mainWindow (necessary to prevent window from being garbage collected)
 let mainWindow: BrowserWindow | null;
-let testWindow: BrowserWindow | null;
-
-const defaultScreen: Required<Screen> = {
-  width: 640,
-  height: 320,
-  moduleHres: 40,
-  moduleVres: 40,
-  x: 0,
-  y: 0,
-  display: true,
-  addresses: [],
-  dirh: false,
-  dirv: false,
-  borderTop: 0,
-  borderBottom: 0,
-  borderLeft: 0,
-  borderRight: 0,
-};
-
-let currentScreen = defaultScreen;
 
 const closeNibus = (): void => {
   if (service) {
@@ -126,7 +107,7 @@ const pickRemoteService = (svc: RemoteService): RemoteHost | undefined => {
 const register = (svc: RemoteService, window = mainWindow): void => {
   const remote = pickRemoteService(svc);
   if (remote) {
-    debug(`${!!mainWindow} serviceUp ${JSON.stringify(remote)}}`);
+    debug(`serviceUp ${JSON.stringify(remote)}}`);
     window?.webContents.send('serviceUp', remote);
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
     addRemote(remote.port, remote.address);
@@ -140,7 +121,7 @@ async function createWindow(
 ): Promise<BrowserWindow> {
   const size = {
     width: 800,
-    height: 600,
+    height: 620,
   };
   const display = screen.getPrimaryDisplay().workAreaSize;
   const pos = random
@@ -171,9 +152,6 @@ async function createWindow(
     windows.delete(window);
     if (mainWindow === window) {
       mainWindow = null;
-      if (testWindow) {
-        testWindow.close();
-      }
     }
   });
   if (!host) {
@@ -181,9 +159,10 @@ async function createWindow(
       setRemoteEditClick(() => window.webContents.send('editRemoteHosts'));
       // Нужно немного подождать
       setTimeout(() => {
-        debug(`register remotes: ${mdnsBrowser.services.length}`);
+        // debug(`register remotes: ${mdnsBrowser.services.length}`);
         mdnsBrowser.services.forEach(svc => register(svc, window));
-      }, 100);
+      }, 100).unref();
+      if (!localConfig.get('autostart')) window.show();
       // process.platform === 'linux' && window.show();
     });
 
@@ -206,7 +185,8 @@ async function createWindow(
       const { default: installExtension, REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS } = await import(
         'electron-devtools-installer'
       );
-      // REACT_DEVELOPER_TOOLS несовместим с ReactRefreshWebpackPlugin в webpack.renderer.additions.js
+      // REACT_DEVELOPER_TOOLS несовместим с ReactRefreshWebpackPlugin в
+      // webpack.renderer.additions.js
       const name = await installExtension(
         USE_REACT_REFRESH_WEBPACK ? [REDUX_DEVTOOLS] : [REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS]
       );
@@ -242,8 +222,7 @@ const create: CreateWindow = (port, host) => createWindow(port, host, true);
 const addRemote = addRemoteFactory(create);
 const setRemotes = setRemotesFactory(create);
 
-function createTestWindow(): BrowserWindow {
-  const { width, height, x = 0, y = 0 } = currentScreen;
+function createTestWindow(width: number, height: number, x: number, y: number): BrowserWindow {
   const window = new BrowserWindow({
     width,
     height,
@@ -270,19 +249,26 @@ function createTestWindow(): BrowserWindow {
     // },
   });
 
+  /*
   if (isDevelopment) {
     window.webContents.once('did-frame-finish-load', () => {
       window.webContents.openDevTools();
     });
   }
+*/
   window.on('closed', () => {
-    testWindow = null;
+    const [id] = [...screenWindows.entries()].find(([, w]) => window === w) ?? [];
+    if (id) screenWindows.delete(id);
+    log.log(`close and delete screenWindow ${id}`);
+    // testWindow = null;
   });
   window.once('ready-to-show', () => window.show());
-  process.platform === 'win32' || window.setIgnoreMouseEvents(true);
+  /* process.platform === 'win32' ||*/
+  window.setIgnoreMouseEvents(true);
   return window;
 }
 
+/*
 const reloadTest = (id?: string): void => {
   currentTest = id;
   const tests = config.get('tests');
@@ -310,6 +296,7 @@ const reloadTest = (id?: string): void => {
   });
   testWindow.show();
 };
+*/
 
 // quit application when all windows are closed
 app.on('window-all-closed', () => {
@@ -335,6 +322,9 @@ const createMainWindow = async (): Promise<BrowserWindow> => {
       if (!isQuiting && localConfig.get('autostart')) {
         event.preventDefault();
         mainWindow?.hide();
+      } else {
+        [...screenWindows.values()].forEach(window => window.close());
+        mainWindow = null;
       }
       return false;
     });
@@ -359,7 +349,10 @@ localConfig.onDidChange('hosts', hosts => {
 
 localConfig.onDidChange('autostart', (autostart = false) => {
   debug(`autostart: ${autostart}`);
-  app.setLoginItemSettings({ openAtLogin: autostart, openAsHidden: true });
+  app.setLoginItemSettings({
+    openAtLogin: autostart,
+    openAsHidden: true,
+  });
   linuxAutostart(autostart);
   updateMenu();
   updateTray();
@@ -372,42 +365,102 @@ const isCustomHost = (remote: RemoteHost): boolean => {
   return Boolean(custom);
 };
 
-const updateScreen = (): void => {
-  const scr = config.get('screen') ?? {};
-  const needReload =
-    currentScreen.width !== scr.width ||
-    currentScreen.height !== scr.height ||
-    currentScreen.moduleHres !== scr.moduleHres ||
-    currentScreen.moduleVres !== scr.moduleVres;
+const impScreenProps: ReadonlyArray<keyof Screen> = [
+  'output',
+  'borderTop',
+  'borderBottom',
+  'borderLeft',
+  'borderRight',
+  'width',
+  'height',
+  'moduleHres',
+  'moduleVres',
+] as const;
+
+const updateScreens = (newValue?: Screen[], oldValue?: Screen[]): void => {
+  // log.log('UPDATE SCREEN');
   app.whenReady().then(() => {
-    currentScreen = { ...defaultScreen, ...scr };
+    const screens = newValue ?? config.get('screens');
+    // log.log(JSON.stringify(newValue));
+    // log.log(JSON.stringify(oldValue));
+    const keys = [...new Set<string>([...screenWindows.keys(), ...screens.map(({ id }) => id)])];
     const primary = screen.getPrimaryDisplay();
-    let display: Display | undefined;
     const displays = screen.getAllDisplays();
-    if (scr.display === true) {
-      display = primary;
-    } else if (scr.display === false) {
-      const index = displays.findIndex(({ id }) => id !== primary.id);
-      if (index !== -1) display = displays[index];
-    } else {
-      const index = displays.findIndex(({ id }) => id.toString() === scr.display);
-      if (index !== -1) display = displays[index];
-    }
-    if (!display) {
-      debug(`Not found display ${scr.display}, ${displays.length}`);
-      testWindow && testWindow.hide();
-      return;
-    }
-    currentScreen!.x += display.bounds.x;
-    currentScreen!.y += display.bounds.y;
-    if (testWindow) {
-      testWindow.setPosition(currentScreen.x, currentScreen.y);
-      testWindow.setSize(currentScreen.width, currentScreen.height);
-      currentTest && testWindow.show();
-    }
-    if (needReload) reloadTest(currentTest);
+    // log.log(`keys ${keys.join()}`);
+    keys.forEach(id => {
+      const curScreen = findById(screens, id);
+      let window = screenWindows.get(id);
+      if (!curScreen) {
+        if (window) {
+          window.close();
+          screenWindows.delete(id);
+        }
+        return;
+      }
+      let display: Display | undefined;
+      if (curScreen.display === true) {
+        display = primary;
+      } else if (curScreen.display === false) {
+        const index = displays.findIndex(disp => disp.id !== primary.id);
+        if (index !== -1) display = displays[index];
+      } else {
+        const index = displays.findIndex(disp => disp.id.toString() === curScreen.display);
+        if (index !== -1) display = displays[index];
+      }
+      const page =
+        curScreen.output && config.get('pages').find(item => item.id === curScreen.output);
+      if (!display || !page) {
+        // debug(`Not found display ${curScreen.display}, ${displays.length}`);
+        window?.hide();
+        return;
+      }
+      const prevScreen = findById(oldValue, id);
+      const scr = { ...defaultScreen, ...curScreen };
+      const x = scr.x + display.bounds.x;
+      const y = scr.y + display.bounds.y;
+      const needReload =
+        !prevScreen ||
+        !window ||
+        impScreenProps.reduce<boolean>(
+          (res, name) => res || curScreen[name] !== prevScreen[name],
+          false
+        );
+      const url = page.permanent
+        ? `${page.url}?${new URLSearchParams(
+            impScreenProps
+              .map<[string, string] | undefined>(name => {
+                const value = curScreen[name];
+                return value !== undefined ? [name, value.toString()] : undefined;
+              })
+              .filter(notEmpty)
+          )}`
+        : page.url;
+
+      if (!window) {
+        window = createTestWindow(scr.width, scr.height, x, y);
+        screenWindows.set(scr.id, window);
+        const contents = window.webContents;
+        contents.on('did-fail-load', (
+          event,
+          errorCode,
+          errorDescription /* , validatedURL, isMainFrame*/
+        ) => {
+          debug(
+            `Loading error. url: ${url}, errorCode: ${errorCode}, errorDescription: ${errorDescription}`
+          );
+          setTimeout(() => contents.reload(), 5000).unref();
+        });
+      } else {
+        window.setPosition(x, y);
+        window.setSize(scr.width, scr.height);
+      }
+      needReload && url && window.loadURL(url);
+      window.show();
+    });
   });
 };
+
+updateScreens();
 
 const gotTheLock = app.requestSingleInstanceLock();
 
@@ -427,7 +480,7 @@ if (!gotTheLock) {
       autoUpdater
         .checkForUpdatesAndNotify()
         .catch(e => log.error('error while check for updates', e.message));
-    reloadTest(config.get('test'));
+    // reloadTest(config.get('test'));
     mdnsBrowser.on('up', register);
     mdnsBrowser.on('down', svc => {
       const remote = pickRemoteService(svc);
@@ -442,7 +495,10 @@ if (!gotTheLock) {
     // screen.getAllDisplays().forEach(display => debug(JSON.stringify(display)));
     const broadcastDisplays = (): void => {
       service?.server?.broadcast('displays', getAllDisplays());
-      setTimeout(() => updateScreen(), 3000);
+      setTimeout(() => {
+        const screens = config.get('screens');
+        updateScreens(screens, screens);
+      }, 3000).unref();
     };
 
     screen.on('display-added', broadcastDisplays);
@@ -462,7 +518,7 @@ function sendStatusToWindow(text: string, isError = false): void {
   mainWindow && mainWindow.webContents.send('message', text);
 }
 
-sendStatusToWindow('App starting...');
+sendStatusToWindow('>>>>> App starts');
 
 autoUpdater.on('checking-for-update', () => {
   sendStatusToWindow('Checking for update...');
@@ -491,7 +547,9 @@ autoUpdater.on('update-downloaded', () => {
   sendStatusToWindow('Update downloaded');
 });
 
-ipcMain.on('startLocalNibus', async () => {
+const startLocalNibus = async (): Promise<void> => {
+  const inUse = await tcpPortUsed.check(+(process.env.NIBUS_PORT ?? 9001));
+  if (inUse) return;
   try {
     const { default: svc, detectionPath } = await import('@nibus/cli/lib/service');
     service = svc;
@@ -515,13 +573,22 @@ ipcMain.on('startLocalNibus', async () => {
         sendStatusToWindow(`Error while save config: ${err.message}`, true);
       }
     });
+    service.server.on('client:getBrightnessHistory', (socket, dt) => {
+      getBrightnessHistory(dt).then(rows =>
+        service?.server.send(socket, 'brightnessHistory', rows)
+      );
+    });
     sendStatusToWindow('Starting local NIBUS...');
     await service.start();
     sendStatusToWindow(`NiBUS started. Detection file: ${detectionPath}`);
   } catch (e) {
     sendStatusToWindow(`Error while nibus starting ${e}`, true);
   }
-});
+};
+
+startLocalNibus();
+
+ipcMain.on('startLocalNibus', startLocalNibus);
 
 ipcMain.on('showOpenDialogSync', (event, options: Electron.OpenDialogSyncOptions) => {
   event.returnValue = dialog.showOpenDialogSync(options);
@@ -539,6 +606,7 @@ config.onDidAnyChange(newValue => {
   service?.server?.broadcast('config', newValue);
 });
 
+/*
 config.onDidChange('test', (id: string | undefined): void => {
   if (!id) {
     testWindow && testWindow.hide();
@@ -554,13 +622,14 @@ config.onDidChange('test', (id: string | undefined): void => {
   // testWindow.setSize(currentScreen.width ?? 640, currentScreen.height ?? 320);
   // testWindow.show();
 });
+*/
 
-config.onDidChange('screen', updateScreen);
+config.onDidChange('screens', updateScreens);
 
 const reTitle = /<\s*title[^>]*>(.+)<\s*\/\s*title>/i;
 const reId = /<\s*meta\s*data-id=['"](.+?)['"]>/i;
 
-(async function updateTests() {
+async function updateTestsImpl(): Promise<void> {
   const testDir = path.resolve(__dirname, '../extraResources/tests');
   const filenames = (await fs.promises.readdir(testDir))
     .map(filename => path.join(testDir, filename))
@@ -582,7 +651,18 @@ const reId = /<\s*meta\s*data-id=['"](.+?)['"]>/i;
       };
     })
   );
-  const prev = config.get('tests');
+  const prev = config.get('pages');
   const items = uniqBy(tests.concat(prev), 'id');
-  if (!isEqual(prev, items)) config.set('tests', items);
-})();
+  if (!isEqual(prev, items)) config.set('pages', items);
+}
+
+const updateTests = (): void => {
+  updateTestsImpl().catch(err => debug(`error while update tests ${err.message}`));
+};
+
+updateTests();
+
+config.onDidChange('pages', newValue => {
+  if (newValue?.some(({ permanent }) => permanent)) return;
+  process.nextTick(() => updateTests());
+});

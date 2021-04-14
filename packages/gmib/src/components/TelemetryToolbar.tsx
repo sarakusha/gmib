@@ -21,6 +21,7 @@ import Filter7 from '@material-ui/icons/Filter7';
 import StartIcon from '@material-ui/icons/Refresh';
 import React, { useCallback, useState } from 'react';
 import Minihost3SelectorDialog from '../dialogs/Minihost3SelectorDialog';
+import { noop } from '../util/helpers';
 import { initialSelectors, Minihost3Selector } from '../util/Minihost3Loader';
 
 const useStyles = makeStyles(theme => ({
@@ -47,8 +48,6 @@ type Props = {
   selectors?: Set<Minihost3Selector>;
   onSelectorChanged?: (selectors: Set<Minihost3Selector>) => void;
 };
-
-const noop = (): void => {};
 
 const TelemetryToolbar: React.FC<Props> = ({
   start = noop,

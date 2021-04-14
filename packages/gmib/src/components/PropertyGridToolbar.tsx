@@ -10,8 +10,9 @@
 
 import { makeStyles } from '@material-ui/core/styles';
 import { CircularProgress, IconButton, Tooltip } from '@material-ui/core';
-import LoadIcon from '@material-ui/icons/OpenInBrowser';
+// import LoadIcon from '@material-ui/icons/OpenInBrowser';
 import ReloadIcon from '@material-ui/icons/Refresh';
+import LoadIcon from '@material-ui/icons/SystemUpdateAlt';
 import SaveIcon from '@material-ui/icons/Save';
 import { DeviceId } from '@nibus/core';
 import { ipcRenderer } from 'electron';
@@ -41,19 +42,20 @@ const useStyles = makeStyles(theme => ({
 }));
 
 const load = (dispatch: AppDispatch, id: DeviceId, mib: string): boolean => {
-  const fileNames: string[] | undefined = ipcRenderer.sendSync('showOpenDialogSync', {
-    title: 'Загрузить из',
-    filters: [
-      {
-        name: 'JSON',
-        extensions: ['json'],
-      },
-    ],
-    properties: ['openFile'],
-  } as Electron.OpenDialogSyncOptions);
-  if (fileNames?.[0]) {
+  const [fileName]: string[] =
+    ipcRenderer.sendSync('showOpenDialogSync', {
+      title: 'Загрузить из',
+      filters: [
+        {
+          name: 'JSON',
+          extensions: ['json'],
+        },
+      ],
+      properties: ['openFile'],
+    } as Electron.OpenDialogSyncOptions) ?? [];
+  if (fileName) {
     try {
-      const data = JSON.parse(fs.readFileSync(fileNames[0]).toString());
+      const data = JSON.parse(fs.readFileSync(fileName).toString());
       if (data.$mib !== mib) {
         ipcRenderer.sendSync('showErrorBox', 'Ошибка загрузки', 'Тип устройства не совпадает');
         return false;

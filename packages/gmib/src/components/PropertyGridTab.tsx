@@ -14,6 +14,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useSelector, useDispatch, useDevice } from '../store';
 import { selectCurrentTab } from '../store/currentSlice';
 import { selectMibByName } from '../store/mibsSlice';
+import { noop } from '../util/helpers';
 import PropertyGridToolbar from './PropertyGridToolbar';
 import TableCell from './TableCell';
 import AccordionList from './AccordionList';
@@ -53,8 +54,6 @@ const useSummaryClasses = makeStyles(theme => ({
   },
 }));
 
-const propertyGridToolbar = <PropertyGridToolbar />;
-
 const PropertyGridTab: React.FC<MinihostTabProps> = ({ id, selected = false }) => {
   const classes = useStyles();
   const { mib, error, props } = useDevice(id) ?? {};
@@ -70,14 +69,13 @@ const PropertyGridTab: React.FC<MinihostTabProps> = ({ id, selected = false }) =
   }, [id, dispatch]);
   const [, setToolbar] = useToolbar();
 
-  useEffect(
-    () =>
-      setToolbar((toolbar: React.ReactNode) => {
-        if (active) return propertyGridToolbar;
-        return toolbar === propertyGridToolbar ? null : toolbar;
-      }),
-    [active, setToolbar]
-  );
+  useEffect(() => {
+    if (active) {
+      setToolbar(<PropertyGridToolbar />);
+      return () => setToolbar(null);
+    }
+    return noop;
+  }, [active, setToolbar]);
 
   const categories = useMemo(
     () =>

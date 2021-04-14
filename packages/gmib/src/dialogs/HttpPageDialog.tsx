@@ -8,12 +8,12 @@
  * the EULA file that was distributed with this source code.
  */
 import React from 'react';
-// import { makeStyles } from '@material-ui/core/styles';
 import { Dialog, DialogContent, TextField } from '@material-ui/core';
 import DialogTitle from '../components/DialogTitle';
 import { useSelector } from '../store';
-import { selectTestById } from '../store/currentSlice';
+import { selectPageById } from '../store/configSlice';
 import { Page } from '../util/config';
+import { noop } from '../util/helpers';
 
 type Props = {
   pageId?: string;
@@ -26,8 +26,6 @@ type Props = {
 //   root: {},
 // }));
 
-const noop = (): void => {};
-
 const HttpPageDialog: React.FC<Props> = ({
   pageId,
   open = false,
@@ -39,7 +37,7 @@ const HttpPageDialog: React.FC<Props> = ({
     const { name, value } = event.target;
     onChange(name as keyof Page, value);
   };
-  const page = useSelector(state => selectTestById(state, pageId ?? ''));
+  const page = useSelector(state => selectPageById(state, pageId ?? ''));
   const { url, title } = page ?? {};
   return (
     <Dialog

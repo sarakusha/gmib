@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
  * @license
  * Copyright (c) 2021. Nata-Info
@@ -8,11 +9,7 @@
  * the EULA file that was distributed with this source code.
  */
 import { LogLevel, LogLevelV } from '@nibus/core';
-import Store, { Schema } from 'electron-store';
-import { log } from './debug';
-
-// type DeviceAddress = string;
-// type DeviceAlias = string;
+import { Schema } from 'electron-store';
 
 export type SplineItem = [lux: number, brightness: number];
 export const SPLINE_COUNT = 4;
@@ -26,7 +23,27 @@ export type Location = {
   latitude?: number;
   longitude?: number;
 };
+export type ScreenV1 = {
+  width?: number;
+  height?: number;
+  moduleHres?: number;
+  moduleVres?: number;
+  x?: number;
+  y?: number;
+  display?: boolean | string;
+  address?: string;
+  addresses?: string[];
+  dirh?: boolean;
+  dirv?: boolean;
+  borderTop?: number;
+  borderBottom?: number;
+  borderLeft?: number;
+  borderRight?: number;
+};
+
 export type Screen = {
+  id: string;
+  name: string;
   width?: number;
   height?: number;
   moduleHres?: number;
@@ -41,19 +58,49 @@ export type Screen = {
   borderBottom?: number;
   borderLeft?: number;
   borderRight?: number;
+  output?: string;
+  brightnessFactor?: number;
 };
 
-export type Config = {
-  // aliases?: Record<DeviceAddress, DeviceAlias>;
+export const defaultScreen: Required<Omit<Screen, 'output' | 'id'>> = {
+  name: 'Экран',
+  width: 640,
+  height: 320,
+  moduleHres: 40,
+  moduleVres: 40,
+  x: 0,
+  y: 0,
+  display: true,
+  addresses: [],
+  dirh: false,
+  dirv: false,
+  borderTop: 0,
+  borderBottom: 0,
+  borderLeft: 0,
+  borderRight: 0,
+  brightnessFactor: 1,
+};
+
+export type ConfigV1 = {
   location?: Location;
   spline?: SplineItem[];
-  // history?: Record<Altitude, HistoryItem>;
   autobrightness: boolean;
   brightness: number;
   test?: string;
-  screen: Screen;
+  screen: ScreenV1;
   logLevel: LogLevel;
   tests: Page[];
+};
+
+export type Config = {
+  location?: Location;
+  spline?: SplineItem[];
+  autobrightness: boolean;
+  brightness: number;
+  screens: Screen[];
+  logLevel: LogLevel;
+  pages: Page[];
+  version?: string;
 };
 
 /**
@@ -64,12 +111,6 @@ const addressPattern =
 export const reAddress = new RegExp(addressPattern);
 
 export const configSchema: Schema<Config> = {
-  // aliases: {
-  //   type: 'object',
-  //   additionalProperties: {
-  //     type: 'string',
-  //   },
-  // },
   location: {
     type: 'object',
     properties: {
@@ -99,17 +140,6 @@ export const configSchema: Schema<Config> = {
     },
     maxItems: SPLINE_COUNT,
   },
-  // history: {
-  //   type: 'object',
-  //   patternProperties: {
-  //     '^\\d?\\d$': {
-  //       type: 'array',
-  //       items: [{ type: 'number' }, { type: 'number' }],
-  //       additionalItems: false,
-  //       minItems: 2,
-  //     },
-  //   },
-  // },
   autobrightness: {
     type: 'boolean',
     default: false,
@@ -118,84 +148,96 @@ export const configSchema: Schema<Config> = {
     type: 'integer',
     default: 30,
   },
-  test: {
-    type: 'string',
-  },
-  screen: {
-    type: 'object',
-    properties: {
-      width: {
-        type: 'integer',
-        minimum: 0,
-        // default: 640,
-      },
-      height: {
-        type: 'integer',
-        minimum: 0,
-        // default: 320,
-      },
-      moduleHres: {
-        type: 'integer',
-        minimum: 8,
-        // default: 40,
-      },
-      moduleVres: {
-        type: 'integer',
-        minimum: 8,
-        // default: 40,
-      },
-      x: {
-        type: 'integer',
-        // default: 0,
-      },
-      y: {
-        type: 'integer',
-        // default: 0,
-      },
-      display: {
-        anyOf: [{ type: 'string' }, { type: 'boolean' }],
-        default: true,
-      },
-      addresses: {
-        type: 'array',
-        uniqueItems: true,
-        items: {
+  // test: {
+  //   type: 'string',
+  // },
+  screens: {
+    type: 'array',
+    items: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        name: {
           type: 'string',
-          pattern: addressPattern,
+          default: 'Экран',
         },
-        default: [],
+        width: {
+          type: 'integer',
+          minimum: 0,
+          // default: 640,
+        },
+        height: {
+          type: 'integer',
+          minimum: 0,
+          // default: 320,
+        },
+        moduleHres: {
+          type: 'integer',
+          minimum: 8,
+          // default: 40,
+        },
+        moduleVres: {
+          type: 'integer',
+          minimum: 8,
+          // default: 40,
+        },
+        x: {
+          type: 'integer',
+          // default: 0,
+        },
+        y: {
+          type: 'integer',
+          // default: 0,
+        },
+        display: {
+          anyOf: [{ type: 'string' }, { type: 'boolean' }],
+          default: true,
+        },
+        addresses: {
+          type: 'array',
+          uniqueItems: true,
+          items: {
+            type: 'string',
+            pattern: addressPattern,
+          },
+          default: [],
+        },
+        dirh: {
+          type: 'boolean',
+          default: false,
+        },
+        dirv: {
+          type: 'boolean',
+          default: false,
+        },
+        borderTop: {
+          type: 'integer',
+          default: 0,
+        },
+        borderBottom: {
+          type: 'integer',
+          default: 0,
+        },
+        borderLeft: {
+          type: 'integer',
+          default: 0,
+        },
+        borderRight: {
+          type: 'integer',
+          default: 0,
+        },
+        output: { type: 'string' },
+        brightnessFactor: { type: 'number', minimum: 0, maximum: 4, default: 1 },
       },
-      dirh: {
-        type: 'boolean',
-        default: false,
-      },
-      dirv: {
-        type: 'boolean',
-        default: false,
-      },
-      borderTop: {
-        type: 'integer',
-        default: 0,
-      },
-      borderBottom: {
-        type: 'integer',
-        default: 0,
-      },
-      borderLeft: {
-        type: 'integer',
-        default: 0,
-      },
-      borderRight: {
-        type: 'integer',
-        default: 0,
-      },
+      required: ['id'],
+      default: [],
     },
   },
   logLevel: {
     enum: Object.keys(LogLevelV.keys),
     default: 'none',
   },
-  tests: {
+  pages: {
     type: 'array',
     items: {
       type: 'object',
@@ -208,26 +250,39 @@ export const configSchema: Schema<Config> = {
     },
     default: [],
   },
+  version: { type: 'string' },
 };
 
-const config = new Store<Config>({
-  name: 'gmib',
-  schema: configSchema,
-  watch: true,
-  migrations: {
-    '>3.0.6': store => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const screen: any = store.get('screen');
-      if (screen.address) {
-        screen.addresses = [screen.address];
-        delete screen.address;
-        store.set('screen', screen);
-      }
+export const convertCfgFrom = (cfg: unknown): Config => {
+  const { test, tests, screen, ...other } = cfg as ConfigV1;
+  const { address, addresses, ...props } = screen ?? {};
+  const scr: Screen = {
+    addresses: addresses ?? (address ? [address] : []),
+    output: test,
+    id: 'main',
+    name: 'Экран',
+    brightnessFactor: 1,
+    ...props,
+  };
+  return { pages: tests, screens: [scr], ...other };
+};
+
+export const convertCfgTo = (cfg: Config): ConfigV1 => {
+  const {
+    screens: [screen],
+    pages,
+    // eslint-disable-next-line no-shadow
+    version,
+    ...other
+  } = cfg;
+  const { addresses, output, id, name, brightnessFactor, ...screenProps } = screen;
+  return {
+    tests: pages,
+    screen: {
+      address: addresses && addresses[0],
+      ...screenProps,
     },
-  },
-});
-
-log.log(`Config: ${config.path}`);
-// if (process && process.type === 'renderer') throw new Error('Should run in the main process');
-
-export default config;
+    test: output,
+    ...other,
+  };
+};

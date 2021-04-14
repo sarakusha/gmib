@@ -28,16 +28,18 @@ import { useDispatch, useSelector } from '../store';
 import { Page } from '../util/config';
 import AccordionList from './AccordionList';
 import {
-  activateTest,
-  selectCurrentTab,
-  selectCurrentTest,
-  setCurrentTab,
-  TabValues,
-  selectAllTests,
+  activateHttpPage,
+  selectAllPages,
   removeHttpPage,
   upsertHttpPage,
+  selectScreenById,
+} from '../store/configSlice';
+import {
+  selectCurrentScreenId,
+  selectCurrentTab,
+  setCurrentTab,
+  TabValues,
 } from '../store/currentSlice';
-
 /*
 const useStyles = makeStyles(theme => ({
   item: {
@@ -69,21 +71,22 @@ const noWrap = { noWrap: true };
 
 const HttpPages: React.FC = () => {
   const dispatch = useDispatch();
-  const current = useSelector(selectCurrentTest);
-  const tests = useSelector(selectAllTests);
+  const screen = useSelector(selectCurrentScreenId);
+  const current = useSelector(state => selectScreenById(state, screen))?.output;
+  const pages = useSelector(selectAllPages);
   const tab = useSelector(selectCurrentTab);
   const [selected, setSelected] = useState<string>();
   const visibleHandler = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>, checked: boolean) => {
-      dispatch(activateTest(checked ? event.currentTarget.id : undefined));
+      screen && dispatch(activateHttpPage(screen, checked ? event.currentTarget.id : undefined));
     },
-    [dispatch]
+    [dispatch, screen]
   );
   const [open, setOpen] = useState(false);
   const closeDialog = (): void => setOpen(false);
   const changeHandler = (name: keyof Page, value: string): void => {
     if (!selected) return;
-    const props = tests.find(page => page.id === selected);
+    const props = pages.find(page => page.id === selected);
     if (!props) return;
     dispatch(upsertHttpPage({ ...props, [name]: value }));
   };
@@ -100,12 +103,12 @@ const HttpPages: React.FC = () => {
   return (
     <>
       <AccordionList
-        name="tests"
-        title="Вывод"
-        expanded={tab === 'tests'}
+        name="screens"
+        title="Отображение"
+        expanded={tab === 'screens'}
         onChange={currentTab => dispatch(setCurrentTab(currentTab as TabValues))}
       >
-        {tests.map(({ title = '', id, permanent, url }) => {
+        {pages.map(({ title = '', id, permanent, url }) => {
           const [primary, secondary = ''] = title.split('/', 2);
           const isValid = permanent || (url && isUri(url));
           return (
@@ -126,7 +129,14 @@ const HttpPages: React.FC = () => {
               />
               {!permanent && (
                 <ListItemSecondaryAction>
-                  <IconButton edge="end" aria-label="edit" size="small" onClick={editPage(id)}>
+                  <IconButton
+                    edge="end"
+                    aria-label="edit"
+                    size="small"
+                    onClick={editPage(id)}
+                    color="primary"
+                    title="Изменить"
+                  >
                     <EditIcon fontSize="inherit" />
                   </IconButton>
                   <IconButton
@@ -134,6 +144,8 @@ const HttpPages: React.FC = () => {
                     aria-label="remove"
                     size="small"
                     onClick={() => dispatch(removeHttpPage(id))}
+                    color="secondary"
+                    title="Удалить"
                   >
                     <CloseIcon fontSize="inherit" />
                   </IconButton>
@@ -144,7 +156,7 @@ const HttpPages: React.FC = () => {
         })}
         <ListItem button onClick={addPageHandler}>
           <ListItemIcon>
-            <AddCircleOutlineIcon style={{ margin: 'auto' }} />
+            <AddCircleOutlineIcon style={{ margin: 'auto' }} color="primary" />
           </ListItemIcon>
           <ListItemText>Добавить URL</ListItemText>
         </ListItem>

@@ -21,14 +21,14 @@ type Props = {
 } & SvgIconProps;
 const DeviceIcon: React.FC<Props> = ({ device, mib, ...props }) => {
   const parent = device?.parent;
-  const safeMib = device?.mib;
+  const safeMib = device?.mib ?? mib;
   if (!safeMib) console.warn('Invalid mib or device');
   let Icon = DefaultIcon;
   if (safeMib && safeMib.includes('console')) {
     Icon = ConsoleIcon;
   } else if (safeMib && safeMib.includes('minihost')) {
     Icon = MinihostIcon;
-  } else if (!parent && device?.isLink) {
+  } else if (!parent && device?.isLinkingDevice) {
     Icon = HubIcon;
   }
   return <Icon {...props} />;

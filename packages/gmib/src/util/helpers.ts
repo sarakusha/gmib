@@ -13,6 +13,9 @@ import type { BaseService } from 'bonjour-hap';
 import React, { Dispatch, SetStateAction } from 'react';
 import type { SessionId } from '../store/sessionsSlice';
 
+// eslint-disable-next-line global-require,@typescript-eslint/no-var-requires
+export const { version } = require('../../package.json');
+
 export function tuplify<T extends unknown[]>(...args: T): T {
   return args;
 }
@@ -159,3 +162,31 @@ type FilterFlags<Base, Condition> = {
 
 export type FilterNames<Base, Condition> = FilterFlags<Base, Condition>[keyof Base];
 export type SubType<Base, Condition> = Pick<Base, FilterNames<Base, Condition>>;
+
+export type RequiredKeys<T> = {
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  [K in keyof T]-?: {} extends { [P in K]: T[K] } ? never : K;
+}[keyof T];
+export type OptionalKeys<T> = {
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  [K in keyof T]-?: {} extends { [P in K]: T[K] } ? K : never;
+}[keyof T];
+export type PickRequired<T> = Pick<T, RequiredKeys<T>>;
+export type PickOptional<T> = Pick<T, OptionalKeys<T>>;
+export type Nullable<T> = { [P in keyof T]: T[P] | null };
+export type NullableOptional<T> = PickRequired<T> & Nullable<PickOptional<T>>;
+
+export const findById = <T extends { id: string }>(
+  items: T[] | undefined,
+  id: string
+): T | undefined => items?.find(item => item.id === id);
+
+const nameCountRegexp = /(?:(?:-([\d]+))?)?$/;
+const nameCountFunc = (s: string, index: string): string => `-${(parseInt(index, 10) || 0) + 1}`;
+
+export const incrementCounterString = (s: string): string =>
+  s.replace(nameCountRegexp, nameCountFunc);
+
+export const noop = (): void => {};
+
+export type Writeable<T> = { -readonly [P in keyof T]: T[P] };

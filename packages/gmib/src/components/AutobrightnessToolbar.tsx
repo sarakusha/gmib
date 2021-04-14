@@ -9,11 +9,13 @@
  */
 import { makeStyles } from '@material-ui/core/styles';
 import { Badge, Tooltip, Popover, IconButton, TextField } from '@material-ui/core';
-import React, { useEffect, useReducer } from 'react';
+import React, { useEffect, useReducer, useState } from 'react';
 import LocationOnIcon from '@material-ui/icons/LocationOn';
 import HelpIcon from '@material-ui/icons/Help';
+import TimelineIcon from '@material-ui/icons/Timeline';
+import BrightnessHistoryDialog from '../dialogs/BrightnessHistoryDialog';
 
-import { selectCurrentLocation, setLocationProp } from '../store/currentSlice';
+import { selectLocation, selectSessionVersion, setLocationProp } from '../store/configSlice';
 import { Config } from '../util/config';
 import { createPropsReducer, toNumber } from '../util/helpers';
 
@@ -65,7 +67,8 @@ const validateLocation = ({ longitude, latitude }: Config['location'] = {}): str
 
 const AutobrightnessToolbar: React.FC = () => {
   const classes = useStyles();
-  const current = useSelector(selectCurrentLocation);
+  const current = useSelector(selectLocation);
+  const version = useSelector(selectSessionVersion);
   const [location, setLocation] = useReducer(locationReducer, {
     latitude: '',
     longitude: '',
@@ -79,6 +82,7 @@ const AutobrightnessToolbar: React.FC = () => {
     location: null,
     help: null,
   });
+  const [historyOpen, setHistoryOpen] = useState(false);
   const error = validateLocation(current);
   const handleClick = (type: ActionType): React.MouseEventHandler<HTMLButtonElement> => event => {
     setAnchorEl([type, event.currentTarget]);
@@ -104,6 +108,13 @@ const AutobrightnessToolbar: React.FC = () => {
   const helpId = helpOpen ? 'help' : undefined;
   return (
     <div>
+      {version && (
+        <Tooltip title={'История'}>
+          <IconButton color="inherit" onClick={() => setHistoryOpen(true)}>
+            <TimelineIcon />
+          </IconButton>
+        </Tooltip>
+      )}
       <Tooltip title={`${isValid ? 'Задать' : 'Укажите'} координаты экрана`}>
         <IconButton color="inherit" onClick={handleClick('location')}>
           <Badge variant="dot" color="secondary" invisible={isValid}>
@@ -185,6 +196,7 @@ const AutobrightnessToolbar: React.FC = () => {
           <AutobrightnessHelp />
         </div>
       </Popover>
+      <BrightnessHistoryDialog open={historyOpen} onClose={() => setHistoryOpen(false)} />
     </div>
   );
 };

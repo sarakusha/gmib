@@ -17,11 +17,9 @@ import React, {
   useContext,
   useReducer,
 } from 'react';
-import { AtLeastOne } from '../util/helpers';
+import { AtLeastOne, noop } from '../util/helpers';
 
 type Setter<S> = Dispatch<SetStateAction<S>>;
-
-const noop = (): void => {};
 
 export type FlashState = {
   row: number;

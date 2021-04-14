@@ -33,17 +33,17 @@ import {
   Tabs,
   TextField,
 } from '@material-ui/core';
-import { findMibByType, Address, DeviceId, getDefaultSession } from '@nibus/core';
+import { findMibByType, Address, DeviceId } from '@nibus/core';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AddIcon from '@material-ui/icons/Add';
 import unionBy from 'lodash/unionBy';
 import without from 'lodash/without';
 import classNames from 'classnames';
 import { useDevices, useDispatch, useSelector } from '../store';
+import { selectCurrentSession } from '../store/configSlice';
 import { createDevice, selectLinks } from '../store/devicesSlice';
 import { selectMibTypes } from '../store/nibusSlice';
 import Finder, { DeviceInfo, FinderOptions } from '../util/finders';
-import { getSessionId } from '../util/helpers';
 import useDefaultKeys from '../util/useDefaultKeys';
 import DeviceIcon from '../components/DeviceIcon';
 
@@ -87,6 +87,18 @@ const useStyles = makeStyles(theme => ({
   wrapper: {
     position: 'relative',
   },
+  bar: {
+    backgroundColor: theme.palette.primary.main,
+    color: theme.palette.primary.contrastText,
+  },
+  actions: {
+    position: 'relative',
+  },
+  clear: {
+    position: 'absolute',
+    left: theme.spacing(1),
+    top: theme.spacing(1),
+  },
 }));
 
 type Props = {
@@ -99,10 +111,13 @@ const deviceKey = ({ address, owner }: DeviceInfo): string => `${owner}#${addres
 const union = (prev: DeviceInfo[], item: DeviceInfo): DeviceInfo[] =>
   unionBy(prev, [item], deviceKey);
 
+type SearchKind = 'byAddress' | 'byType';
+
 const SearchDialog: React.FC<Props> = ({ open, close }) => {
   const classes = useStyles();
+  const sessionId = useSelector(selectCurrentSession);
   const [isSearching, setSearching] = useState(false);
-  const [kind, setKind] = useState(0);
+  const [kind, setKind] = useState<SearchKind>('byType');
   const links = useSelector(selectLinks);
   const devices = useDevices();
   const dispatch = useDispatch();
@@ -115,11 +130,15 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
     address: '',
     type: '0',
   });
+  useEffect(() => setDetected([]), [open]);
   const finder = useMemo(() => new Finder(), []);
   useEffect(() => {
     const startListener = (): void => setSearching(true);
     const finishListener = (): void => setSearching(false);
-    const foundListener = (info: DeviceInfo): void => setDetected(prev => union(prev, info));
+    const foundListener = (info: DeviceInfo): void => {
+      console.log({ info, address: info.address.toString() });
+      setDetected(prev => union(prev, info));
+    };
     finder.on('start', startListener);
     finder.on('finish', finishListener);
     finder.on('found', foundListener);
@@ -127,9 +146,10 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
       finder.off('start', startListener);
       finder.off('finish', finishListener);
       finder.off('found', foundListener);
+      finder.cancel();
     };
-  }, [finder, setSearching, setDetected]);
-  const changeHandler = useCallback((_, newValue) => setKind(newValue), [setKind]);
+  }, [finder]);
+  const changeHandler = useCallback((_, newValue) => setKind(newValue), []);
   const startStop = useCallback(() => {
     const connection = connectionRef.current?.value;
     if (connection === undefined) return;
@@ -141,10 +161,10 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
       owners,
     };
     switch (kind) {
-      case 0:
+      case 'byAddress':
         options.address = addressRef.current!.value;
         break;
-      case 1:
+      case 'byType':
         options.type = Number(mibTypeRef.current!.value);
         break;
       default:
@@ -163,6 +183,7 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
       );
     }
   }, [links, kind, isSearching, finder]);
+  const clearHandler = () => setDetected([]);
   useEffect(() => {
     finder.cancel();
     if (!open) {
@@ -176,25 +197,21 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
       setDetected(devs => {
         const dev = devs.find(item => deviceKey(item) === key);
         if (!dev?.owner) return devs;
+        // console.log('NEW DEV', dev);
+        // console.log(devices.map(({ address, parent }) => `${address}:${parent}`).join(', '));
         if (
           devices.findIndex(
             device => dev.address.equals(device.address) && device.parent === dev.owner
           ) === -1
         ) {
           dispatch(
-            createDevice(
-              getSessionId(getDefaultSession()),
-              dev.owner,
-              dev.address.toString(),
-              dev.type,
-              dev.version
-            )
+            createDevice(sessionId, dev.owner, dev.address.toString(), dev.type, dev.version)
           );
         }
         return without(devs, dev);
       });
     },
-    [devices, dispatch]
+    [devices, dispatch, sessionId]
   );
   const mibTypes = useSelector(selectMibTypes);
   useDefaultKeys({
@@ -202,17 +219,15 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
     cancelHandler: close,
   });
   return (
-    <Dialog open={open} aria-labelledby="search-title">
+    <Dialog open={open} aria-labelledby="search-title" onClose={close}>
       <DialogTitle id="search-title">Поиск устройств</DialogTitle>
       <DialogContent className={classes.content}>
-        {/* <AppBar position="static">*/}
-        <Paper square>
-          <Tabs value={kind} indicatorColor="primary" onChange={changeHandler} variant="fullWidth">
-            <Tab label="По адресу" />
-            <Tab label="По типу" />
+        <Paper square className={classes.bar}>
+          <Tabs value={kind} onChange={changeHandler} variant="fullWidth">
+            <Tab label="По типу" value="byType" />
+            <Tab label="По адресу" value="byAddress" />
           </Tabs>
         </Paper>
-        {/* </AppBar>*/}
         <form className={classes.tabContent} noValidate autoComplete="off">
           <FormControl className={classes.formControl} margin="normal" disabled={isSearching}>
             <InputLabel htmlFor="connection">Соединение</InputLabel>
@@ -232,7 +247,7 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
           </FormControl>
           <TextField
             id="address"
-            className={classNames(classes.formControl, { [classes.hidden]: kind !== 0 })}
+            className={classNames(classes.formControl, { [classes.hidden]: kind !== 'byAddress' })}
             error={invalidAddress}
             label="Адрес"
             inputRef={addressRef}
@@ -241,7 +256,7 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
             disabled={isSearching}
           />
           <FormControl
-            className={classNames(classes.formControl, { [classes.hidden]: kind !== 1 })}
+            className={classNames(classes.formControl, { [classes.hidden]: kind !== 'byType' })}
             margin="normal"
             disabled={isSearching}
           >
@@ -268,7 +283,7 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
                   <ListItemIcon>
                     <DeviceIcon color="inherit" mib={mib} />
                   </ListItemIcon>
-                  <ListItemText primary={info.address} secondary={mib} />
+                  <ListItemText primary={info.address.toString()} secondary={mib} />
                   <ListItemSecondaryAction>
                     <IconButton
                       id={deviceKey(info)}
@@ -286,12 +301,20 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
         </div>
         {isSearching && <LinearProgress className={classes.linearProgress} />}
       </DialogContent>
-      <DialogActions>
+      <DialogActions className={classes.actions}>
         <Button onClick={startStop} color="primary" type="submit">
           {isSearching ? 'Остановить' : 'Начать'}
         </Button>
         <Button onClick={close} color="primary">
           Закрыть
+        </Button>
+        <Button
+          color="primary"
+          className={classes.clear}
+          disabled={detected.length === 0}
+          onClick={clearHandler}
+        >
+          Очистить
         </Button>
       </DialogActions>
     </Dialog>

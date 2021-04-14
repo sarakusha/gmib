@@ -26,8 +26,8 @@ mibCategories:
     disableBatchReading: true
   ftdi:
     select:
-      - minihost
       - siolynx
+      - minihost
 knownDevices:
   - vid: '2047'
     pid: '0a3d'

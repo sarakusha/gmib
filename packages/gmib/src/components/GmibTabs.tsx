@@ -15,9 +15,9 @@ import { selectCurrentDeviceId, selectCurrentTab } from '../store/currentSlice';
 import Autobrightness from './Autobrightness';
 import DeviceTabs from './DeviceTabs';
 import Log from './Log';
+import Screens from './Screens';
 
 import TabContainer, { Props as ChildProps } from './TabContainer';
-import Screen from './Screen';
 
 const useStyles = makeStyles({
   root: {
@@ -68,8 +68,8 @@ const Tabs: React.FC = () => {
           selected: currentDevice === child.props.id && tab === 'devices',
         })
       )}
-      <TabContainer id="test" selected={tab === 'tests'}>
-        <Screen />
+      <TabContainer id="test" selected={tab === 'screens'}>
+        <Screens />
       </TabContainer>
       <TabContainer id="autobrightness" selected={tab === 'autobrightness'}>
         <Autobrightness />

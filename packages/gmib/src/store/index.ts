@@ -15,18 +15,24 @@ import {
   useSelector as origUseSelector,
 } from 'react-redux';
 import asyncInitializer from './asyncInitialMiddleware';
-import currentReducer, { initializeCurrent } from './currentSlice';
+import currentReducer from './currentSlice';
+import configReducer, { initializeConfig } from './configSlice';
 import sessionsReducer, { startNibus } from './sessionsSlice';
-import devicesReducer, { DeviceState, selectAllDevices, selectDeviceById } from './devicesSlice';
+import devicesReducer, {
+  DeviceState,
+  initializeDevices,
+  selectAllDevices,
+  selectDeviceById,
+} from './devicesSlice';
 import mibsReducer from './mibsSlice';
 import nibusReducer from './nibusSlice';
-// import testsReducer, { loadTests } from './testsSlice';
 import sensorsReducer from './sensorsSlice';
 import remoteHostsReducer, { initializeRemoteHosts } from './remoteHostsSlice';
 
 export const store = configureStore({
   reducer: {
     current: currentReducer,
+    config: configReducer,
     nibus: nibusReducer,
     sessions: sessionsReducer,
     devices: devicesReducer,
@@ -45,8 +51,9 @@ export const store = configureStore({
     }).concat(
       // asyncInitializer(loadTests),
       asyncInitializer(startNibus),
-      asyncInitializer(initializeCurrent),
-      asyncInitializer(initializeRemoteHosts)
+      asyncInitializer(initializeConfig),
+      asyncInitializer(initializeRemoteHosts),
+      asyncInitializer(initializeDevices)
     ),
 });
 

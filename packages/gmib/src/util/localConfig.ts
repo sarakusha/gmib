@@ -8,19 +8,16 @@
  * the EULA file that was distributed with this source code.
  */
 import Store, { Schema } from 'electron-store';
-// import type { Display, Rectangle } from 'electron';
 
 export type CustomHost = {
   port: number;
   address: string;
+  name?: string;
 };
-
-// type DisplayType = Pick<Display, 'id' | 'bounds' | 'workArea' | 'displayFrequency' | 'internal'>;
 
 export type LocalConfig = {
   hosts: CustomHost[];
   autostart: boolean;
-  // displays: DisplayType[];
 };
 
 const localConfigSchema: Schema<LocalConfig> = {
@@ -31,46 +28,13 @@ const localConfigSchema: Schema<LocalConfig> = {
       properties: {
         port: { type: 'number' },
         address: { type: 'string' },
+        name: { type: 'string' },
       },
       required: ['port', 'address'],
     },
     default: [],
   },
   autostart: { type: 'boolean', default: false },
-  /*
-  displays: {
-    type: 'array',
-    items: {
-      type: 'object',
-      properties: {
-        id: { type: 'integer' },
-        displayFrequency: { type: 'number' },
-        internal: { type: 'boolean' },
-        bounds: {
-          type: 'object',
-          properties: {
-            x: { type: 'integer' },
-            y: { type: 'integer' },
-            width: { type: 'integer' },
-            height: { type: 'integer' },
-          },
-          required: ['x', 'y', 'width', 'height'],
-        },
-        workArea: {
-          type: 'object',
-          properties: {
-            x: { type: 'integer' },
-            y: { type: 'integer' },
-            width: { type: 'integer' },
-            height: { type: 'integer' },
-          },
-          required: ['x', 'y', 'width', 'height'],
-        },
-      },
-      required: ['id', 'displayFrequency', 'internal', 'bounds', 'workArea']
-    },
-  },
-*/
 };
 
 const localConfig = new Store<LocalConfig>({

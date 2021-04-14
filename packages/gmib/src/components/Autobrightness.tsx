@@ -12,32 +12,27 @@ import { Paper, TextField, IconButton, InputAdornment, Button } from '@material-
 import { makeStyles } from '@material-ui/core/styles';
 import classNames from 'classnames';
 import React, { useCallback, useEffect, useState } from 'react';
-import Highcharts, { SeriesSolidgaugeOptions } from 'highcharts';
-import highchartsMore from 'highcharts/highcharts-more';
-import highchartsSolidGauge from 'highcharts/modules/solid-gauge';
 import HighchartsReact from 'highcharts-react-official';
 import CloseIcon from '@material-ui/icons/Close';
 import CheckIcon from '@material-ui/icons/Check';
 import sortBy from 'lodash/sortBy';
 
+import Highcharts, { SeriesSolidgaugeOptions } from './Highcharts';
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useDispatch, useSelector } from '../store';
 import {
   selectAutobrightness,
-  selectCurrentBrightness,
-  selectCurrentSpline,
-  selectCurrentTab,
+  selectBrightness,
+  selectSpline,
   setCurrentBrightness,
   setSpline,
-} from '../store/currentSlice';
+} from '../store/configSlice';
+import { selectCurrentTab } from '../store/currentSlice';
 import { selectLastIlluminance } from '../store/sensorsSlice';
 import { SPLINE_COUNT, SplineItem } from '../util/config';
-import { notEmpty } from '../util/helpers';
+import { noop, notEmpty } from '../util/helpers';
 import AutobrightnessToolbar from './AutobrightnessToolbar';
 import Brightness from './Brightness';
-
-highchartsMore(Highcharts);
-highchartsSolidGauge(Highcharts);
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -91,16 +86,10 @@ const useStyles = makeStyles(theme => ({
   last: {
     marginBottom: theme.spacing(1),
     marginRight: theme.spacing(1),
+    marginLeft: 'auto',
     alignSelf: 'flex-end',
   },
-  // log: {
-  //   display: 'flex',
-  //   justifyContent: 'flex-end',
-  //   alignSelf: 'flex-start',
-  // },
 }));
-
-const autobrightnessToolbar = <AutobrightnessToolbar />;
 
 const setItem = (index: number, value?: number) => (array: number[]): number[] => {
   const clone = [...array];
@@ -117,6 +106,9 @@ const highChartsOptions = (classes: ReturnType<typeof useStyles>): Highcharts.Op
     type: 'solidgauge',
     height: 180,
     width: 400,
+    style: {
+      fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif"',
+    },
   },
   credits: {
     enabled: false,
@@ -198,10 +190,11 @@ const Autobrightness: React.FC = () => {
   const [, setToolbar] = useToolbar();
   const tab = useSelector(selectCurrentTab);
   useEffect(() => {
-    setToolbar(toolbar => {
-      if (tab === 'autobrightness') return autobrightnessToolbar;
-      return toolbar === autobrightnessToolbar ? null : toolbar;
-    });
+    if (tab === 'autobrightness') {
+      setToolbar(<AutobrightnessToolbar />);
+      return () => setToolbar(null);
+    }
+    return noop;
   }, [setToolbar, tab]);
   useEffect(() => {
     setOptions(prev => {
@@ -212,12 +205,14 @@ const Autobrightness: React.FC = () => {
   }, [illuminance]);
   const [lux, setLux] = useState<(number | undefined)[]>([]);
   const [bright, setBright] = useState<(number | undefined)[]>([]);
-  const spline = useSelector(selectCurrentSpline);
-  useEffect(() => {
-    setLux(spline ? spline.map(([l]) => l) : []);
-    setBright(spline ? spline.map(([, b]) => b) : []);
-  }, [spline]);
+  const spline = useSelector(selectSpline);
   const [changed, setChanged] = useState(false);
+  useEffect(() => {
+    if (!changed) {
+      setLux(spline ? spline.map(([l]) => l) : []);
+      setBright(spline ? spline.map(([, b]) => b) : []);
+    }
+  }, [spline, changed]);
   const [error, setError] = useState<string[]>([]);
   const handleChange = useCallback<React.ChangeEventHandler<HTMLInputElement>>(e => {
     const { id, value } = e.target;
@@ -261,16 +256,12 @@ const Autobrightness: React.FC = () => {
         errors[i] = '0..100%';
       }
     }
-    // saveSpline.length = SPLINE_COUNT;
-    // setLux(saveSpline.map(([l]: SplineItem) => l));
-    // setBright(saveSpline.map(([, b]: SplineItem) => b));
     if (errors.length === 0) {
       try {
         dispatch(setSpline(saveSpline.filter(notEmpty)));
         setChanged(false);
       } catch (e) {
         console.error('error while save spline', e.message);
-        // console.log('spline', spline);
       }
     }
     setError(errors);
@@ -283,7 +274,7 @@ const Autobrightness: React.FC = () => {
     setBright(setItem(i));
     setChanged(true);
   };
-  const brightness = useSelector(selectCurrentBrightness);
+  const brightness = useSelector(selectBrightness);
   const handleBrightness = useCallback(
     (e: React.ChangeEvent, value: number) => {
       dispatch(setCurrentBrightness(value));
@@ -293,7 +284,7 @@ const Autobrightness: React.FC = () => {
   const autobrightness = useSelector(selectAutobrightness);
   return (
     <div className={classNames(classes.root, classes.column)}>
-      <Paper>
+      <Paper className={classes.column}>
         <div className={classes.control}>
           <HighchartsReact highcharts={Highcharts} options={options} />
           <Brightness
@@ -349,26 +340,19 @@ const Autobrightness: React.FC = () => {
                 </React.Fragment>
               ))}
             </div>
-            {/*
-            <div className={classes.log}>
-              <InfoIcon opacity={0.5} />
-              &nbsp;
-              <FormHelperText>Шкала логарифмическая</FormHelperText>
-            </div>
-*/}
-            <Button
-              color="primary"
-              startIcon={<CheckIcon />}
-              variant="contained"
-              size="small"
-              disabled={!changed}
-              onClick={handleSave}
-              className={classes.last}
-            >
-              Сохранить
-            </Button>
           </div>
         </div>
+        <Button
+          color="primary"
+          startIcon={<CheckIcon />}
+          variant="outlined"
+          size="small"
+          disabled={!changed}
+          onClick={handleSave}
+          className={classes.last}
+        >
+          Применить
+        </Button>
       </Paper>
     </div>
   );

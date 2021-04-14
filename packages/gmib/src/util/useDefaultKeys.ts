@@ -8,6 +8,7 @@
  * the EULA file that was distributed with this source code.
  */
 
+import { noop } from '@nibus/core';
 import hotkeys from 'hotkeys-js';
 import { useEffect } from 'react';
 import timeid from './timeid';
@@ -16,7 +17,6 @@ type Props = {
   enterHandler?: () => void;
   cancelHandler?: () => void;
 };
-const noop = (): void => {};
 const useDefaultKeys = ({ enterHandler = noop, cancelHandler = noop }: Props): void => {
   useEffect(() => {
     const scope = timeid();

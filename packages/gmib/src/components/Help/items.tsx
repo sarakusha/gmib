@@ -43,8 +43,8 @@ const withIconStyles = withStyles(theme => ({
 
 // eslint-disable-next-line import/prefer-default-export
 export const LocationOnIcon = withRoundBorderStyles(LocationOnIconMui);
-export const SaveButton: React.FC = () => (
-  <Button color="primary" startIcon={<CheckIcon />} variant="contained" size="small">
-    Сохранить
+export const ApplyButton: React.FC = () => (
+  <Button color="primary" startIcon={<CheckIcon />} variant="outlined" size="small">
+    Применить
   </Button>
 );

@@ -14,7 +14,7 @@ import { ipcRenderer } from 'electron';
 import type { Config } from '../util/config';
 import { getSession } from '../util/helpers';
 import { AsyncInitializer } from './asyncInitialMiddleware';
-import { loadConfig, selectCurrentSession, updateCurrentSession } from './currentSlice';
+import { loadConfig, selectCurrentSession, selectScreenAddresses } from './configSlice';
 import { addDevicesListener } from './devicesSlice';
 import type { AppThunk, RootState } from './index';
 import { addSensorsListener } from './sensorsSlice';
@@ -126,11 +126,12 @@ export const openSession = (id: SessionId): AppThunk => (dispatch, getState) => 
     address,
     connection,
   }) => {
+    const addresses = selectScreenAddresses(getState());
     try {
       if (connection.description.mib) {
         session.devices.create(address, connection.description.mib, connection);
       } else {
-        const [version, type] = await connection.getVersion(address);
+        const {version, type} = await connection.getVersion(address) ?? {};
         session.devices.create(address, type!, version, connection);
       }
     } catch (e) {
@@ -148,9 +149,10 @@ export const openSession = (id: SessionId): AppThunk => (dispatch, getState) => 
   // };
 
   const configHandler = (config: Config): void => {
+    // TODO: Возможно лишняя проверка
     const currentSession = selectCurrentSession(getState());
     if (currentSession === id) {
-      dispatch(loadConfig(id, config));
+      dispatch(loadConfig(config));
     }
   };
 
@@ -266,11 +268,13 @@ export const openSession = (id: SessionId): AppThunk => (dispatch, getState) => 
   });
 };
 
+/*
 export const setCurrentSession = (id: SessionId): AppThunk => (dispatch, getState) => {
   dispatch(updateCurrentSession(id));
   const session = selectSessionById(getState(), id);
   if (!session) dispatch(openSession(id));
 };
+*/
 
 export const startNibus: AsyncInitializer = (dispatch, getState) => {
   const session = selectCurrentSession(getState() as RootState);

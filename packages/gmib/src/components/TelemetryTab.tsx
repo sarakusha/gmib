@@ -14,7 +14,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useDevice, useSelector } from '../store';
 import { selectCurrentDeviceId } from '../store/currentSlice';
-import { getStatesAsync } from '../util/helpers';
+import { getStatesAsync, noop } from '../util/helpers';
 import Minihost2Loader, { Minihost2Info } from '../util/Minihost2Loader';
 import Minihost3Loader, { initialSelectors, Minihost3Info } from '../util/Minihost3Loader';
 import MinihostLoader, { IModuleInfo } from '../util/MinihostLoader';
@@ -161,14 +161,13 @@ const TelemetryTab: React.FC<MinihostTabProps> = ({ id, selected = false }) => {
     ),
     [mib, selectors, loading, start, cancel]
   );
-  useEffect(
-    () =>
-      setToolbar(toolbar => {
-        if (active) return telemetryToolbar;
-        return toolbar === telemetryToolbar ? null : toolbar;
-      }),
-    [selected, active, id, setToolbar, telemetryToolbar]
-  );
+  useEffect(() => {
+    if (active) {
+      setToolbar(telemetryToolbar);
+      return () => setToolbar(null);
+    }
+    return noop;
+  }, [active, setToolbar, telemetryToolbar]);
   useEffect(() => {
     if (!loader) return () => {};
     const columnHandler = (column: IModuleInfo<Minihost2Info | Minihost3Info>[]): void => {

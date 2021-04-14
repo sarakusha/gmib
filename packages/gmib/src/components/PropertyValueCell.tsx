@@ -23,7 +23,7 @@ import SerialNoCell from './SerialNoCell';
 const capitalize = (str?: string): string | undefined =>
   str && str.charAt(0).toUpperCase() + str.slice(1);
 
-const safeParseNumber = ({ value }: ValueState): number => parseFloat(value as string) || 0;
+// const safeParseNumber = ({ value }: ValueState): number => parseFloat(value as string) || 0;
 
 const useStyles = makeStyles(_theme => ({
   select: {
@@ -33,11 +33,11 @@ const useStyles = makeStyles(_theme => ({
     fontWeight: 'bold',
   },
   error: {
-    color: 'red',
+    color: 'rgba(255,0,0,0.875) !important',
   },
-  readonly: {
-    whiteSpace: 'nowrap',
-  },
+  // readonly: {
+  //   whiteSpace: 'nowrap',
+  // },
 }));
 
 type Props = {
@@ -53,13 +53,10 @@ const PropertyValueCell: React.FC<Props> = ({ meta, name, state, onChangePropert
   const classes = useStyles();
   const cellFactory = useCallback<() => CellComponent>(() => {
     const componentName = capitalize(name)!;
-    const { simpleType, isWritable, enumeration, unit, min, max, convertFrom = x => x } = meta;
+    const { simpleType, isWritable, enumeration, min, max, convertFrom = x => x } = meta;
     if (!isWritable) {
       return setDisplayName(componentName)(({ value, status, error }: ValueState) => (
-        <TableCell
-          align="right"
-          className={classNames(classes.readonly, { [classes.error]: status === 'failed' })}
-        >
+        <TableCell align="right" className={classNames({ [classes.error]: status === 'failed' })}>
           {status === 'failed' ? error : value}
         </TableCell>
       ));
@@ -115,15 +112,13 @@ const PropertyValueCell: React.FC<Props> = ({ meta, name, state, onChangePropert
       ));
     }
 
-    const [convert, type] =
-      simpleType === 'xs:string'
-        ? [rawValue, 'text']
-        : [unit ? rawValue : safeParseNumber, 'number'];
+    const type = simpleType === 'xs:string' ? 'text' : 'number';
     return setDisplayName(componentName)(props => (
       <EditCell
         name={name}
         type={type}
-        value={convert(props)}
+        // value={convert(props)}
+        value={props.value}
         align="right"
         min={min}
         max={max}

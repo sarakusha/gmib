@@ -59,7 +59,7 @@ const AccordionList: React.FC<AccordionListProps> = ({
       className={className}
     >
       <AccordionSummary
-        expandIcon={<ExpandMoreIcon />}
+        expandIcon={React.Children.count(children) > 0 ? <ExpandMoreIcon /> : undefined}
         aria-controls={name}
         classes={summaryClasses}
         className={classNames({ [classes.hidden]: !title })}

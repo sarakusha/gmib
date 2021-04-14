@@ -34,22 +34,17 @@ import SettingsEthernetIcon from '@material-ui/icons/SettingsEthernet';
 import HighlightOffIcon from '@material-ui/icons/HighlightOff';
 import RemoteHostsDialog from '../dialogs/RemoteHostsDialog';
 import { useDevices, useDispatch, useSelector } from '../store';
-import {
-  selectAutobrightness,
-  selectCurrentTab,
-  setCurrentTab,
-  setAutobrightness,
-} from '../store/currentSlice';
+import { selectAutobrightness, selectLoading, setAutobrightness } from '../store/configSlice';
+import { selectCurrentTab, setCurrentTab } from '../store/currentSlice';
 import { selectIsClosed, selectIsOnline } from '../store/sessionsSlice';
 import Devices from './Devices';
 import GmibTabs from './GmibTabs';
 import SearchDialog from '../dialogs/SearchDialog';
 import { useToolbar } from '../providers/ToolbarProvider';
 import HttpPages from './HttpPages';
+import { version } from '../util/helpers';
 
 const drawerWidth = 240;
-// eslint-disable-next-line global-require,@typescript-eslint/no-var-requires
-const { version } = require('../../package.json');
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -176,16 +171,17 @@ const App: React.FC = () => {
   const [isSearchOpen, setSearchOpen] = useState(false);
   const searchOpen = useCallback(() => setSearchOpen(true), [setSearchOpen]);
   const searchClose = useCallback(() => setSearchOpen(false), [setSearchOpen]);
-  const [link, setLink] = useState(false);
+  const [isLinkingDevice, setLinkingDevice] = useState(false);
   const devices = useDevices();
   const autobrightness = useSelector(selectAutobrightness);
   useEffect(() => {
-    setLink(some(devices, device => !!device?.isLink));
+    setLinkingDevice(some(devices, device => !!device?.isLinkingDevice));
   }, [devices]);
   const [toolbar] = useToolbar();
   const dispatch = useDispatch();
   const tab = useSelector(selectCurrentTab);
   const online = useSelector(selectIsOnline);
+  const loading = useSelector(selectLoading);
   const sessionClosed = useSelector(selectIsClosed);
   const [remoteDialogOpen, setRemoteDialogOpen] = useState(false);
   useEffect(() => {
@@ -198,7 +194,7 @@ const App: React.FC = () => {
   const closeRemoteDialog = (): void => setRemoteDialogOpen(false);
   return (
     <>
-      <Backdrop className={classes.backdrop} open={!online}>
+      <Backdrop className={classes.backdrop} open={!online || loading}>
         {sessionClosed ? (
           <HighlightOffIcon fontSize="large" />
         ) : (
@@ -224,7 +220,7 @@ const App: React.FC = () => {
             </IconButton>
             <div className={classes.title}>
               <Typography component="h1" variant="h6" color="inherit" noWrap display="inline">
-                gMIB
+                gmib
               </Typography>
               &nbsp;
               <Typography component="h1" variant="subtitle1" color="inherit" display="inline">
@@ -237,7 +233,7 @@ const App: React.FC = () => {
                 <IconButton
                   color="inherit"
                   onClick={searchOpen}
-                  disabled={!link}
+                  disabled={!isLinkingDevice}
                   hidden={tab !== 'devices'}
                   className={classNames({ [classes.hidden]: tab !== 'devices' })}
                 >

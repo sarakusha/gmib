@@ -8,7 +8,15 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { Address, AddressParam, AddressType, DeviceId, findDeviceById, IDevice } from '@nibus/core';
+import {
+  Address,
+  AddressParam,
+  AddressType,
+  DeviceId,
+  findDeviceById,
+  IDevice,
+  MINIHOST_TYPE,
+} from '@nibus/core';
 import {
   createAction,
   createAsyncThunk,
@@ -19,20 +27,26 @@ import {
 } from '@reduxjs/toolkit';
 import debounce from 'lodash/debounce';
 import pick from 'lodash/pick';
-import { getSession, notEmpty } from '../util/helpers';
+import { getSession, notEmpty, tuplify } from '../util/helpers';
+import { AsyncInitializer } from './asyncInitialMiddleware';
 import {
   initializeMinihosts,
-  selectCurrent,
-  selectCurrentDeviceId,
-  setCurrentDevice,
-} from './currentSlice';
+  selectBrightness,
+  selectCurrentSession,
+  selectScreenAddresses,
+} from './configSlice';
+import { selectCurrentDeviceId, setCurrentDevice } from './currentSlice';
 import type { AppDispatch, AppThunk, RootState } from './index';
 import { addMib } from './mibsSlice';
 import type { SessionId } from './sessionsSlice';
-// import debugFactory from '../util/debug';
+import debugFactory from '../util/debug';
 
-// const debug = debugFactory('gmib:devicesSlice');
+// noinspection JSUnusedLocalSymbols
+const debug = debugFactory('gmib:devicesSlice');
 
+const sessionSlice = import('./sessionsSlice');
+
+const PINGER_INTERVAL = 10000;
 type ValueStatus = 'succeeded' | 'failed' | 'pending';
 export type ValueType = string | number | boolean | null;
 export type ValueState = {
@@ -56,7 +70,7 @@ export type DeviceState = {
   props: DeviceProps;
   parent?: DeviceId;
   category?: string;
-  isLink?: boolean;
+  isLinkingDevice?: boolean;
   error?: string;
   isBusy: number;
   session?: SessionId;
@@ -146,24 +160,24 @@ const devicesSlice = createSlice({
         mib: Reflect.getMetadata('mib', device),
         isEmptyAddress: address.isEmpty,
         props: getProps(device),
-        isBusy: 0,
+        isBusy: 1,
         session: connection?.session && getSessionId(connection.session),
       };
 
       if (connection?.owner === device) {
-        entity.isLink = connection.description.link;
+        entity.isLinkingDevice = connection.description.link;
         entity.category = connection.description.category;
       }
 
       devicesAdapter.addOne(state, entity);
     },
     removeDevice(state, { payload: id }: PayloadAction<DeviceId>) {
-      const entity = state.entities[id];
-      if (entity) {
-        devicesAdapter.removeOne(state, id);
-        const device = findDeviceById(id);
-        device && device.release();
-      }
+      // const entity = state.entities[id];
+      // if (entity) {
+      devicesAdapter.removeOne(state, id);
+      // const device = findDeviceById(id);
+      // device && device.release();
+      // }
     },
     setConnected(state, { payload: id }: PayloadAction<DeviceId>) {
       const device = findDeviceById(id);
@@ -213,6 +227,20 @@ const devicesSlice = createSlice({
         changes: { address },
       });
     },
+    deviceReady(state, { payload: id }: PayloadAction<DeviceId>) {
+      const entity = state.entities[id];
+      if (!entity) return;
+      devicesAdapter.updateOne(state, {
+        id,
+        changes: {
+          isBusy: entity.isBusy - 1,
+        },
+      });
+    },
+    // releaseDevice(state, { payload: id }: PayloadAction<DeviceId>) {
+    //   const device = findDeviceById(id);
+    //   device && device.release();
+    // },
   },
   extraReducers: builder => {
     builder.addCase(
@@ -319,7 +347,7 @@ export const selectProps = <P extends string>(
 export const selectLinkIds = (state: RootState): DeviceId[] =>
   Object.values(state.devices.entities)
     .filter(notEmpty)
-    .filter(({ isLink }) => isLink)
+    .filter(({ isLinkingDevice }) => isLinkingDevice)
     .map(({ id }) => id);
 
 export const selectLinks = (state: RootState): DeviceState[] =>
@@ -328,7 +356,7 @@ export const selectLinks = (state: RootState): DeviceState[] =>
     .filter(notEmpty);
 
 export const selectCurrentDevice = (state: RootState): DeviceState | undefined => {
-  const { device } = selectCurrent(state);
+  const device = selectCurrentDeviceId(state);
   return device !== undefined ? selectDeviceById(state, device) : undefined;
 };
 
@@ -338,25 +366,30 @@ export const selectAllDevicesWithParent = (state: RootState): DeviceStateWithPar
     parent: typeof parent !== 'undefined' ? selectDeviceById(state, parent) : undefined,
   }));
 
+export const filterDevicesByAddress = <D extends Pick<DeviceState, 'address' | 'mib' | 'props'>>(
+  devices: D[],
+  address: Address
+): D[] =>
+  devices.filter(device => {
+    if (address.type === AddressType.mac) return address.equals(device.address);
+    if (address.type === AddressType.net && device.mib.startsWith('minihost')) {
+      // debug(`${device.props.domain?.raw}.${device.props.subnet?.raw}.${device.props.did?.raw}`);
+      try {
+        const netAddress = new Address(
+          `${device.props.domain?.raw}.${device.props.subnet?.raw}.${device.props.did?.raw}`
+        );
+        // debug(`device: ${netAddress.toString()}`);
+        return address.equals(netAddress);
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  });
+
 export const selectDevicesByAddress = createSelector(
   [selectAllDevices, (state, address: AddressParam) => new Address(address)],
-  (devices, address) =>
-    devices.filter(device => {
-      if (address.type === AddressType.mac) return address.equals(device.address);
-      if (address.type === AddressType.net && device.mib.startsWith('minihost')) {
-        // debug(`${device.props.domain?.raw}.${device.props.subnet?.raw}.${device.props.did?.raw}`);
-        try {
-          const netAddress = new Address(
-            `${device.props.domain?.raw}.${device.props.subnet?.raw}.${device.props.did?.raw}`
-          );
-          // debug(`device: ${netAddress.toString()}`);
-          return address.equals(netAddress);
-        } catch {
-          return false;
-        }
-      }
-      return false;
-    })
+  filterDevicesByAddress
 );
 
 const {
@@ -367,8 +400,10 @@ const {
   setParent,
   // setDeviceError,
   changeAddress,
+  deviceReady,
 } = devicesSlice.actions;
 
+// export const { releaseDevice } = devicesSlice.actions;
 export const setDeviceValue = (
   deviceId: DeviceId
 ): ((name: string, value: ValueType) => AppThunk) => {
@@ -400,7 +435,7 @@ export const setDeviceValue = (
 export const addDevicesListener = (id: SessionId): AppThunk<() => void> => (dispatch, getState) => {
   const newDeviceHandler = (device: IDevice): void => {
     const { id: deviceId, mib } = device;
-    setTimeout(() => dispatch(initializeMinihosts(deviceId)), 100);
+    setTimeout(() => dispatch(initializeMinihosts()), 100);
     const connectedHandler = (): void => {
       dispatch(setConnected(deviceId));
       dispatch(reloadDevice(deviceId));
@@ -430,11 +465,15 @@ export const addDevicesListener = (id: SessionId): AppThunk<() => void> => (disp
     device.on('release', releaseHandler);
     device.on('addressChanged', addressHandler);
 
+    dispatch(addMib(deviceId));
+    // isBusy = 1
+    dispatch(addDevice(deviceId));
     device.read().finally(() => {
-      dispatch(addMib(deviceId));
-      dispatch(addDevice(deviceId));
+      dispatch(updateProps([deviceId]));
+      dispatch(deviceReady(deviceId));
+      // debug(`deviceReady ${device.address.toString()}`);
       selectCurrentDeviceId(getState()) || dispatch(setCurrentDevice(deviceId));
-      const { brightness } = getState().current;
+      const brightness = selectBrightness(getState());
       if (mib?.startsWith('minihost')) {
         setDeviceValue(deviceId)('brightness', brightness);
       }
@@ -442,6 +481,10 @@ export const addDevicesListener = (id: SessionId): AppThunk<() => void> => (disp
   };
   const deleteDeviceHandler = (device: IDevice): void => {
     try {
+      const current = selectCurrentDeviceId(getState());
+      if (current === device.id) {
+        dispatch(setCurrentDevice(undefined));
+      }
       dispatch(removeDevice(device.id));
     } catch (e) {
       console.error(e.message);
@@ -468,9 +511,45 @@ export const createDevice = (
   const parentDevice = session.devices.findById(parent);
   if (parentDevice) {
     device.connection = parentDevice.connection;
+    const checkConnection = async (): Promise<void> => {
+      await session.pingDevice(device);
+    };
+    const timer = window.setInterval(checkConnection, 10000);
+    device.once('release', () => window.clearInterval(timer));
   }
   setImmediate(() => {
     dispatch(setParent([device.id, parent]));
+  });
+};
+
+const pinger: AppThunk = (dispatch, getState) => {
+  const state = getState();
+  const addresses = selectScreenAddresses(state).filter(
+    address => selectDevicesByAddress(state, address).length === 0
+  );
+  if (addresses.length === 0) return;
+  const sessionId = selectCurrentSession(state);
+  const session = getSession(sessionId);
+  Promise.all(addresses.map(async address => tuplify(await session.ping(address), address))).then(
+    res =>
+      res
+        .filter(([[timeout, info]]) => timeout > 0 && info?.type === MINIHOST_TYPE)
+        .forEach(([[, info], address]) => {
+          // debug(`source: ${info?.source}`);
+          dispatch(
+            createDevice(sessionId, info!.connection.owner!.id, address, info!.type, info!.version)
+          );
+        })
+  );
+};
+
+let pingerTimer = 0;
+
+export const initializeDevices: AsyncInitializer = (dispatch, getState: () => RootState) => {
+  sessionSlice.then(({ selectIsRemote }) => {
+    if (!selectIsRemote(getState()) && !pingerTimer) {
+      pingerTimer = window.setInterval(() => dispatch(pinger), PINGER_INTERVAL);
+    }
   });
 };
 

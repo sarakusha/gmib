@@ -14,22 +14,29 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
+  ListItemSecondaryAction,
   Tooltip,
   Typography,
   IconButton,
 } from '@material-ui/core';
+import CloseIcon from '@material-ui/icons/Close';
 import LinkIcon from '@material-ui/icons/Link';
 import UsbIcon from '@material-ui/icons/Usb';
-import { DeviceId, getDefaultSession } from '@nibus/core';
+import { Address, DeviceId, findDeviceById, getDefaultSession } from '@nibus/core';
 import React, { useCallback, useMemo } from 'react';
 import ReloadIcon from '@material-ui/icons/Refresh';
 import { useSelector, useDispatch } from '../store';
-import { selectAllDevicesWithParent } from '../store/devicesSlice';
+import { selectScreenAddresses } from '../store/configSlice';
+import {
+  DeviceStateWithParent,
+  filterDevicesByAddress,
+  selectAllDevicesWithParent,
+} from '../store/devicesSlice';
 import {
   selectCurrentDeviceId,
-  activateDevice,
   selectCurrentTab,
   setCurrentTab,
+  activateDevice,
   TabValues,
 } from '../store/currentSlice';
 import { getSessionId } from '../util/helpers';
@@ -50,13 +57,45 @@ const useStyles = makeStyles(theme => ({
   },
 }));
 
-const name = 'devices';
+const tabName = 'devices';
+
+type DeviceItem = { name: React.ReactNode; device: DeviceStateWithParent };
+
+const getItems = (addresses: string[], devices: DeviceStateWithParent[]): DeviceItem[] => {
+  let rest = [...devices];
+  const result: DeviceItem[] = [];
+  addresses.forEach(address => {
+    const subs = filterDevicesByAddress(devices, new Address(address));
+    if (subs.length > 0) {
+      const ids = subs.map(({ id }) => id);
+      rest = rest.filter(({ id }) => !ids.includes(id));
+      result.push(
+        ...subs.map(device => {
+          const serno = new Address(device.props.serno.value as string).toString();
+          return {
+            name: (
+              <span title={serno}>
+                {address}
+                {device.connected && <small>&nbsp;{serno}</small>}
+              </span>
+            ),
+            device,
+          };
+        })
+      );
+    }
+  });
+  return [...result, ...rest.map(device => ({ name: device.address, device }))];
+};
+
+const noWrap = { noWrap: true };
 
 const Devices: React.FC = () => {
   const classes = useStyles();
   const dispatch = useDispatch();
   const devices = useSelector(selectAllDevicesWithParent);
   const current = useSelector(selectCurrentDeviceId);
+  const addresses = useSelector(selectScreenAddresses);
   const tab = useSelector(selectCurrentTab);
   // const [, setAccordion] = useAccordion();
   const reloadHandler = useCallback<React.MouseEventHandler<HTMLButtonElement>>(
@@ -84,15 +123,17 @@ const Devices: React.FC = () => {
     ),
     [reloadHandler]
   );
+  const items = getItems(addresses, devices);
   return (
     <AccordionList
-      name={name}
+      name={tabName}
       title={title}
       expanded={tab === 'devices' && devices.length > 0}
       onChange={currentTab => dispatch(setCurrentTab(currentTab as TabValues))}
     >
-      {devices.map(device => {
+      {items.map(({ name, device }) => {
         const { id, connected, path, mib, isEmptyAddress, parent, address, category } = device;
+        const removable = Boolean(parent || address!.indexOf('.') !== -1);
         // Reflect.getMetadata('parent', device);
         // const mib = Reflect.getMetadata('mib', device);
         // const desc = device.connection?.description ?? {};
@@ -130,9 +171,25 @@ const Devices: React.FC = () => {
               </div>
             </ListItemIcon>
             <ListItemText
-              primary={isEmptyAddress ? category : address}
+              primaryTypographyProps={noWrap}
+              primary={isEmptyAddress ? category : name}
               secondary={isEmptyAddress ? id : mib}
             />
+            {removable && id && (
+              <ListItemSecondaryAction>
+                <IconButton
+                  edge="end"
+                  aria-label="delete"
+                  size="small"
+                  onClick={event => {
+                    event.stopPropagation();
+                    findDeviceById(id)?.release();
+                  }}
+                >
+                  <CloseIcon />
+                </IconButton>
+              </ListItemSecondaryAction>
+            )}
           </ListItem>
         );
       })}

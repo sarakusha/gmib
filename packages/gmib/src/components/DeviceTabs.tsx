@@ -24,16 +24,9 @@ const useStyles = makeStyles(theme => ({
     flexDirection: 'column',
     width: '100%',
   },
-  // appBarSpacer: {
-  //   flex: '0 0 auto',
-  //   height: 48,
-  // },
-  // header: {},
   content: {
-    flex: '0 1 auto',
-    height: '100%',
-    // height: 'calc(100% - 48px)',
-    display: 'flex',
+    flexGrow: 1,
+    // display: 'flex',
     paddingTop: theme.spacing(1),
     WebkitOverflowScrolling: 'touch', // Add iOS momentum scrolling.
   },
@@ -50,13 +43,9 @@ const DeviceTabs: React.FC<Props> = ({ id }) => {
   const device = useSelector(selectCurrentDevice);
   const isEmpty = !device || device.isEmptyAddress;
   const [value, setValue] = useState<TabState>('props');
-  // const changeHandler = useCallback((_, newValue: unknown) => {
-  //   setValue(Number(newValue));
-  // }, []);
   const mib = device?.mib;
   const isMinihost = mib?.startsWith('minihost');
   const isMinihost3 = mib === 'minihost3';
-  // if (!isMinihost && value > 0) setValue(0);
   if (!id) return null;
   return (
     <div className={classes.root}>
@@ -75,13 +64,11 @@ const DeviceTabs: React.FC<Props> = ({ id }) => {
           {isMinihost3 && <Tab label="Прошивка" value="firmware" />}
         </Tabs>
       </Paper>
-      <div className={classes.content}>
-        <Container maxWidth={value !== 'telemetry' ? 'sm' : undefined} className={classes.root}>
-          <PropertyGridTab id={id} selected={value === 'props'} />
-          <TelemetryTab id={id} selected={value === 'telemetry'} />
-          <FirmwareTab id={id} selected={value === 'firmware'} />
-        </Container>
-      </div>
+      <Container maxWidth={value !== 'telemetry' ? 'sm' : undefined} className={classes.content}>
+        <PropertyGridTab id={id} selected={value === 'props'} />
+        <TelemetryTab id={id} selected={value === 'telemetry'} />
+        <FirmwareTab id={id} selected={value === 'firmware'} />
+      </Container>
     </div>
   );
 };

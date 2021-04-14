@@ -12,11 +12,12 @@ import { Paper } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
 import { parse } from 'ansicolor';
 import sanitizeHtml from 'sanitize-html';
-import { getSession } from '../util/helpers';
+import { getSession, noop } from '../util/helpers';
 import LogToolbar from './LogToolbar';
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useSelector } from '../store';
-import { selectCurrentSession, selectCurrentTab } from '../store/currentSlice';
+import { selectCurrentSession } from '../store/configSlice';
+import { selectCurrentTab } from '../store/currentSlice';
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -50,8 +51,6 @@ const useStyles = makeStyles(theme => ({
     },
   },
 }));
-
-const logToolbar = <LogToolbar />;
 
 const Log: React.FC = () => {
   const refLog = useRef<HTMLDivElement>(null);
@@ -91,10 +90,11 @@ const Log: React.FC = () => {
   const [, setToolbar] = useToolbar();
   const tab = useSelector(selectCurrentTab);
   useEffect(() => {
-    setToolbar(toolbar => {
-      if (tab === 'log') return logToolbar;
-      return toolbar === logToolbar ? null : toolbar;
-    });
+    if (tab === 'log') {
+      setToolbar(<LogToolbar />);
+      return () => setToolbar(null);
+    }
+    return noop;
   }, [setToolbar, tab]);
   return (
     <div className={classes.root}>

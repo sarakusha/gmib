@@ -21,7 +21,7 @@ import { LogLevel, LogLevelV } from '@nibus/core';
 import React, { useState } from 'react';
 import FormFieldSet from './FormFieldSet';
 import { useDispatch, useSelector } from '../store';
-import { selectLogLevel, setLogLevel } from '../store/currentSlice';
+import { selectLogLevel, setLogLevel } from '../store/configSlice';
 
 const useStyles = makeStyles(theme => ({
   content: {

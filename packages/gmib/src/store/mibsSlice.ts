@@ -69,6 +69,7 @@ const mibsSlice = createSlice({
               unit: getPropMeta('unit'),
               min: getPropMeta('min'),
               max: getPropMeta('max'),
+              step: getPropMeta('step'),
               enumeration: getPropMeta('enum'),
               convertFrom: getPropMeta('convertFrom'),
             } as PropMetaInfo,
