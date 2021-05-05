@@ -31,6 +31,8 @@ export type SessionStatus = 'idle' | 'pending' | 'succeeded' | 'failed' | 'close
 
 type NovastarSession = novastar.Session<Socket>;
 
+const novastarSessions: Record<string, NovastarSession> = {};
+
 export interface SessionState extends Partial<Host> {
   status: SessionStatus;
   error: string | undefined;
@@ -38,7 +40,7 @@ export interface SessionState extends Partial<Host> {
   devices: DeviceId[];
   online: boolean;
   displays: Display[];
-  novastarSessions: NovastarSession[];
+  novastarIds: string[];
 }
 
 export const selectSession = (state: RootState): SessionState => state.session;
@@ -50,8 +52,7 @@ export const selectIsClosed = (state: RootState): boolean =>
 
 export const selectDisplays = (state: RootState): Display[] => selectSession(state).displays;
 
-export const selectNovastarSessions = (state: RootState): NovastarSession[] =>
-  selectSession(state).novastarSessions;
+export const selectNovastarIds = (state: RootState): string[] => selectSession(state).novastarIds;
 
 const initialState: SessionState = {
   status: 'idle',
@@ -60,7 +61,7 @@ const initialState: SessionState = {
   devices: [],
   online: false,
   displays: [],
-  novastarSessions: [],
+  novastarIds: [],
 };
 
 const sessionSlice = createSlice({
@@ -76,7 +77,6 @@ const sessionSlice = createSlice({
       state.online = false;
       state.portCount = 0;
       state.displays = [];
-      state.novastarSessions = [];
     },
     reloadSession() {
       const session = getCurrentNibusSession();
@@ -97,13 +97,11 @@ const sessionSlice = createSlice({
     setDisplays(state, { payload: displays }: PayloadAction<Display[]>) {
       state.displays = displays;
     },
-    addNovastarSession(state, { payload: novastarSession }: PayloadAction<NovastarSession>) {
-      state.novastarSessions.push(novastarSession);
+    addNovastarSession(state, { payload: id }: PayloadAction<string>) {
+      state.novastarIds.push(id);
     },
-    removeNovastarSession(state, { payload: novastarSession }: PayloadAction<NovastarSession>) {
-      state.novastarSessions = state.novastarSessions.filter(
-        session => session !== novastarSession
-      );
+    removeNovastarSession(state, { payload: id }: PayloadAction<string>) {
+      state.novastarIds = state.novastarIds.filter(session => session !== id);
     },
     setStatus(
       state,
@@ -175,12 +173,13 @@ export const openSession: AsyncInitializer = (dispatch, getState) => {
         const connection = new novastar.Connection(socket);
         connection.start().then(() => {
           const novastarSession = new novastar.Session(connection);
-          dispatch(addNovastarSession(novastarSession));
+          dispatch(addNovastarSession(path));
           socket.once('close', () => {
             novastarSession.close();
           });
           novastarSession.once('close', () => {
-            dispatch(removeNovastarSession(novastarSession));
+            dispatch(removeNovastarSession(path));
+            delete novastarSessions[path];
             if (!socket.destroyed) socket.destroy();
           });
         });
@@ -213,12 +212,11 @@ export const openSession: AsyncInitializer = (dispatch, getState) => {
   session.on('config', configHandler);
   session.once('host', hostHandler);
   session.on('informationReport', informationListener);
+  session.on('foreign', addForeignDeviceHandler);
   session.devices.on('new', updateDevices);
   session.devices.on('delete', updateDevices);
   const release = (): void => {
-    selectNovastarSessions(getState() as RootState).forEach(novastarSession =>
-      novastarSession.close()
-    );
+    Object.values(novastarSessions).forEach(novastarSession => novastarSession.close());
     session.off('displays', displaysHandler);
     session.off('online', onlineHandler);
     session.off('add', updatePortsHandler);
@@ -228,6 +226,7 @@ export const openSession: AsyncInitializer = (dispatch, getState) => {
     session.off('config', configHandler);
     session.off('host', hostHandler);
     session.off('informationReport', informationListener);
+    session.off('foreign', addForeignDeviceHandler);
     session.devices.off('new', updateDevices);
     session.devices.off('delete', updateDevices);
     // removeDevicesListener();
@@ -241,15 +240,6 @@ export const openSession: AsyncInitializer = (dispatch, getState) => {
     session
       .start()
       .then(ports => {
-        const socket = session.getSocket();
-        if (socket) {
-          socket.once('close', () => {
-            socket.off('add', addForeignDeviceHandler);
-            // socket.off('remove', removeForeignDeviceHandler);
-          });
-          socket.on('add', addForeignDeviceHandler);
-          // socket.on('remove', removeForeignDeviceHandler);
-        }
         dispatch(setStatus({ status: 'succeeded', portCount: ports, error: undefined }));
       })
       .catch(e => {
