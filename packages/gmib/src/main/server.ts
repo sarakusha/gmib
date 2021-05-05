@@ -13,12 +13,12 @@ import { AddressInfo } from 'net';
 import rangeParser from 'range-parser';
 import pump from 'pump';
 import { log } from '../util/debug';
-import config from './config';
 
 type ReadStreamOptions = Parameters<typeof fs.createReadStream>[1];
 
 const VIDEO = '/Users/sarakusha/Movies/tests/daschmi_video.mp4';
-const createReadStream = (opts?: ReadStreamOptions) => fs.createReadStream(VIDEO, opts);
+const createReadStream = (opts?: ReadStreamOptions): fs.ReadStream =>
+  fs.createReadStream(VIDEO, opts);
 const { size } = fs.statSync(VIDEO);
 
 const server = http.createServer((req, res): void => {

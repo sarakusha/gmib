@@ -69,11 +69,10 @@ const PropertyValueCell: React.FC<Props> = ({ meta, name, state, onChangePropert
     const selectChanged = (event: React.ChangeEvent<{ name?: string; value: unknown }>): void => {
       onChangeProperty(name, event.target.value);
     };
-    const rawValue = ({ status, error, value }: ValueState): ValueType =>
-      (status === 'failed' ? error : convertFrom(value)) ?? '';
+    const rawValue = ({ error, value }: ValueState): ValueType => error ?? convertFrom(value) ?? '';
     if (enumeration && enumeration.length > 0) {
       return setDisplayName(componentName)(props => {
-        const { value, status } = props;
+        const { value, status, error } = props;
         const isDirty = status === 'pending';
         return (
           <TableCell align="right">
@@ -84,9 +83,9 @@ const PropertyValueCell: React.FC<Props> = ({ meta, name, state, onChangePropert
               value={String(rawValue(props)) || ''}
               onChange={selectChanged}
             >
-              {(value === '' || value === undefined) && (
-                <MenuItem value="">
-                  <em>Не задано</em>
+              {(error || !value) && (
+                <MenuItem value={error ?? ''}>
+                  <em className={classNames({ [classes.error]: error })}>{error ?? 'Не задано'}</em>
                 </MenuItem>
               )}
               {enumeration.map(([key, itemValue]) => (

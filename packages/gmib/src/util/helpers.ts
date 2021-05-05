@@ -7,11 +7,9 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import { getNibusSession, INibusSession } from '@nibus/core';
 import { PayloadAction } from '@reduxjs/toolkit';
 import type { BaseService } from 'bonjour-hap';
 import React, { Dispatch, SetStateAction } from 'react';
-import type { SessionId } from '../store/sessionsSlice';
 
 // eslint-disable-next-line global-require,@typescript-eslint/no-var-requires
 export const { version } = require('../../package.json');
@@ -111,16 +109,6 @@ export function getStatesAsync<S>(setter1: Setter<S>): Promise<[S]>;
 export function getStatesAsync(...setters: Setter<unknown>[]): Promise<unknown[]> {
   return Promise.all(setters.map(setter => getStateAsync(setter)));
 }
-
-export const getSession = (id?: SessionId): INibusSession => {
-  const [host, port = process.env.NIBUS_PORT ?? '9001'] = id?.split(':') ?? [];
-  return getNibusSession(+port, host || undefined);
-};
-
-export const getSessionId = ({ host, port }: Pick<INibusSession, 'host' | 'port'>): SessionId =>
-  `${host ?? ''}:${port}` as SessionId;
-// export type Altitude = `${number}`;
-// export type HistoryItem = [average: number, count: number];
 
 export const toNumber = (value: string): number | undefined =>
   value.trim().length === 0 ? undefined : Number(value);

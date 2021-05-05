@@ -563,7 +563,7 @@ const startLocalNibus = async (): Promise<void> => {
   const inUse = await tcpPortUsed.check(+(process.env.NIBUS_PORT ?? 9001));
   if (inUse) return;
   try {
-    const { default: svc, detectionPath } = await import('@nibus/cli/lib/service');
+    const { default: svc } = await import('@nibus/cli/lib/service');
     service = svc;
     service.server.on('connection', socket => {
       const file = log.transports.file.getFile().path;

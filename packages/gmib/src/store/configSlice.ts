@@ -28,7 +28,6 @@ import {
 import debugFactory from '../util/debug';
 import {
   findById,
-  getSession,
   incrementCounterString,
   notEmpty,
   PropPayload,
@@ -36,35 +35,32 @@ import {
   tuplify,
 } from '../util/helpers';
 import MonotonicCubicSpline, { Point } from '../util/MonotonicCubicSpline';
+import { getCurrentNibusSession, isRemoteSession } from '../util/nibus';
 import type { AsyncInitializer } from './asyncInitialMiddleware';
 import { setCurrentTab, setCurrentScreen, selectCurrentScreenId } from './currentSlice';
 import type { DeviceState } from './devicesSlice';
 import type { AppThunk, RootState } from './index';
 import { selectLastAverage } from './sensorsSlice';
-import type { SessionId } from './sessionsSlice';
 
 const debug = debugFactory('gmib:configSlice');
 
 // cyclic dependency
 const devicesSlice = import('./devicesSlice');
-const sessionsSlice = import('./sessionsSlice');
 
 const BRIGHTNESS_INTERVAL = 60 * 1000;
 
 const ajv = new Ajv({ removeAdditional: 'failing' });
 
 export interface ConfigState extends Config {
-  readonly session: SessionId;
+  // readonly session: SessionId;
   loading: boolean;
 }
-
-const params = new URLSearchParams(window.location.search);
 
 const initialState: ConfigState = {
   brightness: 30,
   autobrightness: false,
   spline: undefined,
-  session: `${params.get('host') || ''}:${params.get('port') || 9001}` as SessionId,
+  // session: `${params.get('host') || ''}:${params.get('port') || 9001}` as SessionId,
   screens: [],
   logLevel: 'none',
   pages: [],
@@ -72,7 +68,7 @@ const initialState: ConfigState = {
   loading: true,
 };
 
-export type RemoteSession = { id: SessionId; isPersist: boolean };
+// export type RemoteSession = { id: SessionId; isPersist: boolean };
 
 const validateConfig = ajv.compile({
   type: 'object',
@@ -81,12 +77,8 @@ const validateConfig = ajv.compile({
 });
 
 export const sendConfig = debounce((state: ConfigState): void => {
-  const { session: id, loading, ...config } = state;
-  const session = getSession(id);
-  if (!session) {
-    console.error(`Unknown session ${id}`);
-    return;
-  }
+  const { loading, ...config } = state;
+  const session = getCurrentNibusSession();
   if (!validateConfig(config)) console.warn(`error while validate config`);
   const cfg =
     !config.version || semverLt(config.version, '3.1.0') ? convertCfgTo(config) : { ...config };
@@ -141,7 +133,7 @@ export const configSlice = createSlice({
       state.loading = false;
     },
     setLogLevel(state, { payload: logLevel }: PayloadAction<LogLevel>) {
-      const session = getSession(state.session);
+      const session = getCurrentNibusSession();
       state.logLevel = logLevel;
       session.setLogLevel(logLevel);
       sendConfig(current(state));
@@ -203,8 +195,6 @@ export const selectBrightness = (state: RootState): number => selectConfig(state
 
 export const selectAutobrightness = (state: RootState): boolean =>
   selectConfig(state).autobrightness;
-
-export const selectCurrentSessionId = (state: RootState): SessionId => selectConfig(state).session;
 
 export const selectSpline = (state: RootState): Config['spline'] => selectConfig(state).spline;
 
@@ -373,7 +363,7 @@ const updateBrightness = debounce<AppThunk>((dispatch, getState) => {
     if (brightness === undefined) return;
     const screens = selectScreens(state);
     const tasks = screens
-      .filter(({ brightnessFactor, addresses }) => brightnessFactor && brightnessFactor > 0)
+      .filter(({ brightnessFactor }) => brightnessFactor && brightnessFactor > 0)
       .reduce<[DeviceId, number][]>((res, { addresses, brightnessFactor }) => {
         if (!addresses) return res;
         return [
@@ -489,15 +479,10 @@ const calculateBrightness: AppThunk = (dispatch, getState) => {
   dispatch(setCurrentBrightness(brightness));
 };
 
-// export const setAutobrightness = (on: boolean): AppThunk => dispatch => {
-//   dispatch(currentSlice.actions.setAutobrightness(on));
-// };
-
 let brightnessTimer = 0;
 
-export const initializeConfig: AsyncInitializer = async (dispatch, getState: () => RootState) => {
-  const { selectIsRemote } = await sessionsSlice;
-  if (!selectIsRemote(getState()) && !brightnessTimer) {
+export const initializeConfig: AsyncInitializer = dispatch => {
+  if (!isRemoteSession && !brightnessTimer) {
     brightnessTimer = window.setInterval(() => dispatch(calculateBrightness), BRIGHTNESS_INTERVAL);
   }
 };

@@ -17,7 +17,7 @@ import {
 import asyncInitializer from './asyncInitialMiddleware';
 import currentReducer from './currentSlice';
 import configReducer, { initializeConfig } from './configSlice';
-import sessionsReducer, { startNibus } from './sessionsSlice';
+import sessionReducer, { openSession } from './sessionSlice';
 import devicesReducer, {
   DeviceState,
   initializeDevices,
@@ -34,7 +34,7 @@ export const store = configureStore({
     current: currentReducer,
     config: configReducer,
     nibus: nibusReducer,
-    sessions: sessionsReducer,
+    session: sessionReducer,
     devices: devicesReducer,
     mibs: mibsReducer,
     // tests: testsReducer,
@@ -50,7 +50,7 @@ export const store = configureStore({
       },
     }).concat(
       // asyncInitializer(loadTests),
-      asyncInitializer(startNibus),
+      asyncInitializer(openSession),
       asyncInitializer(initializeConfig),
       asyncInitializer(initializeRemoteHosts),
       asyncInitializer(initializeDevices)

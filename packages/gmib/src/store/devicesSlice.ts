@@ -15,7 +15,9 @@ import {
   DeviceId,
   findDeviceById,
   IDevice,
+  INibusSession,
   MINIHOST_TYPE,
+  VersionInfo,
 } from '@nibus/core';
 import {
   createAction,
@@ -27,26 +29,19 @@ import {
 } from '@reduxjs/toolkit';
 import debounce from 'lodash/debounce';
 import pick from 'lodash/pick';
-import { getSession, notEmpty, tuplify } from '../util/helpers';
+import { notEmpty, tuplify } from '../util/helpers';
+import { getCurrentNibusSession, isRemoteSession } from '../util/nibus';
 import { AsyncInitializer } from './asyncInitialMiddleware';
-import {
-  initializeMinihosts,
-  selectBrightness,
-  selectCurrentSessionId,
-  selectScreenAddresses,
-} from './configSlice';
+import { initializeMinihosts, selectBrightness, selectScreenAddresses } from './configSlice';
 import { selectCurrentDeviceId, setCurrentDevice } from './currentSlice';
 import type { AppDispatch, AppThunk, RootState } from './index';
 import { addMib } from './mibsSlice';
-import type { SessionId } from './sessionsSlice';
-import debugFactory from '../util/debug';
+// import debugFactory from '../util/debug';
 
-// noinspection JSUnusedLocalSymbols
-const debug = debugFactory('gmib:devicesSlice');
-
-const sessionSlice = import('./sessionsSlice');
+// const debug = debugFactory('gmib:devicesSlice');
 
 const PINGER_INTERVAL = 10000;
+
 type ValueStatus = 'succeeded' | 'failed' | 'pending';
 export type ValueType = string | number | boolean | null;
 export type ValueState = {
@@ -55,6 +50,7 @@ export type ValueState = {
   raw: ValueType;
   error?: string;
 };
+
 type PropEntity = [name: string, state: ValueState];
 
 export type DeviceProps = Record<string, ValueState>;
@@ -73,13 +69,12 @@ export type DeviceState = {
   isLinkingDevice?: boolean;
   error?: string;
   isBusy: number;
-  session?: SessionId;
 };
 
 export type DeviceStateWithParent = Omit<DeviceState, 'parent'> & { parent?: DeviceState };
 
-const getSessionId = ({ host, port }: { host?: string; port: number }): SessionId =>
-  `${host ?? ''}:${port}` as SessionId;
+// const getSessionId = ({ host, port }: { host?: string; port: number }): SessionId =>
+//   `${host ?? ''}:${port}` as SessionId;
 
 const getDeviceProp = (device: IDevice) => (idOrName: string | number): PropEntity => {
   const error = device.getError(idOrName);
@@ -110,8 +105,6 @@ const devicesAdapter = createEntityAdapter<DeviceState>({
   selectId: device => device.id,
 });
 
-// const { selectById } = devicesAdapter.getSelectors();
-
 const updateProps = createAction<[id: DeviceId, ids?: number[]]>('devices/updateProps');
 
 export const reloadDevice = createAsyncThunk<void, DeviceId>(
@@ -141,13 +134,7 @@ const devicesSlice = createSlice({
     addDevice(state, { payload: id }: PayloadAction<DeviceId>) {
       const device = findDeviceById(id);
       if (!device) {
-        // console.log(
-        //   'sessions',
-        //   getSessions().map(s => s.port)
-        // );
-        // const session = getSession(':9001');
         console.error(`unknown Device id: ${id}`);
-        // setTimeout(() => console.warn(`devices ${session.devices.get().length}`), 100);
         return;
       }
       const { address, connection } = device;
@@ -161,7 +148,7 @@ const devicesSlice = createSlice({
         isEmptyAddress: address.isEmpty,
         props: getProps(device),
         isBusy: 1,
-        session: connection?.session && getSessionId(connection.session),
+        // session: connection?.session && getSessionId(connection.session),
       };
 
       if (connection?.owner === device) {
@@ -172,12 +159,7 @@ const devicesSlice = createSlice({
       devicesAdapter.addOne(state, entity);
     },
     removeDevice(state, { payload: id }: PayloadAction<DeviceId>) {
-      // const entity = state.entities[id];
-      // if (entity) {
       devicesAdapter.removeOne(state, id);
-      // const device = findDeviceById(id);
-      // device && device.release();
-      // }
     },
     setConnected(state, { payload: id }: PayloadAction<DeviceId>) {
       const device = findDeviceById(id);
@@ -187,7 +169,7 @@ const devicesSlice = createSlice({
         id,
         changes: {
           connected: !!connection,
-          session: connection?.session && getSessionId(connection.session),
+          // session: connection?.session && getSessionId(connection.session),
         },
       });
     },
@@ -432,7 +414,61 @@ export const setDeviceValue = (
   };
 };
 
-export const addDevicesListener = (id: SessionId): AppThunk<() => void> => (dispatch, getState) => {
+export const createDevice = (
+  parent: DeviceId,
+  address: string,
+  type: number,
+  version?: number
+): AppThunk => dispatch => {
+  const session = getCurrentNibusSession();
+  const device = session.devices.create(address, type!, version);
+  const parentDevice = session.devices.findById(parent);
+  if (parentDevice) {
+    device.connection = parentDevice.connection;
+    const checkConnection = async (): Promise<void> => {
+      await session.pingDevice(device);
+    };
+    const timer = window.setInterval(checkConnection, 10000);
+    device.once('release', () => window.clearInterval(timer));
+  }
+  setImmediate(() => {
+    dispatch(setParent([device.id, parent]));
+  });
+};
+
+const isSlaveMinihost = (info?: VersionInfo): boolean =>
+  Boolean(info && info.type === MINIHOST_TYPE && info.connection.owner);
+
+const pinger = (session: INibusSession): AppThunk => (dispatch, getState) => {
+  const state = getState();
+  const isReady = !selectAllDevices(state).some(({ isBusy }) => isBusy);
+  if (!isReady) {
+    window.setTimeout(() => dispatch(pinger(session)), 300);
+    return;
+  }
+  const inaccessibleAddresses = selectScreenAddresses(state).filter(
+    address => selectDevicesByAddress(state, address).length === 0
+  );
+  if (inaccessibleAddresses.length === 0) return;
+  Promise.all(
+    inaccessibleAddresses.map(async address => tuplify(await session.ping(address), address))
+  ).then(res =>
+    res
+      .filter(([[timeout, info]]) => timeout > 0 && isSlaveMinihost(info))
+      .forEach(([[, info], address]) => {
+        // debug(`source: ${info?.source}`);
+        dispatch(createDevice(info!.connection.owner!.id, address, info!.type, info!.version));
+      })
+  );
+};
+
+let pingerTimer = 0;
+
+export const initializeDevices: AsyncInitializer = (dispatch, getState: () => RootState) => {
+  if (!isRemoteSession && !pingerTimer) {
+    const session = getCurrentNibusSession();
+    pingerTimer = window.setInterval(() => dispatch(pinger(session)), PINGER_INTERVAL);
+  }
   const newDeviceHandler = (device: IDevice): void => {
     const { id: deviceId, mib } = device;
     setTimeout(() => dispatch(initializeMinihosts()), 100);
@@ -493,67 +529,13 @@ export const addDevicesListener = (id: SessionId): AppThunk<() => void> => (disp
       console.error(e.message);
     }
   };
-  const session = getSession(id);
+  const session = getCurrentNibusSession();
   session.devices.on('new', newDeviceHandler);
   session.devices.on('delete', deleteDeviceHandler);
   return () => {
     session.devices.off('new', newDeviceHandler);
     session.devices.off('delete', deleteDeviceHandler);
   };
-};
-
-export const createDevice = (
-  id: SessionId,
-  parent: DeviceId,
-  address: string,
-  type: number,
-  version?: number
-): AppThunk => dispatch => {
-  const session = getSession(id);
-  const device = session.devices.create(address, type!, version);
-  const parentDevice = session.devices.findById(parent);
-  if (parentDevice) {
-    device.connection = parentDevice.connection;
-    const checkConnection = async (): Promise<void> => {
-      await session.pingDevice(device);
-    };
-    const timer = window.setInterval(checkConnection, 10000);
-    device.once('release', () => window.clearInterval(timer));
-  }
-  setImmediate(() => {
-    dispatch(setParent([device.id, parent]));
-  });
-};
-
-const pinger: AppThunk = (dispatch, getState) => {
-  const state = getState();
-  const addresses = selectScreenAddresses(state).filter(
-    address => selectDevicesByAddress(state, address).length === 0
-  );
-  if (addresses.length === 0) return;
-  const sessionId = selectCurrentSessionId(state);
-  const session = getSession(sessionId);
-  Promise.all(addresses.map(async address => tuplify(await session.ping(address), address))).then(
-    res =>
-      res
-        .filter(([[timeout, info]]) => timeout > 0 && info?.type === MINIHOST_TYPE)
-        .forEach(([[, info], address]) => {
-          // debug(`source: ${info?.source}`);
-          dispatch(
-            createDevice(sessionId, info!.connection.owner!.id, address, info!.type, info!.version)
-          );
-        })
-  );
-};
-
-let pingerTimer = 0;
-
-export const initializeDevices: AsyncInitializer = (dispatch, getState: () => RootState) => {
-  sessionSlice.then(({ selectIsRemote }) => {
-    if (!selectIsRemote(getState()) && !pingerTimer) {
-      pingerTimer = window.setInterval(() => dispatch(pinger), PINGER_INTERVAL);
-    }
-  });
 };
 
 export default devicesSlice.reducer;

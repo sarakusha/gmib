@@ -12,11 +12,11 @@ import { Paper } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
 import { parse } from 'ansicolor';
 import sanitizeHtml from 'sanitize-html';
-import { getSession, noop } from '../util/helpers';
+import { noop } from '../util/helpers';
+import { getCurrentNibusSession } from '../util/nibus';
 import LogToolbar from './LogToolbar';
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useSelector } from '../store';
-import { selectCurrentSessionId } from '../store/configSlice';
 import { selectCurrentTab } from '../store/currentSlice';
 
 const useStyles = makeStyles(theme => ({
@@ -55,7 +55,6 @@ const useStyles = makeStyles(theme => ({
 const Log: React.FC = () => {
   const refLog = useRef<HTMLDivElement>(null);
   const classes = useStyles();
-  const sessionId = useSelector(selectCurrentSessionId);
   const [, setState] = useState(0);
   useEffect(() => {
     const logListener = (line: string): void => {
@@ -81,12 +80,12 @@ const Log: React.FC = () => {
         });
       }
     };
-    const session = getSession(sessionId);
+    const session = getCurrentNibusSession();
     session.on('log', logListener);
     return () => {
       session.off('log', logListener);
     };
-  }, [sessionId]);
+  }, []);
   const [, setToolbar] = useToolbar();
   const tab = useSelector(selectCurrentTab);
   useEffect(() => {

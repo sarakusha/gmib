@@ -40,7 +40,6 @@ import unionBy from 'lodash/unionBy';
 import without from 'lodash/without';
 import classNames from 'classnames';
 import { useDevices, useDispatch, useSelector } from '../store';
-import { selectCurrentSessionId } from '../store/configSlice';
 import { createDevice, selectLinks } from '../store/devicesSlice';
 import { selectMibTypes } from '../store/nibusSlice';
 import Finder, { DeviceInfo, FinderOptions } from '../util/finders';
@@ -115,7 +114,6 @@ type SearchKind = 'byAddress' | 'byType';
 
 const SearchDialog: React.FC<Props> = ({ open, close }) => {
   const classes = useStyles();
-  const sessionId = useSelector(selectCurrentSessionId);
   const [isSearching, setSearching] = useState(false);
   const [kind, setKind] = useState<SearchKind>('byType');
   const links = useSelector(selectLinks);
@@ -136,7 +134,7 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
     const startListener = (): void => setSearching(true);
     const finishListener = (): void => setSearching(false);
     const foundListener = (info: DeviceInfo): void => {
-      console.log({ info, address: info.address.toString() });
+      // console.log({ info, address: info.address.toString() });
       setDetected(prev => union(prev, info));
     };
     finder.on('start', startListener);
@@ -183,7 +181,7 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
       );
     }
   }, [links, kind, isSearching, finder]);
-  const clearHandler = () => setDetected([]);
+  const clearHandler = (): void => setDetected([]);
   useEffect(() => {
     finder.cancel();
     if (!open) {
@@ -204,14 +202,12 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
             device => dev.address.equals(device.address) && device.parent === dev.owner
           ) === -1
         ) {
-          dispatch(
-            createDevice(sessionId, dev.owner, dev.address.toString(), dev.type, dev.version)
-          );
+          dispatch(createDevice(dev.owner, dev.address.toString(), dev.type, dev.version));
         }
         return without(devs, dev);
       });
     },
-    [devices, dispatch, sessionId]
+    [devices, dispatch]
   );
   const mibTypes = useSelector(selectMibTypes);
   useDefaultKeys({

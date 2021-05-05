@@ -22,7 +22,7 @@ import {
 import CloseIcon from '@material-ui/icons/Close';
 import LinkIcon from '@material-ui/icons/Link';
 import UsbIcon from '@material-ui/icons/Usb';
-import { Address, DeviceId, findDeviceById, getDefaultSession } from '@nibus/core';
+import { Address, DeviceId, findDeviceById } from '@nibus/core';
 import React, { useCallback, useMemo } from 'react';
 import ReloadIcon from '@material-ui/icons/Refresh';
 import { useSelector, useDispatch } from '../store';
@@ -39,10 +39,9 @@ import {
   activateDevice,
   TabValues,
 } from '../store/currentSlice';
-import { getSessionId } from '../util/helpers';
 import AccordionList from './AccordionList';
 import DeviceIcon from './DeviceIcon';
-import { reloadSession } from '../store/sessionsSlice';
+import { reloadSession } from '../store/sessionSlice';
 
 const useStyles = makeStyles(theme => ({
   wrapper: {
@@ -100,7 +99,7 @@ const Devices: React.FC = () => {
   // const [, setAccordion] = useAccordion();
   const reloadHandler = useCallback<React.MouseEventHandler<HTMLButtonElement>>(
     e => {
-      dispatch(reloadSession(getSessionId(getDefaultSession())));
+      dispatch(reloadSession());
       e.stopPropagation();
     },
     [dispatch]

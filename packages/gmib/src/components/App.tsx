@@ -36,7 +36,7 @@ import RemoteHostsDialog from '../dialogs/RemoteHostsDialog';
 import { useDevices, useDispatch, useSelector } from '../store';
 import { selectAutobrightness, selectLoading, setAutobrightness } from '../store/configSlice';
 import { selectCurrentTab, setCurrentTab } from '../store/currentSlice';
-import { selectIsClosed, selectIsOnline } from '../store/sessionsSlice';
+import { selectIsClosed, selectIsOnline } from '../store/sessionSlice';
 import Devices from './Devices';
 import GmibTabs from './GmibTabs';
 import SearchDialog from '../dialogs/SearchDialog';

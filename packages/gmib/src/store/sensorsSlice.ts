@@ -10,12 +10,10 @@
 
 /* eslint-disable no-bitwise */
 import { createSlice, PayloadAction, Draft } from '@reduxjs/toolkit';
-import { NibusSessionEvents } from '@nibus/core';
 import sortBy from 'lodash/sortBy';
 import maxBy from 'lodash/maxBy';
-import { getSession, notEmpty } from '../util/helpers';
+import { notEmpty } from '../util/helpers';
 import type { AppThunk, RootState } from './index';
-import type { SessionId } from './sessionsSlice';
 
 type SensorRecord = [timestamp: number, value: number];
 
@@ -29,8 +27,8 @@ type SensorState = {
 
 const DEFAULT_INTERVAL = 60;
 const MIN_INTERVAL = 10;
-const ILLUMINATION = 321;
-const TEMPERATURE = 128;
+export const ILLUMINATION = 321;
+export const TEMPERATURE = 128;
 
 type SensorDictionary = Record<SensorAddress, SensorState>;
 
@@ -151,35 +149,6 @@ export const pushSensorValue = (
   //   }
   // }
   timeout = window.setTimeout(() => dispatch(calculate()), (MIN_INTERVAL + 1) * 1000);
-};
-
-export const addSensorsListener = (sessionId: SessionId): AppThunk<() => void> => dispatch => {
-  const informationListener: NibusSessionEvents['informationReport'] = (
-    connection,
-    { id, value, source }
-  ) => {
-    switch (id) {
-      case ILLUMINATION:
-        dispatch(pushSensorValue('illuminance', source.toString(), value));
-        break;
-      case TEMPERATURE:
-        dispatch(pushSensorValue('temperature', source.toString(), value));
-        break;
-      default:
-        break;
-    }
-  };
-
-  // session.on('close', closeListener);
-  const session = getSession(sessionId);
-
-  const closeListener = (): void => {
-    // console.log('CLOSE SESSION');
-    // session.off('close', closeListener);
-    session.off('informationReport', informationListener);
-  };
-  session.on('informationReport', informationListener);
-  return closeListener;
 };
 
 const selectLast = (state: RootState, kind: SensorKind): SensorState | undefined => {
