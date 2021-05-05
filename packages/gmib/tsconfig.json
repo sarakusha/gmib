@@ -17,11 +17,13 @@
     "resolveJsonModule": true,
     "baseUrl": ".",
     "typeRoots": [
+      "../../node_modules/@types",
       "./node_modules/@types",
       "./@types"
     ],
     "types": [
-      "node"
+      "node",
+      "jest"
     ],
     "lib": [
       "dom",
@@ -36,7 +38,7 @@
       "debug/src/node": [
         "../../node_modules/@types/debug"
       ],
-      "iput": ["@types/iput"],
+      "iput": ["@types/iput"]
     }
   },
   "exclude": [

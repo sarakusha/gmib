@@ -40,7 +40,7 @@ import unionBy from 'lodash/unionBy';
 import without from 'lodash/without';
 import classNames from 'classnames';
 import { useDevices, useDispatch, useSelector } from '../store';
-import { selectCurrentSession } from '../store/configSlice';
+import { selectCurrentSessionId } from '../store/configSlice';
 import { createDevice, selectLinks } from '../store/devicesSlice';
 import { selectMibTypes } from '../store/nibusSlice';
 import Finder, { DeviceInfo, FinderOptions } from '../util/finders';
@@ -115,7 +115,7 @@ type SearchKind = 'byAddress' | 'byType';
 
 const SearchDialog: React.FC<Props> = ({ open, close }) => {
   const classes = useStyles();
-  const sessionId = useSelector(selectCurrentSession);
+  const sessionId = useSelector(selectCurrentSessionId);
   const [isSearching, setSearching] = useState(false);
   const [kind, setKind] = useState<SearchKind>('byType');
   const links = useSelector(selectLinks);

@@ -27,7 +27,7 @@ import { Button, Dialog, DialogActions, DialogContent, Typography } from '@mater
 import SunCalc from 'suncalc';
 import Highcharts, { SeriesLineOptions } from '../components/Highcharts';
 import { useSelector } from '../store';
-import { selectCurrentSession, selectLocation } from '../store/configSlice';
+import { selectCurrentSessionId, selectLocation } from '../store/configSlice';
 import { getSession, noop } from '../util/helpers';
 
 type Props = {
@@ -221,7 +221,7 @@ const useStyles = makeStyles({
 });
 
 const BrightnessHistoryDialog: React.FC<Props> = ({ open = false, onClose = noop }) => {
-  const sessionId = useSelector(selectCurrentSession);
+  const sessionId = useSelector(selectCurrentSessionId);
   const [options, setOptions] = useState<Highcharts.Options>(highchartsOptions);
   const { latitude, longitude } = useSelector(selectLocation) ?? {};
   const isValidLocation = latitude !== undefined && longitude !== undefined;

@@ -18,7 +18,7 @@ import { autoUpdater } from 'electron-updater';
 import fs from 'fs';
 import isEqual from 'lodash/isEqual';
 import uniqBy from 'lodash/uniqBy';
-import { isIPv4 } from 'net';
+import { AddressInfo, isIPv4 } from 'net';
 import os from 'os';
 import path from 'path';
 import readline from 'readline';
@@ -42,8 +42,8 @@ import {
   updateMenu,
 } from './mainMenu';
 import { updateTray } from './tray';
-
 import windows, { screenWindows, showAll } from './windows';
+import server from './server';
 
 const USE_REACT_REFRESH_WEBPACK = true;
 const bonjour = Bonjour();
@@ -443,6 +443,7 @@ const updateScreens = (newValue?: Screen[], oldValue?: Screen[]): void => {
                 const value = curScreen[name];
                 return value !== undefined ? [name, value.toString()] : undefined;
               })
+              .concat([['port', (server.address() as AddressInfo).port.toString()]])
               .filter(notEmpty)
           )}`
         : page.url;
@@ -591,7 +592,7 @@ const startLocalNibus = async (): Promise<void> => {
     });
     sendStatusToWindow('Starting local NIBUS...');
     await service.start();
-    sendStatusToWindow(`NiBUS started. Detection file: ${detectionPath}`);
+    // sendStatusToWindow(`NiBUS started. Detection file: ${detectionPath}`);
   } catch (e) {
     sendStatusToWindow(`Error while nibus starting ${e}`, true);
   }

@@ -32,7 +32,7 @@ import { AsyncInitializer } from './asyncInitialMiddleware';
 import {
   initializeMinihosts,
   selectBrightness,
-  selectCurrentSession,
+  selectCurrentSessionId,
   selectScreenAddresses,
 } from './configSlice';
 import { selectCurrentDeviceId, setCurrentDevice } from './currentSlice';
@@ -468,16 +468,19 @@ export const addDevicesListener = (id: SessionId): AppThunk<() => void> => (disp
     dispatch(addMib(deviceId));
     // isBusy = 1
     dispatch(addDevice(deviceId));
-    device.read().finally(() => {
-      dispatch(updateProps([deviceId]));
-      dispatch(deviceReady(deviceId));
-      // debug(`deviceReady ${device.address.toString()}`);
-      selectCurrentDeviceId(getState()) || dispatch(setCurrentDevice(deviceId));
-      const brightness = selectBrightness(getState());
-      if (mib?.startsWith('minihost')) {
-        setDeviceValue(deviceId)('brightness', brightness);
-      }
-    });
+    setTimeout(() => {
+      if (!device.connection) return;
+      device.read().finally(() => {
+        dispatch(updateProps([deviceId]));
+        dispatch(deviceReady(deviceId));
+        // debug(`deviceReady ${device.address.toString()}`);
+        selectCurrentDeviceId(getState()) || dispatch(setCurrentDevice(deviceId));
+        const brightness = selectBrightness(getState());
+        if (mib?.startsWith('minihost')) {
+          setDeviceValue(deviceId)('brightness', brightness);
+        }
+      });
+    }, 3000);
   };
   const deleteDeviceHandler = (device: IDevice): void => {
     try {
@@ -528,7 +531,7 @@ const pinger: AppThunk = (dispatch, getState) => {
     address => selectDevicesByAddress(state, address).length === 0
   );
   if (addresses.length === 0) return;
-  const sessionId = selectCurrentSession(state);
+  const sessionId = selectCurrentSessionId(state);
   const session = getSession(sessionId);
   Promise.all(addresses.map(async address => tuplify(await session.ping(address), address))).then(
     res =>

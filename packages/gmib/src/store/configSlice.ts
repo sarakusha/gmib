@@ -47,7 +47,7 @@ const debug = debugFactory('gmib:configSlice');
 
 // cyclic dependency
 const devicesSlice = import('./devicesSlice');
-const sessionSlice = import('./sessionsSlice');
+const sessionsSlice = import('./sessionsSlice');
 
 const BRIGHTNESS_INTERVAL = 60 * 1000;
 
@@ -204,7 +204,7 @@ export const selectBrightness = (state: RootState): number => selectConfig(state
 export const selectAutobrightness = (state: RootState): boolean =>
   selectConfig(state).autobrightness;
 
-export const selectCurrentSession = (state: RootState): SessionId => selectConfig(state).session;
+export const selectCurrentSessionId = (state: RootState): SessionId => selectConfig(state).session;
 
 export const selectSpline = (state: RootState): Config['spline'] => selectConfig(state).spline;
 
@@ -496,7 +496,7 @@ const calculateBrightness: AppThunk = (dispatch, getState) => {
 let brightnessTimer = 0;
 
 export const initializeConfig: AsyncInitializer = async (dispatch, getState: () => RootState) => {
-  const { selectIsRemote } = await sessionSlice;
+  const { selectIsRemote } = await sessionsSlice;
   if (!selectIsRemote(getState()) && !brightnessTimer) {
     brightnessTimer = window.setInterval(() => dispatch(calculateBrightness), BRIGHTNESS_INTERVAL);
   }

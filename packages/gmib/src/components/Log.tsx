@@ -16,7 +16,7 @@ import { getSession, noop } from '../util/helpers';
 import LogToolbar from './LogToolbar';
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useSelector } from '../store';
-import { selectCurrentSession } from '../store/configSlice';
+import { selectCurrentSessionId } from '../store/configSlice';
 import { selectCurrentTab } from '../store/currentSlice';
 
 const useStyles = makeStyles(theme => ({
@@ -55,7 +55,7 @@ const useStyles = makeStyles(theme => ({
 const Log: React.FC = () => {
   const refLog = useRef<HTMLDivElement>(null);
   const classes = useStyles();
-  const sessionId = useSelector(selectCurrentSession);
+  const sessionId = useSelector(selectCurrentSessionId);
   const [, setState] = useState(0);
   useEffect(() => {
     const logListener = (line: string): void => {

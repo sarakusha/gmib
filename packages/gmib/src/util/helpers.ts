@@ -162,6 +162,7 @@ type FilterFlags<Base, Condition> = {
 
 export type FilterNames<Base, Condition> = FilterFlags<Base, Condition>[keyof Base];
 export type SubType<Base, Condition> = Pick<Base, FilterNames<Base, Condition>>;
+export type OmitType<Base, Condition> = Omit<Base, FilterNames<Base, Condition>>;
 
 export type RequiredKeys<T> = {
   // eslint-disable-next-line @typescript-eslint/ban-types

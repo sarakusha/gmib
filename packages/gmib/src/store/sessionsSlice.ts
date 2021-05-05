@@ -8,13 +8,17 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { FoundListener, DeviceId, Host, Display } from '@nibus/core';
+import { Socket, connect } from 'net';
+import { FoundListener, DeviceId, Host, Display, PortArg } from '@nibus/core';
 import { createEntityAdapter, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { ipcRenderer } from 'electron';
+// eslint-disable-next-line import/no-extraneous-dependencies
+import * as novastar from '@novastar/core';
+
 import type { Config } from '../util/config';
 import { getSession } from '../util/helpers';
 import { AsyncInitializer } from './asyncInitialMiddleware';
-import { loadConfig, selectCurrentSession, selectScreenAddresses } from './configSlice';
+import { loadConfig, selectCurrentSessionId } from './configSlice';
 import { addDevicesListener } from './devicesSlice';
 import type { AppThunk, RootState } from './index';
 import { addSensorsListener } from './sensorsSlice';
@@ -27,6 +31,8 @@ const RESTART_DELAY = 3000;
 export type SessionStatus = 'idle' | 'pending' | 'succeeded' | 'failed' | 'closed';
 export type SessionId = `${string}:${number}`;
 
+type NovastarSession = novastar.Session<Socket>;
+
 export interface SessionState extends Partial<Host> {
   id: SessionId;
   status: SessionStatus;
@@ -36,6 +42,7 @@ export interface SessionState extends Partial<Host> {
   online: boolean;
   remote: boolean;
   displays: Display[];
+  novastarSessions: NovastarSession[];
   // config: Config | undefined;
 }
 
@@ -43,25 +50,21 @@ const sessionAdapter = createEntityAdapter<SessionState>({ selectId: session => 
 
 export const { selectById: selectSessionById } = sessionAdapter.getSelectors<RootState>(state => state.sessions);
 
-export const selectIsRemote = (state: RootState): boolean => !!selectSessionById(
+export const selectCurrentSession = (state: RootState): SessionState | undefined => selectSessionById(
   state,
-  selectCurrentSession(state),
-)?.remote;
+  selectCurrentSessionId(state),
+);
 
-export const selectIsOnline = (state: RootState): boolean => !!selectSessionById(
-  state,
-  selectCurrentSession(state),
-)?.online;
+export const selectIsRemote = (state: RootState): boolean => !!selectCurrentSession(state)?.remote;
 
-export const selectIsClosed = (state: RootState): boolean => selectSessionById(
-  state,
-  selectCurrentSession(state),
-)?.status === 'closed';
+export const selectIsOnline = (state: RootState): boolean => !!selectCurrentSession(state)?.online;
 
-export const selectDisplays = (state: RootState): Display[] => selectSessionById(
-  state,
-  selectCurrentSession(state),
-)?.displays ?? [];
+export const selectIsClosed = (state: RootState): boolean => selectCurrentSession(state)?.status === 'closed';
+
+export const selectDisplays = (state: RootState): Display[] => selectCurrentSession(state)?.displays ?? [];
+
+export const selectNovastarSessions = (state: RootState): NovastarSession[] => selectCurrentSession(
+  state)?.novastarSessions ?? [];
 
 const sessionsSlice = createSlice({
   name: 'sessions',
@@ -113,7 +116,7 @@ export const {
 export const openSession = (id: SessionId): AppThunk => (dispatch, getState) => {
   if (selectSessionById(getState(), id)) return;
   // Глюк, если не привести к string падает webpack!
-  const [host] = (id as string).split(':');
+  const [host, port] = (id as string).split(':');
   const remote = !!host && host !== 'localhost';
   const session = getSession(id);
   const updatePortsHandler = (): void => {
@@ -126,12 +129,15 @@ export const openSession = (id: SessionId): AppThunk => (dispatch, getState) => 
     address,
     connection,
   }) => {
-    const addresses = selectScreenAddresses(getState());
+    // const addresses = selectScreenAddresses(getState());
     try {
       if (connection.description.mib) {
         session.devices.create(address, connection.description.mib, connection);
       } else {
-        const {version, type} = await connection.getVersion(address) ?? {};
+        const {
+          version,
+          type,
+        } = await connection.getVersion(address) ?? {};
         session.devices.create(address, type!, version, connection);
       }
     } catch (e) {
@@ -150,7 +156,7 @@ export const openSession = (id: SessionId): AppThunk => (dispatch, getState) => 
 
   const configHandler = (config: Config): void => {
     // TODO: Возможно лишняя проверка
-    const currentSession = selectCurrentSession(getState());
+    const currentSession = selectCurrentSessionId(getState());
     if (currentSession === id) {
       dispatch(loadConfig(config));
     }
@@ -177,6 +183,48 @@ export const openSession = (id: SessionId): AppThunk => (dispatch, getState) => 
     }));
   };
 
+  const selectNovastar = (): NovastarSession[] => selectSessionById(
+    getState(),
+    id,
+  )?.novastarSessions ?? [];
+
+  const addForeignDeviceHandler = async ({
+    portInfo: { path },
+    description,
+  }: PortArg): Promise<void> => {
+    if (description.category !== 'novastar') return;
+    const socket = connect(+port, host, () => {
+      socket.write(path);
+      window.setTimeout(() => {
+        const connection = new novastar.Connection(socket);
+        connection.start().then(() => {
+
+          const novastarSession = new novastar.Session(connection);
+          dispatch(updateSession({
+            id,
+            changes: {
+              novastarSessions: [...selectNovastar(), novastarSession],
+            },
+          }));
+          socket.once('close', () => {
+            novastarSession.close();
+          });
+          novastarSession.once('close', () => {
+            dispatch(updateSession({
+              id,
+              changes: {
+                novastarSessions: selectNovastar().filter(item => item !== novastarSession),
+              },
+            }));
+
+            if (!socket.destroyed) socket.destroy();
+          });
+        });
+      }, 100);
+    });
+  };
+  // const removeForeignDeviceHandler = ({} : PortArg): void => {};
+
   const removeSensorsListener = dispatch(addSensorsListener(id));
   const removeDevicesListener = dispatch(addDevicesListener(id));
 
@@ -191,6 +239,7 @@ export const openSession = (id: SessionId): AppThunk => (dispatch, getState) => 
   session.devices.on('new', updateDevices);
   session.devices.on('delete', updateDevices);
   const release = (): void => {
+    selectNovastar().forEach(novastarSession => novastarSession.close());
     session.off('displays', displaysHandler);
     session.off('online', onlineHandler);
     session.off('add', updatePortsHandler);
@@ -212,6 +261,7 @@ export const openSession = (id: SessionId): AppThunk => (dispatch, getState) => 
             online: false,
             portCount: 0,
             displays: [],
+            novastarSessions: [],
           },
         },
       ));
@@ -228,6 +278,7 @@ export const openSession = (id: SessionId): AppThunk => (dispatch, getState) => 
     online: false,
     remote,
     displays: [],
+    novastarSessions: [],
     // config: undefined,
   }));
   const start = (): void => {
@@ -236,6 +287,15 @@ export const openSession = (id: SessionId): AppThunk => (dispatch, getState) => 
     session
       .start()
       .then(ports => {
+        const socket = session.getSocket();
+        if (socket) {
+          socket.once('close', () => {
+            socket.off('add', addForeignDeviceHandler);
+            // socket.off('remove', removeForeignDeviceHandler);
+          });
+          socket.on('add', addForeignDeviceHandler);
+          // socket.on('remove', removeForeignDeviceHandler);
+        }
         dispatch(updateSession({
           id,
           changes: {
@@ -268,16 +328,8 @@ export const openSession = (id: SessionId): AppThunk => (dispatch, getState) => 
   });
 };
 
-/*
-export const setCurrentSession = (id: SessionId): AppThunk => (dispatch, getState) => {
-  dispatch(updateCurrentSession(id));
-  const session = selectSessionById(getState(), id);
-  if (!session) dispatch(openSession(id));
-};
-*/
-
 export const startNibus: AsyncInitializer = (dispatch, getState) => {
-  const session = selectCurrentSession(getState() as RootState);
+  const session = selectCurrentSessionId(getState() as RootState);
   dispatch(openSession(session));
 };
 
