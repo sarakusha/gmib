@@ -37,9 +37,9 @@ import {
 import MonotonicCubicSpline, { Point } from '../util/MonotonicCubicSpline';
 import { getCurrentNibusSession, isRemoteSession } from '../util/nibus';
 import type { AsyncInitializer } from './asyncInitialMiddleware';
-import { setCurrentTab, setCurrentScreen, selectCurrentScreenId } from './currentSlice';
 import type { DeviceState } from './devicesSlice';
 import type { AppThunk, RootState } from './index';
+import { setNovastarBrightness } from './novastarsSlice';
 import { selectLastAverage } from './sensorsSlice';
 
 const debug = debugFactory('gmib:configSlice');
@@ -128,7 +128,7 @@ export const configSlice = createSlice({
       screen[prop] = value as never;
       sendConfig(current(state));
     },
-    loadConfig(state, { payload: config }: PayloadAction<Config>) {
+    updateConfig(state, { payload: config }: PayloadAction<Config>) {
       Object.assign(state, config);
       state.loading = false;
     },
@@ -228,14 +228,11 @@ export const selectScreenAddresses = (state: RootState): string[] =>
   ].sort();
 
 export const {
-  // setCurrentTab,
-  // setCurrentDevice,
+  addScreen,
+  removeScreen,
   showHttpPage,
-  // updateCurrentSession,
   setAutobrightness,
   setSpline,
-  // setLongitude,
-  // setLatitude,
   setLocationProp,
   setScreenProp,
   setLogLevel,
@@ -243,9 +240,10 @@ export const {
   removeHttpPage,
   addAddress,
   removeAddress,
+  updateConfig,
 } = configSlice.actions;
 
-export const addScreen = (): AppThunk => (dispatch, getState) => {
+export const createScreen = (): AppThunk => (dispatch, getState) => {
   let name = 'Экран';
   const screens = selectScreens(getState());
   const hasName = (n: string): boolean => screens.findIndex(screen => screen.name === n) !== -1;
@@ -253,25 +251,27 @@ export const addScreen = (): AppThunk => (dispatch, getState) => {
     name = incrementCounterString(name);
   }
   const id = nanoid();
-  dispatch(configSlice.actions.addScreen([id, name]));
-  dispatch(setCurrentScreen(id));
+  dispatch(addScreen([id, name]));
+  // dispatch(setCurrentScreen(id));
 };
 
-export const removeScreen = (id: string): AppThunk => (dispatch, getState) => {
+/*
+export const deleteScreen = (id: string): AppThunk => (dispatch, getState) => {
   const state = getState();
   let screens = selectScreens(state);
   if (screens.length < 1) return;
   let currentScreen = selectCurrentScreenId(state);
   const index = screens.findIndex(screen => screen.id === id);
   if (index === -1) return;
-  dispatch(configSlice.actions.removeScreen(id));
-  if (currentScreen === id) {
-    screens = selectScreens(getState());
-    currentScreen =
-      screens.length > 0 ? screens[Math.min(index, screens.length - 1)].id : undefined;
-    dispatch(setCurrentScreen(currentScreen));
-  }
+  dispatch(removeScreen(id));
+  // if (currentScreen === id) {
+  //   screens = selectScreens(getState());
+  //   currentScreen =
+  //     screens.length > 0 ? screens[Math.min(index, screens.length - 1)].id : undefined;
+  //   dispatch(setCurrentScreen(currentScreen));
+  // }
 };
+*/
 
 type HostParams = {
   address: Address;
@@ -351,7 +351,7 @@ export const activateHttpPage = (
   pageId: string | undefined
 ): AppThunk => dispatch => {
   dispatch(showHttpPage([scrId, pageId]));
-  dispatch(setCurrentTab('screens'));
+  // dispatch(setCurrentTab('screens'));
   dispatch(initializeMinihosts(scrId));
 };
 
@@ -382,14 +382,16 @@ const updateBrightness = debounce<AppThunk>((dispatch, getState) => {
 
 export const setCurrentBrightness = (value: number): AppThunk => dispatch => {
   dispatch(configSlice.actions.setBrightness(value));
+  dispatch(setNovastarBrightness(value));
   dispatch(updateBrightness);
 };
 
-export const loadConfig = (config: Config): AppThunk => async (dispatch, getState) => {
+export const loadConfig = (config: Config): AppThunk => async dispatch => {
   const data = convertCfgFrom(config);
   if (!validateConfig(data)) console.error('Invalid configuration data received');
-  dispatch(configSlice.actions.loadConfig(data));
+  dispatch(updateConfig(data));
   dispatch(updateBrightness);
+  /*
   const state = getState();
   // debug(`load Config ${JSON.stringify(state)}`);
   const screens = selectScreens(state).map(({ id: scr }) => scr);
@@ -398,6 +400,7 @@ export const loadConfig = (config: Config): AppThunk => async (dispatch, getStat
     dispatch(setCurrentScreen(screens[0]));
     // debug(`select screen ${screens[0]}`);
   }
+*/
 };
 
 const getValue = (value: number, min: number, max: number): number =>

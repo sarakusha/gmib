@@ -10,7 +10,6 @@
 
 import { makeStyles } from '@material-ui/core/styles';
 import { CircularProgress, IconButton, Tooltip } from '@material-ui/core';
-// import LoadIcon from '@material-ui/icons/OpenInBrowser';
 import ReloadIcon from '@material-ui/icons/Refresh';
 import LoadIcon from '@material-ui/icons/SystemUpdateAlt';
 import SaveIcon from '@material-ui/icons/Save';
@@ -20,12 +19,8 @@ import fs from 'fs';
 import React, { useCallback, useState } from 'react';
 import SaveDialog from '../dialogs/SaveDialog';
 import { AppDispatch, useDispatch, useSelector } from '../store';
-import {
-  PropTuple,
-  reloadDevice,
-  selectCurrentDevice,
-  setDeviceValue,
-} from '../store/devicesSlice';
+import { selectCurrentDevice } from '../store/currentSlice';
+import { PropTuple, reloadDevice, setDeviceValue } from '../store/devicesSlice';
 
 const useStyles = makeStyles(theme => ({
   toolbarWrapper: {

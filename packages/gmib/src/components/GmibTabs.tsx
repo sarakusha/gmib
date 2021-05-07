@@ -7,14 +7,17 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
+import { DeviceId } from '@nibus/core';
 import React, { useEffect, useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
-import { selectDeviceIds } from '../store/devicesSlice';
+import { selectDeviceById, selectDeviceIds } from '../store/devicesSlice';
 import { useSelector } from '../store';
 import { selectCurrentDeviceId, selectCurrentTab } from '../store/currentSlice';
+import { selectNovastarByPath } from '../store/novastarsSlice';
 import Autobrightness from './Autobrightness';
 import DeviceTabs from './DeviceTabs';
 import Log from './Log';
+import NovastarTab from './NovastarTab';
 import Screens from './Screens';
 
 import TabContainer, { Props as ChildProps } from './TabContainer';
@@ -34,16 +37,18 @@ const Tabs: React.FC = () => {
     React.ReactElement<ChildProps, typeof TabContainer>[]
   >([]);
   const ids = useSelector(selectDeviceIds);
-  const currentDevice = useSelector(selectCurrentDeviceId);
+  const currentDeviceId = useSelector(selectCurrentDeviceId) as DeviceId;
+  const currentDevice = useSelector(state => selectDeviceById(state, currentDeviceId));
+  const currentNovastar = useSelector(state => selectNovastarByPath(state, currentDeviceId));
   if (currentDevice) {
-    let curChild = devChildren.find(({ props }) => props.id === currentDevice);
+    let curChild = devChildren.find(({ props }) => props.id === currentDeviceId);
     /**
      * Создаем только те вкладки с устройствами, которые выбрали
      */
     if (!curChild) {
       curChild = (
-        <TabContainer key={currentDevice} id={currentDevice}>
-          <DeviceTabs id={currentDevice} />
+        <TabContainer key={currentDeviceId} id={currentDeviceId}>
+          <DeviceTabs id={currentDeviceId} />
         </TabContainer>
       );
       setDevChildren(children => children.concat(curChild!));
@@ -65,9 +70,12 @@ const Tabs: React.FC = () => {
     <div className={classes.root}>
       {devChildren.map(child =>
         React.cloneElement(child, {
-          selected: currentDevice === child.props.id && tab === 'devices',
+          selected: currentDeviceId === child.props.id && tab === 'devices',
         })
       )}
+      <TabContainer id="novastar" selected={tab === 'devices' && currentNovastar !== undefined}>
+        <NovastarTab device={currentNovastar} />
+      </TabContainer>
       <TabContainer id="test" selected={tab === 'screens'}>
         <Screens />
       </TabContainer>

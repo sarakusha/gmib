@@ -22,7 +22,7 @@ type Props = {
 const DeviceIcon: React.FC<Props> = ({ device, mib, ...props }) => {
   const parent = device?.parent;
   const safeMib = device?.mib ?? mib;
-  if (!safeMib) console.warn('Invalid mib or device');
+  // if (!safeMib) console.warn('Invalid mib or device');
   let Icon = DefaultIcon;
   if (safeMib && safeMib.includes('console')) {
     Icon = ConsoleIcon;

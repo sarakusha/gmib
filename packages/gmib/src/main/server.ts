@@ -19,7 +19,6 @@ type ReadStreamOptions = Parameters<typeof fs.createReadStream>[1];
 const VIDEO = '/Users/sarakusha/Movies/tests/daschmi_video.mp4';
 const createReadStream = (opts?: ReadStreamOptions): fs.ReadStream =>
   fs.createReadStream(VIDEO, opts);
-const { size } = fs.statSync(VIDEO);
 
 const server = http.createServer((req, res): void => {
   if (req.url !== '/video') {
@@ -30,6 +29,7 @@ const server = http.createServer((req, res): void => {
   if (req.headers.origin) res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
   res.setHeader('Accept-Ranges', 'bytes');
   res.setHeader('Content-Type', 'video/mp4');
+  const { size } = fs.statSync(VIDEO);
   const range = req.headers.range && rangeParser(size, req.headers.range)[0];
   if (!range) {
     res.setHeader('Content-Length', size);

@@ -8,18 +8,16 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { Socket, connect } from 'net';
 import { FoundListener, DeviceId, Host, Display, PortArg, NibusSessionEvents } from '@nibus/core';
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { ipcRenderer } from 'electron';
-// eslint-disable-next-line import/no-extraneous-dependencies
-import * as novastar from '@novastar/core';
 
 import type { Config } from '../util/config';
 import { getCurrentNibusSession, isRemoteSession } from '../util/nibus';
 import { AsyncInitializer } from './asyncInitialMiddleware';
-import { loadConfig } from './configSlice';
+import { loadConfig, selectBrightness } from './configSlice';
 import type { RootState } from './index';
+import { createNovastarConnection, releaseNovastar, setNovastarBrightness } from './novastarsSlice';
 import { ILLUMINATION, pushSensorValue, TEMPERATURE } from './sensorsSlice';
 // import debugFactory from '../util/debug';
 
@@ -29,10 +27,6 @@ const RESTART_DELAY = 3000;
 
 export type SessionStatus = 'idle' | 'pending' | 'succeeded' | 'failed' | 'closed';
 
-type NovastarSession = novastar.Session<Socket>;
-
-const novastarSessions: Record<string, NovastarSession> = {};
-
 export interface SessionState extends Partial<Host> {
   status: SessionStatus;
   error: string | undefined;
@@ -40,7 +34,6 @@ export interface SessionState extends Partial<Host> {
   devices: DeviceId[];
   online: boolean;
   displays: Display[];
-  novastarIds: string[];
 }
 
 export const selectSession = (state: RootState): SessionState => state.session;
@@ -52,8 +45,6 @@ export const selectIsClosed = (state: RootState): boolean =>
 
 export const selectDisplays = (state: RootState): Display[] => selectSession(state).displays;
 
-export const selectNovastarIds = (state: RootState): string[] => selectSession(state).novastarIds;
-
 const initialState: SessionState = {
   status: 'idle',
   error: undefined,
@@ -61,7 +52,6 @@ const initialState: SessionState = {
   devices: [],
   online: false,
   displays: [],
-  novastarIds: [],
 };
 
 const sessionSlice = createSlice({
@@ -97,12 +87,6 @@ const sessionSlice = createSlice({
     setDisplays(state, { payload: displays }: PayloadAction<Display[]>) {
       state.displays = displays;
     },
-    addNovastarSession(state, { payload: id }: PayloadAction<string>) {
-      state.novastarIds.push(id);
-    },
-    removeNovastarSession(state, { payload: id }: PayloadAction<string>) {
-      state.novastarIds = state.novastarIds.filter(session => session !== id);
-    },
     setStatus(
       state,
       { payload: status }: PayloadAction<Pick<SessionState, 'status' | 'portCount' | 'error'>>
@@ -117,14 +101,12 @@ const {
   setHostDescription,
   setOnline,
   setDisplays,
-  addNovastarSession,
-  removeNovastarSession,
   releaseSession,
   setStatus,
 } = sessionSlice.actions;
 export const { closeSession, reloadSession } = sessionSlice.actions;
 
-export const openSession: AsyncInitializer = (dispatch, getState) => {
+export const openSession: AsyncInitializer = (dispatch, getState: () => RootState) => {
   const session = getCurrentNibusSession();
   const updatePortsHandler = (): void => {
     dispatch(setPortCount(session.ports));
@@ -167,24 +149,8 @@ export const openSession: AsyncInitializer = (dispatch, getState) => {
   }: PortArg): Promise<void> => {
     if (description.category !== 'novastar') return;
     const { port, host } = session;
-    const socket = connect(port, host, () => {
-      socket.write(path);
-      window.setTimeout(() => {
-        const connection = new novastar.Connection(socket);
-        connection.start().then(() => {
-          const novastarSession = new novastar.Session(connection);
-          dispatch(addNovastarSession(path));
-          socket.once('close', () => {
-            novastarSession.close();
-          });
-          novastarSession.once('close', () => {
-            dispatch(removeNovastarSession(path));
-            delete novastarSessions[path];
-            if (!socket.destroyed) socket.destroy();
-          });
-        });
-      }, 100);
-    });
+    await dispatch(createNovastarConnection(path, port, host));
+    dispatch(setNovastarBrightness(selectBrightness(getState())));
   };
 
   const informationListener: NibusSessionEvents['informationReport'] = (
@@ -216,7 +182,8 @@ export const openSession: AsyncInitializer = (dispatch, getState) => {
   session.devices.on('new', updateDevices);
   session.devices.on('delete', updateDevices);
   const release = (): void => {
-    Object.values(novastarSessions).forEach(novastarSession => novastarSession.close());
+    dispatch(releaseNovastar());
+    // Object.values(novastarSessions).forEach(novastarSession => novastarSession.close());
     session.off('displays', displaysHandler);
     session.off('online', onlineHandler);
     session.off('add', updatePortsHandler);
@@ -235,7 +202,7 @@ export const openSession: AsyncInitializer = (dispatch, getState) => {
   session.once('close', release);
   dispatch(setStatus({ status: 'pending', error: undefined, portCount: 0 }));
   const start = (): void => {
-    const { status } = selectSession(getState() as RootState);
+    const { status } = selectSession(getState());
     if (status === 'closed' || status === 'succeeded') return;
     session
       .start()

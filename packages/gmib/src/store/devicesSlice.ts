@@ -33,7 +33,6 @@ import { notEmpty, tuplify } from '../util/helpers';
 import { getCurrentNibusSession, isRemoteSession } from '../util/nibus';
 import { AsyncInitializer } from './asyncInitialMiddleware';
 import { initializeMinihosts, selectBrightness, selectScreenAddresses } from './configSlice';
-import { selectCurrentDeviceId, setCurrentDevice } from './currentSlice';
 import type { AppDispatch, AppThunk, RootState } from './index';
 import { addMib } from './mibsSlice';
 // import debugFactory from '../util/debug';
@@ -337,11 +336,6 @@ export const selectLinks = (state: RootState): DeviceState[] =>
     .map(id => selectDeviceById(state, id))
     .filter(notEmpty);
 
-export const selectCurrentDevice = (state: RootState): DeviceState | undefined => {
-  const device = selectCurrentDeviceId(state);
-  return device !== undefined ? selectDeviceById(state, device) : undefined;
-};
-
 export const selectAllDevicesWithParent = (state: RootState): DeviceStateWithParent[] =>
   selectAllDevices(state).map(({ parent, ...props }) => ({
     ...props,
@@ -375,8 +369,8 @@ export const selectDevicesByAddress = createSelector(
 );
 
 const {
-  addDevice,
-  removeDevice,
+  // addDevice,
+  // removeDevice,
   setConnected,
   updateProperty,
   setParent,
@@ -385,7 +379,7 @@ const {
   deviceReady,
 } = devicesSlice.actions;
 
-// export const { releaseDevice } = devicesSlice.actions;
+export const { addDevice, removeDevice } = devicesSlice.actions;
 export const setDeviceValue = (
   deviceId: DeviceId
 ): ((name: string, value: ValueType) => AppThunk) => {
@@ -477,6 +471,7 @@ export const initializeDevices: AsyncInitializer = (dispatch, getState: () => Ro
       dispatch(reloadDevice(deviceId));
     };
     const disconnectedHandler = (): void => {
+      /*
       try {
         const current = selectCurrentDeviceId(getState());
         if (current === deviceId) {
@@ -485,6 +480,7 @@ export const initializeDevices: AsyncInitializer = (dispatch, getState: () => Ro
       } catch (e) {
         console.error(`error while disconnect: ${e.message}`);
       }
+*/
       device.release();
     };
     const addressHandler = (prev: Address, address: Address): void => {
@@ -510,7 +506,7 @@ export const initializeDevices: AsyncInitializer = (dispatch, getState: () => Ro
         dispatch(updateProps([deviceId]));
         dispatch(deviceReady(deviceId));
         // debug(`deviceReady ${device.address.toString()}`);
-        selectCurrentDeviceId(getState()) || dispatch(setCurrentDevice(deviceId));
+        // selectCurrentDeviceId(getState()) || dispatch(setCurrentDevice(deviceId));
         const brightness = selectBrightness(getState());
         if (mib?.startsWith('minihost')) {
           setDeviceValue(deviceId)('brightness', brightness);
@@ -520,10 +516,12 @@ export const initializeDevices: AsyncInitializer = (dispatch, getState: () => Ro
   };
   const deleteDeviceHandler = (device: IDevice): void => {
     try {
+      /*
       const current = selectCurrentDeviceId(getState());
       if (current === device.id) {
         dispatch(setCurrentDevice(undefined));
       }
+*/
       dispatch(removeDevice(device.id));
     } catch (e) {
       console.error(e.message);

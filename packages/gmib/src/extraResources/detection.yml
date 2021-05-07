@@ -93,8 +93,6 @@ knownDevices:
     pid: 10
     serialNumber: 'K_Ke-USB24R'
     category: relay
-  - device: 'CP2102 USB to UART Bridge Controller'
-    vid: '10c4'
+  - vid: '10c4'
     pid: 'ea60'
-    manufacturer: 'Silicon Labs'
     category: 'novastar'

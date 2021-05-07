@@ -28,6 +28,7 @@ import mibsReducer from './mibsSlice';
 import nibusReducer from './nibusSlice';
 import sensorsReducer from './sensorsSlice';
 import remoteHostsReducer, { initializeRemoteHosts } from './remoteHostsSlice';
+import novastarsReducer from './novastarsSlice';
 
 export const store = configureStore({
   reducer: {
@@ -40,6 +41,7 @@ export const store = configureStore({
     // tests: testsReducer,
     sensors: sensorsReducer,
     remoteHosts: remoteHostsReducer,
+    novastars: novastarsReducer,
   },
   middleware: getDefaultMiddleware =>
     getDefaultMiddleware({

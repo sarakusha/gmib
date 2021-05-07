@@ -39,6 +39,7 @@ import {
   activateDevice,
   TabValues,
 } from '../store/currentSlice';
+import { selectAllNovastars } from '../store/novastarsSlice';
 import AccordionList from './AccordionList';
 import DeviceIcon from './DeviceIcon';
 import { reloadSession } from '../store/sessionSlice';
@@ -96,6 +97,7 @@ const Devices: React.FC = () => {
   const current = useSelector(selectCurrentDeviceId);
   const addresses = useSelector(selectScreenAddresses);
   const tab = useSelector(selectCurrentTab);
+  const novastars = useSelector(selectAllNovastars);
   // const [, setAccordion] = useAccordion();
   const reloadHandler = useCallback<React.MouseEventHandler<HTMLButtonElement>>(
     e => {
@@ -106,8 +108,8 @@ const Devices: React.FC = () => {
   );
   const clickHandler = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
-      const id = e.currentTarget.dataset.id as DeviceId;
-      dispatch(activateDevice(id));
+      const { id } = e.currentTarget.dataset; // as DeviceId;
+      id && dispatch(activateDevice(id));
     },
     [dispatch]
   );
@@ -127,7 +129,7 @@ const Devices: React.FC = () => {
     <AccordionList
       name={tabName}
       title={title}
-      expanded={tab === 'devices' && devices.length > 0}
+      expanded={tab === 'devices' && devices.length + novastars.length > 0}
       onChange={currentTab => dispatch(setCurrentTab(currentTab as TabValues))}
     >
       {items.map(({ name, device }) => {
@@ -192,6 +194,30 @@ const Devices: React.FC = () => {
           </ListItem>
         );
       })}
+      {novastars.map(card => (
+        <ListItem
+          key={card.path}
+          button
+          selected={card.path === current}
+          data-id={card.path}
+          onClick={clickHandler}
+        >
+          <ListItemIcon>
+            <div className={classes.wrapper}>
+              <DeviceIcon color="inherit" />
+              <Tooltip title={card.path}>
+                <UsbIcon className={classes.kind} />
+              </Tooltip>
+            </div>
+          </ListItemIcon>
+          <ListItemText
+            primaryTypographyProps={noWrap}
+            primary={card.model}
+            secondary="novastar"
+            secondaryTypographyProps={noWrap}
+          />
+        </ListItem>
+      ))}
     </AccordionList>
   );
 };

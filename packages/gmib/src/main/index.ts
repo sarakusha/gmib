@@ -196,6 +196,7 @@ async function createWindow(
 
   window.on('show', () => {
     window.setSkipTaskbar(false);
+    window.focus();
     return false;
   });
   window.on('hide', () => {

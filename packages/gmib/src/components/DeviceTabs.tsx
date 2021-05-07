@@ -13,7 +13,7 @@ import { Paper, Container, Tab, Tabs } from '@material-ui/core';
 import { DeviceId } from '@nibus/core';
 import React, { useState } from 'react';
 import { useSelector } from '../store';
-import { selectCurrentDevice } from '../store/devicesSlice';
+import { selectCurrentDevice } from '../store/currentSlice';
 import FirmwareTab from './FirmwareTab';
 import PropertyGridTab from './PropertyGridTab';
 import TelemetryTab from './TelemetryTab';
@@ -65,9 +65,9 @@ const DeviceTabs: React.FC<Props> = ({ id }) => {
         </Tabs>
       </Paper>
       <Container maxWidth={value !== 'telemetry' ? 'sm' : undefined} className={classes.content}>
-        <PropertyGridTab id={id} selected={value === 'props'} />
-        <TelemetryTab id={id} selected={value === 'telemetry'} />
-        <FirmwareTab id={id} selected={value === 'firmware'} />
+        <PropertyGridTab id={id} selected={value === 'props' && device !== undefined} />
+        <TelemetryTab id={id} selected={value === 'telemetry' && device !== undefined} />
+        <FirmwareTab id={id} selected={value === 'firmware' && device !== undefined} />
       </Container>
     </div>
   );
