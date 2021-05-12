@@ -17,6 +17,7 @@ import {
   IDevice,
   INibusSession,
   MINIHOST_TYPE,
+  MCDVI_TYPE,
   VersionInfo,
 } from '@nibus/core';
 import {
@@ -32,7 +33,7 @@ import pick from 'lodash/pick';
 import { notEmpty, tuplify } from '../util/helpers';
 import { getCurrentNibusSession, isRemoteSession } from '../util/nibus';
 import { AsyncInitializer } from './asyncInitialMiddleware';
-import { initializeMinihosts, selectBrightness, selectScreenAddresses } from './configSlice';
+import { initializeScreens, selectBrightness, selectScreenAddresses } from './configSlice';
 import type { AppDispatch, AppThunk, RootState } from './index';
 import { addMib } from './mibsSlice';
 // import debugFactory from '../util/debug';
@@ -348,16 +349,21 @@ export const filterDevicesByAddress = <D extends Pick<DeviceState, 'address' | '
 ): D[] =>
   devices.filter(device => {
     if (address.type === AddressType.mac) return address.equals(device.address);
-    if (address.type === AddressType.net && device.mib.startsWith('minihost')) {
-      // debug(`${device.props.domain?.raw}.${device.props.subnet?.raw}.${device.props.did?.raw}`);
-      try {
-        const netAddress = new Address(
-          `${device.props.domain?.raw}.${device.props.subnet?.raw}.${device.props.did?.raw}`
+    if (address.type === AddressType.net) {
+      if (device.mib.startsWith('minihost')) {
+        // debug(`${device.props.domain?.raw}.${device.props.subnet?.raw}.${device.props.did?.raw}`);
+        return (
+          address.domain === device.props.domain?.raw &&
+          address.subnet === device.props.subnet?.raw &&
+          address.device === device.props.did?.raw
         );
-        // debug(`device: ${netAddress.toString()}`);
-        return address.equals(netAddress);
-      } catch {
-        return false;
+      }
+      if (device.mib === 'mcdvi') {
+        return (
+          address.domain === 255 &&
+          device.props.subnet?.raw === address.subnet &&
+          address.device === device.props.did?.raw
+        );
       }
     }
     return false;
@@ -430,8 +436,10 @@ export const createDevice = (
   });
 };
 
-const isSlaveMinihost = (info?: VersionInfo): boolean =>
-  Boolean(info && info.type === MINIHOST_TYPE && info.connection.owner);
+const isSlaveMinihostOrMcdvi = (info?: VersionInfo): boolean =>
+  Boolean(
+    info && ((info.type === MINIHOST_TYPE && info.connection.owner) || info.type === MCDVI_TYPE)
+  );
 
 const pinger = (session: INibusSession): AppThunk => (dispatch, getState) => {
   const state = getState();
@@ -448,7 +456,7 @@ const pinger = (session: INibusSession): AppThunk => (dispatch, getState) => {
     inaccessibleAddresses.map(async address => tuplify(await session.ping(address), address))
   ).then(res =>
     res
-      .filter(([[timeout, info]]) => timeout > 0 && isSlaveMinihost(info))
+      .filter(([[timeout, info]]) => timeout > 0 && isSlaveMinihostOrMcdvi(info))
       .forEach(([[, info], address]) => {
         // debug(`source: ${info?.source}`);
         dispatch(createDevice(info!.connection.owner!.id, address, info!.type, info!.version));
@@ -464,8 +472,8 @@ export const initializeDevices: AsyncInitializer = (dispatch, getState: () => Ro
     pingerTimer = window.setInterval(() => dispatch(pinger(session)), PINGER_INTERVAL);
   }
   const newDeviceHandler = (device: IDevice): void => {
-    const { id: deviceId, mib } = device;
-    setTimeout(() => dispatch(initializeMinihosts()), 100);
+    const { id: deviceId } = device;
+    const mib = Reflect.getMetadata('mib', device);
     const connectedHandler = (): void => {
       dispatch(setConnected(deviceId));
       dispatch(reloadDevice(deviceId));
@@ -508,9 +516,11 @@ export const initializeDevices: AsyncInitializer = (dispatch, getState: () => Ro
         // debug(`deviceReady ${device.address.toString()}`);
         // selectCurrentDeviceId(getState()) || dispatch(setCurrentDevice(deviceId));
         const brightness = selectBrightness(getState());
-        if (mib?.startsWith('minihost')) {
-          setDeviceValue(deviceId)('brightness', brightness);
+        const setValue = setDeviceValue(deviceId);
+        if (mib?.startsWith('minihost') || mib === 'mcdvi') {
+          setValue('brightness', brightness);
         }
+        dispatch(initializeScreens());
       });
     }, 3000);
   };

@@ -104,7 +104,7 @@ const HttpPages: React.FC = () => {
     <>
       <AccordionList
         name="screens"
-        title="Отображение"
+        title="Вывод"
         expanded={tab === 'screens'}
         onChange={currentTab => dispatch(setCurrentTab(currentTab as TabValues))}
       >

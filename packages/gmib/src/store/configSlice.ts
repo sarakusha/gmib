@@ -37,8 +37,8 @@ import {
 import MonotonicCubicSpline, { Point } from '../util/MonotonicCubicSpline';
 import { getCurrentNibusSession, isRemoteSession } from '../util/nibus';
 import type { AsyncInitializer } from './asyncInitialMiddleware';
-import type { DeviceState } from './devicesSlice';
-import type { AppThunk, RootState } from './index';
+import type { DeviceState, ValueType } from './devicesSlice';
+import type { AppDispatch, AppThunk, RootState } from './index';
 import { setNovastarBrightness } from './novastarsSlice';
 import { selectLastAverage } from './sensorsSlice';
 
@@ -234,7 +234,7 @@ export const {
   setAutobrightness,
   setSpline,
   setLocationProp,
-  setScreenProp,
+  // setScreenProp,
   setLogLevel,
   upsertHttpPage,
   removeHttpPage,
@@ -300,7 +300,7 @@ const getHostParams = (screen: Input) => (expr: string): HostParams | undefined 
   };
 };
 
-export const initializeMinihosts = (scrId?: string): AppThunk => (dispatch, getState) => {
+export const initializeScreens = (scrId?: string): AppThunk => (dispatch, getState) => {
   const state = getState();
   const scr = scrId && selectScreenById(state, scrId);
   const screens = scr ? [scr] : selectConfig(state).screens;
@@ -318,21 +318,35 @@ export const initializeMinihosts = (scrId?: string): AppThunk => (dispatch, getS
               const devices = selectDevicesByAddress(state, target);
               devices
                 .filter(notEmpty)
-                .filter(({ mib }) => mib.startsWith('minihost'))
-                .forEach(({ id, address: devAddress }) => {
-                  debug(`initialize minihost ${devAddress}`);
+                // .filter(({ mib }) => mib.startsWith('minihost'))
+                .forEach(({ id, address: devAddress, mib }) => {
+                  debug(`initialize ${devAddress}`);
                   const setValue = setDeviceValue(id);
-                  Object.entries({
-                    hoffs: left,
-                    voffs: top,
-                    hres: width,
-                    vres: height,
-                    moduleHres,
-                    moduleVres,
-                    indication: 0,
-                    dirh,
-                    dirv,
-                  }).forEach(([name, value]) => {
+                  let props: Record<string, ValueType | undefined> = {};
+                  if (mib.startsWith('minihost')) {
+                    props = {
+                      hoffs: left,
+                      voffs: top,
+                      hres: width,
+                      vres: height,
+                      moduleHres,
+                      moduleVres,
+                      indication: 0,
+                      dirh,
+                      dirv,
+                    };
+                  } else if (mib === 'mcdvi') {
+                    props = {
+                      // moduleHres,
+                      // moduleVres,
+                      indication: 0,
+                      hres: width,
+                      vres: height,
+                      hofs: left,
+                      vofs: top,
+                    };
+                  }
+                  Object.entries(props).forEach(([name, value]) => {
                     // debug(`setValue ${name} = ${value}`);
                     value !== undefined && dispatch(setValue(name, value));
                   });
@@ -346,13 +360,25 @@ export const initializeMinihosts = (scrId?: string): AppThunk => (dispatch, getS
   });
 };
 
+const updateScreen = debounce((dispatch: AppDispatch, scrId: string): void => {
+  dispatch(initializeScreens(scrId));
+}, 3000);
+
+export const setScreenProp = (
+  scrId: string,
+  [prop, value]: PropPayload<Screen>
+): AppThunk => dispatch => {
+  dispatch(configSlice.actions.setScreenProp([scrId, [prop, value]]));
+  updateScreen(dispatch, scrId);
+};
+
 export const activateHttpPage = (
   scrId: string,
   pageId: string | undefined
 ): AppThunk => dispatch => {
   dispatch(showHttpPage([scrId, pageId]));
   // dispatch(setCurrentTab('screens'));
-  dispatch(initializeMinihosts(scrId));
+  dispatch(initializeScreens(scrId));
 };
 
 const updateBrightness = debounce<AppThunk>((dispatch, getState) => {
@@ -373,7 +399,7 @@ const updateBrightness = debounce<AppThunk>((dispatch, getState) => {
               (devs, address) => [...devs, ...selectDevicesByAddress(state, address)],
               []
             )
-            .map(({ id }) => tuplify(id, brightnessFactor! * brightness)),
+            .map(({ id }) => tuplify(id, Math.round(brightnessFactor! * brightness))),
         ];
       }, []);
     tasks.forEach(([id, value]) => dispatch(setDeviceValue(id)('brightness', value)));

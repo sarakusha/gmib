@@ -136,7 +136,7 @@ async function createWindow(
     backgroundColor: '#fff', // Лучше сглаживание не некоторых экранах
     title: getTitle(port, host),
     skipTaskbar: true,
-    show: false,
+    show: false, // !localConfig.get('autostart'),
     useContentSize: true,
     webPreferences: {
       contextIsolation: false,
@@ -162,7 +162,11 @@ async function createWindow(
         // debug(`register remotes: ${mdnsBrowser.services.length}`);
         mdnsBrowser.services.forEach(svc => register(svc, window));
       }, 100).unref();
-      if (!localConfig.get('autostart')) window.show();
+      if (!localConfig.get('autostart')) {
+        window.show();
+        // The window may freeze from time to time at startup on Windows
+        setTimeout(() => window.show(), 100);
+      }
       // process.platform === 'linux' && window.show();
     });
 

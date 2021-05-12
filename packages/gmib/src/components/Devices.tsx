@@ -22,7 +22,7 @@ import {
 import CloseIcon from '@material-ui/icons/Close';
 import LinkIcon from '@material-ui/icons/Link';
 import UsbIcon from '@material-ui/icons/Usb';
-import { Address, DeviceId, findDeviceById } from '@nibus/core';
+import { Address, findDeviceById } from '@nibus/core';
 import React, { useCallback, useMemo } from 'react';
 import ReloadIcon from '@material-ui/icons/Refresh';
 import { useSelector, useDispatch } from '../store';
@@ -187,7 +187,7 @@ const Devices: React.FC = () => {
                     findDeviceById(id)?.release();
                   }}
                 >
-                  <CloseIcon />
+                  <CloseIcon fontSize="inherit" />
                 </IconButton>
               </ListItemSecondaryAction>
             )}

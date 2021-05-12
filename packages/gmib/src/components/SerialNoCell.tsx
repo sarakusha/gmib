@@ -8,7 +8,7 @@
  * the EULA file that was distributed with this source code.
  */
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import classNames from 'classnames';
 import { Input } from '@material-ui/core';
@@ -59,6 +59,7 @@ const SerialNoCell: React.FC<Props> = ({
 }) => {
   const classes = useStyles();
   const [value, setValue] = useState(initValue);
+  useEffect(() => setValue(initValue), [initValue]);
   const [changing, setChanging] = useState(false);
   const updateValue = useMemo(
     () =>
