@@ -9,8 +9,7 @@
  */
 import { Paper, Typography } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
-// eslint-disable-next-line import/no-extraneous-dependencies
-import { BrightnessRGBV, DisplayMode } from '@novastar/core';
+import { BrightnessRGBV, DisplayMode } from '@novastar/codec';
 import classNames from 'classnames';
 import React, { useEffect } from 'react';
 import { useToolbar } from '../providers/ToolbarProvider';

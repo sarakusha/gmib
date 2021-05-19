@@ -16,8 +16,7 @@ import {
   DeviceType,
   Session,
   BrightnessRGBV,
-  // eslint-disable-next-line import/no-extraneous-dependencies
-} from '@novastar/core';
+} from '@novastar/codec';
 import { createEntityAdapter, createSlice } from '@reduxjs/toolkit';
 import { connect, Socket } from 'net';
 import type { AppThunk, RootState } from './index';
