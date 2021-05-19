@@ -1,3 +1,13 @@
+/*
+ * @license
+ * Copyright (c) 2021. Nata-Info
+ * @author Andrei Sarakeev <avs@nata-info.ru>
+ *
+ * This file is part of the "@nibus" project.
+ * For the full copyright and license information, please view
+ * the EULA file that was distributed with this source code.
+ */
+
 /* eslint-disable no-var */
 import { makeStyles } from '@material-ui/core/styles';
 /*
@@ -17,8 +27,9 @@ import { Button, Dialog, DialogActions, DialogContent, Typography } from '@mater
 import SunCalc from 'suncalc';
 import Highcharts, { SeriesLineOptions } from '../components/Highcharts';
 import { useSelector } from '../store';
-import { selectCurrentSession, selectLocation } from '../store/configSlice';
-import { getSession, noop } from '../util/helpers';
+import { selectLocation } from '../store/configSlice';
+import { noop } from '../util/helpers';
+import { getCurrentNibusSession } from '../util/nibus';
 
 type Props = {
   open?: boolean;
@@ -211,13 +222,12 @@ const useStyles = makeStyles({
 });
 
 const BrightnessHistoryDialog: React.FC<Props> = ({ open = false, onClose = noop }) => {
-  const sessionId = useSelector(selectCurrentSession);
   const [options, setOptions] = useState<Highcharts.Options>(highchartsOptions);
   const { latitude, longitude } = useSelector(selectLocation) ?? {};
   const isValidLocation = latitude !== undefined && longitude !== undefined;
   useEffect(() => {
     if (!open) return;
-    const session = getSession(sessionId);
+    const session = getCurrentNibusSession();
     let history: BrightnessHistory[] = [];
     session
       .getBrightnessHistory()
@@ -256,7 +266,7 @@ const BrightnessHistoryDialog: React.FC<Props> = ({ open = false, onClose = noop
           };
         });
       });
-  }, [open, sessionId, latitude, longitude, isValidLocation]);
+  }, [open, latitude, longitude, isValidLocation]);
   const suntimes = isValidLocation
     ? SunCalc.getTimes(new Date(), latitude!, longitude!)
     : undefined;

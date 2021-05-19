@@ -28,6 +28,8 @@ mibCategories:
     select:
       - siolynx
       - minihost
+  novastar:
+    foreign: true
 knownDevices:
   - vid: '2047'
     pid: '0a3d'
@@ -91,3 +93,6 @@ knownDevices:
     pid: 10
     serialNumber: 'K_Ke-USB24R'
     category: relay
+  - vid: '10c4'
+    pid: 'ea60'
+    category: 'novastar'

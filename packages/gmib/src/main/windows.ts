@@ -17,7 +17,7 @@ export const screenWindows = new Map<string, BrowserWindow>();
 export const showAll = (): void =>
   [...windows].forEach(window => {
     if (window.isMinimized()) window.restore();
-    else window.show();
+    window.show();
   });
 
 export const hideAll = (): void => {

@@ -57,7 +57,7 @@ module.exports = config => {
   const babel = config.module.rules.find(rule => rule.use.loader === 'babel-loader');
   const babelOptions = babel.use.options;
   if (!isProduction) {
-    babelOptions.plugins.push(require.resolve('react-refresh/babel'));
+    babelOptions.plugins.push([require.resolve('react-refresh/babel'), { skipEnvCheck: true }]);
     // Несовместим с React DevTools в main
     config.plugins.push(new ReactRefreshWebpackPlugin());
   }

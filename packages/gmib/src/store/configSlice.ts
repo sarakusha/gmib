@@ -28,7 +28,6 @@ import {
 import debugFactory from '../util/debug';
 import {
   findById,
-  getSession,
   incrementCounterString,
   notEmpty,
   PropPayload,
@@ -36,35 +35,32 @@ import {
   tuplify,
 } from '../util/helpers';
 import MonotonicCubicSpline, { Point } from '../util/MonotonicCubicSpline';
+import { getCurrentNibusSession, isRemoteSession } from '../util/nibus';
 import type { AsyncInitializer } from './asyncInitialMiddleware';
-import { setCurrentTab, setCurrentScreen, selectCurrentScreenId } from './currentSlice';
-import type { DeviceState } from './devicesSlice';
-import type { AppThunk, RootState } from './index';
+import type { DeviceState, ValueType } from './devicesSlice';
+import type { AppDispatch, AppThunk, RootState } from './index';
+import { setNovastarBrightness } from './novastarsSlice';
 import { selectLastAverage } from './sensorsSlice';
-import type { SessionId } from './sessionsSlice';
 
 const debug = debugFactory('gmib:configSlice');
 
 // cyclic dependency
 const devicesSlice = import('./devicesSlice');
-const sessionSlice = import('./sessionsSlice');
 
 const BRIGHTNESS_INTERVAL = 60 * 1000;
 
 const ajv = new Ajv({ removeAdditional: 'failing' });
 
 export interface ConfigState extends Config {
-  readonly session: SessionId;
+  // readonly session: SessionId;
   loading: boolean;
 }
-
-const params = new URLSearchParams(window.location.search);
 
 const initialState: ConfigState = {
   brightness: 30,
   autobrightness: false,
   spline: undefined,
-  session: `${params.get('host') || ''}:${params.get('port') || 9001}` as SessionId,
+  // session: `${params.get('host') || ''}:${params.get('port') || 9001}` as SessionId,
   screens: [],
   logLevel: 'none',
   pages: [],
@@ -72,7 +68,7 @@ const initialState: ConfigState = {
   loading: true,
 };
 
-export type RemoteSession = { id: SessionId; isPersist: boolean };
+// export type RemoteSession = { id: SessionId; isPersist: boolean };
 
 const validateConfig = ajv.compile({
   type: 'object',
@@ -81,12 +77,8 @@ const validateConfig = ajv.compile({
 });
 
 export const sendConfig = debounce((state: ConfigState): void => {
-  const { session: id, loading, ...config } = state;
-  const session = getSession(id);
-  if (!session) {
-    console.error(`Unknown session ${id}`);
-    return;
-  }
+  const { loading, ...config } = state;
+  const session = getCurrentNibusSession();
   if (!validateConfig(config)) console.warn(`error while validate config`);
   const cfg =
     !config.version || semverLt(config.version, '3.1.0') ? convertCfgTo(config) : { ...config };
@@ -136,12 +128,12 @@ export const configSlice = createSlice({
       screen[prop] = value as never;
       sendConfig(current(state));
     },
-    loadConfig(state, { payload: config }: PayloadAction<Config>) {
+    updateConfig(state, { payload: config }: PayloadAction<Config>) {
       Object.assign(state, config);
       state.loading = false;
     },
     setLogLevel(state, { payload: logLevel }: PayloadAction<LogLevel>) {
-      const session = getSession(state.session);
+      const session = getCurrentNibusSession();
       state.logLevel = logLevel;
       session.setLogLevel(logLevel);
       sendConfig(current(state));
@@ -204,8 +196,6 @@ export const selectBrightness = (state: RootState): number => selectConfig(state
 export const selectAutobrightness = (state: RootState): boolean =>
   selectConfig(state).autobrightness;
 
-export const selectCurrentSession = (state: RootState): SessionId => selectConfig(state).session;
-
 export const selectSpline = (state: RootState): Config['spline'] => selectConfig(state).spline;
 
 export const selectLocation = (state: RootState): Config['location'] =>
@@ -238,24 +228,22 @@ export const selectScreenAddresses = (state: RootState): string[] =>
   ].sort();
 
 export const {
-  // setCurrentTab,
-  // setCurrentDevice,
+  addScreen,
+  removeScreen,
   showHttpPage,
-  // updateCurrentSession,
   setAutobrightness,
   setSpline,
-  // setLongitude,
-  // setLatitude,
   setLocationProp,
-  setScreenProp,
+  // setScreenProp,
   setLogLevel,
   upsertHttpPage,
   removeHttpPage,
   addAddress,
   removeAddress,
+  updateConfig,
 } = configSlice.actions;
 
-export const addScreen = (): AppThunk => (dispatch, getState) => {
+export const createScreen = (): AppThunk => (dispatch, getState) => {
   let name = 'Экран';
   const screens = selectScreens(getState());
   const hasName = (n: string): boolean => screens.findIndex(screen => screen.name === n) !== -1;
@@ -263,25 +251,27 @@ export const addScreen = (): AppThunk => (dispatch, getState) => {
     name = incrementCounterString(name);
   }
   const id = nanoid();
-  dispatch(configSlice.actions.addScreen([id, name]));
-  dispatch(setCurrentScreen(id));
+  dispatch(addScreen([id, name]));
+  // dispatch(setCurrentScreen(id));
 };
 
-export const removeScreen = (id: string): AppThunk => (dispatch, getState) => {
+/*
+export const deleteScreen = (id: string): AppThunk => (dispatch, getState) => {
   const state = getState();
   let screens = selectScreens(state);
   if (screens.length < 1) return;
   let currentScreen = selectCurrentScreenId(state);
   const index = screens.findIndex(screen => screen.id === id);
   if (index === -1) return;
-  dispatch(configSlice.actions.removeScreen(id));
-  if (currentScreen === id) {
-    screens = selectScreens(getState());
-    currentScreen =
-      screens.length > 0 ? screens[Math.min(index, screens.length - 1)].id : undefined;
-    dispatch(setCurrentScreen(currentScreen));
-  }
+  dispatch(removeScreen(id));
+  // if (currentScreen === id) {
+  //   screens = selectScreens(getState());
+  //   currentScreen =
+  //     screens.length > 0 ? screens[Math.min(index, screens.length - 1)].id : undefined;
+  //   dispatch(setCurrentScreen(currentScreen));
+  // }
 };
+*/
 
 type HostParams = {
   address: Address;
@@ -310,7 +300,7 @@ const getHostParams = (screen: Input) => (expr: string): HostParams | undefined 
   };
 };
 
-export const initializeMinihosts = (scrId?: string): AppThunk => (dispatch, getState) => {
+export const initializeScreens = (scrId?: string): AppThunk => (dispatch, getState) => {
   const state = getState();
   const scr = scrId && selectScreenById(state, scrId);
   const screens = scr ? [scr] : selectConfig(state).screens;
@@ -328,21 +318,35 @@ export const initializeMinihosts = (scrId?: string): AppThunk => (dispatch, getS
               const devices = selectDevicesByAddress(state, target);
               devices
                 .filter(notEmpty)
-                .filter(({ mib }) => mib.startsWith('minihost'))
-                .forEach(({ id, address: devAddress }) => {
-                  debug(`initialize minihost ${devAddress}`);
+                // .filter(({ mib }) => mib.startsWith('minihost'))
+                .forEach(({ id, address: devAddress, mib }) => {
+                  debug(`initialize ${devAddress}`);
                   const setValue = setDeviceValue(id);
-                  Object.entries({
-                    hoffs: left,
-                    voffs: top,
-                    hres: width,
-                    vres: height,
-                    moduleHres,
-                    moduleVres,
-                    indication: 0,
-                    dirh,
-                    dirv,
-                  }).forEach(([name, value]) => {
+                  let props: Record<string, ValueType | undefined> = {};
+                  if (mib.startsWith('minihost')) {
+                    props = {
+                      hoffs: left,
+                      voffs: top,
+                      hres: width,
+                      vres: height,
+                      moduleHres,
+                      moduleVres,
+                      indication: 0,
+                      dirh,
+                      dirv,
+                    };
+                  } else if (mib === 'mcdvi') {
+                    props = {
+                      // moduleHres,
+                      // moduleVres,
+                      indication: 0,
+                      hres: width,
+                      vres: height,
+                      hofs: left,
+                      vofs: top,
+                    };
+                  }
+                  Object.entries(props).forEach(([name, value]) => {
                     // debug(`setValue ${name} = ${value}`);
                     value !== undefined && dispatch(setValue(name, value));
                   });
@@ -356,13 +360,25 @@ export const initializeMinihosts = (scrId?: string): AppThunk => (dispatch, getS
   });
 };
 
+const updateScreen = debounce((dispatch: AppDispatch, scrId: string): void => {
+  dispatch(initializeScreens(scrId));
+}, 3000);
+
+export const setScreenProp = (
+  scrId: string,
+  [prop, value]: PropPayload<Screen>
+): AppThunk => dispatch => {
+  dispatch(configSlice.actions.setScreenProp([scrId, [prop, value]]));
+  updateScreen(dispatch, scrId);
+};
+
 export const activateHttpPage = (
   scrId: string,
   pageId: string | undefined
 ): AppThunk => dispatch => {
   dispatch(showHttpPage([scrId, pageId]));
-  dispatch(setCurrentTab('screens'));
-  dispatch(initializeMinihosts(scrId));
+  // dispatch(setCurrentTab('screens'));
+  dispatch(initializeScreens(scrId));
 };
 
 const updateBrightness = debounce<AppThunk>((dispatch, getState) => {
@@ -373,7 +389,7 @@ const updateBrightness = debounce<AppThunk>((dispatch, getState) => {
     if (brightness === undefined) return;
     const screens = selectScreens(state);
     const tasks = screens
-      .filter(({ brightnessFactor, addresses }) => brightnessFactor && brightnessFactor > 0)
+      .filter(({ brightnessFactor }) => brightnessFactor && brightnessFactor > 0)
       .reduce<[DeviceId, number][]>((res, { addresses, brightnessFactor }) => {
         if (!addresses) return res;
         return [
@@ -383,7 +399,7 @@ const updateBrightness = debounce<AppThunk>((dispatch, getState) => {
               (devs, address) => [...devs, ...selectDevicesByAddress(state, address)],
               []
             )
-            .map(({ id }) => tuplify(id, brightnessFactor! * brightness)),
+            .map(({ id }) => tuplify(id, Math.round(brightnessFactor! * brightness))),
         ];
       }, []);
     tasks.forEach(([id, value]) => dispatch(setDeviceValue(id)('brightness', value)));
@@ -392,14 +408,16 @@ const updateBrightness = debounce<AppThunk>((dispatch, getState) => {
 
 export const setCurrentBrightness = (value: number): AppThunk => dispatch => {
   dispatch(configSlice.actions.setBrightness(value));
+  dispatch(setNovastarBrightness(value));
   dispatch(updateBrightness);
 };
 
-export const loadConfig = (config: Config): AppThunk => async (dispatch, getState) => {
+export const loadConfig = (config: Config): AppThunk => async dispatch => {
   const data = convertCfgFrom(config);
   if (!validateConfig(data)) console.error('Invalid configuration data received');
-  dispatch(configSlice.actions.loadConfig(data));
+  dispatch(updateConfig(data));
   dispatch(updateBrightness);
+  /*
   const state = getState();
   // debug(`load Config ${JSON.stringify(state)}`);
   const screens = selectScreens(state).map(({ id: scr }) => scr);
@@ -408,6 +426,7 @@ export const loadConfig = (config: Config): AppThunk => async (dispatch, getStat
     dispatch(setCurrentScreen(screens[0]));
     // debug(`select screen ${screens[0]}`);
   }
+*/
 };
 
 const getValue = (value: number, min: number, max: number): number =>
@@ -489,15 +508,10 @@ const calculateBrightness: AppThunk = (dispatch, getState) => {
   dispatch(setCurrentBrightness(brightness));
 };
 
-// export const setAutobrightness = (on: boolean): AppThunk => dispatch => {
-//   dispatch(currentSlice.actions.setAutobrightness(on));
-// };
-
 let brightnessTimer = 0;
 
-export const initializeConfig: AsyncInitializer = async (dispatch, getState: () => RootState) => {
-  const { selectIsRemote } = await sessionSlice;
-  if (!selectIsRemote(getState()) && !brightnessTimer) {
+export const initializeConfig: AsyncInitializer = dispatch => {
+  if (!isRemoteSession && !brightnessTimer) {
     brightnessTimer = window.setInterval(() => dispatch(calculateBrightness), BRIGHTNESS_INTERVAL);
   }
 };

@@ -1,6 +1,6 @@
 /*
  * @license
- * Copyright (c) 2020. Nata-Info
+ * Copyright (c) 2021. Nata-Info
  * @author Andrei Sarakeev <avs@nata-info.ru>
  *
  * This file is part of the "@nibus" project.
@@ -132,7 +132,7 @@ const TelemetryTab: React.FC<MinihostTabProps> = ({ id, selected = false }) => {
   const dirh = loader?.isInvertH() || false;
   const [modules, setModules] = useState<IModuleInfo<Minihost2Info | Minihost3Info>[]>([]);
   const start = useCallback(async () => {
-    /* eslint-disable no-shadow */
+    // eslint-disable-next-line @typescript-eslint/no-shadow
     const [xMin, xMax, yMin, yMax, selectors] = await getStatesAsync(
       setXMin,
       setXMax,

@@ -1,6 +1,6 @@
 /*
  * @license
- * Copyright (c) 2020. Nata-Info
+ * Copyright (c) 2021. Nata-Info
  * @author Andrei Sarakeev <avs@nata-info.ru>
  *
  * This file is part of the "@nibus" project.
@@ -9,7 +9,7 @@
  */
 
 import { app, BrowserWindow, Menu, MenuItemConstructorOptions, shell } from 'electron';
-import { getRemoteLabel, getSessionId, getTitle, RemoteHost } from '../util/helpers';
+import { getRemoteLabel, getTitle, RemoteHost } from '../util/helpers';
 import localConfig from '../util/localConfig';
 import windows from './windows';
 
@@ -229,9 +229,9 @@ export const addRemoteFactory = (create: CreateWindow) => (
 };
 
 export const removeRemote = ({ port, address }: RemoteHost): void => {
-  const id = getSessionId({ port, host: address });
+  const label = getRemoteLabel(port, address);
   const sub = getRemoteSub();
-  const index = sub.findIndex(item => item.label === id);
+  const index = sub.findIndex(item => item.label === label);
   if (index !== -1) {
     sub.splice(index, 1);
     updateMenu();

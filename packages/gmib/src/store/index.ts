@@ -17,7 +17,7 @@ import {
 import asyncInitializer from './asyncInitialMiddleware';
 import currentReducer from './currentSlice';
 import configReducer, { initializeConfig } from './configSlice';
-import sessionsReducer, { startNibus } from './sessionsSlice';
+import sessionReducer, { openSession } from './sessionSlice';
 import devicesReducer, {
   DeviceState,
   initializeDevices,
@@ -28,18 +28,20 @@ import mibsReducer from './mibsSlice';
 import nibusReducer from './nibusSlice';
 import sensorsReducer from './sensorsSlice';
 import remoteHostsReducer, { initializeRemoteHosts } from './remoteHostsSlice';
+import novastarsReducer from './novastarsSlice';
 
 export const store = configureStore({
   reducer: {
     current: currentReducer,
     config: configReducer,
     nibus: nibusReducer,
-    sessions: sessionsReducer,
+    session: sessionReducer,
     devices: devicesReducer,
     mibs: mibsReducer,
     // tests: testsReducer,
     sensors: sensorsReducer,
     remoteHosts: remoteHostsReducer,
+    novastars: novastarsReducer,
   },
   middleware: getDefaultMiddleware =>
     getDefaultMiddleware({
@@ -50,7 +52,7 @@ export const store = configureStore({
       },
     }).concat(
       // asyncInitializer(loadTests),
-      asyncInitializer(startNibus),
+      asyncInitializer(openSession),
       asyncInitializer(initializeConfig),
       asyncInitializer(initializeRemoteHosts),
       asyncInitializer(initializeDevices)

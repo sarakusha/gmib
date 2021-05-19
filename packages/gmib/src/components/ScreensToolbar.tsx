@@ -15,7 +15,7 @@ import LockOpenIcon from '@material-ui/icons/LockOpen';
 import { ipcRenderer } from 'electron';
 import fs from 'fs';
 import React from 'react';
-import { useDispatch, useSelector } from '../store';
+import { useSelector } from '../store';
 import { ConfigState, sendConfig, selectConfig } from '../store/configSlice';
 import { noop, Writeable } from '../util/helpers';
 
@@ -58,7 +58,6 @@ const save = (config: ConfigState): void => {
     clone.pages = clone.pages?.filter(({ permanent }) => !permanent);
     delete clone.brightness;
     delete clone.loading;
-    delete clone.session;
     fs.writeFileSync(fileName, JSON.stringify(clone, null, 2));
   }
 };

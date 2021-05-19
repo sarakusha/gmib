@@ -1,6 +1,6 @@
 /*
  * @license
- * Copyright (c) 2020. Nata-Info
+ * Copyright (c) 2021. Nata-Info
  * @author Andrei Sarakeev <avs@nata-info.ru>
  *
  * This file is part of the "@nibus" project.
@@ -22,7 +22,7 @@ type Props = {
 const DeviceIcon: React.FC<Props> = ({ device, mib, ...props }) => {
   const parent = device?.parent;
   const safeMib = device?.mib ?? mib;
-  if (!safeMib) console.warn('Invalid mib or device');
+  // if (!safeMib) console.warn('Invalid mib or device');
   let Icon = DefaultIcon;
   if (safeMib && safeMib.includes('console')) {
     Icon = ConsoleIcon;

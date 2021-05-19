@@ -1,4 +1,3 @@
-/* eslint-disable no-plusplus */
 /*
  * @license
  * Copyright (c) 2021. Nata-Info
@@ -9,6 +8,7 @@
  * the EULA file that was distributed with this source code.
  */
 
+/* eslint-disable no-plusplus */
 // http://blog.mackerron.com/2011/01/01/javascript-cubic-splines/
 
 export type Point = [x: number, y: number];

@@ -1,6 +1,6 @@
 {
   "name": "gmib",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "description": "Nata-Info gmib tool",
   "private": true,
   "keywords": [
@@ -12,7 +12,8 @@
   "author": "Andrei Sarakeev <avs@nata-info.ru>",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sarakusha/nibus.git"
+    "url": "https://github.com/sarakusha/nibus.git",
+    "directory": "packages/gmib"
   },
   "bugs": {
     "url": "https://github.com/sarakusha/nibus/issues"
@@ -47,24 +48,33 @@
     "@mdx-js/react": "^1.6.22",
     "@nibus/cli": "^3",
     "@nibus/core": "^3",
+    "@novastar/codec": "^1.0.5",
     "@reduxjs/toolkit": "^1.5.0",
     "@serialport/bindings": "^9.0.1",
+    "@types/node": "^14.14.20",
+    "@typescript-eslint/eslint-plugin": "^4.4.0",
+    "@typescript-eslint/parser": "^4.4.0",
     "ajv": "^8.0.5",
     "ansicolor": "^1.1.93",
     "bonjour-hap": "^3.6.2",
     "classnames": "^2.2.6",
     "debug": "^4.3.1",
-    "dotenv": "^8.2.0",
+    "dotenv": "^9.0.2",
     "electron-log": "^4.0.3",
-    "electron-store": "^7.0.1",
+    "electron-store": "^8.0.0",
     "electron-updater": "^4.2.0",
+    "eslint": "^7.10.0",
+    "eslint-plugin-import": "^2.18.2",
     "highcharts": "^9.0.0",
     "highcharts-react-official": "^3.0.0",
     "hotkeys-js": "^3.7.3",
     "iput": "^1.1.2",
     "lodash": "^4.17.15",
     "material-ui-chip-input": "^2.0.0-beta.2",
+    "node-machine-id": "^1.1.12",
     "notistack": "^1.0.1",
+    "pump": "^3.0.0",
+    "range-parser": "^1.2.1",
     "rc-slider": "^9.1.0",
     "react": "^17.0.0",
     "react-dom": "^17.0.0",
@@ -92,13 +102,16 @@
     "@types/dotenv": "^8.2.0",
     "@types/electron-devtools-installer": "^2.2.0",
     "@types/electron-json-storage": "^4.0.0",
+    "@types/jest": "^26.0.22",
     "@types/material-ui": "^0.21.6",
-    "@types/rc-slider": "^8.6.3",
+    "@types/pump": "^1.1.1",
+    "@types/range-parser": "^1.2.3",
+    "@types/rc-slider": "^9.3.1",
     "@types/react": "^17.0.0",
     "@types/react-dom": "^17.0.0",
     "@types/react-input-mask": "^3.0.0",
     "@types/react-redux": "^7.1.16",
-    "@types/sanitize-html": "^1.27.1",
+    "@types/sanitize-html": "^2.3.1",
     "@types/sqlite3": "^3.1.7",
     "@types/suncalc": "^1.8.0",
     "@types/tcp-port-used": "^1.0.0",
@@ -107,7 +120,7 @@
     "babel-plugin-macros": "^3.0.1",
     "css-loader": "^5.0.0",
     "devtron": "^1.4.0",
-    "electron": "12.0.4",
+    "electron": "12.0.8",
     "electron-builder": "^22.2.0",
     "electron-devtools-installer": "^3.1.1",
     "electron-react-devtools": "^0.5.3",
@@ -163,6 +176,5 @@
         ]
       }
     ]
-  },
-  "gitHead": "bff51a5d48e72aa5cb4acefd176d0026346fe532"
+  }
 }

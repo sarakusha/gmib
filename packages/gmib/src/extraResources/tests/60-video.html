@@ -1,0 +1,47 @@
+<!--
+  ~ @license
+  ~ Copyright (c) 2021. Nata-Info
+  ~ @author Andrei Sarakeev <avs@nata-info.ru>
+  ~
+  ~ This file is part of the "@nibus" project.
+  ~ For the full copyright and license information, please view
+  ~ the EULA file that was distributed with this source code.
+  -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta data-id="1nRpWAI1y3g2XzzfXzj0c">
+  <title>Video</title>
+  <style>
+    html {
+      box-sizing: border-box;
+    }
+    *, *::before, *::after {
+      box-sizing: inherit;
+    }
+    body {
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <video id="player" loop></video>
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const port = params.get('port');
+  const width = params.get('width');
+  const height = params.get('height');
+  const player = document.getElementById('player');
+  player.setAttribute('width', width);
+  // player.setAttribute('height', height);
+  const source = document.createElement('source')
+  source.setAttribute('src', `http://127.0.0.1:${port}/video`);
+  source.setAttribute('type', 'video/mp4')
+  player.appendChild(source)
+  player.load()
+  player.play()
+</script>
+</body>
+</html>

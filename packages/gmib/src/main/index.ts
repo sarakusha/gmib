@@ -1,7 +1,6 @@
-/* eslint-disable import/first */
 /*
  * @license
- * Copyright (c) 2020. Nata-Info
+ * Copyright (c) 2021. Nata-Info
  * @author Andrei Sarakeev <avs@nata-info.ru>
  *
  * This file is part of the "@nibus" project.
@@ -9,16 +8,17 @@
  * the EULA file that was distributed with this source code.
  */
 
+/* eslint-disable import/first */
 process.env.NIBUS_LOG = 'nibus-all.log';
 
 import type { NibusService } from '@nibus/cli';
 import Bonjour, { RemoteService } from 'bonjour-hap';
-import { app, BrowserWindow, dialog, Display, ipcMain, screen } from 'electron';
+import { app, BrowserWindow, dialog, Display, ipcMain, screen, powerSaveBlocker } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import fs from 'fs';
 import isEqual from 'lodash/isEqual';
 import uniqBy from 'lodash/uniqBy';
-import { isIPv4 } from 'net';
+import { AddressInfo, isIPv4 } from 'net';
 import os from 'os';
 import path from 'path';
 import readline from 'readline';
@@ -42,8 +42,8 @@ import {
   updateMenu,
 } from './mainMenu';
 import { updateTray } from './tray';
-
 import windows, { screenWindows, showAll } from './windows';
+import server from './server';
 
 const USE_REACT_REFRESH_WEBPACK = true;
 const bonjour = Bonjour();
@@ -136,7 +136,7 @@ async function createWindow(
     backgroundColor: '#fff', // Лучше сглаживание не некоторых экранах
     title: getTitle(port, host),
     skipTaskbar: true,
-    show: false,
+    show: false, // !localConfig.get('autostart'),
     useContentSize: true,
     webPreferences: {
       contextIsolation: false,
@@ -162,7 +162,11 @@ async function createWindow(
         // debug(`register remotes: ${mdnsBrowser.services.length}`);
         mdnsBrowser.services.forEach(svc => register(svc, window));
       }, 100).unref();
-      if (!localConfig.get('autostart')) window.show();
+      if (!localConfig.get('autostart')) {
+        window.show();
+        // The window may freeze from time to time at startup on Windows
+        setTimeout(() => window.show(), 100);
+      }
       // process.platform === 'linux' && window.show();
     });
 
@@ -196,6 +200,7 @@ async function createWindow(
 
   window.on('show', () => {
     window.setSkipTaskbar(false);
+    window.focus();
     return false;
   });
   window.on('hide', () => {
@@ -265,6 +270,17 @@ function createTestWindow(width: number, height: number, x: number, y: number): 
   window.once('ready-to-show', () => window.show());
   /* process.platform === 'win32' ||*/
   window.setIgnoreMouseEvents(true);
+  let saveBlocker = 0;
+  window.on('show', () => {
+    if (!powerSaveBlocker.isStarted(saveBlocker)) {
+      saveBlocker = powerSaveBlocker.start('prevent-display-sleep');
+    }
+  });
+  window.on('hide', () => {
+    if (powerSaveBlocker.isStarted(saveBlocker)) {
+      powerSaveBlocker.stop(saveBlocker);
+    }
+  });
   return window;
 }
 
@@ -432,6 +448,7 @@ const updateScreens = (newValue?: Screen[], oldValue?: Screen[]): void => {
                 const value = curScreen[name];
                 return value !== undefined ? [name, value.toString()] : undefined;
               })
+              .concat([['port', (server.address() as AddressInfo).port.toString()]])
               .filter(notEmpty)
           )}`
         : page.url;
@@ -551,7 +568,7 @@ const startLocalNibus = async (): Promise<void> => {
   const inUse = await tcpPortUsed.check(+(process.env.NIBUS_PORT ?? 9001));
   if (inUse) return;
   try {
-    const { default: svc, detectionPath } = await import('@nibus/cli/lib/service');
+    const { default: svc } = await import('@nibus/cli/lib/service');
     service = svc;
     service.server.on('connection', socket => {
       const file = log.transports.file.getFile().path;
@@ -580,7 +597,7 @@ const startLocalNibus = async (): Promise<void> => {
     });
     sendStatusToWindow('Starting local NIBUS...');
     await service.start();
-    sendStatusToWindow(`NiBUS started. Detection file: ${detectionPath}`);
+    // sendStatusToWindow(`NiBUS started. Detection file: ${detectionPath}`);
   } catch (e) {
     sendStatusToWindow(`Error while nibus starting ${e}`, true);
   }

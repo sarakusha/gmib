@@ -15,7 +15,12 @@ import classNames from 'classnames';
 import React, { useEffect, useState } from 'react';
 import { useSnackbar } from 'notistack';
 import { useToolbar } from '../providers/ToolbarProvider';
-import { addScreen, removeScreen, selectScreens, selectSessionVersion } from '../store/configSlice';
+import {
+  createScreen,
+  removeScreen,
+  selectScreens,
+  selectSessionVersion,
+} from '../store/configSlice';
 import { useDispatch, useSelector } from '../store';
 import { selectCurrentScreenId, selectCurrentTab, setCurrentScreen } from '../store/currentSlice';
 import { noop } from '../util/helpers';
@@ -126,7 +131,7 @@ const Screens: React.FC = () => {
               icon={<AddToQueue color={readonly ? 'inherit' : 'secondary'} />}
               className={classes.add}
               textColor="secondary"
-              onClick={() => dispatch(addScreen())}
+              onClick={() => dispatch(createScreen())}
               title="Добавить экран"
               value="addScreen"
               disabled={readonly}
