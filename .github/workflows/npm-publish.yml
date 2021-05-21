@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v1
         with:
-          node-version: 12
+          node-version: 14
       - name: install build-essential libudev-dev
         run: sudo apt install build-essential libudev-dev
       - run: yarn
@@ -56,13 +56,12 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v1
         with:
-          node-version: 12
+          node-version: 14
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v1.0.2
-      - run: yarn workspace @nibus/gmib install
-      - run: yarn workspace @nibus/gmib rebuild
-      - run: yarn workspace @nibus/gmib compile
-      - run: yarn workspace @nibus/gmib release:win
+      - run: yarn workspace gmib install
+      - run: yarn workspace gmib compile
+      - run: yarn workspace gmib release:win
         env:
           GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
 
@@ -73,13 +72,12 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v1
         with:
-          node-version: 12
+          node-version: 14
       - name: install build-essential libudev-dev
         run: sudo apt install build-essential libudev-dev
-      - run: yarn workspace @nibus/gmib install
-      - run: yarn workspace @nibus/gmib rebuild
-      - run: yarn workspace @nibus/gmib compile
-      - run: yarn workspace @nibus/gmib release:linux
+      - run: yarn workspace gmib install
+      - run: yarn workspace gmib compile
+      - run: yarn workspace gmib release:linux
         env:
           GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
 
@@ -90,10 +88,9 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v1
         with:
-          node-version: 12
-      - run: yarn workspace @nibus/gmib install
-      - run: yarn workspace @nibus/gmib rebuild
-      - run: yarn workspace @nibus/gmib compile
-      - run: yarn workspace @nibus/gmib release:mac
+          node-version: 14
+      - run: yarn workspace gmib install
+      - run: yarn workspace gmib compile
+      - run: yarn workspace gmib release:mac
         env:
           GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
