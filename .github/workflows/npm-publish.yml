@@ -18,6 +18,8 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: 12
+      - name: install build-essential libudev-dev
+        run: sudo apt install build-essential libudev-dev
       - run: yarn
       - run: yarn build
 
