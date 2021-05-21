@@ -119,6 +119,7 @@
     "babel-loader": "^8.2.2",
     "babel-plugin-macros": "^3.0.1",
     "css-loader": "^5.0.0",
+    "cz-conventional-changelog": "3.3.0",
     "devtron": "^1.4.0",
     "electron": "12.0.8",
     "electron-builder": "^22.2.0",
@@ -176,5 +177,10 @@
         ]
       }
     ]
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
   }
 }
