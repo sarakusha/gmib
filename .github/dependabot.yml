@@ -5,7 +5,9 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
-    open-pull-requests-limit: 20
+    open-pull-requests-limit: 30
+    labels:
+      - dependencies
     ignore:
       - dependency-name: "electron"
       - dependency-name: "webpack"
