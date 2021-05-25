@@ -7,49 +7,28 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import { Address, DeviceId, LogLevel } from '@nibus/core';
-import { createSlice, current, nanoid, PayloadAction } from '@reduxjs/toolkit';
-import Ajv from 'ajv';
+import { LogLevel } from '@nibus/core';
+import { createSlice, current, PayloadAction } from '@reduxjs/toolkit';
 import debounce from 'lodash/debounce';
-import sortBy from 'lodash/sortBy';
 import semverLt from 'semver/functions/lt';
-import SunCalc from 'suncalc';
 import {
   Config,
-  configSchema,
-  convertCfgFrom,
   convertCfgTo,
   defaultScreen,
   Location,
   Page,
-  reAddress,
   Screen,
+  validateConfig,
 } from '../util/config';
-import debugFactory from '../util/debug';
-import {
-  findById,
-  incrementCounterString,
-  notEmpty,
-  PropPayload,
-  PropPayloadAction,
-  tuplify,
-} from '../util/helpers';
-import MonotonicCubicSpline, { Point } from '../util/MonotonicCubicSpline';
-import { getCurrentNibusSession, isRemoteSession } from '../util/nibus';
-import type { AsyncInitializer } from './asyncInitialMiddleware';
-import type { DeviceState, ValueType } from './devicesSlice';
-import type { AppDispatch, AppThunk, RootState } from './index';
-import { setNovastarBrightness } from './novastarsSlice';
-import { selectLastAverage } from './sensorsSlice';
+import { findById, PropPayload, PropPayloadAction } from '../util/helpers';
+import { getCurrentNibusSession } from '../util/nibus';
+import type { RootState } from './index';
 
-const debug = debugFactory('gmib:configSlice');
+// const debug = debugFactory('gmib:configSlice');
 
 // cyclic dependency
-const devicesSlice = import('./devicesSlice');
-
-const BRIGHTNESS_INTERVAL = 60 * 1000;
-
-const ajv = new Ajv({ removeAdditional: 'failing' });
+// eslint-disable-next-line import/no-cycle
+// const devicesSlice = import('./devicesSlice');
 
 export interface ConfigState extends Config {
   // readonly session: SessionId;
@@ -69,12 +48,6 @@ const initialState: ConfigState = {
 };
 
 // export type RemoteSession = { id: SessionId; isPersist: boolean };
-
-const validateConfig = ajv.compile({
-  type: 'object',
-  additionalProperties: false,
-  properties: configSchema,
-});
 
 export const sendConfig = debounce((state: ConfigState): void => {
   const { loading, ...config } = state;
@@ -241,19 +214,8 @@ export const {
   addAddress,
   removeAddress,
   updateConfig,
+  setBrightness,
 } = configSlice.actions;
-
-export const createScreen = (): AppThunk => (dispatch, getState) => {
-  let name = 'Экран';
-  const screens = selectScreens(getState());
-  const hasName = (n: string): boolean => screens.findIndex(screen => screen.name === n) !== -1;
-  while (hasName(name)) {
-    name = incrementCounterString(name);
-  }
-  const id = nanoid();
-  dispatch(addScreen([id, name]));
-  // dispatch(setCurrentScreen(id));
-};
 
 /*
 export const deleteScreen = (id: string): AppThunk => (dispatch, getState) => {
@@ -272,248 +234,5 @@ export const deleteScreen = (id: string): AppThunk => (dispatch, getState) => {
   // }
 };
 */
-
-type HostParams = {
-  address: Address;
-  left: number;
-  top: number;
-  width: number;
-  height: number;
-};
-
-type Input = Pick<Required<Screen>, 'width' | 'height' | 'x' | 'y'>;
-
-const getHostParams = (screen: Input) => (expr: string): HostParams | undefined => {
-  const matches = expr.match(reAddress);
-  if (!matches) return undefined;
-  const [, address, l, t, w, h] = matches;
-  const left = l ? +l : 0;
-  const top = t ? +(+t) : 0;
-  const width = w ? +w : Math.max(screen.width - left, 0);
-  const height = h ? +h : Math.max(screen.height - top, 0);
-  return {
-    address: new Address(address),
-    left: screen.x + left,
-    top: screen.y + top,
-    width,
-    height,
-  };
-};
-
-export const initializeScreens = (scrId?: string): AppThunk => (dispatch, getState) => {
-  const state = getState();
-  const scr = scrId && selectScreenById(state, scrId);
-  const screens = scr ? [scr] : selectConfig(state).screens;
-  screens.forEach(screen => {
-    const { addresses, moduleHres, moduleVres, dirh, dirv } = screen;
-    const getParams = getHostParams(screen as Input);
-    try {
-      if (addresses) {
-        addresses
-          .map(getParams)
-          .filter(notEmpty)
-          .forEach(({ address, left, top, width, height }) => {
-            const target = new Address(address);
-            devicesSlice.then(({ selectDevicesByAddress, setDeviceValue }) => {
-              const devices = selectDevicesByAddress(state, target);
-              devices
-                .filter(notEmpty)
-                // .filter(({ mib }) => mib.startsWith('minihost'))
-                .forEach(({ id, address: devAddress, mib }) => {
-                  debug(`initialize ${devAddress}`);
-                  const setValue = setDeviceValue(id);
-                  let props: Record<string, ValueType | undefined> = {};
-                  if (mib.startsWith('minihost')) {
-                    props = {
-                      hoffs: left,
-                      voffs: top,
-                      hres: width,
-                      vres: height,
-                      moduleHres,
-                      moduleVres,
-                      indication: 0,
-                      dirh,
-                      dirv,
-                    };
-                  } else if (mib === 'mcdvi') {
-                    props = {
-                      // moduleHres,
-                      // moduleVres,
-                      indication: 0,
-                      hres: width,
-                      vres: height,
-                      hofs: left,
-                      vofs: top,
-                    };
-                  }
-                  Object.entries(props).forEach(([name, value]) => {
-                    // debug(`setValue ${name} = ${value}`);
-                    value !== undefined && dispatch(setValue(name, value));
-                  });
-                });
-            });
-          });
-      }
-    } catch (err) {
-      debug(`error while initialize screen ${screen.name}: ${err.message}`);
-    }
-  });
-};
-
-const updateScreen = debounce((dispatch: AppDispatch, scrId: string): void => {
-  dispatch(initializeScreens(scrId));
-}, 3000);
-
-export const setScreenProp = (
-  scrId: string,
-  [prop, value]: PropPayload<Screen>
-): AppThunk => dispatch => {
-  dispatch(configSlice.actions.setScreenProp([scrId, [prop, value]]));
-  updateScreen(dispatch, scrId);
-};
-
-export const activateHttpPage = (
-  scrId: string,
-  pageId: string | undefined
-): AppThunk => dispatch => {
-  dispatch(showHttpPage([scrId, pageId]));
-  // dispatch(setCurrentTab('screens'));
-  dispatch(initializeScreens(scrId));
-};
-
-const updateBrightness = debounce<AppThunk>((dispatch, getState) => {
-  // console.log('updateBrightness', new Date().toLocaleTimeString());
-  devicesSlice.then(({ setDeviceValue, selectDevicesByAddress }) => {
-    const state = getState();
-    const brightness = selectBrightness(state);
-    if (brightness === undefined) return;
-    const screens = selectScreens(state);
-    const tasks = screens
-      .filter(({ brightnessFactor }) => brightnessFactor && brightnessFactor > 0)
-      .reduce<[DeviceId, number][]>((res, { addresses, brightnessFactor }) => {
-        if (!addresses) return res;
-        return [
-          ...res,
-          ...addresses
-            .reduce<DeviceState[]>(
-              (devs, address) => [...devs, ...selectDevicesByAddress(state, address)],
-              []
-            )
-            .map(({ id }) => tuplify(id, Math.round(brightnessFactor! * brightness))),
-        ];
-      }, []);
-    tasks.forEach(([id, value]) => dispatch(setDeviceValue(id)('brightness', value)));
-  });
-}, 500);
-
-export const setCurrentBrightness = (value: number): AppThunk => dispatch => {
-  dispatch(configSlice.actions.setBrightness(value));
-  dispatch(setNovastarBrightness(value));
-  dispatch(updateBrightness);
-};
-
-export const loadConfig = (config: Config): AppThunk => async dispatch => {
-  const data = convertCfgFrom(config);
-  if (!validateConfig(data)) console.error('Invalid configuration data received');
-  dispatch(updateConfig(data));
-  dispatch(updateBrightness);
-  /*
-  const state = getState();
-  // debug(`load Config ${JSON.stringify(state)}`);
-  const screens = selectScreens(state).map(({ id: scr }) => scr);
-  const currentScreen = selectCurrentScreenId(state);
-  if (screens.length > 0 && (!currentScreen || !screens.includes(currentScreen))) {
-    dispatch(setCurrentScreen(screens[0]));
-    // debug(`select screen ${screens[0]}`);
-  }
-*/
-};
-
-const getValue = (value: number, min: number, max: number): number =>
-  Math.min(Math.max(value, min), max);
-
-const calculateBrightness: AppThunk = (dispatch, getState) => {
-  const state = getState();
-  const autobrightness = selectAutobrightness(state);
-  if (!autobrightness) return;
-  const spline = selectSpline(state);
-  const illuminance = selectLastAverage(state, 'illuminance');
-  // console.log({ illuminance });
-  let brightness = selectBrightness(state);
-  const { latitude, longitude } = selectLocation(state) ?? {};
-  const isValidLocation = latitude !== undefined && longitude !== undefined;
-  if (spline) {
-    const safeData = sortBy(spline.filter(notEmpty), ([lux]) => lux);
-    const [min] = safeData;
-    const max = safeData[safeData.length - 1];
-    const [minLux, minBrightness] = min;
-    const [maxLux, maxBrightness] = max;
-    // debug(`min: ${minBrightness}, max: ${maxBrightness}`);
-    if (illuminance !== undefined) {
-      // На показаниях датчика
-      const illuminanceSpline = new MonotonicCubicSpline(
-        safeData.map<Point>(([lux, bright]) => [Math.log(1 + lux), bright])
-      );
-      if (illuminance <= minLux) brightness = minBrightness;
-      else if (illuminance >= maxLux) brightness = maxBrightness;
-      else brightness = Math.round(illuminanceSpline.interpolate(Math.log(1 + illuminance)));
-    } else if (isValidLocation) {
-      // По высоте солнца
-      // Полдень = 1, Начало вечера/Конец утра = 3/4, Заход/Восход = 1/2, ночь = 0
-      const now = new Date();
-      const midnight = new Date();
-      midnight.setHours(0, 0, 0, 0);
-      const getTime = (date: Date): number => date.getTime() - midnight.getTime();
-      const getBrightness = (aspect: number): number =>
-        minBrightness + (maxBrightness - minBrightness) * aspect;
-      const {
-        dawn,
-        sunriseEnd,
-        goldenHourEnd,
-        solarNoon,
-        goldenHour,
-        sunsetStart,
-        dusk,
-      } = SunCalc.getTimes(now, latitude!, longitude!);
-      // debug(
-      //   `dawn: ${dawn.toLocaleTimeString()}, sunriseEnd: ${sunriseEnd.toLocaleTimeString()}, goldenHourEnd: ${goldenHourEnd.toLocaleTimeString()}, noon: ${solarNoon.toLocaleTimeString()}`
-      // );
-      // debug(
-      //   `goldenHour: ${goldenHour.toLocaleTimeString()}, sunsetStart: ${sunsetStart.toLocaleTimeString()}, dusk: ${dusk.toLocaleTimeString()}`
-      // );
-      // debug(`now: ${getTime(now)}`);
-      if (now > dawn && now < dusk) {
-        const sunSpline =
-          now <= solarNoon
-            ? new MonotonicCubicSpline([
-                [getTime(dawn), getBrightness(0)],
-                [getTime(sunriseEnd), getBrightness(1 / 2)],
-                [getTime(goldenHourEnd), getBrightness(3 / 4)],
-                [getTime(solarNoon), getBrightness(1)],
-              ])
-            : new MonotonicCubicSpline([
-                [getTime(solarNoon), getBrightness(1)],
-                [getTime(goldenHour), getBrightness(3 / 4)],
-                [getTime(sunsetStart), getBrightness(1 / 2)],
-                [getTime(dusk), getBrightness(0)],
-              ]);
-        brightness = getValue(
-          Math.round(sunSpline.interpolate(getTime(now))),
-          minBrightness,
-          maxBrightness
-        );
-      } else brightness = minBrightness;
-    }
-  }
-  dispatch(setCurrentBrightness(brightness));
-};
-
-let brightnessTimer = 0;
-
-export const initializeConfig: AsyncInitializer = dispatch => {
-  if (!isRemoteSession && !brightnessTimer) {
-    brightnessTimer = window.setInterval(() => dispatch(calculateBrightness), BRIGHTNESS_INTERVAL);
-  }
-};
 
 export default configSlice.reducer;

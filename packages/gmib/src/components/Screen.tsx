@@ -20,7 +20,8 @@ import {
 import ChipInput from 'material-ui-chip-input';
 import React, { useCallback, useMemo } from 'react';
 import { AppThunk, useDispatch, useSelector } from '../store';
-import { addAddress, removeAddress, selectScreenById, setScreenProp } from '../store/configSlice';
+import { addAddress, removeAddress, selectScreenById } from '../store/configSlice';
+import { setScreenProp } from '../store/configThunks';
 import { selectDisplays } from '../store/sessionSlice';
 import { reAddress, Screen } from '../util/config';
 import { toNumber } from '../util/helpers';

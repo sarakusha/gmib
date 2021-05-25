@@ -8,18 +8,7 @@
  * the EULA file that was distributed with this source code.
  */
 
-import {
-  Address,
-  AddressParam,
-  AddressType,
-  DeviceId,
-  findDeviceById,
-  IDevice,
-  INibusSession,
-  MINIHOST_TYPE,
-  MCDVI_TYPE,
-  VersionInfo,
-} from '@nibus/core';
+import { Address, AddressParam, AddressType, DeviceId, findDeviceById, IDevice } from '@nibus/core';
 import {
   createAction,
   createAsyncThunk,
@@ -30,17 +19,11 @@ import {
 } from '@reduxjs/toolkit';
 import debounce from 'lodash/debounce';
 import pick from 'lodash/pick';
-import { notEmpty, tuplify } from '../util/helpers';
-import { getCurrentNibusSession, isRemoteSession } from '../util/nibus';
-import { AsyncInitializer } from './asyncInitialMiddleware';
-import { initializeScreens, selectBrightness, selectScreenAddresses } from './configSlice';
+import { notEmpty } from '../util/helpers';
 import type { AppDispatch, AppThunk, RootState } from './index';
-import { addMib } from './mibsSlice';
 // import debugFactory from '../util/debug';
 
 // const debug = debugFactory('gmib:devicesSlice');
-
-const PINGER_INTERVAL = 10000;
 
 type ValueStatus = 'succeeded' | 'failed' | 'pending';
 export type ValueType = string | number | boolean | null;
@@ -105,7 +88,7 @@ const devicesAdapter = createEntityAdapter<DeviceState>({
   selectId: device => device.id,
 });
 
-const updateProps = createAction<[id: DeviceId, ids?: number[]]>('devices/updateProps');
+export const updateProps = createAction<[id: DeviceId, ids?: number[]]>('devices/updateProps');
 
 export const reloadDevice = createAsyncThunk<void, DeviceId>(
   'devices/reload',
@@ -118,14 +101,17 @@ export const reloadDevice = createAsyncThunk<void, DeviceId>(
   }
 );
 
-const drainDevice = createAsyncThunk<void, DeviceId>('devices/drain', async (id, { dispatch }) => {
-  const device = findDeviceById(id);
-  if (!device) return;
-  const ids = await device.drain();
-  const failed = ids.filter(ident => ident < 0).map(ident => -ident);
-  failed.length > 0 && (await device.read(...failed));
-  dispatch(updateProps([id, ids.map(Math.abs)]));
-});
+export const drainDevice = createAsyncThunk<void, DeviceId>(
+  'devices/drain',
+  async (id, { dispatch }) => {
+    const device = findDeviceById(id);
+    if (!device) return;
+    const ids = await device.drain();
+    const failed = ids.filter(ident => ident < 0).map(ident => -ident);
+    failed.length > 0 && (await device.read(...failed));
+    dispatch(updateProps([id, ids.map(Math.abs)]));
+  }
+);
 
 const devicesSlice = createSlice({
   name: 'devices',
@@ -309,7 +295,6 @@ const devicesSlice = createSlice({
     );
   },
 });
-
 export const {
   selectAll: selectAllDevices,
   selectById: selectDeviceById,
@@ -377,15 +362,24 @@ export const selectDevicesByAddress = createSelector(
 const {
   // addDevice,
   // removeDevice,
-  setConnected,
+  // setConnected,
   updateProperty,
-  setParent,
+  // setParent,
   // setDeviceError,
-  changeAddress,
-  deviceReady,
+  // changeAddress,
+  // deviceReady,
 } = devicesSlice.actions;
 
-export const { addDevice, removeDevice } = devicesSlice.actions;
+export const {
+  addDevice,
+  removeDevice,
+  setConnected,
+  changeAddress,
+  deviceReady,
+  setParent,
+  // updateProperty,
+} = devicesSlice.actions;
+
 export const setDeviceValue = (
   deviceId: DeviceId
 ): ((name: string, value: ValueType) => AppThunk) => {
@@ -411,138 +405,6 @@ export const setDeviceValue = (
     device[name] = value;
     dispatch(updateProperty([deviceId, name]));
     drain(dispatch);
-  };
-};
-
-export const createDevice = (
-  parent: DeviceId,
-  address: string,
-  type: number,
-  version?: number
-): AppThunk => dispatch => {
-  const session = getCurrentNibusSession();
-  const device = session.devices.create(address, type!, version);
-  const parentDevice = session.devices.findById(parent);
-  if (parentDevice) {
-    device.connection = parentDevice.connection;
-    const checkConnection = async (): Promise<void> => {
-      await session.pingDevice(device);
-    };
-    const timer = window.setInterval(checkConnection, 10000);
-    device.once('release', () => window.clearInterval(timer));
-  }
-  setImmediate(() => {
-    dispatch(setParent([device.id, parent]));
-  });
-};
-
-const isSlaveMinihostOrMcdvi = (info?: VersionInfo): boolean =>
-  Boolean(
-    info && ((info.type === MINIHOST_TYPE && info.connection.owner) || info.type === MCDVI_TYPE)
-  );
-
-const pinger = (session: INibusSession): AppThunk => (dispatch, getState) => {
-  const state = getState();
-  const isReady = !selectAllDevices(state).some(({ isBusy }) => isBusy);
-  if (!isReady) {
-    window.setTimeout(() => dispatch(pinger(session)), 300);
-    return;
-  }
-  const inaccessibleAddresses = selectScreenAddresses(state).filter(
-    address => selectDevicesByAddress(state, address).length === 0
-  );
-  if (inaccessibleAddresses.length === 0) return;
-  Promise.all(
-    inaccessibleAddresses.map(async address => tuplify(await session.ping(address), address))
-  ).then(res =>
-    res
-      .filter(([[timeout, info]]) => timeout > 0 && isSlaveMinihostOrMcdvi(info))
-      .forEach(([[, info], address]) => {
-        // debug(`source: ${info?.source}`);
-        dispatch(createDevice(info!.connection.owner!.id, address, info!.type, info!.version));
-      })
-  );
-};
-
-let pingerTimer = 0;
-
-export const initializeDevices: AsyncInitializer = (dispatch, getState: () => RootState) => {
-  if (!isRemoteSession && !pingerTimer) {
-    const session = getCurrentNibusSession();
-    pingerTimer = window.setInterval(() => dispatch(pinger(session)), PINGER_INTERVAL);
-  }
-  const newDeviceHandler = (device: IDevice): void => {
-    const { id: deviceId } = device;
-    const mib = Reflect.getMetadata('mib', device);
-    const connectedHandler = (): void => {
-      dispatch(setConnected(deviceId));
-      dispatch(reloadDevice(deviceId));
-    };
-    const disconnectedHandler = (): void => {
-      /*
-      try {
-        const current = selectCurrentDeviceId(getState());
-        if (current === deviceId) {
-          dispatch(setCurrentDevice(undefined));
-        }
-      } catch (e) {
-        console.error(`error while disconnect: ${e.message}`);
-      }
-*/
-      device.release();
-    };
-    const addressHandler = (prev: Address, address: Address): void => {
-      dispatch(changeAddress([deviceId, address.toString()]));
-    };
-    const releaseHandler = (): void => {
-      device.off('connected', connectedHandler);
-      device.off('disconnected', disconnectedHandler);
-      device.off('release', releaseHandler);
-      device.off('addressChanged', addressHandler);
-    };
-    device.on('connected', connectedHandler);
-    device.on('disconnected', disconnectedHandler);
-    device.on('release', releaseHandler);
-    device.on('addressChanged', addressHandler);
-
-    dispatch(addMib(deviceId));
-    // isBusy = 1
-    dispatch(addDevice(deviceId));
-    setTimeout(() => {
-      if (!device.connection) return;
-      device.read().finally(() => {
-        dispatch(updateProps([deviceId]));
-        dispatch(deviceReady(deviceId));
-        // debug(`deviceReady ${device.address.toString()}`);
-        // selectCurrentDeviceId(getState()) || dispatch(setCurrentDevice(deviceId));
-        const brightness = selectBrightness(getState());
-        const setValue = setDeviceValue(deviceId);
-        if (mib?.startsWith('minihost') || mib === 'mcdvi') {
-          setValue('brightness', brightness);
-        }
-        dispatch(initializeScreens());
-      });
-    }, 3000);
-  };
-  const deleteDeviceHandler = (device: IDevice): void => {
-    try {
-      /*
-      const current = selectCurrentDeviceId(getState());
-      if (current === device.id) {
-        dispatch(setCurrentDevice(undefined));
-      }
-*/
-      dispatch(removeDevice(device.id));
-    } catch (e) {
-      console.error(e.message);
-    }
-  };
-  const session = getCurrentNibusSession();
-  session.devices.on('new', newDeviceHandler);
-  session.devices.on('delete', deleteDeviceHandler);
-  return () => {
-    session.devices.off('new', newDeviceHandler);
-    session.devices.off('delete', deleteDeviceHandler);
   };
 };
 

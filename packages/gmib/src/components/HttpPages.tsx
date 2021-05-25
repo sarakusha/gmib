@@ -25,10 +25,10 @@ import { nanoid } from '@reduxjs/toolkit';
 import { isUri } from 'valid-url';
 import HttpPageDialog from '../dialogs/HttpPageDialog';
 import { useDispatch, useSelector } from '../store';
+import { activateHttpPage } from '../store/configThunks';
 import { Page } from '../util/config';
 import AccordionList from './AccordionList';
 import {
-  activateHttpPage,
   selectAllPages,
   removeHttpPage,
   upsertHttpPage,

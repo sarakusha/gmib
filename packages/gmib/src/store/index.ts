@@ -16,14 +16,11 @@ import {
 } from 'react-redux';
 import asyncInitializer from './asyncInitialMiddleware';
 import currentReducer from './currentSlice';
-import configReducer, { initializeConfig } from './configSlice';
+import configReducer from './configSlice';
+import { initializeConfig } from './configThunks';
+import { initializeDevices } from './deviceThunks';
 import sessionReducer, { openSession } from './sessionSlice';
-import devicesReducer, {
-  DeviceState,
-  initializeDevices,
-  selectAllDevices,
-  selectDeviceById,
-} from './devicesSlice';
+import devicesReducer, { DeviceState, selectAllDevices, selectDeviceById } from './devicesSlice';
 import mibsReducer from './mibsSlice';
 import nibusReducer from './nibusSlice';
 import sensorsReducer from './sensorsSlice';

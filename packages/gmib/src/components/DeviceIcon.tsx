@@ -7,12 +7,12 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import type { SvgIconProps } from '@material-ui/core';
 import React from 'react';
 import HubIcon from '@material-ui/icons/DeviceHub';
 import DefaultIcon from '@material-ui/icons/Memory';
 import MinihostIcon from '@material-ui/icons/Tv';
 import ConsoleIcon from '@material-ui/icons/VideogameAsset';
+import type { SvgIconProps } from '@material-ui/core';
 import { DeviceState, DeviceStateWithParent } from '../store/devicesSlice';
 
 type Props = {

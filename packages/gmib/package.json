@@ -1,6 +1,6 @@
 {
   "name": "gmib",
-  "version": "3.2.0",
+  "version": "3.2.2",
   "description": "Nata-Info gmib tool",
   "private": true,
   "keywords": [
@@ -41,13 +41,12 @@
     "lint:fix": "eslint -c ../../.eslintrc-prod.js --ext .js,.ts,.tsx --fix src/",
     "postinstall": "electron-builder install-app-deps"
   },
-  "peerDependencies": {},
   "dependencies": {
     "@material-ui/core": "^4.8.3",
     "@material-ui/icons": "^4.5.1",
     "@mdx-js/react": "^1.6.22",
-    "@nibus/cli": "^3",
-    "@nibus/core": "^3",
+    "@nibus/cli": "3.2.2",
+    "@nibus/core": "3.2.2",
     "@novastar/codec": "^1.0.5",
     "@reduxjs/toolkit": "^1.5.0",
     "@serialport/bindings": "^9.0.1",

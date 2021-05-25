@@ -15,14 +15,10 @@ import classNames from 'classnames';
 import React, { useEffect, useState } from 'react';
 import { useSnackbar } from 'notistack';
 import { useToolbar } from '../providers/ToolbarProvider';
-import {
-  createScreen,
-  removeScreen,
-  selectScreens,
-  selectSessionVersion,
-} from '../store/configSlice';
+import { removeScreen, selectScreens, selectSessionVersion } from '../store/configSlice';
 import { useDispatch, useSelector } from '../store';
 import { selectCurrentScreenId, selectCurrentTab, setCurrentScreen } from '../store/currentSlice';
+import { createScreen } from '../store/configThunks';
 import { noop } from '../util/helpers';
 import Screen from './Screen';
 import ScreensToolbar from './ScreensToolbar';
