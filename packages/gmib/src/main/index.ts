@@ -186,7 +186,9 @@ async function createWindow(
     */
 
     if (isDevelopment) {
+      // eslint-disable-next-line import/no-extraneous-dependencies
       const { default: installExtension, REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS } = await import(
+        // eslint-disable-next-line import/no-extraneous-dependencies
         'electron-devtools-installer'
       );
       // REACT_DEVELOPER_TOOLS несовместим с ReactRefreshWebpackPlugin в

@@ -16,6 +16,7 @@ import HighchartsReact from 'highcharts-react-official';
 import CloseIcon from '@material-ui/icons/Close';
 import CheckIcon from '@material-ui/icons/Check';
 import sortBy from 'lodash/sortBy';
+import { setCurrentBrightness } from '../store/configThunks';
 
 import Highcharts, { SeriesSolidgaugeOptions } from './Highcharts';
 import { useToolbar } from '../providers/ToolbarProvider';
@@ -24,7 +25,6 @@ import {
   selectAutobrightness,
   selectBrightness,
   selectSpline,
-  setCurrentBrightness,
   setSpline,
 } from '../store/configSlice';
 import { selectCurrentTab } from '../store/currentSlice';

@@ -10,6 +10,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { LogLevel, LogLevelV } from '@nibus/core';
+import Ajv from 'ajv';
 import { Schema } from 'electron-store';
 
 export type SplineItem = [lux: number, brightness: number];
@@ -287,3 +288,11 @@ export const convertCfgTo = (cfg: Config): ConfigV1 => {
     ...other,
   };
 };
+
+const ajv = new Ajv({ removeAdditional: 'failing' });
+
+export const validateConfig = ajv.compile({
+  type: 'object',
+  additionalProperties: false,
+  properties: configSchema,
+});
