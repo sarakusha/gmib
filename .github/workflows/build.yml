@@ -11,17 +11,17 @@ on:
 #    types: [created]
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v1
-        with:
-          node-version: 14
-      - name: install build-essential libudev-dev
-        run: sudo apt install build-essential libudev-dev
-      - run: yarn
-      - run: yarn build
+#  build:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v2
+#      - uses: actions/setup-node@v1
+#        with:
+#          node-version: 14
+#      - name: install build-essential libudev-dev
+#        run: sudo apt install build-essential libudev-dev
+#      - run: yarn
+#      - run: yarn build
 
 #  publish-npm:
 #    needs: build
@@ -50,7 +50,7 @@ jobs:
 #          NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
 #
   release-win:
-    needs: build
+#    needs: build
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v2
@@ -59,6 +59,8 @@ jobs:
           node-version: 14
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v1.0.2
+      - run: yarn install
+      - run: yarn build
       - run: yarn workspace gmib install
       - run: yarn workspace gmib compile
       - run: yarn workspace gmib release:win
@@ -66,7 +68,7 @@ jobs:
           GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
 
   release-linux:
-    needs: build
+#    needs: build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -75,6 +77,8 @@ jobs:
           node-version: 14
       - name: install build-essential libudev-dev
         run: sudo apt install build-essential libudev-dev
+      - run: yarn install
+      - run: yarn build
       - run: yarn workspace gmib install
       - run: yarn workspace gmib compile
       - run: yarn workspace gmib release:linux
@@ -82,13 +86,15 @@ jobs:
           GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
 
   release-mac:
-    needs: build
+#    needs: build
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v1
         with:
           node-version: 14
+      - run: yarn install
+      - run: yarn build
       - run: yarn workspace gmib install
       - run: yarn workspace gmib compile
       - run: yarn workspace gmib release:mac
