@@ -10,7 +10,7 @@
 
 import { makeStyles } from '@material-ui/core/styles';
 import { InputAdornment, InputBaseProps, Input } from '@material-ui/core';
-import React, { ChangeEvent, useCallback, useMemo, useState } from 'react';
+import React, { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import classNames from 'classnames';
 import TableCell, { TableCellProps } from './TableCell';
 
@@ -85,10 +85,10 @@ const EditCell: React.FC<Props> = ({
     [classes.positionEnd, unit]
   );
   // let controlled = value !== undefined;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [val, setVal] = useState<unknown>(
-    value === undefined || value instanceof Error ? '' : value
-  );
+  const [val, setVal] = useState<unknown>();
+  useEffect(() => {
+    setVal(value === undefined || value instanceof Error ? '' : value);
+  }, [value]);
   const changeHandler = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
       const ctrl =
