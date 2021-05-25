@@ -8,8 +8,8 @@
  * the EULA file that was distributed with this source code.
  */
 import { PayloadAction } from '@reduxjs/toolkit';
-import type { BaseService } from 'bonjour-hap';
 import React, { Dispatch, SetStateAction } from 'react';
+import type { BaseService } from 'bonjour-hap';
 
 // eslint-disable-next-line global-require,@typescript-eslint/no-var-requires
 export const { version } = require('../../package.json');

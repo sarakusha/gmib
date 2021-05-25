@@ -11,7 +11,6 @@
 /* eslint-disable import/first */
 process.env.NIBUS_LOG = 'nibus-all.log';
 
-import type { NibusService } from '@nibus/cli';
 import Bonjour, { RemoteService } from 'bonjour-hap';
 import { app, BrowserWindow, dialog, Display, ipcMain, screen, powerSaveBlocker } from 'electron';
 import { autoUpdater } from 'electron-updater';
@@ -25,6 +24,7 @@ import readline from 'readline';
 import { Tail } from 'tail';
 import { URLSearchParams } from 'url';
 import tcpPortUsed from 'tcp-port-used';
+import type { NibusService } from '@nibus/cli';
 import { Config, defaultScreen, Page, Screen } from '../util/config';
 import debugFactory, { log } from '../util/debug';
 import { findById, getRemoteLabel, getTitle, notEmpty, RemoteHost } from '../util/helpers';
