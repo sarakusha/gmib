@@ -242,7 +242,7 @@ export const initializeScreens = (scrId?: string): AppThunk => (dispatch, getSta
                 }
                 Object.entries(props).forEach(([name, value]) => {
                   // debug(`setValue ${name} = ${value}`);
-                  value !== undefined && dispatch(setValue(name, value));
+                  value !== undefined && value !== null && dispatch(setValue(name, value));
                 });
               });
           });
