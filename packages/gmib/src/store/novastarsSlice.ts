@@ -136,22 +136,20 @@ export const createNovastarConnection = (
       socket.write(path);
       window.setTimeout(() => {
         const connection = new Connection(socket);
-        connection.open().then(() => {
-          const novastarSession = new Session(connection);
-          novastarSession[path]?.close();
-          novastarSessions[path] = novastarSession;
-          dispatch(addNovastar({ path }));
-          dispatch(reloadNovastar(path));
-          socket.once('close', () => {
-            novastarSession.close();
-          });
-          connection.once('close', () => {
-            dispatch(removeNovastar(path));
-            delete novastarSessions[path];
-            if (!socket.destroyed) socket.destroy();
-          });
-          resolve();
+        const novastarSession = new Session(connection);
+        novastarSession[path]?.close();
+        novastarSessions[path] = novastarSession;
+        dispatch(addNovastar({ path }));
+        dispatch(reloadNovastar(path));
+        socket.once('close', () => {
+          novastarSession.close();
         });
+        connection.once('close', () => {
+          dispatch(removeNovastar(path));
+          delete novastarSessions[path];
+          if (!socket.destroyed) socket.destroy();
+        });
+        resolve();
       }, 100);
     });
   });
