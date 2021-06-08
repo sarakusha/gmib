@@ -34,7 +34,7 @@ const getEntry = (): string => {
 Type=Application
 Version=${version}
 Name=${name}
-Exec=${exe}
+Exec=${exe} --no-sandbox
 Icon=${iconDst}
 Categories=Utility;
 StartupWMClass=${name}
