@@ -1,8 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always" serverName="GIGABYTE" preserveTimestamps="false" exclude=".svn;.cvs;.idea;.DS_Store;.git;.hg;*.hprof;*.pyc;*.log;*.tsbuildinfo">
+  <component name="PublishConfigData" serverName="astra" preserveTimestamps="false" exclude=".svn;.cvs;.idea;.DS_Store;.git;.hg;*.hprof;*.pyc;*.log;*.tsbuildinfo">
     <serverData>
       <paths name="GIGABYTE">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/src/nibus" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+          <excludedPaths>
+            <excludedPath local="true" path="$PROJECT_DIR$/node_modules" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/cli/node_modules" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/gmib/node_modules" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/core/node_modules" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/gmib/dist" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/gmib/bak" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/cli/lib" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/core/lib" />
+          </excludedPaths>
+        </serverdata>
+      </paths>
+      <paths name="astra">
         <serverdata>
           <mappings>
             <mapping deploy="/src/nibus" local="$PROJECT_DIR$" web="/" />
@@ -78,6 +95,5 @@
         </serverdata>
       </paths>
     </serverData>
-    <option name="myAutoUpload" value="ALWAYS" />
   </component>
 </project>

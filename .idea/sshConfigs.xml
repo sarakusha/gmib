@@ -18,6 +18,9 @@
       <sshConfig host="192.168.1.40" id="20b01b0b-4c74-4e30-b343-f6155307388f" keyPath="$USER_HOME$/.ssh/id_rsa" port="22" customName="Keenetic" nameFormat="CUSTOM" username="sarakusha">
         <option name="customName" value="Keenetic" />
       </sshConfig>
+      <sshConfig connectionConfig="{&quot;serverAliveInterval&quot;:300}" host="192.168.23.13" id="f0032861-45a6-4b68-85de-4571fccb3870" keyPath="$USER_HOME$/.ssh/id_rsa" port="22" customName="astra" nameFormat="CUSTOM" username="sarakusha">
+        <option name="customName" value="astra" />
+      </sshConfig>
     </configs>
   </component>
 </project>

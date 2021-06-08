@@ -3,14 +3,14 @@
   <component name="WebServers">
     <option name="servers">
       <webServer id="b13fb38e-eb13-4043-a3e6-cf40fbbd8144" name="GIGABYTE" url="http://192.168.23.27:3000">
-        <fileTransfer rootFolder="/C:/Users/sarakusha" accessType="SFTP" host="192.168.23.26" port="22" sshConfigId="c8135efe-6c91-4b20-8593-365b71e5b226" sshConfig="GIGABYTE" keyPair="true">
+        <fileTransfer rootFolder="/home/sarakusha" accessType="SFTP" host="192.168.23.26" port="22" sshConfigId="c8135efe-6c91-4b20-8593-365b71e5b226" sshConfig="GIGABYTE" keyPair="true">
           <advancedOptions>
             <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
           </advancedOptions>
         </fileTransfer>
       </webServer>
       <webServer id="31509ba6-fcf2-490d-8257-5486d1d3d586" name="sarakusha" url="http://192.168.23.30:3000">
-        <fileTransfer rootFolder="/home/sarakusha" accessType="SFTP" host="192.168.1.108" port="22" sshConfigId="6432fa09-eb99-4ea4-bd20-4b180feac210" sshConfig="sarakusha" keyPair="true">
+        <fileTransfer rootFolder="/home/sarakusha" accessType="SFTP" host="192.168.23.13" port="22" sshConfigId="f0032861-45a6-4b68-85de-4571fccb3870" sshConfig="astra" keyPair="true">
           <advancedOptions>
             <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
           </advancedOptions>
@@ -25,6 +25,13 @@
       </webServer>
       <webServer id="2960a34b-134e-446f-b264-5b3e3f6b0bf7" name="pertab" url="http://192.168.23.27:3000">
         <fileTransfer rootFolder="/home/user" accessType="SFTP" host="192.168.23.27" port="22" sshConfigId="c5c479d0-ce09-44f8-a20b-879d6a631ad1" sshConfig="user@192.168.23.27:22 key" keyPair="true">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+      <webServer id="c4d0e4b4-0038-4cb0-854f-677957f579b2" name="astra" url="http://192.168.23.27:3000">
+        <fileTransfer rootFolder="/home/sarakusha" accessType="SFTP" host="192.168.23.13" port="22" sshConfigId="f0032861-45a6-4b68-85de-4571fccb3870" sshConfig="astra" keyPair="true">
           <advancedOptions>
             <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
           </advancedOptions>
