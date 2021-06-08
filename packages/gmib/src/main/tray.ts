@@ -9,6 +9,7 @@
  */
 
 import { app, Menu, Tray } from 'electron';
+import os from 'os';
 
 import path from 'path';
 import localConfig from '../util/localConfig';
@@ -46,11 +47,11 @@ export const updateTray = (): void => {
   tray && tray.appIcon?.setContextMenu(contextMenu);
 };
 app.whenReady().then(() => {
-  tray.appIcon = new Tray(
-    process.platform !== 'win32'
-      ? path.resolve(__dirname, '../extraResources/icon16x16.png')
-      : path.resolve(__dirname, '../extraResources/icon.ico')
-  );
+  let icon = path.resolve(__dirname, '../extraResources/icon16x16.png');
+  if (process.platform === 'win32') icon = path.resolve(__dirname, '../extraResources/icon.ico');
+  else if (process.platform === 'linux' && os.version().indexOf('astra') !== -1)
+    icon = path.resolve(__dirname, '../extraResources/32x32.png');
+  tray.appIcon = new Tray(icon);
   tray.appIcon.on('click', () => showAll());
   tray.appIcon.setToolTip('gmib');
   updateTray();
