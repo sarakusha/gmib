@@ -568,7 +568,10 @@ autoUpdater.on('update-downloaded', () => {
 
 const startLocalNibus = async (): Promise<void> => {
   const inUse = await tcpPortUsed.check(+(process.env.NIBUS_PORT ?? 9001));
-  if (inUse) return;
+  if (inUse) {
+    console.warn('Port already in use');
+    return;
+  }
   try {
     const { default: svc } = await import('@nibus/cli/lib/service');
     service = svc;
