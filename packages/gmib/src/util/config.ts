@@ -140,6 +140,10 @@ export const configSchema: Schema<Config> = {
       additionalItems: false,
       minItems: 2,
     },
+    default: [
+      [10, 10],
+      [10000, 80],
+    ],
     maxItems: SPLINE_COUNT,
   },
   autobrightness: {
@@ -185,11 +189,11 @@ export const configSchema: Schema<Config> = {
         },
         x: {
           type: 'integer',
-          // default: 0,
+          default: 0,
         },
         y: {
           type: 'integer',
-          // default: 0,
+          default: 0,
         },
         display: {
           anyOf: [{ type: 'string' }, { type: 'boolean' }],
@@ -202,7 +206,7 @@ export const configSchema: Schema<Config> = {
             type: 'string',
             pattern: addressPattern,
           },
-          default: [],
+          default: ['255.255.1'],
         },
         dirh: {
           type: 'boolean',
