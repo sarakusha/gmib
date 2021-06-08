@@ -243,8 +243,7 @@ function createTestWindow(width: number, height: number, x: number, y: number): 
     skipTaskbar: true,
     hasShadow: false,
     transparent: true,
-    // Еще не работает
-    // roundedCorners: false,
+    roundedCorners: false,
     webPreferences: {
       // nodeIntegration: true,
       contextIsolation: true,
