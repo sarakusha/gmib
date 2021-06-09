@@ -240,28 +240,44 @@ export const initializeScreens = (scrId?: string): AppThunk => (dispatch, getSta
                 debug(`initialize ${devAddress}`);
                 const setValue = setDeviceValue(id);
                 let props: Record<string, ValueType | undefined> = {};
-                if (mib.startsWith('minihost')) {
-                  props = {
-                    hoffs: left,
-                    voffs: top,
-                    hres: width,
-                    vres: height,
-                    moduleHres,
-                    moduleVres,
-                    indication: 0,
-                    dirh,
-                    dirv,
-                  };
-                } else if (mib === 'mcdvi') {
-                  props = {
-                    // moduleHres,
-                    // moduleVres,
-                    indication: 0,
-                    hres: width,
-                    vres: height,
-                    hofs: left,
-                    vofs: top,
-                  };
+                switch (mib) {
+                  case 'minihost3':
+                    props = {
+                      hoffs: left,
+                      voffs: top,
+                      hres: width,
+                      vres: height,
+                      moduleHres,
+                      moduleVres,
+                      indication: 0,
+                      dirh,
+                      dirv,
+                    };
+                    break;
+                  case 'minihost_v2.06b':
+                    props = {
+                      hoffs: left,
+                      voffs: top,
+                      hres: width,
+                      vres: height,
+                      moduleHres,
+                      moduleVres,
+                      indication: 0,
+                      hinvert: dirh,
+                      vinvert: dirv,
+                    };
+                    break;
+                  case 'mcdvi':
+                    props = {
+                      indication: 0,
+                      hres: width,
+                      vres: height,
+                      hofs: left,
+                      vofs: top,
+                    };
+                    break;
+                  default:
+                    break;
                 }
                 Object.entries(props).forEach(([name, value]) => {
                   // debug(`setValue ${name} = ${value}`);
