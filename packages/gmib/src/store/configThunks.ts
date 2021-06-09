@@ -45,6 +45,54 @@ const BRIGHTNESS_INTERVAL = 60 * 1000;
 const getValue = (value: number, min: number, max: number): number =>
   Math.min(Math.max(value, min), max);
 
+type Location = {
+  address: Address;
+  left?: number;
+  top?: number;
+  width?: number;
+  height?: number;
+};
+
+type HostParams = Required<Location>;
+
+const safeNumber = (value: string | undefined): number | undefined =>
+  value !== undefined ? +value : undefined;
+
+const parseLocation = (location: string): Location | undefined => {
+  const matches = location.match(reAddress);
+  if (!matches) return undefined;
+  const [, address, l, t, w, h] = matches;
+  return {
+    address: new Address(address),
+    left: safeNumber(l),
+    top: safeNumber(t),
+    width: safeNumber(w),
+    height: safeNumber(h),
+  };
+};
+
+type Input = Pick<Required<Screen>, 'width' | 'height' | 'x' | 'y'>;
+
+const getHostParams = (screen: Input) => (expr: string): HostParams | undefined => {
+  // const matches = expr.match(reAddress);
+  // if (!matches) return undefined;
+  // const [, address, l, t, w, h] = matches;
+  // const left = l ? +l : 0;
+  // const top = t ? +(+t) : 0;
+  const location = parseLocation(expr);
+  if (!location) return undefined;
+  const { left = 0, top = 0, address } = location;
+  const width = location.width ?? Math.max(screen.width - left, 0);
+  const height = location.height ?? Math.max(screen.height - top, 0);
+  return {
+    address,
+    left: screen.x + left,
+    top: screen.y + top,
+    width,
+    height,
+  };
+};
+
 export const updateBrightness = debounce<AppThunk>((dispatch, getState) => {
   // console.log('updateBrightness', new Date().toLocaleTimeString());
   const state = getState();
@@ -53,11 +101,13 @@ export const updateBrightness = debounce<AppThunk>((dispatch, getState) => {
   const screens = selectScreens(state);
   const tasks = screens
     .filter(({ brightnessFactor }) => brightnessFactor && brightnessFactor > 0)
-    .reduce<[DeviceId, number][]>((res, { addresses, brightnessFactor }) => {
+    .reduce<[DeviceId, number][]>((res, { brightnessFactor, addresses }) => {
       if (!addresses) return res;
       return [
         ...res,
         ...addresses
+          .map(location => parseLocation(location)?.address)
+          .filter(notEmpty)
           .reduce<DeviceState[]>(
             (devs, address) => [...devs, ...selectDevicesByAddress(state, address)],
             []
@@ -166,33 +216,6 @@ export const createScreen = (): AppThunk => (dispatch, getState) => {
   const id = nanoid();
   dispatch(addScreen([id, name]));
   // dispatch(setCurrentScreen(id));
-};
-
-type HostParams = {
-  address: Address;
-  left: number;
-  top: number;
-  width: number;
-  height: number;
-};
-
-type Input = Pick<Required<Screen>, 'width' | 'height' | 'x' | 'y'>;
-
-const getHostParams = (screen: Input) => (expr: string): HostParams | undefined => {
-  const matches = expr.match(reAddress);
-  if (!matches) return undefined;
-  const [, address, l, t, w, h] = matches;
-  const left = l ? +l : 0;
-  const top = t ? +(+t) : 0;
-  const width = w ? +w : Math.max(screen.width - left, 0);
-  const height = h ? +h : Math.max(screen.height - top, 0);
-  return {
-    address: new Address(address),
-    left: screen.x + left,
-    top: screen.y + top,
-    width,
-    height,
-  };
 };
 
 export const initializeScreens = (scrId?: string): AppThunk => (dispatch, getState) => {
