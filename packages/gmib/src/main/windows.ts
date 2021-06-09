@@ -26,4 +26,9 @@ export const hideAll = (): void => {
   });
 };
 
+export const closeScreens = (): void => {
+  [...screenWindows.values()].forEach(window => window.destroy());
+  screenWindows.clear();
+};
+
 export default windows;

@@ -42,7 +42,7 @@ import {
   updateMenu,
 } from './mainMenu';
 import { updateTray } from './tray';
-import windows, { screenWindows, showAll } from './windows';
+import windows, { closeScreens, screenWindows, showAll } from './windows';
 import server from './server';
 
 const USE_REACT_REFRESH_WEBPACK = true;
@@ -285,53 +285,6 @@ function createTestWindow(width: number, height: number, x: number, y: number): 
   return window;
 }
 
-/*
-const reloadTest = (id?: string): void => {
-  currentTest = id;
-  const tests = config.get('tests');
-  const test = id ? tests.find(item => item.id === id) : undefined;
-  if (!testWindow) {
-    testWindow = createTestWindow();
-    // eslint-disable-next-line @typescript-eslint/no-use-before-define
-    updateScreen();
-  }
-  if (!test || !test.url) {
-    testWindow.hide();
-    return;
-  }
-
-  const url = test.permanent
-    ? `${test.url}?${new URLSearchParams(
-        Object.entries(currentScreen)
-          .filter(([, value]) => value !== undefined)
-          .map<[string, string]>(([name, value]) => [name, value!.toString()])
-      )}`
-    : test.url;
-
-  testWindow.loadURL(url).catch(e => {
-    log.error('error while load test', e.message);
-  });
-  testWindow.show();
-};
-*/
-
-// quit application when all windows are closed
-app.on('window-all-closed', () => {
-  isQuiting = true;
-  closeNibus();
-  debug('App closed');
-  app.quit();
-});
-
-/*
-app.on('activate', async () => {
-  // on macOS it is common to re-create a window even after all windows have been closed
-  if (mainWindow === null) {
-    mainWindow = await createWindow();
-  }
-});
-*/
-
 const createMainWindow = async (): Promise<BrowserWindow> => {
   if (!mainWindow) {
     mainWindow = await createWindow();
@@ -340,7 +293,7 @@ const createMainWindow = async (): Promise<BrowserWindow> => {
         event.preventDefault();
         mainWindow?.hide();
       } else {
-        [...screenWindows.values()].forEach(window => window.close());
+        closeScreens();
         mainWindow = null;
       }
       return false;
