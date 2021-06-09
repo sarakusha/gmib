@@ -13,7 +13,7 @@ import classNames from 'classnames';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useDevice, useSelector } from '../store';
-import { selectCurrentDeviceId } from '../store/currentSlice';
+import { selectCurrentDeviceId, selectCurrentTab } from '../store/currentSlice';
 import { getStatesAsync, noop } from '../util/helpers';
 import Minihost2Loader, { Minihost2Info } from '../util/Minihost2Loader';
 import Minihost3Loader, { initialSelectors, Minihost3Info } from '../util/Minihost3Loader';
@@ -147,7 +147,8 @@ const TelemetryTab: React.FC<MinihostTabProps> = ({ id, selected = false }) => {
   }, [loader]);
   const cancel = useCallback(() => loader && loader.cancel(), [loader]);
   const [, setToolbar] = useToolbar();
-  const active = useSelector(selectCurrentDeviceId) === id && selected;
+  const tab = useSelector(selectCurrentTab);
+  const active = useSelector(selectCurrentDeviceId) === id && selected && tab === 'devices';
   const telemetryToolbar = useMemo(
     () => (
       <TelemetryToolbar
