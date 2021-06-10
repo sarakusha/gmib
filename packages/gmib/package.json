@@ -82,7 +82,7 @@
     "tcp-port-used": "^1.0.2",
     "tiny-typed-emitter": "^2.0.3",
     "typeface-roboto": "^1.1.13",
-    "usb-detection": "^4.7.0",
+    "usb-detection": "git://github.com/sarakusha/node-usb-detection.git#fix_segfault_on_close",
     "valid-url": "^1.0.9"
   },
   "devDependencies": {
