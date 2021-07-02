@@ -10,14 +10,16 @@
 
 /* eslint-disable no-bitwise */
 import { makeStyles } from '@material-ui/core/styles';
-import { Button, IconButton } from '@material-ui/core';
+import { Button, FormControl, FormHelperText, IconButton } from '@material-ui/core';
 import FolderIcon from '@material-ui/icons/FolderOpen';
 import SaveAltIcon from '@material-ui/icons/SaveAlt';
 import { Kind, KindMap } from '@nibus/core';
 import classNames from 'classnames';
 import { ipcRenderer } from 'electron';
 import React, { memo, useCallback, useState } from 'react';
-// import { useFlashState } from '../providers/FlashStateProvider';
+import { useSelector } from '../store';
+import { selectAutobrightness, selectOverheatProtection } from '../store/configSlice';
+import { selectCurrentDevice } from '../store/currentSlice';
 import { getStatesAsync } from '../util/helpers';
 import FilenameEllipsis from './FilenameEllipsis';
 import FormFieldSet from './FormFieldSet';
@@ -96,10 +98,12 @@ export const displayName = (kind: string): string => {
 const FlashUpgrade: React.FC<Props> = ({ kind, onFlash, hidden = false }) => {
   const classes = useStyles();
   const [ext, isModule] = KindMap[kind];
-  // const { column, row, file, setColumn, setRow, setFile } = useFlashState(kind);
   const [file, setFile] = useState('');
   const [column, setColumn] = useState(0);
   const [row, setRow] = useState(0);
+  const { enabled = false } = useSelector(selectOverheatProtection) ?? {};
+  const autobrightness = useSelector(selectAutobrightness);
+  const { isBusy = 0 } = useSelector(selectCurrentDevice) ?? {};
   const selectFileHandler = useCallback<React.MouseEventHandler<HTMLButtonElement>>(
     _ => {
       const fileNames: string[] | undefined = ipcRenderer.sendSync('showOpenDialogSync', {
@@ -157,16 +161,31 @@ const FlashUpgrade: React.FC<Props> = ({ kind, onFlash, hidden = false }) => {
             max={255}
             className={classNames({ [classes.invisible]: !isModule })}
           />
-          <Button
-            variant="contained"
-            color="default"
-            className={classes.write}
-            startIcon={<SaveAltIcon />}
-            disabled={!file}
-            onClick={flashHandler}
-          >
-            Прошить
-          </Button>
+          <FormControl className={classes.write}>
+            <FormHelperText
+              className={classNames({ [classes.invisible]: !enabled })}
+              error
+              margin="dense"
+            >
+              {'\u26a0'}Защита от перегрева
+            </FormHelperText>
+            <FormHelperText
+              className={classNames({ [classes.invisible]: !autobrightness })}
+              error
+              margin="dense"
+            >
+              {'\u26a0'}Автояркость
+            </FormHelperText>
+            <Button
+              variant="contained"
+              color="default"
+              startIcon={<SaveAltIcon />}
+              disabled={!file || enabled || autobrightness || isBusy > 0}
+              onClick={flashHandler}
+            >
+              Прошить
+            </Button>
+          </FormControl>
         </div>
       </FormFieldSet>
     </div>

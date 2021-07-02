@@ -14,7 +14,8 @@ import debounce from 'lodash/debounce';
 import sortBy from 'lodash/sortBy';
 import SunCalc from 'suncalc';
 import { Config, convertCfgFrom, reAddress, Screen, validateConfig } from '../util/config';
-import { incrementCounterString, notEmpty, PropPayload, tuplify } from '../util/helpers';
+import localConfig from '../util/localConfig';
+import { incrementCounterString, MINUTE, notEmpty, PropPayload, tuplify } from '../util/helpers';
 import MonotonicCubicSpline, { Point } from '../util/MonotonicCubicSpline';
 import { isRemoteSession } from '../util/nibus';
 import { AsyncInitializer } from './asyncInitialMiddleware';
@@ -25,6 +26,7 @@ import {
   selectBrightness,
   selectConfig,
   selectLocation,
+  selectOverheatProtection,
   selectScreenById,
   selectScreens,
   selectSpline,
@@ -94,15 +96,18 @@ const getHostParams = (screen: Input) => (expr: string): HostParams | undefined 
 };
 
 export const updateBrightness = debounce<AppThunk>((dispatch, getState) => {
-  // console.log('updateBrightness', new Date().toLocaleTimeString());
   const state = getState();
   const brightness = selectBrightness(state);
+  const { interval } = selectOverheatProtection(state) ?? {};
   if (brightness === undefined) return;
   const screens = selectScreens(state);
   const tasks = screens
     .filter(({ brightnessFactor }) => brightnessFactor && brightnessFactor > 0)
-    .reduce<[DeviceId, number][]>((res, { brightnessFactor, addresses }) => {
+    .reduce<[DeviceId, number][]>((res, { brightnessFactor, addresses, id: screenId }) => {
       if (!addresses) return res;
+      const { timestamp, screens: scr } = localConfig.get('health');
+      const isValid = timestamp && interval && Date.now() - timestamp < 2 * interval * MINUTE;
+      const actualBrightness = Math.min(Math.round(brightnessFactor! * brightness), 100);
       return [
         ...res,
         ...addresses
@@ -112,7 +117,17 @@ export const updateBrightness = debounce<AppThunk>((dispatch, getState) => {
             (devs, address) => [...devs, ...selectDevicesByAddress(state, address)],
             []
           )
-          .map(({ id }) => tuplify(id, Math.round(brightnessFactor! * brightness))),
+          .map(({ id }) =>
+            tuplify(
+              id,
+              isValid
+                ? Math.min(
+                    actualBrightness,
+                    scr?.[screenId]?.maxBrightness ?? Number.MAX_SAFE_INTEGER
+                  )
+                : actualBrightness
+            )
+          ),
       ];
     }, []);
   tasks.forEach(([id, value]) => dispatch(setDeviceValue(id)('brightness', value)));

@@ -32,9 +32,16 @@ import React, { useCallback, useEffect, useState } from 'react';
 import some from 'lodash/some';
 import SettingsEthernetIcon from '@material-ui/icons/SettingsEthernet';
 import HighlightOffIcon from '@material-ui/icons/HighlightOff';
+import nata from '../extraResources/nata.svg';
 import RemoteHostsDialog from '../dialogs/RemoteHostsDialog';
 import { useDevices, useDispatch, useSelector } from '../store';
-import { selectAutobrightness, selectLoading, setAutobrightness } from '../store/configSlice';
+import {
+  selectAutobrightness,
+  selectLoading,
+  selectOverheatProtection,
+  setAutobrightness,
+} from '../store/configSlice';
+import setProtectionProp from '../store/healthThunks';
 import { selectCurrentTab, setCurrentTab } from '../store/currentSlice';
 import { selectIsClosed, selectIsOnline } from '../store/sessionSlice';
 import Devices from './Devices';
@@ -59,6 +66,7 @@ const useStyles = makeStyles(theme => ({
     alignItems: 'center',
     justifyContent: 'flex-end',
     padding: '0 8px',
+    gap: theme.spacing(1),
     ...theme.mixins.toolbar,
   },
   appBar: {
@@ -85,6 +93,9 @@ const useStyles = makeStyles(theme => ({
   },
   title: {
     flexGrow: 1,
+    display: 'flex',
+    alignItems: 'flex-end',
+    whiteSpace: 'nowrap',
   },
   drawerPaper: {
     position: 'relative',
@@ -105,9 +116,6 @@ const useStyles = makeStyles(theme => ({
       duration: theme.transitions.duration.leavingScreen,
     }),
     width: 0,
-    // [theme.breakpoints.up('sm')]: {
-    //   width: theme.spacing(9),
-    // },
   },
   drawerContent: {
     flex: 1,
@@ -161,6 +169,9 @@ const useStyles = makeStyles(theme => ({
       opacity: 0,
     },
   },
+  nata: {
+    height: 42,
+  },
 }));
 
 const App: React.FC = () => {
@@ -192,6 +203,7 @@ const App: React.FC = () => {
     };
   }, []);
   const closeRemoteDialog = (): void => setRemoteDialogOpen(false);
+  const { enabled: protectionEnabled = false } = useSelector(selectOverheatProtection) ?? {};
   return (
     <>
       <Backdrop className={classes.backdrop} open={!online || loading}>
@@ -224,7 +236,7 @@ const App: React.FC = () => {
               </Typography>
               &nbsp;
               <Typography component="h1" variant="subtitle1" color="inherit" display="inline">
-                {`${version} [${process.versions.modules}]`}
+                {`${version}`}
               </Typography>
             </div>
             {toolbar}
@@ -251,6 +263,7 @@ const App: React.FC = () => {
           open={open}
         >
           <div className={classes.toolbarIcon}>
+            <img src={nata} alt="Nata-Info" className={classes.nata} />
             <IconButton onClick={handleDrawerClose}>
               <ChevronLeftIcon />
             </IconButton>
@@ -265,15 +278,29 @@ const App: React.FC = () => {
               selected={tab === 'autobrightness'}
               className={classes.listItem}
             >
-              <ListItemText id="switch-autobrightness">Автояркость</ListItemText>
+              <ListItemText id="switch-autobrightness" primary="Автояркость" />
               <ListItemSecondaryAction>
                 <Switch
                   edge="end"
                   onChange={() => dispatch(setAutobrightness(!autobrightness))}
                   checked={autobrightness}
-                  // onChange={handleToggle('wifi')}
-                  // checked={checked.indexOf('wifi') !== -1}
                   inputProps={{ 'aria-labelledby': 'switch-autobrightness' }}
+                />
+              </ListItemSecondaryAction>
+            </ListItem>
+            <ListItem
+              button
+              className={classes.listItem}
+              selected={tab === 'overheat'}
+              onClick={() => dispatch(setCurrentTab('overheat'))}
+            >
+              <ListItemText id="switch-overheat-protection" primary="Защита от перегрева" />
+              <ListItemSecondaryAction>
+                <Switch
+                  edge="end"
+                  checked={protectionEnabled}
+                  inputProps={{ 'aria-labelledby': 'switch-overheat-protection' }}
+                  onClick={() => dispatch(setProtectionProp(['enabled', !protectionEnabled]))}
                 />
               </ListItemSecondaryAction>
             </ListItem>
@@ -283,7 +310,7 @@ const App: React.FC = () => {
               selected={tab === 'log'}
               className={classes.listItem}
             >
-              <ListItemText>Журнал</ListItemText>
+              <ListItemText primary="Журнал" />
             </ListItem>
           </List>
         </Drawer>

@@ -14,6 +14,9 @@ import type { BaseService } from 'bonjour-hap';
 // eslint-disable-next-line global-require,@typescript-eslint/no-var-requires
 export const { version } = require('../../package.json');
 
+export const MINUTE = 60 * 1000;
+export const HOUR = 60 * MINUTE;
+
 export function tuplify<T extends unknown[]>(...args: T): T {
   return args;
 }
@@ -110,13 +113,13 @@ export function getStatesAsync(...setters: Setter<unknown>[]): Promise<unknown[]
   return Promise.all(setters.map(setter => getStateAsync(setter)));
 }
 
-export const toNumber = (value: string): number | undefined =>
-  value.trim().length === 0 ? undefined : Number(value);
+export const toNumber = (value: string | number): number | undefined =>
+  typeof value === 'string' && value.trim().length === 0 ? undefined : Number(value);
 
 export type PropPayload<T, K extends keyof T = keyof T> = readonly [K, T[K]];
 // export type PropertiesReducer<T> = React.Reducer<T, PropPayload<T> | [undefined, T]>;
 export type PropertiesReducer<T> = React.Reducer<T, PropPayload<T>>;
-export type PropPayloadAction<T> = PayloadAction<PropPayload<T>>;
+export type PropPayloadAction<T, K extends keyof T = keyof T> = PayloadAction<PropPayload<T, K>>;
 export function createPropsReducer<T extends Record<string, unknown>>(): PropertiesReducer<T> {
   return (state, [prop, value]) => ({
     ...state,
@@ -178,4 +181,4 @@ export const incrementCounterString = (s: string): string =>
 
 export const noop = (): void => {};
 
-export type Writeable<T> = { -readonly [P in keyof T]: T[P] };
+export type Writable<T> = { -readonly [P in keyof T]: T[P] };

@@ -44,6 +44,7 @@ type Props = {
   start?: () => void;
   cancel?: () => void;
   loading?: boolean;
+  isBusy?: number;
   mib?: string;
   selectors?: Set<Minihost3Selector>;
   onSelectorChanged?: (selectors: Set<Minihost3Selector>) => void;
@@ -55,6 +56,7 @@ const TelemetryToolbar: React.FC<Props> = ({
   loading = false,
   mib,
   onSelectorChanged = noop,
+  isBusy = 0,
   selectors = new Set(initialSelectors),
 }) => {
   const classes = useStyles();
@@ -76,10 +78,10 @@ const TelemetryToolbar: React.FC<Props> = ({
           </div>
         </Tooltip>
       )}
-      {loading ? (
-        <Tooltip title="Отменить опрос">
+      {loading || isBusy > 0 ? (
+        <Tooltip title={loading && 'Отменить опрос'}>
           <div className={classes.wrapper}>
-            <IconButton onClick={cancel} color="inherit">
+            <IconButton onClick={cancel} color="inherit" disabled={!loading}>
               <CancelIcon />
             </IconButton>
             <CircularProgress size={48} className={classes.fabProgress} />

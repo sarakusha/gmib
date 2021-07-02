@@ -18,7 +18,9 @@ import {
   Location,
   Page,
   Screen,
+  OverheatProtection,
   validateConfig,
+  DEFAULT_OVERHEAD_PROTECTION,
 } from '../util/config';
 import { findById, PropPayload, PropPayloadAction } from '../util/helpers';
 import { getCurrentNibusSession } from '../util/nibus';
@@ -26,12 +28,7 @@ import type { RootState } from './index';
 
 // const debug = debugFactory('gmib:configSlice');
 
-// cyclic dependency
-// eslint-disable-next-line import/no-cycle
-// const devicesSlice = import('./devicesSlice');
-
 export interface ConfigState extends Config {
-  // readonly session: SessionId;
   loading: boolean;
 }
 
@@ -39,15 +36,13 @@ const initialState: ConfigState = {
   brightness: 30,
   autobrightness: false,
   spline: undefined,
-  // session: `${params.get('host') || ''}:${params.get('port') || 9001}` as SessionId,
   screens: [],
   logLevel: 'none',
   pages: [],
   version: undefined,
   loading: true,
+  overheatProtection: DEFAULT_OVERHEAD_PROTECTION,
 };
-
-// export type RemoteSession = { id: SessionId; isPersist: boolean };
 
 export const sendConfig = debounce((state: ConfigState): void => {
   const { loading, ...config } = state;
@@ -77,12 +72,6 @@ export const configSlice = createSlice({
       state.autobrightness = on;
       sendConfig(current(state));
     },
-    // updateCurrentSession(state, { payload: id }: PayloadAction<SessionId>) {
-    //   if (id === state.session) return;
-    //   const save = savers[state.session];
-    //   state.session = id;
-    //   save && save.flush();
-    // },
     setSpline(state, { payload: spline }: PayloadAction<Config['spline']>) {
       state.spline = spline;
       sendConfig(current(state));
@@ -143,7 +132,7 @@ export const configSlice = createSlice({
     },
     addScreen(state, { payload: [id, name] }: PayloadAction<[string, string]>) {
       state.screens.push({ ...defaultScreen, id, name });
-      // saveConfig(current(state));
+      sendConfig(current(state));
     },
     removeScreen(state, { payload: id }: PayloadAction<string>) {
       const index = state.screens.findIndex(screen => screen.id === id);
@@ -155,12 +144,22 @@ export const configSlice = createSlice({
         sendConfig(current(state));
       }
     },
+    // setOverheatProtection(
+    //   state,
+    //   { payload: overheatProtection }: PayloadAction<OverheatProtection>
+    // ) {
+    //   state.overheatProtection = overheatProtection;
+    //   sendConfig(current(state));
+    // },
+    setProtectionProp(state, { payload: [name, value] }: PropPayloadAction<OverheatProtection>) {
+      if (!state.overheatProtection) state.overheatProtection = DEFAULT_OVERHEAD_PROTECTION;
+      Object.assign(state.overheatProtection, { [name]: value });
+      sendConfig(current(state));
+    },
   },
 });
 
 export const selectConfig = (state: RootState): ConfigState => state.config;
-
-// export const selectOutput = (state: RootState): string | undefined => selectConfig(state).test;
 
 export const selectLoading = (state: RootState): boolean => selectConfig(state).loading;
 
@@ -200,6 +199,9 @@ export const selectScreenAddresses = (state: RootState): string[] =>
     ),
   ].sort();
 
+export const selectOverheatProtection = (state: RootState): OverheatProtection | undefined =>
+  selectConfig(state).overheatProtection;
+
 export const {
   addScreen,
   removeScreen,
@@ -207,7 +209,6 @@ export const {
   setAutobrightness,
   setSpline,
   setLocationProp,
-  // setScreenProp,
   setLogLevel,
   upsertHttpPage,
   removeHttpPage,
@@ -215,24 +216,8 @@ export const {
   removeAddress,
   updateConfig,
   setBrightness,
+  // setOverheatProtection,
+  setProtectionProp: setProtectionPropImpl,
 } = configSlice.actions;
-
-/*
-export const deleteScreen = (id: string): AppThunk => (dispatch, getState) => {
-  const state = getState();
-  let screens = selectScreens(state);
-  if (screens.length < 1) return;
-  let currentScreen = selectCurrentScreenId(state);
-  const index = screens.findIndex(screen => screen.id === id);
-  if (index === -1) return;
-  dispatch(removeScreen(id));
-  // if (currentScreen === id) {
-  //   screens = selectScreens(getState());
-  //   currentScreen =
-  //     screens.length > 0 ? screens[Math.min(index, screens.length - 1)].id : undefined;
-  //   dispatch(setCurrentScreen(currentScreen));
-  // }
-};
-*/
 
 export default configSlice.reducer;

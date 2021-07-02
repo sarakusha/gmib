@@ -17,12 +17,15 @@ const config = new Store<Config>({
   name: 'gmib',
   schema: configSchema,
   watch: true,
+  clearInvalidConfig: true,
   migrations: {
     '>3.0.6': store => {
       store.set(convertCfgFrom(store.store));
     },
   },
 });
+
+export const prevVersion = config.get('version', version);
 
 config.set('version', version);
 

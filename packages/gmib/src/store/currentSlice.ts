@@ -9,23 +9,26 @@
  */
 
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { Health } from '../util/localConfig';
 import { addScreen, removeScreen, showHttpPage, updateConfig } from './configSlice';
 import { addDevice, DeviceState, removeDevice, selectDeviceById } from './devicesSlice';
 import type { AppThunk, RootState } from './index';
 import { addNovastar, removeNovastar } from './novastarsSlice';
 
-export type TabValues = 'devices' | 'screens' | 'autobrightness' | 'log';
+export type TabValues = 'devices' | 'screens' | 'autobrightness' | 'overheat' | 'log';
 
 interface CurrentState {
   tab: TabValues | undefined;
   device: string | undefined;
   screen: string | undefined;
+  health: Health | undefined;
 }
 
 const initialState: CurrentState = {
   tab: 'devices',
   device: undefined,
   screen: undefined,
+  health: undefined,
 };
 
 const currentSlice = createSlice({
@@ -40,6 +43,9 @@ const currentSlice = createSlice({
     },
     setCurrentScreen(state, { payload: id }: PayloadAction<string | undefined>) {
       state.screen = id;
+    },
+    setCurrentHealth(state, { payload: health }: PayloadAction<Health | undefined>) {
+      state.health = health;
     },
   },
   extraReducers: builder => {
@@ -84,7 +90,12 @@ const currentSlice = createSlice({
   },
 });
 
-export const { setCurrentDevice, setCurrentTab, setCurrentScreen } = currentSlice.actions;
+export const {
+  setCurrentDevice,
+  setCurrentTab,
+  setCurrentScreen,
+  setCurrentHealth,
+} = currentSlice.actions;
 
 export const selectCurrent = (state: RootState): CurrentState => state.current;
 
@@ -106,5 +117,8 @@ export const selectCurrentDevice = (state: RootState): DeviceState | undefined =
   const device = selectCurrentDeviceId(state);
   return device !== undefined ? selectDeviceById(state, device) : undefined;
 };
+
+export const selectCurrentHealth = (state: RootState): Health | undefined =>
+  selectCurrent(state).health;
 
 export default currentSlice.reducer;

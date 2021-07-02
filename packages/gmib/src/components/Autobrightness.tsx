@@ -37,7 +37,8 @@ import Brightness from './Brightness';
 const useStyles = makeStyles(theme => ({
   root: {
     paddingTop: theme.spacing(1),
-    width: '100%',
+    marginLeft: 'auto',
+    marginRight: 'auto',
   },
   column: {
     display: 'flex',
@@ -182,6 +183,22 @@ const highChartsOptions = (classes: ReturnType<typeof useStyles>): Highcharts.Op
   ],
 });
 
+const brightnessInputProps = {
+  startAdornment: <InputAdornment position="start">%</InputAdornment>,
+  inputProps: {
+    min: 0,
+    max: 100,
+  },
+};
+
+const illuminanceInputProps = {
+  startAdornment: <InputAdornment position="start">lux</InputAdornment>,
+  inputProps: {
+    min: 0,
+    max: 65535,
+  },
+};
+
 const Autobrightness: React.FC = () => {
   const classes = useStyles();
   const [options, setOptions] = useState<Highcharts.Options>(highChartsOptions(classes));
@@ -283,7 +300,7 @@ const Autobrightness: React.FC = () => {
   );
   const autobrightness = useSelector(selectAutobrightness);
   return (
-    <div className={classNames(classes.root, classes.column)}>
+    <div className={classNames(classes.root)}>
       <Paper className={classes.column}>
         <div className={classes.control}>
           <HighchartsReact highcharts={Highcharts} options={options} />
@@ -304,13 +321,7 @@ const Autobrightness: React.FC = () => {
                     id={`lux-${i}`}
                     value={lux[i] ?? ''}
                     type="number"
-                    InputProps={{
-                      startAdornment: <InputAdornment position="start">lux</InputAdornment>,
-                      inputProps: {
-                        min: 0,
-                        max: 65535,
-                      },
-                    }}
+                    InputProps={illuminanceInputProps}
                     onChange={handleChange}
                     // margin="dense"
                   />
@@ -320,13 +331,7 @@ const Autobrightness: React.FC = () => {
                     id={`bright-${i}`}
                     value={bright[i] ?? ''}
                     type="number"
-                    InputProps={{
-                      startAdornment: <InputAdornment position="start">%</InputAdornment>,
-                      inputProps: {
-                        min: 0,
-                        max: 100,
-                      },
-                    }}
+                    InputProps={brightnessInputProps}
                     onChange={handleChange}
                     // margin="dense"
                     error={!!error[i]}

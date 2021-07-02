@@ -17,7 +17,7 @@ import fs from 'fs';
 import React from 'react';
 import { useSelector } from '../store';
 import { ConfigState, sendConfig, selectConfig } from '../store/configSlice';
-import { noop, Writeable } from '../util/helpers';
+import { noop, Writable } from '../util/helpers';
 
 const load = (): void => {
   const [fileName]: string[] =
@@ -54,7 +54,7 @@ const save = (config: ConfigState): void => {
     ],
   });
   if (fileName) {
-    const clone: Partial<Writeable<ConfigState>> = JSON.parse(JSON.stringify(config));
+    const clone: Partial<Writable<ConfigState>> = JSON.parse(JSON.stringify(config));
     clone.pages = clone.pages?.filter(({ permanent }) => !permanent);
     delete clone.brightness;
     delete clone.loading;

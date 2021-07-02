@@ -195,6 +195,16 @@ const devicesSlice = createSlice({
         changes: { address },
       });
     },
+    deviceBusy(state, { payload: id }: PayloadAction<DeviceId>) {
+      const entity = state.entities[id];
+      if (!entity) return;
+      devicesAdapter.updateOne(state, {
+        id,
+        changes: {
+          isBusy: entity.isBusy + 1,
+        },
+      });
+    },
     deviceReady(state, { payload: id }: PayloadAction<DeviceId>) {
       const entity = state.entities[id];
       if (!entity) return;
@@ -329,6 +339,7 @@ export const selectAllDevicesWithParent = (state: RootState): DeviceStateWithPar
   }));
 
 export const filterDevicesByAddress = <D extends Pick<DeviceState, 'address' | 'mib' | 'props'>>(
+  // export const filterDevicesByAddress = <D extends { address: Address; mib: string; props: { domain?: number, subnet?} }>(
   devices: D[],
   address: Address
 ): D[] =>
@@ -375,6 +386,7 @@ export const {
   removeDevice,
   setConnected,
   changeAddress,
+  deviceBusy,
   deviceReady,
   setParent,
   // updateProperty,

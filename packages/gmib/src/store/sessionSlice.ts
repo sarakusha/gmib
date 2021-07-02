@@ -13,9 +13,11 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { ipcRenderer } from 'electron';
 
 import type { Config } from '../util/config';
+import { Health } from '../util/localConfig';
 import { getCurrentNibusSession, isRemoteSession } from '../util/nibus';
 import { AsyncInitializer } from './asyncInitialMiddleware';
 import { selectBrightness } from './configSlice';
+import { setCurrentHealth } from './currentSlice';
 import type { RootState } from './index';
 import { loadConfig } from './configThunks';
 import { createNovastarConnection, releaseNovastar, setNovastarBrightness } from './novastarsSlice';
@@ -132,6 +134,11 @@ export const openSession: AsyncInitializer = (dispatch, getState: () => RootStat
     dispatch(loadConfig(config));
   };
 
+  const healthHandler = (health: Health): void => {
+    // debug(`health ${JSON.stringify(health)}`);
+    dispatch(setCurrentHealth(health));
+  };
+
   const hostHandler = (hostArgs: Host): void => {
     dispatch(setHostDescription(hostArgs));
   };
@@ -180,6 +187,7 @@ export const openSession: AsyncInitializer = (dispatch, getState: () => RootStat
   session.once('host', hostHandler);
   session.on('informationReport', informationListener);
   session.on('foreign', addForeignDeviceHandler);
+  session.on('health', healthHandler);
   session.devices.on('new', updateDevices);
   session.devices.on('delete', updateDevices);
   const release = (): void => {
@@ -195,6 +203,7 @@ export const openSession: AsyncInitializer = (dispatch, getState: () => RootStat
     session.off('host', hostHandler);
     session.off('informationReport', informationListener);
     session.off('foreign', addForeignDeviceHandler);
+    session.off('health', healthHandler);
     session.devices.off('new', updateDevices);
     session.devices.off('delete', updateDevices);
     // removeDevicesListener();

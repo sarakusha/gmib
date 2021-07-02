@@ -328,6 +328,15 @@ localConfig.onDidChange('autostart', (autostart = false) => {
   updateTray();
 });
 
+let lastHealth: number | undefined;
+
+localConfig.onDidChange('health', health => {
+  if (health && health.timestamp !== lastHealth) {
+    lastHealth = health.timestamp;
+    service?.server.broadcast('health', health);
+  }
+});
+
 const isCustomHost = (remote: RemoteHost): boolean => {
   const label = getRemoteLabel(remote.port, remote.address);
   const customHosts = localConfig.get('hosts');
@@ -348,7 +357,6 @@ const impScreenProps: ReadonlyArray<keyof Screen> = [
 ] as const;
 
 const updateScreens = (newValue?: Screen[], oldValue?: Screen[]): void => {
-  // log.log('UPDATE SCREEN');
   app.whenReady().then(() => {
     const screens = newValue ?? config.get('screens');
     // log.log(JSON.stringify(newValue));
@@ -504,7 +512,7 @@ autoUpdater.on('update-not-available', () => {
 });
 
 autoUpdater.on('error', err => {
-  sendStatusToWindow(`Error in auto-updater. ${err}`);
+  sendStatusToWindow(`Error in auto-updater. ${err.message}`);
 });
 
 autoUpdater.on('download-progress', progressObj => {
@@ -540,11 +548,12 @@ const startLocalNibus = async (): Promise<void> => {
       service?.server.send(socket, 'config', config.store);
       service?.server.send(socket, 'displays', getAllDisplays());
     });
-    service.server.on('client:config', (_, store) => {
+    service.server.on('client:config', (socket, store) => {
       try {
         config.store = store as Config;
       } catch (err) {
         sendStatusToWindow(`Error while save config: ${err.message}`, true);
+        service?.server.send(socket, 'config', config.store);
       }
     });
     service.server.on('client:getBrightnessHistory', (socket, dt) => {

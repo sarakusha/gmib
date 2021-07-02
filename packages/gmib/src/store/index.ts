@@ -19,6 +19,7 @@ import currentReducer from './currentSlice';
 import configReducer from './configSlice';
 import { initializeConfig } from './configThunks';
 import { initializeDevices } from './deviceThunks';
+import { healthInitializer } from './healthThunks';
 import sessionReducer, { openSession } from './sessionSlice';
 import devicesReducer, { DeviceState, selectAllDevices, selectDeviceById } from './devicesSlice';
 import mibsReducer from './mibsSlice';
@@ -35,7 +36,6 @@ export const store = configureStore({
     session: sessionReducer,
     devices: devicesReducer,
     mibs: mibsReducer,
-    // tests: testsReducer,
     sensors: sensorsReducer,
     remoteHosts: remoteHostsReducer,
     novastars: novastarsReducer,
@@ -48,11 +48,11 @@ export const store = configureStore({
         // ignoredActionPaths: ['payload.release'],
       },
     }).concat(
-      // asyncInitializer(loadTests),
       asyncInitializer(openSession),
       asyncInitializer(initializeConfig),
       asyncInitializer(initializeRemoteHosts),
-      asyncInitializer(initializeDevices)
+      asyncInitializer(initializeDevices),
+      asyncInitializer(healthInitializer)
     ),
 });
 

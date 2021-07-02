@@ -12,3 +12,5 @@ declare interface NodeModule {
     accept(path?: string, fn?: () => void, callback?: () => void): void;
   };
 }
+declare module '*.png';
+declare module '*.svg';

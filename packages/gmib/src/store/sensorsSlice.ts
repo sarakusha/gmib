@@ -13,6 +13,7 @@ import { createSlice, PayloadAction, Draft } from '@reduxjs/toolkit';
 import sortBy from 'lodash/sortBy';
 import maxBy from 'lodash/maxBy';
 import { notEmpty } from '../util/helpers';
+import { AsyncInitializer } from './asyncInitialMiddleware';
 import type { AppThunk, RootState } from './index';
 
 type SensorRecord = [timestamp: number, value: number];
@@ -32,7 +33,9 @@ export const TEMPERATURE = 128;
 
 type SensorDictionary = Record<SensorAddress, SensorState>;
 
-type SensorKind = 'temperature' | 'illuminance';
+const sensorKinds = ['temperature', 'illuminance'] as const;
+
+type SensorKind = typeof sensorKinds[number];
 
 interface SensorsState {
   /**
@@ -117,7 +120,7 @@ const sensorsSlice = createSlice({
 
 const { changeInterval, push, calculate } = sensorsSlice.actions;
 
-export const setInterval = (interval: number): AppThunk => dispatch => {
+export const setSensorInterval = (interval: number): AppThunk => dispatch => {
   dispatch(changeInterval(interval));
   dispatch(calculate());
 };
@@ -151,8 +154,10 @@ export const pushSensorValue = (
   timeout = window.setTimeout(() => dispatch(calculate()), (MIN_INTERVAL + 1) * 1000);
 };
 
+const selectSensors = (state: RootState): SensorsState => state.sensors;
+
 const selectLast = (state: RootState, kind: SensorKind): SensorState | undefined => {
-  const sensors = state.sensors.sensors[kind];
+  const sensors = selectSensors(state).sensors[kind];
   return maxBy(
     Object.values(sensors).filter(({ current }) => notEmpty(current)),
     ({ current }) => current![0]
@@ -177,7 +182,7 @@ export const selectLastAverage = (state: RootState, kind: SensorKind): number | 
   selectLast(state, kind)?.average;
 
 export const selectIlluminance = (state: RootState): SensorDictionary =>
-  state.sensors.sensors.illuminance;
+  selectSensors(state).sensors.illuminance;
 
 export const selectLastIlluminance = (state: RootState): number | undefined =>
   selectLastValue(state, 'illuminance');
@@ -186,12 +191,16 @@ export const selectCurrentIlluminance = (state: RootState, address: string): num
   selectIlluminance(state).sensors[address]?.current?.[1];
 
 export const selectTemperature = (state: RootState): SensorDictionary =>
-  state.sensors.sensors.temperature;
+  selectSensors(state).sensors.temperature;
 
 export const selectLastTemperature = (state: RootState): number | undefined =>
   selectLastValue(state, 'temperature');
 
 export const selectCurrentTemperature = (state: RootState, address: string): number | undefined =>
   selectTemperature(state).sensors[address]?.current?.[1];
+
+export const startSensorSaver: AsyncInitializer = (_, getState) => {
+  window.setInterval(() => {}, selectSensors(getState() as RootState).interval * 1000);
+};
 
 export default sensorsSlice.reducer;

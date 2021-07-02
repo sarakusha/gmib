@@ -24,7 +24,7 @@ type LoaderOptions = {
   xMax: number;
   yMin: number;
   yMax: number;
-  selectors?: Set<number>;
+  selectors?: number[];
 };
 
 interface MinihostLoaderEvents<T> extends RunnableEvents {
@@ -54,7 +54,7 @@ declare interface MinihostLoader<T> {
 }
 */
 
-abstract class MinihostLoader<T> extends Runnable<
+abstract class MinihostLoader<T extends { t?: number }> extends Runnable<
   LoaderOptions,
   MinihostLoaderEvents<T>,
   IModuleInfo<T>[]

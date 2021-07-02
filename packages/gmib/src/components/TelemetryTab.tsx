@@ -12,8 +12,9 @@ import { Paper, Typography } from '@material-ui/core';
 import classNames from 'classnames';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useToolbar } from '../providers/ToolbarProvider';
-import { useDevice, useSelector } from '../store';
+import { useDevice, useDispatch, useSelector } from '../store';
 import { selectCurrentDeviceId, selectCurrentTab } from '../store/currentSlice';
+import { deviceBusy, deviceReady } from '../store/devicesSlice';
 import { getStatesAsync, noop } from '../util/helpers';
 import Minihost2Loader, { Minihost2Info } from '../util/Minihost2Loader';
 import Minihost3Loader, { initialSelectors, Minihost3Info } from '../util/Minihost3Loader';
@@ -86,7 +87,7 @@ const useStyles = makeStyles(theme => ({
 
 const TelemetryTab: React.FC<MinihostTabProps> = ({ id, selected = false }) => {
   const classes = useStyles();
-  const { mib, props } = useDevice(id) ?? {};
+  const { mib, props, isBusy = 0 } = useDevice(id) ?? {};
   const loader = useMemo<MinihostLoader<Minihost2Info | Minihost3Info> | null>(() => {
     if (!mib || !id) return null;
     switch (mib) {
@@ -106,6 +107,7 @@ const TelemetryTab: React.FC<MinihostTabProps> = ({ id, selected = false }) => {
   const [style, setStyle] = useState({});
   const [selectors, setSelectors] = useState(new Set(initialSelectors));
   const [loading, setLoading] = useState(false);
+  const dispatch = useDispatch();
 
   useEffect(() => {
     if (!hres?.value || !vres?.value || !moduleHres || !moduleVres || !maxModulesH || !maxModulesV)
@@ -143,7 +145,7 @@ const TelemetryTab: React.FC<MinihostTabProps> = ({ id, selected = false }) => {
     /* eslint-enable */
     setStyle({ gridTemplateRows: `repeat(${yMax! - yMin + 1}, 1fr)` });
     setModules([]);
-    loader && (await loader.run({ xMin, yMin, xMax, yMax, selectors }));
+    loader && (await loader.run({ xMin, yMin, xMax, yMax, selectors: [...selectors] }));
   }, [loader]);
   const cancel = useCallback(() => loader && loader.cancel(), [loader]);
   const [, setToolbar] = useToolbar();
@@ -156,11 +158,12 @@ const TelemetryTab: React.FC<MinihostTabProps> = ({ id, selected = false }) => {
         selectors={selectors}
         onSelectorChanged={setSelectors}
         loading={loading}
+        isBusy={isBusy}
         start={start}
         cancel={cancel}
       />
     ),
-    [mib, selectors, loading, start, cancel]
+    [mib, selectors, loading, isBusy, start, cancel]
   );
   useEffect(() => {
     if (active) {
@@ -174,8 +177,14 @@ const TelemetryTab: React.FC<MinihostTabProps> = ({ id, selected = false }) => {
     const columnHandler = (column: IModuleInfo<Minihost2Info | Minihost3Info>[]): void => {
       setModules(prev => prev.concat(column));
     };
-    const startHandler = (): void => setLoading(true);
-    const finishHandler = (): void => setLoading(false);
+    const startHandler = (): void => {
+      setLoading(true);
+      dispatch(deviceBusy(id));
+    };
+    const finishHandler = (): void => {
+      setLoading(false);
+      dispatch(deviceReady(id));
+    };
     loader.on('column', columnHandler);
     loader.on('start', startHandler);
     loader.on('finish', finishHandler);
@@ -184,7 +193,7 @@ const TelemetryTab: React.FC<MinihostTabProps> = ({ id, selected = false }) => {
       loader.off('start', startHandler);
       loader.off('column', columnHandler);
     };
-  }, [loader]);
+  }, [loader, dispatch, id]);
 
   return (
     <Paper className={classNames(classes.root, { [classes.hidden]: !selected })}>

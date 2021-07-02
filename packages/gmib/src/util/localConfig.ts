@@ -15,9 +15,22 @@ export type CustomHost = {
   name?: string;
 };
 
+export type Aggregations = [maximum: number, average: number, median: number];
+
+export type ScreenHealth = {
+  aggregations: Aggregations;
+  maxBrightness?: number;
+};
+
+export type Health = {
+  screens: Record<string, ScreenHealth>;
+  timestamp?: number;
+};
+
 export type LocalConfig = {
   hosts: CustomHost[];
   autostart: boolean;
+  health: Health;
 };
 
 const localConfigSchema: Schema<LocalConfig> = {
@@ -35,11 +48,35 @@ const localConfigSchema: Schema<LocalConfig> = {
     default: [],
   },
   autostart: { type: 'boolean', default: false },
+  health: {
+    type: 'object',
+    properties: {
+      screens: {
+        type: 'object',
+        additionalProperties: {
+          type: 'object',
+          properties: {
+            aggregations: {
+              type: 'array',
+              items: { type: 'integer' },
+              maxItems: 3,
+              minItems: 3,
+            },
+            maxBrightness: { type: 'integer' },
+          },
+        },
+        default: {},
+      },
+      timestamp: { type: 'integer' },
+    },
+    default: {},
+  },
 };
 
 const localConfig = new Store<LocalConfig>({
   name: 'gmib-local',
   schema: localConfigSchema,
+  clearInvalidConfig: true,
   watch: true,
 });
 

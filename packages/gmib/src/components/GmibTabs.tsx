@@ -19,6 +19,7 @@ import DeviceTabs from './DeviceTabs';
 import Log from './Log';
 import NovastarTab from './NovastarTab';
 import Screens from './Screens';
+import OverheatProtectionTab from './OverheatProtectionTab';
 
 import TabContainer, { Props as ChildProps } from './TabContainer';
 
@@ -84,6 +85,9 @@ const Tabs: React.FC = () => {
       </TabContainer>
       <TabContainer id="log" selected={tab === 'log'}>
         <Log />
+      </TabContainer>
+      <TabContainer id="overheat" selected={tab === 'overheat'}>
+        <OverheatProtectionTab />
       </TabContainer>
     </div>
   );

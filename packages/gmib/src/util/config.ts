@@ -94,6 +94,30 @@ export type ConfigV1 = {
   tests: Page[];
 };
 
+export const enum AggregationType {
+  Maximum,
+  Average,
+  Median,
+}
+
+export type OverheatProtection = {
+  interval: number;
+  bottomBound: number;
+  upperBound: number;
+  step: number;
+  aggregation: AggregationType;
+  enabled: boolean;
+};
+
+export const DEFAULT_OVERHEAD_PROTECTION: OverheatProtection = {
+  interval: 15,
+  bottomBound: 65,
+  upperBound: 85,
+  step: 5,
+  aggregation: 0,
+  enabled: false,
+};
+
 export type Config = {
   location?: Location;
   spline?: SplineItem[];
@@ -103,6 +127,7 @@ export type Config = {
   logLevel: LogLevel;
   pages: Page[];
   version?: string;
+  overheatProtection: OverheatProtection;
 };
 
 /**
@@ -257,6 +282,34 @@ export const configSchema: Schema<Config> = {
     default: [],
   },
   version: { type: 'string' },
+  overheatProtection: {
+    type: 'object',
+    properties: {
+      interval: {
+        type: 'integer',
+        minimum: 0,
+        maximum: 60,
+        default: DEFAULT_OVERHEAD_PROTECTION.interval,
+      },
+      bottomBound: {
+        type: 'integer',
+        minimum: 0,
+        maximum: 200,
+        default: DEFAULT_OVERHEAD_PROTECTION.bottomBound,
+      },
+      upperBound: {
+        type: 'integer',
+        minimum: 0,
+        maximum: 200,
+        default: DEFAULT_OVERHEAD_PROTECTION.upperBound,
+      },
+      step: { type: 'integer', minimum: 1, maximum: 25, default: DEFAULT_OVERHEAD_PROTECTION.step },
+      aggregation: { enum: [0, 1, 2], default: DEFAULT_OVERHEAD_PROTECTION.aggregation },
+      enabled: { type: 'boolean', default: DEFAULT_OVERHEAD_PROTECTION.enabled },
+    },
+    default: DEFAULT_OVERHEAD_PROTECTION,
+    // required: ['interval', 'bottomBound', 'upperBound'],
+  },
 };
 
 export const convertCfgFrom = (cfg: unknown): Config => {
@@ -270,7 +323,12 @@ export const convertCfgFrom = (cfg: unknown): Config => {
     brightnessFactor: 1,
     ...props,
   };
-  return { pages: tests, screens: [scr], ...other };
+  return {
+    pages: tests,
+    screens: [scr],
+    overheatProtection: DEFAULT_OVERHEAD_PROTECTION,
+    ...other,
+  };
 };
 
 export const convertCfgTo = (cfg: Config): ConfigV1 => {
