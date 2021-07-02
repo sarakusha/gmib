@@ -139,7 +139,8 @@
     "mac": {
       "category": "public.app-category.utilities",
       "target": [
-        "dmg"
+        "dmg",
+        "zip"
       ]
     },
     "linux": {
