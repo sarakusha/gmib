@@ -28,8 +28,8 @@ import Selector from './Selector';
 export type Props = {
   kind: Kind;
   onFlash: (
-    kind: Kind,
-    filename: string,
+    kind: Kind | false,
+    filename: string | undefined,
     moduleSelect?: number,
     column?: number,
     row?: number
@@ -64,13 +64,19 @@ const useStyles = makeStyles(theme => ({
     // padding: theme.spacing(1),
     alignItems: 'flex-end',
     '& > *': {
-      flex: `0 1 12ch`,
+      // flex: `0 1 12ch`,
       margin: theme.spacing(1),
     },
   },
-  write: {
+  selector: {
+    flex: `0 1 12ch`,
+  },
+  reset: {
     flex: '0 0 auto',
     marginLeft: 'auto',
+  },
+  write: {
+    flexShrink: 0,
   },
   root: {
     width: '100%',
@@ -127,6 +133,10 @@ const FlashUpgrade: React.FC<Props> = ({ kind, onFlash, hidden = false }) => {
     },
     [kind, onFlash, setColumn, setRow, setFile]
   );
+  const resetHandler = (): void => {
+    const moduleArgs = [];
+    onFlash(false, undefined, (column << 8) | (row & 0xff), column, row);
+  };
   return (
     <div className={classNames(classes.root, { [classes.hidden]: hidden })}>
       <FormFieldSet className={classes.set} legend={displayName(kind)}>
@@ -151,7 +161,7 @@ const FlashUpgrade: React.FC<Props> = ({ kind, onFlash, hidden = false }) => {
             value={column}
             onChange={setColumn}
             max={23}
-            className={classNames({ [classes.invisible]: !isModule })}
+            className={classNames({ [classes.invisible]: !isModule }, classes.selector)}
           />
           <Selector
             label="Ряд"
@@ -159,8 +169,11 @@ const FlashUpgrade: React.FC<Props> = ({ kind, onFlash, hidden = false }) => {
             value={row}
             onChange={setRow}
             max={255}
-            className={classNames({ [classes.invisible]: !isModule })}
+            className={classNames({ [classes.invisible]: !isModule }, classes.selector)}
           />
+          <Button className={classes.reset} onClick={resetHandler}>
+            Сброс
+          </Button>
           <FormControl className={classes.write}>
             <FormHelperText
               className={classNames({ [classes.invisible]: !enabled })}

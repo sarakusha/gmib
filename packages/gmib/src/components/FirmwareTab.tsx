@@ -100,6 +100,12 @@ const FirmwareTab: React.FC<MinihostTabProps> = ({ id, selected = false }) => {
       snacksRef.current = [];
       setProgress(0);
       const flasher = new Flasher(id);
+      if (!currentKind) {
+        setFlashing(true);
+        flasher.resetModule(moduleSelect ?? 0xffff).finally(() => setFlashing(false));
+        return;
+      }
+      if (!filename) return;
       let total = 0;
       try {
         total = flasher.flash(currentKind, filename, moduleSelect).total;
