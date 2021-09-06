@@ -141,8 +141,8 @@ async function createWindow(
     webPreferences: {
       contextIsolation: false,
       nodeIntegration: true,
-      worldSafeExecuteJavaScript: true,
-      enableRemoteModule: false,
+      //      worldSafeExecuteJavaScript: true,
+      //      enableRemoteModule: false,
     },
   });
 
@@ -247,8 +247,8 @@ function createTestWindow(width: number, height: number, x: number, y: number): 
     webPreferences: {
       // nodeIntegration: true,
       contextIsolation: true,
-      worldSafeExecuteJavaScript: true,
-      enableRemoteModule: false,
+      //      worldSafeExecuteJavaScript: true,
+      //      enableRemoteModule: false,
     },
     // webPreferences: {
     //   webSecurity: false,
@@ -268,9 +268,12 @@ function createTestWindow(width: number, height: number, x: number, y: number): 
     log.log(`close and delete screenWindow ${id}`);
     // testWindow = null;
   });
-  window.once('ready-to-show', () => window.show());
+  window.once('ready-to-show', () => {
+    window.show();
+    window.setIgnoreMouseEvents(true);
+  });
   /* process.platform === 'win32' ||*/
-  window.setIgnoreMouseEvents(true);
+  //  window.setIgnoreMouseEvents(true);
   let saveBlocker = 0;
   window.on('show', () => {
     if (!powerSaveBlocker.isStarted(saveBlocker)) {
@@ -388,7 +391,7 @@ const updateScreens = (newValue?: Screen[], oldValue?: Screen[]): void => {
       const page =
         curScreen.output && config.get('pages').find(item => item.id === curScreen.output);
       if (!display || !page) {
-        // debug(`Not found display ${curScreen.display}, ${displays.length}`);
+        debug(`Not found display ${curScreen.display}, ${displays.length}`);
         window?.hide();
         return;
       }
