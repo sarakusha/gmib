@@ -91,7 +91,7 @@ type PosProps = {
   y: number;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// eslint-disable-next-line react/no-unused-prop-types
 type ValueType<T = string | number> = { name?: string; value?: T; index?: number | string };
 
 const Temperature: React.FC<ValueType> = ({ value }) => {

@@ -134,7 +134,6 @@ const FlashUpgrade: React.FC<Props> = ({ kind, onFlash, hidden = false }) => {
     [kind, onFlash, setColumn, setRow, setFile]
   );
   const resetHandler = (): void => {
-    const moduleArgs = [];
     onFlash(false, undefined, (column << 8) | (row & 0xff), column, row);
   };
   return (
