@@ -8,7 +8,7 @@
       <sshConfig connectionConfig="{&quot;serverAliveInterval&quot;:300}" host="192.168.1.108" id="6432fa09-eb99-4ea4-bd20-4b180feac210" keyPath="$USER_HOME$/.ssh/id_rsa" port="22" customName="sarakusha" nameFormat="CUSTOM" username="sarakusha">
         <option name="customName" value="sarakusha" />
       </sshConfig>
-      <sshConfig connectionConfig="{&quot;serverAliveInterval&quot;:300}" host="192.168.23.16" id="11a6e461-91f8-4a1c-b9c6-b48dba1a9b69" keyPath="$USER_HOME$/.ssh/id_rsa" port="22" customName="levakov" nameFormat="CUSTOM" username="sarakusha">
+      <sshConfig connectionConfig="{&quot;serverAliveInterval&quot;:300}" host="192.168.23.13" id="11a6e461-91f8-4a1c-b9c6-b48dba1a9b69" keyPath="$USER_HOME$/.ssh/id_rsa" port="22" customName="levakov" nameFormat="CUSTOM" username="sarakusha">
         <option name="customName" value="levakov" />
       </sshConfig>
       <sshConfig connectionConfig="{&quot;serverAliveInterval&quot;:300}" host="192.168.23.27" id="c5c479d0-ce09-44f8-a20b-879d6a631ad1" keyPath="$USER_HOME$/.ssh/id_rsa" port="22" nameFormat="DESCRIPTIVE" username="user" />
@@ -18,7 +18,7 @@
       <sshConfig host="192.168.1.40" id="20b01b0b-4c74-4e30-b343-f6155307388f" keyPath="$USER_HOME$/.ssh/id_rsa" port="22" customName="Keenetic" nameFormat="CUSTOM" username="sarakusha">
         <option name="customName" value="Keenetic" />
       </sshConfig>
-      <sshConfig connectionConfig="{&quot;serverAliveInterval&quot;:300}" host="192.168.23.13" id="f0032861-45a6-4b68-85de-4571fccb3870" keyPath="$USER_HOME$/.ssh/id_rsa" port="22" customName="astra" nameFormat="CUSTOM" username="sarakusha">
+      <sshConfig connectionConfig="{&quot;serverAliveInterval&quot;:300}" host="192.168.23.29" id="f0032861-45a6-4b68-85de-4571fccb3870" keyPath="$USER_HOME$/.ssh/id_rsa" port="22" customName="astra" nameFormat="CUSTOM" username="sarakusha">
         <option name="customName" value="astra" />
       </sshConfig>
     </configs>
