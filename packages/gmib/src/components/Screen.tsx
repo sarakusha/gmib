@@ -158,7 +158,7 @@ const Screen: React.FC<Props> = ({ id: scrId, selected, readonly = true, single 
         >
           <FormControlLabel
             control={<Checkbox checked={!!current.dirv} onChange={changeHandler} id="dirv" />}
-            label="Снизу вверх"
+            label="Сверху вниз"
           />
         </FormFieldSet>
         <FormFieldSet legend="Экран" className={classes.fieldset} title="Размеры в пикселях">
