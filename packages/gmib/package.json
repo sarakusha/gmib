@@ -76,6 +76,7 @@
     "react-redux": "^7.2.2",
     "sanitize-html": "^2.3.2",
     "semver": "^7.3.5",
+    "source-map-support": "^0.5.20",
     "sqlite3": "^5.0.2",
     "suncalc": "^1.8.0",
     "tail": "^2.2.0",
