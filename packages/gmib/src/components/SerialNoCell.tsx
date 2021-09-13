@@ -12,7 +12,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import classNames from 'classnames';
 import { Input } from '@material-ui/core';
-import { IMaskMixin } from 'react-imask/dist/react-imask';
+import { IMaskMixin } from 'react-imask';
 import debounce from 'lodash/debounce';
 import TableCell, { TableCellProps } from './TableCell';
 
