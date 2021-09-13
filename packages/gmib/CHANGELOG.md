@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.5.3](https://github.com/sarakusha/nibus/compare/v3.5.2...v3.5.3) (2021-09-13)
+
+
+### Bug Fixes
+
+* add source-map-support to dependencies ([1fc9f31](https://github.com/sarakusha/nibus/commit/1fc9f31ceeb41563348f0157a68ea23f9d0f0e08))
+* resolve promise when cancelled ([5ac707e](https://github.com/sarakusha/nibus/commit/5ac707e8efdc500440e522c107b42a7acd37594a))
+
+
+
+
+
 ## [3.5.2](https://github.com/sarakusha/nibus/compare/v3.5.1...v3.5.2) (2021-09-13)
 
 
