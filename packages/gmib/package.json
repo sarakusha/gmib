@@ -1,6 +1,6 @@
 {
   "name": "gmib",
-  "version": "3.5.0",
+  "version": "3.5.1",
   "description": "Nata-Info gmib tool",
   "private": true,
   "keywords": [
@@ -45,8 +45,8 @@
     "@material-ui/core": "^4.8.3",
     "@material-ui/icons": "^4.5.1",
     "@mdx-js/react": "^1.6.22",
-    "@nibus/cli": "3.5.0",
-    "@nibus/core": "3.5.0",
+    "@nibus/cli": "^3.5.1",
+    "@nibus/core": "^3.5.1",
     "@novastar/codec": "^1.0.8",
     "@reduxjs/toolkit": "^1.5.0",
     "@serialport/bindings": "^9.0.1",
