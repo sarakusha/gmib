@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.5.2](https://github.com/sarakusha/nibus/compare/v3.5.1...v3.5.2) (2021-09-13)
+
+
+### Bug Fixes
+
+* freeze react-imask@6.1 ([831045a](https://github.com/sarakusha/nibus/commit/831045a95b68ee3a60909db3ad237eae58b38196))
+
+
+
+
+
 ## [3.5.1](https://github.com/sarakusha/nibus/compare/v3.2.2...v3.5.1) (2021-09-13)
 
 
