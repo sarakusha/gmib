@@ -50,6 +50,7 @@ abstract class Runnable<
     } finally {
       this.isRunning = false;
       self.emit('finish');
+      this.cancelResolve();
     }
   }
 
