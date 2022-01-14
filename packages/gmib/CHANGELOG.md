@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.5.4](https://github.com/sarakusha/nibus/compare/v3.5.3...v3.5.4) (2022-01-14)
+
+**Note:** Version bump only for package gmib
+
+
+
+
+
 ## [3.5.3](https://github.com/sarakusha/nibus/compare/v3.5.2...v3.5.3) (2021-09-13)
 
 
