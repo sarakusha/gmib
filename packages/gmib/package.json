@@ -38,8 +38,7 @@
     "analyze": "cross-env ANALYZE=1 electron-webpack dev",
     "lint:dev": "eslint --ext .js,.ts,.tsx src/",
     "lint": "eslint -c ../../.eslintrc-prod.js --ext .js,.ts,.tsx src/",
-    "lint:fix": "eslint -c ../../.eslintrc-prod.js --ext .js,.ts,.tsx --fix src/",
-    "postinstall": "electron-builder install-app-deps"
+    "lint:fix": "eslint -c ../../.eslintrc-prod.js --ext .js,.ts,.tsx --fix src/"
   },
   "dependencies": {
     "@material-ui/core": "^4.8.3",
@@ -124,12 +123,6 @@
     "react-refresh": "^0.10.0",
     "webpack": "4",
     "webpack-build-notifier": "^2.0.0"
-  },
-  "workspaces": {
-    "nohoist": [
-      "usb-detection",
-      "@serialport/bindings"
-    ]
   },
   "build": {
     "npmRebuild": true,
