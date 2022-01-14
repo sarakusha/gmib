@@ -1,13 +1,14 @@
-/* eslint-disable import/no-extraneous-dependencies */
 /*
- * Copyright (c) 2019. OOO Nata-Info
- * @author: Andrei Sarakeev <avs@nata-info.ru>
+ * @license
+ * Copyright (c) 2022. Nata-Info
+ * @author Andrei Sarakeev <avs@nata-info.ru>
  *
- * This file is part of the "@nata" project.
+ * This file is part of the "@nibus" project.
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
 
+/* eslint-disable import/no-extraneous-dependencies */
 const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
 // const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
 // const path = require('path');

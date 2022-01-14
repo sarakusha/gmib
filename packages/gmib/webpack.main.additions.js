@@ -1,9 +1,9 @@
 /*
  * @license
- * Copyright (c) 2019. Nata-Info
+ * Copyright (c) 2022. Nata-Info
  * @author Andrei Sarakeev <avs@nata-info.ru>
  *
- * This file is part of the "@nata" project.
+ * This file is part of the "@nibus" project.
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
@@ -11,16 +11,14 @@
 module.exports = {
   externals: [
     (function () {
-      const IGNORES = [
-        'electron',
-      ];
+      const IGNORES = ['electron'];
       return function (context, request, callback) {
         if (IGNORES.indexOf(request) >= 0) {
           return callback(null, `require('${request}')`);
         }
         return callback();
       };
-    }()),
+    })(),
     'worker_threads',
     'usb-detection',
   ],
