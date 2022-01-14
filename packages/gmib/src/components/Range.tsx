@@ -149,7 +149,7 @@ const Range: FC<Props> = props => {
           },
         }}
       >
-        <Handle {...restProps} ariaValueTextFormatter={() => ariaValueTextFormatter} />
+        <Handle {...restProps} ariaValueTextFormatter={ariaValueTextFormatter} />
       </Tooltip>
     ),
     [reverse, reverseValue, classes.arrow, classes.arrowPopper, tooltipPos, arrowRef]

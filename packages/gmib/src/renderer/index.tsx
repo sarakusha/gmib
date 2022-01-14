@@ -9,12 +9,12 @@
  */
 
 // Не удалять, если нужны логи в production
-/* eslint-disable import/first */
+/* eslint-disable import/first,import/no-import-module-exports */
 process.env.NIBUS_LOG = 'nibus-all.log';
 
 window.localStorage.debug = process.env.DEBUG;
 
-import { createMuiTheme, MuiThemeProvider } from '@material-ui/core/styles';
+import { createTheme, MuiThemeProvider } from '@material-ui/core/styles';
 import { CssBaseline } from '@material-ui/core';
 import React from 'react';
 import ReactDOM from 'react-dom';
@@ -26,7 +26,7 @@ import App from '../components/App';
 import ToolbarProvider from '../providers/ToolbarProvider';
 import { store } from '../store';
 
-const theme = createMuiTheme({});
+const theme = createTheme({});
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (window as any).ELECTRON_DISABLE_SECURITY_WARNINGS = 1;

@@ -7,7 +7,7 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useMemo, useState } from 'react';
 import { tuplify } from '../util/helpers';
 
 type ToolbarElement = React.ReactNode;
@@ -24,16 +24,8 @@ export const useToolbar = (): [ToolbarElement, (toolbar: ToolbarElement) => void
 
 const ToolbarProvider: React.FC = ({ children }) => {
   const [toolbar, setToolbar] = useState<ToolbarElement>(null);
-  return (
-    <ToolbarContext.Provider
-      value={{
-        toolbar,
-        setToolbar,
-      }}
-    >
-      {children}
-    </ToolbarContext.Provider>
-  );
+  const value = useMemo(() => ({ toolbar, setToolbar }), [toolbar]);
+  return <ToolbarContext.Provider value={value}>{children}</ToolbarContext.Provider>;
 };
 
 export default ToolbarProvider;

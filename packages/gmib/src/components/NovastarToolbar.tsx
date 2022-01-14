@@ -18,13 +18,11 @@ const NovastarToolbar: React.FC = () => {
   const dispatch = useDispatch();
   const device = useSelector(selectCurrentDeviceId);
   return (
-    <>
-      <Tooltip title="Обновить">
+    <Tooltip title="Обновить">
         <IconButton color="inherit" onClick={() => device && dispatch(reloadNovastar(device))}>
           <ReloadIcon />
         </IconButton>
       </Tooltip>
-    </>
   );
 };
 

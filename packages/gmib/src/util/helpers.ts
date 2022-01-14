@@ -22,7 +22,9 @@ export function tuplify<T extends unknown[]>(...args: T): T {
 }
 
 export const delay = (seconds: number): Promise<void> =>
-  new Promise(resolve => setTimeout(resolve, seconds * 1000));
+  new Promise(resolve => {
+    setTimeout(resolve, seconds * 1000);
+  });
 
 export function notEmpty<TValue>(value: TValue | null | undefined): value is TValue {
   return value !== null && value !== undefined;

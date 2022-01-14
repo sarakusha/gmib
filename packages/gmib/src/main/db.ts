@@ -33,7 +33,8 @@ export const insertBrightness = (value: number): void => {
 ipcMain.on(
   'addTelemetry',
   (event, timestamp: number, address: string, x: number, y: number, temperature: number) => {
-    // debug(`telemetry: ${timestamp}, address = ${address}, x = ${x}, y = ${y}, t = ${temperature}`);
+    // debug(`telemetry: ${timestamp}, address = ${address}, x = ${x}, y = ${y}, t =
+    // ${temperature}`);
     db.run(
       'INSERT INTO telemetry (timestamp, address, x, y, temperature) VALUES (?, ?, ?, ?, ?)',
       timestamp,
@@ -57,44 +58,113 @@ const createTables = (): void => {
       db.run(`DROP TABLE IF EXISTS sensors`);
     }
     db.run(
-      `CREATE TABLE IF NOT EXISTS telemetry (
-      timestamp INT NOT NULL,
-      address TEXT NOT NULL,
-      x INT(2) NOT NULL,
-      y INT(2) NOT NULL,
-      temperature INT(1),
-      PRIMARY KEY (timestamp, address, x, y))`
+      `CREATE TABLE IF NOT EXISTS telemetry
+      (
+          timestamp
+          INT
+          NOT
+          NULL,
+          address
+          TEXT
+          NOT
+          NULL,
+          x
+          INT
+       (
+          2
+       ) NOT NULL,
+          y INT
+       (
+           2
+       ) NOT NULL,
+          temperature INT
+       (
+           1
+       ),
+          PRIMARY KEY
+       (
+           timestamp,
+           address,
+           x,
+           y
+       ))`
     );
     db.run(
-      `CREATE TABLE IF NOT EXISTS sensors (
-      timestamp INT NOT NULL,
-      address TEXT NOT NULL,
-      illuminanse INT(2),
-      tempearure INT(1),
-      PRIMARY KEY (timestamp, address))`
+      `CREATE TABLE IF NOT EXISTS sensors
+      (
+          timestamp
+          INT
+          NOT
+          NULL,
+          address
+          TEXT
+          NOT
+          NULL,
+          illuminanse
+          INT
+       (
+          2
+       ),
+          tempearure INT
+       (
+           1
+       ),
+          PRIMARY KEY
+       (
+           timestamp,
+           address
+       ))`
     );
     db.run(
-      `CREATE TABLE IF NOT EXISTS brightness (
-      timestamp INT PRIMARY KEY NOT NULL,
-      brightness INT(1) NOT NULL,
-      actual INT(1))`,
+      `CREATE TABLE IF NOT EXISTS brightness
+      (
+          timestamp
+          INT
+          PRIMARY
+          KEY
+          NOT
+          NULL,
+          brightness
+          INT
+       (
+          1
+       ) NOT NULL,
+          actual INT
+       (
+           1
+       ))`,
       listen
     );
 
     const date = new Date();
     date.setDate(date.getDate() - 7);
 
-    db.exec(`DELETE FROM telemetry WHERE timestamp < ${date.getTime()}`, err => {
-      err && debug(`error while clear telemetry history, ${err.message}`);
-    });
+    db.exec(
+      `DELETE
+       FROM telemetry
+       WHERE timestamp < ${date.getTime()}`,
+      err => {
+        err && debug(`error while clear telemetry history, ${err.message}`);
+      }
+    );
 
-    db.exec(`DELETE FROM sensors WHERE timestamp < ${date.getTime()}`, err => {
-      err && debug(`error while clear sensors history, ${err.message}`);
-    });
+    db.exec(
+      `DELETE
+       FROM sensors
+       WHERE timestamp < ${date.getTime()}`,
+      err => {
+        err && debug(`error while clear sensors history, ${err.message}`);
+      }
+    );
 
-    db.exec(`DELETE FROM brightness WHERE timestamp < ${date.getTime()}`, err => {
-      err && debug(`error while clear brightness history, ${err.message}`);
-    });
+    db.exec(
+      `DELETE
+       FROM brightness
+       WHERE timestamp < ${date.getTime()}`,
+      err => {
+        err && debug(`error while clear brightness history, ${err.message}`);
+      }
+    );
   });
 };
 
@@ -109,7 +179,7 @@ export const getBrightnessHistory = async (dt?: number): Promise<BrightnessHisto
   const to = dt ? Math.min(now, dt + 24 * HOUR) : now;
   const from = to - 24 * HOUR;
   const [first, result, last] = await Promise.all([
-    new Promise<BrightnessHistory | undefined>((resolve, reject) =>
+    new Promise<BrightnessHistory | undefined>((resolve, reject) => {
       db.get(
         `SELECT timestamp, brightness, actual
          FROM brightness
@@ -118,10 +188,17 @@ export const getBrightnessHistory = async (dt?: number): Promise<BrightnessHisto
         from,
         (error, row?: NullableOptional<BrightnessHistory>) => {
           if (error) reject(error);
-          else resolve(row && removeNull({ ...row, timestamp: from }));
+          else
+            resolve(
+              row &&
+                removeNull({
+                  ...row,
+                  timestamp: from,
+                })
+            );
         }
-      )
-    ),
+      );
+    }),
     new Promise<BrightnessHistory[]>((resolve, reject) => {
       db.all(
         `SELECT timestamp, brightness, actual
@@ -135,19 +212,26 @@ export const getBrightnessHistory = async (dt?: number): Promise<BrightnessHisto
         }
       );
     }),
-    new Promise<BrightnessHistory | undefined>((resolve, reject) =>
+    new Promise<BrightnessHistory | undefined>((resolve, reject) => {
       db.get(
         `SELECT timestamp, brightness, actual
-         FROM brightness
-         WHERE timestamp >= ?
-         ORDER BY timestamp ASC`,
+           FROM brightness
+           WHERE timestamp >= ?
+           ORDER BY timestamp ASC`,
         to,
         (error, row?: NullableOptional<BrightnessHistory>) => {
           if (error) reject(error);
-          else resolve(row && removeNull({ ...row, timestamp: to }));
+          else
+            resolve(
+              row &&
+                removeNull({
+                  ...row,
+                  timestamp: to,
+                })
+            );
         }
-      )
-    ),
+      );
+    }),
   ]);
   return [first, ...result, last].filter(notEmpty);
 };

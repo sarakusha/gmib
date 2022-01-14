@@ -116,7 +116,7 @@ const register = (svc: RemoteService, window = mainWindow): void => {
 
 async function createWindow(
   port = +(process.env.NIBUS_PORT ?? 9001),
-  host?: string,
+  host: string | undefined = undefined,
   random = false
 ): Promise<BrowserWindow> {
   const size = {
