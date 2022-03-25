@@ -11,7 +11,7 @@
       <sshConfig connectionConfig="{&quot;serverAliveInterval&quot;:300}" host="192.168.23.13" id="11a6e461-91f8-4a1c-b9c6-b48dba1a9b69" keyPath="$USER_HOME$/.ssh/id_rsa" port="22" customName="levakov" nameFormat="CUSTOM" username="sarakusha">
         <option name="customName" value="levakov" />
       </sshConfig>
-      <sshConfig connectionConfig="{&quot;serverAliveInterval&quot;:300}" host="192.168.23.27" id="c5c479d0-ce09-44f8-a20b-879d6a631ad1" keyPath="$USER_HOME$/.ssh/id_rsa" port="22" nameFormat="DESCRIPTIVE" username="user" />
+      <sshConfig connectionConfig="{&quot;serverAliveInterval&quot;:300}" host="192.168.1.40" id="c5c479d0-ce09-44f8-a20b-879d6a631ad1" keyPath="$USER_HOME$/.ssh/id_rsa" port="22" nameFormat="DESCRIPTIVE" username="user" useOpenSSHConfig="true" />
       <sshConfig host="localhost" id="48dd1553-c896-4c3e-9cc8-1d2a10b8977c" keyPath="$USER_HOME$/.ssh/id_rsa" port="8022" customName="localhost" nameFormat="CUSTOM" username="sarakusha">
         <option name="customName" value="localhost" />
       </sshConfig>
