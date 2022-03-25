@@ -32,13 +32,30 @@ export type AccordionListProps = {
   detailsClasses?: AccordionDetailsProps['classes'];
   expanded?: boolean;
   onChange?: (name?: string) => void;
+  selected?: boolean;
 };
 
-const useStyles = makeStyles({
+const useStyles = makeStyles(theme => ({
   hidden: {
     display: 'none',
   },
-});
+  button: {
+    transition: theme.transitions.create('background-color', {
+      duration: theme.transitions.duration.shortest,
+    }),
+    '&:hover': {
+      textDecoration: 'none',
+      backgroundColor: theme.palette.action.hover,
+      // Reset on touch devices, it doesn't add specificity
+      '@media (hover: none)': {
+        backgroundColor: 'transparent',
+      },
+    },
+  },
+  selected: {
+    backgroundColor: theme.palette.action.selected,
+  },
+}));
 
 const AccordionList: React.FC<AccordionListProps> = ({
   name,
@@ -50,6 +67,7 @@ const AccordionList: React.FC<AccordionListProps> = ({
   detailsClasses,
   expanded = false,
   onChange = () => {},
+  selected,
 }) => {
   const classes = useStyles();
   return (
@@ -62,7 +80,10 @@ const AccordionList: React.FC<AccordionListProps> = ({
         expandIcon={React.Children.count(children) > 0 ? <ExpandMoreIcon /> : undefined}
         aria-controls={name}
         classes={summaryClasses}
-        className={classNames({ [classes.hidden]: !title })}
+        className={classNames(
+          { [classes.hidden]: !title, [classes.selected]: selected ?? expanded },
+          classes.button
+        )}
       >
         {typeof title === 'string' ? <Typography>{title}</Typography> : title}
       </AccordionSummary>
