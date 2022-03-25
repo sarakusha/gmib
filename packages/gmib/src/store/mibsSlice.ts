@@ -9,7 +9,7 @@
  */
 
 import { DeviceId, findDeviceById } from '@nibus/core';
-import { createEntityAdapter, createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { PayloadAction, createEntityAdapter, createSlice } from '@reduxjs/toolkit';
 import type { ValueType } from './devicesSlice';
 import type { RootState } from './index';
 

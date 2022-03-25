@@ -8,20 +8,19 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { FoundListener, DeviceId, Host, Display, PortArg, NibusSessionEvents } from '@nibus/core';
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { DeviceId, Display, FoundListener, Host, NibusSessionEvents, PortArg } from '@nibus/core';
+import { PayloadAction, createSlice } from '@reduxjs/toolkit';
 import { ipcRenderer } from 'electron';
 
 import type { Config } from '../util/config';
 import { Health } from '../util/localConfig';
 import { getCurrentNibusSession, isRemoteSession } from '../util/nibus';
 import { AsyncInitializer } from './asyncInitialMiddleware';
-import { selectBrightness } from './configSlice';
+import { updateConfig } from './configSlice';
 import { setCurrentHealth } from './currentSlice';
 import type { RootState } from './index';
-import { loadConfig } from './configThunks';
-import { createNovastarConnection, releaseNovastar, setNovastarBrightness } from './novastarsSlice';
-import { ILLUMINATION, pushSensorValue, TEMPERATURE } from './sensorsSlice';
+import { createNovastarConnection, releaseNovastars } from './novastarsSlice';
+import { ILLUMINATION, TEMPERATURE, pushSensorValue } from './sensorsSlice';
 // import debugFactory from '../util/debug';
 
 // const debug = debugFactory('gmib:sessionsSlice');
@@ -109,7 +108,7 @@ const {
 } = sessionSlice.actions;
 export const { closeSession, reloadSession } = sessionSlice.actions;
 
-export const openSession: AsyncInitializer = (dispatch, getState: () => RootState) => {
+export const openSession: AsyncInitializer = (dispatch, getState) => {
   const session = getCurrentNibusSession();
   const updatePortsHandler = (): void => {
     dispatch(setPortCount(session.ports));
@@ -130,13 +129,13 @@ export const openSession: AsyncInitializer = (dispatch, getState: () => RootStat
     dispatch(setDevices(session.devices.get().map(device => device.id)));
   };
 
-  const configHandler = (config: Config): void => {
-    dispatch(loadConfig(config));
+  const configHandler = (config: Record<string, unknown>): void => {
+    dispatch(updateConfig(config as Config));
   };
 
-  const healthHandler = (health: Health): void => {
+  const healthHandler = (health: Record<string, unknown>): void => {
     // debug(`health ${JSON.stringify(health)}`);
-    dispatch(setCurrentHealth(health));
+    dispatch(setCurrentHealth(health as Health));
   };
 
   const hostHandler = (hostArgs: Host): void => {
@@ -158,7 +157,6 @@ export const openSession: AsyncInitializer = (dispatch, getState: () => RootStat
     if (description.category !== 'novastar') return;
     const { port, host } = session;
     await dispatch(createNovastarConnection(path, port, host));
-    dispatch(setNovastarBrightness(selectBrightness(getState())));
   };
 
   const informationListener: NibusSessionEvents['informationReport'] = (
@@ -167,10 +165,22 @@ export const openSession: AsyncInitializer = (dispatch, getState: () => RootStat
   ) => {
     switch (id) {
       case ILLUMINATION:
-        dispatch(pushSensorValue('illuminance', source.toString(), value));
+        dispatch(
+          pushSensorValue({
+            kind: 'illuminance',
+            address: source.toString(),
+            value,
+          })
+        );
         break;
       case TEMPERATURE:
-        dispatch(pushSensorValue('temperature', source.toString(), value));
+        dispatch(
+          pushSensorValue({
+            kind: 'temperature',
+            address: source.toString(),
+            value,
+          })
+        );
         break;
       default:
         break;
@@ -191,7 +201,7 @@ export const openSession: AsyncInitializer = (dispatch, getState: () => RootStat
   session.devices.on('new', updateDevices);
   session.devices.on('delete', updateDevices);
   const release = (): void => {
-    dispatch(releaseNovastar());
+    dispatch(releaseNovastars());
     // Object.values(novastarSessions).forEach(novastarSession => novastarSession.close());
     session.off('displays', displaysHandler);
     session.off('online', onlineHandler);
@@ -210,14 +220,26 @@ export const openSession: AsyncInitializer = (dispatch, getState: () => RootStat
     dispatch(releaseSession());
   };
   session.once('close', release);
-  dispatch(setStatus({ status: 'pending', error: undefined, portCount: 0 }));
+  dispatch(
+    setStatus({
+      status: 'pending',
+      error: undefined,
+      portCount: 0,
+    })
+  );
   const start = (): void => {
-    const { status } = selectSession(getState());
+    const { status } = selectSession(getState() as RootState);
     if (status === 'closed' || status === 'succeeded') return;
     session
       .start()
       .then(ports => {
-        dispatch(setStatus({ status: 'succeeded', portCount: ports, error: undefined }));
+        dispatch(
+          setStatus({
+            status: 'succeeded',
+            portCount: ports,
+            error: undefined,
+          })
+        );
       })
       .catch(e => {
         if (!isRemoteSession) {
@@ -225,7 +247,13 @@ export const openSession: AsyncInitializer = (dispatch, getState: () => RootStat
         } else {
           console.error(`error while start session: ${e.message}`);
         }
-        dispatch(setStatus({ status: 'failed', portCount: 0, error: e.message }));
+        dispatch(
+          setStatus({
+            status: 'failed',
+            portCount: 0,
+            error: e.message,
+          })
+        );
         setTimeout(start, RESTART_DELAY);
       });
   };

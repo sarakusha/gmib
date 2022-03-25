@@ -44,7 +44,10 @@ const formatChars = {
 };
 const isEmpty = (value: string): boolean => !value || value.replace(/0/g, '') === '';
 
-const MaskedInput = IMaskMixin(Input);
+const MaskedInput = IMaskMixin(({ inputRef, ...props }) => (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  <Input inputRef={inputRef} {...(props as any[])} />
+));
 
 const toUpper = (str: string): string => str.toUpperCase();
 
@@ -97,6 +100,7 @@ const SerialNoCell: React.FC<Props> = ({
         onAccept={changeHandler}
         value={value.slice(-12).padStart(12, '0')}
         className={classes.inputRoot}
+        // @ts-ignore
         classes={inputClasses}
         disableUnderline
         mask="XX:XX:XX:XX:XX:XX"

@@ -13,7 +13,7 @@ import type { RootState } from './index';
 
 type MibTypes = { value: string; name: string }[];
 
-interface NibusState {
+export interface NibusState {
   mibTypes: MibTypes;
   // logLevel: LogLevel;
 }

@@ -28,9 +28,9 @@ export type FlashState = {
 };
 
 export type FlashSetters = {
-  setColumn: Setter<number>;
-  setRow: Setter<number>;
-  setFile: Setter<string>;
+  setColumn: Setter<number | string>;
+  setRow: Setter<number | string>;
+  setFile: Setter<string | number>;
 };
 
 type FlashGlobalState = Record<string, FlashState>;
@@ -67,15 +67,15 @@ export const useGlobalFlashState = () =>
 
 export const useFlashState = (kind: Kind): FlashState & FlashSetters => {
   const [state, dispatch] = useGlobalFlashState();
-  const setColumn = useCallback<Setter<number>>(
+  const setColumn = useCallback<Setter<number | string>>(
     payload => dispatch({ kind, payload, type: 'column' }),
     [kind, dispatch]
   );
-  const setRow = useCallback<Setter<number>>(payload => dispatch({ kind, payload, type: 'row' }), [
-    kind,
-    dispatch,
-  ]);
-  const setFile = useCallback<Setter<string>>(
+  const setRow = useCallback<Setter<number | string>>(
+    payload => dispatch({ kind, payload, type: 'row' }),
+    [kind, dispatch]
+  );
+  const setFile = useCallback<Setter<string | number>>(
     payload => dispatch({ kind, payload, type: 'file' }),
     [kind, dispatch]
   );

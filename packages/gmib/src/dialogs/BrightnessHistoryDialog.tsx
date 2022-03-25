@@ -27,7 +27,7 @@ import { Button, Dialog, DialogActions, DialogContent, Typography } from '@mater
 import SunCalc from 'suncalc';
 import Highcharts, { SeriesLineOptions } from '../components/Highcharts';
 import { useSelector } from '../store';
-import { selectLocation } from '../store/configSlice';
+import { selectBrightness, selectLocation } from '../store/configSlice';
 import { noop } from '../util/helpers';
 import { getCurrentNibusSession } from '../util/nibus';
 
@@ -225,10 +225,12 @@ const BrightnessHistoryDialog: React.FC<Props> = ({ open = false, onClose = noop
   const [options, setOptions] = useState<Highcharts.Options>(highchartsOptions);
   const { latitude, longitude } = useSelector(selectLocation) ?? {};
   const isValidLocation = latitude !== undefined && longitude !== undefined;
+  const currentBrightness = useSelector(selectBrightness);
   useEffect(() => {
     if (!open) return;
     const session = getCurrentNibusSession();
     let history: BrightnessHistory[] = [];
+    const ts = Math.floor(Date.now() / 1000) * 1000;
     session
       .getBrightnessHistory()
       .then(
@@ -240,15 +242,17 @@ const BrightnessHistoryDialog: React.FC<Props> = ({ open = false, onClose = noop
       .finally(() => {
         setOptions(opts => {
           const series = opts.series?.filter(({ yAxis }) => yAxis !== 1) ?? [];
+          const data = history.map(({ timestamp, brightness }) => [
+            timestamp - (timestamp % 1000),
+            brightness,
+          ]);
+          data.push([ts, currentBrightness]);
           const brightSeries: SeriesLineOptions = {
             name: 'Яркость',
             type: 'line',
             yAxis: 1,
             tooltip: { valueSuffix: '%' },
-            data: history.map(({ timestamp, brightness }) => [
-              timestamp - (timestamp % 1000),
-              brightness,
-            ]),
+            data,
           };
           if (isValidLocation) {
             const now = new Date();
@@ -266,7 +270,7 @@ const BrightnessHistoryDialog: React.FC<Props> = ({ open = false, onClose = noop
           };
         });
       });
-  }, [open, latitude, longitude, isValidLocation]);
+  }, [open, latitude, longitude, isValidLocation, currentBrightness]);
   const suntimes = isValidLocation
     ? SunCalc.getTimes(new Date(), latitude!, longitude!)
     : undefined;
