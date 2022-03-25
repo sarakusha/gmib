@@ -17,7 +17,7 @@ import {
   MINIHOST_TYPE,
   VersionInfo,
 } from '@nibus/core';
-import { tuplify } from '../util/helpers';
+import { toErrorMessage, tuplify } from '../util/helpers';
 import { getCurrentNibusSession, isRemoteSession } from '../util/nibus';
 import { AsyncInitializer } from './asyncInitialMiddleware';
 import { selectBrightness, selectScreenAddresses } from './configSlice';
@@ -34,8 +34,8 @@ import {
   setParent,
   updateProps,
 } from './devicesSlice';
-import type { AppThunk, RootState } from './index';
-import { initializeScreens } from './configThunks';
+import type { AppThunk } from './index';
+import { updateScreen } from './configThunks';
 import { addMib } from './mibsSlice';
 
 const PINGER_INTERVAL = 10000;
@@ -92,7 +92,7 @@ const pinger = (session: INibusSession): AppThunk => (dispatch, getState) => {
 
 let pingerTimer = 0;
 
-export const initializeDevices: AsyncInitializer = (dispatch, getState: () => RootState) => {
+export const initializeDevices: AsyncInitializer = (dispatch, getState) => {
   if (!isRemoteSession && !pingerTimer) {
     const session = getCurrentNibusSession();
     pingerTimer = window.setInterval(() => dispatch(pinger(session)), PINGER_INTERVAL);
@@ -146,7 +146,7 @@ export const initializeDevices: AsyncInitializer = (dispatch, getState: () => Ro
         if (mib?.startsWith('minihost') || mib === 'mcdvi') {
           setValue('brightness', brightness);
         }
-        dispatch(initializeScreens());
+        dispatch(updateScreen());
       });
     }, 3000);
   };
@@ -160,7 +160,7 @@ export const initializeDevices: AsyncInitializer = (dispatch, getState: () => Ro
 */
       dispatch(removeDevice(device.id));
     } catch (e) {
-      console.error(e.message);
+      console.error(toErrorMessage(e));
     }
   };
   const session = getCurrentNibusSession();

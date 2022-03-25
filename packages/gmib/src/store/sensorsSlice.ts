@@ -9,12 +9,12 @@
  */
 
 /* eslint-disable no-bitwise */
-import { createSlice, PayloadAction, Draft } from '@reduxjs/toolkit';
+import { Draft, PayloadAction, createSlice, isAnyOf } from '@reduxjs/toolkit';
 import sortBy from 'lodash/sortBy';
 import maxBy from 'lodash/maxBy';
-import { notEmpty } from '../util/helpers';
-import { AsyncInitializer } from './asyncInitialMiddleware';
-import type { AppThunk, RootState } from './index';
+import { hasProps } from '@novastar/screen';
+import type { RootState } from './index';
+import { startAppListening } from './listenerMiddleware';
 
 type SensorRecord = [timestamp: number, value: number];
 
@@ -26,8 +26,8 @@ type SensorState = {
   history: SensorRecord[];
 };
 
-const DEFAULT_INTERVAL = 60;
-const MIN_INTERVAL = 10;
+export const DEFAULT_INTERVAL = 60;
+export const MIN_INTERVAL = 10;
 export const ILLUMINATION = 321;
 export const TEMPERATURE = 128;
 
@@ -37,7 +37,7 @@ const sensorKinds = ['temperature', 'illuminance'] as const;
 
 type SensorKind = typeof sensorKinds[number];
 
-interface SensorsState {
+export interface SensorsState {
   /**
    * interval in seconds
    */
@@ -53,13 +53,17 @@ const initialState: SensorsState = {
   },
 };
 
-type SensorValue = [address: SensorAddress, value: number];
+type Sensor = {
+  kind: SensorKind;
+  address: SensorAddress;
+  value: number;
+};
 
-const calculateSensors = (sensors: Draft<SensorDictionary>, interval): void => {
+const calculateSensors = (sensors: Draft<SensorDictionary>, interval: number): void => {
+  const startingFrom = Date.now() - interval * 1000;
   Object.entries(sensors).forEach(([, sensorState]) => {
     let { history } = sensorState;
     const { current } = sensorState;
-    const startingFrom = Date.now() - interval * 1000;
     history = sortBy(
       history.filter(([timestamp]) => timestamp >= startingFrom),
       ([timestamp]) => timestamp
@@ -85,23 +89,6 @@ const calculateSensors = (sensors: Draft<SensorDictionary>, interval): void => {
   });
 };
 
-const pushValue = (sensors: Draft<SensorDictionary>, [address, value]: SensorValue): void => {
-  const sensor = sensors[address];
-  const current: SensorRecord = [Date.now(), value];
-  if (!sensor) {
-    sensors[address] = {
-      current,
-      average: value,
-      history: [],
-    };
-  } else {
-    if (sensor.current) {
-      sensor.history = [...sensor.history, sensor.current];
-    }
-    sensor.current = current;
-  }
-};
-
 const sensorsSlice = createSlice({
   name: 'sensor',
   initialState,
@@ -109,8 +96,22 @@ const sensorsSlice = createSlice({
     changeInterval(state, { payload: interval }: PayloadAction<number>) {
       state.interval = Math.max(interval, MIN_INTERVAL);
     },
-    push(state, { payload: [kind, value] }: PayloadAction<[kind: SensorKind, value: SensorValue]>) {
-      pushValue(state.sensors[kind], value);
+    pushSensorValue(state, { payload: { kind, address, value } }: PayloadAction<Sensor>) {
+      const sensors = state.sensors[kind];
+      const sensor = sensors[address];
+      const current: SensorRecord = [Date.now(), value];
+      if (!sensor) {
+        sensors[address] = {
+          current,
+          average: value,
+          history: [],
+        };
+      } else {
+        if (sensor.current) {
+          sensor.history = [...sensor.history, sensor.current];
+        }
+        sensor.current = current;
+      }
     },
     calculate(state) {
       Object.values(state.sensors).forEach(dic => calculateSensors(dic, state.interval));
@@ -118,15 +119,27 @@ const sensorsSlice = createSlice({
   },
 });
 
-const { changeInterval, push, calculate } = sensorsSlice.actions;
+export const { changeInterval, pushSensorValue, calculate } = sensorsSlice.actions;
 
-export const setSensorInterval = (interval: number): AppThunk => dispatch => {
-  dispatch(changeInterval(interval));
-  dispatch(calculate());
-};
+// export const setSensorInterval = (interval: number): AppThunk => dispatch => {
+//   dispatch(changeInterval(interval));
+//   dispatch(calculate());
+// };
 
 let timeout = 0;
 
+startAppListening({
+  matcher: isAnyOf(changeInterval, pushSensorValue),
+  effect(action, { dispatch }) {
+    if (pushSensorValue.match(action)) {
+      window.clearTimeout(timeout);
+      timeout = window.setTimeout(() => dispatch(calculate()), (MIN_INTERVAL + 1) * 1000);
+    }
+    dispatch(calculate);
+  },
+});
+
+/*
 export const pushSensorValue = (
   kind: SensorKind,
   address: string,
@@ -153,15 +166,15 @@ export const pushSensorValue = (
   // }
   timeout = window.setTimeout(() => dispatch(calculate()), (MIN_INTERVAL + 1) * 1000);
 };
+*/
 
-const selectSensors = (state: RootState): SensorsState => state.sensors;
+export const selectSensors = (state: RootState): SensorsState => state.sensors;
+
+const hasCurrent = hasProps('current');
 
 const selectLast = (state: RootState, kind: SensorKind): SensorState | undefined => {
   const sensors = selectSensors(state).sensors[kind];
-  return maxBy(
-    Object.values(sensors).filter(({ current }) => notEmpty(current)),
-    ({ current }) => current![0]
-  );
+  return maxBy(Object.values(sensors).filter(hasCurrent), ({ current }) => current[0]);
 };
 
 const selectLastValue = (state: RootState, kind: SensorKind): number | undefined => {
@@ -184,6 +197,8 @@ export const selectLastAverage = (state: RootState, kind: SensorKind): number | 
 export const selectIlluminance = (state: RootState): SensorDictionary =>
   selectSensors(state).sensors.illuminance;
 
+export const selectInterval = (state: RootState): number => selectSensors(state).interval;
+
 export const selectLastIlluminance = (state: RootState): number | undefined =>
   selectLastValue(state, 'illuminance');
 
@@ -199,8 +214,8 @@ export const selectLastTemperature = (state: RootState): number | undefined =>
 export const selectCurrentTemperature = (state: RootState, address: string): number | undefined =>
   selectTemperature(state).sensors[address]?.current?.[1];
 
-export const startSensorSaver: AsyncInitializer = (_, getState) => {
-  window.setInterval(() => {}, selectSensors(getState() as RootState).interval * 1000);
-};
+// export const startSensorSaver: AsyncInitializer = (_, getState) => {
+//   window.setInterval(() => {}, selectSensors(getState() as RootState).interval * 1000);
+// };
 
 export default sensorsSlice.reducer;

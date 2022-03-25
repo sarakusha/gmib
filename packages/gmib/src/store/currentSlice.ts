@@ -8,16 +8,17 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { PayloadAction, createSlice } from '@reduxjs/toolkit';
 import { Health } from '../util/localConfig';
 import { addScreen, removeScreen, showHttpPage, updateConfig } from './configSlice';
-import { addDevice, DeviceState, removeDevice, selectDeviceById } from './devicesSlice';
-import type { AppThunk, RootState } from './index';
-import { addNovastar, removeNovastar } from './novastarsSlice';
+import { DeviceState, addDevice, removeDevice, selectDeviceById } from './devicesSlice';
+import type { RootState } from './index';
+import { startAppListening } from './listenerMiddleware';
+import { addNovastar, removeNovastar, selectNovastarByPath } from './novastarsSlice';
 
 export type TabValues = 'devices' | 'screens' | 'autobrightness' | 'overheat' | 'log';
 
-interface CurrentState {
+export interface CurrentState {
   tab: TabValues | undefined;
   device: string | undefined;
   screen: string | undefined;
@@ -105,10 +106,20 @@ export const selectCurrentTab = (state: RootState): TabValues | undefined =>
 export const selectCurrentDeviceId = (state: RootState): string | undefined =>
   selectCurrent(state).device;
 
-export const activateDevice = (id: string | undefined): AppThunk => dispatch => {
-  dispatch(setCurrentDevice(id));
-  dispatch(setCurrentTab('devices'));
-};
+// export const activateDevice = (id: string | undefined): AppThunk => dispatch => {
+//   dispatch(setCurrentDevice(id));
+//   dispatch(setCurrentTab('devices'));
+// };
+
+startAppListening({
+  predicate(_, currentState, previousState) {
+    const current = selectCurrentDeviceId(currentState);
+    return current !== undefined && current !== selectCurrentDeviceId(previousState);
+  },
+  effect(_, { dispatch }) {
+    dispatch(setCurrentTab('devices'));
+  },
+});
 
 export const selectCurrentScreenId = (state: RootState): string | undefined =>
   selectCurrent(state).screen;
@@ -120,5 +131,11 @@ export const selectCurrentDevice = (state: RootState): DeviceState | undefined =
 
 export const selectCurrentHealth = (state: RootState): Health | undefined =>
   selectCurrent(state).health;
+
+export const selectNovastarIsBusy = (state: RootState): boolean => {
+  const path = selectCurrentDeviceId(state);
+  const novastar = path !== undefined && selectNovastarByPath(state, path);
+  return !!novastar && novastar.isBusy > 0;
+};
 
 export default currentSlice.reducer;

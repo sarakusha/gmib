@@ -8,21 +8,22 @@
  * the EULA file that was distributed with this source code.
  */
 import { LogLevel } from '@nibus/core';
-import { createSlice, current, PayloadAction } from '@reduxjs/toolkit';
+import { PayloadAction, createSlice, current } from '@reduxjs/toolkit';
 import debounce from 'lodash/debounce';
 import semverLt from 'semver/functions/lt';
 import {
   Config,
-  convertCfgTo,
-  defaultScreen,
+  DEFAULT_OVERHEAD_PROTECTION,
   Location,
+  OverheatProtection,
   Page,
   Screen,
-  OverheatProtection,
+  convertCfgFrom,
+  convertCfgTo,
+  defaultScreen,
   validateConfig,
-  DEFAULT_OVERHEAD_PROTECTION,
 } from '../util/config';
-import { findById, PropPayload, PropPayloadAction } from '../util/helpers';
+import { PropPayload, PropPayloadAction, findById } from '../util/helpers';
 import { getCurrentNibusSession } from '../util/nibus';
 import type { RootState } from './index';
 
@@ -45,7 +46,7 @@ const initialState: ConfigState = {
 };
 
 export const sendConfig = debounce((state: ConfigState): void => {
-  const { loading, ...config } = state;
+  const { loading: _, ...config } = state;
   const session = getCurrentNibusSession();
   if (!validateConfig(config)) console.warn(`error while validate config`);
   const cfg =
@@ -91,7 +92,9 @@ export const configSlice = createSlice({
       sendConfig(current(state));
     },
     updateConfig(state, { payload: config }: PayloadAction<Config>) {
-      Object.assign(state, config);
+      const data = convertCfgFrom(config);
+      if (!validateConfig(data)) console.error('Invalid configuration data received');
+      Object.assign(state, data);
       state.loading = false;
     },
     setLogLevel(state, { payload: logLevel }: PayloadAction<LogLevel>) {
@@ -216,8 +219,9 @@ export const {
   removeAddress,
   updateConfig,
   setBrightness,
+  setScreenProp,
   // setOverheatProtection,
-  setProtectionProp: setProtectionPropImpl,
+  setProtectionProp,
 } = configSlice.actions;
 
 export default configSlice.reducer;

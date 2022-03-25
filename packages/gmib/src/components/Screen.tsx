@@ -9,21 +9,21 @@
  */
 import { makeStyles } from '@material-ui/core/styles';
 import {
+  Checkbox,
   FormControlLabel,
   MenuItem,
-  Checkbox,
   Paper,
   Select,
   TextField,
   Typography,
 } from '@material-ui/core';
+import { AnyAction } from '@reduxjs/toolkit';
 import ChipInput from 'material-ui-chip-input';
 import React, { useCallback, useMemo } from 'react';
-import { AppThunk, useDispatch, useSelector } from '../store';
-import { addAddress, removeAddress, selectScreenById } from '../store/configSlice';
-import { setScreenProp } from '../store/configThunks';
+import { useDispatch, useSelector } from '../store';
+import { addAddress, removeAddress, selectScreenById, setScreenProp } from '../store/configSlice';
 import { selectDisplays } from '../store/sessionSlice';
-import { reAddress, Screen } from '../util/config';
+import { Screen, reAddress } from '../util/config';
 import { toNumber } from '../util/helpers';
 import useDelayUpdate from '../util/useDelayUpdate';
 import FormFieldSet from './FormFieldSet';
@@ -98,21 +98,23 @@ const Screen: React.FC<Props> = ({ id: scrId, selected, readonly = true, single 
       const { value, id } = e.currentTarget;
       const res = toNumber(value);
       if (res === undefined || res.toString() === value.trim())
-        dispatch(setScreenProp(scrId, [id as keyof Screen, res]));
+        dispatch(setScreenProp([scrId, [id as keyof Screen, res]]));
     },
     [dispatch, scrId]
   );
   const [displayChanged, changeHandler, onBeforeAddAddress, setName] = useMemo(
     () => [
-      (event: React.ChangeEvent<{ value: string }>): void => {
-        dispatch(setScreenProp(scrId, ['display', toDisplay(event.target.value)]));
+      (event: React.ChangeEvent<{ value: unknown }>): void => {
+        dispatch(setScreenProp([scrId, ['display', toDisplay(`${event.target.value}`)]]));
       },
       (event: React.ChangeEvent<HTMLInputElement>): void => {
         const { value, id, type, checked } = event.target;
-        dispatch(setScreenProp(scrId, [id as keyof Screen, type === 'checkbox' ? checked : value]));
+        dispatch(
+          setScreenProp([scrId, [id as keyof Screen, type === 'checkbox' ? checked : value]])
+        );
       },
       (value: string): boolean => reAddress.test(value),
-      (value: string): AppThunk => setScreenProp(scrId, ['name', value]),
+      (value: string): AnyAction => setScreenProp([scrId, ['name', value]]),
     ],
     [dispatch, scrId]
   );

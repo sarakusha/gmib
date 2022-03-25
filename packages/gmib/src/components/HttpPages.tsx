@@ -10,12 +10,12 @@
 
 import { withStyles } from '@material-ui/core/styles';
 import {
+  IconButton,
   ListItemIcon,
   ListItemSecondaryAction,
-  ListItem as MuiListItem,
   ListItemText,
+  ListItem as MuiListItem,
   Switch,
-  IconButton,
 } from '@material-ui/core';
 import React, { useCallback, useState } from 'react';
 import CloseIcon from '@material-ui/icons/Close';
@@ -25,20 +25,20 @@ import { nanoid } from '@reduxjs/toolkit';
 import { isUri } from 'valid-url';
 import HttpPageDialog from '../dialogs/HttpPageDialog';
 import { useDispatch, useSelector } from '../store';
-import { activateHttpPage } from '../store/configThunks';
 import { Page } from '../util/config';
 import AccordionList from './AccordionList';
 import {
-  selectAllPages,
   removeHttpPage,
-  upsertHttpPage,
+  selectAllPages,
   selectScreenById,
+  showHttpPage,
+  upsertHttpPage,
 } from '../store/configSlice';
 import {
+  TabValues,
   selectCurrentScreenId,
   selectCurrentTab,
   setCurrentTab,
-  TabValues,
 } from '../store/currentSlice';
 /*
 const useStyles = makeStyles(theme => ({
@@ -78,7 +78,7 @@ const HttpPages: React.FC = () => {
   const [selected, setSelected] = useState<string>();
   const visibleHandler = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>, checked: boolean) => {
-      screen && dispatch(activateHttpPage(screen, checked ? event.currentTarget.id : undefined));
+      screen && dispatch(showHttpPage([screen, checked ? event.currentTarget.id : undefined]));
     },
     [dispatch, screen]
   );

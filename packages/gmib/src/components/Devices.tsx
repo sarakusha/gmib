@@ -11,21 +11,22 @@
 import { makeStyles } from '@material-ui/core/styles';
 import {
   Box,
+  IconButton,
   ListItem,
   ListItemIcon,
-  ListItemText,
   ListItemSecondaryAction,
+  ListItemText,
   Tooltip,
   Typography,
-  IconButton,
 } from '@material-ui/core';
+import LanIcon from '@material-ui/icons/SettingsInputHdmi';
 import CloseIcon from '@material-ui/icons/Close';
 import LinkIcon from '@material-ui/icons/Link';
 import UsbIcon from '@material-ui/icons/Usb';
 import { Address, findDeviceById } from '@nibus/core';
 import React, { useCallback, useMemo } from 'react';
 import ReloadIcon from '@material-ui/icons/Refresh';
-import { useSelector, useDispatch } from '../store';
+import { useDispatch, useSelector } from '../store';
 import { selectScreenAddresses } from '../store/configSlice';
 import {
   DeviceStateWithParent,
@@ -33,13 +34,13 @@ import {
   selectAllDevicesWithParent,
 } from '../store/devicesSlice';
 import {
+  TabValues,
   selectCurrentDeviceId,
   selectCurrentTab,
+  setCurrentDevice,
   setCurrentTab,
-  activateDevice,
-  TabValues,
 } from '../store/currentSlice';
-import { selectAllNovastars } from '../store/novastarsSlice';
+import { findNetNovastarDevices, selectAllNovastars } from '../store/novastarsSlice';
 import AccordionList from './AccordionList';
 import DeviceIcon from './DeviceIcon';
 import { reloadSession } from '../store/sessionSlice';
@@ -85,7 +86,13 @@ const getItems = (addresses: string[], devices: DeviceStateWithParent[]): Device
       );
     }
   });
-  return [...result, ...rest.map(device => ({ name: device.address, device }))];
+  return [
+    ...result,
+    ...rest.map(device => ({
+      name: device.address,
+      device,
+    })),
+  ];
 };
 
 const noWrap = { noWrap: true };
@@ -102,6 +109,7 @@ const Devices: React.FC = () => {
   const reloadHandler = useCallback<React.MouseEventHandler<HTMLButtonElement>>(
     e => {
       dispatch(reloadSession());
+      dispatch(findNetNovastarDevices());
       e.stopPropagation();
     },
     [dispatch]
@@ -109,7 +117,7 @@ const Devices: React.FC = () => {
   const clickHandler = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       const { id } = e.currentTarget.dataset; // as DeviceId;
-      id && dispatch(activateDevice(id));
+      id && dispatch(setCurrentDevice(id));
     },
     [dispatch]
   );
@@ -206,13 +214,17 @@ const Devices: React.FC = () => {
             <div className={classes.wrapper}>
               <DeviceIcon color="inherit" />
               <Tooltip title={card.path}>
-                <UsbIcon className={classes.kind} />
+                {card.path[0] >= '0' && card.path[0] <= '9' ? (
+                  <LanIcon className={classes.kind} />
+                ) : (
+                  <UsbIcon className={classes.kind} />
+                )}
               </Tooltip>
             </div>
           </ListItemIcon>
           <ListItemText
             primaryTypographyProps={noWrap}
-            primary={card.model}
+            primary={card.info?.name}
             secondary="novastar"
             secondaryTypographyProps={noWrap}
           />

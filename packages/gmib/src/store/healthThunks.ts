@@ -8,14 +8,14 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { Address, asyncSerialMap, DeviceId } from '@nibus/core';
+import { Address, DeviceId, asyncSerialMap } from '@nibus/core';
 import { ipcRenderer } from 'electron';
 import intersection from 'lodash/intersection';
 import flatten from 'lodash/flatten';
 import groupBy from 'lodash/groupBy';
-import { OverheatProtection } from '../util/config';
+import debugFactory from 'debug';
 import { isRemoteSession } from '../util/nibus';
-import { MINUTE, notEmpty, PropPayload } from '../util/helpers';
+import { MINUTE, minmax, notEmpty } from '../util/helpers';
 import localConfig, { Aggregations } from '../util/localConfig';
 import Minihost2Loader, { Minihost2Info } from '../util/Minihost2Loader';
 import Minihost3Loader, { Minihost3Info, Minihost3Selector } from '../util/Minihost3Loader';
@@ -26,21 +26,21 @@ import {
   selectOverheatProtection,
   selectScreenById,
   selectScreens,
-  setProtectionPropImpl,
+  setProtectionProp,
 } from './configSlice';
 import { updateBrightness } from './configThunks';
 import {
-  deviceBusy,
   DeviceProps,
-  deviceReady,
   DeviceState,
+  ValueType,
+  deviceBusy,
+  deviceReady,
   filterDevicesByAddress,
   selectAllDevices,
   selectDeviceById,
-  ValueType,
 } from './devicesSlice';
-import debugFactory from '../util/debug';
-import type { RootState, AppThunk } from './index';
+import type { AppThunk, RootState } from './index';
+import { startAppListening } from './listenerMiddleware';
 
 const debug = debugFactory('gmib:health');
 
@@ -123,10 +123,10 @@ const groupDevicesByScreens = (state: RootState): GroupedByScreens[] => {
   const allDevices = selectAllDevices(state);
   const series = screens
     .filter(({ addresses }) => addresses !== undefined && addresses.length > 0)
-    .map(({ id, addresses }) => ({
+    .map(({ id, addresses = [] }) => ({
       screens: [id],
       devices: flatten(
-        addresses!.map(address =>
+        addresses.map(address =>
           filterDevicesByAddress(allDevices, new Address(address)).map(
             ({ id: deviceId }) => deviceId
           )
@@ -139,7 +139,8 @@ const groupDevicesByScreens = (state: RootState): GroupedByScreens[] => {
   If there is an overlap of devices, we combine the groups
    */
   while (series.length > 0) {
-    const [item] = series.splice(0, 1);
+    const item = series.shift()!;
+    // const [item] = series.splice(0, 1);
     const container = series.find(
       ({ devices }) => intersection([item.devices, devices]).length > 0
     );
@@ -242,10 +243,10 @@ const checkTemperature = (): AppThunk<Promise<void>> => async (
 
   debug('screens overheating check started...');
   const groups = groupDevicesByScreens(state);
-  await Promise.all(
+  const all = await Promise.all(
     groups.map(
-      async ({ screens, devices }): Promise<void> => {
-        const results = flatten(
+      async ({ screens, devices }): Promise<{ screens: string[]; temperatures: number[] }> => {
+        const results: number[] = flatten(
           await Promise.all(
             groupDevicesByConnection(
               devices
@@ -262,31 +263,37 @@ const checkTemperature = (): AppThunk<Promise<void>> => async (
             )
           )
         ).filter(notEmpty);
-        if (results.length === 0) {
-          const health = localConfig.get('health');
-          if (health) {
-            screens.forEach(name => delete health.screens[name]);
-          }
-          localConfig.set('health', health);
-          return;
-        }
-        const sorted = results.sort();
-        const maximum = sorted[sorted.length - 1];
-        const average = calcAverage(sorted);
-        const median = calcMedian(sorted);
-        const { brightnessFactor = 1 } = selectScreenById(state, screens[0]) ?? {};
-        screens.forEach(id => {
-          dispatch(
-            updateMaxBrightness(
-              id,
-              [maximum, average, median],
-              Math.max(Math.min(desiredBrightness * brightnessFactor, 100), 0)
-            )
-          );
-        });
+        return {
+          screens,
+          temperatures: results,
+        };
       }
     )
   );
+  all.forEach(({ screens, temperatures }) => {
+    if (temperatures.length === 0) {
+      const health = localConfig.get('health');
+      if (health) {
+        screens.forEach(name => delete health.screens[name]);
+      }
+      localConfig.set('health', health);
+      return;
+    }
+    const sorted = temperatures.sort();
+    const maximum = sorted[sorted.length - 1];
+    const average = calcAverage(sorted);
+    const median = calcMedian(sorted);
+    const { brightnessFactor = 1 } = selectScreenById(state, screens[0]) ?? {};
+    screens.forEach(id => {
+      dispatch(
+        updateMaxBrightness(
+          id,
+          [maximum, average, median],
+          minmax(100, desiredBrightness * brightnessFactor)
+        )
+      );
+    });
+  });
   const existingScreens = flatten(groups.map(({ screens }) => screens));
   const health = localConfig.get('health');
   Object.keys(health.screens).forEach(id => {
@@ -294,7 +301,7 @@ const checkTemperature = (): AppThunk<Promise<void>> => async (
   });
   health.timestamp = Date.now();
   localConfig.set('health', health);
-  dispatch(updateBrightness);
+  dispatch(updateBrightness());
 
   running = false;
   debug('screens overheating check completed');
@@ -316,18 +323,29 @@ const updateOverheatProtection = (): AppThunk => (dispatch, getState) => {
   currentInterval = enabled ? interval : undefined;
 };
 
-const setProtectionProp = (payload: PropPayload<OverheatProtection>): AppThunk => dispatch => {
-  dispatch(setProtectionPropImpl(payload));
-  if (isRemoteSession) return;
-  const [name] = payload;
-  if (name === 'enabled' || name === 'interval') {
-    dispatch(updateOverheatProtection());
-  }
-};
+// const setProtectionProp = (payload: PropPayload<OverheatProtection>): AppThunk => dispatch => {
+//   dispatch(setProtectionPropImpl(payload));
+//   if (isRemoteSession) return;
+//   const [name] = payload;
+//   if (name === 'enabled' || name === 'interval') {
+//     dispatch(updateOverheatProtection());
+//   }
+// };
 
-export const healthInitializer: AsyncInitializer = dispatch => {
+startAppListening({
+  actionCreator: setProtectionProp,
+  effect({ payload: [name] }, { dispatch }) {
+    if (!isRemoteSession && (name === 'enabled' || name === 'interval')) {
+      dispatch(updateOverheatProtection());
+    }
+  },
+});
+
+const healthInitializer: AsyncInitializer = dispatch => {
   if (isRemoteSession) return;
   setTimeout(() => dispatch(updateOverheatProtection()), 1000);
 };
 
-export default setProtectionProp;
+export default healthInitializer;
+
+// export default setProtectionProp;

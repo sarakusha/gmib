@@ -8,19 +8,19 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { Address, AddressParam, AddressType, DeviceId, findDeviceById, IDevice } from '@nibus/core';
+import { Address, AddressParam, AddressType, DeviceId, IDevice, findDeviceById } from '@nibus/core';
 import {
+  PayloadAction,
   createAction,
   createAsyncThunk,
   createEntityAdapter,
   createSelector,
   createSlice,
-  PayloadAction,
 } from '@reduxjs/toolkit';
-import debounce from 'lodash/debounce';
 import pick from 'lodash/pick';
 import { notEmpty } from '../util/helpers';
-import type { AppDispatch, AppThunk, RootState } from './index';
+import createDebouncedAsyncThunk from './createDebouncedAsyncThunk';
+import type { AppThunk, AppThunkConfig, RootState } from './index';
 // import debugFactory from '../util/debug';
 
 // const debug = debugFactory('gmib:devicesSlice');
@@ -90,7 +90,7 @@ const devicesAdapter = createEntityAdapter<DeviceState>({
 
 export const updateProps = createAction<[id: DeviceId, ids?: number[]]>('devices/updateProps');
 
-export const reloadDevice = createAsyncThunk<void, DeviceId>(
+export const reloadDevice = createAsyncThunk<Promise<void>, DeviceId, AppThunkConfig>(
   'devices/reload',
   async (id, { dispatch }) => {
     const device = findDeviceById(id);
@@ -101,7 +101,7 @@ export const reloadDevice = createAsyncThunk<void, DeviceId>(
   }
 );
 
-export const drainDevice = createAsyncThunk<void, DeviceId>(
+const drainDevice = createDebouncedAsyncThunk<void, DeviceId>(
   'devices/drain',
   async (id, { dispatch }) => {
     const device = findDeviceById(id);
@@ -110,6 +110,11 @@ export const drainDevice = createAsyncThunk<void, DeviceId>(
     const failed = ids.filter(ident => ident < 0).map(ident => -ident);
     failed.length > 0 && (await device.read(...failed));
     dispatch(updateProps([id, ids.map(Math.abs)]));
+  },
+  400,
+  {
+    selectId: id => id,
+    leading: true,
   }
 );
 
@@ -339,7 +344,8 @@ export const selectAllDevicesWithParent = (state: RootState): DeviceStateWithPar
   }));
 
 export const filterDevicesByAddress = <D extends Pick<DeviceState, 'address' | 'mib' | 'props'>>(
-  // export const filterDevicesByAddress = <D extends { address: Address; mib: string; props: { domain?: number, subnet?} }>(
+  // export const filterDevicesByAddress = <D extends { address: Address; mib: string; props: {
+  // domain?: number, subnet?} }>(
   devices: D[],
   address: Address
 ): D[] =>
@@ -365,7 +371,10 @@ export const filterDevicesByAddress = <D extends Pick<DeviceState, 'address' | '
     return false;
   });
 
-export const selectDevicesByAddress = createSelector(
+export const selectDevicesByAddress: (
+  state: RootState,
+  address: AddressParam
+) => DeviceState[] = createSelector(
   [selectAllDevices, (state, address: AddressParam) => new Address(address)],
   filterDevicesByAddress
 );
@@ -404,9 +413,6 @@ export const setDeviceValue = (
   const propNames = (
     (Reflect.getMetadata('mibProperties', proto!) as string[]) ?? []
   ).filter(name => Reflect.getMetadata('isWritable', proto!, name));
-  const drain = debounce((dispatch: AppDispatch): void => {
-    dispatch(drainDevice(deviceId));
-  }, 400);
 
   return (name, value) => dispatch => {
     if (!propNames.includes(name)) {
@@ -416,7 +422,7 @@ export const setDeviceValue = (
     }
     device[name] = value;
     dispatch(updateProperty([deviceId, name]));
-    drain(dispatch);
+    dispatch(drainDevice(deviceId));
   };
 };
 

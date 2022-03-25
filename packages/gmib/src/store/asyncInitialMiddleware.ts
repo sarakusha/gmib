@@ -8,19 +8,17 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { Action, AnyAction, Middleware, ThunkDispatch } from '@reduxjs/toolkit';
+import { Middleware } from '@reduxjs/toolkit';
+import type { AppDispatch, RootState } from './index';
 
-export type AsyncInitializer<
-  A extends Action = AnyAction,
-  S = Record<string, unknown>,
-  E = undefined
-> = (dispatch: ThunkDispatch<S, E, A>, getState: () => S) => void;
+export type AsyncInitializer = (dispatch: AppDispatch, getState: () => RootState) => void;
 
-export default function asyncInitializer<A extends Action, S = Record<string, unknown>>(
-  initializer: AsyncInitializer<A, S>
+export default function asyncInitializer(
+  initializer: AsyncInitializer
+  // eslint-disable-next-line @typescript-eslint/ban-types
 ): Middleware {
   return ({ dispatch, getState }) => {
-    setTimeout(() => initializer(dispatch, getState), 0);
+    setTimeout(() => initializer(dispatch as AppDispatch, getState), 0);
     return next => action => {
       next(action);
     };
