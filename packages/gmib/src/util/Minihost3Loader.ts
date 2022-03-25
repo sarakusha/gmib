@@ -9,7 +9,8 @@
  */
 
 /* eslint-disable no-bitwise */
-import { findDeviceById, DeviceId } from '@nibus/core';
+import { DeviceId, findDeviceById } from '@nibus/core';
+import { getEnumValues } from '../dialogs/PropertySelectorDialog';
 import MinihostLoader from './MinihostLoader';
 
 export type VertexType = { x: number; y: number };
@@ -36,15 +37,15 @@ export type Minihost3Info = {
   blueVertex?: VertexType;
 };
 
-export const initialSelectors = [
-  Minihost3Selector.Temperature,
-  Minihost3Selector.Voltage1,
-  Minihost3Selector.Voltage2,
-  Minihost3Selector.Version,
-  Minihost3Selector.RedVertex,
-  Minihost3Selector.GreenVertex,
-  Minihost3Selector.BlueVertex,
-] as const;
+// export const initialSelectors = [
+//   Minihost3Selector.Temperature,
+//   Minihost3Selector.Voltage1,
+//   Minihost3Selector.Voltage2,
+//   Minihost3Selector.Version,
+//   Minihost3Selector.RedVertex,
+//   Minihost3Selector.GreenVertex,
+//   Minihost3Selector.BlueVertex,
+// ] as const;
 
 const digits = (len: number): ((val: number) => number) => {
   const dec = 10 ** len;
@@ -102,11 +103,11 @@ const parseData = (info: Minihost3Info, selector: Minihost3Selector, data: Buffe
 };
 
 export default class Minihost3Loader extends MinihostLoader<Minihost3Info> {
+  static readonly DOMAIN = 'MODUL';
+
   selectorId: number;
 
   moduleSelectId: number;
-
-  static readonly DOMAIN = 'MODUL';
 
   constructor(deviceId: DeviceId) {
     const device = findDeviceById(deviceId);
@@ -117,7 +118,7 @@ export default class Minihost3Loader extends MinihostLoader<Minihost3Info> {
   }
 
   async getInfo(x: number, y: number): Promise<Minihost3Info> {
-    const { device, selectors = new Set(initialSelectors) } = this;
+    const { device, selectors = new Set(getEnumValues(Minihost3Selector)) } = this;
     const info: Minihost3Info = {};
     // eslint-disable-next-line no-restricted-syntax
     for (const selector of selectors) {

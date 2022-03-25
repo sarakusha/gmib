@@ -20,12 +20,13 @@ import {
 } from '@material-ui/core';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import FormFieldSet from '../components/FormFieldSet';
-import { initialSelectors, Minihost3Selector } from '../util/Minihost3Loader';
+// import { initialSelectors, Minihost3Selector } from '../util/Minihost3Loader';
 
 type Props = {
+  properties: Record<string, number | string>;
   open?: boolean;
-  initial?: Set<Minihost3Selector>;
-  onClose?: (value: Set<Minihost3Selector>) => void;
+  initial?: Set<number>;
+  onClose?: (value: Set<number>) => void;
 };
 
 const useStyles = makeStyles(theme => ({
@@ -37,34 +38,45 @@ const useStyles = makeStyles(theme => ({
   },
 }));
 
-const Minihost3SelectorDialog: React.FC<Props> = ({
+export const getEnumValues = (numEnums: Record<string, number | string>): number[] =>
+  Object.values(numEnums)
+    .filter(value => Number.isInteger(value))
+    .sort() as number[];
+
+// const getEnumKeys = <Enum extends Record<string, number | string>>(
+//   numEnums: Enum
+// ): (keyof Enum)[] => getEnumValues(numEnums).map(value => numEnums[value].toString());
+
+const getEnumEntries = <Enum extends Record<string, number | string>>(
+  numEnum: Enum
+): [keyof Enum, number][] =>
+  getEnumValues(numEnum).map<[keyof Enum, number]>(value => [numEnum[value].toString(), value]);
+
+const PropertySelectorDialog: React.FC<Props> = ({
   open = false,
-  initial = new Set(initialSelectors),
+  initial = new Set<number>(),
+  properties,
   onClose,
 }) => {
   const classes = useStyles();
-  const [selector, setSelector] = useState<Set<Minihost3Selector>>(initial);
+  const [selector, setSelector] = useState(initial);
   const refInitial = useRef(initial);
   refInitial.current = initial;
   useEffect(() => {
-    setSelector(refInitial.current);
+    open && setSelector(refInitial.current);
   }, [open]);
-  const handleChange = useCallback<React.ChangeEventHandler<HTMLInputElement>>(e => {
-    const { checked, name } = e.target;
-    if (checked) {
+  const handleChange = useCallback<React.ChangeEventHandler<HTMLInputElement>>(
+    e => {
+      const { checked, name } = e.target;
       setSelector(prev => {
         const result = new Set(prev);
-        result.add(Minihost3Selector[name]);
+        if (checked) result.add(Number(properties[name]));
+        else result.delete(Number(properties[name]));
         return result;
       });
-    } else {
-      setSelector(prev => {
-        const result = new Set(prev);
-        result.delete(Minihost3Selector[name]);
-        return result;
-      });
-    }
-  }, []);
+    },
+    [properties]
+  );
   const closeHandler = useCallback(() => onClose && onClose(refInitial.current), [onClose]);
   const saveHandler = useCallback(
     () =>
@@ -82,16 +94,16 @@ const Minihost3SelectorDialog: React.FC<Props> = ({
         <div className={classes.root}>
           <FormFieldSet className={classes.formControl} legend="Доступные переменные">
             <FormGroup>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={selector.has(Minihost3Selector.Temperature)}
-                    onChange={handleChange}
-                    name="Temperature"
-                  />
-                }
-                label="Температура"
-              />
+              {getEnumEntries(properties).map(([name, value]) => (
+                <FormControlLabel
+                  control={
+                    <Checkbox checked={selector.has(value)} onChange={handleChange} name={name} />
+                  }
+                  label={name}
+                  key={name}
+                />
+              ))}
+              {/*
               <FormControlLabel
                 control={
                   <Checkbox
@@ -152,6 +164,7 @@ const Minihost3SelectorDialog: React.FC<Props> = ({
                 }
                 label="Голубая вершина"
               />
+*/}
             </FormGroup>
           </FormFieldSet>
         </div>
@@ -168,4 +181,4 @@ const Minihost3SelectorDialog: React.FC<Props> = ({
   );
 };
 
-export default Minihost3SelectorDialog;
+export default PropertySelectorDialog;
