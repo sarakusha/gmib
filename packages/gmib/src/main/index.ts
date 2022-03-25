@@ -1,3 +1,4 @@
+/* eslint-disable import/first */
 /*
  * @license
  * Copyright (c) 2022. Nata-Info
@@ -7,12 +8,10 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-
-/* eslint-disable import/first */
-process.env.NIBUS_LOG = 'nibus-all.log';
-
 import Bonjour, { RemoteService } from 'bonjour-hap';
-import { app, BrowserWindow, dialog, Display, ipcMain, screen, powerSaveBlocker } from 'electron';
+import debugFactory from 'debug';
+import { BrowserWindow, Display, app, dialog, ipcMain, powerSaveBlocker, screen } from 'electron';
+import log from 'electron-log';
 import { autoUpdater } from 'electron-updater';
 import fs from 'fs';
 import isEqual from 'lodash/isEqual';
@@ -25,17 +24,24 @@ import { Tail } from 'tail';
 import { URLSearchParams } from 'url';
 import tcpPortUsed from 'tcp-port-used';
 import type { NibusService } from '@nibus/cli';
-import { Config, defaultScreen, Page, Screen } from '../util/config';
-import debugFactory, { log } from '../util/debug';
-import { findById, getRemoteLabel, getTitle, notEmpty, RemoteHost } from '../util/helpers';
+
+import { Config, Page, Screen, defaultScreen } from '../util/config';
+import {
+  RemoteHost,
+  findById,
+  getRemoteLabel,
+  getTitle,
+  notEmpty,
+  toErrorMessage,
+} from '../util/helpers';
 import localConfig, { CustomHost } from '../util/localConfig';
 import config from './config';
 import { getBrightnessHistory } from './db';
 import getAllDisplays from './getAllDisplays';
 import { linuxAutostart } from './linux';
 import {
-  addRemoteFactory,
   CreateWindow,
+  addRemoteFactory,
   removeRemote,
   setRemoteEditClick,
   setRemotesFactory,
@@ -52,7 +58,23 @@ let service: NibusService | null = null;
 
 let isQuiting = false;
 
-process.nextTick(() => log.log(`Log: ${log.transports.file.getFile().path}`));
+// const logger: Transport = message => service?.server?.broadcast('log', message);
+// logger.level = 'info';
+// log.transports.logger = logger;
+log.transports.file.level = 'info';
+log.transports.file.fileName = 'gmib.log';
+log.transports.console.level = false;
+
+process.env.DEBUG_COLORS = '1';
+debugFactory.log = log.log.bind(log);
+debugFactory.enable(process.env.DEBUG!);
+
+const tail = new Tail(log.transports.file.getFile().path);
+tail.on('line', line => service?.server?.broadcast('log', line));
+
+process.nextTick(() =>
+  log.log(`Log: ${log.transports.file.getFile().path}, DEBUG=${process.env.DEBUG}`)
+);
 // log.log(`${process.env.PORTABLE_EXECUTABLE_DIR}, ${app.getAppPath()}, ${app.getPath('exe')}`);
 autoUpdater.logger = log;
 
@@ -65,10 +87,6 @@ const localAddresses = ([] as os.NetworkInterfaceInfo[])
   .map(({ address }) => address);
 
 const mdnsBrowser = bonjour.find({ type: 'nibus' });
-const tail = new Tail(log.transports.file.getFile().path);
-tail.on('line', line => {
-  service?.server?.broadcast('log', line);
-});
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
@@ -133,7 +151,7 @@ async function createWindow(
   const window = new BrowserWindow({
     ...size,
     ...pos,
-    backgroundColor: '#fff', // Лучше сглаживание не некоторых экранах
+    backgroundColor: '#fff', // Лучше сглаживание на некоторых экранах
     title: getTitle(port, host),
     skipTaskbar: true,
     show: false, // !localConfig.get('autostart'),
@@ -209,7 +227,7 @@ async function createWindow(
     window.setSkipTaskbar(true);
     return false;
   });
-  window.on('minimize', event => {
+  window.on('minimize', (event: Event) => {
     event.preventDefault();
     window.hide();
     return false;
@@ -430,7 +448,8 @@ const updateScreens = (newValue?: Screen[], oldValue?: Screen[]): void => {
           debug(
             `Loading error. url: ${url}, errorCode: ${errorCode}, errorDescription: ${errorDescription}`
           );
-          setTimeout(() => contents.reload(), 5000).unref();
+          /* ERR_FILE_NOT_FOUND */
+          if (errorCode !== -6) setTimeout(() => contents.reload(), 5000).unref();
         });
       } else {
         window.setPosition(x, y);
@@ -555,7 +574,7 @@ const startLocalNibus = async (): Promise<void> => {
       try {
         config.store = store as Config;
       } catch (err) {
-        sendStatusToWindow(`Error while save config: ${err.message}`, true);
+        sendStatusToWindow(`Error while save config: ${toErrorMessage(err)}`, true);
         service?.server.send(socket, 'config', config.store);
       }
     });

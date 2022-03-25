@@ -10,7 +10,7 @@
 import { app } from 'electron';
 import path from 'path';
 import fs from 'fs';
-import debugFactory from '../util/debug';
+import debugFactory from 'debug';
 
 const debug = debugFactory('gmib:linux');
 

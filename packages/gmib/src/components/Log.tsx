@@ -12,12 +12,15 @@ import { Paper } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
 import { parse } from 'ansicolor';
 import sanitizeHtml from 'sanitize-html';
+import ColorHash from 'color-hash';
 import { noop } from '../util/helpers';
 import { getCurrentNibusSession } from '../util/nibus';
 import LogToolbar from './LogToolbar';
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useSelector } from '../store';
 import { selectCurrentTab } from '../store/currentSlice';
+
+const colorHash = new ColorHash();
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -61,10 +64,34 @@ const Log: React.FC = () => {
       const { current } = refLog;
       if (current) {
         const { spans } = parse(line);
-        const html = spans.map(({ text, css }) => `<span style="${css}">${text}</span>`).join('');
+        let html: string | undefined;
+        if (spans.length > 1) {
+          html = spans
+            .map(
+              ({ text, css }) =>
+                `<span style="${css}${
+                  css?.includes('font-weight: bold;') ? `color: ${colorHash.hex(text)};` : ''
+                }">${text}</span>`
+            )
+            .join('');
+        } else {
+          const matches = line.match(
+            /(\[[^\]]+] \[[^\]]+]\s+)([0-9-]{10}T[0-9:.]{12}Z )?(\S+)(.*)/
+          );
+          if (matches) {
+            const [, time, time2, tag, tail] = matches;
+            const [, info = tail, delta] = time2 ? [] : tail.match(/(.*)(\+\S+)$/) ?? [];
+            if (time2 || delta) {
+              const style = `color: ${colorHash.hex(tag)};`;
+              html = `${time}<span style="${style}"><b>${tag}</b></span>${info}<span style="${style}">${
+                delta ?? ''
+              }</span>`;
+            }
+          }
+        }
         current.insertAdjacentHTML(
           'afterbegin',
-          `<div>${sanitizeHtml(html, {
+          `<div>${sanitizeHtml(html ?? line, {
             allowedAttributes: { span: ['style'] },
             allowedTags: ['span', 'b', 'em', 'strong', 'i'],
           })}</div>`
@@ -82,7 +109,12 @@ const Log: React.FC = () => {
     };
     const session = getCurrentNibusSession();
     session.on('log', logListener);
+    // const logger: any = logListener;
+    // logger.level = 'info';
+    // log.transports.logger = logger;
+    // debugFactory.log = logger;
     return () => {
+      // log.transports.logger = null;
       session.off('log', logListener);
     };
   }, []);

@@ -10,9 +10,9 @@
 import http from 'http';
 import fs from 'fs';
 import { AddressInfo } from 'net';
+import log from 'electron-log';
 import rangeParser from 'range-parser';
 import pump from 'pump';
-import { log } from '../util/debug';
 
 type ReadStreamOptions = Parameters<typeof fs.createReadStream>[1];
 

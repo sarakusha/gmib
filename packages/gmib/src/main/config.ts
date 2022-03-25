@@ -9,8 +9,8 @@
  */
 
 import Store from 'electron-store';
+import log from 'electron-log';
 import { Config, configSchema, convertCfgFrom } from '../util/config';
-import { log } from '../util/debug';
 import { version } from '../util/helpers';
 
 const config = new Store<Config>({
