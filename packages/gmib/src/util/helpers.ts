@@ -40,6 +40,7 @@ export const getStateAsync = <S>(setter: Setter<S>): Promise<S> =>
       return prevState;
     });
   });
+
 // export type AtLeastOne<T, U = { [K in keyof T]: Pick<T, K> }> = Partial<T> & U[keyof U];
 export function getStatesAsync<S1, S2, S3, S4, S5, S6, S7, S8, S9, S10>(
   setter1: Setter<S1>,
@@ -122,6 +123,7 @@ export type PropPayload<T, K extends keyof T = keyof T> = readonly [K, T[K]];
 // export type PropertiesReducer<T> = React.Reducer<T, PropPayload<T> | [undefined, T]>;
 export type PropertiesReducer<T> = React.Reducer<T, PropPayload<T>>;
 export type PropPayloadAction<T, K extends keyof T = keyof T> = PayloadAction<PropPayload<T, K>>;
+
 export function createPropsReducer<T extends Record<string, unknown>>(): PropertiesReducer<T> {
   return (state, [prop, value]) => ({
     ...state,
@@ -184,3 +186,13 @@ export const incrementCounterString = (s: string): string =>
 export const noop = (): void => {};
 
 export type Writable<T> = { -readonly [P in keyof T]: T[P] };
+
+export const toErrorMessage = (e: unknown): string =>
+  e == null ? 'Unknown error' : e instanceof Error ? e.message : `${e}`;
+
+export function minmax(max: number, value: number): number;
+export function minmax(min: number, max: number, value: number): number;
+export function minmax(...args: number[]): number {
+  const [min, max, value] = args.length === 2 ? [0, ...args] : args;
+  return Math.max(min, Math.min(max, value));
+}

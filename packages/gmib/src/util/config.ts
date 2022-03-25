@@ -176,7 +176,7 @@ export const configSchema: Schema<Config> = {
     default: false,
   },
   brightness: {
-    type: 'integer',
+    type: 'number',
     default: 30,
   },
   // test: {
@@ -336,10 +336,10 @@ export const convertCfgTo = (cfg: Config): ConfigV1 => {
     screens: [screen],
     pages,
     // eslint-disable-next-line no-shadow
-    version,
+    version: _,
     ...other
   } = cfg;
-  const { addresses, output, id, name, brightnessFactor, ...screenProps } = screen;
+  const { addresses, output, id: _1, name: _2, brightnessFactor: _3, ...screenProps } = screen;
   return {
     tests: pages,
     screen: {
