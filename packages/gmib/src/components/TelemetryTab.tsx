@@ -11,13 +11,14 @@ import { makeStyles } from '@material-ui/core/styles';
 import { Paper, Typography } from '@material-ui/core';
 import classNames from 'classnames';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { getEnumValues } from '../dialogs/PropertySelectorDialog';
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useDevice, useDispatch, useSelector } from '../store';
 import { selectCurrentDeviceId, selectCurrentTab } from '../store/currentSlice';
 import { deviceBusy, deviceReady } from '../store/devicesSlice';
 import { getStatesAsync, noop } from '../util/helpers';
 import Minihost2Loader, { Minihost2Info } from '../util/Minihost2Loader';
-import Minihost3Loader, { initialSelectors, Minihost3Info } from '../util/Minihost3Loader';
+import Minihost3Loader, { Minihost3Info, Minihost3Selector } from '../util/Minihost3Loader';
 import MinihostLoader, { IModuleInfo } from '../util/MinihostLoader';
 import ModuleInfo from './ModuleInfo';
 import Range from './Range';
@@ -105,7 +106,7 @@ const TelemetryTab: React.FC<MinihostTabProps> = ({ id, selected = false }) => {
   const [yMax, setYMax] = useState<number>(YMAX - 1);
   const [yMin, setYMin] = useState(0);
   const [style, setStyle] = useState({});
-  const [selectors, setSelectors] = useState(new Set(initialSelectors));
+  const [selectors, setSelectors] = useState(new Set(getEnumValues(Minihost3Selector)));
   const [loading, setLoading] = useState(false);
   const dispatch = useDispatch();
 
@@ -145,7 +146,14 @@ const TelemetryTab: React.FC<MinihostTabProps> = ({ id, selected = false }) => {
     /* eslint-enable */
     setStyle({ gridTemplateRows: `repeat(${yMax! - yMin + 1}, 1fr)` });
     setModules([]);
-    loader && (await loader.run({ xMin, yMin, xMax, yMax, selectors: [...selectors] }));
+    loader &&
+      (await loader.run({
+        xMin,
+        yMin,
+        xMax,
+        yMax,
+        selectors: [...selectors],
+      }));
   }, [loader]);
   const cancel = useCallback(() => loader && loader.cancel(), [loader]);
   const [, setToolbar] = useToolbar();
@@ -154,11 +162,11 @@ const TelemetryTab: React.FC<MinihostTabProps> = ({ id, selected = false }) => {
   const telemetryToolbar = useMemo(
     () => (
       <TelemetryToolbar
-        mib={mib}
+        properties={mib === 'minihost3' ? Minihost3Selector : undefined}
         selectors={selectors}
         onSelectorChanged={setSelectors}
         loading={loading}
-        isBusy={isBusy}
+        isBusy={isBusy > 0}
         start={start}
         cancel={cancel}
       />

@@ -17,7 +17,7 @@ import { selectNovastarByPath } from '../store/novastarsSlice';
 import Autobrightness from './Autobrightness';
 import DeviceTabs from './DeviceTabs';
 import Log from './Log';
-import NovastarTab from './NovastarTab';
+import NovastarTabs from './NovastarTabs';
 import Screens from './Screens';
 import OverheatProtectionTab from './OverheatProtectionTab';
 
@@ -75,7 +75,7 @@ const Tabs: React.FC = () => {
         })
       )}
       <TabContainer id="novastar" selected={tab === 'devices' && currentNovastar !== undefined}>
-        <NovastarTab device={currentNovastar} />
+        <NovastarTabs device={currentNovastar} />
       </TabContainer>
       <TabContainer id="test" selected={tab === 'screens'}>
         <Screens />

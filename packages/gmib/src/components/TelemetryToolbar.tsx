@@ -20,9 +20,8 @@ import Filter6 from '@material-ui/icons/Filter6';
 import Filter7 from '@material-ui/icons/Filter7';
 import StartIcon from '@material-ui/icons/Refresh';
 import React, { useCallback, useState } from 'react';
-import Minihost3SelectorDialog from '../dialogs/Minihost3SelectorDialog';
+import PropertySelectorDialog, { getEnumValues } from '../dialogs/PropertySelectorDialog';
 import { noop } from '../util/helpers';
-import { initialSelectors, Minihost3Selector } from '../util/Minihost3Loader';
 
 const useStyles = makeStyles(theme => ({
   fabProgress: {
@@ -44,32 +43,32 @@ type Props = {
   start?: () => void;
   cancel?: () => void;
   loading?: boolean;
-  isBusy?: number;
-  mib?: string;
-  selectors?: Set<Minihost3Selector>;
-  onSelectorChanged?: (selectors: Set<Minihost3Selector>) => void;
+  isBusy?: boolean;
+  selectors?: Set<number>;
+  onSelectorChanged?: (selectors: Set<number>) => void;
+  properties?: Record<string, number | string>;
 };
 
 const TelemetryToolbar: React.FC<Props> = ({
   start = noop,
   cancel = noop,
   loading = false,
-  mib,
   onSelectorChanged = noop,
   isBusy = 0,
-  selectors = new Set(initialSelectors),
+  properties,
+  selectors = new Set(properties && getEnumValues(properties)),
 }) => {
   const classes = useStyles();
   const [selectorOpen, setSelectorOpen] = useState(false);
   const openSelectorHandler = useCallback(() => setSelectorOpen(true), []);
-  const closeSelectorHandler = (value: Set<Minihost3Selector>): void => {
+  const closeSelectorHandler = (value: Set<number>): void => {
     onSelectorChanged(value);
     setSelectorOpen(false);
   };
   const FilterIcon = icons[Math.max(selectors.size - 1, 0)];
   return (
     <>
-      {mib === 'minihost3' && (
+      {properties && (
         <Tooltip title="Задать переменные">
           <div className={classes.wrapper}>
             <IconButton color="inherit" onClick={openSelectorHandler}>
@@ -78,7 +77,7 @@ const TelemetryToolbar: React.FC<Props> = ({
           </div>
         </Tooltip>
       )}
-      {loading || isBusy > 0 ? (
+      {loading || isBusy ? (
         <Tooltip title={loading && 'Отменить опрос'}>
           <div className={classes.wrapper}>
             <IconButton onClick={cancel} color="inherit" disabled={!loading}>
@@ -96,11 +95,14 @@ const TelemetryToolbar: React.FC<Props> = ({
           </div>
         </Tooltip>
       )}
-      <Minihost3SelectorDialog
-        open={selectorOpen}
-        onClose={closeSelectorHandler}
-        initial={selectors}
-      />
+      {properties && (
+        <PropertySelectorDialog
+          properties={properties}
+          open={selectorOpen}
+          onClose={closeSelectorHandler}
+          initial={selectors}
+        />
+      )}
     </>
   );
 };

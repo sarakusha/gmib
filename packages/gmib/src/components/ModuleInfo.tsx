@@ -22,6 +22,7 @@ const useStyles = makeStyles(theme => ({
     display: 'flex',
     flexDirection: 'row',
     flexShrink: 0,
+    height: '100%',
   },
   pos: {
     backgroundColor: theme.palette.grey[100],
@@ -44,7 +45,7 @@ const useStyles = makeStyles(theme => ({
   ypos: {},
   table: {
     // backgroundColor: 'gray',
-    minWidth: '5ch',
+    // minWidth: '5ch',
     flex: 0,
     borderCollapse: 'collapse',
     margin: 2,
@@ -187,6 +188,7 @@ type PropRenderType = Record<string, (props: ValueType<unknown>) => React.ReactE
 
 const propMap: PropRenderType = {
   t: ({ value }) => <Temperature value={value as number} />,
+  v: ({ value }) => <Voltage value={value as number} />,
   v1: ({ value }) => <Voltage value={value as number} index={1} />,
   v2: ({ value }) => <Voltage value={value as number} index={2} />,
   redVertex: ({ value }) => <Vertex value={value as VertexType} name="R" />,
