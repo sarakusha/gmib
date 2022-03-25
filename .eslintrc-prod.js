@@ -12,7 +12,14 @@ const path = require('path');
 
 module.exports = {
   parser: '@typescript-eslint/parser', // Specifies the ESLint parser
-  plugins: ['import', '@typescript-eslint', 'react-hooks', 'eslint-plugin-tsdoc', 'prettier'],
+  plugins: [
+    'import',
+    '@typescript-eslint',
+    'react-hooks',
+    'eslint-plugin-tsdoc',
+    'prettier',
+    'unused-imports',
+  ],
   extends: [
     'airbnb',
     // 'plugin:react/recommended',
@@ -49,12 +56,30 @@ module.exports = {
     'spaced-comment': ['error', 'always', { markers: ['/'] }],
     '@typescript-eslint/no-non-null-assertion': 'off',
     '@typescript-eslint/interface-name-prefix': 'off',
-    '@typescript-eslint/no-unused-vars': [
+    // '@typescript-eslint/no-unused-vars': [
+    //   'error',
+    //   {
+    //     argsIgnorePattern: '^_',
+    //     ignoreRestSiblings: true,
+    //     args: 'after-used',
+    //   },
+    // ],
+    '@typescript-eslint/no-unused-vars': 'off',
+    'no-unused-vars': 'off',
+    'unused-imports/no-unused-imports': 'error',
+    'unused-imports/no-unused-vars': [
+      'warn',
+      {
+        vars: 'all',
+        varsIgnorePattern: '^_',
+        args: 'after-used',
+        argsIgnorePattern: '^_',
+      },
+    ],
+    'sort-imports': [
       'error',
       {
-        argsIgnorePattern: '^_',
-        ignoreRestSiblings: true,
-        args: 'after-used',
+        ignoreDeclarationSort: true,
       },
     ],
     '@typescript-eslint/no-empty-function': 'off',
@@ -72,7 +97,13 @@ module.exports = {
     'no-console': ['error', { allow: ['warn', 'error', 'info', 'assert'] }],
     'no-nested-ternary': 'off',
     'import/no-unresolved': [2, { ignore: ['.png?inline'] }],
-    'no-unused-expressions': ['error', { allowShortCircuit: true, allowTernary: true }],
+    'no-unused-expressions': [
+      'error',
+      {
+        allowShortCircuit: true,
+        allowTernary: true,
+      },
+    ],
     'no-useless-constructor': 'off',
     '@typescript-eslint/no-useless-constructor': 'error',
     'tsdoc/syntax': 'warn',
@@ -80,7 +111,13 @@ module.exports = {
     'no-use-before-define': 'off',
     '@typescript-eslint/no-use-before-define': 'error',
     'react/require-default-props': 'off',
-    'react/jsx-wrap-multilines': ['error', { declaration: false, assignment: false }],
+    'react/jsx-wrap-multilines': [
+      'error',
+      {
+        declaration: false,
+        assignment: false,
+      },
+    ],
     'no-restricted-imports': [
       'error',
       {
