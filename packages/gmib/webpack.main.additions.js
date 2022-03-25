@@ -8,11 +8,19 @@
  * the EULA file that was distributed with this source code.
  */
 
-module.exports = {
-  externals: [
-    (function () {
+// eslint-disable-next-line import/no-extraneous-dependencies
+const webpack = require('webpack');
+
+module.exports = config => {
+  config.plugins.push(
+    new webpack.DefinePlugin({
+      'process.env.DEBUG': "'nibus:*,gmib:*,novastar:*,-novastar:encoder,-novastar:decoder'",
+    })
+  );
+  config.externals.push(
+    (() => {
       const IGNORES = ['electron'];
-      return function (context, request, callback) {
+      return (context, request, callback) => {
         if (IGNORES.indexOf(request) >= 0) {
           return callback(null, `require('${request}')`);
         }
@@ -20,8 +28,9 @@ module.exports = {
       };
     })(),
     'worker_threads',
-    'usb-detection',
-  ],
+    'usb-detection'
+  );
+  return config;
   // optimization: {
   //   minimize: false
   // },
