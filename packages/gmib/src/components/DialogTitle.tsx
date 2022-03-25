@@ -8,12 +8,12 @@
  * the EULA file that was distributed with this source code.
  */
 import React, { PropsWithChildren } from 'react';
-import { createStyles, Theme, withStyles, WithStyles } from '@material-ui/core/styles';
+import { Theme, WithStyles, createStyles, withStyles } from '@material-ui/core/styles';
 import {
-  DialogTitle as MuiDialogTitle,
   IconButton,
-  Typography,
+  DialogTitle as MuiDialogTitle,
   DialogTitleProps as MuiDialogTitleProps,
+  Typography,
 } from '@material-ui/core';
 import CloseIcon from '@material-ui/icons/Close';
 

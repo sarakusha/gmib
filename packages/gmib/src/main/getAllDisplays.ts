@@ -7,7 +7,7 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import { screen, Display } from 'electron';
+import { Display, screen } from 'electron';
 import { Display as DisplayType } from '@nibus/core';
 
 // type DisplayType = Pick<Display, 'id' | 'bounds' | 'workArea' | 'displayFrequency' | 'internal'>;

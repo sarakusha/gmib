@@ -8,7 +8,7 @@
  * the EULA file that was distributed with this source code.
  */
 import { makeStyles } from '@material-ui/core/styles';
-import { Badge, Tooltip, Popover, IconButton, TextField } from '@material-ui/core';
+import { Badge, IconButton, Popover, TextField, Tooltip } from '@material-ui/core';
 import React, { useEffect, useReducer, useState } from 'react';
 import LocationOnIcon from '@material-ui/icons/LocationOn';
 import HelpIcon from '@material-ui/icons/Help';

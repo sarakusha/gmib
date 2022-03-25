@@ -10,7 +10,7 @@
 
 /* eslint-disable class-methods-use-this,@typescript-eslint/no-explicit-any,
  @typescript-eslint/no-unused-vars */
-import { IDevice, Address, INibusConnection, DeviceId, NmsDatagram } from '@nibus/core';
+import { Address, DeviceId, IDevice, INibusConnection, NmsDatagram } from '@nibus/core';
 
 import { EventEmitter } from 'events';
 
@@ -26,7 +26,7 @@ export default class StubDevice extends EventEmitter implements IDevice {
     this.id = timeid() as DeviceId;
   }
 
-  download(domain: string, data: Buffer, offset?: number, noTerm?: boolean): Promise<void> {
+  download(_domain: string, _data: Buffer, _offset?: number, _noTerm?: boolean): Promise<void> {
     return Promise.reject(new Error('Not realized'));
   }
 
@@ -35,29 +35,29 @@ export default class StubDevice extends EventEmitter implements IDevice {
   }
 
   execute(
-    program: string,
-    args?: Record<string, any>
+    _program: string,
+    _args?: Record<string, any>
   ): Promise<NmsDatagram | NmsDatagram[] | undefined> {
     return Promise.reject(new Error('Not realized'));
   }
 
-  getError(idOrName: number | string): any {}
+  getError(_idOrName: number | string): any {}
 
-  getId(idOrName: string | number): number {
+  getId(_idOrName: string | number): number {
     return 0;
   }
 
-  getName(idOrName: string | number): string {
+  getName(_idOrName: string | number): string {
     return '';
   }
 
-  getRawValue(idOrName: number | string): any {}
+  getRawValue(_idOrName: number | string): any {}
 
-  isDirty(idOrName: string | number): boolean {
+  isDirty(_idOrName: string | number): boolean {
     return false;
   }
 
-  read(...ids: number[]): Promise<{ [p: string]: any }> {
+  read(..._ids: number[]): Promise<{ [p: string]: any }> {
     return Promise.resolve({});
     // return Promise.reject(new Error('Not realized'));
   }
@@ -66,11 +66,11 @@ export default class StubDevice extends EventEmitter implements IDevice {
     return 0;
   }
 
-  upload(domain: string, offset?: number, size?: number): Promise<Buffer> {
+  upload(_domain: string, _offset?: number, _size?: number): Promise<Buffer> {
     return Promise.reject(new Error('Not realized'));
   }
 
-  write(...ids: number[]): Promise<number[]> {
+  write(..._ids: number[]): Promise<number[]> {
     return Promise.reject(new Error('Not realized'));
   }
 

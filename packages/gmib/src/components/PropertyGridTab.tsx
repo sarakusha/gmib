@@ -11,7 +11,7 @@ import { makeStyles } from '@material-ui/core/styles';
 import { Box, Paper, Table, TableBody, TableRow } from '@material-ui/core';
 import groupBy from 'lodash/groupBy';
 import React, { useEffect, useMemo, useState } from 'react';
-import { useSelector, useDispatch, useDevice } from '../store';
+import { useDevice, useDispatch, useSelector } from '../store';
 import { selectCurrentTab } from '../store/currentSlice';
 import { selectMibByName } from '../store/mibsSlice';
 import { noop } from '../util/helpers';
@@ -22,7 +22,7 @@ import ErrorCard from './ErrorCard';
 import PropertyValueCell from './PropertyValueCell';
 import { useToolbar } from '../providers/ToolbarProvider';
 import type { MinihostTabProps } from './TabContainer';
-import { reloadDevice, setDeviceValue, ValueType } from '../store/devicesSlice';
+import { ValueType, reloadDevice, setDeviceValue } from '../store/devicesSlice';
 
 const useStyles = makeStyles(theme => ({
   error: {
@@ -63,8 +63,8 @@ const PropertyGridTab: React.FC<MinihostTabProps> = ({ id, selected = false }) =
   const dispatch = useDispatch();
   const setValue = useMemo(() => {
     const action = setDeviceValue(id);
-    return (name: string, value: ValueType) => {
-      dispatch(action(name, value));
+    return (name: string, value: unknown) => {
+      dispatch(action(name, value as ValueType));
     };
   }, [id, dispatch]);
   const [, setToolbar] = useToolbar();

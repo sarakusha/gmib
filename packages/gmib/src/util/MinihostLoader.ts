@@ -8,7 +8,7 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { NibusError, IDevice } from '@nibus/core';
+import { IDevice, NibusError } from '@nibus/core';
 
 import Runnable, { RunnableEvents } from './Runnable';
 

@@ -16,8 +16,8 @@ import { ipcRenderer } from 'electron';
 import fs from 'fs';
 import React from 'react';
 import { useSelector } from '../store';
-import { ConfigState, sendConfig, selectConfig } from '../store/configSlice';
-import { noop, Writable } from '../util/helpers';
+import { ConfigState, selectConfig, sendConfig } from '../store/configSlice';
+import { Writable, noop } from '../util/helpers';
 
 const load = (): void => {
   const [fileName]: string[] =

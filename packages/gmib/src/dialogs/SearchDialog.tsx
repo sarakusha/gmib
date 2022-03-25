@@ -12,7 +12,6 @@
 // import AppBar from '@material-ui/core/AppBar';
 import { makeStyles } from '@material-ui/core/styles';
 import {
-  Paper,
   Button,
   Dialog,
   DialogActions,
@@ -29,11 +28,12 @@ import {
   ListItemSecondaryAction,
   ListItemText,
   NativeSelect,
+  Paper,
   Tab,
   Tabs,
   TextField,
 } from '@material-ui/core';
-import { findMibByType, Address, DeviceId } from '@nibus/core';
+import { Address, DeviceId, findMibByType } from '@nibus/core';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AddIcon from '@material-ui/icons/Add';
 import unionBy from 'lodash/unionBy';

@@ -8,7 +8,7 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { app, Menu, Tray } from 'electron';
+import { Menu, Tray, app } from 'electron';
 import os from 'os';
 
 import path from 'path';

@@ -13,15 +13,16 @@ import { app, ipcMain } from 'electron';
 import path from 'path';
 import semverLt from 'semver/functions/lt';
 
-import { HOUR, notEmpty, NullableOptional } from '../util/helpers';
+import debugFactory from 'debug';
+import log from 'electron-log';
+import { HOUR, NullableOptional, notEmpty } from '../util/helpers';
 import config, { prevVersion } from './config';
-import debugFactory, { log } from '../util/debug';
 
 const debug = debugFactory('gmib:db');
 
 let db: Database;
 
-export const insertBrightness = (value: number): void => {
+export const insertBrightness = (value: number | undefined): void => {
   db.run(
     'INSERT INTO brightness (timestamp, brightness, actual) VALUES (?, ?, ?)',
     Date.now(),
@@ -206,7 +207,7 @@ export const getBrightnessHistory = async (dt?: number): Promise<BrightnessHisto
          WHERE timestamp > ? AND timestamp < ?`,
         from,
         to,
-        (error, rows: NullableOptional<BrightnessHistory>[]) => {
+        (error: unknown, rows: NullableOptional<BrightnessHistory>[]) => {
           if (error) reject(error);
           else resolve(rows.map(removeNull));
         }

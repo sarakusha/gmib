@@ -9,19 +9,19 @@
  */
 import { makeStyles } from '@material-ui/core/styles';
 import {
-  List,
-  ListItem,
-  ListItemText,
   AppBar,
+  Backdrop,
   Divider,
   Drawer,
   IconButton,
+  List,
+  ListItem,
+  ListItemSecondaryAction,
+  ListItemText,
+  Switch,
   Toolbar,
   Tooltip,
   Typography,
-  Backdrop,
-  ListItemSecondaryAction,
-  Switch,
 } from '@material-ui/core';
 import ChevronLeftIcon from '@material-ui/icons/ChevronLeft';
 import SearchIcon from '@material-ui/icons/Search';
@@ -40,8 +40,8 @@ import {
   selectLoading,
   selectOverheatProtection,
   setAutobrightness,
+  setProtectionProp,
 } from '../store/configSlice';
-import setProtectionProp from '../store/healthThunks';
 import { selectCurrentTab, setCurrentTab } from '../store/currentSlice';
 import { selectIsClosed, selectIsOnline } from '../store/sessionSlice';
 import Devices from './Devices';

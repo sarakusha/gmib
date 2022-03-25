@@ -8,7 +8,7 @@
  * the EULA file that was distributed with this source code.
  */
 import React from 'react';
-import { CircularProgress, Typography, Box, CircularProgressProps } from '@material-ui/core';
+import { Box, CircularProgress, CircularProgressProps, Typography } from '@material-ui/core';
 
 const CircularProgressWithLabel: React.FC<CircularProgressProps> = ({ value, size, ...props }) => (
   <Box position="relative" display="inline-flex">

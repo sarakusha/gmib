@@ -10,7 +10,7 @@
 
 /* eslint-disable indent,@typescript-eslint/no-explicit-any */
 import { makeStyles } from '@material-ui/core/styles';
-import { Select, MenuItem } from '@material-ui/core';
+import { MenuItem, Select } from '@material-ui/core';
 import React, { memo, useCallback, useMemo } from 'react';
 import classNames from 'classnames';
 import { ValueState, ValueType } from '../store/devicesSlice';

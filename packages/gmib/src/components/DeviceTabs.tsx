@@ -9,7 +9,7 @@
  */
 
 import { makeStyles } from '@material-ui/core/styles';
-import { Paper, Container, Tab, Tabs } from '@material-ui/core';
+import { Container, Paper, Tab, Tabs } from '@material-ui/core';
 import { DeviceId } from '@nibus/core';
 import React, { useState } from 'react';
 import { useSelector } from '../store';

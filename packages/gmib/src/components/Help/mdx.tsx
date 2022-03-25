@@ -8,19 +8,20 @@
  * the EULA file that was distributed with this source code.
  */
 
+import { MDXProviderComponents } from '@mdx-js/react';
 import React from 'react';
 import { withStyles } from '@material-ui/core/styles';
 import {
+  Box,
   Checkbox,
   Divider,
-  Paper,
   Table as MuiTable,
+  Paper,
   TableBody,
   TableCell,
   TableHead,
   TableRow,
   Typography,
-  Box,
 } from '@material-ui/core';
 
 const Blockquote = withStyles(theme => ({
@@ -39,7 +40,7 @@ const Blockquote = withStyles(theme => ({
   },
 }))(Paper);
 
-const mdx: Record<string, React.ReactNode> = {
+const mdx: MDXProviderComponents = {
   p: props => <Typography paragraph {...props} />,
   h1: props => <Typography {...props} component="h1" variant="h1" gutterBottom />,
   h2: props => <Typography {...props} component="h2" variant="h2" gutterBottom />,

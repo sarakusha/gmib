@@ -10,11 +10,11 @@
 import { makeStyles } from '@material-ui/core/styles';
 import {
   FormControlLabel,
+  IconButton,
+  Popover,
   Radio,
   RadioGroup,
   Tooltip,
-  IconButton,
-  Popover,
 } from '@material-ui/core';
 import TuneIcon from '@material-ui/icons/Tune';
 import { LogLevel, LogLevelV } from '@nibus/core';

@@ -9,11 +9,11 @@
  */
 import { makeStyles } from '@material-ui/core/styles';
 import {
+  AccordionDetailsProps,
+  AccordionSummaryProps,
   Box,
   List,
   Typography,
-  AccordionDetailsProps,
-  AccordionSummaryProps,
 } from '@material-ui/core';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import classNames from 'classnames';

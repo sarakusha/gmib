@@ -8,8 +8,8 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { app, BrowserWindow, Menu, MenuItemConstructorOptions, shell } from 'electron';
-import { getRemoteLabel, getTitle, RemoteHost } from '../util/helpers';
+import { BrowserWindow, Menu, MenuItemConstructorOptions, app, shell } from 'electron';
+import { RemoteHost, getRemoteLabel, getTitle } from '../util/helpers';
 import localConfig from '../util/localConfig';
 import windows from './windows';
 

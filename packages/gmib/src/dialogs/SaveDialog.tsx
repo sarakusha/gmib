@@ -57,7 +57,13 @@ type State = Record<string, boolean>;
 
 const reducer = (state: State, { name, value }: Action): State => {
   if (name === '$all$') {
-    return Object.keys(state).reduce<State>((result, key) => ({ ...result, [key]: value }), {});
+    return Object.keys(state).reduce<State>(
+      (result, key) => ({
+        ...result,
+        [key]: value,
+      }),
+      {}
+    );
   }
   return {
     ...state,
@@ -91,7 +97,13 @@ const SaveDialog: React.FC<Props> = ({ deviceId, open, close }) => {
       : [];
     return [
       keys,
-      keys.reduce<Record<string, boolean>>((res, [, name]) => ({ ...res, [name]: false }), {}),
+      keys.reduce<Record<string, boolean>>(
+        (res, [, name]) => ({
+          ...res,
+          [name]: false,
+        }),
+        {}
+      ),
     ];
   }, [meta]);
 
@@ -150,7 +162,10 @@ const SaveDialog: React.FC<Props> = ({ deviceId, open, close }) => {
             key="all"
             control={
               <Checkbox
-                checked={names.reduce((acc, [, name]) => acc && state[name], true)}
+                checked={names.reduce<boolean>(
+                  (acc, [, name]) => Boolean(acc && state[name]),
+                  true
+                )}
                 value="$all$"
                 onChange={changeHandler}
               />

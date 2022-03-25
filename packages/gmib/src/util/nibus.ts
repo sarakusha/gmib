@@ -7,7 +7,7 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import { getNibusSession, INibusSession } from '@nibus/core';
+import { INibusSession, getNibusSession } from '@nibus/core';
 
 if (!window) throw new Error('only renderer process');
 

@@ -8,7 +8,7 @@
  * the EULA file that was distributed with this source code.
  */
 // import FormHelperText from '@material-ui/core/FormHelperText';
-import { Paper, TextField, IconButton, InputAdornment, Button } from '@material-ui/core';
+import { Button, IconButton, InputAdornment, Paper, TextField } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
 import classNames from 'classnames';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -16,7 +16,6 @@ import HighchartsReact from 'highcharts-react-official';
 import CloseIcon from '@material-ui/icons/Close';
 import CheckIcon from '@material-ui/icons/Check';
 import sortBy from 'lodash/sortBy';
-import { setCurrentBrightness } from '../store/configThunks';
 
 import Highcharts, { SeriesSolidgaugeOptions } from './Highcharts';
 import { useToolbar } from '../providers/ToolbarProvider';
@@ -25,12 +24,13 @@ import {
   selectAutobrightness,
   selectBrightness,
   selectSpline,
+  setBrightness,
   setSpline,
 } from '../store/configSlice';
 import { selectCurrentTab } from '../store/currentSlice';
 import { selectLastIlluminance } from '../store/sensorsSlice';
 import { SPLINE_COUNT, SplineItem } from '../util/config';
-import { noop, notEmpty } from '../util/helpers';
+import { noop, notEmpty, toErrorMessage } from '../util/helpers';
 import AutobrightnessToolbar from './AutobrightnessToolbar';
 import Brightness from './Brightness';
 
@@ -92,7 +92,9 @@ const useStyles = makeStyles(theme => ({
   },
 }));
 
-const setItem = (index: number, value?: number) => (array: number[]): number[] => {
+const setItem = (index: number, value?: number) => (
+  array: (number | undefined)[]
+): (number | undefined)[] => {
   const clone = [...array];
   if (value !== undefined) {
     clone[index] = value;
@@ -278,7 +280,7 @@ const Autobrightness: React.FC = () => {
         dispatch(setSpline(saveSpline.filter(notEmpty)));
         setChanged(false);
       } catch (e) {
-        console.error('error while save spline', e.message);
+        console.error('error while save spline', toErrorMessage(e));
       }
     }
     setError(errors);
@@ -293,9 +295,8 @@ const Autobrightness: React.FC = () => {
   };
   const brightness = useSelector(selectBrightness);
   const handleBrightness = useCallback(
-    (e: React.ChangeEvent, value: number) => {
-      dispatch(setCurrentBrightness(value));
-    },
+    (e: unknown, value: number | number[]) =>
+      Array.isArray(value) || dispatch(setBrightness(value)),
     [dispatch]
   );
   const autobrightness = useSelector(selectAutobrightness);

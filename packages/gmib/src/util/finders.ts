@@ -10,19 +10,19 @@
 
 /* eslint-disable no-bitwise,no-await-in-loop */
 import {
-  SarpQueryType,
   Address,
   AddressType,
-  INibusConnection,
-  createSarp,
-  SarpDatagram,
   DeviceId,
+  INibusConnection,
+  SarpDatagram,
+  SarpQueryType,
+  createSarp,
   findDeviceById,
 } from '@nibus/core';
 
+import debugFactory from 'debug';
 import { delay, notEmpty, tuplify } from './helpers';
 import Runnable, { RunnableEvents } from './Runnable';
-import debugFactory from './debug';
 
 const debug = debugFactory('gmib:finder');
 

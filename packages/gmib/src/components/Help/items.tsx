@@ -8,7 +8,7 @@
  * the EULA file that was distributed with this source code.
  */
 import { Button } from '@material-ui/core';
-import { withStyles, fade } from '@material-ui/core/styles';
+import { alpha, withStyles } from '@material-ui/core/styles';
 import CheckIcon from '@material-ui/icons/Check';
 import LocationOnIconMui from '@material-ui/icons/LocationOn';
 import React from 'react';
@@ -20,7 +20,7 @@ const withRoundBorderStyles = withStyles(theme => ({
     borderRadius: '50%', // theme.shape.borderRadius,
     borderWidth: 1,
     borderStyle: 'solid',
-    borderColor: fade(theme.palette.primary.main, 0.2),
+    borderColor: alpha(theme.palette.primary.main, 0.2),
     padding: 2,
     color: theme.palette.primary.main, // action.active,
   },

@@ -8,6 +8,7 @@
  * the EULA file that was distributed with this source code.
  */
 import { debounce } from '@material-ui/core';
+import { AnyAction } from '@reduxjs/toolkit';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import type { AppThunk } from '../store';
@@ -18,7 +19,7 @@ type ChangeHandler = React.ChangeEventHandler<HTMLInputElement>;
 
 const useDelayUpdate = (
   value: unknown,
-  action: (payload: string) => AppThunk,
+  action: (payload: string) => AppThunk | AnyAction,
   delay = 1000
 ): [string, ChangeHandler] => {
   const [current, setCurrent] = useState(toString(value));

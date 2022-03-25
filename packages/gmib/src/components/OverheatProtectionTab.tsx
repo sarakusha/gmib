@@ -7,12 +7,11 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import { InputAdornment, Paper, TextField, MenuItem, Typography } from '@material-ui/core';
+import { InputAdornment, MenuItem, Paper, TextField, Typography } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
 import React, { useCallback } from 'react';
 import { useDispatch, useSelector } from '../store';
-import { selectOverheatProtection, selectScreens } from '../store/configSlice';
-import setProtectionProp from '../store/healthThunks';
+import { selectOverheatProtection, selectScreens, setProtectionProp } from '../store/configSlice';
 import { selectCurrentHealth } from '../store/currentSlice';
 import { DEFAULT_OVERHEAD_PROTECTION, OverheatProtection } from '../util/config';
 import { findById, toNumber } from '../util/helpers';

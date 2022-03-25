@@ -9,7 +9,7 @@
  */
 
 import React, { memo, useCallback, useEffect, useState } from 'react';
-import { TextField, Checkbox, InputAdornment } from '@material-ui/core';
+import { Checkbox, InputAdornment, TextField } from '@material-ui/core';
 import { getStateAsync } from '../util/helpers';
 
 export type Props = {

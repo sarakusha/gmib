@@ -7,7 +7,7 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import { Paper, Container, Tab, Tabs, IconButton } from '@material-ui/core';
+import { Container, IconButton, Paper, Tab, Tabs } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
 import AddToQueue from '@material-ui/icons/AddToQueue';
 import CloseIcon from '@material-ui/icons/Close';

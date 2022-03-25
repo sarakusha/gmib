@@ -10,24 +10,25 @@
 
 import { makeStyles } from '@material-ui/core/styles';
 import {
-  Paper,
   Backdrop,
   Button,
   FormControlLabel,
   LinearProgress,
+  Paper,
   Radio,
   RadioGroup,
 } from '@material-ui/core';
 import CloseIcon from '@material-ui/icons/Close';
 import ReplayIcon from '@material-ui/icons/Replay';
-import { Address, Flasher, FlashKinds, Kind, KindMap } from '@nibus/core';
+import { Address, FlashKinds, Flasher, Kind, KindMap } from '@nibus/core';
 import classNames from 'classnames';
 import { SnackbarAction, useSnackbar } from 'notistack';
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useDevice, useSelector } from '../store';
 import { selectProps } from '../store/devicesSlice';
+import { toErrorMessage } from '../util/helpers';
 import CircularProgressWithLabel from './CircularProgressWithLabel';
-import FlashUpgrade, { displayName, Props as FlashUpgradeProps } from './FlashUpgrade';
+import FlashUpgrade, { Props as FlashUpgradeProps, displayName } from './FlashUpgrade';
 import FormFieldSet from './FormFieldSet';
 import type { MinihostTabProps } from './TabContainer';
 
@@ -110,7 +111,9 @@ const FirmwareTab: React.FC<MinihostTabProps> = ({ id, selected = false }) => {
       try {
         total = flasher.flash(currentKind, filename, moduleSelect).total;
       } catch (e) {
-        enqueueSnackbar(`Invalid source file: ${filename} (${e.message})`, { variant: 'error' });
+        enqueueSnackbar(`Invalid source file: ${filename} (${toErrorMessage(e)})`, {
+          variant: 'error',
+        });
         return;
       }
       flasher.once('error', e => {

@@ -9,7 +9,7 @@
  */
 
 import { makeStyles } from '@material-ui/core/styles';
-import { InputAdornment, InputBaseProps, Input } from '@material-ui/core';
+import { Input, InputAdornment, InputBaseProps } from '@material-ui/core';
 import React, { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import classNames from 'classnames';
 import TableCell, { TableCellProps } from './TableCell';
