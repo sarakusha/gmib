@@ -1,20 +1,21 @@
 {
-  "compileOnSave": false,
+  "extends": "../../tsconfig.settings.json",
   "compilerOptions": {
     "target": "es2019",
-    "module": "esnext",
+//    "module": "esnext",
     "jsx": "react",
     "allowJs": true,
-    "moduleResolution": "node",
+    //    "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": false,
+    "suppressImplicitAnyIndexErrors": true,
+    //    "esModuleInterop": true,
+    //    "noUnusedLocals": true,
+    //    "noUnusedParameters": false,
     "removeComments": true,
-    "preserveConstEnums": true,
-    "sourceMap": true,
-    "inlineSources": true,
-    "skipLibCheck": true,
+    //    "preserveConstEnums": true,
+    //    "sourceMap": true,
+    //    "inlineSources": true,
+    //    "skipLibCheck": true,
     "resolveJsonModule": true,
     "baseUrl": ".",
     "typeRoots": [
@@ -24,22 +25,33 @@
     ],
     "types": [
       "node",
-      "jest"
+      "jest",
+      "webpack-env"
     ],
     "lib": [
       "dom",
       "es2019"
     ],
-    "strict": false,
+    //    "strict": false,
     "forceConsistentCasingInFileNames": true,
-    "isolatedModules": true,
-    "strictNullChecks": true,
+    //    "isolatedModules": true,
+    //    "strictNullChecks": true,
     "paths": {
-      "bonjour-hap": ["@types/bonjour-hap"],
-      "debug/src/node": [
-        "../../node_modules/@types/debug"
+      "bonjour-hap": [
+        "@types/bonjour-hap"
       ],
-      "iput": ["@types/iput"]
+      //      "debug/src/node": [
+      //        "../../node_modules/@types/debug"
+      //      ],
+      "iput": [
+        "@types/iput"
+      ],
+      "imask": [
+        "@types/imask"
+      ],
+      "react-imask": [
+        "@types/react-imask"
+      ]
     }
   },
   "exclude": [
@@ -49,9 +61,14 @@
   "include": [
     "src",
     "@types/mdx.d.ts",
-    "**/*.mdx"
+    "**/*.mdx",
+    "@types/svg.d.ts",
+    "**/*.svg",
+    "node_modules/@novastar/screen/build/main/api.d.ts"
   ],
   "paths": {
-    "@mdx-js/react": ["mdx-js__react"]
+    "@mdx-js/react": [
+      "mdx-js__react"
+    ]
   }
 }

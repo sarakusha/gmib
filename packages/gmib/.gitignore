@@ -462,3 +462,5 @@ electron-builder.env
 !/@types/
 /bak/
 /temp/
+/.yalc/
+/yalc.lock
