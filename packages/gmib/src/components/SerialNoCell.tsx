@@ -100,6 +100,7 @@ const SerialNoCell: React.FC<Props> = ({
         onAccept={changeHandler}
         value={value.slice(-12).padStart(12, '0')}
         className={classes.inputRoot}
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
         classes={inputClasses}
         disableUnderline

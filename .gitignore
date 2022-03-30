@@ -180,3 +180,6 @@ Temporary Items
 
 .idea/deployment.xml
 .idea/webServers.xml
+/.yalc/
+
+/yalc.lock

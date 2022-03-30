@@ -11,6 +11,7 @@
       <excludeFolder url="file://$MODULE_DIR$/packages/gmib/temp" />
       <excludeFolder url="file://$MODULE_DIR$/packages/core/bak" />
       <excludeFolder url="file://$MODULE_DIR$/packages/core/lib" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/gmib/ffmpeg" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

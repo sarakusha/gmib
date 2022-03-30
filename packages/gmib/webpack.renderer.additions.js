@@ -121,6 +121,7 @@ module.exports = config => {
     'react-dom',
     '@material-ui/core',
     '@material-ui/styles',
+    '@novastar/screen',
   ];
   // config.resolve.alias.debug = path.join(require.resolve('debug'), 'src', 'node');
   // if (ANALYZE) {

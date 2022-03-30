@@ -464,3 +464,4 @@ electron-builder.env
 /temp/
 /.yalc/
 /yalc.lock
+/ffmpeg

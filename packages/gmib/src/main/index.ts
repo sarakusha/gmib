@@ -24,6 +24,7 @@ import { Tail } from 'tail';
 import { URLSearchParams } from 'url';
 import tcpPortUsed from 'tcp-port-used';
 import type { NibusService } from '@nibus/cli';
+import isDevelopment from 'electron-is-dev';
 
 import { Config, Page, Screen, defaultScreen } from '../util/config';
 import {
@@ -49,7 +50,7 @@ import {
 } from './mainMenu';
 import { updateTray } from './tray';
 import windows, { closeScreens, screenWindows, showAll } from './windows';
-import server from './server';
+import server from './express';
 
 const USE_REACT_REFRESH_WEBPACK = true;
 const bonjour = Bonjour();
@@ -87,8 +88,6 @@ const localAddresses = ([] as os.NetworkInterfaceInfo[])
   .map(({ address }) => address);
 
 const mdnsBrowser = bonjour.find({ type: 'nibus' });
-
-const isDevelopment = process.env.NODE_ENV !== 'production';
 
 // global reference to mainWindow (necessary to prevent window from being garbage collected)
 let mainWindow: BrowserWindow | null;

@@ -10,12 +10,19 @@
 import { PayloadAction } from '@reduxjs/toolkit';
 import React, { Dispatch, SetStateAction } from 'react';
 import type { BaseService } from 'bonjour-hap';
+import os from 'os';
 
 // eslint-disable-next-line global-require,@typescript-eslint/no-var-requires
 export const { version } = require('../../package.json');
 
 export const MINUTE = 60 * 1000;
 export const HOUR = 60 * MINUTE;
+
+export const platform = os.platform();
+export const arch = os.arch();
+
+export const isWindows = platform === 'win32';
+export const isMac = platform === 'darwin';
 
 export function tuplify<T extends unknown[]>(...args: T): T {
   return args;

@@ -40,11 +40,12 @@
     "lint": "eslint -c ../../.eslintrc-prod.js --ext .js,.ts,.tsx src/",
     "lint:fix": "eslint -c ../../.eslintrc-prod.js --ext .js,.ts,.tsx --fix src/",
     "postinstall": "electron-builder install-app-deps",
-    "yalc:novastar": "yalc add @novastar/codec @novastar/net @novastar/screen @novastar/native"
+    "yalc:novastar": "yalc add @novastar/codec @novastar/net @novastar/screen @novastar/native",
+    "download-ffmpeg-mac": "mkdirp ffmpeg/darwin-x64 && cd ffmpeg/darwin-x64 && wget https://github.com/mifi/ffmpeg-build-script/releases/download/4.4.1-2/ffmpeg -O ffmpeg && wget https://github.com/mifi/ffmpeg-build-script/releases/download/4.4.1-2/ffprobe -O ffprobe && chmod +x ffmpeg && chmod +x ffprobe",
+    "download-ffmpeg-linux": "mkdirp ffmpeg/linux-x64 && cd ffmpeg/linux-x64 && wget https://github.com/mifi/ffmpeg-builds/releases/download/4.4.1/ffmpeg-release-amd64-static.tar.xz -O ffmpeg.xz && tar xvf ffmpeg.xz ffmpeg-4.4.1-amd64-static/ffmpeg ffmpeg-4.4.1-amd64-static/ffprobe --strip-components=1",
+    "download-ffmpeg-windows": "mkdirp ffmpeg/win32-x64 && cd ffmpeg/win32-x64 && npx download-cli https://github.com/mifi/ffmpeg-builds/releases/download/4.4.1/ffmpeg-n4.4.1-2-gcc33e73618-win64-gpl-4.4.zip --out . --filename ffmpeg.zip && 7z x ffmpeg.zip && npx shx mv ffmpeg-n4.4.1-2-gcc33e73618-win64-gpl-4.4/bin/ffmpeg.exe ./ && npx shx mv ffmpeg-n4.4.1-2-gcc33e73618-win64-gpl-4.4/bin/ffprobe.exe ./"
   },
   "dependencies": {
-    "@commitlint/cli": "^16.0.2",
-    "@commitlint/config-conventional": "^16.0.0",
     "@material-ui/core": "^4.8.3",
     "@material-ui/icons": "^4.5.1",
     "@mdx-js/react": "^1.6.22",
@@ -54,12 +55,8 @@
     "@novastar/native": "file:.yalc/@novastar/native",
     "@novastar/net": "file:.yalc/@novastar/net",
     "@novastar/screen": "file:.yalc/@novastar/screen",
+    "@novastar/serial": "file:.yalc/@novastar/serial",
     "@reduxjs/toolkit": "^1.5.0",
-    "@serialport/bindings": "^9.2.8",
-    "@types/jest": "^27.0.1",
-    "@types/node": "^17.0.8",
-    "@typescript-eslint/eslint-plugin": "^5.9.1",
-    "@typescript-eslint/parser": "^5.9.1",
     "ajv": "^8.0.5",
     "ansicolor": "^1.1.93",
     "bonjour-hap": "^3.6.2",
@@ -67,12 +64,15 @@
     "color-hash": "^2.0.1",
     "debug": "^4.3.1",
     "dotenv": "^11.0.0",
+    "electron-is-dev": "^2.0.0",
     "electron-log": "^4.0.3",
     "electron-store": "^8.0.0",
     "electron-updater": "^4.2.0",
-    "eslint": "^8.6.0",
-    "eslint-config-prettier": "^8.1.0",
-    "eslint-plugin-react": "^7.17.0",
+    "execa": "^6.1.0",
+    "express": "^4.17.3",
+    "file-type": "^17.1.1",
+    "formidable": "v2",
+    "helmet": "^5.0.2",
     "highcharts": "^9.0.0",
     "highcharts-react-official": "^3.0.0",
     "hotkeys-js": "^3.7.3",
@@ -81,7 +81,6 @@
     "material-ui-chip-input": "^2.0.0-beta.2",
     "node-machine-id": "^1.1.12",
     "notistack": "^1.0.1",
-    "pump": "^3.0.0",
     "range-parser": "^1.2.1",
     "rc-slider": "^9.1.0",
     "react": "^17.0.0",
@@ -93,13 +92,11 @@
     "source-map-support": "^0.5.20",
     "sqlite3": "^5.0.2",
     "suncalc": "^1.8.0",
-    "supports-color": "^9.0.0",
+    "supports-color": "^8",
     "tail": "^2.2.0",
     "tcp-port-used": "^1.0.2",
     "tiny-typed-emitter": "^2.0.3",
-    "ts-node": "^10.0.0",
     "typeface-roboto": "^1.1.13",
-    "typescript": "^4.0.3",
     "usb-detection": "https://github.com/sarakusha/node-usb-detection.git#fix_segfault_on_close",
     "valid-url": "^1.0.9"
   },
@@ -114,9 +111,10 @@
     "@types/dotenv": "^8.2.0",
     "@types/electron-devtools-installer": "^2.2.0",
     "@types/electron-json-storage": "^4.0.0",
+    "@types/express": "^4.17.13",
+    "@types/formidable": "^2.0.4",
     "@types/material-ui": "^0.21.6",
     "@types/mdx-js__react": "^1.5.5",
-    "@types/pump": "^1.1.1",
     "@types/range-parser": "^1.2.3",
     "@types/rc-slider": "^9.3.1",
     "@types/react": "^17.0.0",
@@ -134,7 +132,7 @@
     "css-loader": "5",
     "cz-conventional-changelog": "3.3.0",
     "devtron": "^1.4.0",
-    "electron": "17.0.0",
+    "electron": "17.2.0",
     "electron-builder": "^22.14.5",
     "electron-devtools-installer": "^3.1.1",
     "electron-react-devtools": "^0.5.3",
@@ -156,6 +154,16 @@
       "target": [
         "dmg",
         "zip"
+      ],
+      "extraResources": [
+        {
+          "from": "ffmpeg/darwin-${arch}/ffmpeg",
+          "to": "ffmpeg"
+        },
+        {
+          "from": "ffmpeg/darwin-${arch}/ffprobe",
+          "to": "ffprobe"
+        }
       ]
     },
     "linux": {
@@ -167,10 +175,30 @@
       }
     },
     "nsis": {
-      "artifactName": "${productName}-setup-${version}.${ext}"
+      "artifactName": "${productName}-setup-${version}.${ext}",
+      "extraResources": [
+        {
+          "from": "ffmpeg/win32-${arch}/ffmpeg.exe",
+          "to": "ffmpeg.exe"
+        },
+        {
+          "from": "ffmpeg/win32-${arch}/ffprobe.exe",
+          "to": "ffprobe.exe"
+        }
+      ]
     },
     "appImage": {
-      "artifactName": "${productName}.${ext}"
+      "artifactName": "${productName}.${ext}",
+      "extraResources": [
+        {
+          "from": "ffmpeg/linux-${arch}/ffmpeg",
+          "to": "ffmpeg"
+        },
+        {
+          "from": "ffmpeg/linux-${arch}/ffprobe",
+          "to": "ffprobe"
+        }
+      ]
     },
     "directories": {
       "buildResources": "resources"

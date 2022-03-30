@@ -11,6 +11,8 @@
 // eslint-disable-next-line import/no-extraneous-dependencies
 const webpack = require('webpack');
 
+const IGNORES = ['electron'];
+
 module.exports = config => {
   config.plugins.push(
     new webpack.DefinePlugin({
@@ -18,14 +20,11 @@ module.exports = config => {
     })
   );
   config.externals.push(
-    (() => {
-      const IGNORES = ['electron'];
-      return (context, request, callback) => {
-        if (IGNORES.indexOf(request) >= 0) {
-          return callback(null, `require('${request}')`);
-        }
-        return callback();
-      };
+    (() => (context, request, callback) => {
+      if (IGNORES.indexOf(request) >= 0) {
+        return callback(null, `require('${request}')`);
+      }
+      return callback();
     })(),
     'worker_threads',
     'usb-detection'

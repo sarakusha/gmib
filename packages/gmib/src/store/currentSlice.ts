@@ -16,7 +16,15 @@ import type { RootState } from './index';
 import { startAppListening } from './listenerMiddleware';
 import { addNovastar, removeNovastar, selectNovastarByPath } from './novastarsSlice';
 
-export type TabValues = 'devices' | 'screens' | 'autobrightness' | 'overheat' | 'log';
+export type TabValues =
+  | 'devices'
+  | 'screens'
+  | 'autobrightness'
+  | 'overheat'
+  | 'log'
+  | 'media'
+  | 'playlist'
+  | 'scheduler';
 
 export interface CurrentState {
   tab: TabValues | undefined;

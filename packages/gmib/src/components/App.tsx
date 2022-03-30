@@ -271,6 +271,30 @@ const App: React.FC = () => {
           <Divider />
           <List className={classes.drawerContent}>
             <Devices />
+            <ListItem
+              button
+              onClick={() => dispatch(setCurrentTab('playlist'))}
+              selected={tab === 'playlist'}
+              className={classes.listItem}
+            >
+              <ListItemText primary="Плейлист" />
+            </ListItem>
+            <ListItem
+              button
+              onClick={() => dispatch(setCurrentTab('media'))}
+              selected={tab === 'media'}
+              className={classes.listItem}
+            >
+              <ListItemText primary="Медиатека" />
+            </ListItem>
+            <ListItem
+              button
+              onClick={() => dispatch(setCurrentTab('scheduler'))}
+              selected={tab === 'scheduler'}
+              className={classes.listItem}
+            >
+              <ListItemText primary="Планировщик" />
+            </ListItem>
             <HttpPages />
             <ListItem
               button

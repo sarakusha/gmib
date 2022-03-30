@@ -133,11 +133,13 @@ const Devices: React.FC = () => {
     [reloadHandler]
   );
   const items = getItems(addresses, devices);
+  const hasDevices = devices.length + novastars.length > 0;
   return (
     <AccordionList
       name={tabName}
       title={title}
-      expanded={tab === 'devices' && devices.length + novastars.length > 0}
+      expanded={tab === 'devices' && hasDevices}
+      selected={tab === 'devices' && !hasDevices}
       onChange={currentTab => dispatch(setCurrentTab(currentTab as TabValues))}
     >
       {items.map(({ name, device }) => {

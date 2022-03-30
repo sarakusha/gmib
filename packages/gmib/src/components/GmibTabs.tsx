@@ -22,6 +22,7 @@ import Screens from './Screens';
 import OverheatProtectionTab from './OverheatProtectionTab';
 
 import TabContainer, { Props as ChildProps } from './TabContainer';
+import MediaTab from './MediaTab';
 
 const useStyles = makeStyles({
   root: {
@@ -88,6 +89,9 @@ const Tabs: React.FC = () => {
       </TabContainer>
       <TabContainer id="overheat" selected={tab === 'overheat'}>
         <OverheatProtectionTab />
+      </TabContainer>
+      <TabContainer id="media" selected={tab === 'media'}>
+        <MediaTab />
       </TabContainer>
     </div>
   );
