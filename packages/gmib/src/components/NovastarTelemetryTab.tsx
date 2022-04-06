@@ -8,10 +8,9 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { Box, Typography } from '@material-ui/core';
+import { Box, Typography } from '@mui/material';
 import { getScreenLocation } from '@novastar/screen';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { makeStyles } from '@material-ui/core/styles';
 import groupBy from 'lodash/groupBy';
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useDispatch, useSelector } from '../store';
@@ -27,17 +26,17 @@ import NovastarLoader, { CabinetInfo, NovastarSelector } from '../util/NovastarL
 import ModuleInfo from './ModuleInfo';
 import TelemetryToolbar from './TelemetryToolbar';
 
-const useStyles = makeStyles(theme => ({
-  grid: {
-    display: 'grid',
-    gap: 2,
-    // alignItems: 'stretch',
-  },
-  header: {
-    marginTop: theme.spacing(1),
-  },
-  item: {},
-}));
+// const useStyles = makeStyles(theme => ({
+//   grid: {
+//     display: 'grid',
+//     gap: 2,
+//     // alignItems: 'stretch',
+//   },
+//   header: {
+//     marginTop: theme.spacing(1),
+//   },
+//   item: {},
+// }));
 
 const NovastarTelemetryTab: React.FC<{ device: Novastar | undefined; selected?: boolean }> = ({
   device,
@@ -116,15 +115,17 @@ const NovastarTelemetryTab: React.FC<{ device: Novastar | undefined; selected?: 
     cabinets,
   ]);
   useEffect(() => setCabinets([]), [path]);
-  const classes = useStyles();
   return (
     <Box display={active ? 'inline-block' : 'none'}>
       {grouped.map(([screen, cabs], index) => (
         <React.Fragment key={screen}>
           <Typography color="inherit">Экран #{Number(screen) + 1}</Typography>
-          <div
-            className={classes.grid}
-            style={{ gridTemplateColumns: `repeat(${locations[index]?.cols ?? 0}, 1fr)` }}
+          <Box
+            sx={{
+              display: 'grid',
+              gap: '2px',
+              gridTemplateColumns: `repeat(${locations[index]?.cols ?? 0}, 1fr)`,
+            }}
           >
             {cabs.map(({ column, row, status, mcuVersion, fpgaVersion }) => {
               const info: Record<string, unknown> = {};
@@ -153,7 +154,7 @@ const NovastarTelemetryTab: React.FC<{ device: Novastar | undefined; selected?: 
                 </div>
               );
             })}
-          </div>
+          </Box>
         </React.Fragment>
       ))}
     </Box>

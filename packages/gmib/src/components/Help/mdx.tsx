@@ -9,8 +9,9 @@
  */
 
 import { MDXProviderComponents } from '@mdx-js/react';
+import { styled } from '@mui/material/styles';
 import React from 'react';
-import { withStyles } from '@material-ui/core/styles';
+// import withStyles from '@mui/styles/withStyles';
 import {
   Box,
   Checkbox,
@@ -22,10 +23,10 @@ import {
   TableHead,
   TableRow,
   Typography,
-} from '@material-ui/core';
+} from '@mui/material';
 
-const Blockquote = withStyles(theme => ({
-  root: {
+const Blockquote = styled(Paper)(({ theme }) => ({
+  '&.MuiPaper-root': {
     borderLeftWidth: 4,
     borderLeftStyle: 'solid',
     borderLeftColor: theme.palette.text.secondary, // '4px solid grey',
@@ -38,7 +39,7 @@ const Blockquote = withStyles(theme => ({
       marginBottom: 0,
     },
   },
-}))(Paper);
+}));
 
 const mdx: MDXProviderComponents = {
   p: props => <Typography paragraph {...props} />,
@@ -65,7 +66,7 @@ const mdx: MDXProviderComponents = {
       bgcolor="text.primary"
       color="background.paper"
       p={1}
-      borderRadius="borderRadius"
+      borderRadius={1}
       {...props}
     />
     // </Typography>

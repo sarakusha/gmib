@@ -9,10 +9,8 @@
  */
 
 /* eslint-disable indent,@typescript-eslint/no-explicit-any */
-import { makeStyles } from '@material-ui/core/styles';
-import { MenuItem, Select } from '@material-ui/core';
+import { Box, MenuItem, Select, SelectChangeEvent } from '@mui/material';
 import React, { memo, useCallback, useMemo } from 'react';
-import classNames from 'classnames';
 import { ValueState, ValueType } from '../store/devicesSlice';
 import { PropMetaInfo } from '../store/mibsSlice';
 import setDisplayName from '../util/setDisplayName';
@@ -25,20 +23,20 @@ const capitalize = (str?: string): string | undefined =>
 
 // const safeParseNumber = ({ value }: ValueState): number => parseFloat(value as string) || 0;
 
-const useStyles = makeStyles(_theme => ({
-  select: {
-    fontSize: 'inherit',
-  },
-  inputDirty: {
-    fontWeight: 'bold',
-  },
-  error: {
-    color: 'rgba(255,0,0,0.875) !important',
-  },
-  // readonly: {
-  //   whiteSpace: 'nowrap',
-  // },
-}));
+// const useStyles = makeStyles(_theme => ({
+//   select: {
+//     fontSize: 'inherit',
+//   },
+//   inputDirty: {
+//     fontWeight: 'bold',
+//   },
+//   error: {
+//     color: 'rgba(255,0,0,0.875) !important',
+//   },
+//   // readonly: {
+//   //   whiteSpace: 'nowrap',
+//   // },
+// }));
 
 type Props = {
   meta: PropMetaInfo;
@@ -50,13 +48,15 @@ type Props = {
 type CellComponent = React.FunctionComponent<ValueState>;
 
 const PropertyValueCell: React.FC<Props> = ({ meta, name, state, onChangeProperty }) => {
-  const classes = useStyles();
   const cellFactory = useCallback<() => CellComponent>(() => {
     const componentName = capitalize(name)!;
     const { simpleType, isWritable, enumeration, min, max, convertFrom = x => x } = meta;
     if (!isWritable) {
       return setDisplayName(componentName)(({ value, status, error }: ValueState) => (
-        <TableCell align="right" className={classNames({ [classes.error]: status === 'failed' })}>
+        <TableCell
+          align="right"
+          sx={{ color: status === 'failed' ? 'rgba(255,0,0,0.875) !important' : 'inherit' }}
+        >
           {status === 'failed' ? error : value}
         </TableCell>
       ));
@@ -66,7 +66,7 @@ const PropertyValueCell: React.FC<Props> = ({ meta, name, state, onChangePropert
     if (step === undefined) {
       step = simpleType === 'xs:float' || simpleType === 'xs.double' ? 0.01 : 1;
     }
-    const selectChanged = (event: React.ChangeEvent<{ name?: string; value: unknown }>): void => {
+    const selectChanged = (event: SelectChangeEvent): void => {
       onChangeProperty(name, event.target.value);
     };
     const rawValue = ({ error, value }: ValueState): ValueType => error ?? convertFrom(value) ?? '';
@@ -77,15 +77,24 @@ const PropertyValueCell: React.FC<Props> = ({ meta, name, state, onChangePropert
         return (
           <TableCell align="right">
             <Select
+              variant="standard"
               fullWidth
               disableUnderline
-              className={classNames(classes.select, { [classes.inputDirty]: isDirty })}
+              sx={{
+                fontSize: 'inherit',
+                fontWeight: isDirty ? 'bold' : 'inherit',
+              }}
               value={String(rawValue(props)) || ''}
               onChange={selectChanged}
             >
               {(error || !value) && (
                 <MenuItem value={error ?? ''}>
-                  <em className={classNames({ [classes.error]: error })}>{error ?? 'Не задано'}</em>
+                  <Box
+                    component="em"
+                    sx={{ color: error ? 'rgba(255,0,0,0.875) !important' : 'inherit' }}
+                  >
+                    {error ?? 'Не задано'}
+                  </Box>
                 </MenuItem>
               )}
               {enumeration.map(([key, itemValue]) => (
@@ -127,7 +136,7 @@ const PropertyValueCell: React.FC<Props> = ({ meta, name, state, onChangePropert
         dirty={props.status === 'pending'}
       />
     ));
-  }, [meta, name, classes, onChangeProperty]);
+  }, [meta, name, onChangeProperty]);
   const Cell = useMemo(() => cellFactory(), [cellFactory]);
   return <Cell {...state} />;
 };

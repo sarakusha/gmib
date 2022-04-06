@@ -8,25 +8,23 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { AccordionSummary as MuiAccordionSummary } from '@material-ui/core';
-import { withStyles } from '@material-ui/core/styles';
+import { AccordionSummary as MuiAccordionSummary } from '@mui/material';
+import extendStyled from '../util/extendStyled';
 
-const AccordionSummary = withStyles(theme => ({
-  root: {
-    backgroundColor: theme.palette.background.paper,
+const AccordionSummary = extendStyled(MuiAccordionSummary, {
+  selected: false,
+})(({ theme, selected }) => ({
+  '&.MuiAccordionSummary-root': {
+    backgroundColor: selected ? theme.palette.action.selected : theme.palette.background.paper,
     borderBottom: `1px solid ${theme.palette.divider}`,
     minHeight: 56,
-    '&$expanded': {
+    '&.Mui-expanded': {
       minHeight: 56,
-      // marginBottom: -10,
     },
   },
-  content: {
-    '&$expanded': {
-      margin: '12px 0',
-    },
+  '.MuiAccordionSummary-content.Mui-expanded': {
+    margin: '12px 0',
   },
-  expanded: {},
-}))(MuiAccordionSummary);
+}));
 
 export default AccordionSummary;

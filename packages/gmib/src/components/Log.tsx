@@ -8,8 +8,8 @@
  * the EULA file that was distributed with this source code.
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { Paper } from '@material-ui/core';
-import { makeStyles } from '@material-ui/core/styles';
+import { Box, Paper } from '@mui/material';
+import { Interpolation, Theme, keyframes } from '@mui/material/styles';
 import { parse } from 'ansicolor';
 import sanitizeHtml from 'sanitize-html';
 import ColorHash from 'color-hash';
@@ -22,42 +22,53 @@ import { selectCurrentTab } from '../store/currentSlice';
 
 const colorHash = new ColorHash();
 
-const useStyles = makeStyles(theme => ({
-  root: {
-    paddingLeft: theme.spacing(2),
-    paddingRight: theme.spacing(2),
-    paddingTop: theme.spacing(1),
-    paddingBottom: theme.spacing(1),
-    width: '100%',
-    height: '100%',
-  },
-  '@keyframes slideIn': {
-    '0%': {
-      marginLeft: '100%',
-      backgroundColor: theme.palette.action.disabledBackground,
-    },
-    '5%': {
-      marginLeft: '0%',
-    },
-    '100%': {
-      backgroundColor: theme.palette.background.paper,
-    },
-  },
-  log: {
-    height: '100%',
-    overflow: 'auto',
-    '& > div': {
-      paddingLeft: theme.spacing(1),
-      whiteSpace: 'nowrap',
-      animationDuration: '5s',
-      animationName: '$slideIn',
-    },
-  },
-}));
+const slideIn: Interpolation<Theme> = theme => keyframes`
+  0% {
+    margin-left: 100%;
+    background-color: ${theme.palette.action.disabledBackground};
+  }
+  5% {
+    margin-left: 0;
+  }
+  100% {
+    background-color: ${theme.palette.background.paper};
+  } `;
+
+// const useStyles = makeStyles(theme => ({
+//   root: {
+//     paddingLeft: theme.spacing(2),
+//     paddingRight: theme.spacing(2),
+//     paddingTop: theme.spacing(1),
+//     paddingBottom: theme.spacing(1),
+//     width: '100%',
+//     height: '100%',
+//   },
+//   '@keyframes slideIn': {
+//     '0%': {
+//       marginLeft: '100%',
+//       backgroundColor: theme.palette.action.disabledBackground,
+//     },
+//     '5%': {
+//       marginLeft: '0%',
+//     },
+//     '100%': {
+//       backgroundColor: theme.palette.background.paper,
+//     },
+//   },
+//   log: {
+//     height: '100%',
+//     overflow: 'auto',
+//     '& > div': {
+//       paddingLeft: theme.spacing(1),
+//       whiteSpace: 'nowrap',
+//       animationDuration: '5s',
+//       animationName: '$slideIn',
+//     },
+//   },
+// }));
 
 const Log: React.FC = () => {
   const refLog = useRef<HTMLDivElement>(null);
-  const classes = useStyles();
   const [, setState] = useState(0);
   useEffect(() => {
     const logListener = (line: string): void => {
@@ -128,9 +139,21 @@ const Log: React.FC = () => {
     return noop;
   }, [setToolbar, tab]);
   return (
-    <div className={classes.root}>
-      <Paper ref={refLog} className={classes.log} />
-    </div>
+    <Box sx={{ px: 2, py: 1, width: 1, height: 1 }}>
+      <Paper
+        ref={refLog}
+        sx={{
+          height: 1,
+          overflow: 'auto',
+          '& > div': {
+            pl: 1,
+            whiteSpace: 'nowrap',
+            animation: theme => `${slideIn(theme)} 5s`,
+          },
+          fontSize: 14,
+        }}
+      />
+    </Box>
   );
 };
 

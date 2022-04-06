@@ -8,7 +8,7 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { makeStyles } from '@material-ui/core/styles';
+import { FunctionInterpolation, useTheme } from '@emotion/react';
 import {
   Box,
   IconButton,
@@ -18,14 +18,15 @@ import {
   ListItemText,
   Tooltip,
   Typography,
-} from '@material-ui/core';
-import LanIcon from '@material-ui/icons/SettingsInputHdmi';
-import CloseIcon from '@material-ui/icons/Close';
-import LinkIcon from '@material-ui/icons/Link';
-import UsbIcon from '@material-ui/icons/Usb';
+} from '@mui/material';
+import { Theme, styled } from '@mui/material/styles';
+import LanIcon from '@mui/icons-material/SettingsInputHdmi';
+import CloseIcon from '@mui/icons-material/Close';
+import LinkIcon from '@mui/icons-material/Link';
+import UsbIcon from '@mui/icons-material/Usb';
 import { Address, findDeviceById } from '@nibus/core';
 import React, { useCallback, useMemo } from 'react';
-import ReloadIcon from '@material-ui/icons/Refresh';
+import ReloadIcon from '@mui/icons-material/Refresh';
 import { useDispatch, useSelector } from '../store';
 import { selectScreenAddresses } from '../store/configSlice';
 import {
@@ -44,19 +45,6 @@ import { findNetNovastarDevices, selectAllNovastars } from '../store/novastarsSl
 import AccordionList from './AccordionList';
 import DeviceIcon from './DeviceIcon';
 import { reloadSession } from '../store/sessionSlice';
-
-const useStyles = makeStyles(theme => ({
-  wrapper: {
-    position: 'relative',
-  },
-  kind: {
-    color: theme.palette.primary.light,
-    position: 'absolute',
-    bottom: 0,
-    right: -16,
-    fontSize: '1em',
-  },
-}));
 
 const tabName = 'devices';
 
@@ -97,8 +85,20 @@ const getItems = (addresses: string[], devices: DeviceStateWithParent[]): Device
 
 const noWrap = { noWrap: true };
 
+const Wrapper = styled('div')`
+  position: relative;
+`;
+
+const kindStyle: FunctionInterpolation<Theme> = theme => ({
+  color: theme.palette.primary.light,
+  position: 'absolute',
+  bottom: 0,
+  right: -16,
+  fontSize: '1em',
+});
+
 const Devices: React.FC = () => {
-  const classes = useStyles();
+  const theme = useTheme();
   const dispatch = useDispatch();
   const devices = useSelector(selectAllDevicesWithParent);
   const current = useSelector(selectCurrentDeviceId);
@@ -166,20 +166,20 @@ const Devices: React.FC = () => {
             aria-controls={`tabpanel-${id}`}
           >
             <ListItemIcon>
-              <div className={classes.wrapper}>
+              <Wrapper>
                 <DeviceIcon color="inherit" device={device} />
                 {parent ? (
                   <Tooltip title={parent.address}>
-                    <LinkIcon className={classes.kind} />
+                    <LinkIcon css={kindStyle(theme)} />
                   </Tooltip>
                 ) : (
                   path && (
                     <Tooltip title={path}>
-                      <UsbIcon className={classes.kind} />
+                      <UsbIcon css={kindStyle(theme)} />
                     </Tooltip>
                   )
                 )}
-              </div>
+              </Wrapper>
             </ListItemIcon>
             <ListItemText
               primaryTypographyProps={noWrap}
@@ -213,16 +213,16 @@ const Devices: React.FC = () => {
           onClick={clickHandler}
         >
           <ListItemIcon>
-            <div className={classes.wrapper}>
+            <Wrapper>
               <DeviceIcon color="inherit" />
               <Tooltip title={card.path}>
                 {card.path[0] >= '0' && card.path[0] <= '9' ? (
-                  <LanIcon className={classes.kind} />
+                  <LanIcon css={kindStyle(theme)} />
                 ) : (
-                  <UsbIcon className={classes.kind} />
+                  <UsbIcon css={kindStyle(theme)} />
                 )}
               </Tooltip>
-            </div>
+            </Wrapper>
           </ListItemIcon>
           <ListItemText
             primaryTypographyProps={noWrap}

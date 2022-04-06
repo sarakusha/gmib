@@ -3,7 +3,9 @@
   "compilerOptions": {
     "target": "es2019",
 //    "module": "esnext",
-    "jsx": "react",
+//    "jsx": "preserve",
+    "jsx": "react-jsx",
+    "jsxImportSource": "@emotion/react",
     "allowJs": true,
     //    "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,

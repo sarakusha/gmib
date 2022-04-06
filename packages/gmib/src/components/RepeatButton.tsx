@@ -10,7 +10,7 @@
 
 import React, { useCallback, useEffect, useRef } from 'react';
 
-import { IconButton, IconButtonProps } from '@material-ui/core';
+import { IconButton, IconButtonProps } from '@mui/material';
 
 type RepeatReturn = Pick<Required<IconButtonProps>, 'onMouseDown' | 'onMouseUp'>;
 

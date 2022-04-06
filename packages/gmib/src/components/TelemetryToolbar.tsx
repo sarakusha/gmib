@@ -8,34 +8,34 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { makeStyles } from '@material-ui/core/styles';
-import { CircularProgress, IconButton, Tooltip } from '@material-ui/core';
-import CancelIcon from '@material-ui/icons/Cancel';
-import Filter1 from '@material-ui/icons/Filter1';
-import Filter2 from '@material-ui/icons/Filter2';
-import Filter3 from '@material-ui/icons/Filter3';
-import Filter4 from '@material-ui/icons/Filter4';
-import Filter5 from '@material-ui/icons/Filter5';
-import Filter6 from '@material-ui/icons/Filter6';
-import Filter7 from '@material-ui/icons/Filter7';
-import StartIcon from '@material-ui/icons/Refresh';
+import { IconButton, Tooltip } from '@mui/material';
+import CancelIcon from '@mui/icons-material/Cancel';
+import Filter1 from '@mui/icons-material/Filter1';
+import Filter2 from '@mui/icons-material/Filter2';
+import Filter3 from '@mui/icons-material/Filter3';
+import Filter4 from '@mui/icons-material/Filter4';
+import Filter5 from '@mui/icons-material/Filter5';
+import Filter6 from '@mui/icons-material/Filter6';
+import Filter7 from '@mui/icons-material/Filter7';
+import StartIcon from '@mui/icons-material/Refresh';
 import React, { useCallback, useState } from 'react';
 import PropertySelectorDialog, { getEnumValues } from '../dialogs/PropertySelectorDialog';
 import { noop } from '../util/helpers';
+import BusyButton from './BusyButton';
 
-const useStyles = makeStyles(theme => ({
-  fabProgress: {
-    color: theme.palette.secondary.light,
-    position: 'absolute',
-    pointerEvents: 'none',
-    top: 0,
-    left: 0,
-    zIndex: 1,
-  },
-  wrapper: {
-    position: 'relative',
-  },
-}));
+// const useStyles = makeStyles(theme => ({
+//   fabProgress: {
+//     color: theme.palette.secondary.light,
+//     position: 'absolute',
+//     pointerEvents: 'none',
+//     top: 0,
+//     left: 0,
+//     zIndex: 1,
+//   },
+//   wrapper: {
+//     position: 'relative',
+//   },
+// }));
 
 const icons = [Filter1, Filter2, Filter3, Filter4, Filter5, Filter6, Filter7] as const;
 
@@ -58,7 +58,6 @@ const TelemetryToolbar: React.FC<Props> = ({
   properties,
   selectors = new Set(properties && getEnumValues(properties)),
 }) => {
-  const classes = useStyles();
   const [selectorOpen, setSelectorOpen] = useState(false);
   const openSelectorHandler = useCallback(() => setSelectorOpen(true), []);
   const closeSelectorHandler = (value: Set<number>): void => {
@@ -70,29 +69,24 @@ const TelemetryToolbar: React.FC<Props> = ({
     <>
       {properties && (
         <Tooltip title="Задать переменные">
-          <div className={classes.wrapper}>
-            <IconButton color="inherit" onClick={openSelectorHandler}>
-              <FilterIcon />
-            </IconButton>
-          </div>
+          <IconButton color="inherit" onClick={openSelectorHandler} size="large">
+            <FilterIcon />
+          </IconButton>
         </Tooltip>
       )}
       {loading || isBusy ? (
-        <Tooltip title={loading && 'Отменить опрос'}>
-          <div className={classes.wrapper}>
-            <IconButton onClick={cancel} color="inherit" disabled={!loading}>
-              <CancelIcon />
-            </IconButton>
-            <CircularProgress size={48} className={classes.fabProgress} />
-          </div>
-        </Tooltip>
+        <BusyButton
+          icon={<CancelIcon />}
+          title={'Отменить опрос'}
+          onClick={cancel}
+          isBusy={isBusy > 0 || loading}
+          disabled={!loading}
+        />
       ) : (
         <Tooltip title="Запустить опрос модулей" enterDelay={500}>
-          <div className={classes.wrapper}>
-            <IconButton onClick={start} color="inherit">
-              <StartIcon />
-            </IconButton>
-          </div>
+          <IconButton onClick={start} color="inherit" size="large">
+            <StartIcon />
+          </IconButton>
         </Tooltip>
       )}
       {properties && (

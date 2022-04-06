@@ -7,12 +7,12 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import { makeStyles } from '@material-ui/core/styles';
-import { Badge, IconButton, Popover, TextField, Tooltip } from '@material-ui/core';
+import { Badge, Box, IconButton, Popover, TextField, Tooltip } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import React, { useEffect, useReducer, useState } from 'react';
-import LocationOnIcon from '@material-ui/icons/LocationOn';
-import HelpIcon from '@material-ui/icons/Help';
-import TimelineIcon from '@material-ui/icons/Timeline';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import HelpIcon from '@mui/icons-material/Help';
+import TimelineIcon from '@mui/icons-material/Timeline';
 import BrightnessHistoryDialog from '../dialogs/BrightnessHistoryDialog';
 
 import { selectLocation, selectSessionVersion, setLocationProp } from '../store/configSlice';
@@ -22,29 +22,6 @@ import { createPropsReducer, toNumber } from '../util/helpers';
 import FormFieldSet from './FormFieldSet';
 import { useDispatch, useSelector } from '../store';
 import AutobrightnessHelp from './Help/AutobrightnessHelp';
-
-const useStyles = makeStyles(theme => ({
-  content: {
-    padding: theme.spacing(1),
-    width: '30ch',
-  },
-  location: {
-    '& > div': {
-      display: 'flex',
-      flexDirection: 'row',
-      paddingTop: theme.spacing(1),
-    },
-  },
-  item: {
-    flex: 1,
-    '& ~ $item': {
-      marginLeft: theme.spacing(2),
-    },
-  },
-  help: {
-    padding: theme.spacing(1),
-  },
-}));
 
 type ActionType = 'location' | 'help';
 type State = Record<ActionType, HTMLButtonElement | null>;
@@ -65,8 +42,15 @@ const validateLocation = ({ longitude, latitude }: Config['location'] = {}): str
   return undefined;
 };
 
+const Item = styled(TextField)(({ theme }) => ({
+  flex: 1,
+  width: '10ch',
+  '& ~ &': {
+    marginLeft: theme.spacing(2),
+  },
+}));
+
 const AutobrightnessToolbar: React.FC = () => {
-  const classes = useStyles();
   const current = useSelector(selectLocation);
   const version = useSelector(selectSessionVersion);
   const [location, setLocation] = useReducer(locationReducer, {
@@ -110,20 +94,20 @@ const AutobrightnessToolbar: React.FC = () => {
     <div>
       {version && (
         <Tooltip title={'История'}>
-          <IconButton color="inherit" onClick={() => setHistoryOpen(true)}>
+          <IconButton color="inherit" onClick={() => setHistoryOpen(true)} size="large">
             <TimelineIcon />
           </IconButton>
         </Tooltip>
       )}
       <Tooltip title={`${isValid ? 'Задать' : 'Укажите'} координаты экрана`}>
-        <IconButton color="inherit" onClick={handleClick('location')}>
+        <IconButton color="inherit" onClick={handleClick('location')} size="large">
           <Badge variant="dot" color="secondary" invisible={isValid}>
             <LocationOnIcon />
           </Badge>
         </IconButton>
       </Tooltip>
       <Tooltip title="Справка задания автояркости">
-        <IconButton color="inherit" onClick={handleClick('help')}>
+        <IconButton color="inherit" onClick={handleClick('help')} size="large">
           <HelpIcon />
         </IconButton>
       </Tooltip>
@@ -141,15 +125,26 @@ const AutobrightnessToolbar: React.FC = () => {
           horizontal: 'right',
         }}
       >
-        <div className={classes.content}>
+        <Box
+          sx={{
+            p: 1,
+            width: '30ch',
+          }}
+        >
           <FormFieldSet
             legend="Координаты экрана"
             helper={error}
             error={!!error}
-            className={classes.location}
+            sx={{
+              '& > div': {
+                display: 'flex',
+                flexDirection: 'row',
+                pt: 1,
+              },
+            }}
             fullWidth
           >
-            <TextField
+            <Item
               type="number"
               label="Широта"
               value={location.latitude}
@@ -160,9 +155,9 @@ const AutobrightnessToolbar: React.FC = () => {
                 min: -90,
                 max: 90,
               }}
-              className={classes.item}
+              variant="standard"
             />
-            <TextField
+            <Item
               type="number"
               label="Долгота"
               value={location.longitude}
@@ -173,10 +168,10 @@ const AutobrightnessToolbar: React.FC = () => {
                 min: -180,
                 max: 180,
               }}
-              className={classes.item}
+              variant="standard"
             />
           </FormFieldSet>
-        </div>
+        </Box>
       </Popover>
       <Popover
         open={helpOpen}
@@ -192,9 +187,9 @@ const AutobrightnessToolbar: React.FC = () => {
           horizontal: 'right',
         }}
       >
-        <div className={classes.help}>
+        <Box sx={{ p: 1 }}>
           <AutobrightnessHelp />
-        </div>
+        </Box>
       </Popover>
       <BrightnessHistoryDialog open={historyOpen} onClose={() => setHistoryOpen(false)} />
     </div>

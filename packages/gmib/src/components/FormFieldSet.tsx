@@ -14,7 +14,7 @@ import {
   FormHelperText,
   FormLabel,
   FormLabelProps,
-} from '@material-ui/core';
+} from '@mui/material';
 import React from 'react';
 
 export interface FormFieldSetProps extends FormControlProps {

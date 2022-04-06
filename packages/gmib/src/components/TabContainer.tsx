@@ -8,20 +8,19 @@
  * the EULA file that was distributed with this source code.
  */
 
+import { Box } from '@mui/material';
 import { DeviceId } from '@nibus/core';
 import React from 'react';
-import { makeStyles } from '@material-ui/core/styles';
-import classNames from 'classnames';
 
-const useStyles = makeStyles({
-  root: {
-    width: '100%',
-    display: 'flex',
-  },
-  hidden: {
-    display: 'none',
-  },
-});
+// const useStyles = makeStyles({
+//   root: {
+//     width: '100%',
+//     display: 'flex',
+//   },
+//   hidden: {
+//     display: 'none',
+//   },
+// });
 
 export type Props = {
   id: string;
@@ -33,18 +32,15 @@ export type MinihostTabProps = {
   selected?: boolean;
 };
 
-const TabContainer: React.FC<Props> = ({ id, children, selected = true }) => {
-  const classes = useStyles();
-  return (
-    <div
-      id={`tabpanel-${id}`}
-      aria-labelledby={`tab-${id}`}
-      hidden={!selected}
-      className={classNames(classes.root, { [classes.hidden]: !selected })}
-    >
-      {children}
-    </div>
-  );
-};
+const TabContainer: React.FC<Props> = ({ id, children, selected = true }) => (
+  <Box
+    id={`tabpanel-${id}`}
+    aria-labelledby={`tab-${id}`}
+    hidden={!selected}
+    sx={{ display: selected ? 'flex' : 'none', width: '100%' }}
+  >
+    {children}
+  </Box>
+);
 
 export default TabContainer;

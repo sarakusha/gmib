@@ -8,79 +8,79 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { makeStyles } from '@material-ui/core/styles';
-import { Paper, Tooltip, Typography } from '@material-ui/core';
+import { Box, Paper, Tooltip, Typography } from '@mui/material';
 import React from 'react';
-import ErrorIcon from '@material-ui/icons/Clear';
+import { styled } from '@mui/material/styles';
+import ErrorIcon from '@mui/icons-material/Clear';
 import { VertexType } from '../util/Minihost3Loader';
 
 // const bg = grey[100];
 
-const useStyles = makeStyles(theme => ({
-  root: {
-    margin: theme.spacing(1) / 2,
-    display: 'flex',
-    flexDirection: 'row',
-    flexShrink: 0,
-    height: '100%',
-  },
-  pos: {
-    backgroundColor: theme.palette.grey[100],
-    color: theme.palette.grey[500],
-    flex: 0,
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    borderBottomLeftRadius: 5,
-    borderTopLeftRadius: 5,
-    minWidth: '1.2rem',
-    '&>*': {
-      padding: 2,
-      textAlign: 'right',
-    },
-  },
-  xpos: {
-    borderBottom: '1px solid white',
-  },
-  ypos: {},
-  table: {
-    // backgroundColor: 'gray',
-    // minWidth: '5ch',
-    flex: 0,
-    borderCollapse: 'collapse',
-    margin: 2,
-  },
-  typo: {
-    fontSize: theme.typography.pxToRem(13),
-  },
-  name: {
-    padding: 0,
-    paddingRight: theme.spacing(1),
-    borderCollapse: 'collapse',
-  },
-  value: {
-    textAlign: 'right',
-    borderCollapse: 'collapse',
-    padding: 0,
-  },
-  unit: {
-    borderCollapse: 'collapse',
-    padding: 0,
-    opacity: 0.7,
-  },
-  error: {
-    width: '100%',
-    // fontSize: '300%',
-    display: 'flex',
-    opacity: 0.3,
-    alignItems: 'center',
-    justifyContent: 'center',
-    '& > *': {
-      margin: 0,
-      fontSize: '300%',
-    },
-  },
-}));
+// const useStyles = makeStyles(theme => ({
+//   root: {
+//     margin: theme.spacing(0.5),
+//     display: 'flex',
+//     flexDirection: 'row',
+//     flexShrink: 0,
+//     height: '100%',
+//   },
+//   pos: {
+//     backgroundColor: theme.palette.grey[100],
+//     color: theme.palette.grey[500],
+//     flex: 0,
+//     display: 'flex',
+//     flexDirection: 'column',
+//     justifyContent: 'center',
+//     borderBottomLeftRadius: 5,
+//     borderTopLeftRadius: 5,
+//     minWidth: '1.2rem',
+//     '&>*': {
+//       padding: 2,
+//       textAlign: 'right',
+//     },
+//   },
+//   xpos: {
+//     borderBottom: '1px solid white',
+//   },
+//   ypos: {},
+//   table: {
+//     // backgroundColor: 'grey',
+//     // minWidth: '5ch',
+//     flex: 0,
+//     borderCollapse: 'collapse',
+//     margin: 2,
+//   },
+//   typo: {
+//     fontSize: theme.typography.pxToRem(13),
+//   },
+//   name: {
+//     padding: 0,
+//     paddingRight: theme.spacing(1),
+//     borderCollapse: 'collapse',
+//   },
+//   value: {
+//     textAlign: 'right',
+//     borderCollapse: 'collapse',
+//     padding: 0,
+//   },
+//   unit: {
+//     borderCollapse: 'collapse',
+//     padding: 0,
+//     opacity: 0.7,
+//   },
+//   error: {
+//     width: '100%',
+//     // fontSize: '300%',
+//     display: 'flex',
+//     opacity: 0.3,
+//     alignItems: 'center',
+//     justifyContent: 'center',
+//     '& > *': {
+//       margin: 0,
+//       fontSize: '300%',
+//     },
+//   },
+// }));
 
 type Props = {
   info?: Record<string, unknown>;
@@ -95,66 +95,74 @@ type PosProps = {
 // eslint-disable-next-line react/no-unused-prop-types
 type ValueType<T = string | number> = { name?: string; value?: T; index?: number | string };
 
-const Temperature: React.FC<ValueType> = ({ value }) => {
-  const classes = useStyles();
-  return (
-    <tr>
-      <td className={classes.name}>
-        <Typography variant="body2" classes={{ root: classes.typo }}>
-          T
-        </Typography>
-      </td>
-      <td className={classes.value}>
-        <Typography variant="body2">
-          <strong>{value}</strong>
-        </Typography>
-      </td>
-      <td className={classes.unit}>
-        <Typography variant="body2">&deg;C</Typography>
-      </td>
-    </tr>
-  );
-};
+const Name = styled('td')(({ theme }) => ({
+  padding: [0, theme.spacing(1), 0, 0],
+  borderCollapse: 'collapse',
+}));
 
-const VertexElement: React.FC<ValueType> = ({ name, value, index }) => {
-  const classes = useStyles();
-  return (
-    <tr>
-      <td className={classes.name}>
-        <Typography variant="body2">
-          {name}
-          <sub>{index}</sub>
-        </Typography>
-      </td>
-      <td className={classes.value}>
-        <Typography variant="body2">
-          <strong>{value}</strong>
-        </Typography>
-      </td>
-    </tr>
-  );
-};
+const Value = styled('td')({
+  textAlign: 'right',
+  borderCollapse: 'collapse',
+  padding: 0,
+});
 
-const Voltage: React.FC<ValueType> = ({ value, index }) => {
-  const classes = useStyles();
-  return (
-    <tr>
-      <td className={classes.name}>
-        <Typography variant="body2">
-          V<sub>{index}</sub>
-        </Typography>
-      </td>
-      <td className={classes.value}>
-        <Typography variant="body2">
-          <strong>{value !== undefined && Number(value) / 1000}</strong>
-        </Typography>
-      </td>
-      <td className={classes.unit}>
-        <Typography variant="body2">В</Typography>
-      </td>
-    </tr>
-  );
-};
+const Unit = styled('td')({
+  borderCollapse: 'collapse',
+  padding: 0,
+  opacity: 0.7,
+});
+
+const Temperature: React.FC<ValueType> = ({ value }) => (
+  <tr>
+    <Name>
+      <Typography variant="body2" sx={{ fontSize: theme => theme.typography.pxToRem(13) }}>
+        T
+      </Typography>
+    </Name>
+    <Value>
+      <Typography variant="body2">
+        <strong>{value}</strong>
+      </Typography>
+    </Value>
+    <Unit>
+      <Typography variant="body2">&deg;C</Typography>
+    </Unit>
+  </tr>
+);
+
+const VertexElement: React.FC<ValueType> = ({ name, value, index }) => (
+  <tr>
+    <Name>
+      <Typography variant="body2">
+        {name}
+        <sub>{index}</sub>
+      </Typography>
+    </Name>
+    <Value>
+      <Typography variant="body2">
+        <strong>{value}</strong>
+      </Typography>
+    </Value>
+  </tr>
+);
+
+const Voltage: React.FC<ValueType> = ({ value, index }) => (
+  <tr>
+    <Name>
+      <Typography variant="body2">
+        V<sub>{index}</sub>
+      </Typography>
+    </Name>
+    <Value>
+      <Typography variant="body2">
+        <strong>{value !== undefined && Number(value) / 1000}</strong>
+      </Typography>
+    </Value>
+    <Unit>
+      <Typography variant="body2">В</Typography>
+    </Unit>
+  </tr>
+);
 
 const Vertex: React.FC<ValueType<VertexType>> = ({ name, value }) => (
   <>
@@ -165,21 +173,20 @@ const Vertex: React.FC<ValueType<VertexType>> = ({ name, value }) => (
 
 const Row: React.FC<ValueType> = ({ value, name }) => {
   const [, title, sub] = name?.match(/([^(]*)(?:\(?(.*)\))?/) ?? [null, name, null];
-  const classes = useStyles();
   return (
     <tr>
-      <td className={classes.name}>
+      <Name>
         <Typography variant="body2">
           {title}
           <sub>{sub}</sub>
         </Typography>
-      </td>
-      <td className={classes.value}>
+      </Name>
+      <Value>
         <Typography variant="body2">
           <strong>{value}</strong>
         </Typography>
-      </td>
-      <td className={classes.unit}>&nbsp;</td>
+      </Value>
+      <Unit>&nbsp;</Unit>
     </tr>
   );
 };
@@ -197,49 +204,92 @@ const propMap: PropRenderType = {
   default: ({ value, ...props }) => <Row value={value as string | number | undefined} {...props} />,
 };
 
-const Position: React.FC<PosProps> = ({ x, y }) => {
-  const classes = useStyles();
-  return (
-    <div className={classes.pos}>
-      <div className={classes.xpos}>
-        <Typography variant="caption" color="inherit">
-          <b>{x}</b>
-        </Typography>
-      </div>
-      <div className={classes.ypos}>
-        <Typography variant="caption" color="inherit">
-          <b>{y}</b>
-        </Typography>
-      </div>
+const Position: React.FC<PosProps> = ({ x, y }) => (
+  <Box
+    sx={{
+      bgcolor: 'grey.100',
+      color: 'grey.500',
+      flex: 0,
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'center',
+      borderLeftRadius: '5px',
+      minWidth: '1.2rem',
+      '& > *': {
+        padding: '2px',
+        textAlign: 'right',
+      },
+      lineHeight: 1,
+    }}
+  >
+    <Box
+      sx={{
+        borderBottom: 1,
+        borderColor: 'white',
+      }}
+    >
+      <Typography variant="caption" color="inherit">
+        <b>{x}</b>
+      </Typography>
+    </Box>
+    <div>
+      <Typography variant="caption" color="inherit">
+        <b>{y}</b>
+      </Typography>
     </div>
-  );
-};
+  </Box>
+);
 
-const ModuleInfo: React.FC<Props> = ({ info, error, x, y }) => {
-  const classes = useStyles();
-  return (
-    <Paper className={classes.root} elevation={1}>
-      <Position x={x} y={y} />
-      {error && (
-        <Tooltip title={error} enterDelay={300}>
-          <div className={classes.error}>
-            <ErrorIcon />
-          </div>
-        </Tooltip>
-      )}
-      {info && (
-        <table className={classes.table}>
-          <tbody>
-            {Object.entries(info).map(([name, value]) => {
-              const ModuleRow = propMap[name] ?? propMap.default;
-              return <ModuleRow key={name} name={name} value={value} />;
-            })}
-          </tbody>
-        </table>
-      )}
-    </Paper>
-  );
-};
+const ModuleInfo: React.FC<Props> = ({ info, error, x, y }) => (
+  <Paper
+    sx={{
+      // m: 0.5,
+      display: 'flex',
+      flexDirection: 'row',
+      flexShrink: 0,
+      height: 1,
+    }}
+    elevation={1}
+  >
+    <Position x={x} y={y} />
+    {error && (
+      <Tooltip title={error} enterDelay={300}>
+        <Box
+          sx={{
+            width: 1,
+            display: 'flex',
+            opacity: 0.3,
+            alignItems: 'center',
+            justifyContent: 'center',
+            '& > *': {
+              m: 0,
+              fontSize: '300%',
+            },
+          }}
+        >
+          <ErrorIcon />
+        </Box>
+      </Tooltip>
+    )}
+    {info && (
+      <Box
+        component="table"
+        sx={{
+          flex: 0,
+          borderCollapse: 'collapse',
+          m: '2px',
+        }}
+      >
+        <tbody>
+          {Object.entries(info).map(([name, value]) => {
+            const ModuleRow = propMap[name] ?? propMap.default;
+            return <ModuleRow key={name} name={name} value={value} />;
+          })}
+        </tbody>
+      </Box>
+    )}
+  </Paper>
+);
 
 // export default compose<Props, Props>(hot, React.memo)(ModuleInfo);
 export default ModuleInfo;

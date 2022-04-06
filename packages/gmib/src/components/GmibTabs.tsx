@@ -7,9 +7,9 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
+import { Box } from '@mui/material';
 import { DeviceId } from '@nibus/core';
 import React, { useEffect, useState } from 'react';
-import { makeStyles } from '@material-ui/core/styles';
 import { selectDeviceById, selectDeviceIds } from '../store/devicesSlice';
 import { useSelector } from '../store';
 import { selectCurrentDeviceId, selectCurrentTab } from '../store/currentSlice';
@@ -24,17 +24,16 @@ import OverheatProtectionTab from './OverheatProtectionTab';
 import TabContainer, { Props as ChildProps } from './TabContainer';
 import MediaTab from './MediaTab';
 
-const useStyles = makeStyles({
-  root: {
-    display: 'flex',
-    width: '100%',
-    overflow: 'auto',
-    padding: 0,
-  },
-});
+// const useStyles = makeStyles({
+//   root: {
+//     display: 'flex',
+//     width: '100%',
+//     overflow: 'auto',
+//     padding: 0,
+//   },
+// });
 
 const Tabs: React.FC = () => {
-  const classes = useStyles();
   const [devChildren, setDevChildren] = useState<
     React.ReactElement<ChildProps, typeof TabContainer>[]
   >([]);
@@ -69,7 +68,7 @@ const Tabs: React.FC = () => {
   }, [ids]);
 
   return (
-    <div className={classes.root}>
+    <Box sx={{ display: 'flex', width: '100%', p: 0, overflow: 'auto' }}>
       {devChildren.map(child =>
         React.cloneElement(child, {
           selected: currentDeviceId === child.props.id && tab === 'devices',
@@ -93,7 +92,7 @@ const Tabs: React.FC = () => {
       <TabContainer id="media" selected={tab === 'media'}>
         <MediaTab />
       </TabContainer>
-    </div>
+    </Box>
   );
 };
 

@@ -10,7 +10,6 @@
 
 import { DeviceId } from '@nibus/core';
 import React, { useCallback, useMemo, useReducer } from 'react';
-import { makeStyles } from '@material-ui/core/styles';
 import {
   Button,
   Checkbox,
@@ -19,7 +18,7 @@ import {
   DialogContent,
   DialogTitle,
   FormControlLabel,
-} from '@material-ui/core';
+} from '@mui/material';
 import { ipcRenderer } from 'electron';
 import fs from 'fs';
 import some from 'lodash/some';
@@ -31,16 +30,16 @@ import type { ValueState, ValueType } from '../store/devicesSlice';
 import FormFieldSet from '../components/FormFieldSet';
 import { selectMibByName } from '../store/mibsSlice';
 
-const useStyles = makeStyles(theme => ({
-  root: {
-    display: 'flex',
-  },
-  formControl: {
-    margin: theme.spacing(3),
-    display: 'flex',
-    flexDirection: 'column',
-  },
-}));
+// const useStyles = makeStyles(theme => ({
+//   root: {
+//     display: 'flex',
+//   },
+//   formControl: {
+//     margin: theme.spacing(3),
+//     display: 'flex',
+//     flexDirection: 'column',
+//   },
+// }));
 
 type Props = {
   deviceId?: DeviceId;
@@ -80,7 +79,6 @@ const extractValues = (props: Record<string, ValueState>): Record<string, ValueT
   );
 
 const SaveDialog: React.FC<Props> = ({ deviceId, open, close }) => {
-  const classes = useStyles();
   const { mib = 0, props = {} } = useDevice(deviceId) ?? {};
   const meta = useSelector(state => selectMibByName(state, mib));
   const [names, initial] = useMemo(() => {
@@ -156,8 +154,11 @@ const SaveDialog: React.FC<Props> = ({ deviceId, open, close }) => {
       aria-describedby="select-properties-description"
     >
       <DialogTitle id="select-properties-title">Сохранить значения</DialogTitle>
-      <DialogContent className={classes.root}>
-        <FormFieldSet className={classes.formControl} legend="Укажите свойства для сохранения">
+      <DialogContent sx={{ display: 'flex' }}>
+        <FormFieldSet
+          sx={{ m: 3, display: 'flex', flexDirection: 'column' }}
+          legend="Укажите свойства для сохранения"
+        >
           <FormControlLabel
             key="all"
             control={

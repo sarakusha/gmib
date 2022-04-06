@@ -8,19 +8,20 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { withStyles } from '@material-ui/core/styles';
 import {
   IconButton,
   ListItemIcon,
   ListItemSecondaryAction,
   ListItemText,
-  ListItem as MuiListItem,
+  ListItemButton as MuiListItemButton,
   Switch,
-} from '@material-ui/core';
+} from '@mui/material';
+import { styled } from '@mui/material/styles';
+import { useTheme } from '@emotion/react';
 import React, { useCallback, useState } from 'react';
-import CloseIcon from '@material-ui/icons/Close';
-import EditIcon from '@material-ui/icons/Edit';
-import AddCircleOutlineIcon from '@material-ui/icons/AddCircleOutline';
+import CloseIcon from '@mui/icons-material/Close';
+import EditIcon from '@mui/icons-material/Edit';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import { nanoid } from '@reduxjs/toolkit';
 import { isUri } from 'valid-url';
 import HttpPageDialog from '../dialogs/HttpPageDialog';
@@ -55,17 +56,16 @@ const useStyles = makeStyles(theme => ({
 }));
 */
 
-const ListItem = withStyles({
-  container: {
-    '&:hover $secondaryAction ~ *': {
+const ListItemButton = styled(MuiListItemButton)({
+  '&.MuiListItemButton-container': {
+    '&:hover.MuiListItemButton-secondaryAction ~ *': {
       visibility: 'visible',
     },
-    '& $secondaryAction ~ *': {
+    '&.MuiListItemButton-secondaryAction ~ *': {
       visibility: 'hidden',
     },
   },
-  secondaryAction: {},
-})(MuiListItem) as typeof MuiListItem;
+});
 
 const noWrap = { noWrap: true };
 
@@ -106,13 +106,14 @@ const HttpPages: React.FC = () => {
         name="screens"
         title="Вывод"
         expanded={tab === 'screens'}
+        selected={tab === 'screens'}
         onChange={currentTab => dispatch(setCurrentTab(currentTab as TabValues))}
       >
         {pages.map(({ title = '', id, permanent, url }) => {
           const [primary, secondary = ''] = title.split('/', 2);
           const isValid = permanent || (url && isUri(url));
           return (
-            <ListItem key={id}>
+            <ListItemButton key={id}>
               <ListItemIcon>
                 <Switch
                   checked={current === id}
@@ -151,15 +152,15 @@ const HttpPages: React.FC = () => {
                   </IconButton>
                 </ListItemSecondaryAction>
               )}
-            </ListItem>
+            </ListItemButton>
           );
         })}
-        <ListItem button onClick={addPageHandler}>
+        <ListItemButton onClick={addPageHandler}>
           <ListItemIcon>
             <AddCircleOutlineIcon style={{ margin: 'auto' }} color="primary" />
           </ListItemIcon>
           <ListItemText>Добавить URL</ListItemText>
-        </ListItem>
+        </ListItemButton>
       </AccordionList>
       <HttpPageDialog
         open={open}

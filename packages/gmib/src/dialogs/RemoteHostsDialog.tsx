@@ -8,8 +8,8 @@
  * the EULA file that was distributed with this source code.
  */
 import React, { MouseEvent, useEffect, useRef, useState } from 'react';
-import { makeStyles } from '@material-ui/core/styles';
 import {
+  Box,
   Button,
   Dialog,
   DialogActions,
@@ -17,8 +17,9 @@ import {
   DialogTitle,
   IconButton,
   TextField,
-} from '@material-ui/core';
-import CloseIcon from '@material-ui/icons/Close';
+} from '@mui/material';
+import { styled } from '@mui/material/styles';
+import CloseIcon from '@mui/icons-material/Close';
 import IPut from 'iput';
 import FormFieldSet from '../components/FormFieldSet';
 import { useSelector } from '../store';
@@ -26,65 +27,67 @@ import { selectAllRemoteHosts } from '../store/remoteHostsSlice';
 import localConfig, { CustomHost } from '../util/localConfig';
 import timeid from '../util/timeid';
 
-const useStyles = makeStyles(theme => ({
-  root: {
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  remote: {
-    display: 'grid',
-    gridTemplateColumns: '18ch 8ch 20ch 8ch',
-    gap: theme.spacing(1),
-    padding: theme.spacing(1),
-    fontSize: '1rem',
-  },
-  header: {
-    display: 'contents',
-    '& > *': {
-      color: theme.palette.primary.main,
-      // textAlign: 'center',
-      fontSize: '0.875rem',
-    },
-  },
-  fieldSet: {
-    // borderRadius: theme.shape.borderRadius,
-    // borderColor: 'rgba(0, 0, 0, 0.23)',
-    // borderWidth: 1,
-    // borderStyle: 'solid',
-    minHeight: 100,
-    overflowY: 'auto',
-    '& ~ $fieldSet': {
-      marginTop: theme.spacing(2),
-    },
-  },
-  actions: {
-    position: 'relative',
-  },
-  add: {
-    position: 'absolute',
-    left: 8 + theme.spacing(2),
-    top: 8,
-  },
-  iput: {
-    padding: 0,
-    border: 'none',
-    borderRadius: 0,
-    '& input': {
-      borderBottom: '1px solid rgba(0, 0, 0, 0.42)',
-      fontFamily: theme.typography.fontFamily,
-      fontSize: 16,
-      padding: '6px 0',
-      width: '4ch',
-    },
-  },
-  close: {
-    alignSelf: 'flex-start',
-  },
-  found: {
-    display: 'contents',
-    color: theme.palette.text.disabled,
-  },
-}));
+// const useStyles = makeStyles(theme => {
+//   return {
+//     // root: {
+//     //   display: 'flex',
+//     //   flexDirection: 'column',
+//     // },
+//     remote: {
+//       display: 'grid',
+//       gridTemplateColumns: '18ch 8ch 20ch 8ch',
+//       gap: theme.spacing(1),
+//       padding: theme.spacing(1),
+//       fontSize: '1rem',
+//     },
+//     header: {
+//       display: 'contents',
+//       '& > *': {
+//         color: theme.palette.primary.main,
+//         // textAlign: 'center',
+//         fontSize: '0.875rem',
+//       },
+//     },
+//     fieldSet: {
+//       // borderRadius: theme.shape.borderRadius,
+//       // borderColor: 'rgba(0, 0, 0, 0.23)',
+//       // borderWidth: 1,
+//       // borderStyle: 'solid',
+//       minHeight: 100,
+//       overflowY: 'auto',
+//       '& ~ $fieldSet': {
+//         marginTop: theme.spacing(2),
+//       },
+//     },
+//     actions: {
+//       position: 'relative',
+//     },
+//     add: {
+//       position: 'absolute',
+//       left: 8 + theme.spacing(2),
+//       top: 8,
+//     },
+//     iput: {
+//       padding: 0,
+//       border: 'none',
+//       borderRadius: 0,
+//       '& input': {
+//         borderBottom: '1px solid rgba(0, 0, 0, 0.42)',
+//         fontFamily: theme.typography.fontFamily,
+//         fontSize: 16,
+//         padding: '6px 0',
+//         width: '4ch',
+//       },
+//     },
+//     close: {
+//       alignSelf: 'flex-start',
+//     },
+//     found: {
+//       display: 'contents',
+//       color: theme.palette.text.disabled,
+//     },
+//   };
+// });
 
 export type RemoteHostsDialogProps = {
   open?: boolean;
@@ -104,11 +107,35 @@ const portProps = {
   },
 };
 
+const FieldSet = styled(FormFieldSet)(({ theme }) => ({
+  minHeight: 100,
+  overflowY: 'auto',
+  '& ~ &': {
+    marginTop: theme.spacing(2),
+  },
+}));
+
+const Remote = styled('div')(({ theme }) => ({
+  display: 'grid',
+  gridTemplateColumns: '18ch 8ch 20ch 8ch',
+  gap: theme.spacing(1),
+  padding: theme.spacing(1),
+  fontSize: '1rem',
+}));
+
+const Header = styled('div')(({ theme }) => ({
+  display: 'contents',
+  '& > *': {
+    color: theme.palette.primary.main,
+    // textAlign: 'center',
+    fontSize: '0.875rem',
+  },
+}));
+
 const RemoteHostsDialog: React.FC<RemoteHostsDialogProps> = ({
   open = false,
   onClose = () => {},
 }) => {
-  const classes = useStyles();
   const remoteHosts = useSelector(selectAllRemoteHosts);
   const [customHosts, setCustomHosts] = useState<CustomHostItem[]>([]);
   const [changed, setChanged] = useState(false);
@@ -167,16 +194,21 @@ const RemoteHostsDialog: React.FC<RemoteHostsDialogProps> = ({
   return (
     <Dialog open={open} aria-labelledby="remote-hosts-title" maxWidth="md">
       <DialogTitle id="remote-hosts-title">Список удаленных хостов</DialogTitle>
-      <DialogContent className={classes.root}>
-        <FormFieldSet legend="Найденные в сети" className={classes.fieldSet}>
-          <div className={classes.remote}>
-            <div className={classes.header}>
+      <DialogContent sx={{ display: 'flex', flexDirection: 'column' }}>
+        <FieldSet legend="Найденные в сети">
+          <Remote>
+            <Header>
               <div>Адрес</div>
               <div>Порт</div>
               <div>Хост</div>
               <div>Версия</div>
-            </div>
-            <div className={classes.found}>
+            </Header>
+            <Box
+              sx={{
+                display: 'contents',
+                color: 'text.disabled',
+              }}
+            >
               {remoteHosts.map(({ name, address, port, version }) => (
                 <React.Fragment key={name}>
                   <div>{address}</div>
@@ -185,50 +217,66 @@ const RemoteHostsDialog: React.FC<RemoteHostsDialogProps> = ({
                   <div>{version}</div>
                 </React.Fragment>
               ))}
-            </div>
-          </div>
-        </FormFieldSet>
-        <FormFieldSet legend="Пользовательские" className={classes.fieldSet}>
-          <div className={classes.remote}>
-            <div className={classes.header}>
+            </Box>
+          </Remote>
+        </FieldSet>
+        <FieldSet legend="Пользовательские">
+          <Remote>
+            <Header>
               <div>Адрес</div>
               <div>Порт</div>
               <div />
               <div />
-            </div>
+            </Header>
             {customHosts &&
               customHosts.map(({ address, port, id }, index) => (
                 <React.Fragment key={id}>
                   <IPut
                     defaultValue={address ?? '...'}
                     onChange={makeAddressHandler(id)}
-                    className={classes.iput}
+                    css={theme => ({
+                      padding: 0,
+                      border: 'none',
+                      borderRadius: 0,
+                      '& input': {
+                        borderBottom: '1px solid rgba(0, 0, 0, 0.42)',
+                        fontFamily: theme.typography.fontFamily,
+                        fontSize: 16,
+                        padding: '6px 0',
+                        width: '4ch',
+                      },
+                    })}
                   />
                   <TextField
+                    variant="standard"
                     value={port ?? ''}
                     type="number"
                     onChange={makePortHandler(id)}
                     InputProps={portProps}
                   />
-                  <div
-                    className={classes.close}
+                  <Box
+                    alignSelf="flex-start"
                     ref={index === customHosts.length - 1 ? refLast : undefined}
                   >
                     <IconButton size="small" title="Удалить" onClick={makeCloseHandler(id)}>
                       <CloseIcon fontSize="inherit" />
                     </IconButton>
-                  </div>
+                  </Box>
                   <div />
                 </React.Fragment>
               ))}
-          </div>
-        </FormFieldSet>
+          </Remote>
+        </FieldSet>
       </DialogContent>
-      <DialogActions className={classes.actions}>
+      <DialogActions sx={{ position: 'relative' }}>
         <Button
           size="small"
           color="primary"
-          className={classes.add}
+          sx={{
+            position: 'absolute',
+            left: theme => theme.spacing(3),
+            top: theme => theme.spacing(1),
+          }}
           onClick={() => {
             setCustomHosts(hosts =>
               hosts.concat({

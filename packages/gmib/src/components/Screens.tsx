@@ -7,12 +7,11 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import { Container, IconButton, Paper, Tab, Tabs } from '@material-ui/core';
-import { makeStyles } from '@material-ui/core/styles';
-import AddToQueue from '@material-ui/icons/AddToQueue';
-import CloseIcon from '@material-ui/icons/Close';
-import classNames from 'classnames';
+import { Box, Container, IconButton, Paper, Tab, Tabs } from '@mui/material';
+import AddToQueue from '@mui/icons-material/AddToQueue';
+import CloseIcon from '@mui/icons-material/Close';
 import React, { useEffect, useState } from 'react';
+import { styled } from '@mui/material/styles';
 import { useSnackbar } from 'notistack';
 import { useToolbar } from '../providers/ToolbarProvider';
 import { removeScreen, selectScreens, selectSessionVersion } from '../store/configSlice';
@@ -23,39 +22,46 @@ import { noop } from '../util/helpers';
 import Screen from './Screen';
 import ScreensToolbar from './ScreensToolbar';
 
-const useStyles = makeStyles(theme => ({
-  root: {
-    width: '100%',
-    // display: 'flex',
-    // flexDirection: 'column',
-  },
-  content: {
-    // flexGrow: 1,
-    paddingTop: theme.spacing(1),
-    paddingBottom: theme.spacing(1),
-    paddingLeft: theme.spacing(2),
-    paddingRight: theme.spacing(2),
-  },
-  label: {
-    display: 'flex',
-    width: '100%',
-    '& > *:first-child': {
-      flexGrow: 1,
-    },
-  },
-  add: {
-    flexGrow: 0,
-    minWidth: 48,
-    // backgroundColor: theme.palette.secondary.light,
-  },
-  hidden: {
-    // visibility: 'hidden',
-    display: 'none',
-  },
-}));
+// const useStyles = makeStyles(theme => ({
+//   root: {
+//     width: '100%',
+//     // display: 'flex',
+//     // flexDirection: 'column',
+//   },
+//   content: {
+//     // flexGrow: 1,
+//     paddingTop: theme.spacing(1),
+//     paddingBottom: theme.spacing(1),
+//     paddingLeft: theme.spacing(2),
+//     paddingRight: theme.spacing(2),
+//   },
+//   label: {
+//     display: 'flex',
+//     width: '100%',
+//     '& > *:first-child': {
+//       flexGrow: 1,
+//     },
+//   },
+//   add: {
+//     flexGrow: 0,
+//     minWidth: 48,
+//     // backgroundColor: theme.palette.secondary.light,
+//   },
+//   hidden: {
+//     // visibility: 'hidden',
+//     display: 'none',
+//   },
+// }));
+
+const Label = styled('span')`
+  display: flex;
+  width: 100%;
+  & > *:first-child {
+    flex-grow: 1;
+  }
+`;
 
 const Screens: React.FC = () => {
-  const classes = useStyles();
   const value = useSelector(selectCurrentScreenId);
   const screens = useSelector(selectScreens);
   const dispatch = useDispatch();
@@ -89,7 +95,7 @@ const Screens: React.FC = () => {
   };
   const single = screens.length === 1;
   return (
-    <div className={classes.root}>
+    <Box sx={{ width: 1 }}>
       <Paper square>
         <Tabs
           value={value ?? 'addScreen'}
@@ -103,19 +109,19 @@ const Screens: React.FC = () => {
             <Tab
               component="div"
               label={
-                <span className={classes.label}>
+                <Label>
                   <span>{name || `#${index + 1}`}</span>
                   <IconButton
                     size="small"
                     onClick={removeHandler(id)}
                     title="Удалить"
-                    className={classNames({ [classes.hidden]: readonly })}
+                    sx={{ display: readonly ? 'none' : undefined, p: '3px' }}
                     disabled={readonly}
                     color="inherit"
                   >
                     <CloseIcon fontSize="inherit" />
                   </IconButton>
-                </span>
+                </Label>
               }
               value={id}
               key={id}
@@ -125,8 +131,8 @@ const Screens: React.FC = () => {
           {sessionVersion && (
             <Tab
               icon={<AddToQueue color={readonly ? 'inherit' : 'secondary'} />}
-              className={classes.add}
-              textColor="secondary"
+              sx={{ flexGrow: 0, minWidth: 48 }}
+              // textColor="secondary"
               onClick={() => dispatch(createScreen())}
               title="Добавить экран"
               value="addScreen"
@@ -135,12 +141,12 @@ const Screens: React.FC = () => {
           )}
         </Tabs>
       </Paper>
-      <Container maxWidth="md" className={classes.content}>
+      <Container maxWidth="md" sx={{ px: 2, py: 1 }}>
         {screens.map(({ id }) => (
           <Screen id={id} key={id} selected={value} readonly={readonly} single={single} />
         ))}
       </Container>
-    </div>
+    </Box>
   );
 };
 

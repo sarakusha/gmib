@@ -7,60 +7,79 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import { makeStyles } from '@material-ui/core/styles';
 import {
+  Box,
   Checkbox,
   FormControlLabel,
   MenuItem,
   Paper,
   Select,
+  SelectChangeEvent,
   TextField,
   Typography,
-} from '@material-ui/core';
+} from '@mui/material';
 import { AnyAction } from '@reduxjs/toolkit';
-import ChipInput from 'material-ui-chip-input';
+// import ChipInput from '@jansedlon/material-ui-chip-input';
 import React, { useCallback, useMemo } from 'react';
+import { styled } from '@mui/material/styles';
 import { useDispatch, useSelector } from '../store';
-import { addAddress, removeAddress, selectScreenById, setScreenProp } from '../store/configSlice';
+import { selectScreenById, setScreenProp } from '../store/configSlice';
 import { selectDisplays } from '../store/sessionSlice';
 import { Screen, reAddress } from '../util/config';
 import { toNumber } from '../util/helpers';
 import useDelayUpdate from '../util/useDelayUpdate';
 import FormFieldSet from './FormFieldSet';
 
-const useStyles = makeStyles(theme => ({
-  content: {
-    height: '100%',
-    padding: theme.spacing(1),
-    '& > * ~ *': {
-      marginTop: theme.spacing(1),
-    },
+// const useStyles = makeStyles(theme => ({
+//   content: {
+//     height: '100%',
+//     padding: theme.spacing(1),
+//     '& > * ~ *': {
+//       marginTop: theme.spacing(1),
+//     },
+//   },
+//   params: {
+//     display: 'flex',
+//     flexWrap: 'wrap',
+//     gap: theme.spacing(1),
+//     // justifyContent: 'center',
+//   },
+//   fieldset: {
+//     padding: theme.spacing(1),
+//     borderRadius: theme.shape.borderRadius,
+//     borderColor: 'rgba(0, 0, 0, 0.23)',
+//     borderWidth: 1,
+//     borderStyle: 'solid',
+//     width: '26ch',
+//   },
+//   item: {
+//     flex: 1,
+//     '& ~ $item': {
+//       marginLeft: theme.spacing(2),
+//     },
+//     width: '10ch',
+//   },
+//   // formControl: {
+//   //   margin: theme.spacing(1),
+//   //   minWidth: '23ch',
+//   // },
+// }));
+
+const FieldSet = styled(FormFieldSet)(({ theme }) => ({
+  padding: theme.spacing(1),
+  borderRadius: theme.shape.borderRadius,
+  borderColor: 'rgba(0, 0, 0, 0.23)',
+  borderWidth: 1,
+  borderStyle: 'solid',
+  width: '26ch',
+}));
+
+const Field = styled(TextField)(({ theme }) => ({
+  flex: 1,
+  '& ~ &': {
+    marginLeft: theme.spacing(2),
   },
-  params: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: theme.spacing(1),
-    // justifyContent: 'center',
-  },
-  fieldset: {
-    padding: theme.spacing(1),
-    borderRadius: theme.shape.borderRadius,
-    borderColor: 'rgba(0, 0, 0, 0.23)',
-    borderWidth: 1,
-    borderStyle: 'solid',
-    width: '26ch',
-  },
-  item: {
-    flex: 1,
-    '& ~ $item': {
-      marginLeft: theme.spacing(2),
-    },
-    width: '10ch',
-  },
-  // formControl: {
-  //   margin: theme.spacing(1),
-  //   minWidth: '23ch',
-  // },
+  width: '10ch',
 }));
 
 const toDisplay = (value: string): boolean | string => {
@@ -87,8 +106,12 @@ type Props = {
   single?: boolean;
 };
 
-const Screen: React.FC<Props> = ({ id: scrId, selected, readonly = true, single = true }) => {
-  const classes = useStyles();
+const ScreenComponent: React.FC<Props> = ({
+  id: scrId,
+  selected,
+  readonly = true,
+  single = true,
+}) => {
   const dispatch = useDispatch();
   const current = useSelector(state => selectScreenById(state, scrId));
   const displays = useSelector(selectDisplays);
@@ -104,7 +127,7 @@ const Screen: React.FC<Props> = ({ id: scrId, selected, readonly = true, single 
   );
   const [displayChanged, changeHandler, onBeforeAddAddress, setName] = useMemo(
     () => [
-      (event: React.ChangeEvent<{ value: unknown }>): void => {
+      (event: SelectChangeEvent): void => {
         dispatch(setScreenProp([scrId, ['display', toDisplay(`${event.target.value}`)]]));
       },
       (event: React.ChangeEvent<HTMLInputElement>): void => {
@@ -120,18 +143,25 @@ const Screen: React.FC<Props> = ({ id: scrId, selected, readonly = true, single 
   );
   const [name, nameChanged] = useDelayUpdate(current?.name ?? '', setName);
   return !current ? null : (
-    <Paper className={classes.content} hidden={scrId !== selected}>
-      <div className={classes.params}>
-        <FormFieldSet legend="Название" className={classes.fieldset} disabled={readonly}>
-          <TextField id="name" value={name} onChange={nameChanged} fullWidth disabled={readonly} />
-        </FormFieldSet>
-        <FormFieldSet
+    <Paper sx={{ height: 1, p: 1, '& > * ~ *': { mt: 1 } }} hidden={scrId !== selected}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+        <FieldSet legend="Название" disabled={readonly}>
+          <TextField
+            id="name"
+            value={name}
+            onChange={nameChanged}
+            fullWidth
+            disabled={readonly}
+            variant="standard"
+          />
+        </FieldSet>
+        <FieldSet
           legend="Коэффициент яркости"
-          className={classes.fieldset}
           disabled={readonly}
           title="Применяется при использовании нескольких типов экранов"
         >
           <TextField
+            variant="standard"
             id="brightnessFactor"
             value={current.brightnessFactor}
             type="number"
@@ -140,139 +170,126 @@ const Screen: React.FC<Props> = ({ id: scrId, selected, readonly = true, single 
             fullWidth
             disabled={readonly || single}
           />
-        </FormFieldSet>
-        <FormFieldSet
-          legend="По горизонтали"
-          className={classes.fieldset}
-          disabled={readonly}
-          title="Порядок модулей"
-        >
+        </FieldSet>
+        <FieldSet legend="По горизонтали" disabled={readonly} title="Порядок модулей">
           <FormControlLabel
             control={<Checkbox checked={!!current.dirh} onChange={changeHandler} id="dirh" />}
             label="Справа налево"
           />
-        </FormFieldSet>
-        <FormFieldSet
-          legend="По вертикали"
-          className={classes.fieldset}
-          disabled={readonly}
-          title="Порядок модулей"
-        >
+        </FieldSet>
+        <FieldSet legend="По вертикали" disabled={readonly} title="Порядок модулей">
           <FormControlLabel
             control={<Checkbox checked={!!current.dirv} onChange={changeHandler} id="dirv" />}
             label="Сверху вниз"
           />
-        </FormFieldSet>
-        <FormFieldSet legend="Экран" className={classes.fieldset} title="Размеры в пикселях">
-          <TextField
+        </FieldSet>
+        <FieldSet legend="Экран" title="Размеры в пикселях">
+          <Field
+            variant="standard"
             id="width"
             label="Ширина"
             value={current.width ?? ''}
             onChange={changeNumberHandler}
             type="number"
             inputProps={inputSize}
-            className={classes.item}
             disabled={readonly}
           />
-          <TextField
+          <Field
+            variant="standard"
             id="height"
             label="Высота"
             value={current.height ?? ''}
             onChange={changeNumberHandler}
             type="number"
             inputProps={inputSize}
-            className={classes.item}
             disabled={readonly}
           />
-        </FormFieldSet>
-        <FormFieldSet legend="Модуль" className={classes.fieldset} title="Размеры в пикселях">
-          <TextField
+        </FieldSet>
+        <FieldSet legend="Модуль" title="Размеры в пикселях">
+          <Field
+            variant="standard"
             id="moduleHres"
             label="Ширина"
             value={current.moduleHres ?? ''}
             onChange={changeNumberHandler}
             type="number"
             inputProps={inputSize}
-            className={classes.item}
             disabled={readonly}
           />
-          <TextField
+          <Field
+            variant="standard"
             id="moduleVres"
             label="Высота"
             value={current.moduleVres ?? ''}
             onChange={changeNumberHandler}
             type="number"
             inputProps={inputSize}
-            className={classes.item}
             disabled={readonly}
           />
-        </FormFieldSet>
-        <FormFieldSet legend="Рамка" className={classes.fieldset}>
-          <TextField
+        </FieldSet>
+        <FieldSet legend="Рамка">
+          <Field
+            variant="standard"
             id="borderLeft"
             label="Слева"
             value={current.borderLeft ?? ''}
             onChange={changeNumberHandler}
             type="number"
-            className={classes.item}
             disabled={readonly}
           />
-          <TextField
+          <Field
+            variant="standard"
             id="borderRight"
             label="Справа"
             value={current.borderRight ?? ''}
             onChange={changeNumberHandler}
             type="number"
-            className={classes.item}
             disabled={readonly}
           />
-        </FormFieldSet>
-        <FormFieldSet legend="Рамка" className={classes.fieldset}>
-          <TextField
+        </FieldSet>
+        <FieldSet legend="Рамка">
+          <Field
+            variant="standard"
             id="borderTop"
             label="Сверху"
             value={current.borderTop ?? ''}
             onChange={changeNumberHandler}
             type="number"
-            className={classes.item}
             disabled={readonly}
           />
-          <TextField
+          <Field
+            variant="standard"
             id="borderBottom"
             label="Снизу"
             value={current.borderBottom ?? ''}
             onChange={changeNumberHandler}
             type="number"
-            className={classes.item}
             disabled={readonly}
           />
-        </FormFieldSet>
-        <FormFieldSet
-          legend="Отступ"
-          className={classes.fieldset}
-          title="Отступ изображения от края монитора"
-        >
-          <TextField
+        </FieldSet>
+        <FieldSet legend="Отступ" title="Отступ изображения от края монитора">
+          <Field
+            variant="standard"
             id="x"
             label="Слева"
             value={current.x ?? ''}
             onChange={changeNumberHandler}
             type="number"
-            className={classes.item}
             disabled={readonly}
           />
-          <TextField
+          <Field
+            variant="standard"
             id="y"
             label="Сверху"
             value={current.y ?? ''}
             onChange={changeNumberHandler}
             type="number"
-            className={classes.item}
             disabled={readonly}
           />
-        </FormFieldSet>
-        <FormFieldSet legend="Дисплей" className={classes.fieldset} disabled={readonly}>
+        </FieldSet>
+        <FieldSet legend="Дисплей" disabled={readonly}>
           <Select
+            variant="standard"
             labelId="display-label"
             value={(current.display ?? true).toString()}
             onChange={displayChanged}
@@ -296,9 +313,10 @@ const Screen: React.FC<Props> = ({ id: scrId, selected, readonly = true, single 
                 <MenuItem value={current.display}>{current.display} (отключен)</MenuItem>
               )}
           </Select>
-        </FormFieldSet>
-      </div>
+        </FieldSet>
+      </Box>
 
+      {/*
       <ChipInput
         label="Адреса минихостов"
         value={current.addresses}
@@ -310,8 +328,9 @@ const Screen: React.FC<Props> = ({ id: scrId, selected, readonly = true, single 
         fullWidth
         disabled={readonly}
       />
+*/}
     </Paper>
   );
 };
 
-export default React.memo(Screen);
+export default React.memo(ScreenComponent);

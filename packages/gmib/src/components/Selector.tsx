@@ -9,7 +9,7 @@
  */
 
 import React, { memo, useCallback, useEffect, useState } from 'react';
-import { Checkbox, InputAdornment, TextField } from '@material-ui/core';
+import { Checkbox, InputAdornment, TextField } from '@mui/material';
 import { getStateAsync } from '../util/helpers';
 
 export type Props = {
@@ -43,6 +43,7 @@ const Selector: React.FC<Props> = ({ label, groupName, value, onChange, max, cla
   return (
     <div className={className}>
       <TextField
+        variant="standard"
         fullWidth
         value={value === ALL ? groupName : value}
         label={label}

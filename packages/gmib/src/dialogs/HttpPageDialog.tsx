@@ -8,7 +8,7 @@
  * the EULA file that was distributed with this source code.
  */
 import React from 'react';
-import { Dialog, DialogContent, TextField } from '@material-ui/core';
+import { Dialog, DialogContent, TextField } from '@mui/material';
 import DialogTitle from '../components/DialogTitle';
 import { useSelector } from '../store';
 import { selectPageById } from '../store/configSlice';
@@ -51,6 +51,7 @@ const HttpPageDialog: React.FC<Props> = ({
       </DialogTitle>
       <DialogContent>
         <TextField
+          variant="standard"
           name="url"
           value={url ?? ''}
           onChange={changeHandler}
@@ -60,6 +61,7 @@ const HttpPageDialog: React.FC<Props> = ({
           margin="normal"
         />
         <TextField
+          variant="standard"
           name="title"
           value={title ?? ''}
           onChange={changeHandler}

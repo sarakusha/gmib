@@ -7,8 +7,8 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import { makeStyles } from '@material-ui/core/styles';
 import {
+  Box,
   Button,
   Checkbox,
   Dialog,
@@ -17,7 +17,7 @@ import {
   DialogTitle,
   FormControlLabel,
   FormGroup,
-} from '@material-ui/core';
+} from '@mui/material';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import FormFieldSet from '../components/FormFieldSet';
 // import { initialSelectors, Minihost3Selector } from '../util/Minihost3Loader';
@@ -29,14 +29,14 @@ type Props = {
   onClose?: (value: Set<number>) => void;
 };
 
-const useStyles = makeStyles(theme => ({
-  root: {
-    display: 'flex',
-  },
-  formControl: {
-    margin: theme.spacing(3),
-  },
-}));
+// const useStyles = makeStyles(theme => ({
+//   root: {
+//     display: 'flex',
+//   },
+//   formControl: {
+//     margin: theme.spacing(3),
+//   },
+// }));
 
 export const getEnumValues = (numEnums: Record<string, number | string>): number[] =>
   Object.values(numEnums)
@@ -58,7 +58,6 @@ const PropertySelectorDialog: React.FC<Props> = ({
   properties,
   onClose,
 }) => {
-  const classes = useStyles();
   const [selector, setSelector] = useState(initial);
   const refInitial = useRef(initial);
   refInitial.current = initial;
@@ -91,8 +90,8 @@ const PropertySelectorDialog: React.FC<Props> = ({
     <Dialog open={open} aria-labelledby="selector-title">
       <DialogTitle id="selector-title">Выбор переменных для опроса</DialogTitle>
       <DialogContent>
-        <div className={classes.root}>
-          <FormFieldSet className={classes.formControl} legend="Доступные переменные">
+        <Box display="flex">
+          <FormFieldSet sx={{ m: 3 }} legend="Доступные переменные">
             <FormGroup>
               {getEnumEntries(properties).map(([name, value]) => (
                 <FormControlLabel
@@ -167,7 +166,7 @@ const PropertySelectorDialog: React.FC<Props> = ({
 */}
             </FormGroup>
           </FormFieldSet>
-        </div>
+        </Box>
       </DialogContent>
       <DialogActions>
         <Button color="primary" type="submit" onClick={saveHandler} disabled={!selector.size}>

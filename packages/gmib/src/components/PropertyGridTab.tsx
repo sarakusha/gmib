@@ -7,8 +7,8 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import { makeStyles } from '@material-ui/core/styles';
-import { Box, Paper, Table, TableBody, TableRow } from '@material-ui/core';
+import { Box, Paper, Table, TableBody, TableRow } from '@mui/material';
+import { styled, css } from '@mui/material/styles';
 import groupBy from 'lodash/groupBy';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useDevice, useDispatch, useSelector } from '../store';
@@ -24,38 +24,52 @@ import { useToolbar } from '../providers/ToolbarProvider';
 import type { MinihostTabProps } from './TabContainer';
 import { ValueType, reloadDevice, setDeviceValue } from '../store/devicesSlice';
 
-const useStyles = makeStyles(theme => ({
-  error: {
-    display: 'flex',
-    width: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  name: {
-    paddingLeft: theme.spacing(4),
-  },
-  table: {
-    '& table': {
-      borderCollapse: 'separate',
+// const useStyles = makeStyles(theme => ({
+//   error: {
+//     display: 'flex',
+//     width: '100%',
+//     justifyContent: 'center',
+//     alignItems: 'center',
+//   },
+//   name: {
+//     paddingLeft: theme.spacing(4),
+//   },
+//   table: {
+//     '& table': {
+//       borderCollapse: 'separate',
+//     },
+//     borderBottom: 0,
+//   },
+// }));
+
+// const useSummaryClasses = makeStyles(theme => ({
+//   expanded: {
+//     backgroundColor: theme.palette.action.selected,
+//   },
+//   root: {
+//     opacity: 0.7,
+//     '& > *': {
+//       backgroundColor: 'transparent',
+//     },
+//   },
+// }));
+
+const StyledAccordionList = styled(AccordionList)(({ theme }) => ({
+  '&.MuiAccordionSummary-root': {
+    opacity: 0.6,
+    '& > *': {
+      backgroundColor: 'transparent',
     },
+    '&.Mui-expanded': {
+      backgroundColor: theme.palette.action.selected,
+    },
+  },
+  '&.MuiAccordion-root.Mui-expanded': {
     borderBottom: 0,
   },
 }));
 
-const useSummaryClasses = makeStyles(theme => ({
-  expanded: {
-    backgroundColor: theme.palette.action.selected,
-  },
-  root: {
-    opacity: 0.7,
-    '& > *': {
-      backgroundColor: 'transparent',
-    },
-  },
-}));
-
 const PropertyGridTab: React.FC<MinihostTabProps> = ({ id, selected = false }) => {
-  const classes = useStyles();
   const { mib, error, props } = useDevice(id) ?? {};
   const meta = useSelector(state => selectMibByName(state, mib ?? 0));
   const tab = useSelector(selectCurrentTab);
@@ -88,36 +102,61 @@ const PropertyGridTab: React.FC<MinihostTabProps> = ({ id, selected = false }) =
     [meta]
   );
 
-  const summaryClasses = useSummaryClasses();
+  // const summaryClasses = useSummaryClasses();
   const [currentCategory, setCurrentCategory] = useState<string>();
   if (!meta || !categories || !props) return null;
 
   if (error) {
     return (
-      <div className={classes.error}>
+      <Box
+        sx={{
+          display: 'flex',
+          width: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
         <ErrorCard error={error} onAction={() => dispatch(reloadDevice(id))} />
-      </div>
+      </Box>
     );
   }
 
+  // TODO: table
   return (
     <Box px={1} width={1} fontSize="body1.fontSize" display={selected ? 'block' : 'none'}>
+      {/*
+      <GlobalStyles
+        styles={theme => ({
+          '.MuiAccordionSummary-root.MuiAccordionSummary-root': {
+            opacity: 0.7,
+            '& > *': {
+              backgroundColor: 'transparent',
+            },
+            '&.Mui-expanded': {
+              backgroundColor: theme.palette.action.selected,
+            },
+          },
+          '.MuiAccordion-root.MuiAccordion-root.MuiAccordion-root.Mui-expanded': {
+            borderBottom: 0,
+          },
+        })}
+      />
+*/}
       <Paper>
         {Object.entries(categories).map(([category, propNames]) => (
-          <AccordionList
+          <StyledAccordionList
             key={category}
             name={category || 'other'}
             title={category}
             component={Table}
-            summaryClasses={summaryClasses}
-            className={classes.table}
+            // summaryClasses={summaryClasses}
             expanded={category === '' || currentCategory === category}
             onChange={setCurrentCategory}
           >
             <TableBody>
               {propNames.map(([name, info]) => (
                 <TableRow key={name}>
-                  <TableCell className={classes.name}>
+                  <TableCell sx={{ pl: 4 }}>
                     {`${info.displayName}${info.unit && info.isWritable ? ` в ${info.unit}` : ''}`}
                   </TableCell>
                   <PropertyValueCell
@@ -129,7 +168,7 @@ const PropertyGridTab: React.FC<MinihostTabProps> = ({ id, selected = false }) =
                 </TableRow>
               ))}
             </TableBody>
-          </AccordionList>
+          </StyledAccordionList>
         ))}
       </Paper>
     </Box>

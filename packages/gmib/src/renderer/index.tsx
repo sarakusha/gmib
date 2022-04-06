@@ -12,19 +12,18 @@
 // Не удалять, если нужны логи в production
 import './initlog';
 
-import { MuiThemeProvider, createTheme } from '@material-ui/core/styles';
-import { CssBaseline } from '@material-ui/core';
+import { ThemeProvider as MuiThemeProvider, StyledEngineProvider } from '@mui/material/styles';
+import { CssBaseline } from '@mui/material';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import 'typeface-roboto/index.css';
 import { SnackbarProvider } from 'notistack';
 import { Provider } from 'react-redux';
 
+import theme from '../components/theme';
 import App from '../components/App';
 import ToolbarProvider from '../providers/ToolbarProvider';
 import { store } from '../store';
-
-const theme = createTheme({});
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (window as any).ELECTRON_DISABLE_SECURITY_WARNINGS = 1;
@@ -33,23 +32,25 @@ const render = (): void => {
   ReactDOM.render(
     <>
       <CssBaseline />
-      <Provider store={store}>
+      <StyledEngineProvider injectFirst>
         <MuiThemeProvider theme={theme}>
-          <ToolbarProvider>
-            <SnackbarProvider
-              anchorOrigin={{
-                vertical: 'top',
-                horizontal: 'right',
-              }}
-              maxSnack={10}
-              dense
-              preventDuplicate
-            >
-              <App />
-            </SnackbarProvider>
-          </ToolbarProvider>
+          <Provider store={store}>
+            <ToolbarProvider>
+              <SnackbarProvider
+                anchorOrigin={{
+                  vertical: 'top',
+                  horizontal: 'right',
+                }}
+                maxSnack={10}
+                dense
+                preventDuplicate
+              >
+                <App />
+              </SnackbarProvider>
+            </ToolbarProvider>
+          </Provider>
         </MuiThemeProvider>
-      </Provider>
+      </StyledEngineProvider>
     </>,
     document.getElementById('app')
   );

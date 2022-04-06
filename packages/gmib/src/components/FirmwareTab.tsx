@@ -8,7 +8,6 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { makeStyles } from '@material-ui/core/styles';
 import {
   Backdrop,
   Button,
@@ -17,11 +16,11 @@ import {
   Paper,
   Radio,
   RadioGroup,
-} from '@material-ui/core';
-import CloseIcon from '@material-ui/icons/Close';
-import ReplayIcon from '@material-ui/icons/Replay';
+} from '@mui/material';
+import { styled } from '@mui/material/styles';
+import CloseIcon from '@mui/icons-material/Close';
+import ReplayIcon from '@mui/icons-material/Replay';
 import { Address, FlashKinds, Flasher, Kind, KindMap } from '@nibus/core';
-import classNames from 'classnames';
 import { SnackbarAction, useSnackbar } from 'notistack';
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useDevice, useSelector } from '../store';
@@ -32,45 +31,58 @@ import FlashUpgrade, { Props as FlashUpgradeProps, displayName } from './FlashUp
 import FormFieldSet from './FormFieldSet';
 import type { MinihostTabProps } from './TabContainer';
 
-const useStyles = makeStyles(theme => ({
-  root: {
-    padding: theme.spacing(1),
-  },
-  backdrop: {
-    zIndex: theme.zIndex.drawer + 1,
-    color: '#fff',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'space-evenly',
-  },
-  kinds: {
-    padding: theme.spacing(1),
-    borderRadius: theme.shape.borderRadius,
-    borderColor: 'rgba(0, 0, 0, 0.23)',
-    borderWidth: 1,
-    borderStyle: 'solid',
-    display: 'block',
-    flexDirection: 'row',
-    '& ~ $kinds': {
-      marginRight: theme.spacing(2),
-    },
-  },
-  wrapper: {
-    '& > fieldset ~ fieldset': {
-      marginLeft: theme.spacing(2),
-    },
-  },
-  kind: {
-    marginLeft: theme.spacing(1),
-    marginRight: theme.spacing(1),
-  },
-  progress: {
-    width: '80%',
-  },
-  hidden: {
-    display: 'none',
+const KindFormFieldSet = styled(FormFieldSet)(({ theme }) => ({
+  padding: theme.spacing(1),
+  borderRadius: theme.shape.borderRadius,
+  borderColor: 'rgba(0, 0, 0, 0.23)',
+  borderWidth: 1,
+  borderStyle: 'solid',
+  display: 'block',
+  flexDirection: 'row',
+  '& ~ &': {
+    marginRight: theme.spacing(2),
   },
 }));
+
+// const useStyles = makeStyles(theme => ({
+//   root: {
+//     padding: theme.spacing(1),
+//   },
+//   backdrop: {
+//     zIndex: theme.zIndex.drawer + 1,
+//     color: '#fff',
+//     display: 'flex',
+//     flexDirection: 'column',
+//     justifyContent: 'space-evenly',
+//   },
+//   kinds: {
+//     padding: theme.spacing(1),
+//     borderRadius: theme.shape.borderRadius,
+//     borderColor: 'rgba(0, 0, 0, 0.23)',
+//     borderWidth: 1,
+//     borderStyle: 'solid',
+//     display: 'block',
+//     flexDirection: 'row',
+//     '& ~ $kinds': {
+//       marginRight: theme.spacing(2),
+//     },
+//   },
+//   wrapper: {
+//     '& > fieldset ~ fieldset': {
+//       marginLeft: theme.spacing(2),
+//     },
+//   },
+//   kind: {
+//     marginLeft: theme.spacing(1),
+//     marginRight: theme.spacing(1),
+//   },
+//   progress: {
+//     width: '80%',
+//   },
+//   hidden: {
+//     display: 'none',
+//   },
+// }));
 
 const OFFSET_SUCCESS = 0x1800;
 
@@ -85,7 +97,6 @@ function* generateSuccessKey(maxSuccess = 3): Generator<number, number> {
 const successId = generateSuccessKey();
 
 const FirmwareTab: React.FC<MinihostTabProps> = ({ id, selected = false }) => {
-  const classes = useStyles();
   const { closeSnackbar, enqueueSnackbar } = useSnackbar();
   const { address } = useDevice(id) ?? {};
   const { bootloader } = useSelector(state => selectProps(state, id, 'bootloader'));
@@ -161,7 +172,12 @@ const FirmwareTab: React.FC<MinihostTabProps> = ({ id, selected = false }) => {
             variant: 'success',
           });
         } else {
-          enqueueSnackbar(msg, { key, persist: true, variant: 'error', action });
+          enqueueSnackbar(msg, {
+            key,
+            persist: true,
+            variant: 'error',
+            action,
+          });
         }
         snacksRef.current.push(key);
       });
@@ -173,20 +189,25 @@ const FirmwareTab: React.FC<MinihostTabProps> = ({ id, selected = false }) => {
     []
   );
   return (
-    <Paper className={classNames(classes.root, { [classes.hidden]: !selected })}>
+    <Paper
+      sx={{
+        p: 1,
+        display: selected ? 'block' : 'none',
+      }}
+    >
       <RadioGroup
         row
         aria-label="firmware kind"
         value={kind}
         onChange={kindHandler}
-        className={classes.wrapper}
+        sx={{
+          '& > fieldset ~ fieldset': {
+            ml: 2,
+          },
+        }}
       >
         {[false, true].map(isModule => (
-          <FormFieldSet
-            legend={isModule ? 'Модуль' : 'Хост'}
-            className={classes.kinds}
-            key={isModule.toString()}
-          >
+          <KindFormFieldSet legend={isModule ? 'Модуль' : 'Хост'} key={isModule.toString()}>
             {Object.entries(KindMap)
               .filter(([, [, module]]) => isModule === module)
               .map(([value]) => (
@@ -196,19 +217,28 @@ const FirmwareTab: React.FC<MinihostTabProps> = ({ id, selected = false }) => {
                   control={<Radio />}
                   label={displayName(value)}
                   labelPlacement="top"
-                  className={classes.kind}
+                  sx={{ mx: 1 }}
                   disabled={(value === 'mcu' ? !bootloader?.raw : isEmpty) || value === 'fpga'}
                 />
               ))}
-          </FormFieldSet>
+          </KindFormFieldSet>
         ))}
       </RadioGroup>
       {FlashKinds.map(value => (
         <FlashUpgrade key={value} kind={value} onFlash={flashHandler} hidden={value !== kind} />
       ))}
-      <Backdrop open={flashing} className={classes.backdrop}>
+      <Backdrop
+        open={flashing}
+        sx={{
+          zIndex: theme => theme.zIndex.drawer + 1,
+          color: '#fff',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-evenly',
+        }}
+      >
         <CircularProgressWithLabel color="inherit" value={progress} />
-        <LinearProgress variant="determinate" value={progress} className={classes.progress} />
+        <LinearProgress variant="determinate" value={progress} sx={{ width: 0.8 }} />
       </Backdrop>
     </Paper>
   );

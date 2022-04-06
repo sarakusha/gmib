@@ -8,22 +8,12 @@
  * the EULA file that was distributed with this source code.
  */
 
-/* eslint-disable no-var */
-import { makeStyles } from '@material-ui/core/styles';
-/*
- * @license
- * Copyright (c) 2021. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
 import { BrightnessHistory } from '@nibus/core/lib/ipc/events';
 import { XAxisOptions, XAxisPlotBandsOptions, XAxisPlotLinesOptions } from 'highcharts';
 import HighchartsReact from 'highcharts-react-official';
 import React, { useEffect, useState } from 'react';
-import { Button, Dialog, DialogActions, DialogContent, Typography } from '@material-ui/core';
+import { styled } from '@mui/material/styles';
+import { Box, Button, Dialog, DialogActions, DialogContent, Typography } from '@mui/material';
 import SunCalc from 'suncalc';
 import Highcharts, { SeriesLineOptions } from '../components/Highcharts';
 import { useSelector } from '../store';
@@ -207,19 +197,24 @@ const getBands = (
   return [plotBands, plotLines];
 };
 
-const useStyles = makeStyles({
-  table: {
-    display: 'grid',
-    gridTemplateColumns: '10ch 10ch',
-  },
-  suntimes: {
-    display: 'flex',
-    justifyContent: 'space-evenly',
-    // '& div ~ div': {
-    //   marginLeft: theme.spacing(4),
-    // },
-  },
-});
+// const useStyles = makeStyles({
+//   table: {
+//     display: 'grid',
+//     gridTemplateColumns: '10ch 10ch',
+//   },
+//   suntimes: {
+//     display: 'flex',
+//     justifyContent: 'space-evenly',
+//     // '& div ~ div': {
+//     //   marginLeft: theme.spacing(4),
+//     // },
+//   },
+// });
+
+const Grid = styled('div')`
+  display: grid;
+  grid-template-columns: 10ch 10ch;
+`;
 
 const BrightnessHistoryDialog: React.FC<Props> = ({ open = false, onClose = noop }) => {
   const [options, setOptions] = useState<Highcharts.Options>(highchartsOptions);
@@ -274,14 +269,13 @@ const BrightnessHistoryDialog: React.FC<Props> = ({ open = false, onClose = noop
   const suntimes = isValidLocation
     ? SunCalc.getTimes(new Date(), latitude!, longitude!)
     : undefined;
-  const classes = useStyles();
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullScreen>
       <DialogContent>
         <HighchartsReact highcharts={Highcharts} options={options} />
         {suntimes && (
-          <div className={classes.suntimes}>
-            <div className={classes.table}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-evenly' }}>
+            <Grid>
               <Typography>Рассвет</Typography>
               <Typography>{suntimes.dawn.toLocaleTimeString()}</Typography>
               <Typography>Восход</Typography>
@@ -292,8 +286,8 @@ const BrightnessHistoryDialog: React.FC<Props> = ({ open = false, onClose = noop
               <Typography>{suntimes.goldenHourEnd.toLocaleTimeString()}</Typography>
               <Typography>Зенит</Typography>
               <Typography>{suntimes.solarNoon.toLocaleTimeString()}</Typography>
-            </div>
-            <div className={classes.table}>
+            </Grid>
+            <Grid>
               <Typography>Вечер</Typography>
               <Typography>{suntimes.goldenHour.toLocaleTimeString()}</Typography>
               <Typography>Закат</Typography>
@@ -304,8 +298,8 @@ const BrightnessHistoryDialog: React.FC<Props> = ({ open = false, onClose = noop
               <Typography>{suntimes.dusk.toLocaleTimeString()}</Typography>
               <Typography>Надир</Typography>
               <Typography>{suntimes.nadir.toLocaleTimeString()}</Typography>
-            </div>
-          </div>
+            </Grid>
+          </Box>
         )}
       </DialogContent>
       <DialogActions>

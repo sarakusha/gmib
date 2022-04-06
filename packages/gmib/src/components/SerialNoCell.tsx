@@ -9,28 +9,26 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { makeStyles } from '@material-ui/core/styles';
-import classNames from 'classnames';
-import { Input } from '@material-ui/core';
 import { IMaskMixin } from 'react-imask';
 import debounce from 'lodash/debounce';
 import TableCell, { TableCellProps } from './TableCell';
+import StyledInput, { ExtendedProps } from './StyledInput';
 
-const useStyles = makeStyles(_theme => ({
-  inputDirty: {
-    fontWeight: 'bold',
-  },
-  inputRoot: {
-    fontSize: 'inherit',
-    width: '100%',
-  },
-  inputRight: {
-    textAlign: 'right',
-  },
-  inputCenter: {
-    textAlign: 'center',
-  },
-}));
+// const useStyles = makeStyles(_theme => ({
+//   inputDirty: {
+//     fontWeight: 'bold',
+//   },
+//   inputRoot: {
+//     fontSize: 'inherit',
+//     width: '100%',
+//   },
+//   inputRight: {
+//     textAlign: 'right',
+//   },
+//   inputCenter: {
+//     textAlign: 'center',
+//   },
+// }));
 
 type Props = {
   name: string;
@@ -44,9 +42,9 @@ const formatChars = {
 };
 const isEmpty = (value: string): boolean => !value || value.replace(/0/g, '') === '';
 
-const MaskedInput = IMaskMixin(({ inputRef, ...props }) => (
+const MaskedInput = IMaskMixin<IMask.AnyMaskedOptions & ExtendedProps>(({ inputRef, ...props }) => (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  <Input inputRef={inputRef} {...(props as any[])} />
+  <StyledInput inputRef={inputRef} fullWidth disableUnderline {...(props as any[])} />
 ));
 
 const toUpper = (str: string): string => str.toUpperCase();
@@ -60,7 +58,6 @@ const SerialNoCell: React.FC<Props> = ({
   align,
   ...props
 }) => {
-  const classes = useStyles();
   const [value, setValue] = useState(initValue);
   useEffect(() => setValue(initValue), [initValue]);
   const [changing, setChanging] = useState(false);
@@ -87,23 +84,12 @@ const SerialNoCell: React.FC<Props> = ({
     },
     [name, updateValue]
   );
-  const inputClasses = {
-    input: classNames({
-      [classes.inputRight]: align === 'right',
-      [classes.inputCenter]: align === 'center',
-      [classes.inputDirty]: dirty || changing,
-    }),
-  };
   return (
     <TableCell className={className} align={align} {...props}>
       <MaskedInput
         onAccept={changeHandler}
         value={value.slice(-12).padStart(12, '0')}
-        className={classes.inputRoot}
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        classes={inputClasses}
-        disableUnderline
+        dirty={dirty || changing}
         mask="XX:XX:XX:XX:XX:XX"
         definitions={formatChars}
         overwrite
@@ -111,6 +97,7 @@ const SerialNoCell: React.FC<Props> = ({
         autofix
         placeholderChar="0"
         prepare={toUpper}
+        align={align}
       />
     </TableCell>
   );

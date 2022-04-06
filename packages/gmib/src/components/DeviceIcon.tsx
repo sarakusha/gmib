@@ -8,11 +8,11 @@
  * the EULA file that was distributed with this source code.
  */
 import React from 'react';
-import HubIcon from '@material-ui/icons/DeviceHub';
-import DefaultIcon from '@material-ui/icons/Memory';
-import MinihostIcon from '@material-ui/icons/Tv';
-import ConsoleIcon from '@material-ui/icons/VideogameAsset';
-import type { SvgIconProps } from '@material-ui/core';
+import HubIcon from '@mui/icons-material/DeviceHub';
+import DefaultIcon from '@mui/icons-material/Memory';
+import MinihostIcon from '@mui/icons-material/Tv';
+import ConsoleIcon from '@mui/icons-material/VideogameAsset';
+import type { SvgIconProps } from '@mui/material';
 import { DeviceState, DeviceStateWithParent } from '../store/devicesSlice';
 
 type Props = {

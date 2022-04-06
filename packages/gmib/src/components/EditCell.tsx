@@ -8,37 +8,33 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { makeStyles } from '@material-ui/core/styles';
-import { Input, InputAdornment, InputBaseProps } from '@material-ui/core';
+import { InputAdornment, InputBaseProps } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import React, { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import classNames from 'classnames';
+import StyledInput from './StyledInput';
 import TableCell, { TableCellProps } from './TableCell';
 
 const safeParseNumber = (value: unknown): number => parseFloat(value as string);
 
-const useStyles = makeStyles(theme => ({
-  inputRoot: {
-    width: '100%',
-    fontSize: 'inherit',
-  },
-  inputRight: {
-    textAlign: 'right',
-  },
-  inputCenter: {
-    textAlign: 'center',
-  },
-  cell: {
-    paddingRight: theme.spacing(1),
-    paddingLeft: theme.spacing(1),
-  },
-  positionEnd: {
-    marginLeft: 0,
-    marginRight: -20,
-  },
-  inputDirty: {
-    fontWeight: 'bold',
-  },
-}));
+// const useStyles = makeStyles(theme => ({
+//   inputRoot: {
+//     width: '100%',
+//     fontSize: 'inherit',
+//   },
+//   inputRight: {
+//     textAlign: 'right',
+//   },
+//   inputCenter: {
+//     textAlign: 'center',
+//   },
+//   positionEnd: {
+//     marginLeft: 0,
+//     marginRight: -20,
+//   },
+//   inputDirty: {
+//     fontWeight: 'bold',
+//   },
+// }));
 
 type Props = {
   name: string;
@@ -51,6 +47,30 @@ type Props = {
   dirty?: boolean;
   onChangeProperty?: (name: string, value: unknown) => void;
 } & TableCellProps;
+
+const EndAdornment = styled(InputAdornment)({
+  '&.MuiInputAdornment-positionEnd': {
+    marginLeft: 0,
+    marginRight: -20,
+  },
+});
+
+// type InputExProps = InputBaseProps &
+//   Pick<TableCellProps, 'align'> & {
+//     dirty?: boolean;
+//     controlled?: boolean;
+//   };
+//
+// const InputEx = extendStyled(Input, {
+//   align: 'left',
+//   dirty: false,
+//   controlled: false,
+// })(({ align, dirty, controlled }: InputExProps) => ({
+//   textAlign: align && ['right', 'center'].includes(align) ? align : 'inherit',
+//   fontWeight: dirty || !controlled ? 'bold' : 'normal',
+//   fontSize: 'inherit',
+//   width: '100%',
+// }));
 
 const EditCell: React.FC<Props> = ({
   value,
@@ -66,23 +86,18 @@ const EditCell: React.FC<Props> = ({
   dirty,
   ...props
 }) => {
-  const classes = useStyles();
+  // const classes = useStyles();
   const [controlled, setControlled] = useState(value !== undefined);
-  const inputClasses = {
-    input: classNames({
-      [classes.inputRight]: align === 'right',
-      [classes.inputCenter]: align === 'center',
-      [classes.inputDirty]: dirty || !controlled,
-    }),
-  };
+  // const inputClasses = {
+  //   input: classNames({
+  //     [classes.inputRight]: align === 'right',
+  //     [classes.inputCenter]: align === 'center',
+  //     [classes.inputDirty]: dirty || !controlled,
+  //   }),
+  // };
   const endAdornment = useMemo(
-    () =>
-      unit ? (
-        <InputAdornment position="end" classes={{ positionEnd: classes.positionEnd }}>
-          {unit}
-        </InputAdornment>
-      ) : null,
-    [classes.positionEnd, unit]
+    () => (unit ? <EndAdornment position="end">{unit}</EndAdornment> : null),
+    [unit]
   );
   // let controlled = value !== undefined;
   const [val, setVal] = useState<unknown>();
@@ -110,12 +125,12 @@ const EditCell: React.FC<Props> = ({
   const hasError = value instanceof Error ? value.message : undefined;
   const current = hasError || value === undefined ? '' : controlled ? value : val;
   return (
-    <TableCell className={classNames(classes.cell, className)} {...props}>
-      <Input
+    <TableCell className={className} sx={{ px: 1 }} {...props}>
+      <StyledInput
+        align={align}
+        dirty={dirty || !controlled}
         error={!!hasError}
         name={name}
-        className={classes.inputRoot}
-        classes={inputClasses}
         fullWidth
         value={current}
         type={type || 'text'}
@@ -132,10 +147,5 @@ const EditCell: React.FC<Props> = ({
     </TableCell>
   );
 };
-
-// export default compose<Props, Props>(
-//   hot,
-//   React.memo,
-// )(EditCell);
 
 export default EditCell;

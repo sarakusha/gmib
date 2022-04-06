@@ -8,10 +8,12 @@
  * the EULA file that was distributed with this source code.
  */
 
+import { FunctionInterpolation, useTheme } from '@emotion/react';
+import { Theme, css } from '@mui/material/styles';
 /* tslint:disable:react-a11y-role-has-required-aria-props */
-// import AppBar from '@material-ui/core/AppBar';
-import { makeStyles } from '@material-ui/core/styles';
+// import AppBar from '@mui/material/AppBar';
 import {
+  Box,
   Button,
   Dialog,
   DialogActions,
@@ -32,13 +34,12 @@ import {
   Tab,
   Tabs,
   TextField,
-} from '@material-ui/core';
+} from '@mui/material';
 import { Address, DeviceId, findMibByType } from '@nibus/core';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import AddIcon from '@material-ui/icons/Add';
+import AddIcon from '@mui/icons-material/Add';
 import unionBy from 'lodash/unionBy';
 import without from 'lodash/without';
-import classNames from 'classnames';
 import { useDevices, useDispatch, useSelector } from '../store';
 import { selectLinks } from '../store/devicesSlice';
 import { createDevice } from '../store/deviceThunks';
@@ -47,64 +48,70 @@ import Finder, { DeviceInfo, FinderOptions } from '../util/finders';
 import useDefaultKeys from '../util/useDefaultKeys';
 import DeviceIcon from '../components/DeviceIcon';
 
-const useStyles = makeStyles(theme => ({
-  hidden: {
-    display: 'none',
-  },
-  formControl: {
-    marginLeft: theme.spacing(1),
-    marginRight: theme.spacing(1),
-    width: '30ch',
-  },
-  tabContent: {
-    padding: theme.spacing(2),
-    display: 'flex',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  content: {
-    position: 'relative',
-    paddingLeft: 0,
-    paddingRight: 0,
-  },
-  detectedList: {
-    minWidth: '40ch',
-  },
-  detectedContainer: {
-    width: '100%',
-    display: 'flex',
-    height: '20ch',
-    justifyContent: 'center',
-    overflowY: 'auto',
-  },
-  detectedItem: {},
-  linearProgress: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
-  wrapper: {
-    position: 'relative',
-  },
-  bar: {
-    backgroundColor: theme.palette.primary.main,
-    color: theme.palette.primary.contrastText,
-  },
-  actions: {
-    position: 'relative',
-  },
-  clear: {
-    position: 'absolute',
-    left: theme.spacing(1),
-    top: theme.spacing(1),
-  },
-}));
+// const useStyles = makeStyles(theme => ({
+//   hidden: {
+//     display: 'none',
+//   },
+//   formControl: {
+//     marginLeft: theme.spacing(1),
+//     marginRight: theme.spacing(1),
+//     width: '30ch',
+//   },
+//   tabContent: {
+//     padding: theme.spacing(2),
+//     display: 'flex',
+//     flexWrap: 'wrap',
+//     justifyContent: 'space-between',
+//   },
+//   content: {
+//     position: 'relative',
+//     paddingLeft: 0,
+//     paddingRight: 0,
+//   },
+//   detectedList: {
+//     minWidth: '40ch',
+//   },
+//   detectedContainer: {
+//     width: '100%',
+//     display: 'flex',
+//     height: '20ch',
+//     justifyContent: 'center',
+//     overflowY: 'auto',
+//   },
+//   detectedItem: {},
+//   linearProgress: {
+//     position: 'absolute',
+//     bottom: 0,
+//     left: 0,
+//     right: 0,
+//   },
+//   wrapper: {
+//     position: 'relative',
+//   },
+//   bar: {
+//     backgroundColor: theme.palette.primary.main,
+//     color: theme.palette.primary.contrastText,
+//   },
+//   actions: {
+//     position: 'relative',
+//   },
+//   clear: {
+//     position: 'absolute',
+//     left: theme.spacing(1),
+//     top: theme.spacing(1),
+//   },
+// }));
 
 type Props = {
   open: boolean;
   close: () => void;
 };
+
+const formControlStyle: FunctionInterpolation<Theme> = theme => css`
+  margin-left: ${theme.spacing(1)};
+  margin-right: ${theme.spacing(1)};
+  width: 30ch;
+`;
 
 const deviceKey = ({ address, owner }: DeviceInfo): string => `${owner}#${address.toString()}`;
 
@@ -114,7 +121,7 @@ const union = (prev: DeviceInfo[], item: DeviceInfo): DeviceInfo[] =>
 type SearchKind = 'byAddress' | 'byType';
 
 const SearchDialog: React.FC<Props> = ({ open, close }) => {
-  const classes = useStyles();
+  const theme = useTheme();
   const [isSearching, setSearching] = useState(false);
   const [kind, setKind] = useState<SearchKind>('byType');
   const links = useSelector(selectLinks);
@@ -218,15 +225,20 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
   return (
     <Dialog open={open} aria-labelledby="search-title" onClose={close}>
       <DialogTitle id="search-title">Поиск устройств</DialogTitle>
-      <DialogContent className={classes.content}>
-        <Paper square className={classes.bar}>
+      <DialogContent sx={{ position: 'relative', px: 0 }}>
+        <Paper square sx={{ bgcolor: 'primary.main', color: 'primary.contrastText' }}>
           <Tabs value={kind} onChange={changeHandler} variant="fullWidth">
             <Tab label="По типу" value="byType" />
             <Tab label="По адресу" value="byAddress" />
           </Tabs>
         </Paper>
-        <form className={classes.tabContent} noValidate autoComplete="off">
-          <FormControl className={classes.formControl} margin="normal" disabled={isSearching}>
+        <Box
+          component="form"
+          sx={{ p: 2, display: 'flex', flexWrap: 'wrap', justifyContext: 'space-between' }}
+          noValidate
+          autoComplete="off"
+        >
+          <FormControl css={formControlStyle(theme)} margin="normal" disabled={isSearching}>
             <InputLabel htmlFor="connection">Соединение</InputLabel>
             <NativeSelect
               defaultValue={'0'}
@@ -243,8 +255,10 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
             </NativeSelect>
           </FormControl>
           <TextField
+            variant="standard"
             id="address"
-            className={classNames(classes.formControl, { [classes.hidden]: kind !== 'byAddress' })}
+            css={formControlStyle(theme)}
+            sx={{ display: kind !== 'byAddress' ? 'none' : 'block' }}
             error={invalidAddress}
             label="Адрес"
             inputRef={addressRef}
@@ -253,7 +267,8 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
             disabled={isSearching}
           />
           <FormControl
-            className={classNames(classes.formControl, { [classes.hidden]: kind !== 'byType' })}
+            css={formControlStyle(theme)}
+            sx={{ display: kind !== 'byType' ? 'none' : 'block' }}
             margin="normal"
             disabled={isSearching}
           >
@@ -270,13 +285,21 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
               ))}
             </NativeSelect>
           </FormControl>
-        </form>
-        <div className={classes.detectedContainer}>
-          <List className={classes.detectedList}>
+        </Box>
+        <Box
+          sx={{
+            width: 1,
+            display: 'flex',
+            height: '20ch',
+            justifyContent: 'center',
+            overflowY: 'auto',
+          }}
+        >
+          <List sx={{ minWidth: '40ch' }}>
             {detected.map(info => {
               const mib = info.type > 0 ? findMibByType(info.type, info.version) : undefined;
               return (
-                <ListItem key={deviceKey(info)} className={classes.detectedItem}>
+                <ListItem key={deviceKey(info)}>
                   <ListItemIcon>
                     <DeviceIcon color="inherit" mib={mib} />
                   </ListItemIcon>
@@ -287,6 +310,7 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
                       aria-label="Add"
                       onClick={addDevice}
                       disabled={isSearching}
+                      size="large"
                     >
                       <AddIcon />
                     </IconButton>
@@ -295,10 +319,12 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
               );
             })}
           </List>
-        </div>
-        {isSearching && <LinearProgress className={classes.linearProgress} />}
+        </Box>
+        {isSearching && (
+          <LinearProgress sx={{ position: 'absolute', bottom: 0, left: 0, right: 0 }} />
+        )}
       </DialogContent>
-      <DialogActions className={classes.actions}>
+      <DialogActions sx={{ position: 'relative' }}>
         <Button onClick={startStop} color="primary" type="submit">
           {isSearching ? 'Остановить' : 'Начать'}
         </Button>
@@ -307,7 +333,11 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
         </Button>
         <Button
           color="primary"
-          className={classes.clear}
+          sx={{
+            position: 'absolute',
+            left: theme => theme.spacing(1),
+            top: theme => theme.spacing(1),
+          }}
           disabled={detected.length === 0}
           onClick={clearHandler}
         >

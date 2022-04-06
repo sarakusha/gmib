@@ -8,13 +8,13 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { TableCell as MuiTableCell, TableCellProps } from '@material-ui/core';
-import { withStyles } from '@material-ui/core/styles';
+import { TableCell as MuiTableCell, TableCellProps } from '@mui/material';
+import { styled } from '@mui/material/styles';
 
 export const GuiFontSize = '0.875rem';
 
-export default withStyles(theme => ({
-  root: {
+const TableCell = styled(MuiTableCell)(({ theme }) => ({
+  '&.MuiTableCell-root': {
     fontSize: GuiFontSize,
 
     '&:last-child': {
@@ -22,6 +22,7 @@ export default withStyles(theme => ({
       color: theme.palette.text.disabled,
     },
   },
-}))(MuiTableCell);
+}));
+export default TableCell;
 
 export type { TableCellProps };

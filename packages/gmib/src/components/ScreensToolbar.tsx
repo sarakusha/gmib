@@ -7,11 +7,11 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import { IconButton, Tooltip } from '@material-ui/core';
-import LoadIcon from '@material-ui/icons/SystemUpdateAlt';
-import SaveIcon from '@material-ui/icons/Save';
-import LockIcon from '@material-ui/icons/Lock';
-import LockOpenIcon from '@material-ui/icons/LockOpen';
+import { IconButton, Tooltip } from '@mui/material';
+import LoadIcon from '@mui/icons-material/SystemUpdateAlt';
+import SaveIcon from '@mui/icons-material/Save';
+import LockIcon from '@mui/icons-material/Lock';
+import LockOpenIcon from '@mui/icons-material/LockOpen';
 import { ipcRenderer } from 'electron';
 import fs from 'fs';
 import React from 'react';
@@ -70,17 +70,17 @@ const ScreensToolbar: React.FC<{ readonly?: boolean; toggle?: () => void }> = ({
   return (
     <>
       <Tooltip title="Загрузить конфигурацию из файла">
-        <IconButton color="inherit" onClick={() => load()}>
+        <IconButton color="inherit" onClick={() => load()} size="large">
           <LoadIcon />
         </IconButton>
       </Tooltip>
       <Tooltip title="Сохранить конфигурацию в файл">
-        <IconButton color="inherit" onClick={() => save(config)}>
+        <IconButton color="inherit" onClick={() => save(config)} size="large">
           <SaveIcon />
         </IconButton>
       </Tooltip>
       <Tooltip title={readonly ? 'Разблокировать' : 'Заблокировать'}>
-        <IconButton onClick={toggle} color="inherit">
+        <IconButton onClick={toggle} color="inherit" size="large">
           {readonly ? <LockIcon /> : <LockOpenIcon />}
         </IconButton>
       </Tooltip>

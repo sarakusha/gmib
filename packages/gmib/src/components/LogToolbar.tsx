@@ -7,44 +7,43 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import { makeStyles } from '@material-ui/core/styles';
 import {
+  Box,
   FormControlLabel,
   IconButton,
   Popover,
   Radio,
   RadioGroup,
   Tooltip,
-} from '@material-ui/core';
-import TuneIcon from '@material-ui/icons/Tune';
+} from '@mui/material';
+import TuneIcon from '@mui/icons-material/Tune';
 import { LogLevel, LogLevelV } from '@nibus/core';
 import React, { useState } from 'react';
 import FormFieldSet from './FormFieldSet';
 import { useDispatch, useSelector } from '../store';
 import { selectLogLevel, setLogLevel } from '../store/configSlice';
 
-const useStyles = makeStyles(theme => ({
-  content: {
-    margin: theme.spacing(1),
-  },
-  levels: {
-    padding: theme.spacing(1),
-    borderRadius: theme.shape.borderRadius,
-    borderColor: 'rgba(0, 0, 0, 0.23)',
-    borderWidth: 1,
-    borderStyle: 'solid',
-    // display: 'block',
-    // flexDirection: 'row',
-    // '&:not(:last-child)': {
-    //   marginRight: theme.spacing(2),
-    // },
-  },
-}));
-
+// const useStyles = makeStyles(theme => ({
+//   content: {
+//     margin: theme.spacing(1),
+//   },
+//   levels: {
+//     padding: theme.spacing(1),
+//     borderRadius: theme.shape.borderRadius,
+//     borderColor: ,
+//     borderWidth: 1,
+//     borderStyle: 'solid',
+//     // display: 'block',
+//     // flexDirection: 'row',
+//     // '&:not(:last-child)': {
+//     //   marginRight: theme.spacing(2),
+//     // },
+//   },
+// }));
+//
 const levels = Object.keys(LogLevelV.keys) as LogLevel[];
 
 const LogToolbar: React.FC = () => {
-  const classes = useStyles();
   const logLevel = useSelector(selectLogLevel);
   const dispatch = useDispatch();
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
@@ -66,7 +65,7 @@ const LogToolbar: React.FC = () => {
   return (
     <div>
       <Tooltip title="Задать формат вывода пакетов NiBUS">
-        <IconButton color="inherit" onClick={handleClick} aria-describedby={id}>
+        <IconButton color="inherit" onClick={handleClick} aria-describedby={id} size="large">
           <TuneIcon />
         </IconButton>
       </Tooltip>
@@ -84,9 +83,12 @@ const LogToolbar: React.FC = () => {
           horizontal: 'right',
         }}
       >
-        <div className={classes.content}>
+        <Box sx={{ m: 1 }}>
           <RadioGroup row aria-label="nibus log level" value={logLevel} onChange={handleChange}>
-            <FormFieldSet legend="Формат пакетов NiBUS" className={classes.levels}>
+            <FormFieldSet
+              legend="Формат пакетов NiBUS"
+              sx={{ p: 1, borderRadius: 1, borderColor: 'rgba(0, 0, 0, 0.23)', border: 1 }}
+            >
               {levels.map(value => (
                 <FormControlLabel
                   key={value}
@@ -98,7 +100,7 @@ const LogToolbar: React.FC = () => {
               ))}
             </FormFieldSet>
           </RadioGroup>
-        </div>
+        </Box>
       </Popover>
     </div>
   );

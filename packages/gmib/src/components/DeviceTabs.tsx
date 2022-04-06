@@ -8,8 +8,7 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { makeStyles } from '@material-ui/core/styles';
-import { Container, Paper, Tab, Tabs } from '@material-ui/core';
+import { Box, Container, Paper, Tab, Tabs } from '@mui/material';
 import { DeviceId } from '@nibus/core';
 import React, { useState } from 'react';
 import { useSelector } from '../store';
@@ -18,20 +17,6 @@ import FirmwareTab from './FirmwareTab';
 import PropertyGridTab from './PropertyGridTab';
 import TelemetryTab from './TelemetryTab';
 
-const useStyles = makeStyles(theme => ({
-  root: {
-    display: 'flex',
-    flexDirection: 'column',
-    width: '100%',
-  },
-  content: {
-    flexGrow: 1,
-    // display: 'flex',
-    paddingTop: theme.spacing(1),
-    WebkitOverflowScrolling: 'touch', // Add iOS momentum scrolling.
-  },
-}));
-
 type Props = {
   id: DeviceId;
 };
@@ -39,7 +24,6 @@ type Props = {
 type TabState = 'props' | 'telemetry' | 'firmware';
 
 const DeviceTabs: React.FC<Props> = ({ id }) => {
-  const classes = useStyles();
   const device = useSelector(selectCurrentDevice);
   const isEmpty = !device || device.isEmptyAddress;
   const [value, setValue] = useState<TabState>('props');
@@ -48,7 +32,7 @@ const DeviceTabs: React.FC<Props> = ({ id }) => {
   const isMinihost3 = mib === 'minihost3';
   if (!id) return null;
   return (
-    <div className={classes.root}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', width: 1 }}>
       <Paper square>
         <Tabs
           value={value}
@@ -57,19 +41,19 @@ const DeviceTabs: React.FC<Props> = ({ id }) => {
           onChange={(_, newValue) => setValue(newValue ?? 'props')}
           variant="fullWidth"
         >
-          {!isEmpty && <Tab label="Свойства" disabled={isEmpty} value="props" />}
+          <Tab label="Свойства" disabled={isEmpty} value="props" />
           {isMinihost && !isEmpty && (
             <Tab label="Телеметрия" disabled={isEmpty} value="telemetry" />
           )}
           {isMinihost3 && <Tab label="Прошивка" value="firmware" />}
         </Tabs>
       </Paper>
-      <Container maxWidth={value !== 'telemetry' ? 'sm' : undefined} className={classes.content}>
+      <Container maxWidth={value !== 'telemetry' ? 'sm' : undefined} sx={{ flexGrow: 1, pt: 1 }}>
         <PropertyGridTab id={id} selected={value === 'props' && device !== undefined} />
         <TelemetryTab id={id} selected={value === 'telemetry' && device !== undefined} />
         <FirmwareTab id={id} selected={value === 'firmware' && device !== undefined} />
       </Container>
-    </div>
+    </Box>
   );
 };
 

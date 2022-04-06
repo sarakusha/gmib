@@ -7,9 +7,8 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import { makeStyles } from '@material-ui/core/styles';
-import { Paper, Typography } from '@material-ui/core';
-import classNames from 'classnames';
+import { Box, Paper, Typography } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { getEnumValues } from '../dialogs/PropertySelectorDialog';
 import { useToolbar } from '../providers/ToolbarProvider';
@@ -28,66 +27,81 @@ import TelemetryToolbar from './TelemetryToolbar';
 const XMAX = 24;
 const YMAX = 32;
 
-const useStyles = makeStyles(theme => ({
-  root: {
-    marginBottom: theme.spacing(1),
-    width: '100%',
-    height: '100%',
-    display: 'grid',
-    gridTemplateColumns: 'auto 1fr',
-    gridTemplateRows: 'auto 1fr',
-    gridTemplateAreas: `
-      "corner hRange"
-      "vRange main"
-    `,
-  },
-  hidden: {
-    display: 'none',
-  },
-  main: {
-    gridArea: 'main',
-    display: 'flex',
-    overflow: 'auto',
-  },
-  grid: {
-    display: 'grid',
-    gridAutoFlow: 'column',
-  },
-  hRange: {
-    gridArea: 'hRange',
-    width: '36ch',
-    marginBottom: theme.spacing(3),
-    marginTop: theme.spacing(3),
-    marginLeft: theme.spacing(2),
-  },
-  vRange: {
-    gridArea: 'vRange',
-    marginTop: theme.spacing(2),
-    marginLeft: theme.spacing(3),
-    marginRight: theme.spacing(3),
-    height: '48ch',
-  },
-  corner: {
-    gridArea: 'corner',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    backgroundColor: theme.palette.grey[100],
-    color: theme.palette.grey[500],
-    '&>*': {
-      padding: 2,
-      textAlign: 'center',
-    },
-    margin: theme.spacing(1) / 2,
-  },
-  xpos: {
-    borderBottom: '1px solid white',
-  },
-  ypos: {},
+// const useStyles = makeStyles(theme => ({
+//   root: {
+//     marginBottom: theme.spacing(1),
+//     width: '100%',
+//     height: '100%',
+//     display: 'grid',
+//     gridTemplateColumns: 'auto 1fr',
+//     gridTemplateRows: 'auto 1fr',
+//     gridTemplateAreas: `
+//       "corner hRange"
+//       "vRange main"
+//     `,
+//   },
+//   hidden: {
+//     display: 'none',
+//   },
+//   main: {
+//     gridArea: 'main',
+//     display: 'flex',
+//     overflow: 'auto',
+//   },
+//   grid: {
+//     display: 'grid',
+//     gridAutoFlow: 'column',
+//   },
+//   hRange: {
+//     gridArea: 'hRange',
+//     width: '36ch',
+//     marginBottom: theme.spacing(3),
+//     marginTop: theme.spacing(3),
+//     marginLeft: theme.spacing(2),
+//   },
+//   vRange: {
+//     gridArea: 'vRange',
+//     marginTop: theme.spacing(2),
+//     marginLeft: theme.spacing(3),
+//     marginRight: theme.spacing(3),
+//     height: '48ch',
+//   },
+//   corner: {
+//     gridArea: 'corner',
+//     display: 'flex',
+//     flexDirection: 'column',
+//     justifyContent: 'center',
+//     backgroundColor: theme.palette.grey[100],
+//     color: theme.palette.grey[500],
+//     '&>*': {
+//       padding: 2,
+//       textAlign: 'center',
+//     },
+//     margin: theme.spacing(0.5),
+//   },
+//   xpos: {
+//     borderBottom: '1px solid white',
+//   },
+//   ypos: {},
+// }));
+
+const HRange = styled(Range)(({ theme }) => ({
+  gridArea: 'hRange',
+  width: '34ch',
+  marginBottom: theme.spacing(2),
+  marginTop: theme.spacing(2),
+  marginLeft: theme.spacing(2),
+}));
+
+const VRange = styled(Range)(({ theme }) => ({
+  gridArea: 'vRange',
+  marginTop: theme.spacing(2),
+  marginLeft: theme.spacing(2),
+  marginRight: theme.spacing(2),
+  height: '40ch',
 }));
 
 const TelemetryTab: React.FC<MinihostTabProps> = ({ id, selected = false }) => {
-  const classes = useStyles();
   const { mib, props, isBusy = 0 } = useDevice(id) ?? {};
   const loader = useMemo<MinihostLoader<Minihost2Info | Minihost3Info> | null>(() => {
     if (!mib || !id) return null;
@@ -101,10 +115,12 @@ const TelemetryTab: React.FC<MinihostTabProps> = ({ id, selected = false }) => {
     }
   }, [id, mib]);
   const { hres, vres, moduleHres, moduleVres, maxModulesH, maxModulesV } = props ?? {};
-  const [xMax, setXMax] = useState<number>(XMAX - 1);
-  const [xMin, setXMin] = useState<number>(0);
-  const [yMax, setYMax] = useState<number>(YMAX - 1);
-  const [yMin, setYMin] = useState(0);
+  const [[xMin, xMax], setX] = useState([0, XMAX - 1]);
+  const [[yMin, yMax], setY] = useState([0, YMAX - 1]);
+  // const [xMax, setXMax] = useState<number>(XMAX - 1);
+  // const [xMin, setXMin] = useState<number>(0);
+  // const [yMax, setYMax] = useState<number>(YMAX - 1);
+  // const [yMin, setYMin] = useState(0);
   const [style, setStyle] = useState({});
   const [selectors, setSelectors] = useState(new Set(getEnumValues(Minihost3Selector)));
   const [loading, setLoading] = useState(false);
@@ -113,22 +129,24 @@ const TelemetryTab: React.FC<MinihostTabProps> = ({ id, selected = false }) => {
   useEffect(() => {
     if (!hres?.value || !vres?.value || !moduleHres || !moduleVres || !maxModulesH || !maxModulesV)
       return;
-    setXMax(
+    setX([
+      0,
       Math.min(
         Math.ceil(
           (hres.value as number) / ((moduleHres.value as number) || (hres.value as number))
         ),
         (maxModulesH.value as number) || XMAX
-      ) - 1
-    );
-    setYMax(
+      ) - 1,
+    ]);
+    setY([
+      0,
       Math.min(
         Math.ceil(
           (vres.value as number) / ((moduleVres.value as number) || (vres.value as number))
         ),
         (maxModulesV.value as number) || YMAX
-      ) - 1
-    );
+      ) - 1,
+    ]);
   }, [hres, vres, moduleHres, moduleVres, maxModulesH, maxModulesV]);
 
   const dirv = loader?.isInvertV() || false;
@@ -136,13 +154,7 @@ const TelemetryTab: React.FC<MinihostTabProps> = ({ id, selected = false }) => {
   const [modules, setModules] = useState<IModuleInfo<Minihost2Info | Minihost3Info>[]>([]);
   const start = useCallback(async () => {
     // eslint-disable-next-line @typescript-eslint/no-shadow
-    const [xMin, xMax, yMin, yMax, selectors] = await getStatesAsync(
-      setXMin,
-      setXMax,
-      setYMin,
-      setYMax,
-      setSelectors
-    );
+    const [[xMin, xMax], [yMin, yMax], selectors] = await getStatesAsync(setX, setY, setSelectors);
     /* eslint-enable */
     setStyle({ gridTemplateRows: `repeat(${yMax! - yMin + 1}, 1fr)` });
     setModules([]);
@@ -204,16 +216,49 @@ const TelemetryTab: React.FC<MinihostTabProps> = ({ id, selected = false }) => {
   }, [loader, dispatch, id]);
 
   return (
-    <Paper className={classNames(classes.root, { [classes.hidden]: !selected })}>
-      <Paper className={classes.corner}>
-        <div className={classes.xpos}>
+    <Paper
+      sx={{
+        display: selected ? 'grid' : 'none',
+        mb: 1,
+        width: 1,
+        height: 1,
+        gridTemplateColumns: 'auto 1fr',
+        gridTemplateRows: 'auto 1fr',
+        gridTemplateAreas: `
+      "corner hRange"
+      "vRange main"
+    `,
+      }}
+    >
+      <Paper
+        sx={{
+          gridArea: 'corner',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          bgcolor: 'grey.100',
+          color: 'grey.500',
+          m: 0.5,
+          '& > *': {
+            padding: '2px',
+            textAlign: 'center',
+          },
+          lineHeight: 1,
+        }}
+      >
+        <Box
+          sx={{
+            borderBottom: 1,
+            borderColor: 'white',
+          }}
+        >
           <Typography variant="caption" color="inherit">
             <b>
               {xMin}..{xMax}
             </b>
           </Typography>
-        </div>
-        <div className={classes.ypos}>
+        </Box>
+        <div>
           <Typography variant="caption" color="inherit">
             <b>
               {yMin}..{yMax}
@@ -221,35 +266,47 @@ const TelemetryTab: React.FC<MinihostTabProps> = ({ id, selected = false }) => {
           </Typography>
         </div>
       </Paper>
-      <Range
+      <HRange
         min={0}
-        max={(maxModulesH?.value as number) || 24}
-        values={[xMin, xMax || 0]}
-        className={classes.hRange}
-        setMin={setXMin}
-        setMax={setXMax}
+        max={((maxModulesH?.value as number) ?? XMAX) - 1}
+        value={[xMin, xMax]}
+        valueLabelDisplay="auto"
+        onChange={(_, x) => setX(x as [number, number])}
+        size="small"
         reverse={dirh}
       />
-      <Range
+      <VRange
         min={0}
-        max={32}
-        values={[yMin, yMax || 0]}
-        className={classes.vRange}
-        setMin={setYMin}
-        setMax={setYMax}
-        vertical
+        max={YMAX - 1}
+        value={[yMin, yMax]}
+        valueLabelDisplay="auto"
+        onChange={(_, y) => setY(y as [number, number])}
+        orientation="vertical"
+        size="small"
         reverse={!dirv}
-        tooltipPos={'right'}
       />
-      <div className={classes.main}>
+      <Box
+        sx={{
+          gridArea: 'main',
+          display: 'flex',
+          overflow: 'auto',
+        }}
+      >
         <div>
-          <div className={classes.grid} style={style}>
+          <Box
+            sx={{
+              display: 'grid',
+              gridAutoFlow: 'column',
+              gap: 1,
+            }}
+            style={style}
+          >
             {modules.map(moduleProps => (
               <ModuleInfo key={`${moduleProps.y}:${moduleProps.x}`} {...moduleProps} />
             ))}
-          </div>
+          </Box>
         </div>
-      </div>
+      </Box>
     </Paper>
   );
 };

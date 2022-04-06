@@ -16,13 +16,13 @@ import {
   TextField,
   TextFieldProps,
   Typography,
-} from '@material-ui/core';
-import { makeStyles } from '@material-ui/core/styles';
+} from '@mui/material';
+import { FunctionInterpolation, useTheme } from '@emotion/react';
 import { ChipTypeEnum } from '@novastar/native/build/main/generated/ChipType';
 import { DviSelectModeEnum } from '@novastar/native/build/main/generated/DviSelectMode';
 import { BrightnessRGBV, getScreenLocation } from '@novastar/screen';
-import classNames from 'classnames';
 import React, { useCallback, useEffect, useState } from 'react';
+import { Theme, css, styled } from '@mui/material/styles';
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useDispatch, useSelector } from '../store';
 import { selectCurrentTab } from '../store/currentSlice';
@@ -36,66 +36,66 @@ import { noop } from '../util/helpers';
 import DisplayModeSelector from './DisplayModeSelector';
 import NovastarToolbar from './NovastarToolbar';
 
-const useStyles = makeStyles(theme => ({
-  root: {
-    // padding: theme.spacing(1),
-    // marginLeft: 'auto',
-    // marginRight: 'auto',
-    // margin: theme.spacing(1),
-    // display: 'flex',
-    // flexDirection: 'column',
-    // alignItems: 'center',
-    // width: '100%',
-  },
-  paper: {
-    padding: theme.spacing(1),
-    minWidth: '100%',
-    overflowY: 'auto',
-  },
-  grid: {
-    display: 'grid',
-    gridTemplateColumns: '30px auto 1fr',
-    gap: 2,
-  },
-  itemValue: {
-    gridColumnStart: 3,
-    padding: 4,
-  },
-  propertyName: {
-    gridColumnStart: 'span 2',
-    fontWeight: 500,
-    backgroundColor: theme.palette.action.selected,
-    padding: 4,
-  },
-  brightness: {
-    gridRowStart: 'span 5',
-    writingMode: 'vertical-lr',
-    transform: 'rotate(180deg)',
-    textAlign: 'center',
-  },
-  center: {
-    textAlign: 'center',
-  },
-  bold: {
-    fontWeight: 500,
-    backgroundColor: theme.palette.action.selected,
-    padding: 4,
-  },
-  RGBV: {
-    gridColumnStart: 2,
-  },
-  screens: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 2,
-  },
-  item: {
-    // flexGrow: 1,
-    width: 130,
-    paddingLeft: 4,
-    paddingRight: 4,
-  },
-}));
+// const useStyles = makeStyles(theme => ({
+//   root: {
+//     // padding: theme.spacing(1),
+//     // marginLeft: 'auto',
+//     // marginRight: 'auto',
+//     // margin: theme.spacing(1),
+//     // display: 'flex',
+//     // flexDirection: 'column',
+//     // alignItems: 'center',
+//     // width: '100%',
+//   },
+//   paper: {
+//     padding: theme.spacing(1),
+//     minWidth: '100%',
+//     overflowY: 'auto',
+//   },
+//   grid: {
+//     display: 'grid',
+//     gridTemplateColumns: '30px auto 1fr',
+//     gap: 2,
+//   },
+//   itemValue: {
+//     gridColumnStart: 3,
+//     padding: 4,
+//   },
+//   propertyName: {
+//     gridColumnStart: 'span 2',
+//     fontWeight: 500,
+//     backgroundColor: theme.palette.action.selected,
+//     padding: 4,
+//   },
+//   brightness: {
+//     gridRowStart: 'span 5',
+//     writingMode: 'vertical-lr',
+//     transform: 'rotate(180deg)',
+//     textAlign: 'center',
+//   },
+//   center: {
+//     textAlign: 'center',
+//   },
+//   bold: {
+//     fontWeight: 500,
+//     backgroundColor: theme.palette.action.selected,
+//     padding: 4,
+//   },
+//   RGBV: {
+//     gridColumnStart: 2,
+//   },
+//   screens: {
+//     display: 'flex',
+//     alignItems: 'center',
+//     gap: 2,
+//   },
+//   item: {
+//     // flexGrow: 1,
+//     width: 130,
+//     paddingLeft: 4,
+//     paddingRight: 4,
+//   },
+// }));
 
 type RGBVItemProps = { kind: keyof BrightnessRGBV } & Omit<
   TextFieldProps,
@@ -142,16 +142,48 @@ const RGBVItem: React.FC<RGBVItemProps> = ({ kind, className, value, onChange, .
       onChange={changeHandler}
       onBlur={() => setState(value)}
       type="number"
+      variant="standard"
     />
   );
 };
+
+const Name = styled(Typography)(({ theme }) => ({
+  gridColumnStart: 'span 2',
+  fontWeight: 500,
+  backgroundColor: theme.palette.action.selected,
+  padding: 4,
+}));
+
+const Value = styled(Typography)({
+  gridColumnStart: 3,
+  padding: 4,
+});
+
+const Screens = styled('div')({
+  display: 'flex',
+  alignItems: 'center',
+  gap: 2,
+});
+
+const itemStyle = css`
+  width: 130px;
+  padding-left: 4px;
+  padding-right: 4px;
+`;
+
+const boldStyle: FunctionInterpolation<Theme> = theme => css`
+  font-weight: 500;
+  background-color: ${theme.palette.action.selected};
+  padding: ${theme.spacing(0.5)};
+`;
+
+const Item = styled(Typography)(itemStyle);
 
 const NovastarDeviceTab: React.FC<{ device: Novastar | undefined; selected?: boolean }> = ({
   device,
   selected = false,
 }) => {
   const [, setToolbar] = useToolbar();
-  const classes = useStyles();
   const tab = useSelector(selectCurrentTab);
   const active = selected && tab === 'devices' && device !== undefined;
   const path = device?.path;
@@ -231,112 +263,133 @@ const NovastarDeviceTab: React.FC<{ device: Novastar | undefined; selected?: boo
       x: location?.leftTop.x ?? '-',
       y: location?.leftTop.y ?? '-',
     }));
+  const theme = useTheme();
   // const screens = original?.[0] && [original[0], original[0], original[0], original[0]];
   return (
     <Box width={1} display={active ? 'flex' : 'none'}>
-      <Paper className={classes.paper}>
+      <Paper
+        sx={{
+          p: 1,
+          minWidth: '100%',
+          overflowY: 'auto',
+        }}
+      >
         {info && (
-          <div className={classes.grid}>
-            <Typography className={classes.propertyName}>Модель</Typography>
-            <Typography className={classes.itemValue}>{info.name}</Typography>
-            <Typography className={classes.propertyName}>mac</Typography>
-            <Typography className={classes.itemValue}>{info.mac}</Typography>
-            <Typography className={classes.propertyName}>Вход</Typography>
-            <Typography className={classes.itemValue}>
-              {info.dviSelect ? DviSelectModeEnum[info.dviSelect] || 'DVI' : '-'}
-            </Typography>
-            <Typography className={classes.propertyName}>Сигнал</Typography>
-            <Typography className={classes.itemValue}>
-              {device.hasDVISignalIn ? 'Да' : 'Нет'}
-            </Typography>
-            <Typography className={classes.propertyName}>Выходы</Typography>
-            <Typography className={classes.itemValue}>{info.portCount}</Typography>
-            <Typography className={classes.propertyName}>Экраны</Typography>
-            <div className={classes.screens}>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: '30px auto 1fr',
+              gap: '2px',
+            }}
+          >
+            <Name>Модель</Name>
+            <Value>{info.name}</Value>
+            <Name>mac</Name>
+            <Value>{info.mac}</Value>
+            <Name>Вход</Name>
+            <Value>{info.dviSelect ? DviSelectModeEnum[info.dviSelect] || 'DVI' : '-'}</Value>
+            <Name>Сигнал</Name>
+            <Value>{device.hasDVISignalIn ? 'Да' : 'Нет'}</Value>
+            <Name>Выходы</Name>
+            <Value>{info.portCount}</Value>
+            <Name>Экраны</Name>
+            <Screens>
               {screens.map((_, index) => (
                 // eslint-disable-next-line react/no-array-index-key
-                <Typography key={index} className={classNames(classes.bold, classes.item)}>
+                <Item key={index} css={boldStyle(theme)}>
                   #{index + 1}
-                </Typography>
+                </Item>
               ))}
-            </div>
-            <Typography className={classes.propertyName}>Чип</Typography>
-            <div className={classNames(classes.screens)}>
+            </Screens>
+            <Name>Чип</Name>
+            <Screens>
               {screens.map(({ chipType }, index) => (
-                <Typography className={classes.item} key={index}>
+                <Item key={index}>
                   {typeof chipType === 'number'
                     ? ChipTypeEnum[chipType].replace('Chip_', '')
                     : 'N/A'}
-                </Typography>
+                </Item>
               ))}
-            </div>
-            <Typography className={classes.propertyName}>Размер</Typography>
-            <div className={classNames(classes.screens)}>
+            </Screens>
+            <Name>Размер</Name>
+            <Screens>
               {locations?.map(({ width, height }, index) => (
-                <Typography className={classes.item} key={index}>
+                <Item key={index}>
                   {width}x{height}
-                </Typography>
+                </Item>
               ))}
-            </div>
-            <Typography className={classes.propertyName}>Отступ</Typography>
-            <div className={classNames(classes.screens)}>
+            </Screens>
+            <Name>Отступ</Name>
+            <Screens>
               {locations?.map(({ x, y }, index) => (
-                <Typography className={classes.item} key={index}>
+                <Item key={index}>
                   {x},{y}
-                </Typography>
+                </Item>
               ))}
-            </div>
-            <Typography className={classNames(classes.brightness, classes.bold)}>
+            </Screens>
+            <Typography
+              css={boldStyle(theme)}
+              sx={{
+                gridRowStart: 'span 5',
+                writingMode: 'vertical-lr',
+                transform: 'rotate(180deg)',
+                textAlign: 'center',
+              }}
+            >
               Яркость
             </Typography>
             {brightProps.map(name => (
               <React.Fragment key={name}>
-                <Typography className={classNames(classes.bold, classes.RGBV)}>{name}</Typography>
-                <div className={classNames(classes.screens)}>
+                <Typography css={boldStyle(theme)} sx={{ gridColumnStart: 2 }}>
+                  {name}
+                </Typography>
+                <Screens>
                   {screens.map(({ rgbv }, index) => (
                     <RGBVItem
                       key={index}
                       kind={name}
                       value={rgbv?.[name] ?? ''}
-                      className={classes.item}
+                      css={itemStyle}
                       name={`${index}:${name}`}
                       onChange={rgbvChanged}
                       disabled={rgbv == null}
                     />
                   ))}
-                </div>
+                </Screens>
               </React.Fragment>
             ))}
-            <Typography className={classes.propertyName}>Гамма</Typography>
-            <div className={classNames(classes.screens)}>
+            <Name>Гамма</Name>
+            <Screens>
               {screens.map(({ gamma }, index) => (
                 <TextField
                   key={index}
                   name={`${index}`}
-                  className={classes.item}
+                  css={itemStyle}
                   type="number"
                   inputProps={gammaInputProps}
                   value={gamma}
                   onChange={gammaHandler}
                   disabled={gamma == null}
+                  variant="standard"
                 />
               ))}
-            </div>
-            <Typography className={classes.propertyName}>Режим</Typography>
-            <div className={classNames(classes.screens)}>
+            </Screens>
+            <Name>Режим</Name>
+            <Screens>
               {screens.map(({ mode }, screen) => (
-                <div className={classes.item} key={screen}>
+                <Box css={itemStyle} key={screen}>
                   <DisplayModeSelector
+                    variant="standard"
                     fullWidth
                     value={mode}
                     name={`${screen}`}
                     onChange={modeHandler}
                     disabled={mode == null}
                   />
-                </div>
+                </Box>
               ))}
-            </div>
-          </div>
+            </Screens>
+          </Box>
         )}
       </Paper>
     </Box>

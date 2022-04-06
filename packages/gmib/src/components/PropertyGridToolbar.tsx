@@ -8,11 +8,10 @@
  * the EULA file that was distributed with this source code.
  */
 
-import { makeStyles } from '@material-ui/core/styles';
-import { CircularProgress, IconButton, Tooltip } from '@material-ui/core';
-import ReloadIcon from '@material-ui/icons/Refresh';
-import LoadIcon from '@material-ui/icons/SystemUpdateAlt';
-import SaveIcon from '@material-ui/icons/Save';
+import { IconButton, Tooltip } from '@mui/material';
+import ReloadIcon from '@mui/icons-material/Refresh';
+import LoadIcon from '@mui/icons-material/SystemUpdateAlt';
+import SaveIcon from '@mui/icons-material/Save';
 import { DeviceId } from '@nibus/core';
 import { ipcRenderer } from 'electron';
 import fs from 'fs';
@@ -21,20 +20,21 @@ import SaveDialog from '../dialogs/SaveDialog';
 import { AppDispatch, useDispatch, useSelector } from '../store';
 import { selectCurrentDevice } from '../store/currentSlice';
 import { PropTuple, reloadDevice, setDeviceValue } from '../store/devicesSlice';
+import BusyButton from './BusyButton';
 
-const useStyles = makeStyles(theme => ({
-  toolbarWrapper: {
-    position: 'relative',
-  },
-  fabProgress: {
-    color: theme.palette.secondary.light,
-    position: 'absolute',
-    pointerEvents: 'none',
-    top: 0,
-    left: 0,
-    zIndex: 1,
-  },
-}));
+// const useStyles = makeStyles(theme => ({
+//   toolbarWrapper: {
+//     position: 'relative',
+//   },
+//   fabProgress: {
+//     color: theme.palette.secondary.light,
+//     position: 'absolute',
+//     pointerEvents: 'none',
+//     top: 0,
+//     left: 0,
+//     zIndex: 1,
+//   },
+// }));
 
 const load = (dispatch: AppDispatch, id: DeviceId, mib: string): boolean => {
   const [fileName]: string[] =
@@ -71,7 +71,6 @@ const PropertyGridToolbar: React.FC = () => {
   const device = useSelector(selectCurrentDevice);
   const { id, mib, isBusy = 0 } = device ?? {};
   const dispatch = useDispatch();
-  const classes = useStyles();
   const [saveIsOpen, setSaveOpen] = useState(false);
   const closeSaveDialog = useCallback(() => setSaveOpen(false), []);
   const saveHandler = useCallback(() => setSaveOpen(true), []);
@@ -86,6 +85,7 @@ const PropertyGridToolbar: React.FC = () => {
             color="inherit"
             onClick={() => id && mib && load(dispatch, id, mib)}
             disabled={!mib}
+            size="large"
           >
             <LoadIcon />
           </IconButton>
@@ -93,19 +93,17 @@ const PropertyGridToolbar: React.FC = () => {
       </Tooltip>
       <Tooltip title="Сохранить выбранные свойства в файл" enterDelay={1000}>
         <div>
-          <IconButton color="inherit" onClick={saveHandler} disabled={!mib}>
+          <IconButton color="inherit" onClick={saveHandler} disabled={!mib} size="large">
             <SaveIcon />
           </IconButton>
         </div>
       </Tooltip>
-      <Tooltip title="Обновить свойства" enterDelay={1000}>
-        <div className={classes.toolbarWrapper}>
-          <IconButton color="inherit" onClick={reloadHandler} disabled={isBusy > 0}>
-            <ReloadIcon />
-          </IconButton>
-          {isBusy > 0 && <CircularProgress size={48} className={classes.fabProgress} />}
-        </div>
-      </Tooltip>
+      <BusyButton
+        icon={<ReloadIcon />}
+        title="Обновить свойства"
+        isBusy={isBusy > 0}
+        onClick={reloadHandler}
+      />
       <SaveDialog open={saveIsOpen} close={closeSaveDialog} deviceId={id} />
     </>
   );

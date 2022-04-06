@@ -7,34 +7,38 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import { Container, Paper, Tab, Tabs } from '@material-ui/core';
+import { Box, Container, Paper, Tab, Tabs } from '@mui/material';
 import React, { useState } from 'react';
-import { makeStyles } from '@material-ui/core/styles';
 import { Novastar } from '../store/novastarsSlice';
 import NovastarDeviceTab from './NovastarDeviceTab';
 import NovastarTelemetryTab from './NovastarTelemetryTab';
 
-const useStyles = makeStyles(theme => ({
-  root: {
-    display: 'flex',
-    flexDirection: 'column',
-    width: '100%',
-  },
-  content: {
-    flexGrow: 1,
-    // display: 'flex',
-    paddingTop: theme.spacing(1),
-    // WebkitOverflowScrolling: 'touch', // Add iOS momentum scrolling.
-  },
-}));
+// const useStyles = makeStyles(theme => ({
+//   root: {
+//     display: 'flex',
+//     flexDirection: 'column',
+//     width: '100%',
+//   },
+//   content: {
+//     flexGrow: 1,
+//     // display: 'flex',
+//     paddingTop: theme.spacing(1),
+//     // WebkitOverflowScrolling: 'touch', // Add iOS momentum scrolling.
+//   },
+// }));
 
 type TabsType = 'props' | 'telemetry';
 
 const NovastarTabs: React.FC<{ device: Novastar | undefined }> = ({ device }) => {
-  const classes = useStyles();
   const [value, setValue] = useState<TabsType>('props');
   return (
-    <div className={classes.root}>
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        width: 1,
+      }}
+    >
       <Paper square>
         <Tabs
           value={value}
@@ -47,11 +51,16 @@ const NovastarTabs: React.FC<{ device: Novastar | undefined }> = ({ device }) =>
           <Tab label="Телеметрия" value="telemetry" />
         </Tabs>
       </Paper>
-      <Container className={classes.content}>
+      <Container
+        sx={{
+          flexGrow: 1,
+          pt: 1,
+        }}
+      >
         <NovastarDeviceTab device={device} selected={value === 'props'} />
         <NovastarTelemetryTab device={device} selected={value === 'telemetry'} />
       </Container>
-    </div>
+    </Box>
   );
 };
 

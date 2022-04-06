@@ -9,7 +9,7 @@
  */
 
 import React from 'react';
-import { MenuItem, Select, SelectProps } from '@material-ui/core';
+import { MenuItem, Select, SelectProps } from '@mui/material';
 import { TestModeEnum } from '@novastar/native/build/main/generated/TestMode';
 
 const modes: Partial<Record<TestModeEnum, string>> = {

@@ -7,7 +7,7 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-import { debounce } from '@material-ui/core';
+import { debounce } from '@mui/material';
 import { AnyAction } from '@reduxjs/toolkit';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useDispatch } from 'react-redux';

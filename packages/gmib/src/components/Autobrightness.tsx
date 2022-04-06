@@ -7,14 +7,21 @@
  * For the full copyright and license information, please view
  * the EULA file that was distributed with this source code.
  */
-// import FormHelperText from '@material-ui/core/FormHelperText';
-import { Button, IconButton, InputAdornment, Paper, TextField } from '@material-ui/core';
-import { makeStyles } from '@material-ui/core/styles';
-import classNames from 'classnames';
+// import FormHelperText from '@mui/material/FormHelperText';
+import {
+  Box,
+  Button,
+  GlobalStyles,
+  IconButton,
+  InputAdornment,
+  Paper,
+  TextField,
+} from '@mui/material';
+import { css, styled } from '@mui/material/styles';
 import React, { useCallback, useEffect, useState } from 'react';
 import HighchartsReact from 'highcharts-react-official';
-import CloseIcon from '@material-ui/icons/Close';
-import CheckIcon from '@material-ui/icons/Check';
+import CloseIcon from '@mui/icons-material/Close';
+import CheckIcon from '@mui/icons-material/Check';
 import sortBy from 'lodash/sortBy';
 
 import Highcharts, { SeriesSolidgaugeOptions } from './Highcharts';
@@ -34,64 +41,6 @@ import { noop, notEmpty, toErrorMessage } from '../util/helpers';
 import AutobrightnessToolbar from './AutobrightnessToolbar';
 import Brightness from './Brightness';
 
-const useStyles = makeStyles(theme => ({
-  root: {
-    paddingTop: theme.spacing(1),
-    marginLeft: 'auto',
-    marginRight: 'auto',
-  },
-  column: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-  },
-  labelWrapper: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    width: '6ch',
-    ...theme.typography.subtitle1,
-  },
-  value: {
-    lineHeight: 1,
-  },
-  unit: {
-    ...theme.typography.caption,
-    opacity: 0.5,
-  },
-  spline: {
-    padding: theme.spacing(1),
-    display: 'grid',
-    gridTemplateColumns: '[lux] 1fr [brightness] 1fr [clear] auto',
-    columnGap: theme.spacing(1),
-    rowGap: theme.spacing(1),
-  },
-  valueItem: {
-    minWidth: '14ch',
-  },
-  clear: {
-    alignSelf: 'center',
-    paddingBottom: theme.spacing(2),
-  },
-  control: {
-    display: 'flex',
-    justifyContent: 'center',
-    paddingTop: theme.spacing(1),
-    paddingBottom: theme.spacing(1),
-    // minHeight: 300,
-    // width: '100%',
-  },
-  auto: {
-    flexGrow: 1,
-  },
-  last: {
-    marginBottom: theme.spacing(1),
-    marginRight: theme.spacing(1),
-    marginLeft: 'auto',
-    alignSelf: 'flex-end',
-  },
-}));
-
 const setItem = (index: number, value?: number) => (
   array: (number | undefined)[]
 ): (number | undefined)[] => {
@@ -104,7 +53,28 @@ const setItem = (index: number, value?: number) => (
   return clone;
 };
 
-const highChartsOptions = (classes: ReturnType<typeof useStyles>): Highcharts.Options => ({
+const unitStyles = (
+  <GlobalStyles
+    styles={theme => ({
+      '.unit': {
+        ...(theme.typography.caption as any),
+        opacity: 0.5,
+      },
+      '.value': {
+        lineHeight: 1,
+      },
+      '.labelWrapper': {
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        width: '6ch',
+        ...(theme.typography.subtitle1 as any),
+      },
+    })}
+  />
+);
+
+const highChartsOptions: Highcharts.Options = {
   chart: {
     type: 'solidgauge',
     height: 180,
@@ -118,7 +88,7 @@ const highChartsOptions = (classes: ReturnType<typeof useStyles>): Highcharts.Op
   },
   exporting: { enabled: false },
   title: {
-    text: `<div class="${classes.unit}">Освещенность</div>`,
+    text: `<div class="unit">Освещенность</div>`,
     useHTML: true,
   },
 
@@ -176,14 +146,14 @@ const highChartsOptions = (classes: ReturnType<typeof useStyles>): Highcharts.Op
       name: 'illuminance',
       data: [10000],
       dataLabels: {
-        format: `<div class="${classes.labelWrapper}">
-             <div class="${classes.value}">{y}</div>
-             <div class="${classes.unit}">Lux</div>
+        format: `<div class="labelWrapper">
+             <div class="value">{y}</div>
+             <div class="unit">Lux</div>
              </div>`,
       },
     },
   ],
-});
+};
 
 const brightnessInputProps = {
   startAdornment: <InputAdornment position="start">%</InputAdornment>,
@@ -201,9 +171,25 @@ const illuminanceInputProps = {
   },
 };
 
+const columnStyle = css`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+`;
+
+const Control = styled('div')(({ theme }) => ({
+  display: 'flex',
+  justifyContent: 'center',
+  paddingTop: theme.spacing(1),
+  paddingBottom: theme.spacing(1),
+}));
+
+const Value = styled(TextField)`
+  min-width: 14ch;
+`;
+
 const Autobrightness: React.FC = () => {
-  const classes = useStyles();
-  const [options, setOptions] = useState<Highcharts.Options>(highChartsOptions(classes));
+  const [options, setOptions] = useState<Highcharts.Options>(highChartsOptions);
   const dispatch = useDispatch();
   const illuminance = useSelector(selectLastIlluminance);
   const [, setToolbar] = useToolbar();
@@ -301,33 +287,40 @@ const Autobrightness: React.FC = () => {
   );
   const autobrightness = useSelector(selectAutobrightness);
   return (
-    <div className={classNames(classes.root)}>
-      <Paper className={classes.column}>
-        <div className={classes.control}>
+    <Box sx={{ pt: 1, mx: 'auto' }}>
+      <Paper css={columnStyle}>
+        <Control>
+          {unitStyles}
           <HighchartsReact highcharts={Highcharts} options={options} />
           <Brightness
             value={brightness ?? 0}
             onChange={handleBrightness}
             disabled={autobrightness}
           />
-        </div>
-        <div className={classes.control}>
-          <div className={classNames(classes.column)}>
-            <div className={classes.spline}>
+        </Control>
+        <Control>
+          <Box css={columnStyle}>
+            <Box
+              sx={{
+                p: 1,
+                display: 'grid',
+                gridTemplateColumns: `[lux] 1fr [brightness] 1fr [clear] auto`,
+                gap: 1,
+              }}
+            >
               {[...Array(SPLINE_COUNT).keys()].map(i => (
                 <React.Fragment key={i}>
-                  <TextField
-                    className={classes.valueItem}
+                  <Value
                     label={i === 0 ? 'Освещенность' : undefined}
                     id={`lux-${i}`}
                     value={lux[i] ?? ''}
                     type="number"
                     InputProps={illuminanceInputProps}
                     onChange={handleChange}
+                    variant="standard"
                     // margin="dense"
                   />
-                  <TextField
-                    className={classes.valueItem}
+                  <Value
                     label={i === 0 ? 'Яркость' : undefined}
                     id={`bright-${i}`}
                     value={bright[i] ?? ''}
@@ -337,17 +330,18 @@ const Autobrightness: React.FC = () => {
                     // margin="dense"
                     error={!!error[i]}
                     helperText={error[i] ?? ' '}
+                    variant="standard"
                   />
-                  <div className={classes.clear}>
+                  <Box sx={{ alignSelf: 'center', pb: 2 }}>
                     <IconButton size="small" onClick={handleClear} id={`clear-${i}`}>
                       <CloseIcon fontSize="inherit" />
                     </IconButton>
-                  </div>
+                  </Box>
                 </React.Fragment>
               ))}
-            </div>
-          </div>
-        </div>
+            </Box>
+          </Box>
+        </Control>
         <Button
           color="primary"
           startIcon={<CheckIcon />}
@@ -355,12 +349,12 @@ const Autobrightness: React.FC = () => {
           size="small"
           disabled={!changed}
           onClick={handleSave}
-          className={classes.last}
+          sx={{ mb: 1, mr: 1, ml: 'auto', alignSelf: 'flex-end' }}
         >
           Применить
         </Button>
       </Paper>
-    </div>
+    </Box>
   );
 };
 

@@ -9,21 +9,29 @@
  */
 
 /* eslint-disable no-bitwise */
-import { makeStyles } from '@material-ui/core/styles';
-import { Button, FormControl, FormHelperText, IconButton } from '@material-ui/core';
-import FolderIcon from '@material-ui/icons/FolderOpen';
-import SaveAltIcon from '@material-ui/icons/SaveAlt';
+import { Box, Button, FormControl, FormHelperText, IconButton } from '@mui/material';
+import FolderIcon from '@mui/icons-material/FolderOpen';
+import SaveAltIcon from '@mui/icons-material/SaveAlt';
 import { Kind, KindMap } from '@nibus/core';
-import classNames from 'classnames';
 import { ipcRenderer } from 'electron';
 import React, { memo, useCallback, useState } from 'react';
 import { useSelector } from '../store';
 import { selectAutobrightness, selectOverheatProtection } from '../store/configSlice';
 import { selectCurrentDevice } from '../store/currentSlice';
+import extendStyled from '../util/extendStyled';
 import { getStatesAsync } from '../util/helpers';
 import FilenameEllipsis from './FilenameEllipsis';
 import FormFieldSet from './FormFieldSet';
 import Selector from './Selector';
+
+const StyledSelector = extendStyled(Selector, { hidden: false })(({ hidden }) => ({
+  flex: `0 1 12ch`,
+  visibility: hidden ? 'hidden' : 'inherit',
+}));
+
+const StyledFormHelperText = extendStyled(FormHelperText, { hidden: false })(({ hidden }) => ({
+  visibility: hidden ? 'hidden' : 'inherit',
+}));
 
 export type Props = {
   kind: Kind;
@@ -37,58 +45,58 @@ export type Props = {
   hidden?: boolean;
 };
 
-const useStyles = makeStyles(theme => ({
-  hidden: {
-    display: 'none',
-  },
-  file: {
-    display: 'flex',
-    alignItems: 'center',
-  },
-  name: {
-    flexGrow: 1,
-    flexShrink: 1,
-    maxWidth: `calc(100% - 48px - ${theme.spacing(1)}px)`,
-    // padding: '5px 15px',
-    // border: `1px solid ${theme.palette.action.disabledBackground}`,
-    borderRadius: theme.shape.borderRadius,
-    marginRight: theme.spacing(1),
-  },
-  button: {
-    flexGrow: 0,
-    flexShrink: 0,
-  },
-  selectors: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    // padding: theme.spacing(1),
-    alignItems: 'flex-end',
-    '& > *': {
-      // flex: `0 1 12ch`,
-      margin: theme.spacing(1),
-    },
-  },
-  selector: {
-    flex: `0 1 12ch`,
-  },
-  reset: {
-    flex: '0 0 auto',
-    marginLeft: 'auto',
-  },
-  write: {
-    flexShrink: 0,
-  },
-  root: {
-    width: '100%',
-    padding: theme.spacing(1),
-  },
-  set: {
-    width: '100%',
-  },
-  invisible: {
-    visibility: 'hidden',
-  },
-}));
+// const useStyles = makeStyles(theme => ({
+//   hidden: {
+//     display: 'none',
+//   },
+//   file: {
+//     display: 'flex',
+//     alignItems: 'center',
+//   },
+//   name: {
+//     flexGrow: 1,
+//     flexShrink: 1,
+//     maxWidth: `calc(100% - 48px - ${theme.spacing(1)})`,
+//     // padding: '5px 15px',
+//     // border: `1px solid ${theme.palette.action.disabledBackground}`,
+//     borderRadius: theme.shape.borderRadius,
+//     marginRight: theme.spacing(1),
+//   },
+//   button: {
+//     flexGrow: 0,
+//     flexShrink: 0,
+//   },
+//   selectors: {
+//     display: 'flex',
+//     flexWrap: 'wrap',
+//     // padding: theme.spacing(1),
+//     alignItems: 'flex-end',
+//     '& > *': {
+//       // flex: `0 1 12ch`,
+//       margin: theme.spacing(1),
+//     },
+//   },
+//   selector: {
+//     flex: `0 1 12ch`,
+//   },
+//   reset: {
+//     flex: '0 0 auto',
+//     marginLeft: 'auto',
+//   },
+//   write: {
+//     flexShrink: 0,
+//   },
+//   root: {
+//     width: '100%',
+//     padding: theme.spacing(1),
+//   },
+//   set: {
+//     width: '100%',
+//   },
+//   invisible: {
+//     visibility: 'hidden',
+//   },
+// }));
 
 export const displayName = (kind: string): string => {
   switch (kind) {
@@ -102,7 +110,6 @@ export const displayName = (kind: string): string => {
 };
 
 const FlashUpgrade: React.FC<Props> = ({ kind, onFlash, hidden = false }) => {
-  const classes = useStyles();
   const [ext, isModule] = KindMap[kind];
   const [file, setFile] = useState('');
   const [column, setColumn] = useState(0);
@@ -114,7 +121,12 @@ const FlashUpgrade: React.FC<Props> = ({ kind, onFlash, hidden = false }) => {
     _ => {
       const fileNames: string[] | undefined = ipcRenderer.sendSync('showOpenDialogSync', {
         title: 'Выбор файла прошивки',
-        filters: [{ extensions: [ext], name: kind }],
+        filters: [
+          {
+            extensions: [ext],
+            name: kind,
+          },
+        ],
         properties: ['openFile'],
       } as Electron.OpenDialogSyncOptions);
       const firmware = fileNames?.[0];
@@ -137,60 +149,87 @@ const FlashUpgrade: React.FC<Props> = ({ kind, onFlash, hidden = false }) => {
     onFlash(false, undefined, (column << 8) | (row & 0xff), column, row);
   };
   return (
-    <div className={classNames(classes.root, { [classes.hidden]: hidden })}>
-      <FormFieldSet className={classes.set} legend={displayName(kind)}>
-        <div className={classes.file}>
+    <Box
+      sx={{
+        width: 1,
+        p: 1,
+        display: hidden ? 'none' : 'block',
+      }}
+    >
+      <FormFieldSet sx={{ width: 1 }} legend={displayName(kind)}>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+          }}
+        >
           <FilenameEllipsis
             filename={file}
-            className={classes.name}
             placeholder={`Выберите файл (*.${ext ?? '*'})`}
+            sx={{
+              flexGrow: 1,
+              flexShrink: 1,
+              maxWidth: theme => `calc(100% - 48px - ${theme.spacing(1)})`,
+              borderRadius: 1,
+              marginRight: 1,
+            }}
           />
           <IconButton
             aria-label={`upgrade-${kind}`}
             onClick={selectFileHandler}
-            className={classes.button}
+            size="large"
+            sx={{
+              flexGrow: 0,
+              flexShrink: 0,
+            }}
           >
             <FolderIcon />
           </IconButton>
-        </div>
-        <div className={classes.selectors}>
-          <Selector
+        </Box>
+        <Box
+          sx={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'flex-end',
+            '& > *': {
+              margin: 1,
+            },
+          }}
+        >
+          <StyledSelector
             label="Столб"
             groupName="Все"
             value={column}
             onChange={setColumn}
             max={23}
-            className={classNames({ [classes.invisible]: !isModule }, classes.selector)}
+            hidden={!isModule}
           />
-          <Selector
+          <StyledSelector
             label="Ряд"
             groupName="Все"
             value={row}
             onChange={setRow}
             max={255}
-            className={classNames({ [classes.invisible]: !isModule }, classes.selector)}
+            hidden={!isModule}
           />
-          <Button className={classes.reset} onClick={resetHandler}>
+          <Button
+            sx={{
+              flex: '0 0 auto',
+              marginLeft: 'auto',
+            }}
+            onClick={resetHandler}
+          >
             Сброс
           </Button>
-          <FormControl className={classes.write}>
-            <FormHelperText
-              className={classNames({ [classes.invisible]: !enabled })}
-              error
-              margin="dense"
-            >
+          <FormControl sx={{ flexShrink: 0 }}>
+            <StyledFormHelperText hidden={!enabled} error margin="dense">
               {'\u26a0'}Защита от перегрева
-            </FormHelperText>
-            <FormHelperText
-              className={classNames({ [classes.invisible]: !autobrightness })}
-              error
-              margin="dense"
-            >
+            </StyledFormHelperText>
+            <StyledFormHelperText hidden={!autobrightness} error margin="dense">
               {'\u26a0'}Автояркость
-            </FormHelperText>
+            </StyledFormHelperText>
             <Button
               variant="contained"
-              color="default"
               startIcon={<SaveAltIcon />}
               disabled={!file || enabled || autobrightness || isBusy > 0}
               onClick={flashHandler}
@@ -198,9 +237,9 @@ const FlashUpgrade: React.FC<Props> = ({ kind, onFlash, hidden = false }) => {
               Прошить
             </Button>
           </FormControl>
-        </div>
+        </Box>
       </FormFieldSet>
-    </div>
+    </Box>
   );
 };
 export default memo(FlashUpgrade);
