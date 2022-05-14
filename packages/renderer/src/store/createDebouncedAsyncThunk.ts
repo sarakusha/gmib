@@ -1,14 +1,6 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
+import type { AsyncThunk, AsyncThunkPayloadCreator } from '@reduxjs/toolkit';
+import { createAsyncThunk } from '@reduxjs/toolkit';
 
-import { AsyncThunk, AsyncThunkPayloadCreator, createAsyncThunk } from '@reduxjs/toolkit';
 import type { AppThunkConfig } from './index';
 
 type DebounceSettings<ThunkArg> = {
@@ -44,8 +36,7 @@ const createDebouncedAsyncThunk = <Returned, ThunkArg = void>(
   typePrefix: string,
   payloadCreator: AsyncThunkPayloadCreator<Returned, ThunkArg, AppThunkConfig>,
   wait: number,
-  options?: DebounceSettings<ThunkArg>
-  // eslint-disable-next-line @typescript-eslint/ban-types
+  options?: DebounceSettings<ThunkArg>,
 ): AsyncThunk<Returned, ThunkArg, AppThunkConfig> => {
   const { maxWait = 0, leading = false, selectId = () => null } = options ?? {};
   const states = new Map<unknown, State>();
@@ -73,7 +64,8 @@ const createDebouncedAsyncThunk = <Returned, ThunkArg = void>(
           maxTimer: 0,
         });
       }
-      const state = states.get(id)!;
+      const state = states.get(id);
+      if (!state) return false;
       const immediate = leading && !state.timer;
       window.clearTimeout(state.timer);
       state.timer = window.setTimeout(() => {

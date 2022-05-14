@@ -1,26 +1,13 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
-
 /* eslint-disable no-bitwise */
-import { Draft, PayloadAction, createSlice, isAnyOf } from '@reduxjs/toolkit';
+import type { Draft, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice } from '@reduxjs/toolkit';
 import sortBy from 'lodash/sortBy';
-import maxBy from 'lodash/maxBy';
-import { hasProps } from '@novastar/screen';
-import type { RootState } from './index';
-import { startAppListening } from './listenerMiddleware';
 
-type SensorRecord = [timestamp: number, value: number];
+export type SensorRecord = [timestamp: number, value: number];
 
-type SensorAddress = string;
+export type SensorAddress = string;
 
-type SensorState = {
+export type SensorState = {
   current: SensorRecord | undefined;
   average: number | undefined;
   history: SensorRecord[];
@@ -31,11 +18,11 @@ export const MIN_INTERVAL = 10;
 export const ILLUMINATION = 321;
 export const TEMPERATURE = 128;
 
-type SensorDictionary = Record<SensorAddress, SensorState>;
+export type SensorDictionary = Record<SensorAddress, SensorState>;
 
 const sensorKinds = ['temperature', 'illuminance'] as const;
 
-type SensorKind = typeof sensorKinds[number];
+export type SensorKind = typeof sensorKinds[number];
 
 export interface SensorsState {
   /**
@@ -53,7 +40,7 @@ const initialState: SensorsState = {
   },
 };
 
-type Sensor = {
+export type Sensor = {
   kind: SensorKind;
   address: SensorAddress;
   value: number;
@@ -61,29 +48,28 @@ type Sensor = {
 
 const calculateSensors = (sensors: Draft<SensorDictionary>, interval: number): void => {
   const startingFrom = Date.now() - interval * 1000;
-  Object.entries(sensors).forEach(([, sensorState]) => {
-    let { history } = sensorState;
-    const { current } = sensorState;
+  Object.entries(sensors).forEach(([, state]) => {
+    let { history } = state;
+    const { current } = state;
     history = sortBy(
       history.filter(([timestamp]) => timestamp >= startingFrom),
-      ([timestamp]) => timestamp
+      ([timestamp]) => timestamp,
     );
-    sensorState.history = history;
-    if (current && Date.now() - current[0] > (MIN_INTERVAL + 1) * 1000)
-      sensorState.current = undefined;
+    state.history = history;
+    if (current && Date.now() - current[0] > (MIN_INTERVAL + 1) * 1000) state.current = undefined;
 
     if (history.length === 0) {
-      sensorState.average = sensorState.current?.[1];
+      state.average = state.current?.[1];
     } else {
       const total = [...history];
       current && total.push(current);
       const half = total.length >>> 1;
       if (total.length % 2 === 1) {
-        [, sensorState.average] = total[half];
+        [, state.average] = total[half];
       } else {
         const [, left] = total[half - 1];
         const [, right] = total[half];
-        sensorState.average = Math.round((left + right) / 2);
+        state.average = Math.round((left + right) / 2);
       }
     }
   });
@@ -120,102 +106,5 @@ const sensorsSlice = createSlice({
 });
 
 export const { changeInterval, pushSensorValue, calculate } = sensorsSlice.actions;
-
-// export const setSensorInterval = (interval: number): AppThunk => dispatch => {
-//   dispatch(changeInterval(interval));
-//   dispatch(calculate());
-// };
-
-let timeout = 0;
-
-startAppListening({
-  matcher: isAnyOf(changeInterval, pushSensorValue),
-  effect(action, { dispatch }) {
-    if (pushSensorValue.match(action)) {
-      window.clearTimeout(timeout);
-      timeout = window.setTimeout(() => dispatch(calculate()), (MIN_INTERVAL + 1) * 1000);
-    }
-    dispatch(calculate);
-  },
-});
-
-/*
-export const pushSensorValue = (
-  kind: SensorKind,
-  address: string,
-  value: number
-): AppThunk => dispatch => {
-  window.clearTimeout(timeout);
-  const sensorValue: SensorValue = [address, value];
-  dispatch(push([kind, sensorValue]));
-  dispatch(calculate());
-  // if (kind === 'illuminance') {
-  //   const { longitude, latitude } = selectLocation(getState());
-  //   if (longitude !== undefined && latitude !== undefined) {
-  //     const { altitude } = SunCalc.getPosition(new Date(), latitude, longitude);
-  //     const degree = Math.round((altitude * 180) / Math.PI);
-  //     const prop = `${degree}` as Altitude;
-  //     const history = config.get('history') ?? {};
-  //     const [average, count]: HistoryItem = history[prop] ?? [];
-  //     history[prop] =
-  //       average !== undefined && count !== undefined && count > 0
-  //         ? [average + (value - average) / (count + 1), Math.min(count + 1, 100)]
-  //         : [value, 1];
-  //     config.set('history', history);
-  //   }
-  // }
-  timeout = window.setTimeout(() => dispatch(calculate()), (MIN_INTERVAL + 1) * 1000);
-};
-*/
-
-export const selectSensors = (state: RootState): SensorsState => state.sensors;
-
-const hasCurrent = hasProps('current');
-
-const selectLast = (state: RootState, kind: SensorKind): SensorState | undefined => {
-  const sensors = selectSensors(state).sensors[kind];
-  return maxBy(Object.values(sensors).filter(hasCurrent), ({ current }) => current[0]);
-};
-
-const selectLastValue = (state: RootState, kind: SensorKind): number | undefined => {
-  const [, max] = selectLast(state, kind)?.current ?? [];
-  return max;
-  // const sensors = state.sensors.sensors[kind];
-  // const [, max] =
-  //   maxBy(
-  //     Object.values(sensors)
-  //       .map(({ current }) => current)
-  //       .filter(notEmpty),
-  //     ([timestamp]) => timestamp
-  //   ) ?? [];
-  // return max;
-};
-
-export const selectLastAverage = (state: RootState, kind: SensorKind): number | undefined =>
-  selectLast(state, kind)?.average;
-
-export const selectIlluminance = (state: RootState): SensorDictionary =>
-  selectSensors(state).sensors.illuminance;
-
-export const selectInterval = (state: RootState): number => selectSensors(state).interval;
-
-export const selectLastIlluminance = (state: RootState): number | undefined =>
-  selectLastValue(state, 'illuminance');
-
-export const selectCurrentIlluminance = (state: RootState, address: string): number | undefined =>
-  selectIlluminance(state).sensors[address]?.current?.[1];
-
-export const selectTemperature = (state: RootState): SensorDictionary =>
-  selectSensors(state).sensors.temperature;
-
-export const selectLastTemperature = (state: RootState): number | undefined =>
-  selectLastValue(state, 'temperature');
-
-export const selectCurrentTemperature = (state: RootState, address: string): number | undefined =>
-  selectTemperature(state).sensors[address]?.current?.[1];
-
-// export const startSensorSaver: AsyncInitializer = (_, getState) => {
-//   window.setInterval(() => {}, selectSensors(getState() as RootState).interval * 1000);
-// };
 
 export default sensorsSlice.reducer;

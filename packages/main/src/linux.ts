@@ -1,20 +1,12 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
 import { app } from 'electron';
-import path from 'path';
 import fs from 'fs';
+import path from 'path';
+
 import debugFactory from 'debug';
 
-const debug = debugFactory('gmib:linux');
+const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:linux`);
 
-const iconSrc = path.resolve(__dirname, '../extraResources/icon64x64.png');
+const iconSrc = path.resolve(__dirname, '../../renderer/assets/icon64x64.png');
 const iconDst = path.join(app.getPath('userData'), path.basename(iconSrc));
 
 const getAutostartPath = (): string => {
@@ -27,7 +19,7 @@ const getApplicationsPath = (): string =>
   path.join(app.getPath('home'), '.local/share/applications', `${app.getName()}.desktop`);
 
 const getEntry = (): string => {
-  const exe = process.env.APPIMAGE;
+  const exe = process.env['APPIMAGE'];
   const name = app.getName();
   const version = app.getVersion();
   return `[Desktop Entry]

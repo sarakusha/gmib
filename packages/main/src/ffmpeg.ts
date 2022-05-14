@@ -1,26 +1,22 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
-
 /**
  * https://github.com/mifi/lossless-cut/blob/master/src/ffmpeg.js
  */
 
-import debugFactory from 'debug';
-import isDev from 'electron-is-dev';
-import { ExecaChildProcess, ExecaReturnValue, execa } from 'execa';
-import { FileTypeResult } from 'file-type/core';
+import os from 'os';
 import path from 'path';
 import readline from 'readline';
+
+import debugFactory from 'debug';
+import type { ExecaChildProcess, ExecaReturnValue } from 'execa';
+import { execa } from 'execa';
 import { fileTypeFromFile } from 'file-type';
-import { arch, isMac, isWindows, platform } from '../util/helpers';
+import type { FileTypeResult } from 'file-type/core';
+
+export const platform = os.platform();
+export const arch = os.arch();
+export const isWindows = platform === 'win32';
+export const isMac = platform === 'darwin';
 
 export interface FfprobeFormat {
   filename?: string;
@@ -34,6 +30,7 @@ export interface FfprobeFormat {
   bit_rate?: string;
   probe_score?: number;
   tags?: Record<string, string | number>;
+
   [key: string]: any;
 }
 
@@ -50,6 +47,7 @@ export interface FfprobeStreamDisposition {
   clean_effects?: number;
   attached_pic?: number;
   timed_thumbnails?: number;
+
   [key: string]: any;
 }
 
@@ -100,10 +98,11 @@ export interface FfprobeStream {
   bits_per_sample?: number;
   disposition?: FfprobeStreamDisposition;
   rotation?: string | number;
+
   [key: string]: any;
 }
 
-const debug = debugFactory('gmib:ffmpeg');
+const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:ffmpeg`);
 
 export const getFfCommandLine = (cmd: string, args: string[]): string => {
   const mapArg = (arg: string): string => (/[^0-9a-zA-Z-_]/.test(arg) ? `'${arg}'` : arg);
@@ -113,7 +112,7 @@ export const getFfCommandLine = (cmd: string, args: string[]): string => {
 function getFfPath(cmd: string): string {
   const exeName = isWindows ? `${cmd}.exe` : cmd;
 
-  if (isDev) return path.join('ffmpeg', `${platform}-${arch}`, exeName);
+  if (import.meta.env.DEV) return path.join('ffmpeg', `${platform}-${arch}`, exeName);
   return path.join(process.resourcesPath, exeName);
 }
 
@@ -122,7 +121,7 @@ export const getFfprobePath = (): string => getFfPath('ffprobe');
 
 export async function runFfprobe(
   args: string[],
-  timeout: number = isDev ? 10000 : 30000
+  timeout: number = import.meta.env.DEV ? 10000 : 30000,
 ): Promise<ExecaReturnValue> {
   const ffprobePath = getFfprobePath();
   debug(getFfCommandLine('ffprobe', args));
@@ -132,7 +131,7 @@ export async function runFfprobe(
     ps.kill();
   }, timeout);
   try {
-    return await ps;
+    return await (ps as Promise<ExecaReturnValue>);
   } finally {
     clearTimeout(timer);
   }
@@ -165,7 +164,7 @@ export async function getDuration(filePath: string): Promise<number> {
 function handleProgress(
   process: ExecaChildProcess,
   cutDuration: number,
-  onProgress: (percent: number) => void
+  onProgress: (percent: number) => void,
 ): void {
   if (!process.stderr) return;
   onProgress(0);
@@ -176,7 +175,7 @@ function handleProgress(
       // Video: "frame=  839 fps=159 q=-1.0 Lsize=     391kB time=00:00:34.83 bitrate=
       // 92.0kbits/s speed=6.58x"
       let match = line.match(
-        /frame=\s*[^\s]+\s+fps=\s*[^\s]+\s+q=\s*[^\s]+\s+(?:size|Lsize)=\s*[^\s]+\s+time=\s*(\d+):(\d+):(\d+\.\d+)\s+/
+        /frame=\s*[^\s]+\s+fps=\s*[^\s]+\s+q=\s*[^\s]+\s+(?:size|Lsize)=\s*[^\s]+\s+time=\s*(\d+):(\d+):(\d+\.\d+)\s+/,
       );
       // Audio only looks like this: "line size=  233422kB time=01:45:50.68 bitrate= 301.1kbits/s
       // speed= 353x    "
@@ -226,7 +225,7 @@ export async function html5ify({ outPath, filePath, speed, onProgress }: Opts): 
       break;
   }
   debug(
-    `Making HTML5 friendly version. filePath: ${filePath}, outPath: ${outPath}, video: ${video}`
+    `Making HTML5 friendly version. filePath: ${filePath}, outPath: ${outPath}, video: ${video}`,
   );
 
   let videoArgs;
@@ -316,7 +315,7 @@ export async function html5ify({ outPath, filePath, speed, onProgress }: Opts): 
 }
 
 export async function readFileMeta(
-  filePath: string
+  filePath: string,
 ): Promise<{ streams: FfprobeStream[]; format: FfprobeFormat }> {
   try {
     const { stdout } = await runFfprobe([
@@ -379,13 +378,13 @@ export const doesPlayerSupportFile = (streams: FfprobeStream[]): boolean => {
   // https://github.com/mifi/lossless-cut/issues/975 But cover art / thumbnail streams don't count
   // e.g. hevc with a png stream (disposition.attached_pic=1)
   return realVideoStreams.some(
-    s => s.codec_name && !['hevc', 'prores', 'mpeg4', 'tscc2'].includes(s.codec_name)
+    s => s.codec_name && !['hevc', 'prores', 'mpeg4', 'tscc2'].includes(s.codec_name),
   );
 };
 
 const determineOutputFormat = (
   ffprobeFormats: string[],
-  fileTypeResponse: FileTypeResult | undefined
+  fileTypeResponse: FileTypeResult | undefined,
 ): string | undefined =>
   fileTypeResponse?.ext && ffprobeFormats.includes(fileTypeResponse.ext)
     ? fileTypeResponse.ext
@@ -393,7 +392,7 @@ const determineOutputFormat = (
 
 export async function getSmarterOutFormat(
   filePath: string,
-  format: FfprobeFormat
+  format: FfprobeFormat,
 ): Promise<string | undefined> {
   const formatsStr = format.format_name ?? '';
   debug(`formats: ${formatsStr}`);

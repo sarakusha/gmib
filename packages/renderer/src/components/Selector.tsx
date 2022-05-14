@@ -1,16 +1,8 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
 
-import React, { memo, useCallback, useEffect, useState } from 'react';
 import { Checkbox, InputAdornment, TextField } from '@mui/material';
-import { getStateAsync } from '../util/helpers';
+import React, { memo, useCallback, useEffect, useState } from 'react';
+
+import { getStateAsync } from '/@common/helpers';
 
 export type Props = {
   label: string;
@@ -27,7 +19,7 @@ const Selector: React.FC<Props> = ({ label, groupName, value, onChange, max, cla
   const [, setCached] = useState(value);
   const changeHandler = useCallback<React.ChangeEventHandler<HTMLInputElement>>(
     e => onChange(Number(e.target.value)),
-    [onChange]
+    [onChange],
   );
   useEffect(() => {
     value !== ALL && setCached(value);
@@ -38,7 +30,7 @@ const Selector: React.FC<Props> = ({ label, groupName, value, onChange, max, cla
       const current = await getStateAsync(setCached);
       onChange(checked ? ALL : current);
     },
-    [onChange]
+    [onChange],
   );
   return (
     <div className={className}>

@@ -1,15 +1,4 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
 
-import { DeviceId } from '@nibus/core';
-import React, { useCallback, useMemo, useReducer } from 'react';
 import {
   Button,
   Checkbox,
@@ -19,16 +8,18 @@ import {
   DialogTitle,
   FormControlLabel,
 } from '@mui/material';
-import { ipcRenderer } from 'electron';
-import fs from 'fs';
-import some from 'lodash/some';
+import type { DeviceId } from '@nibus/core';
 import pick from 'lodash/pick';
+import some from 'lodash/some';
 import sortBy from 'lodash/sortBy';
 import sortedUniqBy from 'lodash/sortedUniqBy';
-import { useDevice, useSelector } from '../store';
-import type { ValueState, ValueType } from '../store/devicesSlice';
+import React, { useCallback, useMemo, useReducer } from 'react';
+
 import FormFieldSet from '../components/FormFieldSet';
-import { selectMibByName } from '../store/mibsSlice';
+import { useDevice, useSelector } from '../store';
+import { selectMibByName } from '../store/selectors';
+
+import type {ValueState, ValueType} from '/@common/helpers';
 
 // const useStyles = makeStyles(theme => ({
 //   root: {
@@ -61,7 +52,7 @@ const reducer = (state: State, { name, value }: Action): State => {
         ...result,
         [key]: value,
       }),
-      {}
+      {},
     );
   }
   return {
@@ -75,11 +66,11 @@ const byId = ([id]: PropIds): number => id;
 const selectValue = ({ value }: ValueState): ValueType => value;
 const extractValues = (props: Record<string, ValueState>): Record<string, ValueType> =>
   Object.fromEntries(
-    Object.entries<ValueState>(props).map(([name, state]) => [name, selectValue(state)])
+    Object.entries<ValueState>(props).map(([name, state]) => [name, selectValue(state)]),
   );
 
 const SaveDialog: React.FC<Props> = ({ deviceId, open, close }) => {
-  const { mib = 0, props = {} } = useDevice(deviceId) ?? {};
+  const { mib = '', props = {} } = useDevice(deviceId) ?? {};
   const meta = useSelector(state => selectMibByName(state, mib));
   const [names, initial] = useMemo(() => {
     const keys: [id: number, name: string, displayName: string][] = meta
@@ -88,9 +79,9 @@ const SaveDialog: React.FC<Props> = ({ deviceId, open, close }) => {
             Object.entries(meta.properties)
               .filter(([, { isWritable, isReadable }]) => isWritable && isReadable)
               .map<PropIds>(([name, { displayName, id }]) => [id, name, displayName]),
-            byId
+            byId,
           ),
-          byId
+          byId,
         )
       : [];
     return [
@@ -100,7 +91,7 @@ const SaveDialog: React.FC<Props> = ({ deviceId, open, close }) => {
           ...res,
           [name]: false,
         }),
-        {}
+        {},
       ),
     ];
   }, [meta]);
@@ -113,36 +104,23 @@ const SaveDialog: React.FC<Props> = ({ deviceId, open, close }) => {
         value: event.currentTarget.checked,
       });
     },
-    [dispatch]
+    [dispatch],
   );
   const closeHandler = useCallback(() => close(), [close]);
   const showDialog = useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
-      const fileName: string | undefined = ipcRenderer.sendSync('showSaveDialogSync', {
-        title: 'Сохранить как',
-        defaultPath: mib,
-        filters: [
-          {
-            name: 'JSON',
-            extensions: ['json'],
-          },
-        ],
-      });
-
-      if (fileName) {
-        const properties =
-          event.currentTarget.id === 'all'
-            ? names.map(([, name]) => name)
-            : Object.entries(state)
-                .filter(([, checked]) => checked)
-                .map(([name]) => name);
-        const data = extractValues(pick(props, properties));
-        data.$mib = mib;
-        fs.writeFileSync(fileName, JSON.stringify(data));
-        close();
-      }
+      const properties =
+        event.currentTarget.id === 'all'
+          ? names.map(([, name]) => name)
+          : Object.entries(state)
+              .filter(([, checked]) => checked)
+              .map(([name]) => name);
+      const data = extractValues(pick(props, properties));
+      data.$mib = mib;
+      window.dialogs.saveJSON({ data, defaultPath: mib });
+      close();
     },
-    [close, mib, names, state, props]
+    [close, mib, names, state, props],
   );
 
   const hasSelected = some(Object.values(state), Boolean);
@@ -165,7 +143,7 @@ const SaveDialog: React.FC<Props> = ({ deviceId, open, close }) => {
               <Checkbox
                 checked={names.reduce<boolean>(
                   (acc, [, name]) => Boolean(acc && state[name]),
-                  true
+                  true,
                 )}
                 value="$all$"
                 onChange={changeHandler}

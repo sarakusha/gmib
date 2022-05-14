@@ -1,3 +1,0 @@
-<component name="DependencyValidationManager">
-  <scope name="stela" pattern="file[@nibus]:packages/stela//*||file:lerna.json||file:package.json" />
-</component>

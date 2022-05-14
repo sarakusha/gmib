@@ -1,24 +1,21 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
-import { Box, Container, IconButton, Paper, Tab, Tabs } from '@mui/material';
 import AddToQueue from '@mui/icons-material/AddToQueue';
 import CloseIcon from '@mui/icons-material/Close';
-import React, { useEffect, useState } from 'react';
+import { Box, Container, IconButton, Paper, Tab, Tabs } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useSnackbar } from 'notistack';
+import React, { useEffect, useState } from 'react';
+
 import { useToolbar } from '../providers/ToolbarProvider';
-import { removeScreen, selectScreens, selectSessionVersion } from '../store/configSlice';
 import { useDispatch, useSelector } from '../store';
-import { selectCurrentScreenId, selectCurrentTab, setCurrentScreen } from '../store/currentSlice';
-import { createScreen } from '../store/configThunks';
-import { noop } from '../util/helpers';
+import { removeScreen} from '../store/configSlice';
+// import { createScreen } from '../store/configThunks';
+import {createScreen} from '../store/configThunks';
+import { setCurrentScreen } from '../store/currentSlice';
+
+import { noop } from '/@common/helpers';
+
+import {selectCurrentScreenId, selectCurrentTab, selectScreens, selectSessionVersion} from '../store/selectors';
+
 import Screen from './Screen';
 import ScreensToolbar from './ScreensToolbar';
 

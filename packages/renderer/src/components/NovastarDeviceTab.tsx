@@ -1,38 +1,25 @@
 /* eslint-disable react/no-array-index-key */
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
-import {
-  Box,
-  InputProps,
-  Paper,
-  SelectProps,
-  TextField,
-  TextFieldProps,
-  Typography,
-} from '@mui/material';
-import { FunctionInterpolation, useTheme } from '@emotion/react';
-import { ChipTypeEnum } from '@novastar/native/build/main/generated/ChipType';
-import { DviSelectModeEnum } from '@novastar/native/build/main/generated/DviSelectMode';
-import { BrightnessRGBV, getScreenLocation } from '@novastar/screen';
+import type { FunctionInterpolation } from '@emotion/react';
+import { useTheme } from '@emotion/react';
+import type { InputProps, SelectProps, TextFieldProps } from '@mui/material';
+import { Box, Paper, TextField, Typography } from '@mui/material';
+import type { Theme } from '@mui/material/styles';
+import { css, styled } from '@mui/material/styles';
+import { ChipTypeEnum } from '@novastar/native/lib/generated/ChipType';
+import { DviSelectModeEnum } from '@novastar/native/lib/generated/DviSelectMode';
+import type { BrightnessRGBV } from '@novastar/screen';
+import getScreenLocation from '@novastar/screen/lib/getScreenLocation';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Theme, css, styled } from '@mui/material/styles';
+
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useDispatch, useSelector } from '../store';
-import { selectCurrentTab } from '../store/currentSlice';
-import {
-  Novastar,
-  setDisplayMode,
-  setGamma,
-  setScreenColorBrightness,
-} from '../store/novastarsSlice';
-import { noop } from '../util/helpers';
+import type { Novastar } from '../store/novastarsSlice';
+import { setScreenColorBrightness } from '../store/novastarsSlice';
+
+import { noop } from '/@common/helpers';
+
+import {selectCurrentTab} from '../store/selectors';
+
 import DisplayModeSelector from './DisplayModeSelector';
 import NovastarToolbar from './NovastarToolbar';
 
@@ -127,7 +114,7 @@ const RGBVItem: React.FC<RGBVItemProps> = ({ kind, className, value, onChange, .
       if (val !== '' && onChange) onChange(e);
       else setState(val);
     },
-    [onChange]
+    [onChange],
   );
   return kind === 'overall' ? (
     <Typography className={className}>
@@ -183,6 +170,7 @@ const NovastarDeviceTab: React.FC<{ device: Novastar | undefined; selected?: boo
   device,
   selected = false,
 }) => {
+  const theme = useTheme();
   const [, setToolbar] = useToolbar();
   const tab = useSelector(selectCurrentTab);
   const active = selected && tab === 'devices' && device !== undefined;
@@ -209,38 +197,34 @@ const NovastarDeviceTab: React.FC<{ device: Novastar | undefined; selected?: boo
             screen: Number(screen),
             color,
             value: Number(value),
-          })
+          }),
         );
     },
-    [dispatch, path]
+    [dispatch, path],
   );
   const gammaHandler = useCallback<React.ChangeEventHandler<HTMLInputElement>>(
     e => {
       const { name, value } = e.target;
       path &&
-        dispatch(
-          setGamma({
-            path,
-            screen: Number(name),
-            value: Number(value),
-          })
-        );
+        window.novastar.setGamma({
+          path,
+          screen: Number(name),
+          value: Number(value),
+        });
     },
-    [path, dispatch]
+    [path],
   );
   const modeHandler = useCallback<Required<SelectProps>['onChange']>(
     e => {
       const { name, value } = e.target;
       path &&
-        dispatch(
-          setDisplayMode({
-            path,
-            screen: Number(name),
-            value: Number(value),
-          })
-        );
+        window.novastar.setDisplayMode({
+          path,
+          screen: Number(name),
+          value: Number(value),
+        });
     },
-    [path, dispatch]
+    [path],
   );
 
   if (!device || !device.info) return null;
@@ -263,7 +247,6 @@ const NovastarDeviceTab: React.FC<{ device: Novastar | undefined; selected?: boo
       x: location?.leftTop.x ?? '-',
       y: location?.leftTop.y ?? '-',
     }));
-  const theme = useTheme();
   // const screens = original?.[0] && [original[0], original[0], original[0], original[0]];
   return (
     <Box width={1} display={active ? 'flex' : 'none'}>
@@ -296,7 +279,7 @@ const NovastarDeviceTab: React.FC<{ device: Novastar | undefined; selected?: boo
             <Screens>
               {screens.map((_, index) => (
                 // eslint-disable-next-line react/no-array-index-key
-                <Item key={index} css={boldStyle(theme)}>
+                <Item key={index} css={boldStyle}>
                   #{index + 1}
                 </Item>
               ))}

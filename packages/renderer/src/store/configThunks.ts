@@ -1,54 +1,62 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
-
-import { Address, DeviceId } from '@nibus/core';
-import { hasProps } from '@novastar/screen';
+import type { DeviceId } from '@nibus/core';
+import Address from '@nibus/core/lib/Address';
+import { hasProps } from '@novastar/screen/lib/common';
 import { createAsyncThunk, isAnyOf, nanoid } from '@reduxjs/toolkit';
-// import debounce from 'lodash/debounce';
+import debugFactory from 'debug';
 import sortBy from 'lodash/sortBy';
 import SunCalc from 'suncalc';
-import debugFactory from 'debug';
-import { Screen, reAddress } from '../util/config';
-import localConfig from '../util/localConfig';
+
+import type { Point } from '../util/MonotonicCubicSpline';
+import MonotonicCubicSpline from '../util/MonotonicCubicSpline';
+
+import type { Screen } from '/@common/config';
+import { reAddress } from '/@common/config';
+import type { ValueType } from '/@common/helpers';
 import {
-  MINUTE,
   incrementCounterString,
+  MINUTE,
   notEmpty,
   toErrorMessage,
   tuplify,
-} from '../util/helpers';
-import MonotonicCubicSpline, { Point } from '../util/MonotonicCubicSpline';
-import { isRemoteSession } from '../util/nibus';
-import { AsyncInitializer } from './asyncInitialMiddleware';
+} from '/@common/helpers';
+import { isRemoteSession } from '/@common/remote';
+
 import {
+  addAddress,
   addScreen,
+  removeAddress,
+  removeHttpPage,
+  removeScreen,
+  setAutobrightness,
+  setBrightness,
+  setLocationProp,
+  setLogLevel,
+  setProtectionProp,
+  setScreenProp,
+  setSpline,
+  showHttpPage,
+  updateConfig,
+  upsertHttpPage,
+} from './configSlice';
+import createDebouncedAsyncThunk from './createDebouncedAsyncThunk';
+import type { DeviceState } from './devicesSlice';
+import { startAppListening } from './listenerMiddleware';
+import {
   selectAutobrightness,
   selectBrightness,
   selectConfig,
+  selectDevicesByAddress,
+  selectLastAverage,
   selectLocation,
   selectOverheatProtection,
   selectScreenById,
   selectScreens,
   selectSpline,
-  setBrightness,
-  setScreenProp,
-  showHttpPage,
-  updateConfig,
-} from './configSlice';
-import createDebouncedAsyncThunk from './createDebouncedAsyncThunk';
-import { DeviceState, ValueType, selectDevicesByAddress, setDeviceValue } from './devicesSlice';
-import type { AppThunk, AppThunkConfig, RootState } from './index';
-import { startAppListening } from './listenerMiddleware';
-import { selectLastAverage } from './sensorsSlice';
+} from './selectors';
 
-const debug = debugFactory('gmib:initializeDevices');
+import type { AppThunk, AppThunkConfig, RootState } from './index';
+
+const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:config`);
 
 export const BRIGHTNESS_INTERVAL = 60 * 1000;
 
@@ -83,31 +91,33 @@ const parseLocation = (location: string): Location | undefined => {
 
 type Input = Pick<Required<Screen>, 'width' | 'height' | 'x' | 'y'>;
 
-const getHostParams = (screen: Input) => (expr: string): HostParams | undefined => {
-  // const matches = expr.match(reAddress);
-  // if (!matches) return undefined;
-  // const [, address, l, t, w, h] = matches;
-  // const left = l ? +l : 0;
-  // const top = t ? +(+t) : 0;
-  const location = parseLocation(expr);
-  if (!location) return undefined;
-  const { left = 0, top = 0, address } = location;
-  const width = location.width ?? Math.max(screen.width - left, 0);
-  const height = location.height ?? Math.max(screen.height - top, 0);
-  return {
-    address,
-    left: screen.x + left,
-    top: screen.y + top,
-    width,
-    height,
+const getHostParams =
+  (screen: Input) =>
+  (expr: string): HostParams | undefined => {
+    // const matches = expr.match(reAddress);
+    // if (!matches) return undefined;
+    // const [, address, l, t, w, h] = matches;
+    // const left = l ? +l : 0;
+    // const top = t ? +(+t) : 0;
+    const location = parseLocation(expr);
+    if (!location) return undefined;
+    const { left = 0, top = 0, address } = location;
+    const width = location.width ?? Math.max(screen.width - left, 0);
+    const height = location.height ?? Math.max(screen.height - top, 0);
+    return {
+      address,
+      left: screen.x + left,
+      top: screen.y + top,
+      width,
+      height,
+    };
   };
-};
 
 const hasBrightnessFactor = hasProps('brightnessFactor');
 
 export const updateBrightness = createDebouncedAsyncThunk<void>(
   'config/updateBrightness',
-  async (_, { dispatch, getState }) => {
+  async (_, { getState }) => {
     const state = getState();
     const brightness = selectBrightness(state);
     const { interval } = selectOverheatProtection(state) ?? {};
@@ -118,7 +128,7 @@ export const updateBrightness = createDebouncedAsyncThunk<void>(
       .filter(({ brightnessFactor }) => brightnessFactor > 0)
       .reduce<[DeviceId, number][]>((res, { brightnessFactor, addresses, id: screenId }) => {
         if (!addresses) return res;
-        const { timestamp, screens: scr } = localConfig.get('health');
+        const { timestamp, screens: scr } = window.config.get('health');
         const isValid = timestamp && interval && Date.now() - timestamp < 2 * interval * MINUTE;
         const actualBrightness = Math.min(Math.round(brightnessFactor * brightness), 100);
         return [
@@ -128,7 +138,7 @@ export const updateBrightness = createDebouncedAsyncThunk<void>(
             .filter(notEmpty)
             .reduce<DeviceState[]>(
               (devs, address) => [...devs, ...selectDevicesByAddress(state, address)],
-              []
+              [],
             )
             .map(({ id }) =>
               tuplify(
@@ -136,22 +146,22 @@ export const updateBrightness = createDebouncedAsyncThunk<void>(
                 isValid
                   ? Math.min(
                       actualBrightness,
-                      scr?.[screenId]?.maxBrightness ?? Number.MAX_SAFE_INTEGER
+                      scr?.[screenId]?.maxBrightness ?? Number.MAX_SAFE_INTEGER,
                     )
-                  : actualBrightness
-              )
+                  : actualBrightness,
+              ),
             ),
         ];
       }, []);
     await Promise.allSettled(
-      tasks.map(([id, value]) => dispatch(setDeviceValue(id)('brightness', value)))
+      tasks.map(([id, value]) => window.nibus.setDeviceValue(id)('brightness', value)),
     );
   },
   100,
   {
     maxWait: 1000,
     leading: true,
-  }
+  },
 );
 
 // export const setCurrentBrightness = (value: number): AppThunk => dispatch => {
@@ -188,7 +198,7 @@ const calculateBrightness = createAsyncThunk<void, void, AppThunkConfig>(
       if (illuminance !== undefined) {
         // На показаниях датчика
         const illuminanceSpline = new MonotonicCubicSpline(
-          safeData.map<Point>(([lux, bright]) => [Math.log(1 + lux), bright])
+          safeData.map<Point>(([lux, bright]) => [Math.log(1 + lux), bright]),
         );
         if (illuminance <= minLux) brightness = minBrightness;
         else if (illuminance >= maxLux) brightness = maxBrightness;
@@ -202,15 +212,8 @@ const calculateBrightness = createAsyncThunk<void, void, AppThunkConfig>(
         const getTime = (date: Date): number => date.getTime() - midnight.getTime();
         const getBrightness = (aspect: number): number =>
           minBrightness + (maxBrightness - minBrightness) * aspect;
-        const {
-          dawn,
-          sunriseEnd,
-          goldenHourEnd,
-          solarNoon,
-          goldenHour,
-          sunsetStart,
-          dusk,
-        } = SunCalc.getTimes(now, latitude!, longitude!);
+        const { dawn, sunriseEnd, goldenHourEnd, solarNoon, goldenHour, sunsetStart, dusk } =
+          SunCalc.getTimes(now, latitude, longitude);
         // debug(
         //   `dawn: ${dawn.toLocaleTimeString()}, sunriseEnd: ${sunriseEnd.toLocaleTimeString()},
         // goldenHourEnd: ${goldenHourEnd.toLocaleTimeString()}, noon:
@@ -235,13 +238,13 @@ const calculateBrightness = createAsyncThunk<void, void, AppThunkConfig>(
           brightness = getValue(
             Math.round(sunSpline.interpolate(getTime(now))),
             minBrightness,
-            maxBrightness
+            maxBrightness,
           );
         } else brightness = minBrightness;
       }
     }
     dispatch(setBrightness(brightness));
-  }
+  },
 );
 
 // export const loadConfig = (config: Config): AppThunk => async dispatch => {
@@ -265,7 +268,7 @@ export const createScreen = (): AppThunk => (dispatch, getState) => {
 
 export const updateScreen = createDebouncedAsyncThunk<void, string | undefined>(
   'config/updateScreen',
-  (scrId, { dispatch, getState }) => {
+  (scrId, { getState }) => {
     const state = getState() as RootState;
     const scr = scrId && selectScreenById(state, scrId);
     const screens = scr ? [scr] : selectConfig(state).screens;
@@ -285,7 +288,7 @@ export const updateScreen = createDebouncedAsyncThunk<void, string | undefined>(
                 // .filter(({ mib }) => mib.startsWith('minihost'))
                 .forEach(({ id, address: devAddress, mib }) => {
                   debug(`initialize ${devAddress}`);
-                  const setValue = setDeviceValue(id);
+                  const setValue = window.nibus.setDeviceValue(id);
                   let props: Record<string, ValueType | undefined> = {};
                   switch (mib) {
                     case 'minihost3':
@@ -328,7 +331,7 @@ export const updateScreen = createDebouncedAsyncThunk<void, string | undefined>(
                   }
                   Object.entries(props).forEach(([name, value]) => {
                     // debug(`setValue ${name} = ${value}`);
-                    value !== undefined && value !== null && dispatch(setValue(name, value));
+                    value !== undefined && value !== null && setValue(name, value);
                   });
                 });
             });
@@ -343,7 +346,7 @@ export const updateScreen = createDebouncedAsyncThunk<void, string | undefined>(
     selectId: id => id,
     leading: true,
     maxWait: 1000,
-  }
+  },
 );
 
 // const updateScreen = debounce((dispatch: AppDispatch, scrId: string): void => {
@@ -375,13 +378,51 @@ startAppListening({
   },
 });
 
+startAppListening({
+  matcher: isAnyOf(
+    showHttpPage,
+    setBrightness,
+    setAutobrightness,
+    setSpline,
+    setLocationProp,
+    setScreenProp,
+    setLogLevel,
+    upsertHttpPage,
+    removeHttpPage,
+    addAddress,
+    removeAddress,
+    addScreen,
+    removeScreen,
+    setProtectionProp,
+  ),
+  effect(action, { getState }) {
+    const config = selectConfig(getState());
+    window.nibus.sendConfig(config);
+  },
+});
+
+startAppListening({
+  actionCreator: setLogLevel,
+  effect({ payload: logLevel }) {
+    window.nibus.setLogLevel(logLevel);
+  },
+});
+
 let brightnessTimer = 0;
 
-export const initializeConfig: AsyncInitializer = dispatch => {
-  if (!isRemoteSession && !brightnessTimer) {
-    brightnessTimer = window.setInterval(
-      () => dispatch(calculateBrightness()),
-      BRIGHTNESS_INTERVAL
-    );
-  }
-};
+if (!isRemoteSession) {
+  startAppListening({
+    actionCreator: setAutobrightness,
+    effect({ payload: on }, { dispatch }) {
+      if (!on) {
+        window.clearInterval(brightnessTimer);
+        brightnessTimer = 0;
+      } else if (!brightnessTimer) {
+        brightnessTimer = window.setInterval(
+          () => dispatch(calculateBrightness()),
+          BRIGHTNESS_INTERVAL,
+        );
+      }
+    },
+  });
+}

@@ -1,12 +1,8 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import HighlightOffIcon from '@mui/icons-material/HighlightOff';
+import MenuIcon from '@mui/icons-material/Menu';
+import SearchIcon from '@mui/icons-material/Search';
+import SettingsEthernetIcon from '@mui/icons-material/SettingsEthernet';
 import {
   Backdrop,
   Box,
@@ -22,34 +18,34 @@ import {
   Typography,
 } from '@mui/material';
 import { keyframes, styled } from '@mui/material/styles';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import SearchIcon from '@mui/icons-material/Search';
-import MenuIcon from '@mui/icons-material/Menu';
-import { ipcRenderer } from 'electron';
-import React, { useCallback, useEffect, useState } from 'react';
 import some from 'lodash/some';
-import SettingsEthernetIcon from '@mui/icons-material/SettingsEthernet';
-import HighlightOffIcon from '@mui/icons-material/HighlightOff';
-import nata from '../extraResources/nata.svg';
+import React, { useCallback, useEffect, useState } from 'react';
+
+import nata from '../../assets/nata.svg';
 import RemoteHostsDialog from '../dialogs/RemoteHostsDialog';
+import SearchDialog from '../dialogs/SearchDialog';
+import { useToolbar } from '../providers/ToolbarProvider';
 import { useDevices, useDispatch, useSelector } from '../store';
 import {
-  selectAutobrightness,
-  selectLoading,
-  selectOverheatProtection,
   setAutobrightness,
   setProtectionProp,
 } from '../store/configSlice';
-import { selectCurrentTab, setCurrentTab } from '../store/currentSlice';
-import { selectIsClosed, selectIsOnline } from '../store/sessionSlice';
-import Devices from './Devices';
-import GmibTabs from './GmibTabs';
-import SearchDialog from '../dialogs/SearchDialog';
-import { useToolbar } from '../providers/ToolbarProvider';
-import HttpPages from './HttpPages';
-import { version } from '../util/helpers';
+import {
+  setCurrentTab,
+  setRemoteDialogOpen,
+} from '../store/currentSlice';
+import {
+    selectAutobrightness, selectCurrentTab, selectIsClosed, selectIsOnline,
+    selectIsRemoteDialogOpen,
+    selectLoading,
+    selectOverheatProtection,
+} from '../store/selectors';
+
 import AppBar from './AppBar';
+import Devices from './Devices';
 import Drawer from './Drawer';
+import GmibTabs from './GmibTabs';
+import HttpPages from './HttpPages';
 
 const drawerWidth = 240;
 
@@ -65,127 +61,6 @@ const Item = styled(ListItemButton)(({ theme }) => ({
   borderColor: theme.palette.divider,
   borderBottomWidth: 'thin',
 }));
-
-// const useStyles = makeStyles(theme => ({
-// root: {
-//   display: 'flex',
-//   width: '100%',
-// },
-// toolbar: {
-//   paddingRight: 24, // keep right padding when drawer closed
-// },
-// toolbarIcon: {
-//   display: 'flex',
-//   alignItems: 'center',
-//   justifyContent: 'flex-end',
-//   padding: '0 8px',
-//   gap: theme.spacing(1),
-//   ...theme.mixins.toolbar,
-// },
-// appBar: {
-//   zIndex: theme.zIndex.drawer + 1,
-//   transition: theme.transitions.create(['width', 'margin'], {
-//     easing: theme.transitions.easing.sharp,
-//     duration: theme.transitions.duration.leavingScreen,
-//   }),
-// },
-// appBarShift: {
-//   marginLeft: drawerWidth,
-//   width: `calc(100% - ${drawerWidth}px)`,
-//   transition: theme.transitions.create(['width', 'margin'], {
-//     easing: theme.transitions.easing.sharp,
-//     duration: theme.transitions.duration.enteringScreen,
-//   }),
-// },
-// menuButton: {
-//   marginLeft: 12,
-//   marginRight: 36,
-// },
-// hidden: {
-//   display: 'none',
-// },
-// title: {
-//   flexGrow: 1,
-//   display: 'flex',
-//   alignItems: 'flex-end',
-//   whiteSpace: 'nowrap',
-// },
-// drawerPaper: {
-//   position: 'relative',
-//   whiteSpace: 'nowrap',
-//   height: '100vh',
-//   overflow: 'hidden',
-//   width: drawerWidth,
-//   display: 'flex',
-//   transition: theme.transitions.create('width', {
-//     easing: theme.transitions.easing.sharp,
-//     duration: theme.transitions.duration.enteringScreen,
-//   }),
-// },
-// drawerPaperClose: {
-//   overflowX: 'hidden',
-//   transition: theme.transitions.create('width', {
-//     easing: theme.transitions.easing.sharp,
-//     duration: theme.transitions.duration.leavingScreen,
-//   }),
-//   width: 0,
-// },
-// drawerContent: {
-//   flex: 1,
-//   overflow: 'auto',
-//   padding: 0,
-// },
-// appBarSpacer: {
-//   ...theme.mixins.toolbar,
-//   flex: '0 0 auto',
-// },
-// content: {
-//   flexGrow: 1,
-//   padding: 0, // theme.spacing.unit * 2,
-//   height: '100vh',
-//   overflow: 'hidden',
-//   display: 'flex',
-//   flexDirection: 'column',
-//   width: '100%',
-//   // position: 'relative',
-// },
-// gmib: {
-//   flex: 1,
-//   overflow: 'hidden',
-//   display: 'flex',
-//   position: 'relative',
-// },
-// chartContainer: {
-//   marginLeft: -22,
-// },
-// tableContainer: {
-//   height: 320,
-// },
-// h5: {
-//   marginBottom: theme.spacing(2),
-// },
-// listItem: {
-//   minHeight: 56,
-//   borderStyle: 'solid',
-//   borderColor: theme.palette.divider,
-//   borderBottomWidth: 'thin',
-// },
-// backdrop: {
-//   zIndex: theme.zIndex.drawer + 10,
-//   color: '#fff',
-// },
-// blink: {
-//   animation: '$blink-animation normal 1.5s infinite ease-in-out',
-// },
-// '@keyframes blink-animation': {
-//   '50%': {
-//     opacity: 0,
-//   },
-// },
-// nata: {
-//   height: 42,
-// },
-// }));
 
 const Offset = styled('div')(({ theme }) => theme.mixins.toolbar);
 
@@ -208,15 +83,7 @@ const App: React.FC = () => {
   const online = useSelector(selectIsOnline);
   const loading = useSelector(selectLoading);
   const sessionClosed = useSelector(selectIsClosed);
-  const [remoteDialogOpen, setRemoteDialogOpen] = useState(false);
-  useEffect(() => {
-    const openRemoteDialog = (): void => setRemoteDialogOpen(true);
-    ipcRenderer.on('editRemoteHosts', openRemoteDialog);
-    return () => {
-      ipcRenderer.off('editRemoteHosts', openRemoteDialog);
-    };
-  }, []);
-  const closeRemoteDialog = (): void => setRemoteDialogOpen(false);
+  const isRemoteDialogOpen = useSelector(selectIsRemoteDialogOpen);
   const { enabled: protectionEnabled = false } = useSelector(selectOverheatProtection) ?? {};
   return (
     <>
@@ -236,7 +103,10 @@ const App: React.FC = () => {
           />
         )}
       </Backdrop>
-      <RemoteHostsDialog open={remoteDialogOpen} onClose={closeRemoteDialog} />
+      <RemoteHostsDialog
+        open={isRemoteDialogOpen}
+        onClose={() => dispatch(setRemoteDialogOpen(false))}
+      />
       <Box
         sx={{
           display: 'flex',
@@ -275,11 +145,11 @@ const App: React.FC = () => {
               }}
             >
               <Typography component="h1" variant="h6" color="inherit" noWrap display="inline">
-                gmib
+                {import.meta.env.VITE_APP_NAME}
               </Typography>
               &nbsp;
               <Typography component="h1" variant="subtitle1" color="inherit" display="inline">
-                {`${version}`}
+                {import.meta.env.VITE_APP_VERSION}
               </Typography>
             </Box>
             {toolbar}
@@ -332,7 +202,7 @@ const App: React.FC = () => {
           >
             <Devices />
             <Item onClick={() => dispatch(setCurrentTab('playlist'))} selected={tab === 'playlist'}>
-              <ListItemText primary="Плейлист" />
+              <ListItemText primary="Плейлисты" />
             </Item>
             <Item onClick={() => dispatch(setCurrentTab('media'))} selected={tab === 'media'}>
               <ListItemText primary="Медиатека" />

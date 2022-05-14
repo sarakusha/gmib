@@ -1,14 +1,6 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
 
-import { TableCell as MuiTableCell, TableCellProps } from '@mui/material';
+import type { TableCellProps } from '@mui/material';
+import { TableCell as MuiTableCell } from '@mui/material';
 import { styled } from '@mui/material/styles';
 
 export const GuiFontSize = '0.875rem';

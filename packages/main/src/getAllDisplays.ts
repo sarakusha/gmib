@@ -1,14 +1,7 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
-import { Display, screen } from 'electron';
-import { Display as DisplayType } from '@nibus/core';
+import type { Display } from 'electron';
+import { screen } from 'electron';
+
+import type { Display as DisplayType } from '@nibus/core';
 
 // type DisplayType = Pick<Display, 'id' | 'bounds' | 'workArea' | 'displayFrequency' | 'internal'>;
 

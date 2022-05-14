@@ -5,7 +5,7 @@
 
 /// <reference types="node" />
 
-import { RemoteInfo } from 'dgram';
+import type { RemoteInfo } from 'dgram';
 
 declare function bonjour(opts?: bonjour.BonjourOptions): bonjour.Bonjour;
 export = bonjour;

@@ -1,17 +1,4 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
-
-import { MDXProviderComponents } from '@mdx-js/react';
-import { styled } from '@mui/material/styles';
-import React from 'react';
-// import withStyles from '@mui/styles/withStyles';
+import type { CheckboxProps } from '@mui/material';
 import {
   Box,
   Checkbox,
@@ -24,6 +11,11 @@ import {
   TableRow,
   Typography,
 } from '@mui/material';
+import type { PaperProps } from '@mui/material/Paper/Paper';
+import type { TableCellProps } from '@mui/material/TableCell/TableCell';
+import { styled } from '@mui/material/styles';
+import type { MDXComponents } from 'mdx/types';
+import React from 'react';
 
 const Blockquote = styled(Paper)(({ theme }) => ({
   '&.MuiPaper-root': {
@@ -41,25 +33,25 @@ const Blockquote = styled(Paper)(({ theme }) => ({
   },
 }));
 
-const mdx: MDXProviderComponents = {
-  p: props => <Typography paragraph {...props} />,
-  h1: props => <Typography {...props} component="h1" variant="h1" gutterBottom />,
-  h2: props => <Typography {...props} component="h2" variant="h2" gutterBottom />,
-  h3: props => <Typography {...props} component="h3" variant="h3" gutterBottom />,
-  h4: props => <Typography {...props} component="h4" variant="h4" gutterBottom />,
-  h5: props => <Typography {...props} component="h5" variant="h5" gutterBottom />,
-  h6: props => <Typography {...props} component="h6" variant="h6" gutterBottom />,
-  blockquote: props => <Blockquote {...props} />,
-  ul: props => <Typography {...props} component="ul" />,
-  ol: props => <Typography {...props} component="ol" />,
-  li: props => <Typography {...props} component="li" />,
-  table: props => <MuiTable {...props} />,
-  tr: props => <TableRow {...props} />,
-  td: ({ align, ...props }) => <TableCell align={align || undefined} {...props} />,
-  tbody: props => <TableBody {...props} />,
-  th: ({ align, ...props }) => <TableCell align={align || undefined} {...props} />,
-  thead: props => <TableHead {...props} />,
-  code: props => (
+const mdx: MDXComponents = {
+  p: ({ ref, ...props }) => <Typography paragraph {...props} />,
+  h1: ({ ref, ...props }) => <Typography {...props} component="h1" variant="h1" gutterBottom />,
+  h2: ({ ref, ...props }) => <Typography {...props} component="h2" variant="h2" gutterBottom />,
+  h3: ({ ref, ...props }) => <Typography {...props} component="h3" variant="h3" gutterBottom />,
+  h4: ({ ref, ...props }) => <Typography {...props} component="h4" variant="h4" gutterBottom />,
+  h5: ({ ref, ...props }) => <Typography {...props} component="h5" variant="h5" gutterBottom />,
+  h6: ({ ref, ...props }) => <Typography {...props} component="h6" variant="h6" gutterBottom />,
+  blockquote: ({ ref, ...props }) => <Blockquote {...(props as PaperProps<'div'>)} />,
+  ul: ({ ref, ...props }) => <Typography {...props} component="ul" />,
+  ol: ({ ref, ...props }) => <Typography {...props} component="ol" />,
+  li: ({ ref, ...props }) => <Typography {...props} component="li" />,
+  table: ({ ref, ...props }) => <MuiTable {...props} />,
+  tr: ({ ref, ...props }) => <TableRow {...props} />,
+  td: ({ ref, ...props }) => <TableCell {...(props as TableCellProps)} />,
+  tbody: ({ ref, ...props }) => <TableBody {...props} />,
+  th: ({ ref, ...props }) => <TableCell {...(props as TableCellProps)} />,
+  thead: ({ ref, ...props }) => <TableHead {...props} />,
+  code: ({ ref, ...props }) => (
     // <Typography component="div" paragraph>
     <Box
       fontFamily="Monospace"
@@ -71,15 +63,15 @@ const mdx: MDXProviderComponents = {
     />
     // </Typography>
   ),
-  hr: Divider,
-  input: props => {
+  hr: ({ ref, ...props }) => <Divider {...props} />,
+  input: ({ ref, ...props }) => {
     const { type } = props;
     if (type === 'checkbox') {
-      return <Checkbox {...props} disabled={false} readOnly />;
+      return <Checkbox {...(props as CheckboxProps)} disabled={false} readOnly />;
     }
     return <input {...props} readOnly />;
   },
-  wrapper: props => <div {...props} className="markdown-body" />,
+  wrapper: ({ ref, ...props }) => <div {...props} className="markdown-body" />,
 };
 
 export default mdx;

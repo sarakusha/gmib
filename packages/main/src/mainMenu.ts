@@ -1,17 +1,13 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
+import type { RemoteHost } from '/@common/helpers';
+import { getRemoteLabel } from '/@common/helpers';
 
-import { BrowserWindow, Menu, MenuItemConstructorOptions, app, shell } from 'electron';
-import { RemoteHost, getRemoteLabel, getTitle } from '../util/helpers';
-import localConfig from '../util/localConfig';
+import type { BrowserWindow, MenuItemConstructorOptions } from 'electron';
+import { app, Menu, shell } from 'electron';
+
 import windows from './windows';
+import localConfig from './localConfig';
+import { linuxAutostart } from './linux';
+import { updateTray } from './tray';
 
 const SessionsLabel = 'NiBUS сессии';
 
@@ -153,9 +149,8 @@ const template: MenuItemConstructorOptions[] = [
 ];
 
 if (process.platform === 'darwin') {
-  const name = app.getName();
   template.unshift({
-    label: name,
+    label: import.meta.env.VITE_APP_NAME,
     submenu: [
       {
         role: 'about',
@@ -188,49 +183,51 @@ if (process.platform === 'darwin') {
   });
 }
 
-const getRemoteSub = (): MenuItemConstructorOptions[] =>
-  template.find(menu => menu.label === SessionsLabel)!.submenu as MenuItemConstructorOptions[];
+const getRemoteSub = (): MenuItemConstructorOptions[] | undefined =>
+  template.find(menu => menu.label === SessionsLabel)?.submenu as MenuItemConstructorOptions[];
 
 export const updateMenu = (): void => {
   const sub = getRemoteSub();
-  sub[0].checked = localConfig.get('autostart');
+  if (sub && sub.length > 0) sub[0].checked = localConfig.get('autostart');
   const mainMenu = Menu.buildFromTemplate(template);
   Menu.setApplicationMenu(mainMenu);
 };
 
 app.whenReady().then(updateMenu);
 
-export type CreateWindow = (port: number, host?: string) => Promise<BrowserWindow>;
+export type CreateWindow = (port?: number, host?: string) => Promise<BrowserWindow>;
 
-const remoteClick = (
-  create: CreateWindow
-): Exclude<MenuItemConstructorOptions['click'], undefined> => async menuItem => {
-  const [host, port] = menuItem.label.split(':');
-  let window = [...windows.values()].find(w => w.title === getTitle(+port, host));
-  if (!window) {
-    window = await create(+port, host === 'localhost' ? undefined : host);
-  }
-  window.show();
-  window.focus();
-};
+export const getTitle = (port: number, host?: string): string =>
+  `${import.meta.env.VITE_APP_NAME} - ${host || 'localhost'}:${port}`;
 
-export const addRemoteFactory = (create: CreateWindow) => (
-  port?: number,
-  address?: string,
-  update = true
-): void => {
-  const label = getRemoteLabel(port, address);
-  const sub = getRemoteSub();
-  if (!sub) return;
-  if (sub.findIndex(item => item.label === label) === -1) {
-    sub.push({ label, click: remoteClick(create) });
-    update && updateMenu();
-  }
-};
+const remoteClick =
+  (create: CreateWindow): Exclude<MenuItemConstructorOptions['click'], undefined> =>
+  async menuItem => {
+    const [host, port] = menuItem.label.split(':');
+    let window = [...windows.values()].find(w => w.title === getTitle(+port, host));
+    if (!window) {
+      window = await create(+port, host === 'localhost' ? undefined : host);
+    }
+    window.show();
+    window.focus();
+  };
+
+export const addRemoteFactory =
+  (create: CreateWindow) =>
+  (port?: number, address?: string, update = true): void => {
+    const label = getRemoteLabel(port, address);
+    const sub = getRemoteSub();
+    if (!sub) return;
+    if (sub.findIndex(item => item.label === label) === -1) {
+      sub.push({ label, click: remoteClick(create) });
+      update && updateMenu();
+    }
+  };
 
 export const removeRemote = ({ port, address }: RemoteHost): void => {
   const label = getRemoteLabel(port, address);
   const sub = getRemoteSub();
+  if (!sub) return;
   const index = sub.findIndex(item => item.label === label);
   if (index !== -1) {
     sub.splice(index, 1);
@@ -240,16 +237,27 @@ export const removeRemote = ({ port, address }: RemoteHost): void => {
 
 export const setRemoteEditClick = (click: () => void): void => {
   const sub = getRemoteSub();
-  sub[1].click = click;
+  if (sub && sub.length > 1) sub[1].click = click;
   updateMenu();
 };
 
-export const setRemotesFactory = (create: CreateWindow) => (
-  remotes: { port: number; address: string }[]
-): void => {
-  const addRemote = addRemoteFactory(create);
-  const sub = getRemoteSub();
-  sub.splice(4, sub.length);
-  remotes.forEach(({ port, address }) => addRemote(port, address, false));
+export const setRemotesFactory =
+  (create: CreateWindow) =>
+  (remotes: { port: number; address: string }[]): void => {
+    const addRemote = addRemoteFactory(create);
+    const sub = getRemoteSub();
+    sub && sub.splice(4, sub.length);
+    remotes.forEach(({ port, address }) => addRemote(port, address, false));
+    updateMenu();
+  };
+
+localConfig.onDidChange('autostart', (autostart = false) => {
+  // debug(`autostart: ${autostart}`);
+  app.setLoginItemSettings({
+    openAtLogin: autostart,
+    openAsHidden: true,
+  });
+  linuxAutostart(autostart);
   updateMenu();
-};
+  updateTray();
+});

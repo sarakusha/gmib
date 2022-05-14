@@ -1,50 +1,40 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
-
-import { FunctionInterpolation, useTheme } from '@emotion/react';
+import CloseIcon from '@mui/icons-material/Close';
+import LinkIcon from '@mui/icons-material/Link';
+import ReloadIcon from '@mui/icons-material/Refresh';
+import LanIcon from '@mui/icons-material/SettingsInputHdmi';
+import UsbIcon from '@mui/icons-material/Usb';
+import type { Interpolation } from '@mui/material';
 import {
   Box,
   IconButton,
-  ListItem,
+  ListItemButton,
   ListItemIcon,
   ListItemSecondaryAction,
   ListItemText,
   Tooltip,
   Typography,
 } from '@mui/material';
-import { Theme, styled } from '@mui/material/styles';
-import LanIcon from '@mui/icons-material/SettingsInputHdmi';
-import CloseIcon from '@mui/icons-material/Close';
-import LinkIcon from '@mui/icons-material/Link';
-import UsbIcon from '@mui/icons-material/Usb';
-import { Address, findDeviceById } from '@nibus/core';
+import type { Theme } from '@mui/material/styles';
+import { css, styled } from '@mui/material/styles';
+import Address from '@nibus/core/lib/Address';
 import React, { useCallback, useMemo } from 'react';
-import ReloadIcon from '@mui/icons-material/Refresh';
+
 import { useDispatch, useSelector } from '../store';
-import { selectScreenAddresses } from '../store/configSlice';
+import type { TabValues } from '../store/currentSlice';
+import { setCurrentDevice, setCurrentTab } from '../store/currentSlice';
+import type { DeviceStateWithParent } from '../store/devicesSlice';
 import {
-  DeviceStateWithParent,
   filterDevicesByAddress,
   selectAllDevicesWithParent,
-} from '../store/devicesSlice';
-import {
-  TabValues,
+  selectAllNovastars,
   selectCurrentDeviceId,
   selectCurrentTab,
-  setCurrentDevice,
-  setCurrentTab,
-} from '../store/currentSlice';
-import { findNetNovastarDevices, selectAllNovastars } from '../store/novastarsSlice';
+  selectScreenAddresses,
+} from '../store/selectors';
+// import { reloadSession } from '../store/sessionSlice';
+
 import AccordionList from './AccordionList';
 import DeviceIcon from './DeviceIcon';
-import { reloadSession } from '../store/sessionSlice';
 
 const tabName = 'devices';
 
@@ -70,7 +60,7 @@ const getItems = (addresses: string[], devices: DeviceStateWithParent[]): Device
             ),
             device,
           };
-        })
+        }),
       );
     }
   });
@@ -89,16 +79,26 @@ const Wrapper = styled('div')`
   position: relative;
 `;
 
-const kindStyle: FunctionInterpolation<Theme> = theme => ({
-  color: theme.palette.primary.light,
-  position: 'absolute',
-  bottom: 0,
-  right: -16,
-  fontSize: '1em',
-});
+const kindStyle: Interpolation<{ theme: Theme }> = ({ theme }) =>
+  css({
+    color: theme.palette.primary.light,
+    position: 'absolute',
+    bottom: 0,
+    right: -16,
+    fontSize: '1em',
+  });
+
+const StyledLinkIcon = styled(LinkIcon)(kindStyle);
+
+const StyledUsbIcon = styled(UsbIcon)`
+  ${kindStyle}
+`;
+
+const StyledLanIcon = styled(LanIcon)`
+  ${kindStyle}
+`;
 
 const Devices: React.FC = () => {
-  const theme = useTheme();
   const dispatch = useDispatch();
   const devices = useSelector(selectAllDevicesWithParent);
   const current = useSelector(selectCurrentDeviceId);
@@ -108,18 +108,18 @@ const Devices: React.FC = () => {
   // const [, setAccordion] = useAccordion();
   const reloadHandler = useCallback<React.MouseEventHandler<HTMLButtonElement>>(
     e => {
-      dispatch(reloadSession());
-      dispatch(findNetNovastarDevices());
+      window.nibus.reloadDevices();
+      window.novastar.findNetDevices();
       e.stopPropagation();
     },
-    [dispatch]
+    [],
   );
   const clickHandler = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       const { id } = e.currentTarget.dataset; // as DeviceId;
       id && dispatch(setCurrentDevice(id));
     },
-    [dispatch]
+    [dispatch],
   );
   const title = useMemo(
     () => (
@@ -130,7 +130,7 @@ const Devices: React.FC = () => {
         </IconButton>
       </Box>
     ),
-    [reloadHandler]
+    [reloadHandler],
   );
   const items = getItems(addresses, devices);
   const hasDevices = devices.length + novastars.length > 0;
@@ -144,7 +144,7 @@ const Devices: React.FC = () => {
     >
       {items.map(({ name, device }) => {
         const { id, connected, path, mib, isEmptyAddress, parent, address, category } = device;
-        const removable = Boolean(parent || address!.indexOf('.') !== -1);
+        const removable = Boolean(parent || address.indexOf('.') !== -1);
         // Reflect.getMetadata('parent', device);
         // const mib = Reflect.getMetadata('mib', device);
         // const desc = device.connection?.description ?? {};
@@ -155,8 +155,7 @@ const Devices: React.FC = () => {
         //   Icon = TvIcon;
         // }
         return (
-          <ListItem
-            button
+          <ListItemButton
             key={id}
             onClick={clickHandler}
             data-id={id}
@@ -170,12 +169,12 @@ const Devices: React.FC = () => {
                 <DeviceIcon color="inherit" device={device} />
                 {parent ? (
                   <Tooltip title={parent.address}>
-                    <LinkIcon css={kindStyle(theme)} />
+                    <StyledLinkIcon />
                   </Tooltip>
                 ) : (
                   path && (
                     <Tooltip title={path}>
-                      <UsbIcon css={kindStyle(theme)} />
+                      <StyledUsbIcon />
                     </Tooltip>
                   )
                 )}
@@ -194,20 +193,19 @@ const Devices: React.FC = () => {
                   size="small"
                   onClick={event => {
                     event.stopPropagation();
-                    findDeviceById(id)?.release();
+                    window.nibus.releaseDevice(id);
                   }}
                 >
                   <CloseIcon fontSize="inherit" />
                 </IconButton>
               </ListItemSecondaryAction>
             )}
-          </ListItem>
+          </ListItemButton>
         );
       })}
       {novastars.map(card => (
-        <ListItem
+        <ListItemButton
           key={card.path}
-          button
           selected={card.path === current}
           data-id={card.path}
           onClick={clickHandler}
@@ -216,11 +214,7 @@ const Devices: React.FC = () => {
             <Wrapper>
               <DeviceIcon color="inherit" />
               <Tooltip title={card.path}>
-                {card.path[0] >= '0' && card.path[0] <= '9' ? (
-                  <LanIcon css={kindStyle(theme)} />
-                ) : (
-                  <UsbIcon css={kindStyle(theme)} />
-                )}
+                {card.path[0] >= '0' && card.path[0] <= '9' ? <StyledLanIcon /> : <StyledUsbIcon />}
               </Tooltip>
             </Wrapper>
           </ListItemIcon>
@@ -230,7 +224,7 @@ const Devices: React.FC = () => {
             secondary="novastar"
             secondaryTypographyProps={noWrap}
           />
-        </ListItem>
+        </ListItemButton>
       ))}
     </AccordionList>
   );

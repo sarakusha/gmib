@@ -1,31 +1,24 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
 
 /* eslint-disable no-bitwise */
-import { Box, Button, FormControl, FormHelperText, IconButton } from '@mui/material';
 import FolderIcon from '@mui/icons-material/FolderOpen';
 import SaveAltIcon from '@mui/icons-material/SaveAlt';
-import { Kind, KindMap } from '@nibus/core';
-import { ipcRenderer } from 'electron';
+import { Box, Button, FormControl, FormHelperText, IconButton } from '@mui/material';
+import type { Kind} from '@nibus/core/lib/flash';
+import { KindMap } from '@nibus/core/lib/flash/FlashKinds';
 import React, { memo, useCallback, useState } from 'react';
+
 import { useSelector } from '../store';
-import { selectAutobrightness, selectOverheatProtection } from '../store/configSlice';
-import { selectCurrentDevice } from '../store/currentSlice';
+import {selectAutobrightness, selectCurrentDevice, selectOverheatProtection} from '../store/selectors';
 import extendStyled from '../util/extendStyled';
-import { getStatesAsync } from '../util/helpers';
+
+import { getStatesAsync } from '/@common/helpers';
+
 import FilenameEllipsis from './FilenameEllipsis';
 import FormFieldSet from './FormFieldSet';
 import Selector from './Selector';
 
 const StyledSelector = extendStyled(Selector, { hidden: false })(({ hidden }) => ({
-  flex: `0 1 12ch`,
+  flex: '0 1 12ch',
   visibility: hidden ? 'hidden' : 'inherit',
 }));
 
@@ -44,59 +37,6 @@ export type Props = {
   ) => void;
   hidden?: boolean;
 };
-
-// const useStyles = makeStyles(theme => ({
-//   hidden: {
-//     display: 'none',
-//   },
-//   file: {
-//     display: 'flex',
-//     alignItems: 'center',
-//   },
-//   name: {
-//     flexGrow: 1,
-//     flexShrink: 1,
-//     maxWidth: `calc(100% - 48px - ${theme.spacing(1)})`,
-//     // padding: '5px 15px',
-//     // border: `1px solid ${theme.palette.action.disabledBackground}`,
-//     borderRadius: theme.shape.borderRadius,
-//     marginRight: theme.spacing(1),
-//   },
-//   button: {
-//     flexGrow: 0,
-//     flexShrink: 0,
-//   },
-//   selectors: {
-//     display: 'flex',
-//     flexWrap: 'wrap',
-//     // padding: theme.spacing(1),
-//     alignItems: 'flex-end',
-//     '& > *': {
-//       // flex: `0 1 12ch`,
-//       margin: theme.spacing(1),
-//     },
-//   },
-//   selector: {
-//     flex: `0 1 12ch`,
-//   },
-//   reset: {
-//     flex: '0 0 auto',
-//     marginLeft: 'auto',
-//   },
-//   write: {
-//     flexShrink: 0,
-//   },
-//   root: {
-//     width: '100%',
-//     padding: theme.spacing(1),
-//   },
-//   set: {
-//     width: '100%',
-//   },
-//   invisible: {
-//     visibility: 'hidden',
-//   },
-// }));
 
 export const displayName = (kind: string): string => {
   switch (kind) {
@@ -118,8 +58,8 @@ const FlashUpgrade: React.FC<Props> = ({ kind, onFlash, hidden = false }) => {
   const autobrightness = useSelector(selectAutobrightness);
   const { isBusy = 0 } = useSelector(selectCurrentDevice) ?? {};
   const selectFileHandler = useCallback<React.MouseEventHandler<HTMLButtonElement>>(
-    _ => {
-      const fileNames: string[] | undefined = ipcRenderer.sendSync('showOpenDialogSync', {
+    () => {
+      const fileNames: string[] | undefined = window.dialogs.showOpenDialogSync({
         title: 'Выбор файла прошивки',
         filters: [
           {
@@ -128,22 +68,22 @@ const FlashUpgrade: React.FC<Props> = ({ kind, onFlash, hidden = false }) => {
           },
         ],
         properties: ['openFile'],
-      } as Electron.OpenDialogSyncOptions);
+      });
       const firmware = fileNames?.[0];
       if (firmware) {
         setFile(firmware);
       }
     },
-    [ext, kind, setFile]
+    [ext, kind, setFile],
   );
   const flashHandler = useCallback<React.MouseEventHandler>(
-    async _ => {
+    async () => {
       const [, needModuleSelect] = KindMap[kind];
       const [x, y, filename] = await getStatesAsync(setColumn, setRow, setFile);
       const moduleArgs = needModuleSelect ? [(x << 8) | (y & 0xff), x, y] : [];
       onFlash(kind, filename, ...moduleArgs);
     },
-    [kind, onFlash, setColumn, setRow, setFile]
+    [kind, onFlash, setColumn, setRow, setFile],
   );
   const resetHandler = (): void => {
     onFlash(false, undefined, (column << 8) | (row & 0xff), column, row);

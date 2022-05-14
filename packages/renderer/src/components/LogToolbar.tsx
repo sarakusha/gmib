@@ -1,12 +1,4 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
+import TuneIcon from '@mui/icons-material/Tune';
 import {
   Box,
   FormControlLabel,
@@ -16,12 +8,15 @@ import {
   RadioGroup,
   Tooltip,
 } from '@mui/material';
-import TuneIcon from '@mui/icons-material/Tune';
-import { LogLevel, LogLevelV } from '@nibus/core';
+import type { LogLevel } from '@nibus/core/lib/common';
+import { logLevels } from '@nibus/core/lib/common';
 import React, { useState } from 'react';
-import FormFieldSet from './FormFieldSet';
+
 import { useDispatch, useSelector } from '../store';
-import { selectLogLevel, setLogLevel } from '../store/configSlice';
+import { setLogLevel } from '../store/configSlice';
+import { selectLogLevel } from '../store/selectors';
+
+import FormFieldSet from './FormFieldSet';
 
 // const useStyles = makeStyles(theme => ({
 //   content: {
@@ -41,7 +36,7 @@ import { selectLogLevel, setLogLevel } from '../store/configSlice';
 //   },
 // }));
 //
-const levels = Object.keys(LogLevelV.keys) as LogLevel[];
+const levels = Object.keys(logLevels) as LogLevel[];
 
 const LogToolbar: React.FC = () => {
   const logLevel = useSelector(selectLogLevel);

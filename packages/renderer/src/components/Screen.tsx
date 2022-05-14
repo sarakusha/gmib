@@ -1,12 +1,5 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
+import type {
+  SelectChangeEvent} from '@mui/material';
 import {
   Box,
   Checkbox,
@@ -14,20 +7,24 @@ import {
   MenuItem,
   Paper,
   Select,
-  SelectChangeEvent,
   TextField,
   Typography,
 } from '@mui/material';
-import { AnyAction } from '@reduxjs/toolkit';
-// import ChipInput from '@jansedlon/material-ui-chip-input';
-import React, { useCallback, useMemo } from 'react';
 import { styled } from '@mui/material/styles';
+import type { AnyAction } from '@reduxjs/toolkit';
+import ChipInput from '@sarakusha/material-ui-chip-input';
+import React, { useCallback, useMemo } from 'react';
+
 import { useDispatch, useSelector } from '../store';
-import { selectScreenById, setScreenProp } from '../store/configSlice';
-import { selectDisplays } from '../store/sessionSlice';
-import { Screen, reAddress } from '../util/config';
-import { toNumber } from '../util/helpers';
+import { addAddress, removeAddress, setScreenProp } from '../store/configSlice';
+import {selectDisplays, selectScreenById} from '../store/selectors';
+
+import type { Screen} from '/@common/config';
+import { reAddress } from '/@common/config';
+import { toNumber } from '/@common/helpers';
+
 import useDelayUpdate from '../util/useDelayUpdate';
+
 import FormFieldSet from './FormFieldSet';
 
 // const useStyles = makeStyles(theme => ({
@@ -123,7 +120,7 @@ const ScreenComponent: React.FC<Props> = ({
       if (res === undefined || res.toString() === value.trim())
         dispatch(setScreenProp([scrId, [id as keyof Screen, res]]));
     },
-    [dispatch, scrId]
+    [dispatch, scrId],
   );
   const [displayChanged, changeHandler, onBeforeAddAddress, setName] = useMemo(
     () => [
@@ -133,13 +130,13 @@ const ScreenComponent: React.FC<Props> = ({
       (event: React.ChangeEvent<HTMLInputElement>): void => {
         const { value, id, type, checked } = event.target;
         dispatch(
-          setScreenProp([scrId, [id as keyof Screen, type === 'checkbox' ? checked : value]])
+          setScreenProp([scrId, [id as keyof Screen, type === 'checkbox' ? checked : value]]),
         );
       },
       (value: string): boolean => reAddress.test(value),
       (value: string): AnyAction => setScreenProp([scrId, ['name', value]]),
     ],
-    [dispatch, scrId]
+    [dispatch, scrId],
   );
   const [name, nameChanged] = useDelayUpdate(current?.name ?? '', setName);
   return !current ? null : (
@@ -316,7 +313,6 @@ const ScreenComponent: React.FC<Props> = ({
         </FieldSet>
       </Box>
 
-      {/*
       <ChipInput
         label="Адреса минихостов"
         value={current.addresses}
@@ -328,7 +324,6 @@ const ScreenComponent: React.FC<Props> = ({
         fullWidth
         disabled={readonly}
       />
-*/}
     </Paper>
   );
 };

@@ -1,140 +1,129 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
-import { BrightnessHistory } from '@nibus/core/lib/ipc/events';
-import { Database } from 'sqlite3';
+// noinspection SqlNoDataSourceInspection
+
 import { app, ipcMain } from 'electron';
 import path from 'path';
-import semverLt from 'semver/functions/lt';
 
+import type { NullableOptional, TelemetryOpts } from '/@common/helpers';
+import { HOUR, notEmpty } from '/@common/helpers';
+
+import type { BrightnessHistory } from '@nibus/core/lib/ipc/events';
 import debugFactory from 'debug';
 import log from 'electron-log';
-import { HOUR, NullableOptional, notEmpty } from '../util/helpers';
-import config, { prevVersion } from './config';
+import { Database } from 'sqlite3';
 
-const debug = debugFactory('gmib:db');
+import config from './config';
 
-let db: Database;
+const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:db`);
+
+const dbPath = path.join(app.getPath('userData'), 'db.sqlite3');
+// eslint-disable-next-line @typescript-eslint/no-use-before-define
+const db = new Database(dbPath, createTables);
 
 export const insertBrightness = (value: number | undefined): void => {
   db.run(
     'INSERT INTO brightness (timestamp, brightness, actual) VALUES (?, ?, ?)',
     Date.now(),
     value,
-    null
+    null,
   );
 };
 
-ipcMain.on(
-  'addTelemetry',
-  (event, timestamp: number, address: string, x: number, y: number, temperature: number) => {
-    // debug(`telemetry: ${timestamp}, address = ${address}, x = ${x}, y = ${y}, t =
-    // ${temperature}`);
-    db.run(
-      'INSERT INTO telemetry (timestamp, address, x, y, temperature) VALUES (?, ?, ?, ?, ?)',
-      timestamp,
-      address,
-      x,
-      y,
-      temperature
-    );
-  }
-);
+ipcMain.on('addTelemetry', (event, { timestamp, address, x, y, temperature }: TelemetryOpts) => {
+  // debug(`telemetry: ${timestamp}, address = ${address}, x = ${x}, y = ${y}, t =
+  // ${temperature}`);
+  db.run(
+    'INSERT INTO telemetry (timestamp, address, x, y, temperature) VALUES (?, ?, ?, ?, ?)',
+    timestamp,
+    address,
+    x,
+    y,
+    temperature,
+  );
+});
 
 const listen = (): void => {
   config.onDidChange('brightness', insertBrightness);
 };
 
-const createTables = (): void => {
+function createTables(): void {
   db.serialize(() => {
-    if (prevVersion && semverLt(prevVersion, '3.2.5')) {
-      debug(`drop old tables: telemetry, sensors`);
-      db.run(`DROP TABLE IF EXISTS telemetry`);
-      db.run(`DROP TABLE IF EXISTS sensors`);
-    }
     db.run(
       `CREATE TABLE IF NOT EXISTS telemetry
       (
-          timestamp
-          INT
-          NOT
-          NULL,
-          address
-          TEXT
-          NOT
-          NULL,
-          x
-          INT
+        timestamp
+        INT
+        NOT
+        NULL,
+        address
+        TEXT
+        NOT
+        NULL,
+        x
+        INT
        (
-          2
+        2
        ) NOT NULL,
-          y INT
+        y INT
        (
-           2
+         2
        ) NOT NULL,
-          temperature INT
+        temperature INT
        (
-           1
+         1
        ),
-          PRIMARY KEY
+        PRIMARY KEY
        (
-           timestamp,
-           address,
-           x,
-           y
-       ))`
+         timestamp,
+         address,
+         x,
+         y
+       ))`,
     );
     db.run(
       `CREATE TABLE IF NOT EXISTS sensors
       (
-          timestamp
-          INT
-          NOT
-          NULL,
-          address
-          TEXT
-          NOT
-          NULL,
-          illuminanse
-          INT
+        timestamp
+        INT
+        NOT
+        NULL,
+        address
+        TEXT
+        NOT
+        NULL,
+        illuminanse
+        INT
        (
-          2
+        2
        ),
-          tempearure INT
+        tempearure INT
        (
-           1
+         1
        ),
-          PRIMARY KEY
+        PRIMARY KEY
        (
-           timestamp,
-           address
-       ))`
+         timestamp,
+         address
+       ))`,
     );
     db.run(
       `CREATE TABLE IF NOT EXISTS brightness
       (
-          timestamp
-          INT
-          PRIMARY
-          KEY
-          NOT
-          NULL,
-          brightness
-          INT
+        timestamp
+        INT
+        PRIMARY
+        KEY
+        NOT
+        NULL,
+        brightness
+        INT
        (
-          1
+        1
        ) NOT NULL,
-          actual INT
+        actual INT
        (
-           1
+         1
        ))`,
-      listen
+      listen,
     );
 
     const date = new Date();
@@ -146,7 +135,7 @@ const createTables = (): void => {
        WHERE timestamp < ${date.getTime()}`,
       err => {
         err && debug(`error while clear telemetry history, ${err.message}`);
-      }
+      },
     );
 
     db.exec(
@@ -155,7 +144,7 @@ const createTables = (): void => {
        WHERE timestamp < ${date.getTime()}`,
       err => {
         err && debug(`error while clear sensors history, ${err.message}`);
-      }
+      },
     );
 
     db.exec(
@@ -164,15 +153,15 @@ const createTables = (): void => {
        WHERE timestamp < ${date.getTime()}`,
       err => {
         err && debug(`error while clear brightness history, ${err.message}`);
-      }
+      },
     );
   });
-};
+}
 
 function removeNull<T>(value: NullableOptional<T>): T {
-  return (Object.fromEntries(
-    Object.entries(value).filter(([, val]) => val !== null)
-  ) as unknown) as T;
+  return Object.fromEntries(
+    Object.entries(value).filter(([, val]) => val !== null),
+  ) as unknown as T;
 }
 
 export const getBrightnessHistory = async (dt?: number): Promise<BrightnessHistory[]> => {
@@ -195,9 +184,9 @@ export const getBrightnessHistory = async (dt?: number): Promise<BrightnessHisto
                 removeNull({
                   ...row,
                   timestamp: from,
-                })
+                }),
             );
-        }
+        },
       );
     }),
     new Promise<BrightnessHistory[]>((resolve, reject) => {
@@ -210,15 +199,15 @@ export const getBrightnessHistory = async (dt?: number): Promise<BrightnessHisto
         (error: unknown, rows: NullableOptional<BrightnessHistory>[]) => {
           if (error) reject(error);
           else resolve(rows.map(removeNull));
-        }
+        },
       );
     }),
     new Promise<BrightnessHistory | undefined>((resolve, reject) => {
       db.get(
         `SELECT timestamp, brightness, actual
-           FROM brightness
-           WHERE timestamp >= ?
-           ORDER BY timestamp ASC`,
+         FROM brightness
+         WHERE timestamp >= ?
+         ORDER BY timestamp ASC`,
         to,
         (error, row?: NullableOptional<BrightnessHistory>) => {
           if (error) reject(error);
@@ -228,15 +217,13 @@ export const getBrightnessHistory = async (dt?: number): Promise<BrightnessHisto
                 removeNull({
                   ...row,
                   timestamp: to,
-                })
+                }),
             );
-        }
+        },
       );
     }),
   ]);
   return [first, ...result, last].filter(notEmpty);
 };
 
-const dbPath = path.join(app.getPath('userData'), 'db.sqlite3');
-db = new Database(dbPath, createTables);
 process.nextTick(() => log.log(`DB: ${dbPath}`));

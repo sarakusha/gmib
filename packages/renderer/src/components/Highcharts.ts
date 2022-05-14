@@ -1,12 +1,3 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
 import Highcharts from 'highcharts';
 import highchartsMore from 'highcharts/highcharts-more';
 import highchartsSolidGauge from 'highcharts/modules/solid-gauge';
@@ -49,6 +40,9 @@ Highcharts.setOptions({
     weekdays: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
     resetZoom: 'Сутки',
     resetZoomTitle: 'Сбросить масштаб до суток',
+  },
+  accessibility: {
+    enabled: false,
   },
 });
 

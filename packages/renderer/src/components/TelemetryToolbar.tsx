@@ -1,14 +1,4 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
 
-import { IconButton, Tooltip } from '@mui/material';
 import CancelIcon from '@mui/icons-material/Cancel';
 import Filter1 from '@mui/icons-material/Filter1';
 import Filter2 from '@mui/icons-material/Filter2';
@@ -18,9 +8,13 @@ import Filter5 from '@mui/icons-material/Filter5';
 import Filter6 from '@mui/icons-material/Filter6';
 import Filter7 from '@mui/icons-material/Filter7';
 import StartIcon from '@mui/icons-material/Refresh';
+import { IconButton, Tooltip } from '@mui/material';
 import React, { useCallback, useState } from 'react';
-import PropertySelectorDialog, { getEnumValues } from '../dialogs/PropertySelectorDialog';
-import { noop } from '../util/helpers';
+
+import PropertySelectorDialog from '../dialogs/PropertySelectorDialog';
+
+import { getEnumValues, noop } from '/@common/helpers';
+
 import BusyButton from './BusyButton';
 
 // const useStyles = makeStyles(theme => ({
@@ -77,7 +71,7 @@ const TelemetryToolbar: React.FC<Props> = ({
       {loading || isBusy ? (
         <BusyButton
           icon={<CancelIcon />}
-          title={'Отменить опрос'}
+          title="Отменить опрос"
           onClick={cancel}
           isBusy={isBusy > 0 || loading}
           disabled={!loading}

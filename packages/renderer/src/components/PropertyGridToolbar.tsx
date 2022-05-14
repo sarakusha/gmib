@@ -1,68 +1,30 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
-
-import { IconButton, Tooltip } from '@mui/material';
 import ReloadIcon from '@mui/icons-material/Refresh';
-import LoadIcon from '@mui/icons-material/SystemUpdateAlt';
 import SaveIcon from '@mui/icons-material/Save';
-import { DeviceId } from '@nibus/core';
-import { ipcRenderer } from 'electron';
-import fs from 'fs';
+import LoadIcon from '@mui/icons-material/SystemUpdateAlt';
+import { IconButton, Tooltip } from '@mui/material';
+import type { DeviceId } from '@nibus/core';
 import React, { useCallback, useState } from 'react';
+
 import SaveDialog from '../dialogs/SaveDialog';
-import { AppDispatch, useDispatch, useSelector } from '../store';
-import { selectCurrentDevice } from '../store/currentSlice';
-import { PropTuple, reloadDevice, setDeviceValue } from '../store/devicesSlice';
+import type { AppDispatch } from '../store';
+import { useDispatch, useSelector } from '../store';
+import { reloadDevice } from '../store/deviceThunks';
+import type { PropTuple } from '../store/devicesSlice';
+import { selectCurrentDevice } from '../store/selectors';
+
 import BusyButton from './BusyButton';
 
-// const useStyles = makeStyles(theme => ({
-//   toolbarWrapper: {
-//     position: 'relative',
-//   },
-//   fabProgress: {
-//     color: theme.palette.secondary.light,
-//     position: 'absolute',
-//     pointerEvents: 'none',
-//     top: 0,
-//     left: 0,
-//     zIndex: 1,
-//   },
-// }));
-
 const load = (dispatch: AppDispatch, id: DeviceId, mib: string): boolean => {
-  const [fileName]: string[] =
-    ipcRenderer.sendSync('showOpenDialogSync', {
-      title: 'Загрузить из',
-      filters: [
-        {
-          name: 'JSON',
-          extensions: ['json'],
-        },
-      ],
-      properties: ['openFile'],
-    } as Electron.OpenDialogSyncOptions) ?? [];
-  if (fileName) {
-    try {
-      const data = JSON.parse(fs.readFileSync(fileName).toString());
-      if (data.$mib !== mib) {
-        ipcRenderer.sendSync('showErrorBox', 'Ошибка загрузки', 'Тип устройства не совпадает');
-        return false;
-      }
-      delete data.$mib;
-      const setValue = setDeviceValue(id);
-      Object.entries(data).forEach(prop => dispatch(setValue(...(prop as PropTuple))));
-      return true;
-    } catch (e) {
-      ipcRenderer.sendSync('showErrorBox', 'Ошибка загрузки', 'Файл испорчен');
+  const data = window.dialogs.loadJSON('Загрузить из');
+  if (data) {
+    if (data.$mib !== mib) {
+      window.dialogs.showErrorBox('Ошибка загрузки', 'Тип устройства не совпадает');
       return false;
     }
+    delete data.$mib;
+    const setValue = window.nibus.setDeviceValue(id);
+    Object.entries(data).forEach(prop => setValue(...(prop as PropTuple)));
+    return true;
   }
   return false;
 };

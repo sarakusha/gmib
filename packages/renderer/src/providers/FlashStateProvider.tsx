@@ -1,23 +1,18 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
-import { FlashKinds, Kind } from '@nibus/core';
-import React, {
+import type { Kind } from '@nibus/core';
+import { FlashKinds } from '@nibus/core/lib/flash/FlashKinds';
+import type {
   Dispatch,
   Reducer,
   ReducerAction,
-  SetStateAction,
+  SetStateAction} from 'react';
+import React, {
   useCallback,
   useContext,
   useReducer,
 } from 'react';
-import { AtLeastOne, noop } from '../util/helpers';
+
+import type { AtLeastOne} from '/@common/helpers';
+import { noop } from '/@common/helpers';
 
 type Setter<S> = Dispatch<SetStateAction<S>>;
 
@@ -69,15 +64,15 @@ export const useFlashState = (kind: Kind): FlashState & FlashSetters => {
   const [state, dispatch] = useGlobalFlashState();
   const setColumn = useCallback<Setter<number | string>>(
     payload => dispatch({ kind, payload, type: 'column' }),
-    [kind, dispatch]
+    [kind, dispatch],
   );
   const setRow = useCallback<Setter<number | string>>(
     payload => dispatch({ kind, payload, type: 'row' }),
-    [kind, dispatch]
+    [kind, dispatch],
   );
   const setFile = useCallback<Setter<string | number>>(
     payload => dispatch({ kind, payload, type: 'file' }),
-    [kind, dispatch]
+    [kind, dispatch],
   );
   return { ...state[kind], setColumn, setRow, setFile };
 };
@@ -86,8 +81,8 @@ export const FlashStateProvider: React.FC = ({ children }) => {
   const [state, dispatch] = useReducer<FlashReducer>(
     flashReducer,
     Object.fromEntries(
-      FlashKinds.map<[Kind, FlashState]>(kind => [kind, { row: 0, column: 0, file: '' }])
-    )
+      FlashKinds.map<[Kind, FlashState]>(kind => [kind, { row: 0, column: 0, file: '' }]),
+    ),
   );
   return (
     <FlashGlobalStateContext.Provider value={state}>

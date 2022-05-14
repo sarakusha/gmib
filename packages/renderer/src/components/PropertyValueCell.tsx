@@ -1,25 +1,22 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
 
 /* eslint-disable indent,@typescript-eslint/no-explicit-any */
-import { Box, MenuItem, Select, SelectChangeEvent } from '@mui/material';
+import type { SelectChangeEvent } from '@mui/material';
+import { Box, MenuItem, Select } from '@mui/material';
 import React, { memo, useCallback, useMemo } from 'react';
-import { ValueState, ValueType } from '../store/devicesSlice';
-import { PropMetaInfo } from '../store/mibsSlice';
+
+import type { PropMetaInfo } from '../store/mibsSlice';
 import setDisplayName from '../util/setDisplayName';
-import TableCell from './TableCell';
+
 import EditCell from './EditCell';
 import SerialNoCell from './SerialNoCell';
+import TableCell from './TableCell';
 
-const capitalize = (str?: string): string | undefined =>
-  str && str.charAt(0).toUpperCase() + str.slice(1);
+import type { ValueState, ValueType } from '/@common/helpers';
+
+const capitalize = <T extends string | undefined>(
+  str: T,
+): T extends string ? Capitalize<T> : undefined =>
+  str && ((str.charAt(0).toUpperCase() + str.slice(1)) as any);
 
 // const safeParseNumber = ({ value }: ValueState): number => parseFloat(value as string) || 0;
 
@@ -49,7 +46,7 @@ type CellComponent = React.FunctionComponent<ValueState>;
 
 const PropertyValueCell: React.FC<Props> = ({ meta, name, state, onChangeProperty }) => {
   const cellFactory = useCallback<() => CellComponent>(() => {
-    const componentName = capitalize(name)!;
+    const componentName = capitalize(name);
     const { simpleType, isWritable, enumeration, min, max, convertFrom = x => x } = meta;
     if (!isWritable) {
       return setDisplayName(componentName)(({ value, status, error }: ValueState) => (

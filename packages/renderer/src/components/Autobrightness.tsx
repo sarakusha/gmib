@@ -1,13 +1,5 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
-// import FormHelperText from '@mui/material/FormHelperText';
+import CheckIcon from '@mui/icons-material/Check';
+import CloseIcon from '@mui/icons-material/Close';
 import {
   Box,
   Button,
@@ -18,45 +10,49 @@ import {
   TextField,
 } from '@mui/material';
 import { css, styled } from '@mui/material/styles';
-import React, { useCallback, useEffect, useState } from 'react';
+import debugFactory from 'debug';
+import type { SeriesSolidgaugeOptions } from 'highcharts';
 import HighchartsReact from 'highcharts-react-official';
-import CloseIcon from '@mui/icons-material/Close';
-import CheckIcon from '@mui/icons-material/Check';
 import sortBy from 'lodash/sortBy';
+import React, { useCallback, useEffect, useState } from 'react';
 
-import Highcharts, { SeriesSolidgaugeOptions } from './Highcharts';
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useDispatch, useSelector } from '../store';
+import { setBrightness, setSpline } from '../store/configSlice';
 import {
   selectAutobrightness,
   selectBrightness,
+  selectCurrentTab,
+  selectLastIlluminance,
   selectSpline,
-  setBrightness,
-  setSpline,
-} from '../store/configSlice';
-import { selectCurrentTab } from '../store/currentSlice';
-import { selectLastIlluminance } from '../store/sensorsSlice';
-import { SPLINE_COUNT, SplineItem } from '../util/config';
-import { noop, notEmpty, toErrorMessage } from '../util/helpers';
+} from '../store/selectors';
+
+import type { SplineItem } from '/@common/config';
+import { SPLINE_COUNT } from '/@common/config';
+import { noop, notEmpty, toErrorMessage } from '/@common/helpers';
+
 import AutobrightnessToolbar from './AutobrightnessToolbar';
 import Brightness from './Brightness';
+import Highcharts from './Highcharts';
 
-const setItem = (index: number, value?: number) => (
-  array: (number | undefined)[]
-): (number | undefined)[] => {
-  const clone = [...array];
-  if (value !== undefined) {
-    clone[index] = value;
-  } else {
-    delete clone[index];
-  }
-  return clone;
-};
+const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:autobrightness`);
+const setItem =
+  (index: number, value?: number) =>
+  (array: (number | undefined)[]): (number | undefined)[] => {
+    const clone = [...array];
+    if (value !== undefined) {
+      clone[index] = value;
+    } else {
+      delete clone[index];
+    }
+    return clone;
+  };
 
 const unitStyles = (
   <GlobalStyles
     styles={theme => ({
       '.unit': {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ...(theme.typography.caption as any),
         opacity: 0.5,
       },
@@ -68,6 +64,7 @@ const unitStyles = (
         flexDirection: 'column',
         alignItems: 'center',
         width: '6ch',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ...(theme.typography.subtitle1 as any),
       },
     })}
@@ -88,7 +85,7 @@ const highChartsOptions: Highcharts.Options = {
   },
   exporting: { enabled: false },
   title: {
-    text: `<div class="unit">Освещенность</div>`,
+    text: '<div class="unit">Освещенность</div>',
     useHTML: true,
   },
 
@@ -204,7 +201,8 @@ const Autobrightness: React.FC = () => {
   useEffect(() => {
     setOptions(prev => {
       const value = { ...prev };
-      (value.series![0] as SeriesSolidgaugeOptions).data = [illuminance ?? null];
+      const [first] = (value.series as SeriesSolidgaugeOptions[]) ?? [];
+      if (first !== undefined) first.data = [illuminance ?? null];
       return value;
     });
   }, [illuminance]);
@@ -266,7 +264,7 @@ const Autobrightness: React.FC = () => {
         dispatch(setSpline(saveSpline.filter(notEmpty)));
         setChanged(false);
       } catch (e) {
-        console.error('error while save spline', toErrorMessage(e));
+        debug(`error while save spline: ${toErrorMessage(e)}`);
       }
     }
     setError(errors);
@@ -283,7 +281,7 @@ const Autobrightness: React.FC = () => {
   const handleBrightness = useCallback(
     (e: unknown, value: number | number[]) =>
       Array.isArray(value) || dispatch(setBrightness(value)),
-    [dispatch]
+    [dispatch],
   );
   const autobrightness = useSelector(selectAutobrightness);
   return (
@@ -304,7 +302,7 @@ const Autobrightness: React.FC = () => {
               sx={{
                 p: 1,
                 display: 'grid',
-                gridTemplateColumns: `[lux] 1fr [brightness] 1fr [clear] auto`,
+                gridTemplateColumns: '[lux] 1fr [brightness] 1fr [clear] auto',
                 gap: 1,
               }}
             >

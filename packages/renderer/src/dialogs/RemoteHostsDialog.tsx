@@ -1,13 +1,5 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
-import React, { MouseEvent, useEffect, useRef, useState } from 'react';
+/* eslint-disable @typescript-eslint/no-empty-function */
+import CloseIcon from '@mui/icons-material/Close';
 import {
   Box,
   Button,
@@ -19,13 +11,18 @@ import {
   TextField,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import CloseIcon from '@mui/icons-material/Close';
-import IPut from 'iput';
+import { hasProps } from '@novastar/screen/lib/common';
+import React, { useEffect, useRef, useState } from 'react';
+import type { MouseEvent } from 'react';
+
+import type { CustomHost } from '/@common/helpers';
+
 import FormFieldSet from '../components/FormFieldSet';
 import { useSelector } from '../store';
-import { selectAllRemoteHosts } from '../store/remoteHostsSlice';
-import localConfig, { CustomHost } from '../util/localConfig';
+import { selectAllRemoteHosts } from '../store/selectors';
 import timeid from '../util/timeid';
+
+import IPut from 'iput';
 
 // const useStyles = makeStyles(theme => {
 //   return {
@@ -132,6 +129,8 @@ const Header = styled('div')(({ theme }) => ({
   },
 }));
 
+const hasAddressPort = hasProps('address', 'port');
+
 const RemoteHostsDialog: React.FC<RemoteHostsDialogProps> = ({
   open = false,
   onClose = () => {},
@@ -140,13 +139,11 @@ const RemoteHostsDialog: React.FC<RemoteHostsDialogProps> = ({
   const [customHosts, setCustomHosts] = useState<CustomHostItem[]>([]);
   const [changed, setChanged] = useState(false);
   const saveHandler = (): void => {
-    const valid = customHosts
-      .map(({ address, port }) => ({
-        address,
-        port: port && +port,
-      }))
-      .filter(({ address, port }) => !!address && !!port);
-    localConfig.set('hosts', valid);
+    const valid = customHosts.filter(hasAddressPort).map(({ address, port }) => ({
+      address,
+      port: +port,
+    }));
+    window.config.set('hosts', valid);
     onClose();
   };
   const cancelHandler = onClose;
@@ -158,26 +155,27 @@ const RemoteHostsDialog: React.FC<RemoteHostsDialogProps> = ({
           address,
           port: port.toString(),
           id: timeid(),
-        }))
+        })),
       );
       setChanged(false);
     };
-    updateHosts(localConfig.get('hosts') ?? []);
+    updateHosts(window.config.get('hosts') ?? []);
   }, [open]);
   const refLast = useRef<HTMLDivElement>(null);
 
   function makeHandler<T>(
-    upd: (arg: T, index: number, customs: CustomHostItem[]) => void
+    upd: (arg: T, index: number, customs: CustomHostItem[]) => void,
   ): (id: string) => (arg: T) => void {
-    return (id: string) => (arg: T): void => {
-      const customs = [...customHosts];
-      const index = customs.findIndex(item => item.id === id);
-      if (index !== -1) {
-        upd(arg, index, customs);
-        setCustomHosts(customs);
-        setChanged(true);
-      }
-    };
+    return (id: string) =>
+      (arg: T): void => {
+        const customs = [...customHosts];
+        const index = customs.findIndex(item => item.id === id);
+        if (index !== -1) {
+          upd(arg, index, customs);
+          setCustomHosts(customs);
+          setChanged(true);
+        }
+      };
   }
 
   const makeAddressHandler = makeHandler((address: string, index, customs) => {
@@ -282,7 +280,7 @@ const RemoteHostsDialog: React.FC<RemoteHostsDialogProps> = ({
               hosts.concat({
                 id: timeid(),
                 port: '9001',
-              })
+              }),
             );
             refLast.current?.scrollIntoView({ behavior: 'smooth' });
           }}

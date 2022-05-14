@@ -1,0 +1,3 @@
+<component name="DependencyValidationManager">
+  <scope name="renderer" pattern="file[gmib]:packages/renderer//*" />
+</component>

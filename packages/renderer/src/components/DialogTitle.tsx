@@ -1,24 +1,16 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
+import CloseIcon from '@mui/icons-material/Close';
+import type {
+  DialogTitleProps as MuiDialogTitleProps} from '@mui/material';
+import {
+  IconButton,
+  DialogTitle as MuiDialogTitle,
+  Typography,
+} from '@mui/material';
 import React from 'react';
 // import { Theme } from '@mui/material/styles';
 // import { WithStyles } from '@mui/styles';
 // import createStyles from '@mui/styles/createStyles';
 // import withStyles from '@mui/styles/withStyles';
-import {
-  IconButton,
-  DialogTitle as MuiDialogTitle,
-  DialogTitleProps as MuiDialogTitleProps,
-  Typography,
-} from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 // const styles = (theme: Theme) =>

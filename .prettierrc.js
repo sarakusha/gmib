@@ -3,4 +3,5 @@ module.exports = {
   ...cfg,
   bracketSpacing: true,
   printWidth: 100,
+  trailingComma: 'all'
 };

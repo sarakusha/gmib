@@ -1,173 +1,87 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
+import type { DeviceId } from '@nibus/core';
+import { MCDVI_TYPE, MINIHOST_TYPE } from '@nibus/core/lib/common';
 
+import { tuplify } from '/@common/helpers';
+
+import { createAsyncThunk } from '@reduxjs/toolkit';
+
+import { setCurrentTab } from './currentSlice';
+import { setConnected } from './devicesSlice';
+import { startAppListening } from './listenerMiddleware';
 import {
-  Address,
-  DeviceId,
-  IDevice,
-  INibusSession,
-  MCDVI_TYPE,
-  MINIHOST_TYPE,
-  VersionInfo,
-} from '@nibus/core';
-import { toErrorMessage, tuplify } from '../util/helpers';
-import { getCurrentNibusSession, isRemoteSession } from '../util/nibus';
-import { AsyncInitializer } from './asyncInitialMiddleware';
-import { selectBrightness, selectScreenAddresses } from './configSlice';
-import {
-  addDevice,
-  changeAddress,
-  deviceReady,
-  reloadDevice,
-  removeDevice,
   selectAllDevices,
+  selectCurrentDeviceId,
   selectDevicesByAddress,
-  setConnected,
-  setDeviceValue,
-  setParent,
-  updateProps,
-} from './devicesSlice';
-import type { AppThunk } from './index';
-import { updateScreen } from './configThunks';
-import { addMib } from './mibsSlice';
+  selectScreenAddresses,
+} from './selectors';
+import { setOnline } from './sessionSlice';
 
-const PINGER_INTERVAL = 10000;
+import { isRemoteSession } from '/@common/remote';
 
-const isSlaveMinihostOrMcdvi = (info?: VersionInfo): boolean =>
-  Boolean(
-    info && ((info.type === MINIHOST_TYPE && info.connection.owner) || info.type === MCDVI_TYPE)
-  );
+import type { AppThunk, AppThunkConfig } from './index';
 
-export const createDevice = (
-  parent: DeviceId,
-  address: string,
-  type: number,
-  version?: number
-): AppThunk => dispatch => {
-  const session = getCurrentNibusSession();
-  const device = session.devices.create(address, type!, version);
-  const parentDevice = session.devices.findById(parent);
-  if (parentDevice) {
-    device.connection = parentDevice.connection;
-    const checkConnection = async (): Promise<void> => {
-      await session.pingDevice(device);
-    };
-    const timer = window.setInterval(checkConnection, 10000);
-    device.once('release', () => window.clearInterval(timer));
-  }
-  setImmediate(() => {
-    dispatch(setParent([device.id, parent]));
-  });
-};
+const PING_INTERVAL = 10000;
 
-const pinger = (session: INibusSession): AppThunk => (dispatch, getState) => {
+export const reloadDevice = createAsyncThunk<Promise<void>, DeviceId, AppThunkConfig>(
+  'devices/reload',
+  id => window.nibus.reloadDevice(id),
+);
+
+const isSlaveMinihostOrMcdvi = (info?: { type: number; owner?: string }): boolean =>
+  Boolean(info && ((info.type === MINIHOST_TYPE && info.owner) || info.type === MCDVI_TYPE));
+
+export const ping = (): AppThunk => (dispatch, getState) => {
   const state = getState();
   const isReady = !selectAllDevices(state).some(({ isBusy }) => isBusy);
   if (!isReady) {
-    window.setTimeout(() => dispatch(pinger(session)), 300);
+    window.setTimeout(() => dispatch(ping()), 300);
     return;
   }
   const inaccessibleAddresses = selectScreenAddresses(state).filter(
-    address => selectDevicesByAddress(state, address).length === 0
+    address => selectDevicesByAddress(state, address).length === 0,
   );
   if (inaccessibleAddresses.length === 0) return;
   Promise.all(
-    inaccessibleAddresses.map(async address => tuplify(await session.ping(address), address))
+    inaccessibleAddresses.map(async address => tuplify(await window.nibus.ping(address), address)),
   ).then(res =>
     res
       .filter(([[timeout, info]]) => timeout > 0 && isSlaveMinihostOrMcdvi(info))
       .forEach(([[, info], address]) => {
         // debug(`source: ${info?.source}`);
-        dispatch(createDevice(info!.connection.owner!.id, address, info!.type, info!.version));
-      })
+        info.owner && window.nibus.createDevice(info.owner, address, info.type, info.version);
+      }),
   );
 };
 
-let pingerTimer = 0;
+startAppListening({
+  actionCreator: setConnected,
+  effect: ({ payload: [id, connected] }, { dispatch }) => {
+    connected && dispatch(reloadDevice(id));
+  },
+});
 
-export const initializeDevices: AsyncInitializer = (dispatch, getState) => {
-  if (!isRemoteSession && !pingerTimer) {
-    const session = getCurrentNibusSession();
-    pingerTimer = window.setInterval(() => dispatch(pinger(session)), PINGER_INTERVAL);
-  }
-  const newDeviceHandler = (device: IDevice): void => {
-    const { id: deviceId } = device;
-    const mib = Reflect.getMetadata('mib', device);
-    const connectedHandler = (): void => {
-      dispatch(setConnected(deviceId));
-      dispatch(reloadDevice(deviceId));
-    };
-    const disconnectedHandler = (): void => {
-      /*
-      try {
-        const current = selectCurrentDeviceId(getState());
-        if (current === deviceId) {
-          dispatch(setCurrentDevice(undefined));
-        }
-      } catch (e) {
-        console.error(`error while disconnect: ${e.message}`);
-      }
-*/
-      device.release();
-    };
-    const addressHandler = (prev: Address, address: Address): void => {
-      dispatch(changeAddress([deviceId, address.toString()]));
-    };
-    const releaseHandler = (): void => {
-      device.off('connected', connectedHandler);
-      device.off('disconnected', disconnectedHandler);
-      device.off('release', releaseHandler);
-      device.off('addressChanged', addressHandler);
-    };
-    device.on('connected', connectedHandler);
-    device.on('disconnected', disconnectedHandler);
-    device.on('release', releaseHandler);
-    device.on('addressChanged', addressHandler);
+let pingTimer = 0;
 
-    dispatch(addMib(deviceId));
-    // isBusy = 1
-    dispatch(addDevice(deviceId));
-    setTimeout(() => {
-      if (!device.connection) return;
-      device.read().finally(() => {
-        dispatch(updateProps([deviceId]));
-        dispatch(deviceReady(deviceId));
-        // debug(`deviceReady ${device.address.toString()}`);
-        // selectCurrentDeviceId(getState()) || dispatch(setCurrentDevice(deviceId));
-        const brightness = selectBrightness(getState());
-        const setValue = setDeviceValue(deviceId);
-        if (mib?.startsWith('minihost') || mib === 'mcdvi') {
-          setValue('brightness', brightness);
-        }
-        dispatch(updateScreen());
-      });
-    }, 3000);
-  };
-  const deleteDeviceHandler = (device: IDevice): void => {
-    try {
-      /*
-      const current = selectCurrentDeviceId(getState());
-      if (current === device.id) {
-        dispatch(setCurrentDevice(undefined));
+if (!isRemoteSession) {
+  startAppListening({
+    actionCreator: setOnline,
+    effect({ payload: online }, { dispatch }) {
+      if (!online) {
+        window.clearInterval(pingTimer);
+        pingTimer = 0;
+      } else if (!pingTimer) {
+        pingTimer = window.setInterval(() => dispatch(ping()), PING_INTERVAL);
       }
-*/
-      dispatch(removeDevice(device.id));
-    } catch (e) {
-      console.error(toErrorMessage(e));
-    }
-  };
-  const session = getCurrentNibusSession();
-  session.devices.on('new', newDeviceHandler);
-  session.devices.on('delete', deleteDeviceHandler);
-  return () => {
-    session.devices.off('new', newDeviceHandler);
-    session.devices.off('delete', deleteDeviceHandler);
-  };
-};
+    },
+  });
+}
+
+startAppListening({
+  predicate(_, currentState, previousState) {
+    const current = selectCurrentDeviceId(currentState);
+    return current !== undefined && current !== selectCurrentDeviceId(previousState);
+  },
+  effect(_, { dispatch }) {
+    dispatch(setCurrentTab('devices'));
+  },
+});

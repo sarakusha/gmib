@@ -1,17 +1,5 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
 
-import { FunctionInterpolation, useTheme } from '@emotion/react';
-import { Theme, css } from '@mui/material/styles';
-/* tslint:disable:react-a11y-role-has-required-aria-props */
-// import AppBar from '@mui/material/AppBar';
+import AddIcon from '@mui/icons-material/Add';
 import {
   Box,
   Button,
@@ -29,100 +17,37 @@ import {
   ListItemIcon,
   ListItemSecondaryAction,
   ListItemText,
-  NativeSelect,
+  MenuItem,
   Paper,
+  Select,
   Tab,
   Tabs,
   TextField,
 } from '@mui/material';
-import { Address, DeviceId, findMibByType } from '@nibus/core';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import AddIcon from '@mui/icons-material/Add';
-import unionBy from 'lodash/unionBy';
-import without from 'lodash/without';
-import { useDevices, useDispatch, useSelector } from '../store';
-import { selectLinks } from '../store/devicesSlice';
-import { createDevice } from '../store/deviceThunks';
-import { selectMibTypes } from '../store/nibusSlice';
-import Finder, { DeviceInfo, FinderOptions } from '../util/finders';
-import useDefaultKeys from '../util/useDefaultKeys';
-import DeviceIcon from '../components/DeviceIcon';
+import type { DeviceId } from '@nibus/core';
+import Address from '@nibus/core/lib/Address';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
-// const useStyles = makeStyles(theme => ({
-//   hidden: {
-//     display: 'none',
-//   },
-//   formControl: {
-//     marginLeft: theme.spacing(1),
-//     marginRight: theme.spacing(1),
-//     width: '30ch',
-//   },
-//   tabContent: {
-//     padding: theme.spacing(2),
-//     display: 'flex',
-//     flexWrap: 'wrap',
-//     justifyContent: 'space-between',
-//   },
-//   content: {
-//     position: 'relative',
-//     paddingLeft: 0,
-//     paddingRight: 0,
-//   },
-//   detectedList: {
-//     minWidth: '40ch',
-//   },
-//   detectedContainer: {
-//     width: '100%',
-//     display: 'flex',
-//     height: '20ch',
-//     justifyContent: 'center',
-//     overflowY: 'auto',
-//   },
-//   detectedItem: {},
-//   linearProgress: {
-//     position: 'absolute',
-//     bottom: 0,
-//     left: 0,
-//     right: 0,
-//   },
-//   wrapper: {
-//     position: 'relative',
-//   },
-//   bar: {
-//     backgroundColor: theme.palette.primary.main,
-//     color: theme.palette.primary.contrastText,
-//   },
-//   actions: {
-//     position: 'relative',
-//   },
-//   clear: {
-//     position: 'absolute',
-//     left: theme.spacing(1),
-//     top: theme.spacing(1),
-//   },
-// }));
+import DeviceIcon from '../components/DeviceIcon';
+import { useDevices, useDispatch, useSelector } from '../store';
+import { selectFinder, selectLinks } from '../store/selectors';
+import type { DeviceInfo } from '../store/sessionSlice';
+import { resetDetected } from '../store/sessionSlice';
+import useDefaultKeys from '../util/useDefaultKeys';
+
+import type { FinderOptions } from '/@common/helpers';
 
 type Props = {
   open: boolean;
   close: () => void;
 };
 
-const formControlStyle: FunctionInterpolation<Theme> = theme => css`
-  margin-left: ${theme.spacing(1)};
-  margin-right: ${theme.spacing(1)};
-  width: 30ch;
-`;
-
 const deviceKey = ({ address, owner }: DeviceInfo): string => `${owner}#${address.toString()}`;
-
-const union = (prev: DeviceInfo[], item: DeviceInfo): DeviceInfo[] =>
-  unionBy(prev, [item], deviceKey);
 
 type SearchKind = 'byAddress' | 'byType';
 
 const SearchDialog: React.FC<Props> = ({ open, close }) => {
-  const theme = useTheme();
-  const [isSearching, setSearching] = useState(false);
+  const { isSearching, detected } = useSelector(selectFinder);
   const [kind, setKind] = useState<SearchKind>('byType');
   const links = useSelector(selectLinks);
   const devices = useDevices();
@@ -130,94 +55,59 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
   const connectionRef = useRef<HTMLInputElement>(null);
   const mibTypeRef = useRef<HTMLInputElement>(null);
   const addressRef = useRef<HTMLInputElement>(null);
-  const [detected, setDetected] = useState<DeviceInfo[]>([]);
   const [invalidAddress, setInvalidAddress] = useState(false);
   const defaultValues = useRef({
     address: '',
     type: '0',
   });
-  useEffect(() => setDetected([]), [open]);
-  const finder = useMemo(() => new Finder(), []);
   useEffect(() => {
-    const startListener = (): void => setSearching(true);
-    const finishListener = (): void => setSearching(false);
-    const foundListener = (info: DeviceInfo): void => {
-      // console.log({ info, address: info.address.toString() });
-      setDetected(prev => union(prev, info));
-    };
-    finder.on('start', startListener);
-    finder.on('finish', finishListener);
-    finder.on('found', foundListener);
-    return () => {
-      finder.off('start', startListener);
-      finder.off('finish', finishListener);
-      finder.off('found', foundListener);
-      finder.cancel();
-    };
-  }, [finder]);
+    dispatch(resetDetected());
+  }, [dispatch, open]);
   const changeHandler = useCallback((_, newValue) => setKind(newValue), []);
   const startStop = useCallback(() => {
     const connection = connectionRef.current?.value;
     if (connection === undefined) return;
-    const owners: DeviceId[] = (connection === '0'
-      ? links
-      : links.filter(({ id }) => id === connection)
+    const owners: DeviceId[] = (
+      connection === '0' ? links : links.filter(({ id }) => id === connection)
     ).map(({ id }) => id);
     const options: FinderOptions = {
       owners,
     };
     switch (kind) {
       case 'byAddress':
-        options.address = addressRef.current!.value;
+        options.address = addressRef.current?.value;
         break;
       case 'byType':
-        options.type = Number(mibTypeRef.current!.value);
+        options.type = Number(mibTypeRef.current?.value);
         break;
       default:
-        return;
     }
     if (isSearching) {
-      finder.cancel();
-      setSearching(false);
+      window.nibus.cancelSearch();
     } else {
-      finder.run(options).then(
+      window.nibus.findDevices(options).then(
         () => setInvalidAddress(false),
-        (e: Error) => {
-          console.error(e.stack);
-          setInvalidAddress(true);
-        }
+        () => setInvalidAddress(true),
       );
     }
-  }, [links, kind, isSearching, finder]);
-  const clearHandler = (): void => setDetected([]);
+  }, [links, kind, isSearching /* , finder */]);
   useEffect(() => {
-    finder.cancel();
+    window.nibus.cancelSearch();
     if (!open) {
       addressRef.current && (defaultValues.current.address = addressRef.current.value);
       mibTypeRef.current && (defaultValues.current.type = mibTypeRef.current.value);
     }
-  }, [open, kind, finder]);
-  const addDevice = useCallback(
-    (event: React.MouseEvent<HTMLButtonElement>) => {
-      const key = event.currentTarget.id;
-      setDetected(devs => {
-        const dev = devs.find(item => deviceKey(item) === key);
-        if (!dev?.owner) return devs;
-        // console.log('NEW DEV', dev);
-        // console.log(devices.map(({ address, parent }) => `${address}:${parent}`).join(', '));
-        if (
-          devices.findIndex(
-            device => dev.address.equals(device.address) && device.parent === dev.owner
-          ) === -1
-        ) {
-          dispatch(createDevice(dev.owner, dev.address.toString(), dev.type, dev.version));
-        }
-        return without(devs, dev);
-      });
-    },
-    [devices, dispatch]
-  );
-  const mibTypes = useSelector(selectMibTypes);
+  }, [open, kind]);
+  const addDevice = (key: string): void => {
+    const dev = detected.find(item => deviceKey(item) === key);
+    if (!dev?.owner) return;
+    if (
+      devices.findIndex(device => device.address === dev.address && device.parent === dev.owner) ===
+      -1
+    ) {
+      window.nibus.createDevice(dev.owner, dev.address.toString(), dev.type, dev.version);
+    }
+  };
   useDefaultKeys({
     enterHandler: startStop,
     cancelHandler: close,
@@ -227,63 +117,75 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
       <DialogTitle id="search-title">Поиск устройств</DialogTitle>
       <DialogContent sx={{ position: 'relative', px: 0 }}>
         <Paper square sx={{ bgcolor: 'primary.main', color: 'primary.contrastText' }}>
-          <Tabs value={kind} onChange={changeHandler} variant="fullWidth">
+          <Tabs
+            value={kind}
+            onChange={changeHandler}
+            variant="fullWidth"
+            textColor="inherit"
+            indicatorColor="secondary"
+          >
             <Tab label="По типу" value="byType" />
             <Tab label="По адресу" value="byAddress" />
           </Tabs>
         </Paper>
         <Box
           component="form"
-          sx={{ p: 2, display: 'flex', flexWrap: 'wrap', justifyContext: 'space-between' }}
+          sx={{
+            p: 2,
+            display: 'flex',
+            flexWrap: 'wrap',
+            width: '60ch',
+            gap: 1,
+          }}
           noValidate
           autoComplete="off"
         >
-          <FormControl css={formControlStyle(theme)} margin="normal" disabled={isSearching}>
+          <FormControl margin="normal" disabled={isSearching} sx={{ flex: 1 }}>
             <InputLabel htmlFor="connection">Соединение</InputLabel>
-            <NativeSelect
-              defaultValue={'0'}
+            <Select
+              defaultValue="0"
               input={<Input name="connection" id="connection" inputRef={connectionRef} />}
             >
-              <option value={'0'}>Все</option>
+              <MenuItem value="0">Все</MenuItem>
               {links.map(device => (
-                <option key={device.id} value={device.id}>
+                <MenuItem key={device.id} value={device.id}>
                   {Address.empty.equals(device.address)
                     ? `${device.mib}-${device.id}`
                     : device.address}
-                </option>
+                </MenuItem>
               ))}
-            </NativeSelect>
+            </Select>
           </FormControl>
           <TextField
             variant="standard"
             id="address"
-            css={formControlStyle(theme)}
-            sx={{ display: kind !== 'byAddress' ? 'none' : 'block' }}
+            sx={{ display: kind !== 'byAddress' ? 'none' : 'block', flex: 1 }}
             error={invalidAddress}
             label="Адрес"
             inputRef={addressRef}
             defaultValue={defaultValues.current.address}
             margin="normal"
             disabled={isSearching}
+            fullWidth
           />
           <FormControl
-            css={formControlStyle(theme)}
-            sx={{ display: kind !== 'byType' ? 'none' : 'block' }}
+            sx={{ display: kind !== 'byType' ? 'none' : 'block', flex: 1 }}
             margin="normal"
             disabled={isSearching}
           >
             <InputLabel htmlFor="mibtype">Тип</InputLabel>
-            <NativeSelect
+            <Select
               defaultValue={defaultValues.current.type}
               input={<Input name="mibtype" id="mibtype" inputRef={mibTypeRef} />}
+              fullWidth
             >
-              <option value={'0'}>Не выбран</option>
-              {mibTypes.map(({ value, name }) => (
-                <option key={value} value={value}>
+              <MenuItem value="0">Не выбран</MenuItem>
+              {window.nibus.mibTypes.map(({ name, value }) => (
+                <MenuItem key={value} value={value}>
                   {name}
-                </option>
+                </MenuItem>
               ))}
-            </NativeSelect>
+            </Select>
           </FormControl>
         </Box>
         <Box
@@ -297,7 +199,8 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
         >
           <List sx={{ minWidth: '40ch' }}>
             {detected.map(info => {
-              const mib = info.type > 0 ? findMibByType(info.type, info.version) : undefined;
+              const mib =
+                info.type > 0 ? window.nibus.findMibByType(info.type, info.version) : undefined;
               return (
                 <ListItem key={deviceKey(info)}>
                   <ListItemIcon>
@@ -308,7 +211,7 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
                     <IconButton
                       id={deviceKey(info)}
                       aria-label="Add"
-                      onClick={addDevice}
+                      onClick={() => addDevice(deviceKey(info))}
                       disabled={isSearching}
                       size="large"
                     >
@@ -339,7 +242,7 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
             top: theme => theme.spacing(1),
           }}
           disabled={detected.length === 0}
-          onClick={clearHandler}
+          onClick={() => dispatch(resetDetected())}
         >
           Очистить
         </Button>

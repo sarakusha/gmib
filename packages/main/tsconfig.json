@@ -1,0 +1,28 @@
+{
+  "extends": "../../tsconfig-settings.json",
+  "compilerOptions": {
+    "sourceMap": false,
+    "skipLibCheck": true,
+    // Don't automatically include anything.
+    // Only include `@types` packages that we need to import.
+    "types": [],
+    "baseUrl": ".",
+    "paths": {
+      "bonjour-hap": [
+        "../../types/bonjour-hap"
+      ],
+      "/@common/*": [
+        "../common/*"
+      ]
+    }
+  },
+  "include": [
+    "../common/*.ts",
+    "src/**/*.ts",
+    "../../types/**/*.d.ts"
+  ],
+  "exclude": [
+    "**/*.spec.ts",
+    "**/*.test.ts"
+  ]
+}

@@ -1,18 +1,8 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
-
-import { Menu, Tray, app } from 'electron';
+import { app, Menu, Tray } from 'electron';
 import os from 'os';
-
 import path from 'path';
-import localConfig from '../util/localConfig';
+
+import localConfig from './localConfig';
 import { hideAll, showAll } from './windows';
 
 const tray: { appIcon: Tray | null } = { appIcon: null };
@@ -46,14 +36,17 @@ export const updateTray = (): void => {
   ]);
   tray && tray.appIcon?.setContextMenu(contextMenu);
 };
+
+const assets = path.resolve(__dirname, '../../renderer/assets');
+
 app.whenReady().then(() => {
-  let icon = path.resolve(__dirname, '../extraResources/icon16x16.png');
-  if (process.platform === 'win32') icon = path.resolve(__dirname, '../extraResources/icon.ico');
+  let icon = path.join(assets, 'icon16x16.png');
+  if (process.platform === 'win32') icon = path.join(assets, 'icon.ico');
   else if (process.platform === 'linux' && os.version().indexOf('astra') !== -1)
-    icon = path.resolve(__dirname, '../extraResources/32x32.png');
+    icon = path.join(assets, '32x32.png');
   tray.appIcon = new Tray(icon);
   tray.appIcon.on('click', () => showAll());
-  tray.appIcon.setToolTip('gmib');
+  tray.appIcon.setToolTip(import.meta.env.VITE_APP_NAME);
   updateTray();
 });
 

@@ -1,17 +1,10 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
 
-import { Box, Slider, SliderProps } from '@mui/material';
-import React from 'react';
-import BrightnessHighIcon from '@mui/icons-material/BrightnessHigh';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
+import BrightnessHighIcon from '@mui/icons-material/BrightnessHigh';
+import type { SliderProps } from '@mui/material';
+import { Box, Slider } from '@mui/material';
+import React from 'react';
+
 import CircularProgressWithLabel from './CircularProgressWithLabel';
 import RepeatButton from './RepeatButton';
 
@@ -34,7 +27,7 @@ const Brightness: React.FC<BrightnessProps> = ({
       variant="determinate"
       value={value}
       color="secondary"
-      size={'3.5rem'}
+      size="3.5rem"
     />
     <Box
       display="flex"

@@ -1,18 +1,11 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
 
 import { Box, Container, Paper, Tab, Tabs } from '@mui/material';
-import { DeviceId } from '@nibus/core';
+import type { DeviceId } from '@nibus/core';
 import React, { useState } from 'react';
+
 import { useSelector } from '../store';
-import { selectCurrentDevice } from '../store/currentSlice';
+import { selectCurrentDevice } from '../store/selectors';
+
 import FirmwareTab from './FirmwareTab';
 import PropertyGridTab from './PropertyGridTab';
 import TelemetryTab from './TelemetryTab';
@@ -51,7 +44,7 @@ const DeviceTabs: React.FC<Props> = ({ id }) => {
       <Container maxWidth={value !== 'telemetry' ? 'sm' : undefined} sx={{ flexGrow: 1, pt: 1 }}>
         <PropertyGridTab id={id} selected={value === 'props' && device !== undefined} />
         <TelemetryTab id={id} selected={value === 'telemetry' && device !== undefined} />
-        <FirmwareTab id={id} selected={value === 'firmware' && device !== undefined} />
+         <FirmwareTab id={id} selected={value === 'firmware' && device !== undefined} />
       </Container>
     </Box>
   );

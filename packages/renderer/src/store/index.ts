@@ -1,66 +1,49 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
-import { DeviceId } from '@nibus/core';
-import { Action, Middleware, ThunkAction, configureStore } from '@reduxjs/toolkit';
-import { BaseThunkAPI } from '@reduxjs/toolkit/src/createAsyncThunk';
-import {
-  TypedUseSelectorHook,
-  useDispatch as origUseDispatch,
-  useSelector as origUseSelector,
-} from 'react-redux';
-import asyncInitializer from './asyncInitialMiddleware';
-import currentReducer from './currentSlice';
-import configReducer from './configSlice';
-import { initializeConfig } from './configThunks';
-import { initializeDevices } from './deviceThunks';
-import healthInitializer from './healthThunks';
-import sessionReducer, { openSession } from './sessionSlice';
-import devicesReducer, { DeviceState, selectAllDevices, selectDeviceById } from './devicesSlice';
-import mibsReducer from './mibsSlice';
-import nibusReducer from './nibusSlice';
-import sensorsReducer from './sensorsSlice';
-import remoteHostsReducer, { initializeRemoteHosts } from './remoteHostsSlice';
-import novastarsReducer, { novastarInitializer } from './novastarsSlice';
-import listenerMiddleware from './listenerMiddleware';
+import type { DeviceId } from '@nibus/core';
+import type { Action, ThunkAction } from '@reduxjs/toolkit';
+import { configureStore } from '@reduxjs/toolkit';
+import type { TypedUseSelectorHook } from 'react-redux';
+import { useDispatch as origUseDispatch, useSelector as origUseSelector } from 'react-redux';
 
-const middlewares: ReadonlyArray<Middleware> = [
-  asyncInitializer(openSession),
-  asyncInitializer(initializeConfig),
-  asyncInitializer(initializeRemoteHosts),
-  asyncInitializer(initializeDevices),
-  asyncInitializer(healthInitializer),
-  asyncInitializer(novastarInitializer),
-];
+import configReducer from './configSlice';
+import currentReducer from './currentSlice';
+import devicesReducer from './devicesSlice';
+import type { DeviceState } from './devicesSlice';
+import flasherReducer from './flasherSlice';
+import listenerMiddleware from './listenerMiddleware';
+import logReducer from './logSlice';
+import mibsReducer from './mibsSlice';
+import novastarsReducer from './novastarsSlice';
+import remoteHostsReducer from './remoteHostsSlice';
+import { selectAllDevices, selectDeviceById } from './selectors';
+import sensorsReducer from './sensorsSlice';
+import sessionReducer from './sessionSlice';
+
+import './configThunks';
+import './deviceThunks';
+import './healthThunks';
+import './novastarThunks';
 
 export const store = configureStore({
   reducer: {
     current: currentReducer,
     config: configReducer,
-    nibus: nibusReducer,
     session: sessionReducer,
     devices: devicesReducer,
     mibs: mibsReducer,
     sensors: sensorsReducer,
     remoteHosts: remoteHostsReducer,
     novastars: novastarsReducer,
+    log: logReducer,
+    flasher: flasherReducer,
   },
   middleware: getDefaultMiddleware =>
     getDefaultMiddleware({
       serializableCheck: {
         // `convertFrom` is a function
         ignoredPaths: ['mibs.entities'],
-        // ignoredActionPaths: ['payload.release'],
+        ignoredActions: ['mibs/addMib'],
       },
-    })
-      .prepend(listenerMiddleware.middleware)
-      .concat(...middlewares),
+    }).prepend(listenerMiddleware.middleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;
@@ -81,7 +64,6 @@ export type AppThunkConfig = {
   fulfilledMeta?: unknown;
   rejectedMeta?: unknown;
 };
-export type AppThunkAPI = BaseThunkAPI<RootState, unknown, AppDispatch>;
 
 export const useDispatch = (): AppDispatch => origUseDispatch<AppDispatch>();
 export const useSelector: TypedUseSelectorHook<RootState> = origUseSelector;

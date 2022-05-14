@@ -1,28 +1,17 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
 
 import { Box, Typography } from '@mui/material';
-import { getScreenLocation } from '@novastar/screen';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import getScreenLocation from '@novastar/screen/lib/getScreenLocation';
 import groupBy from 'lodash/groupBy';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+
 import { useToolbar } from '../providers/ToolbarProvider';
-import { useDispatch, useSelector } from '../store';
-import { selectCurrentTab } from '../store/currentSlice';
-import {
-  Novastar,
-  getNovastarController,
-  novastarBusy,
-  novastarReady,
-} from '../store/novastarsSlice';
-import { getStateAsync, noop } from '../util/helpers';
-import NovastarLoader, { CabinetInfo, NovastarSelector } from '../util/NovastarLoader';
+import { useSelector } from '../store';
+import type { Novastar } from '../store/novastarsSlice';
+import { selectCurrentTab } from '../store/selectors';
+
+import type { CabinetInfo } from '/@common/helpers';
+import { getStateAsync, noop, NovastarSelector } from '/@common/helpers';
+
 import ModuleInfo from './ModuleInfo';
 import TelemetryToolbar from './TelemetryToolbar';
 
@@ -42,30 +31,28 @@ const NovastarTelemetryTab: React.FC<{ device: Novastar | undefined; selected?: 
   device,
   selected = false,
 }) => {
-  const dispatch = useDispatch();
   const [, setToolbar] = useToolbar();
   const tab = useSelector(selectCurrentTab);
   const active = selected && tab === 'devices' && device !== undefined;
   const [selectors, setSelectors] = useState(
-    new Set([NovastarSelector.Temperature, NovastarSelector.Voltage])
+    new Set([NovastarSelector.Temperature, NovastarSelector.Voltage]),
   );
   const [loading, setLoading] = useState(false);
   const isBusy = !device || device.isBusy > 0;
   const { path, screens = [] } = device ?? {};
   const locations = screens.map(({ info }) => info && getScreenLocation(info));
   const [cabinets, setCabinets] = useState<CabinetInfo[]>([]);
-  const loader = useMemo(() => {
-    const controller = path ? getNovastarController(path) : undefined;
-    return controller && new NovastarLoader(controller);
-  }, [path]);
+  const telemetry = useMemo(
+    () => (path !== undefined ? window.novastar.telemetry(path) : undefined),
+    [path],
+  );
   const start = useCallback(async () => {
-    if (!loader) return;
+    if (!telemetry) return;
+    setLoading(true);
     const current = await getStateAsync(setSelectors);
-    await loader.run({ selectors: current });
-  }, [loader]);
-  const cancel = useCallback(() => {
-    loader?.cancel();
-  }, [loader]);
+    await telemetry.start({ selectors: current }, setCabinets);
+    setLoading(false);
+  }, [telemetry]);
   const telemetryToolbar = useMemo(
     () => (
       <TelemetryToolbar
@@ -75,10 +62,10 @@ const NovastarTelemetryTab: React.FC<{ device: Novastar | undefined; selected?: 
         loading={loading}
         isBusy={isBusy}
         start={start}
-        cancel={cancel}
+        cancel={telemetry?.cancel}
       />
     ),
-    [selectors, loading, isBusy, start, cancel]
+    [selectors, loading, isBusy, start, telemetry?.cancel],
   );
   useEffect(() => {
     if (active) {
@@ -88,32 +75,10 @@ const NovastarTelemetryTab: React.FC<{ device: Novastar | undefined; selected?: 
     return noop;
   }, [active, setToolbar, telemetryToolbar]);
 
-  useEffect(() => {
-    if (!loader || !path) return () => {};
-    const startHandler = (): void => {
-      setLoading(true);
-      setCabinets([]);
-      dispatch(novastarBusy(path));
-    };
-    const finishHandler = (): void => {
-      setLoading(false);
-      dispatch(novastarReady(path));
-    };
-    const cabinetHandler = (info: CabinetInfo): void => {
-      setCabinets(prev => [...prev, info]);
-    };
-    loader.on('cabinet', cabinetHandler);
-    loader.on('start', startHandler);
-    loader.on('finish', finishHandler);
-    return () => {
-      loader.off('finish', finishHandler);
-      loader.off('start', startHandler);
-      loader.off('cabinet', cabinetHandler);
-    };
-  }, [loader, dispatch, path]);
-  const grouped = useMemo(() => Object.entries(groupBy(cabinets, cabinet => cabinet.screen)), [
-    cabinets,
-  ]);
+  const grouped = useMemo(
+    () => Object.entries(groupBy(cabinets, cabinet => cabinet.screen)),
+    [cabinets],
+  );
   useEffect(() => setCabinets([]), [path]);
   return (
     <Box display={active ? 'inline-block' : 'none'}>

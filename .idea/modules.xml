@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/@nibus.iml" filepath="$PROJECT_DIR$/.idea/@nibus.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/gmib.iml" filepath="$PROJECT_DIR$/.idea/gmib.iml" />
     </modules>
   </component>
 </project>

@@ -1,18 +1,9 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
-
 /* eslint-disable class-methods-use-this,@typescript-eslint/no-explicit-any,
  @typescript-eslint/no-unused-vars */
-import { Address, DeviceId, IDevice, INibusConnection, NmsDatagram } from '@nibus/core';
-
 import { EventEmitter } from 'events';
+
+import type { DeviceId, IDevice, INibusConnection, NmsDatagram } from '@nibus/core';
+import Address from '@nibus/core/lib/Address';
 
 import timeid from '../util/timeid';
 
@@ -36,7 +27,7 @@ export default class StubDevice extends EventEmitter implements IDevice {
 
   execute(
     _program: string,
-    _args?: Record<string, any>
+    _args?: Record<string, any>,
   ): Promise<NmsDatagram | NmsDatagram[] | undefined> {
     return Promise.reject(new Error('Not realized'));
   }

@@ -1,37 +1,25 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
 import { Box } from '@mui/material';
-import { DeviceId } from '@nibus/core';
+import type { DeviceId } from '@nibus/core';
 import React, { useEffect, useState } from 'react';
-import { selectDeviceById, selectDeviceIds } from '../store/devicesSlice';
+
 import { useSelector } from '../store';
-import { selectCurrentDeviceId, selectCurrentTab } from '../store/currentSlice';
-import { selectNovastarByPath } from '../store/novastarsSlice';
+import {
+  selectCurrentDeviceId,
+  selectCurrentTab,
+  selectDeviceById,
+  selectDeviceIds,
+  selectNovastarByPath,
+} from '../store/selectors';
+
 import Autobrightness from './Autobrightness';
 import DeviceTabs from './DeviceTabs';
 import Log from './Log';
-import NovastarTabs from './NovastarTabs';
-import Screens from './Screens';
-import OverheatProtectionTab from './OverheatProtectionTab';
-
-import TabContainer, { Props as ChildProps } from './TabContainer';
 import MediaTab from './MediaTab';
-
-// const useStyles = makeStyles({
-//   root: {
-//     display: 'flex',
-//     width: '100%',
-//     overflow: 'auto',
-//     padding: 0,
-//   },
-// });
+import NovastarTabs from './NovastarTabs';
+import OverheatProtectionTab from './OverheatProtectionTab';
+import Screens from './Screens';
+import type { Props as ChildProps } from './TabContainer';
+import TabContainer from './TabContainer';
 
 const Tabs: React.FC = () => {
   const [devChildren, setDevChildren] = useState<
@@ -42,17 +30,18 @@ const Tabs: React.FC = () => {
   const currentDevice = useSelector(state => selectDeviceById(state, currentDeviceId));
   const currentNovastar = useSelector(state => selectNovastarByPath(state, currentDeviceId));
   if (currentDevice) {
-    let curChild = devChildren.find(({ props }) => props.id === currentDeviceId);
+    const curChild = devChildren.find(({ props }) => props.id === currentDeviceId);
     /**
      * Создаем только те вкладки с устройствами, которые выбрали
      */
     if (!curChild) {
-      curChild = (
-        <TabContainer key={currentDeviceId} id={currentDeviceId}>
-          <DeviceTabs id={currentDeviceId} />
-        </TabContainer>
+      setDevChildren(children =>
+        children.concat(
+          <TabContainer key={currentDeviceId} id={currentDeviceId}>
+            <DeviceTabs id={currentDeviceId} />
+          </TabContainer>,
+        ),
       );
-      setDevChildren(children => children.concat(curChild!));
     }
   }
   const tab = useSelector(selectCurrentTab);
@@ -72,7 +61,7 @@ const Tabs: React.FC = () => {
       {devChildren.map(child =>
         React.cloneElement(child, {
           selected: currentDeviceId === child.props.id && tab === 'devices',
-        })
+        }),
       )}
       <TabContainer id="novastar" selected={tab === 'devices' && currentNovastar !== undefined}>
         <NovastarTabs device={currentNovastar} />

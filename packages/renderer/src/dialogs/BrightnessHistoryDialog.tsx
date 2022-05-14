@@ -1,25 +1,26 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
 
-import { BrightnessHistory } from '@nibus/core/lib/ipc/events';
-import { XAxisOptions, XAxisPlotBandsOptions, XAxisPlotLinesOptions } from 'highcharts';
+import { Box, Button, Dialog, DialogActions, DialogContent, Typography } from '@mui/material';
+import { styled } from '@mui/material/styles';
+import type { BrightnessHistory } from '@nibus/core';
+import debugFactory from 'debug';
+import type {
+  SeriesLineOptions,
+  XAxisOptions,
+  XAxisPlotBandsOptions,
+  XAxisPlotLinesOptions,
+} from 'highcharts';
 import HighchartsReact from 'highcharts-react-official';
 import React, { useEffect, useState } from 'react';
-import { styled } from '@mui/material/styles';
-import { Box, Button, Dialog, DialogActions, DialogContent, Typography } from '@mui/material';
 import SunCalc from 'suncalc';
-import Highcharts, { SeriesLineOptions } from '../components/Highcharts';
+
+import Highcharts from '../components/Highcharts';
 import { useSelector } from '../store';
-import { selectBrightness, selectLocation } from '../store/configSlice';
-import { noop } from '../util/helpers';
-import { getCurrentNibusSession } from '../util/nibus';
+
+import { noop } from '/@common/helpers';
+
+import { selectBrightness, selectLocation } from '../store/selectors';
+
+const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:brightness`);
 
 type Props = {
   open?: boolean;
@@ -95,7 +96,7 @@ const highchartsOptions: Highcharts.Options = {
 const getBands = (
   latitude: number,
   longitude: number,
-  date = new Date()
+  date = new Date(),
 ): [XAxisPlotBandsOptions[], XAxisPlotLinesOptions[]] => {
   const suntimes = SunCalc.getTimes(date, latitude, longitude);
   const start = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
@@ -223,16 +224,15 @@ const BrightnessHistoryDialog: React.FC<Props> = ({ open = false, onClose = noop
   const currentBrightness = useSelector(selectBrightness);
   useEffect(() => {
     if (!open) return;
-    const session = getCurrentNibusSession();
     let history: BrightnessHistory[] = [];
     const ts = Math.floor(Date.now() / 1000) * 1000;
-    session
+    window.nibus
       .getBrightnessHistory()
       .then(
         value => {
           history = value;
         },
-        err => console.error(`error while get brightness history`, err.message)
+        err => debug(`error while get brightness history ${err.message}`),
       )
       .finally(() => {
         setOptions(opts => {
@@ -254,8 +254,8 @@ const BrightnessHistoryDialog: React.FC<Props> = ({ open = false, onClose = noop
             const yesterday = new Date();
             yesterday.setDate(yesterday.getDate() - 1);
             const xAxis = opts.xAxis as XAxisOptions;
-            const [yPlotBands, yPlotLines] = getBands(latitude!, longitude!, yesterday);
-            const [plotBands, plotLines] = getBands(latitude!, longitude!, now);
+            const [yPlotBands, yPlotLines] = getBands(latitude, longitude, yesterday);
+            const [plotBands, plotLines] = getBands(latitude, longitude, now);
             xAxis.plotBands = [...yPlotBands, ...plotBands];
             xAxis.plotLines = [...yPlotLines, ...plotLines];
           }
@@ -266,9 +266,7 @@ const BrightnessHistoryDialog: React.FC<Props> = ({ open = false, onClose = noop
         });
       });
   }, [open, latitude, longitude, isValidLocation, currentBrightness]);
-  const suntimes = isValidLocation
-    ? SunCalc.getTimes(new Date(), latitude!, longitude!)
-    : undefined;
+  const suntimes = isValidLocation ? SunCalc.getTimes(new Date(), latitude, longitude) : undefined;
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullScreen>
       <DialogContent>

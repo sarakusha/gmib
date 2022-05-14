@@ -1,20 +1,16 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
 import { Box, InputAdornment, MenuItem, Paper, TextField, Typography } from '@mui/material';
-import React, { useCallback } from 'react';
 import { styled } from '@mui/material/styles';
+import React, { useCallback } from 'react';
+
 import { useDispatch, useSelector } from '../store';
-import { selectOverheatProtection, selectScreens, setProtectionProp } from '../store/configSlice';
-import { selectCurrentHealth } from '../store/currentSlice';
-import { DEFAULT_OVERHEAD_PROTECTION, OverheatProtection } from '../util/config';
-import { findById, toNumber } from '../util/helpers';
+import { setProtectionProp } from '../store/configSlice';
+
+import type { OverheatProtection } from '/@common/config';
+import { DEFAULT_OVERHEAD_PROTECTION } from '/@common/config';
+import { findById, toNumber } from '/@common/helpers';
+
+import {selectCurrentHealth, selectOverheatProtection, selectScreens} from '../store/selectors';
+
 import FormFieldSet from './FormFieldSet';
 
 // const useStyles = makeStyles(theme => ({
@@ -119,7 +115,7 @@ const OverheatProtectionTab: React.FC = () => {
         dispatch(setProtectionProp([id as keyof OverheatProtection, res]));
       }
     },
-    [dispatch]
+    [dispatch],
   );
   // const health: Health = {
   //   screens: {

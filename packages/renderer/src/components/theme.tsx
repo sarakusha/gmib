@@ -1,21 +1,15 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
 
-import { Theme as MuiTheme, createTheme } from '@mui/material/styles';
+import type { Theme as MuiTheme} from '@mui/material/styles';
+import { createTheme } from '@mui/material/styles';
 
 // declare module '@mui/styles/defaultTheme' {
 //   interface DefaultTheme extends MuiTheme {}
 // }
 
 declare module '@emotion/react' {
-  interface Theme extends MuiTheme {}
+  interface Theme extends MuiTheme {
+    test: 1;
+  }
 }
 
 // declare module '@mui/private-theming' {

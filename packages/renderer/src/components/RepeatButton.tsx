@@ -1,16 +1,6 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
-
+import type { IconButtonProps } from '@mui/material';
+import { IconButton } from '@mui/material';
 import React, { useCallback, useEffect, useRef } from 'react';
-
-import { IconButton, IconButtonProps } from '@mui/material';
 
 type RepeatReturn = Pick<Required<IconButtonProps>, 'onMouseDown' | 'onMouseUp'>;
 
@@ -23,7 +13,7 @@ type Internal = {
 export const useRepeater = (
   onClick?: React.MouseEventHandler,
   delay = 300,
-  interval = 80
+  interval = 80,
 ): RepeatReturn => {
   const refInternal = useRef<Internal>({});
   refInternal.current.onClick = onClick;
@@ -43,7 +33,7 @@ export const useRepeater = (
         }, interval);
       }, delay);
     },
-    [delay, interval]
+    [delay, interval],
   );
 
   return {

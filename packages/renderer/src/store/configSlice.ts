@@ -1,35 +1,16 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
-import { LogLevel } from '@nibus/core';
-import { PayloadAction, createSlice, current } from '@reduxjs/toolkit';
-import debounce from 'lodash/debounce';
-import semverLt from 'semver/functions/lt';
-import {
-  Config,
-  DEFAULT_OVERHEAD_PROTECTION,
-  Location,
-  OverheatProtection,
-  Page,
-  Screen,
-  convertCfgFrom,
-  convertCfgTo,
-  defaultScreen,
-  validateConfig,
-} from '../util/config';
-import { PropPayload, PropPayloadAction, findById } from '../util/helpers';
-import { getCurrentNibusSession } from '../util/nibus';
-import type { RootState } from './index';
+/* eslint-disable no-param-reassign */
+import type { LogLevel } from '@nibus/core';
+import type { PayloadAction } from '@reduxjs/toolkit';
+import { createSlice } from '@reduxjs/toolkit';
 
-// const debug = debugFactory('gmib:configSlice');
+import type { Config, Location, OverheatProtection, Page, Screen } from '/@common/config';
+import { DEFAULT_OVERHEAD_PROTECTION, defaultScreen } from '/@common/config';
+import type { PropPayload, PropPayloadAction } from '/@common/helpers';
+import { findById } from '/@common/helpers';
 
-export interface ConfigState extends Config {
+// const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:configSlice`);
+
+export type ConfigState = Config & {
   loading: boolean;
 }
 
@@ -45,15 +26,6 @@ const initialState: ConfigState = {
   overheatProtection: DEFAULT_OVERHEAD_PROTECTION,
 };
 
-export const sendConfig = debounce((state: ConfigState): void => {
-  const { loading: _, ...config } = state;
-  const session = getCurrentNibusSession();
-  if (!validateConfig(config)) console.warn(`error while validate config`);
-  const cfg =
-    !config.version || semverLt(config.version, '3.1.0') ? convertCfgTo(config) : { ...config };
-  session.saveConfig(cfg);
-}, 500);
-
 export const configSlice = createSlice({
   name: 'config',
   initialState,
@@ -62,46 +34,35 @@ export const configSlice = createSlice({
       const screen = findById(state.screens, scrId);
       if (screen) {
         screen.output = pageId;
-        sendConfig(current(state));
       }
     },
     setBrightness(state, { payload: brightness }: PayloadAction<number>) {
       state.brightness = Math.round(Math.max(Math.min(brightness, 100), 0));
-      sendConfig(current(state));
     },
     setAutobrightness(state, { payload: on }: PayloadAction<boolean>) {
       state.autobrightness = on;
-      sendConfig(current(state));
     },
     setSpline(state, { payload: spline }: PayloadAction<Config['spline']>) {
       state.spline = spline;
-      sendConfig(current(state));
     },
     setLocationProp(state, { payload: [prop, value] }: PropPayloadAction<Location>) {
       if (!state.location) state.location = {};
       state.location[prop] = value;
-      sendConfig(current(state));
     },
     setScreenProp(
       state,
-      { payload: [scrId, [prop, value]] }: PayloadAction<[string, PropPayload<Screen>]>
+      { payload: [scrId, [prop, value]] }: PayloadAction<[string, PropPayload<Screen>]>,
     ) {
       const screen = findById(state.screens, scrId);
       if (!screen) return;
       screen[prop] = value as never;
-      sendConfig(current(state));
     },
     updateConfig(state, { payload: config }: PayloadAction<Config>) {
-      const data = convertCfgFrom(config);
-      if (!validateConfig(data)) console.error('Invalid configuration data received');
-      Object.assign(state, data);
+      Object.assign(state, config);
       state.loading = false;
     },
     setLogLevel(state, { payload: logLevel }: PayloadAction<LogLevel>) {
-      const session = getCurrentNibusSession();
       state.logLevel = logLevel;
-      session.setLogLevel(logLevel);
-      sendConfig(current(state));
     },
     upsertHttpPage(state, { payload: page }: PayloadAction<Page>) {
       const found = findById(state.pages, page.id);
@@ -110,11 +71,9 @@ export const configSlice = createSlice({
       } else {
         state.pages.push(page);
       }
-      sendConfig(current(state));
     },
     removeHttpPage(state, { payload: id }: PayloadAction<string>) {
       state.pages = state.pages.filter(page => page.id !== id);
-      sendConfig(current(state));
     },
 
     addAddress(state, { payload: [scrId, address] }: PayloadAction<[string, string]>) {
@@ -122,20 +81,17 @@ export const configSlice = createSlice({
       if (!screen) return;
       if (!screen.addresses) screen.addresses = [];
       screen.addresses = [...screen.addresses, address];
-      sendConfig(current(state));
     },
     removeAddress(
       state,
-      { payload: [scrId, chip, index] }: PayloadAction<[string, string, number]>
+      { payload: [scrId, chip, index] }: PayloadAction<[string, string, number]>,
     ) {
       const screen = findById(state.screens, scrId);
       if (!screen?.addresses) return;
       if (screen.addresses[index] === chip) screen.addresses.splice(index, 1);
-      sendConfig(current(state));
     },
     addScreen(state, { payload: [id, name] }: PayloadAction<[string, string]>) {
       state.screens.push({ ...defaultScreen, id, name });
-      sendConfig(current(state));
     },
     removeScreen(state, { payload: id }: PayloadAction<string>) {
       const index = state.screens.findIndex(screen => screen.id === id);
@@ -144,66 +100,14 @@ export const configSlice = createSlice({
         if (state.screens.length === 1) {
           state.screens[0].brightnessFactor = 1;
         }
-        sendConfig(current(state));
       }
     },
-    // setOverheatProtection(
-    //   state,
-    //   { payload: overheatProtection }: PayloadAction<OverheatProtection>
-    // ) {
-    //   state.overheatProtection = overheatProtection;
-    //   sendConfig(current(state));
-    // },
     setProtectionProp(state, { payload: [name, value] }: PropPayloadAction<OverheatProtection>) {
       if (!state.overheatProtection) state.overheatProtection = DEFAULT_OVERHEAD_PROTECTION;
       Object.assign(state.overheatProtection, { [name]: value });
-      sendConfig(current(state));
     },
   },
 });
-
-export const selectConfig = (state: RootState): ConfigState => state.config;
-
-export const selectLoading = (state: RootState): boolean => selectConfig(state).loading;
-
-export const selectBrightness = (state: RootState): number => selectConfig(state).brightness;
-
-export const selectAutobrightness = (state: RootState): boolean =>
-  selectConfig(state).autobrightness;
-
-export const selectSpline = (state: RootState): Config['spline'] => selectConfig(state).spline;
-
-export const selectLocation = (state: RootState): Config['location'] =>
-  selectConfig(state).location;
-
-export const selectScreens = (state: RootState): Screen[] => selectConfig(state).screens;
-
-export const selectScreenById = (state: RootState, id?: string): Screen | undefined =>
-  (id && findById(selectConfig(state).screens, id)) || undefined;
-
-export const selectLogLevel = (state: RootState): LogLevel => selectConfig(state).logLevel;
-
-export const selectAllPages = (state: RootState): Page[] => selectConfig(state).pages;
-
-export const selectPageById = (state: RootState, id: string): Page | undefined =>
-  findById(selectAllPages(state), id);
-
-export const selectSessionVersion = (state: RootState): string | undefined =>
-  selectConfig(state).version;
-
-export const selectScreenAddresses = (state: RootState): string[] =>
-  [
-    ...new Set(
-      selectScreens(state).reduce<string[]>(
-        (res, { addresses }) =>
-          addresses ? [...res, ...addresses.map(address => address.replace(/[+-].*$/, ''))] : res,
-        []
-      )
-    ),
-  ].sort();
-
-export const selectOverheatProtection = (state: RootState): OverheatProtection | undefined =>
-  selectConfig(state).overheatProtection;
 
 export const {
   addScreen,
@@ -220,7 +124,6 @@ export const {
   updateConfig,
   setBrightness,
   setScreenProp,
-  // setOverheatProtection,
   setProtectionProp,
 } = configSlice.actions;
 

@@ -1,26 +1,20 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
+import HelpIcon from '@mui/icons-material/Help';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import TimelineIcon from '@mui/icons-material/Timeline';
 import { Badge, Box, IconButton, Popover, TextField, Tooltip } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import React, { useEffect, useReducer, useState } from 'react';
-import LocationOnIcon from '@mui/icons-material/LocationOn';
-import HelpIcon from '@mui/icons-material/Help';
-import TimelineIcon from '@mui/icons-material/Timeline';
-import BrightnessHistoryDialog from '../dialogs/BrightnessHistoryDialog';
 
-import { selectLocation, selectSessionVersion, setLocationProp } from '../store/configSlice';
-import { Config } from '../util/config';
-import { createPropsReducer, toNumber } from '../util/helpers';
+import BrightnessHistoryDialog from '../dialogs/BrightnessHistoryDialog';
+import { useDispatch, useSelector } from '../store';
+import { setLocationProp } from '../store/configSlice';
+
+import type { Config } from '/@common/config';
+import { createPropsReducer, toNumber } from '/@common/helpers';
+
+import { selectLocation, selectSessionVersion } from '../store/selectors';
 
 import FormFieldSet from './FormFieldSet';
-import { useDispatch, useSelector } from '../store';
 import AutobrightnessHelp from './Help/AutobrightnessHelp';
 
 type ActionType = 'location' | 'help';
@@ -68,19 +62,25 @@ const AutobrightnessToolbar: React.FC = () => {
   });
   const [historyOpen, setHistoryOpen] = useState(false);
   const error = validateLocation(current);
-  const handleClick = (type: ActionType): React.MouseEventHandler<HTMLButtonElement> => event => {
-    setAnchorEl([type, event.currentTarget]);
-  };
-  const handleClose = (type: ActionType): (() => void) => () => {
-    error === undefined && setAnchorEl([type, null]);
-  };
-  const handleChange = (prop: keyof Location): React.ChangeEventHandler<HTMLInputElement> => e => {
-    const { value } = e.target;
-    const res = toNumber(value);
-    setLocation([prop, value]);
-    if (res === undefined || value.trim() === res.toString())
-      dispatch(setLocationProp([prop, res]));
-  };
+  const handleClick =
+    (type: ActionType): React.MouseEventHandler<HTMLButtonElement> =>
+    event => {
+      setAnchorEl([type, event.currentTarget]);
+    };
+  const handleClose =
+    (type: ActionType): (() => void) =>
+    () => {
+      error === undefined && setAnchorEl([type, null]);
+    };
+  const handleChange =
+    (prop: keyof Location): React.ChangeEventHandler<HTMLInputElement> =>
+    e => {
+      const { value } = e.target;
+      const res = toNumber(value);
+      setLocation([prop, value]);
+      if (res === undefined || value.trim() === res.toString())
+        dispatch(setLocationProp([prop, res]));
+    };
   const isValid =
     current &&
     current.longitude !== undefined &&
@@ -93,7 +93,7 @@ const AutobrightnessToolbar: React.FC = () => {
   return (
     <div>
       {version && (
-        <Tooltip title={'История'}>
+        <Tooltip title="История">
           <IconButton color="inherit" onClick={() => setHistoryOpen(true)} size="large">
             <TimelineIcon />
           </IconButton>

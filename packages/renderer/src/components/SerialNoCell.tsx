@@ -1,18 +1,14 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { IMaskMixin } from 'react-imask';
 import debounce from 'lodash/debounce';
-import TableCell, { TableCellProps } from './TableCell';
-import StyledInput, { ExtendedProps } from './StyledInput';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+
+
+import type { ExtendedProps } from './StyledInput';
+import StyledInput from './StyledInput';
+import type { TableCellProps } from './TableCell';
+import TableCell from './TableCell';
+
+import { IMaskMixin } from 'react-imask';
 
 // const useStyles = makeStyles(_theme => ({
 //   inputDirty: {
@@ -69,7 +65,7 @@ const SerialNoCell: React.FC<Props> = ({
           setChanging(false);
         }
       }, 5000),
-    [onChangeProperty]
+    [onChangeProperty],
   );
   const changeHandler = useCallback(
     (_, { unmaskedValue }) => {
@@ -82,7 +78,7 @@ const SerialNoCell: React.FC<Props> = ({
         return newValue;
       });
     },
-    [name, updateValue]
+    [name, updateValue],
   );
   return (
     <TableCell className={className} align={align} {...props}>

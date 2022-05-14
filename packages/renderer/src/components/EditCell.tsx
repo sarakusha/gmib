@@ -1,18 +1,13 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
 
-import { InputAdornment, InputBaseProps } from '@mui/material';
+import type { InputBaseProps } from '@mui/material';
+import { InputAdornment } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import React, { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import type { ChangeEvent} from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+
 import StyledInput from './StyledInput';
-import TableCell, { TableCellProps } from './TableCell';
+import type { TableCellProps } from './TableCell';
+import TableCell from './TableCell';
 
 const safeParseNumber = (value: unknown): number => parseFloat(value as string);
 
@@ -97,7 +92,7 @@ const EditCell: React.FC<Props> = ({
   // };
   const endAdornment = useMemo(
     () => (unit ? <EndAdornment position="end">{unit}</EndAdornment> : null),
-    [unit]
+    [unit],
   );
   // let controlled = value !== undefined;
   const [val, setVal] = useState<unknown>();
@@ -113,7 +108,7 @@ const EditCell: React.FC<Props> = ({
       ctrl && onChangeProperty && onChangeProperty(name, event.target.value);
       setVal(event.target.value);
     },
-    [max, min, name, onChangeProperty]
+    [max, min, name, onChangeProperty],
   );
   const blurHandler = useCallback(() => {
     setControlled(true);
@@ -123,6 +118,7 @@ const EditCell: React.FC<Props> = ({
     });
   }, [name, onChangeProperty]);
   const hasError = value instanceof Error ? value.message : undefined;
+  // eslint-disable-next-line no-nested-ternary
   const current = hasError || value === undefined ? '' : controlled ? value : val;
   return (
     <TableCell className={className} sx={{ px: 1 }} {...props}>

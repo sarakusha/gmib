@@ -1,13 +1,7 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
 
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import CloseIcon from '@mui/icons-material/Close';
+import EditIcon from '@mui/icons-material/Edit';
 import {
   IconButton,
   ListItemIcon,
@@ -17,30 +11,28 @@ import {
   Switch,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import { useTheme } from '@emotion/react';
-import React, { useCallback, useState } from 'react';
-import CloseIcon from '@mui/icons-material/Close';
-import EditIcon from '@mui/icons-material/Edit';
-import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import { nanoid } from '@reduxjs/toolkit';
+import React, { useCallback, useState } from 'react';
 import { isUri } from 'valid-url';
+
 import HttpPageDialog from '../dialogs/HttpPageDialog';
 import { useDispatch, useSelector } from '../store';
-import { Page } from '../util/config';
-import AccordionList from './AccordionList';
 import {
   removeHttpPage,
-  selectAllPages,
-  selectScreenById,
   showHttpPage,
   upsertHttpPage,
 } from '../store/configSlice';
+import type {
+  TabValues} from '../store/currentSlice';
 import {
-  TabValues,
-  selectCurrentScreenId,
-  selectCurrentTab,
   setCurrentTab,
 } from '../store/currentSlice';
+
+import type { Page } from '/@common/config';
+
+import {selectAllPages, selectCurrentScreenId, selectCurrentTab, selectScreenById} from '../store/selectors';
+
+import AccordionList from './AccordionList';
 /*
 const useStyles = makeStyles(theme => ({
   item: {
@@ -80,7 +72,7 @@ const HttpPages: React.FC = () => {
     (event: React.ChangeEvent<HTMLInputElement>, checked: boolean) => {
       screen && dispatch(showHttpPage([screen, checked ? event.currentTarget.id : undefined]));
     },
-    [dispatch, screen]
+    [dispatch, screen],
   );
   const [open, setOpen] = useState(false);
   const closeDialog = (): void => setOpen(false);

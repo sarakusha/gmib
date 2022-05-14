@@ -1,12 +1,3 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
 import {
   Box,
   Button,
@@ -18,8 +9,11 @@ import {
   FormControlLabel,
   FormGroup,
 } from '@mui/material';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
+
 import FormFieldSet from '../components/FormFieldSet';
+
+import {getEnumEntries} from '/@common/helpers';
 // import { initialSelectors, Minihost3Selector } from '../util/Minihost3Loader';
 
 type Props = {
@@ -38,19 +32,9 @@ type Props = {
 //   },
 // }));
 
-export const getEnumValues = (numEnums: Record<string, number | string>): number[] =>
-  Object.values(numEnums)
-    .filter(value => Number.isInteger(value))
-    .sort() as number[];
-
 // const getEnumKeys = <Enum extends Record<string, number | string>>(
 //   numEnums: Enum
 // ): (keyof Enum)[] => getEnumValues(numEnums).map(value => numEnums[value].toString());
-
-const getEnumEntries = <Enum extends Record<string, number | string>>(
-  numEnum: Enum
-): [keyof Enum, number][] =>
-  getEnumValues(numEnum).map<[keyof Enum, number]>(value => [numEnum[value].toString(), value]);
 
 const PropertySelectorDialog: React.FC<Props> = ({
   open = false,
@@ -74,7 +58,7 @@ const PropertySelectorDialog: React.FC<Props> = ({
         return result;
       });
     },
-    [properties]
+    [properties],
   );
   const closeHandler = useCallback(() => onClose && onClose(refInitial.current), [onClose]);
   const saveHandler = useCallback(
@@ -84,7 +68,7 @@ const PropertySelectorDialog: React.FC<Props> = ({
         onClose(current);
         return current;
       }),
-    [onClose]
+    [onClose],
   );
   return (
     <Dialog open={open} aria-labelledby="selector-title">

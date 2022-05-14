@@ -1,34 +1,28 @@
-/*
- * @license
- * Copyright (c) 2022. Nata-Info
- * @author Andrei Sarakeev <avs@nata-info.ru>
- *
- * This file is part of the "@nibus" project.
- * For the full copyright and license information, please view
- * the EULA file that was distributed with this source code.
- */
-
-import Store from 'electron-store';
 import log from 'electron-log';
-import { Config, configSchema, convertCfgFrom } from '../util/config';
-import { version } from '../util/helpers';
+import Store from 'electron-store';
+import { config as nibusConfig } from '@nibus/core/lib/config';
+
+import type { Config } from '/@common/config';
+import { configSchema } from '/@common/schema';
+
+// const version = app.getVersion();
 
 const config = new Store<Config>({
-  name: 'gmib',
+  name: import.meta.env.VITE_APP_NAME,
   schema: configSchema,
   watch: true,
   clearInvalidConfig: true,
-  migrations: {
-    '>3.0.6': store => {
-      store.set(convertCfgFrom(store.store));
-    },
-  },
 });
 
-export const prevVersion = config.get('version', version);
+// export const prevVersion = config.get('version', version);
 
-config.set('version', version);
+config.set('version', import.meta.env.VITE_APP_VERSION);
 
 process.nextTick(() => log.log(`Config: ${config.path}`));
+
+config.onDidChange('logLevel', logLevel => {
+  nibusConfig().set('logLevel', logLevel);
+});
+nibusConfig().set('logLevel', config.get('logLevel'));
 
 export default config;

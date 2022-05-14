@@ -1,4 +1,5 @@
-import { Slider, SliderProps } from '@mui/material';
+import type { SliderProps } from '@mui/material';
+import { Slider } from '@mui/material';
 import React from 'react';
 
 const makeConverter = (reverse = false) => (values: [number, number]): [number, number] =>
