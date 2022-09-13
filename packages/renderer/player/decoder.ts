@@ -2,8 +2,8 @@
 import EbmlDecoder from '@sarakusha/ebml';
 import FadeTransform from '@sarakusha/ebml/FadeTransform';
 import ReducingValve from '@sarakusha/ebml/ReducingValve';
-import VideoChunkProcessor from '@sarakusha/ebml/VideoChunkProcessor';
-import VideoFrameProcessor from '@sarakusha/ebml/VideoFrameProcessor';
+import VideoChunkGenerator from '@sarakusha/ebml/VideoChunkGenerator';
+import VideoFrameGenerator from '@sarakusha/ebml/VideoFrameGenerator';
 // import VideoFrameTransformer from '@sarakusha/ebml/VideoFrameTransformer';
 
 let controller: AbortController | undefined;
@@ -17,9 +17,8 @@ onmessage = async ({ data }) => {
   if (typeof data !== 'object') return;
   if ('uri' in data) {
     const ebml = new EbmlDecoder();
-    const chunkProcessor = new VideoChunkProcessor();
-    const frameProcessor = new VideoFrameProcessor(chunkProcessor.config, 20);
-    // const frameProcessor = new VideoFrameTransformer(chunkProcessor.config);
+    const chunkGenerator = new VideoChunkGenerator();
+    const frameGenerator = new VideoFrameGenerator(chunkGenerator.config, 20);
     const fade = new FadeTransform(data.fade);
     const valve = new ReducingValve(data.closed);
     play = valve.open;
@@ -31,8 +30,8 @@ onmessage = async ({ data }) => {
       readable = await fetch(data.uri, { signal: controller?.signal }).then(res =>
         res.body
           ?.pipeThrough(ebml)
-          .pipeThrough(chunkProcessor)
-          .pipeThrough(frameProcessor)
+          .pipeThrough(chunkGenerator)
+          .pipeThrough(frameGenerator)
           .pipeThrough(fade)
           .pipeThrough(valve),
       );
