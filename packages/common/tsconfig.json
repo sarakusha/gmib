@@ -1,0 +1,49 @@
+{
+  "compilerOptions": {
+    "module": "esnext",
+    "target": "esnext",
+    "sourceMap": false,
+    "moduleResolution": "Node",
+    "skipLibCheck": true,
+    "strict": true,
+    "allowSyntheticDefaultImports": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "@emotion/react",
+    // Don't automatically include anything.
+    // Only include `@types` packages that we need to import.
+    "types": [],
+    "baseUrl": "./",
+    "paths": {
+      "bonjour-hap": [
+        "../../types/bonjour-hap"
+      ],
+      "mp4box": [
+        "../../types/mp4box"
+      ]
+    },
+    "lib": [
+      "ESNext",
+      "dom",
+      "dom.iterable"
+    ]
+  },
+  "include": [
+    "*.ts",
+    "*.tsx",
+    "../../types/**/*.d.ts",
+    "../../node_modules/@types/dom-webcodecs/webcodecs.generated.d.ts",
+    "../../node_modules/@types/offscreencanvas/index.d.ts"
+  ],
+  "exclude": [
+    "**/*.spec.ts",
+    "**/*.test.ts"
+  ]
+//  "paths": {
+//    "@mdx-js/react": [
+//      "mdx-js__react"
+//    ]
+//  }
+}

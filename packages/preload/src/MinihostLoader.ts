@@ -1,5 +1,5 @@
 import type { IDevice } from '@nibus/core';
-import type { NibusError } from '@nibus/core/lib/errors';
+import type { NibusError } from '@nibus/core/errors';
 
 import type { RunnableEvents } from './Runnable';
 import Runnable from './Runnable';

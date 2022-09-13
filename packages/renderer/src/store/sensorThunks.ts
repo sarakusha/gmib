@@ -10,8 +10,8 @@ startAppListening({
   effect(action, { dispatch }) {
     if (pushSensorValue.match(action)) {
       window.clearTimeout(timeout);
-      timeout = window.setTimeout(() => dispatch(calculate()), (MIN_INTERVAL + 1) * 1000);
+      timeout = window.setTimeout(() => dispatch(calculate()), 2 * MIN_INTERVAL * 1000);
     }
-    dispatch(calculate);
+    dispatch(calculate());
   },
 });

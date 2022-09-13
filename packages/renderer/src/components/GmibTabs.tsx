@@ -1,5 +1,4 @@
 import { Box } from '@mui/material';
-import type { DeviceId } from '@nibus/core';
 import React, { useEffect, useState } from 'react';
 
 import { useSelector } from '../store';
@@ -14,12 +13,15 @@ import {
 import Autobrightness from './Autobrightness';
 import DeviceTabs from './DeviceTabs';
 import Log from './Log';
-import MediaTab from './MediaTab';
+// import MediaTab from './MediaTab';
 import NovastarTabs from './NovastarTabs';
 import OverheatProtectionTab from './OverheatProtectionTab';
+// import PlaylistsTab from './PlaylistsTab';
 import Screens from './Screens';
 import type { Props as ChildProps } from './TabContainer';
 import TabContainer from './TabContainer';
+
+import type { DeviceId } from '@nibus/core';
 
 const Tabs: React.FC = () => {
   const [devChildren, setDevChildren] = useState<
@@ -78,9 +80,14 @@ const Tabs: React.FC = () => {
       <TabContainer id="overheat" selected={tab === 'overheat'}>
         <OverheatProtectionTab />
       </TabContainer>
+      {/*
       <TabContainer id="media" selected={tab === 'media'}>
         <MediaTab />
       </TabContainer>
+      <TabContainer id="playlist" selected={tab === 'playlist'}>
+        <PlaylistsTab />
+      </TabContainer>
+*/}
     </Box>
   );
 };

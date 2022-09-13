@@ -1,66 +1,19 @@
-import type {
-  SelectChangeEvent} from '@mui/material';
-import {
-  Box,
-  Checkbox,
-  FormControlLabel,
-  MenuItem,
-  Paper,
-  Select,
-  TextField,
-  Typography,
-} from '@mui/material';
+import { Box, Checkbox, FormControlLabel, Paper, TextField } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import type { AnyAction } from '@reduxjs/toolkit';
 import ChipInput from '@sarakusha/material-ui-chip-input';
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback } from 'react';
 
-import { useDispatch, useSelector } from '../store';
-import { addAddress, removeAddress, setScreenProp } from '../store/configSlice';
-import {selectDisplays, selectScreenById} from '../store/selectors';
+import { selectScreen, updateScreen, useGetScreensQuery } from '../api/screens';
+import { useDispatch } from '../store';
 
-import type { Screen} from '/@common/config';
 import { reAddress } from '/@common/config';
 import { toNumber } from '/@common/helpers';
 
-import useDelayUpdate from '../util/useDelayUpdate';
-
 import FormFieldSet from './FormFieldSet';
 
-// const useStyles = makeStyles(theme => ({
-//   content: {
-//     height: '100%',
-//     padding: theme.spacing(1),
-//     '& > * ~ *': {
-//       marginTop: theme.spacing(1),
-//     },
-//   },
-//   params: {
-//     display: 'flex',
-//     flexWrap: 'wrap',
-//     gap: theme.spacing(1),
-//     // justifyContent: 'center',
-//   },
-//   fieldset: {
-//     padding: theme.spacing(1),
-//     borderRadius: theme.shape.borderRadius,
-//     borderColor: 'rgba(0, 0, 0, 0.23)',
-//     borderWidth: 1,
-//     borderStyle: 'solid',
-//     width: '26ch',
-//   },
-//   item: {
-//     flex: 1,
-//     '& ~ $item': {
-//       marginLeft: theme.spacing(2),
-//     },
-//     width: '10ch',
-//   },
-//   // formControl: {
-//   //   margin: theme.spacing(1),
-//   //   minWidth: '23ch',
-//   // },
-// }));
+// import type { Screen } from '/@common/video';
+
+const onBeforeAddress = (value: string): boolean => reAddress.test(value);
 
 const FieldSet = styled(FormFieldSet)(({ theme }) => ({
   padding: theme.spacing(1),
@@ -79,6 +32,7 @@ const Field = styled(TextField)(({ theme }) => ({
   width: '10ch',
 }));
 
+/*
 const toDisplay = (value: string): boolean | string => {
   switch (value.toLowerCase()) {
     case 'true':
@@ -89,6 +43,7 @@ const toDisplay = (value: string): boolean | string => {
       return value;
   }
 };
+*/
 
 // type NumberProps = FilterNames<Required<Screen>, number>;
 // const screenReducer = createPropsReducer<Record<NumberProps, string>>();
@@ -97,8 +52,8 @@ const inputSize = { min: 8, step: 4 };
 const inputFactor = { min: 0, max: 4, step: 0.01 };
 
 type Props = {
-  id: string;
-  selected?: string;
+  id: number;
+  selected?: number;
   readonly?: boolean;
   single?: boolean;
 };
@@ -110,43 +65,94 @@ const ScreenComponent: React.FC<Props> = ({
   single = true,
 }) => {
   const dispatch = useDispatch();
-  const current = useSelector(state => selectScreenById(state, scrId));
-  const displays = useSelector(selectDisplays);
-  // const [name, setName] = useState(current?.name ?? '');
-  const changeNumberHandler = useCallback<React.ChangeEventHandler<HTMLInputElement>>(
+  const { data: screensData } = useGetScreensQuery();
+  const current = screensData && selectScreen(screensData, scrId);
+  // const refScreen = useRef<any>();
+  // refScreen.current = current;
+  const changeHandler = useCallback<React.ChangeEventHandler<HTMLInputElement>>(
     e => {
-      const { value, id } = e.currentTarget;
-      const res = toNumber(value);
-      if (res === undefined || res.toString() === value.trim())
-        dispatch(setScreenProp([scrId, [id as keyof Screen, res]]));
+      const { value, id, type, checked } = e.target;
+      // console.log({ id, value, type, checked });
+      // const scr = { ...refScreen.current };
+      let newValue: unknown = value;
+      switch (type) {
+        case 'number': {
+          const res = toNumber(value);
+          if (res === undefined || res.toString() === value.trim()) newValue = res;
+          break;
+        }
+        case 'checkbox':
+          newValue = checked;
+          break;
+        default:
+          newValue = value;
+          break;
+      }
+      dispatch(updateScreen(scrId, prev => ({ ...prev, [id]: newValue })));
     },
     [dispatch, scrId],
   );
-  const [displayChanged, changeHandler, onBeforeAddAddress, setName] = useMemo(
-    () => [
-      (event: SelectChangeEvent): void => {
-        dispatch(setScreenProp([scrId, ['display', toDisplay(`${event.target.value}`)]]));
-      },
-      (event: React.ChangeEvent<HTMLInputElement>): void => {
-        const { value, id, type, checked } = event.target;
-        dispatch(
-          setScreenProp([scrId, [id as keyof Screen, type === 'checkbox' ? checked : value]]),
-        );
-      },
-      (value: string): boolean => reAddress.test(value),
-      (value: string): AnyAction => setScreenProp([scrId, ['name', value]]),
-    ],
+  const addAddress = useCallback(
+    (address: string) => {
+      // const { addresses = [], ...other } = refScreen.current as Screen;
+      dispatch(
+        updateScreen(scrId, prev => ({ ...prev, addresses: [...(prev.addresses ?? []), address] })),
+      );
+    },
     [dispatch, scrId],
   );
-  const [name, nameChanged] = useDelayUpdate(current?.name ?? '', setName);
+  const removeAddress = useCallback(
+    (address: string, index: number) => {
+      dispatch(
+        updateScreen(scrId, prev => {
+          if (prev.addresses?.[index] === address) {
+            const draft = [...prev.addresses];
+            draft.splice(index, 1);
+            return { ...prev, addresses: draft };
+          }
+          return prev;
+        }),
+      );
+    },
+    [dispatch, scrId],
+  );
+  // const current = useSelector(state => selectScreen(state, scrId));
+  // const displays = useSelector(selectDisplays);
+  // const [name, setName] = useState(current?.name ?? '');
+  // const changeNumberHandler = useCallback<React.ChangeEventHandler<HTMLInputElement>>(
+  //   e => {
+  //     const { value, id } = e.currentTarget;
+  //     const res = toNumber(value);
+  //     if (res === undefined || res.toString() === value.trim())
+  //       dispatch(setScreenProp([scrId, [id as keyof Screen, res]]));
+  //   },
+  //   [dispatch, scrId],
+  // );
+  // const [/* displayChanged, */ changeHandler, onBeforeAddAddress, setName] = useMemo(
+  //   () => [
+  //     // (event: SelectChangeEvent): void => {
+  //     //   dispatch(setScreenProp([scrId, ['display', toDisplay(`${event.target.value}`)]]));
+  //     // },
+  //     (event: React.ChangeEvent<HTMLInputElement>): void => {
+  //       const { value, id, type, checked } = event.target;
+  //       dispatch(
+  //         setScreenProp([scrId, [id as keyof Screen, type === 'checkbox' ? checked : value]]),
+  //       );
+  //     },
+  //     (value: string): boolean => reAddress.test(value),
+  //     (value: string): AnyAction => setScreenProp([scrId, ['name', value]]),
+  //   ],
+  //   [dispatch, scrId],
+  // );
+  // const [name, nameChanged] = useDelayUpdate(current?.name ?? '', setName);
   return !current ? null : (
     <Paper sx={{ height: 1, p: 1, '& > * ~ *': { mt: 1 } }} hidden={scrId !== selected}>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
         <FieldSet legend="Название" disabled={readonly}>
           <TextField
             id="name"
-            value={name}
-            onChange={nameChanged}
+            value={current.name}
+            onChange={changeHandler}
             fullWidth
             disabled={readonly}
             variant="standard"
@@ -163,20 +169,24 @@ const ScreenComponent: React.FC<Props> = ({
             value={current.brightnessFactor}
             type="number"
             inputProps={inputFactor}
-            onChange={changeNumberHandler}
+            onChange={changeHandler}
             fullWidth
             disabled={readonly || single}
           />
         </FieldSet>
         <FieldSet legend="По горизонтали" disabled={readonly} title="Порядок модулей">
           <FormControlLabel
-            control={<Checkbox checked={!!current.dirh} onChange={changeHandler} id="dirh" />}
+            control={
+              <Checkbox checked={!!current.rightToLeft} onChange={changeHandler} id="rightToLeft" />
+            }
             label="Справа налево"
           />
         </FieldSet>
         <FieldSet legend="По вертикали" disabled={readonly} title="Порядок модулей">
           <FormControlLabel
-            control={<Checkbox checked={!!current.dirv} onChange={changeHandler} id="dirv" />}
+            control={
+              <Checkbox checked={!!current.downToTop} onChange={changeHandler} id="downToTop" />
+            }
             label="Сверху вниз"
           />
         </FieldSet>
@@ -186,7 +196,7 @@ const ScreenComponent: React.FC<Props> = ({
             id="width"
             label="Ширина"
             value={current.width ?? ''}
-            onChange={changeNumberHandler}
+            onChange={changeHandler}
             type="number"
             inputProps={inputSize}
             disabled={readonly}
@@ -196,7 +206,7 @@ const ScreenComponent: React.FC<Props> = ({
             id="height"
             label="Высота"
             value={current.height ?? ''}
-            onChange={changeNumberHandler}
+            onChange={changeHandler}
             type="number"
             inputProps={inputSize}
             disabled={readonly}
@@ -205,20 +215,20 @@ const ScreenComponent: React.FC<Props> = ({
         <FieldSet legend="Модуль" title="Размеры в пикселях">
           <Field
             variant="standard"
-            id="moduleHres"
+            id="moduleWidth"
             label="Ширина"
-            value={current.moduleHres ?? ''}
-            onChange={changeNumberHandler}
+            value={current.moduleWidth ?? ''}
+            onChange={changeHandler}
             type="number"
             inputProps={inputSize}
             disabled={readonly}
           />
           <Field
             variant="standard"
-            id="moduleVres"
+            id="moduleHeight"
             label="Высота"
-            value={current.moduleVres ?? ''}
-            onChange={changeNumberHandler}
+            value={current.moduleHeight ?? ''}
+            onChange={changeHandler}
             type="number"
             inputProps={inputSize}
             disabled={readonly}
@@ -230,7 +240,7 @@ const ScreenComponent: React.FC<Props> = ({
             id="borderLeft"
             label="Слева"
             value={current.borderLeft ?? ''}
-            onChange={changeNumberHandler}
+            onChange={changeHandler}
             type="number"
             disabled={readonly}
           />
@@ -239,7 +249,7 @@ const ScreenComponent: React.FC<Props> = ({
             id="borderRight"
             label="Справа"
             value={current.borderRight ?? ''}
-            onChange={changeNumberHandler}
+            onChange={changeHandler}
             type="number"
             disabled={readonly}
           />
@@ -250,7 +260,7 @@ const ScreenComponent: React.FC<Props> = ({
             id="borderTop"
             label="Сверху"
             value={current.borderTop ?? ''}
-            onChange={changeNumberHandler}
+            onChange={changeHandler}
             type="number"
             disabled={readonly}
           />
@@ -259,7 +269,7 @@ const ScreenComponent: React.FC<Props> = ({
             id="borderBottom"
             label="Снизу"
             value={current.borderBottom ?? ''}
-            onChange={changeNumberHandler}
+            onChange={changeHandler}
             type="number"
             disabled={readonly}
           />
@@ -269,8 +279,8 @@ const ScreenComponent: React.FC<Props> = ({
             variant="standard"
             id="x"
             label="Слева"
-            value={current.x ?? ''}
-            onChange={changeNumberHandler}
+            value={current.left ?? ''}
+            onChange={changeHandler}
             type="number"
             disabled={readonly}
           />
@@ -278,12 +288,13 @@ const ScreenComponent: React.FC<Props> = ({
             variant="standard"
             id="y"
             label="Сверху"
-            value={current.y ?? ''}
-            onChange={changeNumberHandler}
+            value={current.top ?? ''}
+            onChange={changeHandler}
             type="number"
             disabled={readonly}
           />
         </FieldSet>
+        {/*
         <FieldSet legend="Дисплей" disabled={readonly}>
           <Select
             variant="standard"
@@ -311,14 +322,15 @@ const ScreenComponent: React.FC<Props> = ({
               )}
           </Select>
         </FieldSet>
+*/}
       </Box>
 
       <ChipInput
         label="Адреса минихостов"
         value={current.addresses}
-        onBeforeAdd={onBeforeAddAddress}
-        onAdd={chip => dispatch(addAddress([scrId, chip]))}
-        onDelete={(chip, index) => dispatch(removeAddress([scrId, chip, index]))}
+        onBeforeAdd={onBeforeAddress}
+        onAdd={addAddress}
+        onDelete={removeAddress}
         // alwaysShowPlaceholder
         placeholder="address+X,Y:WxH"
         fullWidth

@@ -1,4 +1,3 @@
-
 import AddIcon from '@mui/icons-material/Add';
 import {
   Box,
@@ -24,8 +23,10 @@ import {
   Tabs,
   TextField,
 } from '@mui/material';
+
 import type { DeviceId } from '@nibus/core';
-import Address from '@nibus/core/lib/Address';
+import Address from '@nibus/core/Address';
+
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import DeviceIcon from '../components/DeviceIcon';
@@ -63,7 +64,10 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
   useEffect(() => {
     dispatch(resetDetected());
   }, [dispatch, open]);
-  const changeHandler = useCallback((_, newValue) => setKind(newValue), []);
+  const changeHandler = useCallback(
+    (_: React.SyntheticEvent, newValue: SearchKind) => setKind(newValue),
+    [],
+  );
   const startStop = useCallback(() => {
     const connection = connectionRef.current?.value;
     if (connection === undefined) return;

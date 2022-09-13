@@ -1,44 +1,28 @@
-import type { DeviceId } from '@nibus/core';
-import Address from '@nibus/core/lib/Address';
-import { hasProps } from '@novastar/screen/lib/common';
-import { createAsyncThunk, isAnyOf, nanoid } from '@reduxjs/toolkit';
-import debugFactory from 'debug';
+import { createAsyncThunk, isAnyOf } from '@reduxjs/toolkit';
+// import debugFactory from 'debug';
 import sortBy from 'lodash/sortBy';
 import SunCalc from 'suncalc';
 
+import screenApi, { selectScreens } from '../api/screens';
 import type { Point } from '../util/MonotonicCubicSpline';
 import MonotonicCubicSpline from '../util/MonotonicCubicSpline';
 
-import type { Screen } from '/@common/config';
 import { reAddress } from '/@common/config';
-import type { ValueType } from '/@common/helpers';
-import {
-  incrementCounterString,
-  MINUTE,
-  notEmpty,
-  toErrorMessage,
-  tuplify,
-} from '/@common/helpers';
+import { MINUTE, notEmpty, tuplify } from '/@common/helpers';
 import { isRemoteSession } from '/@common/remote';
+import createDebouncedAsyncThunk from '/@common/createDebouncedAsyncThunk';
 
 import {
-  addAddress,
-  addScreen,
-  removeAddress,
   removeHttpPage,
-  removeScreen,
   setAutobrightness,
   setBrightness,
   setLocationProp,
   setLogLevel,
   setProtectionProp,
-  setScreenProp,
   setSpline,
-  showHttpPage,
   updateConfig,
   upsertHttpPage,
 } from './configSlice';
-import createDebouncedAsyncThunk from './createDebouncedAsyncThunk';
 import type { DeviceState } from './devicesSlice';
 import { startAppListening } from './listenerMiddleware';
 import {
@@ -48,15 +32,18 @@ import {
   selectDevicesByAddress,
   selectLastAverage,
   selectLocation,
+  selectLogLevel,
   selectOverheatProtection,
-  selectScreenById,
-  selectScreens,
   selectSpline,
 } from './selectors';
 
-import type { AppThunk, AppThunkConfig, RootState } from './index';
+import type { AppThunkConfig, RootState } from './index';
 
-const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:config`);
+import type { DeviceId } from '@nibus/core';
+import Address from '@nibus/core/Address';
+import { hasProps } from '@novastar/screen/common';
+
+// const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:config`);
 
 export const BRIGHTNESS_INTERVAL = 60 * 1000;
 
@@ -71,7 +58,7 @@ type Location = {
   height?: number;
 };
 
-type HostParams = Required<Location>;
+// type HostParams = Required<Location>;
 
 const safeNumber = (value: string | undefined): number | undefined =>
   value !== undefined ? +value : undefined;
@@ -89,8 +76,9 @@ const parseLocation = (location: string): Location | undefined => {
   };
 };
 
-type Input = Pick<Required<Screen>, 'width' | 'height' | 'x' | 'y'>;
+// type Input = Pick<Required<Screen>, 'width' | 'height' | 'left' | 'top'>;
 
+/*
 const getHostParams =
   (screen: Input) =>
   (expr: string): HostParams | undefined => {
@@ -112,17 +100,19 @@ const getHostParams =
       height,
     };
   };
+*/
 
 const hasBrightnessFactor = hasProps('brightnessFactor');
 
-export const updateBrightness = createDebouncedAsyncThunk<void>(
+export const updateBrightness = createDebouncedAsyncThunk<void, void, AppThunkConfig>(
   'config/updateBrightness',
   async (_, { getState }) => {
     const state = getState();
     const brightness = selectBrightness(state);
     const { interval } = selectOverheatProtection(state) ?? {};
     if (brightness === undefined) return;
-    const screens = selectScreens(state);
+    const { data: screensData } = screenApi.endpoints.getScreens.select()(state);
+    const screens = screensData ? selectScreens(screensData) : [];
     const tasks = screens
       .filter(hasBrightnessFactor)
       .filter(({ brightnessFactor }) => brightnessFactor > 0)
@@ -254,6 +244,7 @@ const calculateBrightness = createAsyncThunk<void, void, AppThunkConfig>(
 //   // dispatch(updateBrightness());
 // };
 
+/*
 export const createScreen = (): AppThunk => (dispatch, getState) => {
   let name = 'Экран';
   const screens = selectScreens(getState());
@@ -270,7 +261,7 @@ export const updateScreen = createDebouncedAsyncThunk<void, string | undefined>(
   'config/updateScreen',
   (scrId, { getState }) => {
     const state = getState() as RootState;
-    const scr = scrId && selectScreenById(state, scrId);
+    const scr = scrId && selectScreen(state, scrId);
     const screens = scr ? [scr] : selectConfig(state).screens;
     screens.forEach(screen => {
       const { addresses, moduleHres, moduleVres, dirh, dirv } = screen;
@@ -348,6 +339,7 @@ export const updateScreen = createDebouncedAsyncThunk<void, string | undefined>(
     maxWait: 1000,
   },
 );
+*/
 
 // const updateScreen = debounce((dispatch: AppDispatch, scrId: string): void => {
 //   dispatch(initializeScreens(scrId));
@@ -371,28 +363,38 @@ export const updateScreen = createDebouncedAsyncThunk<void, string | undefined>(
 //   dispatch(updateScreen(scrId));
 // };
 
+/*
 startAppListening({
-  matcher: isAnyOf(setScreenProp, showHttpPage),
-  effect({ payload: [scrId] }, { dispatch }) {
-    dispatch(updateScreen(scrId));
+  matcher: isAnyOf(setScreenProp, showHttpPage, updateConfig),
+  effect(action, { dispatch }) {
+    if (setScreenProp.match(action) || showHttpPage.match(action)) {
+      const {
+        payload: [scrId],
+      } = action;
+      dispatch(updateScreen(scrId));
+    } else if (updateConfig.match(action)) {
+      const { payload: config } = action;
+      config.screens.forEach(({ id }) => dispatch(updateScreen(id)));
+    }
   },
 });
+*/
 
 startAppListening({
   matcher: isAnyOf(
-    showHttpPage,
+    // showHttpPage,
     setBrightness,
     setAutobrightness,
     setSpline,
     setLocationProp,
-    setScreenProp,
+    // setScreenProp,
     setLogLevel,
     upsertHttpPage,
     removeHttpPage,
-    addAddress,
-    removeAddress,
-    addScreen,
-    removeScreen,
+    // addAddress,
+    // removeAddress,
+    // addScreen,
+    // removeScreen,
     setProtectionProp,
   ),
   effect(action, { getState }) {
@@ -402,8 +404,9 @@ startAppListening({
 });
 
 startAppListening({
-  actionCreator: setLogLevel,
-  effect({ payload: logLevel }) {
+  matcher: isAnyOf(setLogLevel, updateConfig),
+  effect(_, { getState }) {
+    const logLevel = selectLogLevel(getState());
     window.nibus.setLogLevel(logLevel);
   },
 });
@@ -412,8 +415,9 @@ let brightnessTimer = 0;
 
 if (!isRemoteSession) {
   startAppListening({
-    actionCreator: setAutobrightness,
-    effect({ payload: on }, { dispatch }) {
+    matcher: isAnyOf(setAutobrightness, updateConfig),
+    effect(_, { dispatch, getState }) {
+      const on = selectAutobrightness(getState());
       if (!on) {
         window.clearInterval(brightnessTimer);
         brightnessTimer = 0;

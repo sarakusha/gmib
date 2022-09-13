@@ -1,8 +1,9 @@
-import type { DeviceId } from '@nibus/core';
-import type { CabinetPosition, HWStatus } from '@novastar/screen';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import type React from 'react';
 
+import type { DeviceId } from '@nibus/core';
+import type { HWStatus } from '@novastar/screen/HWStatus';
+import type { CabinetPosition } from '@novastar/screen/getCabinetPosition';
 import type { BaseService } from 'bonjour-hap';
 
 export const MINUTE = 60 * 1000;
@@ -17,7 +18,7 @@ export const delay = (seconds: number): Promise<void> =>
     setTimeout(resolve, seconds * 1000);
   });
 
-export function notEmpty<TValue>(value: TValue | null | undefined): value is TValue {
+export function notEmpty<TValue>(value: TValue | null | undefined | void): value is TValue {
   return value !== null && value !== undefined;
 }
 
@@ -158,7 +159,8 @@ export type OptionalKeys<T> = {
 export type PickRequired<T> = Pick<T, RequiredKeys<T>>;
 export type PickOptional<T> = Pick<T, OptionalKeys<T>>;
 export type Nullable<T> = { [P in keyof T]: T[P] | null };
-export type NullableOptional<T> = PickRequired<T> & Nullable<PickOptional<T>>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type NullableOptional<T = any> = PickRequired<T> & Nullable<PickOptional<T>>;
 
 export const findById = <T extends { id: string }>(
   items: T[] | undefined,
@@ -243,11 +245,6 @@ export const isPositiveNumber = (state?: ValueState): state is ValueState<number
 export const calcMaxValue = (screen: ValueState, module: ValueState, max: number): number => {
   if (!isPositiveNumber(screen) || !isPositiveNumber(module)) return max;
   return Math.min(Math.ceil(screen.value / module.value), max);
-};
-export type TypedMessage<T extends string = string, P = unknown> = {
-  target: T;
-  type: string;
-  payload: P;
 };
 export type IModuleInfo<T> = {
   x: number;

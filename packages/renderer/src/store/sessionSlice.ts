@@ -1,6 +1,7 @@
-import type { DeviceId, Display, Host } from '@nibus/core';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { createSlice, current } from '@reduxjs/toolkit';
+
+import type { DeviceId, Display, Host } from '@nibus/core';
 
 export type SessionStatus = 'idle' | 'pending' | 'succeeded' | 'failed' | 'closed';
 

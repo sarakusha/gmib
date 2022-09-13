@@ -5,68 +5,51 @@ import { styled } from '@mui/material/styles';
 import { useSnackbar } from 'notistack';
 import React, { useEffect, useState } from 'react';
 
+import {
+  selectScreens,
+  useCreateScreenMutation,
+  useDeleteScreenMutation,
+  useGetScreensQuery,
+} from '../api/screens';
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useDispatch, useSelector } from '../store';
-import { removeScreen} from '../store/configSlice';
+// import { removeScreen } from '../store/configSlice';
 // import { createScreen } from '../store/configThunks';
-import {createScreen} from '../store/configThunks';
 import { setCurrentScreen } from '../store/currentSlice';
 
 import { noop } from '/@common/helpers';
 
-import {selectCurrentScreenId, selectCurrentTab, selectScreens, selectSessionVersion} from '../store/selectors';
+import { selectCurrentScreenId, selectCurrentTab, selectSessionVersion } from '../store/selectors';
 
 import Screen from './Screen';
 import ScreensToolbar from './ScreensToolbar';
 
-// const useStyles = makeStyles(theme => ({
-//   root: {
-//     width: '100%',
-//     // display: 'flex',
-//     // flexDirection: 'column',
-//   },
-//   content: {
-//     // flexGrow: 1,
-//     paddingTop: theme.spacing(1),
-//     paddingBottom: theme.spacing(1),
-//     paddingLeft: theme.spacing(2),
-//     paddingRight: theme.spacing(2),
-//   },
-//   label: {
-//     display: 'flex',
-//     width: '100%',
-//     '& > *:first-child': {
-//       flexGrow: 1,
-//     },
-//   },
-//   add: {
-//     flexGrow: 0,
-//     minWidth: 48,
-//     // backgroundColor: theme.palette.secondary.light,
-//   },
-//   hidden: {
-//     // visibility: 'hidden',
-//     display: 'none',
-//   },
-// }));
-
 const Label = styled('span')`
   display: flex;
   width: 100%;
-  & > *:first-child {
+
+  & > span:first-of-type {
     flex-grow: 1;
   }
 `;
 
 const Screens: React.FC = () => {
   const value = useSelector(selectCurrentScreenId);
-  const screens = useSelector(selectScreens);
+  const { data: screensData, isSuccess } = useGetScreensQuery();
+  const screens = screensData ? selectScreens(screensData) : [];
+  const needSelect = value == null && isSuccess && screens.length > 0 && screens[0].id;
+  // const screens = useSelector(selectScreens);
   const dispatch = useDispatch();
+  useEffect(() => {
+    if (needSelect) dispatch(setCurrentScreen(needSelect));
+  }, [needSelect, dispatch]);
   const { closeSnackbar, enqueueSnackbar } = useSnackbar();
   const sessionVersion = useSelector(selectSessionVersion);
   const tab = useSelector(selectCurrentTab);
   const [, setToolbar] = useToolbar();
   const [readonly, setReadonly] = useState(true);
+  const [createScreen] = useCreateScreenMutation();
+  const [removeScreen] = useDeleteScreenMutation();
   useEffect(() => {
     if (tab === 'screens') {
       const toolbar = (
@@ -77,19 +60,21 @@ const Screens: React.FC = () => {
     }
     return noop;
   }, [tab, setToolbar, readonly]);
-  const removeHandler = (id: string): React.MouseEventHandler<HTMLButtonElement> => e => {
-    e.stopPropagation();
-    if (e.shiftKey) {
-      dispatch(removeScreen(id));
-    } else {
-      enqueueSnackbar('Удерживайте клавишу Shift, чтобы удалить безвозвратно', {
-        variant: 'info',
-        preventDuplicate: true,
-        autoHideDuration: 3000,
-        onClose: () => closeSnackbar(),
-      });
-    }
-  };
+  const removeHandler =
+    (id: number): React.MouseEventHandler<HTMLButtonElement> =>
+    e => {
+      e.stopPropagation();
+      if (e.shiftKey) {
+        removeScreen(id);
+      } else {
+        enqueueSnackbar('Удерживайте клавишу Shift, чтобы удалить безвозвратно', {
+          variant: 'info',
+          preventDuplicate: true,
+          autoHideDuration: 3000,
+          onClose: () => closeSnackbar(),
+        });
+      }
+    };
   const single = screens.length === 1;
   return (
     <Box sx={{ width: 1 }}>
@@ -125,12 +110,12 @@ const Screens: React.FC = () => {
               onClick={() => dispatch(setCurrentScreen(id))}
             />
           ))}
-          {sessionVersion && (
+          {sessionVersion && !readonly && (
             <Tab
               icon={<AddToQueue color={readonly ? 'inherit' : 'secondary'} />}
               sx={{ flexGrow: 0, minWidth: 48 }}
               // textColor="secondary"
-              onClick={() => dispatch(createScreen())}
+              onClick={() => createScreen()}
               title="Добавить экран"
               value="addScreen"
               disabled={readonly}

@@ -10,9 +10,6 @@ import {
   RadioGroup,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import Address from '@nibus/core/lib/Address';
-import { FlashKinds, KindMap } from '@nibus/core/lib/flash/FlashKinds';
-import type { Kind } from '@nibus/core/lib/flash/FlashKinds';
 import type { SnackbarAction, SnackbarKey } from 'notistack';
 import { useSnackbar } from 'notistack';
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
@@ -27,6 +24,10 @@ import type { Props as FlashUpgradeProps } from './FlashUpgrade';
 import FlashUpgrade, { displayName } from './FlashUpgrade';
 import FormFieldSet from './FormFieldSet';
 import type { MinihostTabProps } from './TabContainer';
+
+import Address from '@nibus/core/Address';
+import type { Kind } from '@nibus/core/flash/FlashKinds';
+import { FlashKinds, KindMap } from '@nibus/core/flash/FlashKinds';
 
 const KindFormFieldSet = styled(FormFieldSet)(({ theme }) => ({
   padding: theme.spacing(1),

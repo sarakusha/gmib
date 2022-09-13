@@ -1,6 +1,6 @@
-import type { NibusSessionEvents } from '@nibus/core/lib/session/NibusSession';
+import type { NibusSessionEvents } from '@nibus/core/session/NibusSession';
 
-import TypedEventTarget from './TypedEventTarget';
+import TypedEventTarget from '/@common/TypedEventTarget';
 
 const sessionListener = new TypedEventTarget<NibusSessionEvents>('session');
 

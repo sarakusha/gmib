@@ -1,13 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import type { LogLevel } from '@nibus/core/lib/common';
+import type { LogLevel } from '@nibus/core/common';
 
 export type SplineItem = [lux: number, brightness: number];
 export const SPLINE_COUNT = 4;
 export type Page = {
   id: string;
   url?: string;
-  title?: string;
+  title: string;
   permanent?: true;
+  preload?: string;
 };
 export type Location = {
   latitude?: number;
@@ -31,27 +32,7 @@ export type ScreenV1 = {
   borderRight?: number;
 };
 
-export type Screen = {
-  id: string;
-  name: string;
-  width?: number;
-  height?: number;
-  moduleHres?: number;
-  moduleVres?: number;
-  x?: number;
-  y?: number;
-  display?: boolean | string;
-  addresses?: string[];
-  dirh?: boolean;
-  dirv?: boolean;
-  borderTop?: number;
-  borderBottom?: number;
-  borderLeft?: number;
-  borderRight?: number;
-  output?: string;
-  brightnessFactor?: number;
-};
-
+/*
 export const defaultScreen: Required<Omit<Screen, 'output' | 'id'>> = {
   name: 'Экран',
   width: 640,
@@ -70,6 +51,7 @@ export const defaultScreen: Required<Omit<Screen, 'output' | 'id'>> = {
   borderRight: 0,
   brightnessFactor: 1,
 };
+*/
 
 export type ConfigV1 = {
   location?: Location;
@@ -111,7 +93,7 @@ export type Config = {
   spline?: SplineItem[];
   autobrightness: boolean;
   brightness: number;
-  screens: Screen[];
+  // screens: Screen[];
   logLevel: LogLevel;
   pages: Page[];
   version?: string;
@@ -125,6 +107,7 @@ export const addressPattern =
   '^(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})(?:([+-]+\\d+)(?:,([+-]?\\d+)(?::(\\d+)(?:x(\\d+))?)?)?)?$';
 export const reAddress = new RegExp(addressPattern);
 
+/*
 export const convertCfgFrom = (cfg: unknown): Config => {
   const { test, tests, screen, ...other } = cfg as ConfigV1;
   const { address, addresses, ...props } = screen ?? {};
@@ -138,15 +121,17 @@ export const convertCfgFrom = (cfg: unknown): Config => {
   };
   return {
     pages: tests,
-    screens: [scr],
+    // screens: [scr],
     overheatProtection: DEFAULT_OVERHEAD_PROTECTION,
     ...other,
   };
 };
+*/
 
+/*
 export const convertCfgTo = (cfg: Config): ConfigV1 => {
   const {
-    screens: [screen],
+    // screens: [screen],
     pages,
     version,
     ...other
@@ -162,3 +147,4 @@ export const convertCfgTo = (cfg: Config): ConfigV1 => {
     ...other,
   };
 };
+*/

@@ -1,10 +1,13 @@
-import type { TypedMessage } from '/@common/helpers';
+import type { TypedMessage } from '/@common/TypedMessage';
 
-export default function patchEmitter(emitter: unknown, target: string): void {
-  const typedEmitter = emitter as { emit: (event: string, ...args: unknown[]) => boolean };
-  const { emit } = typedEmitter;
+export default function patchEmitter<
+  Emitter extends { emit: (event: string, ...args: unknown[]) => boolean },
+>(emitter: Emitter, target: string): void {
+  // const typedEmitter = emitter as { emit: (event: string, ...args: unknown[]) => boolean };
+  const { emit } = emitter;
   if (typeof emit !== 'function') throw new TypeError('Invalid emitter');
-  typedEmitter.emit = (event, payload: unknown, ...args: unknown[]) => {
+  // eslint-disable-next-line no-param-reassign
+  emitter.emit = (event, payload: unknown, ...args: unknown[]) => {
     const msg: TypedMessage = {
       target,
       type: event,

@@ -15,7 +15,15 @@ const config = {
     output: 'dist',
     buildResources: 'resources',
   },
-  files: ['packages/**/dist/**'],
+  files: [
+    'packages/**/dist/**',
+    'packages/renderer/assets/**',
+    'packages/main/assets/output/**',
+    // 'node_modules/ajv/**/*.map',
+    // ...(process.env.PLAYER !== '1'
+    //   ? ['!(packages/{player,playerPreload}/**)']
+    //   : ['packages/renderer/assets/**']),
+  ],
   extraMetadata: {
     version: process.env.VITE_APP_VERSION,
   },

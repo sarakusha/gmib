@@ -1,64 +1,88 @@
-import { app as electronApp } from 'electron';
-import fs from 'fs';
 import path from 'path';
 
+import bodyParser from 'body-parser';
 import debugFactory from 'debug';
 import express from 'express';
-import formidable from 'formidable';
+import type { ErrorRequestHandler, RequestHandler } from 'express-serve-static-core';
 import helmet from 'helmet';
 
-export const MEDIA = '/media';
-export const UPLOAD = '/api/upload';
+import api, { mediaRoot } from './api';
+import { port } from './config';
+import { dbReady } from './db';
+import secret from './secret';
+
+import preventLoadSourceMap from '/@common/preventLoadSourceMap';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:express`);
 
-const mediaRoot = path.join(electronApp.getPath('userData'), 'media');
-
-fs.mkdir(mediaRoot, { recursive: true }, err => {
-  if (err) {
-    debug(`error while create "${mediaRoot}" directory`);
-  } else {
-    debug(`media store: ${mediaRoot}`);
-  }
-});
-
-const nameCountRegexp = /(?:(?:-(\d+))?)?$/;
-const nameCountFunc = (s: string, index: string): string => `-${(parseInt(index, 10) || 0) + 1}`;
-
-export const incrementCounterString = (s: string): string =>
-  s.replace(nameCountRegexp, nameCountFunc);
-
 const app = express();
-app.use(helmet());
-app.use(MEDIA, express.static(mediaRoot));
-app.post(UPLOAD, (req, res, next) => {
-  const form = formidable({
-    uploadDir: mediaRoot,
-    keepExtensions: true,
-    multiples: true,
-    filename: (original, ext) => {
-      let name = original;
-      while (fs.existsSync(path.join(mediaRoot, `${name}.${ext}`))) {
-        name = incrementCounterString(name);
-      }
-      return `${name}.${ext}`;
-    },
-    filter: ({ mimetype }) =>
-      !!mimetype && (mimetype.startsWith('image/') || mimetype.startsWith('video/')),
-  });
-  form.parse(req, (err, fields, files) => {
-    if (err) {
-      next(err);
-    } else {
-      res.json({
-        fields,
-        files,
-      });
-    }
-  });
-});
 
-const port = +(process.env['NIBUS_PORT'] ?? 9001) + 1;
+const isAuthorized: RequestHandler = (req, res, next) => {
+  if (req.query.access_token === secret || req.header('Authorization') === `Bearer ${secret}`) {
+    next();
+  } else {
+    res.sendStatus(401);
+  }
+};
+
+app.use(helmet());
+// app.use(helmet.originAgentCluster());
+// app.use(helmet.crossOriginEmbedderPolicy());
+// app.use(helmet.crossOriginOpenerPolicy());
+app.use(preventLoadSourceMap);
+// app.use((req, res, next) => {
+//   if (req.method === 'GET' && req.url.endsWith('.js.map')) {
+//     // fake js.map to prevent warnings
+//     res.json({ vesrion: 3, file: '', sourceRoot: '', sources: [], names: [], mappings: '' });
+//   } else {
+//     next();
+//   }
+// });
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+
+if (!import.meta.env.DEV) {
+  const root = path.join(__dirname, '../../renderer/dist');
+  app.get('/index.html', isAuthorized);
+  app.use(express.static(root));
+}
+
+const outputRoot = path.resolve(__dirname, '../assets/output');
+
+app.use(
+  '/output',
+  // (req, res, next) => {
+  //   debug(
+  //     `${req.method} ${req.url} ${outputRoot} ${fs.existsSync(
+  //       path.join(outputRoot, 'index.html'),
+  //     )}`,
+  //   );
+  //   next();
+  // },
+  express.static(outputRoot),
+);
+
+app.use('/player', express.static(path.resolve(__dirname, '../../player/dist')));
+
+const errorHandler: ErrorRequestHandler = (error, req, res, next) => {
+  if ('errno' in error && 'code' in error && error.code === 'SQLITE_CONSTRAINT') {
+    const { message, code, errno } = error;
+    res.status(409).json({ message, code, errno });
+  } else {
+    next(error); // forward to next middleware
+  }
+};
+
+app.use('/public', express.static(mediaRoot));
+app.use(
+  '/api',
+  isAuthorized,
+  (_, __, next) => {
+    dbReady.then(next);
+  },
+  api,
+);
+app.use(errorHandler);
 
 const server = app.listen(port, () => {
   debug(`Playback server running on port ${port}...`);

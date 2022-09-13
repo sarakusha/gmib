@@ -1,4 +1,4 @@
-import { app } from 'electron';
+import { app, powerSaveBlocker } from 'electron';
 
 import debugFactory from 'debug';
 
@@ -6,19 +6,25 @@ import './security-restrictions';
 import './initlog';
 import localConfig from './localConfig';
 import './config';
-import './db';
+import './screen';
 import './nibus';
 import './mdns';
 import './tray';
 import './linux';
 import './dialogs';
+import './express';
+// import './channels';
 import { createMainWindow } from './mainWindow';
+import openHandler from './openHandler';
+import { launchPlayers } from './playerWindow';
 
 // import {REDUX_DEVTOOLS} from 'electron-devtools-installer';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:main`);
 // debug(`Starting ${__filename}|${process.pid}|${new Error().stack}...`);
 debug(`local-config: ${localConfig.path}`);
+
+let suspendBlocker = 0;
 /**
  * Prevent multiple instances
  */
@@ -38,6 +44,10 @@ app.on('second-instance', createMainWindow);
  * Shout down background process if all windows was closed
  */
 app.on('window-all-closed', () => {
+  if (powerSaveBlocker.isStarted(suspendBlocker)) {
+    powerSaveBlocker.stop(suspendBlocker);
+  }
+
   // if (!import.meta.env.PROD || process.platform !== 'darwin') {
   app.quit();
   // }
@@ -66,12 +76,25 @@ if (import.meta.env.DEV) {
     .catch(e => debug(`Failed install extension: ${(e as Error).message}`));
 }
 
+// const preload = join(__dirname, '../assets/preload.js');
 /**
  * Create app window when background process will be ready
  */
 app
   .whenReady()
   .then(createMainWindow)
+  .then(main => {
+    main.webContents.setWindowOpenHandler(openHandler);
+  })
+  .then(() => {
+    if (!powerSaveBlocker.isStarted(suspendBlocker)) {
+      suspendBlocker = powerSaveBlocker.start('prevent-display-sleep');
+    }
+  })
+  // .then(() => openOutput(1))
+  // .then(() => openOutput(2))
+  // .then(() => openOutput(3))
+  // .then(() => openOutput(4))
   .catch(e => debug(`Failed create window: ${(e as Error).message}`));
 
 /**
@@ -84,3 +107,5 @@ if (import.meta.env.PROD) {
     .then(({ autoUpdater }) => autoUpdater.checkForUpdatesAndNotify())
     .catch(e => debug(`Failed check updates: ${e.message}`));
 }
+
+launchPlayers();

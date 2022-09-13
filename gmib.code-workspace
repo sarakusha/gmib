@@ -1,0 +1,22 @@
+{
+  "folders": [
+    {
+      "path": "."
+    },
+    {
+      "path": "../ebml"
+    }
+  ],
+  "settings": {
+    "sqltools.connections": [
+      {
+        "previewLimit": 50,
+        "driver": "SQLite",
+        "name": "gmib",
+        "database": "/Users/sarakusha/Library/Application Support/gmib/db.sqlite3"
+      }
+    ],
+    "sqltools.useNodeRuntime": true,
+    "npm.exclude": ""
+  }
+}

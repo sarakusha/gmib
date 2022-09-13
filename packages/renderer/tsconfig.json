@@ -45,7 +45,7 @@
   "include": [
     "src/**/*.ts",
     "src/**/*.tsx",
-    "../common/*.ts",
+//    "../common/*.ts",
     "../../types/**/*.d.ts",
     "../preload/exposedInMainWorld.d.ts"
   ],

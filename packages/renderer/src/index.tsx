@@ -1,28 +1,37 @@
-/* eslint-disable import/no-import-module-exports */
 import { CssBaseline } from '@mui/material';
 import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
+import dayjs from 'dayjs';
+import Duration from 'dayjs/plugin/duration';
+import 'dayjs/locale/ru';
 import debugFactory from 'debug';
 import { SnackbarProvider } from 'notistack';
 import React from 'react';
-import ReactDOM from 'react-dom';
+// import { DndProvider } from 'react-dnd';
+// import { HTML5Backend } from 'react-dnd-html5-backend';
+import { createRoot } from 'react-dom/client';
 import 'typeface-roboto/index.css';
 import { Provider } from 'react-redux';
 
+import theme from '/@common/theme';
+
 import App from './components/App';
-import theme from './components/theme';
 import ToolbarProvider from './providers/ToolbarProvider';
 import { store } from './store';
 
 debugFactory.log = window.log;
 import.meta.env.VITE_DEBUG && debugFactory.enable(import.meta.env.VITE_DEBUG);
 
-const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:app`);
+dayjs.extend(Duration);
+dayjs.locale('ru');
 
 window.setDispatch(store.dispatch.bind(store));
 
-debug('Hello from APP');
+const container = document.getElementById('app') as HTMLElement;
+const root = createRoot(container);
 
-ReactDOM.render(
+const Html5DndProvider = React.lazy(() => import('/@common/Html5DndProvider'));
+
+root.render(
   <React.StrictMode>
     <MuiThemeProvider theme={theme}>
       <CssBaseline />
@@ -30,18 +39,19 @@ ReactDOM.render(
         <ToolbarProvider>
           <SnackbarProvider
             anchorOrigin={{
-              vertical: 'top',
+              vertical: 'bottom',
               horizontal: 'right',
             }}
             maxSnack={10}
             dense
             preventDuplicate
           >
-            <App />
+            <Html5DndProvider>
+              <App />
+            </Html5DndProvider>
           </SnackbarProvider>
         </ToolbarProvider>
       </Provider>
     </MuiThemeProvider>
   </React.StrictMode>,
-  document.getElementById('app'),
 );

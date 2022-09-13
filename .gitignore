@@ -58,8 +58,12 @@ thumbs.db
 /packages/renderer/dist/
 tsconfig.tsbuildinfo
 /packages/preload/dist/
+/packages/playerPreload/dist/
 /dist/
 /packages/main/dist/
+/packages/player/dist/
 /ffmpeg/
 *.bak
 /yalc.lock
+/packages/renderer/stats.html
+bak/

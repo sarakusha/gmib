@@ -1,12 +1,22 @@
+import debugFactory from 'debug';
+
 import { setBrightness } from './configSlice';
-import createDebouncedAsyncThunk from './createDebouncedAsyncThunk';
 import { startAppListening } from './listenerMiddleware';
 import type { ScreenBrightness, ScreenId } from './novastarsSlice';
-import { addNovastar, setScreenColorBrightness } from './novastarsSlice';
+import { addNovastar, removeNovastar, setScreenColorBrightness } from './novastarsSlice';
 import { selectBrightness, selectNovastarIds, selectNovastarScreen } from './selectors';
+import { MIN_INTERVAL } from './sensorsSlice';
+
+import type { AppThunkConfig } from './index';
+
+import { isRemoteSession } from '/@common/remote';
+import createDebouncedAsyncThunk from '/@common/createDebouncedAsyncThunk';
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:novastar`);
 
 const selectScreenId = ({ path, screen }: ScreenId): string => `${path}[${screen}]`;
-export const updateColorBrightness = createDebouncedAsyncThunk<void, ScreenId>(
+export const updateColorBrightness = createDebouncedAsyncThunk<void, ScreenId, AppThunkConfig>(
   'novastar/updateColorBrightness',
   async (payload, { getState }) => {
     const { path, screen } = payload;
@@ -85,3 +95,41 @@ startAppListening({
     if (scr?.rgbv?.[color] !== value) dispatch(updateColorBrightness(payload));
   },
 });
+
+if (!isRemoteSession) {
+  let timer = 0;
+  const state: Record<string, { hasSensor: boolean; iteration: number }> = {};
+  startAppListening({
+    actionCreator: addNovastar,
+    effect(_, { getState }) {
+      const update = () => {
+        // debug('update novastars');
+        const ids = selectNovastarIds(getState()) as string[];
+        Promise.all(
+          ids.map(async path => {
+            let { hasSensor, iteration } = state[path] ?? { hasSensor: false, iteration: 0 };
+            if (iteration === 0 || hasSensor) {
+              hasSensor = (await window.novastar.readLightSensor(path)) != null;
+            }
+            await window.novastar.updateHasDviIn(path);
+            iteration += 1;
+            state[path] = { hasSensor, iteration: iteration % 6 };
+          }),
+        ).finally(() => {
+          timer = ids.length > 0 ? window.setTimeout(update, MIN_INTERVAL * 1000) : 0;
+        });
+      };
+      update();
+    },
+  });
+  startAppListening({
+    actionCreator: removeNovastar,
+    effect(_, { getState }) {
+      const { length } = selectNovastarIds(getState());
+      if (length === 0 && timer !== 0) {
+        window.clearTimeout(timer);
+        timer = 0;
+      }
+    },
+  });
+}

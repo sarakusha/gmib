@@ -8,25 +8,71 @@ import windows from './windows';
 import localConfig from './localConfig';
 import { linuxAutostart } from './linux';
 import { updateTray } from './tray';
+import { openPlayer } from './playerWindow';
+import { getPlayers, hasPlayers, insertPlayer, uniquePlayerName } from './screen';
+import { dbReady } from './db';
+
+export const PlayerLabel = 'Плеер';
+
+const createNewPlayer = async (): Promise<void> => {
+  await dbReady;
+  const player = await uniquePlayerName({ name: 'Новый плеер' });
+  /* const { lastID } = */ await insertPlayer(player);
+  // await openPlayer(lastID);
+  // eslint-disable-next-line @typescript-eslint/no-use-before-define
+  updateMenu();
+};
+
+type AppMenuItem = Omit<MenuItemConstructorOptions, 'submenu'> & {
+  submenu: MenuItemConstructorOptions[];
+};
+
+export const playerMenu: AppMenuItem = {
+  label: PlayerLabel,
+  submenu: [], // [{ label: 'Создать новый', click: createNewPlayer }, { type: 'separator' }],
+};
+
+export const updatePlayerMenu = (): Promise<void> =>
+  dbReady.then(() =>
+    getPlayers().then(players => {
+      // const { submenu } = playerMenu;
+      playerMenu.submenu = [
+        // submenu.splice(
+        //   2,
+        //   submenu.length,
+        ...players.map<MenuItemConstructorOptions>(({ id, name }) => ({
+          label: name ?? `player#${id}`,
+          click: () => {
+            openPlayer(id);
+          },
+        })),
+        // );
+      ];
+    }),
+  );
 
 const SessionsLabel = 'NiBUS сессии';
 
-const template: MenuItemConstructorOptions[] = [
-  {
-    label: SessionsLabel,
-    submenu: [
-      {
-        label: 'Автозапуск',
-        type: 'checkbox',
-        click: mi => {
-          localConfig.set('autostart', mi.checked);
-        },
-        checked: localConfig.get('autostart'),
+const remoteMenu: AppMenuItem = {
+  label: SessionsLabel,
+  submenu: [
+    {
+      label: 'Автозапуск',
+      type: 'checkbox',
+      click: mi => {
+        localConfig.set('autostart', mi.checked);
       },
-      { label: 'Изменить список ...' },
-      { type: 'separator' },
-    ],
-  },
+      checked: localConfig.get('autostart'),
+    },
+    { label: 'Изменить список ...' },
+    { type: 'separator' },
+  ],
+};
+
+const template: MenuItemConstructorOptions[] = [
+  remoteMenu,
+  playerMenu,
+  // ... import.meta.env.VITE_PLAYER === '1' ? [playerMenu] : [],
   {
     label: 'Правка',
     role: 'editMenu',
@@ -183,19 +229,17 @@ if (process.platform === 'darwin') {
   });
 }
 
-const getRemoteSub = (): MenuItemConstructorOptions[] | undefined =>
-  template.find(menu => menu.label === SessionsLabel)?.submenu as MenuItemConstructorOptions[];
-
 export const updateMenu = (): void => {
-  const sub = getRemoteSub();
-  if (sub && sub.length > 0) sub[0].checked = localConfig.get('autostart');
-  const mainMenu = Menu.buildFromTemplate(template);
-  Menu.setApplicationMenu(mainMenu);
+  remoteMenu.submenu[0].checked = localConfig.get('autostart');
+  updatePlayerMenu().then(() => {
+    const mainMenu = Menu.buildFromTemplate(template);
+    Menu.setApplicationMenu(mainMenu);
+  });
 };
 
 app.whenReady().then(updateMenu);
 
-export type CreateWindow = (port?: number, host?: string) => Promise<BrowserWindow>;
+export type CreateWindow = (port?: number, host?: string) => BrowserWindow;
 
 export const getTitle = (port: number, host?: string): string =>
   `${import.meta.env.VITE_APP_NAME} - ${host || 'localhost'}:${port}`;
@@ -216,28 +260,23 @@ export const addRemoteFactory =
   (create: CreateWindow) =>
   (port?: number, address?: string, update = true): void => {
     const label = getRemoteLabel(port, address);
-    const sub = getRemoteSub();
-    if (!sub) return;
-    if (sub.findIndex(item => item.label === label) === -1) {
-      sub.push({ label, click: remoteClick(create) });
+    if (remoteMenu.submenu.findIndex(item => item.label === label) === -1) {
+      remoteMenu.submenu.push({ label, click: remoteClick(create) });
       update && updateMenu();
     }
   };
 
 export const removeRemote = ({ port, address }: RemoteHost): void => {
   const label = getRemoteLabel(port, address);
-  const sub = getRemoteSub();
-  if (!sub) return;
-  const index = sub.findIndex(item => item.label === label);
+  const index = remoteMenu.submenu.findIndex(item => item.label === label);
   if (index !== -1) {
-    sub.splice(index, 1);
+    remoteMenu.submenu.splice(index, 1);
     updateMenu();
   }
 };
 
 export const setRemoteEditClick = (click: () => void): void => {
-  const sub = getRemoteSub();
-  if (sub && sub.length > 1) sub[1].click = click;
+  remoteMenu.submenu[1].click = click;
   updateMenu();
 };
 
@@ -245,8 +284,7 @@ export const setRemotesFactory =
   (create: CreateWindow) =>
   (remotes: { port: number; address: string }[]): void => {
     const addRemote = addRemoteFactory(create);
-    const sub = getRemoteSub();
-    sub && sub.splice(4, sub.length);
+    remoteMenu.submenu.splice(4, remoteMenu.submenu.length);
     remotes.forEach(({ port, address }) => addRemote(port, address, false));
     updateMenu();
   };
@@ -261,3 +299,5 @@ localConfig.onDidChange('autostart', (autostart = false) => {
   updateMenu();
   updateTray();
 });
+
+dbReady.then(hasPlayers).then(async res => res || (await createNewPlayer()));

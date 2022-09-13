@@ -23,6 +23,9 @@
       "/@renderer/store/*": [
         "../renderer/src/store/*"
       ],
+      "/@player/store": [
+        "../player/src/store"
+      ],
       "/@common/*": [
         "../common/*"
       ]
@@ -36,6 +39,6 @@
   ],
   "exclude": [
     "**/*.spec.ts",
-    "**/*.test.ts",
+    "**/*.test.ts"
   ]
 }

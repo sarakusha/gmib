@@ -2,7 +2,6 @@
 /**
  * https://github.com/mifi/lossless-cut/blob/master/src/ffmpeg.js
  */
-
 import os from 'os';
 import path from 'path';
 import readline from 'readline';
@@ -12,11 +11,15 @@ import type { ExecaChildProcess, ExecaReturnValue } from 'execa';
 import { execa } from 'execa';
 import { fileTypeFromFile } from 'file-type';
 import type { FileTypeResult } from 'file-type/core';
+import type { FRAMERATE } from 'smpte-timecode';
+import Timecode from 'smpte-timecode';
 
 export const platform = os.platform();
 export const arch = os.arch();
 export const isWindows = platform === 'win32';
 export const isMac = platform === 'darwin';
+
+export const outExt = 'mkv'; // isMac ? 'mp4' : 'mkv';
 
 export interface FfprobeFormat {
   filename?: string;
@@ -55,7 +58,7 @@ export interface FfprobeStream {
   index: number;
   codec_name?: string;
   codec_long_name?: string;
-  profile?: number;
+  profile?: string;
   codec_type?: string;
   codec_time_base?: string;
   codec_tag_string?: string;
@@ -104,6 +107,46 @@ export interface FfprobeStream {
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:ffmpeg`);
 
+function parseTimecode(str: string, frameRate?: number): number | undefined {
+  // console.log(str, frameRate);
+  const t = Timecode(str, frameRate ? (parseFloat(frameRate.toFixed(3)) as FRAMERATE) : undefined);
+  if (!t) return undefined;
+  const seconds = (t.hours * 60 + t.minutes) * 60 + t.seconds + t.frames / t.frameRate;
+  return Number.isFinite(seconds) ? seconds : undefined;
+}
+
+export function getStreamFps(stream: FfprobeStream): number | undefined {
+  const match =
+    typeof stream.avg_frame_rate === 'string' &&
+    stream.avg_frame_rate.match(/^([0-9]+)\/([0-9]+)$/);
+  if (stream.codec_type === 'video' && match) {
+    const num = parseInt(match[1], 10);
+    const den = parseInt(match[2], 10);
+    if (den > 0) return num / den;
+  }
+  return undefined;
+}
+
+export function getTimecodeFromStreams(streams: FfprobeStream[]): number | undefined {
+  // debug('Trying to load timecode');
+  let foundTimecode: number | undefined;
+  streams.find(stream => {
+    try {
+      if (stream.tags && stream.tags.timecode) {
+        const fps = getStreamFps(stream);
+        foundTimecode = parseTimecode(stream.tags.timecode, fps);
+        debug(`Loaded timecode ${stream.tags.timecode} from stream ${stream.index}`);
+        return true;
+      }
+      return undefined;
+    } catch (err) {
+      // console.warn('Failed to parse timecode from file streams', err);
+      return undefined;
+    }
+  });
+  return foundTimecode;
+}
+
 export const getFfCommandLine = (cmd: string, args: string[]): string => {
   const mapArg = (arg: string): string => (/[^0-9a-zA-Z-_]/.test(arg) ? `'${arg}'` : arg);
   return `${cmd} ${args.map(mapArg).join(' ')}`;
@@ -124,7 +167,7 @@ export async function runFfprobe(
   timeout: number = import.meta.env.DEV ? 10000 : 30000,
 ): Promise<ExecaReturnValue> {
   const ffprobePath = getFfprobePath();
-  debug(getFfCommandLine('ffprobe', args));
+  // debug(getFfCommandLine('ffprobe', args));
   const ps = execa(ffprobePath, args);
   const timer = setTimeout(() => {
     debug('WARN: killing timed out ffprobe');
@@ -141,6 +184,42 @@ export function runFfmpeg(args: string[]): ExecaChildProcess {
   const ffmpegPath = getFfmpegPath();
   debug(getFfCommandLine('ffmpeg', args));
   return execa(ffmpegPath, args);
+}
+
+export async function renderThumbnailFromImage(
+  filePath: string,
+  thumbPath: string,
+): Promise<string> {
+  const args = ['-i', filePath, '-vf', 'scale=-2:100', thumbPath];
+  const ffmpegPath = getFfmpegPath();
+  await execa(ffmpegPath, args, { encoding: null });
+  return thumbPath;
+}
+
+export async function renderThumbnail(
+  filePath: string,
+  timestamp: number,
+  thumbPath: string,
+): Promise<string> {
+  const args = [
+    '-ss',
+    `${timestamp}`,
+    '-i',
+    filePath,
+    '-vf',
+    'scale=-2:100',
+    '-f',
+    'image2',
+    '-vframes',
+    '1',
+    '-q:v',
+    '10',
+    thumbPath,
+  ];
+
+  const ffmpegPath = getFfmpegPath();
+  await execa(ffmpegPath, args, { encoding: null });
+  return thumbPath;
 }
 
 async function readFormatData(filePath: string): Promise<FfprobeFormat> {
@@ -204,6 +283,59 @@ type Opts = {
   onProgress: (percent: number) => void;
 };
 
+type ImgOpts = {
+  outPath: string;
+  filePath: string;
+  duration?: number;
+};
+
+export async function generateFromImage({
+  outPath,
+  filePath,
+  duration = 5,
+}: ImgOpts): Promise<void> {
+  debug(`Generate video from image. filePath: ${filePath}, outPath: ${outPath}`);
+  const fps = 1 / duration;
+  const videoArgs = [
+    '-r',
+    fps.toFixed(3),
+    '-loop',
+    '1',
+    '-vcodec',
+    'libx264',
+    '-t',
+    duration.toFixed(),
+    '-pix_fmt',
+    'yuv420p',
+  ];
+  const ffmpegArgs = ['-hide_banner', '-i', filePath, ...videoArgs, '-an', '-sn', '-y', outPath];
+
+  const process = runFfmpeg(ffmpegArgs);
+
+  const { stdout } = await process;
+  debug(stdout);
+}
+
+export async function convertCopy(filePath: string, outPath: string): Promise<void> {
+  const ffmpegArgs = [
+    '-hide_banner',
+    '-fflags',
+    '+genpts',
+    '-i',
+    filePath,
+    '-vcodec',
+    'copy',
+    '-an',
+    '-sn',
+    '-y',
+    outPath,
+  ];
+  const process = runFfmpeg(ffmpegArgs);
+
+  const { stdout } = await process;
+  debug(stdout);
+}
+
 export async function html5ify({ outPath, filePath, speed, onProgress }: Opts): Promise<void> {
   // let audio;
   // if (hasAudio) {
@@ -234,7 +366,7 @@ export async function html5ify({ outPath, filePath, speed, onProgress }: Opts): 
   // h264/aac_at: No licensing when using HW encoder (Video/Audio Toolbox on Mac)
   // https://github.com/mifi/lossless-cut/issues/372#issuecomment-810766512
 
-  const targetHeight = 400;
+  // const targetHeight = 400;
 
   switch (video) {
     case 'hq': {
@@ -266,7 +398,8 @@ export async function html5ify({ outPath, filePath, speed, onProgress }: Opts): 
       if (isMac) {
         videoArgs = [
           '-vf',
-          `scale=-2:${targetHeight},format=yuv420p`,
+          // `scale=-2:${targetHeight},format=yuv420p`,
+          'format=yuv420p',
           '-allow_sw',
           '1',
           '-sws_flags',
@@ -281,7 +414,8 @@ export async function html5ify({ outPath, filePath, speed, onProgress }: Opts): 
         // '-c:v', 'libtheora', '-qscale:v', '1']; x264 can only be used in GPL projects
         videoArgs = [
           '-vf',
-          `scale=-2:${targetHeight},format=yuv420p`,
+          // `scale=-2:${targetHeight},format=yuv420p`,
+          'format=yuv420p',
           '-sws_flags',
           'neighbor',
           '-c:v',
@@ -345,25 +479,16 @@ export async function readFileMeta(
 
 const getFileBaseName = (filePath: string): string => path.parse(filePath).name;
 
-export const getHtml5ifiedPath = (outDir: string, filePath: string): string => {
-  const ext = isMac ? 'mp4' : 'mkv';
-  return path.join(outDir, `${getFileBaseName(filePath)}.${ext}`);
-};
+export const getHtml5ifiedPath = (outDir: string, filePath: string): string =>
+  path.join(outDir, `${getFileBaseName(filePath)}.${outExt}`);
 
-export function getStreamFps(stream: FfprobeStream): number | undefined {
-  const match =
-    typeof stream.avg_frame_rate === 'string' &&
-    stream.avg_frame_rate.match(/^([0-9]+)\/([0-9]+)$/);
-  if (stream.codec_type === 'video' && match) {
-    const num = parseInt(match[1], 10);
-    const den = parseInt(match[2], 10);
-    if (den > 0) return num / den;
-  }
-  return undefined;
-}
+export const isDurationValid = (duration: number) => Number.isFinite(duration) && duration > 0;
 
 export const isStreamThumbnail = (stream: FfprobeStream): boolean =>
   stream?.disposition?.attached_pic === 1;
+
+export const getAudioStreams = (streams: FfprobeStream[]): FfprobeStream[] =>
+  streams.filter(stream => stream.codec_type === 'audio');
 
 export const getRealVideoStreams = (streams: FfprobeStream[]): FfprobeStream[] =>
   streams.filter(stream => stream.codec_type === 'video' && !isStreamThumbnail(stream));
@@ -401,6 +526,7 @@ export async function getSmarterOutFormat(
   // ffprobe sometimes returns a list of formats, try to be a bit smarter about it.
   // const bytes = await readChunk(filePath, { startPosition: 0, length: 4100 });
   const fileTypeResponse = await fileTypeFromFile(filePath);
-  debug(`fileType detected format ${JSON.stringify(fileTypeResponse)}`);
+  debug(`fileType: ${JSON.stringify(fileTypeResponse)}`);
+  // debug(`fileType detected format ${JSON.stringify(fileTypeResponse)}`);
   return determineOutputFormat(formats, fileTypeResponse);
 }

@@ -1,10 +1,10 @@
 /* eslint-disable no-bitwise */
+import MinihostLoader from './MinihostLoader';
+
 import type { DeviceId } from '@nibus/core';
 import { findDeviceById } from '@nibus/core';
 
 import type { Minihost2Info } from '/@common/helpers';
-
-import MinihostLoader from './MinihostLoader';
 
 function getFraction(byte: number): number {
   let two = 2;

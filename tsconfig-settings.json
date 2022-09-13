@@ -35,10 +35,10 @@
     // "experimentalDecorators": true /* Enables experimental support for ES7 decorators. */,
     // "emitDecoratorMetadata": true /* Enables experimental support for emitting type metadata for decorators. */,
 
-    "lib": ["ESNext"],
-    "types": ["node", "jest"]
+    "lib": ["ESNext", "DOM"],
+    "types": ["node", "jest", "vite"]
   },
   "exclude": ["node_modules/**"],
-  "include": ["packages/{main,preload,renderer}/src/**/*.ts"],
+  "include": ["packages/{main,preload,renderer}/src/**/*.ts", "packages/common/**/*.ts"],
   "compileOnSave": false
 }

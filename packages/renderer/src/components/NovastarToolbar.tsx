@@ -2,19 +2,22 @@ import ReloadIcon from '@mui/icons-material/Refresh';
 import React from 'react';
 
 import { useSelector } from '../store';
-import { selectCurrentDeviceId, selectNovastarIsBusy } from '../store/selectors';
+import { selectCurrentDeviceId, selectNovastarByPath } from '../store/selectors';
 
 import BusyButton from './BusyButton';
 
 const NovastarToolbar: React.FC = () => {
-  const device = useSelector(selectCurrentDeviceId);
-  const isBusy = useSelector(selectNovastarIsBusy);
+  const path = useSelector(selectCurrentDeviceId);
+  const device = useSelector(state =>
+    path != null ? selectNovastarByPath(state, path) : undefined,
+  );
   return (
     <BusyButton
       icon={<ReloadIcon />}
       title="Обновить"
-      onClick={() => device && window.novastar.reloadNovastar(device)}
-      isBusy={isBusy}
+      onClick={() => path && window.novastar.reloadNovastar(path)}
+      isBusy={device && device.isBusy > 0}
+      disabled={!device || !device.connected}
     />
   );
 };

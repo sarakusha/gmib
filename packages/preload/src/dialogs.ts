@@ -3,8 +3,7 @@ import type { Dialog, SaveDialogSyncOptions } from 'electron';
 import { readFileSync, writeFileSync } from 'fs';
 
 import { setRemoteDialogOpen } from '/@renderer/store/currentSlice';
-
-import ipcDispatch from './ipcDispatch';
+import ipcDispatch from '/@common/ipcDispatch';
 
 export const showOpenDialogSync: Dialog['showOpenDialogSync'] = options =>
   ipcRenderer.sendSync('showOpenDialogSync', options);

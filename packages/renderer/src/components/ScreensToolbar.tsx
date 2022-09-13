@@ -1,18 +1,13 @@
 import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
-import SaveIcon from '@mui/icons-material/Save';
-import LoadIcon from '@mui/icons-material/SystemUpdateAlt';
+// import SaveIcon from '@mui/icons-material/Save';
+// import LoadIcon from '@mui/icons-material/SystemUpdateAlt';
 import { IconButton, Tooltip } from '@mui/material';
 import React from 'react';
 
-import { useSelector } from '../store';
-import type { ConfigState } from '../store/configSlice';
-
-import type { Writable } from '/@common/helpers';
 import { noop } from '/@common/helpers';
 
-import { selectConfig } from '../store/selectors';
-
+/*
 const load = (): void => {
   const data = window.dialogs.loadJSON('Загрузить из');
   if (data) {
@@ -30,31 +25,34 @@ const save = (config: ConfigState): void => {
   delete clone.loading;
   window.dialogs.saveJSON({ defaultPath, data: clone });
 };
+*/
 
 const ScreensToolbar: React.FC<{ readonly?: boolean; toggle?: () => void }> = ({
   readonly = true,
   toggle = noop,
-}) => {
-  const config = useSelector(selectConfig);
-  return (
+}) => 
+  // const config = useSelector(selectConfig);
+   (
     <>
+{/*
       <Tooltip title="Загрузить конфигурацию из файла">
-        <IconButton color="inherit" onClick={() => load()} size="large">
+        <IconButton color="inherit" size="large">
           <LoadIcon />
         </IconButton>
       </Tooltip>
       <Tooltip title="Сохранить конфигурацию в файл">
-        <IconButton color="inherit" onClick={() => save(config)} size="large">
+        <IconButton color="inherit"  size="large">
           <SaveIcon />
         </IconButton>
       </Tooltip>
+*/}
       <Tooltip title={readonly ? 'Разблокировать' : 'Заблокировать'}>
         <IconButton onClick={toggle} color="inherit" size="large">
           {readonly ? <LockIcon /> : <LockOpenIcon />}
         </IconButton>
       </Tooltip>
     </>
-  );
-};
+  )
+;
 
 export default ScreensToolbar;

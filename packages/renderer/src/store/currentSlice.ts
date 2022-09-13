@@ -3,26 +3,22 @@ import { createSlice } from '@reduxjs/toolkit';
 
 import type { Health } from '/@common/helpers';
 
-import { addScreen, removeScreen, showHttpPage, updateConfig } from './configSlice';
+// import { addScreen, removeScreen, showHttpPage } from './configSlice';
 import { addDevice, removeDevice } from './devicesSlice';
 import { addNovastar, removeNovastar } from './novastarsSlice';
 
-export type TabValues =
-  | 'devices'
-  | 'screens'
-  | 'autobrightness'
-  | 'overheat'
-  | 'log'
-  | 'media'
-  | 'playlist'
-  | 'scheduler';
+export type TabValues = 'devices' | 'screens' | 'autobrightness' | 'overheat' | 'log';
+// | 'media'
+// | 'playlist'
+// | 'scheduler';
 
 export interface CurrentState {
   tab: TabValues | undefined;
   device: string | undefined;
-  screen: string | undefined;
+  screen: number | undefined;
   health: Health | undefined;
   isRemoteDialogOpen: boolean;
+  // playlist: number | undefined;
 }
 
 const initialState: CurrentState = {
@@ -31,6 +27,7 @@ const initialState: CurrentState = {
   screen: undefined,
   health: undefined,
   isRemoteDialogOpen: false,
+  // playlist: undefined,
 };
 
 const currentSlice = createSlice({
@@ -43,7 +40,7 @@ const currentSlice = createSlice({
     setCurrentDevice(state, { payload: id }: PayloadAction<string | undefined>) {
       state.device = id;
     },
-    setCurrentScreen(state, { payload: id }: PayloadAction<string | undefined>) {
+    setCurrentScreen(state, { payload: id }: PayloadAction<number | undefined>) {
       state.screen = id;
     },
     setCurrentHealth(state, { payload: health }: PayloadAction<Health | undefined>) {
@@ -52,6 +49,9 @@ const currentSlice = createSlice({
     setRemoteDialogOpen(state, { payload: open }: PayloadAction<boolean>) {
       state.isRemoteDialogOpen = open;
     },
+    // setCurrentPlaylist(state, { payload: id }: PayloadAction<number| undefined>) {
+    //   state.playlist = id;
+    // },
   },
   extraReducers: builder => {
     builder.addCase(addDevice, (state, { payload: { id } }) => {
@@ -74,6 +74,7 @@ const currentSlice = createSlice({
         state.device = undefined;
       }
     });
+    /*
     builder.addCase(showHttpPage, state => {
       state.tab = 'screens';
     });
@@ -85,6 +86,8 @@ const currentSlice = createSlice({
         state.screen = undefined;
       }
     });
+*/
+    /*
     builder.addCase(updateConfig, (state, { payload: { screens } }) => {
       if (!screens || screens.length === 0) {
         state.screen = undefined;
@@ -92,6 +95,7 @@ const currentSlice = createSlice({
         state.screen = screens[0].id;
       }
     });
+*/
   },
 });
 
@@ -101,6 +105,7 @@ export const {
   setCurrentScreen,
   setCurrentHealth,
   setRemoteDialogOpen,
+  // setCurrentPlaylist,
 } = currentSlice.actions;
 
 export default currentSlice.reducer;

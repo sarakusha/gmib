@@ -17,7 +17,7 @@ export type AccordionListProps = {
   selected?: boolean;
 };
 
-const AccordionList: React.FC<AccordionListProps> = ({
+const AccordionList: React.FC<React.PropsWithChildren<AccordionListProps>> = ({
   name,
   title,
   component = List,

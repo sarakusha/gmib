@@ -1,9 +1,10 @@
-import { logLevels } from '@nibus/core/lib/common';
 import Ajv from 'ajv';
 import type { Schema } from 'electron-store';
 
-import type { Config} from './config';
-import { addressPattern, DEFAULT_OVERHEAD_PROTECTION, SPLINE_COUNT } from './config';
+import type { Config } from './config';
+import { DEFAULT_OVERHEAD_PROTECTION, SPLINE_COUNT } from './config';
+
+import { logLevels } from '@nibus/core/common';
 
 export const configSchema: Schema<Config> = {
   location: {
@@ -50,6 +51,7 @@ export const configSchema: Schema<Config> = {
   // test: {
   //   type: 'string',
   // },
+  /*
   screens: {
     type: 'array',
     items: {
@@ -132,6 +134,7 @@ export const configSchema: Schema<Config> = {
       default: [],
     },
   },
+*/
   logLevel: {
     enum: Object.keys(logLevels),
     default: 'none',
@@ -144,6 +147,8 @@ export const configSchema: Schema<Config> = {
         id: { type: 'string' },
         url: { type: 'string' },
         title: { type: 'string' },
+        permanent: { type: 'boolean' },
+        preload: { type: 'string' },
       },
       required: ['id', 'title'],
     },

@@ -49,7 +49,7 @@ const register = (svc: RemoteService): void => {
   const remote = pickRemoteService(svc);
   if (remote) {
     debug(`serviceUp ${JSON.stringify(remote)}}`);
-    getMainWindow().then(mainWindow => mainWindow?.webContents.send('serviceUp', remote));
+    getMainWindow()?.webContents.send('serviceUp', remote);
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
     addRemote(remote.port, remote.address);
   }
@@ -83,7 +83,7 @@ app.once('ready', () => {
     const remote = pickRemoteService(svc);
     if (remote) {
       debug(`serviceDown ${JSON.stringify(remote)}`);
-      getMainWindow().then(mainWindow => mainWindow?.webContents.send('serviceDown', remote));
+      getMainWindow()?.webContents.send('serviceDown', remote);
       if (!isCustomHost(remote)) {
         removeRemote(remote);
       }

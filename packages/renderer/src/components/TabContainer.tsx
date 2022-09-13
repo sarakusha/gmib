@@ -1,7 +1,7 @@
-
 import { Box } from '@mui/material';
-import type { DeviceId } from '@nibus/core';
 import React from 'react';
+
+import type { DeviceId } from '@nibus/core';
 
 // const useStyles = makeStyles({
 //   root: {
@@ -13,17 +13,21 @@ import React from 'react';
 //   },
 // });
 
-export type Props = {
+export type Props = React.PropsWithChildren<{
   id: string;
   selected?: boolean;
-};
+}>;
 
 export type MinihostTabProps = {
   id: DeviceId;
   selected?: boolean;
 };
 
-const TabContainer: React.FC<Props> = ({ id, children, selected = true }) => (
+const TabContainer: React.FC<Props> = ({
+  id,
+  children,
+  selected = true,
+}) => (
   <Box
     id={`tabpanel-${id}`}
     aria-labelledby={`tab-${id}`}

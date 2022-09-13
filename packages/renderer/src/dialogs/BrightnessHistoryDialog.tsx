@@ -1,7 +1,5 @@
-
 import { Box, Button, Dialog, DialogActions, DialogContent, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import type { BrightnessHistory } from '@nibus/core';
 import debugFactory from 'debug';
 import type {
   SeriesLineOptions,
@@ -20,6 +18,8 @@ import { noop } from '/@common/helpers';
 
 import { selectBrightness, selectLocation } from '../store/selectors';
 
+import type { BrightnessHistory } from '@nibus/core';
+
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:brightness`);
 
 type Props = {
@@ -33,14 +33,16 @@ const highchartsOptions: Highcharts.Options = {
     useUTC: false,
   },
   chart: {
-    zoomType: 'x',
-    alignTicks: false,
-    resetZoomButton: {
-      position: {
-        verticalAlign: 'bottom',
-        y: 30,
+    zooming: {
+      type: 'x',
+      resetButton: {
+        position: {
+          verticalAlign: 'bottom',
+          y: 30,
+        },
       },
     },
+    alignTicks: false,
     style: {
       fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif"',
     },

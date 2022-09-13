@@ -8,8 +8,6 @@ import {
   RadioGroup,
   Tooltip,
 } from '@mui/material';
-import type { LogLevel } from '@nibus/core/lib/common';
-import { logLevels } from '@nibus/core/lib/common';
 import React, { useState } from 'react';
 
 import { useDispatch, useSelector } from '../store';
@@ -17,6 +15,9 @@ import { setLogLevel } from '../store/configSlice';
 import { selectLogLevel } from '../store/selectors';
 
 import FormFieldSet from './FormFieldSet';
+
+import { logLevels } from '@nibus/core/common';
+import type { LogLevel } from '@nibus/core/common';
 
 // const useStyles = makeStyles(theme => ({
 //   content: {

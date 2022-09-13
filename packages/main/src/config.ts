@@ -1,11 +1,21 @@
+import fs from 'fs';
+import path from 'path';
+
+import { config as nibusConfig } from '@nibus/core/config';
+
+import debugFactory from 'debug';
 import log from 'electron-log';
 import Store from 'electron-store';
-import { config as nibusConfig } from '@nibus/core/lib/config';
+import isEqual from 'lodash/isEqual';
+import uniqBy from 'lodash/uniqBy';
 
-import type { Config } from '/@common/config';
+import type { Config, Page } from '/@common/config';
 import { configSchema } from '/@common/schema';
 
+const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:config`);
 // const version = app.getVersion();
+
+export const port = +(process.env['NIBUS_PORT'] ?? 9001) + 1;
 
 const config = new Store<Config>({
   name: import.meta.env.VITE_APP_NAME,
@@ -24,5 +34,54 @@ config.onDidChange('logLevel', logLevel => {
   nibusConfig().set('logLevel', logLevel);
 });
 nibusConfig().set('logLevel', config.get('logLevel'));
+
+const reTitle = /<\s*title[^>]*>(.+)<\s*\/\s*title>/i;
+const reId = /<\s*meta\s*data-id=['"](.+?)['"]>/i;
+
+async function updateTestsImpl(): Promise<void> {
+  const testDir = path.resolve(__dirname, '../../renderer/assets/tests');
+  const filenames = (await fs.promises.readdir(testDir))
+    .map(filename => path.join(testDir, filename))
+    .filter(filename => !fs.lstatSync(filename).isDirectory());
+  const tests = await Promise.all<Page | undefined>(
+    filenames.map(async filename => {
+      const html = await fs.promises.readFile(filename, 'utf-8');
+      const titleMatches = html.match(reTitle);
+      const idMatches = html.match(reId);
+      if (!titleMatches || !idMatches) {
+        debug(`Отсутствует заголовок или id: ${filename}`);
+        return undefined;
+      }
+      return {
+        id: idMatches[1],
+        title: titleMatches[1],
+        url: `file://${filename}`,
+        permanent: true,
+      };
+    }),
+  );
+  const preload = path.resolve(__dirname, '../../playerPreload/dist/index.cjs');
+  tests.push({
+    id: 'player',
+    title: 'Video Player',
+    url: `http://localhost:${9002}/player/index.html`,
+    preload,
+    permanent: true,
+  });
+  const prev = config.get('pages');
+  const items = uniqBy(tests.concat(prev), 'id');
+  if (!isEqual(prev, items)) config.set('pages', items);
+}
+
+const updateTests = (): void => {
+  updateTestsImpl().catch(err => debug(`error while update tests ${err.message}`));
+};
+
+updateTests();
+
+config.onDidChange('pages', newValue => {
+  if (newValue?.some(({ permanent }) => permanent)) return;
+  process.nextTick(() => updateTests());
+});
 
 export default config;

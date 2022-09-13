@@ -1,7 +1,5 @@
-
 import debounce from 'lodash/debounce';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-
 
 import type { ExtendedProps } from './StyledInput';
 import StyledInput from './StyledInput';
@@ -57,7 +55,7 @@ const SerialNoCell: React.FC<Props> = ({
   const [value, setValue] = useState(initValue);
   useEffect(() => setValue(initValue), [initValue]);
   const [changing, setChanging] = useState(false);
-  const updateValue = useMemo(
+  const updateValue = useMemo<(key: string, val: string) => void>(
     () =>
       debounce((key: string, val: string) => {
         if (!isEmpty(val)) {
@@ -67,7 +65,7 @@ const SerialNoCell: React.FC<Props> = ({
       }, 5000),
     [onChangeProperty],
   );
-  const changeHandler = useCallback(
+  const changeHandler = useCallback<Required<React.ComponentProps<typeof MaskedInput>>['onAccept']>(
     (_, { unmaskedValue }) => {
       setValue(prev => {
         const newValue = unmaskedValue.padStart(16, '0');

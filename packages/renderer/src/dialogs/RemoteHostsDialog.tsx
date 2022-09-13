@@ -11,7 +11,6 @@ import {
   TextField,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import { hasProps } from '@novastar/screen/lib/common';
 import React, { useEffect, useRef, useState } from 'react';
 import type { MouseEvent } from 'react';
 
@@ -22,69 +21,8 @@ import { useSelector } from '../store';
 import { selectAllRemoteHosts } from '../store/selectors';
 import timeid from '../util/timeid';
 
+import { hasProps } from '@novastar/screen/common';
 import IPut from 'iput';
-
-// const useStyles = makeStyles(theme => {
-//   return {
-//     // root: {
-//     //   display: 'flex',
-//     //   flexDirection: 'column',
-//     // },
-//     remote: {
-//       display: 'grid',
-//       gridTemplateColumns: '18ch 8ch 20ch 8ch',
-//       gap: theme.spacing(1),
-//       padding: theme.spacing(1),
-//       fontSize: '1rem',
-//     },
-//     header: {
-//       display: 'contents',
-//       '& > *': {
-//         color: theme.palette.primary.main,
-//         // textAlign: 'center',
-//         fontSize: '0.875rem',
-//       },
-//     },
-//     fieldSet: {
-//       // borderRadius: theme.shape.borderRadius,
-//       // borderColor: 'rgba(0, 0, 0, 0.23)',
-//       // borderWidth: 1,
-//       // borderStyle: 'solid',
-//       minHeight: 100,
-//       overflowY: 'auto',
-//       '& ~ $fieldSet': {
-//         marginTop: theme.spacing(2),
-//       },
-//     },
-//     actions: {
-//       position: 'relative',
-//     },
-//     add: {
-//       position: 'absolute',
-//       left: 8 + theme.spacing(2),
-//       top: 8,
-//     },
-//     iput: {
-//       padding: 0,
-//       border: 'none',
-//       borderRadius: 0,
-//       '& input': {
-//         borderBottom: '1px solid rgba(0, 0, 0, 0.42)',
-//         fontFamily: theme.typography.fontFamily,
-//         fontSize: 16,
-//         padding: '6px 0',
-//         width: '4ch',
-//       },
-//     },
-//     close: {
-//       alignSelf: 'flex-start',
-//     },
-//     found: {
-//       display: 'contents',
-//       color: theme.palette.text.disabled,
-//     },
-//   };
-// });
 
 export type RemoteHostsDialogProps = {
   open?: boolean;

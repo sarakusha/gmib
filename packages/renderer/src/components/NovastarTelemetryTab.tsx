@@ -1,6 +1,5 @@
 
 import { Box, Typography } from '@mui/material';
-import getScreenLocation from '@novastar/screen/lib/getScreenLocation';
 import groupBy from 'lodash/groupBy';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -14,6 +13,8 @@ import { getStateAsync, noop, NovastarSelector } from '/@common/helpers';
 
 import ModuleInfo from './ModuleInfo';
 import TelemetryToolbar from './TelemetryToolbar';
+
+import getScreenLocation from '@novastar/screen/getScreenLocation';
 
 // const useStyles = makeStyles(theme => ({
 //   grid: {

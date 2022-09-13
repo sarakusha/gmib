@@ -1,9 +1,11 @@
 import { connect } from 'net';
 
-import { Connection, series as pMap } from '@novastar/codec';
+import Connection from '@novastar/codec/Connection';
+import { series as pMap } from '@novastar/codec/helper';
 import net, { findNetDevices as novaFindNetDevices } from '@novastar/net';
-import ScreenConfigurator from '@novastar/screen/lib/ScreenConfigurator';
-import '@novastar/screen/lib/api';
+import ScreenConfigurator from '@novastar/screen/ScreenConfigurator';
+
+// import '@novastar/screen/api';
 import debugFactory from 'debug';
 
 import type { Screen, ScreenArg, ScreenBrightness } from '/@renderer/store/novastarsSlice';
@@ -23,9 +25,10 @@ import memoize from 'lodash/memoize';
 import type { CabinetInfo, NovastarTelemetry } from '/@common/helpers';
 
 import NovastarLoader from './NovastarLoader';
-import ipcDispatch from './ipcDispatch';
 
-const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:preload `);
+import ipcDispatch from '/@common/ipcDispatch';
+
+const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:nspreload`);
 
 /*
 type FilterFlags<Base, Condition> = {
@@ -54,6 +57,12 @@ export const closeAll = () => {
   Object.values(novastarControls).forEach(ctrl => ctrl?.session.close());
 };
 
+/**
+ * Connect to shared serial connection
+ * @param path
+ * @param port
+ * @param host
+ */
 export const createConnection = (path: string, port: number, host?: string): Promise<void> =>
   new Promise(resolve => {
     const socket = connect(port, host, () => {
@@ -69,8 +78,7 @@ export const createConnection = (path: string, port: number, host?: string): Pro
         });
         connection.once('close', () => {
           ipcDispatch(removeNovastar(path));
-          // window.postMessage({ dispatch: 'removeNovastar', payload: path }, window.location.href);
-          delete novastarControls[path];
+          if (novastarControls[path] === ctrl) delete novastarControls[path];
           if (!socket.destroyed) socket.destroy();
         });
         resolve();
@@ -78,6 +86,7 @@ export const createConnection = (path: string, port: number, host?: string): Pro
     });
   });
 
+/*
 net.on('open', address => {
   const session = net.sessions[address];
   if (!session) {
@@ -92,14 +101,15 @@ net.on('close', address => {
   ipcDispatch(removeNovastar(address));
   delete novastarControls[address];
 });
+*/
 
 export const findNetDevices = (): void => {
-  novaFindNetDevices().then(addresses => {
-    Object.entries(net.sessions)
-      .filter(([address]) => !addresses.includes(address.split(':', 2)[0]))
-      .forEach(([, session]) => session.close());
-    addresses.forEach(address => net.open(address));
-  });
+  debug('find');
+  if (!isRemoteSession) {
+    novaFindNetDevices().then(addresses => {
+      addresses.forEach(address => net.open(address));
+    });
+  }
 };
 
 export const reloadNovastar = async (path: string): Promise<void> => {
@@ -112,7 +122,8 @@ export const reloadNovastar = async (path: string): Promise<void> => {
   await controller.reload();
   const hasDVISignalIn = await controller.ReadHasDVISignalIn();
   if (hasDVISignalIn == null) {
-    ipcDispatch(removeNovastar(path));
+    controller.session.close();
+    // ipcDispatch(removeNovastar(path));
     return;
   }
   const screens = await pMap(controller.screens, async (info, index) => {
@@ -139,36 +150,38 @@ export const reloadNovastar = async (path: string): Promise<void> => {
   ipcDispatch(novastarReady(path));
 };
 
-export const readLightSensor = async (path: string): Promise<void> => {
+export const readLightSensor = async (path: string): Promise<number | null> => {
   const controller = novastarControls[path];
   if (!controller) {
     ipcDispatch(removeNovastar(path));
-    return;
+    return null;
   }
   const value = await controller.ReadFirstFuncCardLightSensor();
   // debug(`illuminance(${path}): ${value}`);
   value != null && ipcDispatch(pushSensorValue({ kind: 'illuminance', address: path, value }));
+  return value;
 };
 
-export const updateHasDviIn = async (path: string): Promise<void> => {
+export const updateHasDviIn = async (path: string): Promise<boolean | null> => {
   const controller = novastarControls[path];
   if (!controller) {
     ipcDispatch(removeNovastar(path));
-    return;
+    return null;
   }
   const hasDVISignalIn = await controller.ReadHasDVISignalIn();
   if (hasDVISignalIn == null) {
-    ipcDispatch(removeNovastar(path));
-    return;
+    controller.session.close();
+  } else {
+    ipcDispatch(
+      updateNovastar({
+        id: path,
+        changes: {
+          hasDVISignalIn,
+        },
+      }),
+    );
   }
-  ipcDispatch(
-    updateNovastar({
-      id: path,
-      changes: {
-        hasDVISignalIn,
-      },
-    }),
-  );
+  return hasDVISignalIn;
 };
 
 export const setDisplayMode = async ({ path, screen, value }: ScreenArg<'mode'>): Promise<void> => {
@@ -235,7 +248,12 @@ export const setBrightness = async ({ path, screen, percent }: ScreenBrightness)
     ipcDispatch(removeNovastar(path));
     return;
   }
-  await controller.WriteBrightness(percent, screen);
+  const res = await controller.WriteBrightness(percent, screen);
+  if (res == null) {
+    controller.session.close();
+    // ipcDispatch(removeNovastar(path));
+    return;
+  }
   const screens = screen === -1 ? controller.screens.map((_, index) => index) : [screen];
   await pMap(screens, async scr => {
     const value = await controller.ReadFirstRGBVBrightness(scr);
@@ -250,32 +268,46 @@ export const setBrightness = async ({ path, screen, percent }: ScreenBrightness)
   });
 };
 
-const watchNovastar = (): void => {
+const watchNetNovastars = (): void => {
   const openHandler = async (address: string): Promise<void> => {
     const session = net.sessions[address];
     if (!session) {
       debug(`Unknown session: ${address}`);
       return;
     }
-    novastarControls[address] = new ScreenConfigurator(session);
-    ipcDispatch(
-      addNovastar({
-        path: address,
-        isBusy: 0,
-      }),
-    );
-    await reloadNovastar(address);
+    if (novastarControls[address]) {
+      ipcDispatch(updateNovastar({ id: address, changes: { connected: true } }));
+    } else {
+      novastarControls[address] = new ScreenConfigurator(session);
+      ipcDispatch(
+        addNovastar({
+          path: address,
+          isBusy: 0,
+          connected: true,
+        }),
+      );
+    }
+  };
+
+  const disconnectHandler = (address: string): void => {
+    ipcDispatch(updateNovastar({ id: address, changes: { connected: false } }));
   };
 
   const closeHandler = (address: string): void => {
     ipcDispatch(removeNovastar(address));
     delete novastarControls[address];
   };
+
   net.on('open', openHandler);
+  net.on('disconnect', disconnectHandler);
   net.on('close', closeHandler);
+
+  findNetDevices();
 };
 
-if (!isRemoteSession) watchNovastar();
+if (!isRemoteSession) {
+  watchNetNovastars();
+}
 
 export const telemetry = memoize((path: string): NovastarTelemetry | undefined => {
   const controller = novastarControls[path];
@@ -303,5 +335,3 @@ export const telemetry = memoize((path: string): NovastarTelemetry | undefined =
     cancel: () => loader.cancel(),
   };
 });
-
-findNetDevices();

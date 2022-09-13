@@ -19,6 +19,7 @@ import {
   getMibTypes as getMibTypesOrig,
   getNibusSession,
 } from '@nibus/core';
+
 import debugFactory from 'debug';
 import debounce from 'lodash/debounce';
 import memoize from 'lodash/memoize';
@@ -56,7 +57,7 @@ import {
   setSearching,
   setStatus,
 } from '/@renderer/store/sessionSlice';
-import { convertCfgFrom } from '/@common/config';
+import type { Config } from '/@common/config';
 import type {
   Health,
   Modules,
@@ -70,7 +71,9 @@ import { toErrorMessage } from '/@common/helpers';
 import Finder from './Finder';
 import Minihost2Loader from './Minihost2Loader';
 import Minihost3Loader from './Minihost3Loader';
-import ipcDispatch from './ipcDispatch';
+
+import ipcDispatch from '/@common/ipcDispatch';
+
 import { createConnection } from './novastar';
 
 import { validateConfig } from '/@common/schema';
@@ -214,7 +217,8 @@ export const sendConfig = debounce((state: Record<string, unknown>): void => {
   };
 
   const configHandler = (config: Record<string, unknown>): void => {
-    const data = convertCfgFrom(config);
+    // const data = convertCfgFrom(config);
+    const data = config as Config;
     if (!validateConfig(data)) debug('Invalid configuration data received');
     ipcDispatch(updateConfig(data));
   };
@@ -246,6 +250,7 @@ export const sendConfig = debounce((state: Record<string, unknown>): void => {
       addNovastar({
         path,
         isBusy: 0,
+        connected: true,
       }),
     );
   };

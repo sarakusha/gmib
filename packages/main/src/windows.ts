@@ -2,7 +2,8 @@ import type { BrowserWindow } from 'electron';
 
 const windows = new Set<BrowserWindow>();
 
-export const screenWindows = new Map<string, BrowserWindow>();
+export const screenWindows = new Map<number, BrowserWindow>();
+export const playerWindows = new Map<number, BrowserWindow>();
 
 export const showAll = (): void =>
   [...windows].forEach(window => {

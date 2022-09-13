@@ -2,10 +2,10 @@
  @typescript-eslint/no-unused-vars */
 import { EventEmitter } from 'events';
 
-import type { DeviceId, IDevice, INibusConnection, NmsDatagram } from '@nibus/core';
-import Address from '@nibus/core/lib/Address';
-
 import timeid from '../util/timeid';
+
+import type { DeviceId, IDevice, INibusConnection, NmsDatagram } from '@nibus/core';
+import Address from '@nibus/core/Address';
 
 export default class StubDevice extends EventEmitter implements IDevice {
   readonly address = Address.empty;

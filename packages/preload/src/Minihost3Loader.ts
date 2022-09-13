@@ -1,11 +1,11 @@
 /* eslint-disable no-bitwise */
+import MinihostLoader from './MinihostLoader';
+
 import type { DeviceId } from '@nibus/core';
 import { findDeviceById } from '@nibus/core';
 
 import type { Minihost3Info } from '/@common/helpers';
 import { getEnumValues, Minihost3Selector } from '/@common/helpers';
-
-import MinihostLoader from './MinihostLoader';
 
 const digits = (len: number): ((val: number) => number) => {
   const dec = 10 ** len;

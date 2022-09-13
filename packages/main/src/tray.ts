@@ -1,4 +1,4 @@
-import { app, Menu, Tray } from 'electron';
+import { app, Menu, type MenuItem, Tray } from 'electron';
 import os from 'os';
 import path from 'path';
 
@@ -31,8 +31,15 @@ export const updateTray = (): void => {
       },
       checked: localConfig.get('autostart'),
     },
-    { type: 'separator' },
-    { role: 'quit', label: 'Выход' },
+    ...(localConfig.get('autostart')
+      ? []
+      : [
+          { type: 'separator' } as MenuItem,
+          {
+            role: 'quit',
+            label: 'Выход',
+          } as MenuItem,
+        ]),
   ]);
   tray && tray.appIcon?.setContextMenu(contextMenu);
 };

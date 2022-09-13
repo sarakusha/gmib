@@ -14,7 +14,7 @@ export const useToolbar = (): [ToolbarElement, (toolbar: ToolbarElement) => void
   return tuplify(toolbar, setToolbar);
 };
 
-const ToolbarProvider: React.FC = ({ children }) => {
+const ToolbarProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
   const [toolbar, setToolbar] = useState<ToolbarElement>(null);
   const value = useMemo(() => ({ toolbar, setToolbar }), [toolbar]);
   return <ToolbarContext.Provider value={value}>{children}</ToolbarContext.Provider>;

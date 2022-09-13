@@ -3,8 +3,6 @@
 import FolderIcon from '@mui/icons-material/FolderOpen';
 import SaveAltIcon from '@mui/icons-material/SaveAlt';
 import { Box, Button, FormControl, FormHelperText, IconButton } from '@mui/material';
-import type { Kind} from '@nibus/core/lib/flash';
-import { KindMap } from '@nibus/core/lib/flash/FlashKinds';
 import React, { memo, useCallback, useState } from 'react';
 
 import { useSelector } from '../store';
@@ -16,6 +14,9 @@ import { getStatesAsync } from '/@common/helpers';
 import FilenameEllipsis from './FilenameEllipsis';
 import FormFieldSet from './FormFieldSet';
 import Selector from './Selector';
+
+import type { Kind} from '@nibus/core/flash';
+import { KindMap } from '@nibus/core/flash/FlashKinds';
 
 const StyledSelector = extendStyled(Selector, { hidden: false })(({ hidden }) => ({
   flex: '0 1 12ch',

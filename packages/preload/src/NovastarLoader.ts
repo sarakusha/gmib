@@ -1,5 +1,6 @@
-import type ScreenConfigurator from '@novastar/screen';
-import getCabinetPosition from '@novastar/screen/lib/getCabinetPosition';
+import type ScreenConfigurator from '@novastar/screen/ScreenConfigurator';
+import getCabinetPosition from '@novastar/screen/getCabinetPosition';
+
 import flatten from 'lodash/flatten';
 import pMap from 'p-map';
 

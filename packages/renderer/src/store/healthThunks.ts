@@ -1,14 +1,14 @@
-import type { DeviceId } from '@nibus/core';
-import Address from '@nibus/core/lib/Address';
-import { series as pMap } from '@novastar/codec/lib/helper';
 import debugFactory from 'debug';
 import flatten from 'lodash/flatten';
 import groupBy from 'lodash/groupBy';
 import intersection from 'lodash/intersection';
+// import pMap from 'p-map';
 
 import type { Aggregations } from '/@common/helpers';
 import { Minihost3Selector, minmax, MINUTE, notEmpty } from '/@common/helpers';
 import { isRemoteSession } from '/@common/remote';
+
+import screenApi, { selectScreen, selectScreens } from '../api/screens';
 
 import { setProtectionProp } from './configSlice';
 import { updateBrightness } from './configThunks';
@@ -21,11 +21,13 @@ import {
   selectBrightness,
   selectDeviceById,
   selectOverheatProtection,
-  selectScreenById,
-  selectScreens,
 } from './selectors';
 
 import type { AppThunk, RootState } from './index';
+
+import type { DeviceId } from '@nibus/core';
+import Address from '@nibus/core/Address';
+import { series as pMap } from '@novastar/codec/helper';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:health`);
 
@@ -55,7 +57,7 @@ const calcMedian = (sorted: number[]): number => {
 };
 
 const updateMaxBrightness =
-  (id: string, aggregations: Aggregations, desiredBrightness: number): AppThunk =>
+  (id: number, aggregations: Aggregations, desiredBrightness: number): AppThunk =>
   (dispatch, getState) => {
     const health = window.config.get('health') ?? {};
     if (!health.screens) {
@@ -88,12 +90,14 @@ const updateMaxBrightness =
   };
 
 type GroupedByScreens = {
-  screens: string[];
+  screens: number[];
   devices: DeviceId[];
 };
 
 const groupDevicesByScreens = (state: RootState): GroupedByScreens[] => {
-  const screens = selectScreens(state);
+  const { data: screensData } = screenApi.endpoints.getScreens.select()(state);
+  const screens = screensData ? selectScreens(screensData) : [];
+  // const screens = selectScreens(state);
   const allDevices = selectAllDevices(state);
   const series = screens
     .filter(({ addresses }) => addresses !== undefined && addresses.length > 0)
@@ -126,7 +130,7 @@ const groupDevicesByScreens = (state: RootState): GroupedByScreens[] => {
       container.devices = [...new Set([...container.devices, ...item.devices])];
       debug(
         `WARNING: screens ${container.screens
-          .map(screenId => selectScreenById(state, screenId))
+          .map(screenId => screensData && selectScreen(screensData, screenId))
           .filter(notEmpty)
           .map(({ name }) => name)
           .join(', ')} refer to the same device addresses`,
@@ -154,6 +158,7 @@ const checkTemperature =
   async (dispatch, getState): Promise<void> => {
     if (isRemoteSession) throw new Error('Only local session');
     const state = getState();
+    const { data: screensData } = screenApi.endpoints.getScreens.select()(state);
     const overheatProtection = selectOverheatProtection(state);
     if (!overheatProtection) return;
     const desiredBrightness = selectBrightness(state);
@@ -172,7 +177,7 @@ const checkTemperature =
     const groups = groupDevicesByScreens(state);
     const all = await Promise.all(
       groups.map(
-        async ({ screens, devices }): Promise<{ screens: string[]; temperatures: number[] }> => {
+        async ({ screens, devices }): Promise<{ screens: number[]; temperatures: number[] }> => {
           const results = await Promise.all(
             groupDevicesByConnection(
               devices
@@ -208,7 +213,7 @@ const checkTemperature =
       const maximum = sorted[sorted.length - 1];
       const average = calcAverage(sorted);
       const median = calcMedian(sorted);
-      const { brightnessFactor = 1 } = selectScreenById(state, screens[0]) ?? {};
+      const { brightnessFactor = 1 } = (screensData && selectScreen(screensData, screens[0])) ?? {};
       screens.forEach(id => {
         dispatch(
           updateMaxBrightness(
@@ -222,7 +227,7 @@ const checkTemperature =
     const existingScreens = flatten(groups.map(({ screens }) => screens));
     const health = window.config.get('health');
     Object.keys(health.screens).forEach(id => {
-      existingScreens.includes(id) || delete health.screens[id];
+      existingScreens.includes(Number(id)) || delete health.screens[id];
     });
     health.timestamp = Date.now();
     window.config.set('health', health);

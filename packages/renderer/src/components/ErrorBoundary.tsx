@@ -1,4 +1,6 @@
-import type { ErrorInfo, ReactNode } from 'react';
+import { Typography } from '@mui/material';
+import Box from '@mui/material/Box';
+import type { ErrorInfo } from 'react';
 import React from 'react';
 
 type State = {
@@ -8,7 +10,10 @@ type State = {
 
 type Props = Record<string, unknown>;
 
-export default class ErrorBoundary extends React.PureComponent<Props, State> {
+export default class ErrorBoundary extends React.PureComponent<
+  React.PropsWithChildren<Props>,
+  State
+> {
   constructor(props: Props) {
     super(props);
     this.state = {};
@@ -24,23 +29,21 @@ export default class ErrorBoundary extends React.PureComponent<Props, State> {
     this.setState({ error, errorInfo });
   }
 
-  render(): ReactNode {
+  render() {
     const {
-      props: { children, value },
+      props: { children },
       state: { error, errorInfo },
     } = this;
     if (errorInfo) {
       // Error path
       return (
         <div>
-          <h2>Something went wrong.</h2>
-          <details style={{ whiteSpace: 'pre-wrap' }}>
+          <Typography variant="h5">Something went wrong.</Typography>
+          <Box component="details" sx={{ whiteSpace: 'pre-wrap' }}>
             {error && error.toString()}
             <br />
-            {value && `${value}`}
-            <br />
             {errorInfo.componentStack}
-          </details>
+          </Box>
         </div>
       );
     }

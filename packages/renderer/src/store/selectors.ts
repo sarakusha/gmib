@@ -1,6 +1,7 @@
-import type { AddressParam, DeviceId, Display, LogLevel } from '@nibus/core/lib';
-import Address, { AddressType } from '@nibus/core/lib/Address';
-import { hasProps } from '@novastar/screen/lib/common';
+import type { AddressParam, DeviceId, Display, LogLevel } from '@nibus/core';
+import Address, { AddressType } from '@nibus/core/Address';
+import { hasProps } from '@novastar/screen/common';
+
 import { createSelector } from '@reduxjs/toolkit';
 import maxBy from 'lodash/maxBy';
 import pick from 'lodash/pick';
@@ -9,7 +10,7 @@ import type { ConfigState } from './configSlice';
 import type { CurrentState, TabValues } from './currentSlice';
 import type { DeviceProps, DeviceState, DeviceStateWithParent } from './devicesSlice';
 import { devicesAdapter } from './devicesSlice';
-import type {FlasherState} from './flasherSlice';
+import type { FlasherState } from './flasherSlice';
 import { logAdapter } from './logSlice';
 import { mibsAdapter } from './mibsSlice';
 import { novastarsAdapter } from './novastarsSlice';
@@ -19,10 +20,9 @@ import type { FinderState, SessionState } from './sessionSlice';
 
 import type { RootState } from './index';
 
-import type { Config, OverheatProtection, Page, Screen } from '/@common/config';
+import type { Config, OverheatProtection, Page } from '/@common/config';
 import type { Health, ValueState } from '/@common/helpers';
 import { findById, notEmpty } from '/@common/helpers';
-
 
 export const {
   selectAll: selectAllDevices,
@@ -49,25 +49,15 @@ export const selectAutobrightness = (state: RootState): boolean =>
 export const selectSpline = (state: RootState): Config['spline'] => selectConfig(state).spline;
 export const selectLocation = (state: RootState): Config['location'] =>
   selectConfig(state).location;
-export const selectScreens = (state: RootState): Screen[] => selectConfig(state).screens;
-export const selectScreenById = (state: RootState, id?: string): Screen | undefined =>
-  (id && findById(selectConfig(state).screens, id)) || undefined;
+// export const selectScreens = (state: RootState): Screen[] => selectConfig(state).screens;
+// export const selectScreenById = (state: RootState, id?: string): Screen | undefined =>
+//   (id && findById(selectConfig(state).screens, id)) || undefined;
 export const selectLogLevel = (state: RootState): LogLevel => selectConfig(state).logLevel;
 export const selectAllPages = (state: RootState): Page[] => selectConfig(state).pages;
 export const selectPageById = (state: RootState, id: string): Page | undefined =>
   findById(selectAllPages(state), id);
 export const selectSessionVersion = (state: RootState): string | undefined =>
   selectConfig(state).version;
-export const selectScreenAddresses = (state: RootState): string[] =>
-  [
-    ...new Set(
-      selectScreens(state).reduce<string[]>(
-        (res, { addresses }) =>
-          addresses ? [...res, ...addresses.map(address => address.replace(/[+-].*$/, ''))] : res,
-        [],
-      ),
-    ),
-  ].sort();
 export const selectOverheatProtection = (state: RootState): OverheatProtection | undefined =>
   selectConfig(state).overheatProtection;
 export const selectCurrent = (state: RootState): CurrentState => state.current;
@@ -77,7 +67,7 @@ export const selectCurrentDeviceId = (state: RootState): string | undefined =>
   selectCurrent(state).device;
 export const selectIsRemoteDialogOpen = (state: RootState): boolean =>
   selectCurrent(state).isRemoteDialogOpen;
-export const selectCurrentScreenId = (state: RootState): string | undefined =>
+export const selectCurrentScreenId = (state: RootState): number | undefined =>
   selectCurrent(state).screen;
 export const selectCurrentDevice = (state: RootState): DeviceState | undefined => {
   const device = selectCurrentDeviceId(state);
@@ -90,6 +80,8 @@ export const selectNovastarIsBusy = (state: RootState): boolean => {
   const novastar = path !== undefined && selectNovastarByPath(state, path);
   return Boolean(novastar && novastar.isBusy > 0);
 };
+// export const selectCurrentPlaylist = (state: RootState): number | undefined =>
+//   selectCurrent(state).playlist;
 
 export const selectAllProps = (state: RootState, id: DeviceId): DeviceProps =>
   selectDeviceById(state, id)?.props ?? {};
@@ -201,3 +193,21 @@ const selectFlasher = (state: RootState): FlasherState => state.flasher;
 export const selectProgress = (state: RootState): number => selectFlasher(state).progress;
 
 export const selectFlashing = (state: RootState): boolean => selectFlasher(state).flashing;
+
+/*
+export const {
+  selectAll: selectScreens,
+  selectById: selectScreen,
+  selectTotal: selectTotalScreens,
+} = screensAdapter.getSelectors<RootState>(state => state.screens);
+export const selectScreenAddresses = (state: RootState): string[] =>
+  [
+    ...new Set(
+      selectScreens(state).reduce<string[]>(
+        (res, { addresses }) =>
+          addresses ? [...res, ...addresses.map(address => address.replace(/[+-].*$/, ''))] : res,
+        [],
+      ),
+    ),
+  ].sort();
+*/

@@ -1,0 +1,14 @@
+body,
+html {
+  height: 100%;
+  display: grid;
+  background-color: rgba(0, 0, 155, 0.3);
+  padding: 0;
+  margin: 0;
+}
+
+span {
+  margin: auto;
+  font-size: 40vh;
+  text-shadow: -3px -3px 0 #fff, 3px -3px 0 #fff, -3px 3px 0 #fff, 3px 3px 0 #fff;
+}

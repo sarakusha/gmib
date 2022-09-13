@@ -2,72 +2,16 @@ import { Box, InputAdornment, MenuItem, Paper, TextField, Typography } from '@mu
 import { styled } from '@mui/material/styles';
 import React, { useCallback } from 'react';
 
+import { selectScreen, useGetScreensQuery } from '../api/screens';
 import { useDispatch, useSelector } from '../store';
 import { setProtectionProp } from '../store/configSlice';
+import { selectCurrentHealth, selectOverheatProtection } from '../store/selectors';
 
 import type { OverheatProtection } from '/@common/config';
 import { DEFAULT_OVERHEAD_PROTECTION } from '/@common/config';
-import { findById, toNumber } from '/@common/helpers';
-
-import {selectCurrentHealth, selectOverheatProtection, selectScreens} from '../store/selectors';
+import { toNumber } from '/@common/helpers';
 
 import FormFieldSet from './FormFieldSet';
-
-// const useStyles = makeStyles(theme => ({
-//   root: {
-//     padding: theme.spacing(1),
-//     marginLeft: 'auto',
-//     marginRight: 'auto',
-//     '& > div ~ div': {
-//       marginTop: theme.spacing(1),
-//     },
-//   },
-//   content: {
-//     padding: theme.spacing(1),
-//   },
-//   params: {
-//     display: 'flex',
-//     flexWrap: 'wrap',
-//     // flexDirection: 'column',
-//     gap: theme.spacing(1),
-//     '& > *': {
-//       width: '18ch',
-//     },
-//   },
-//   screens: {
-//     // position: 'relative',
-//     // padding: theme.spacing(1),
-//     // paddingTop: '5ch',
-//     display: 'flex',
-//     flexWrap: 'wrap',
-//     gap: theme.spacing(1),
-//   },
-//   screen: {
-//     padding: theme.spacing(1),
-//     borderRadius: theme.shape.borderRadius,
-//     borderColor: 'rgba(0, 0, 0, 0.23)',
-//     borderWidth: 1,
-//     borderStyle: 'solid',
-//   },
-//   wrapper: {
-//     display: 'grid',
-//     gridTemplateColumns: '14ch 5ch',
-//     gridTemplateRows: 'auto',
-//     gap: theme.spacing(1),
-//   },
-//   value: {
-//     marginLeft: 'auto',
-//   },
-//   empty: {
-//     marginLeft: 'auto',
-//     marginRight: 'auto',
-//   },
-//   timestamp: {
-//     // position: 'absolute',
-//     // left: theme.spacing(1),
-//     // top: theme.spacing(1),
-//   },
-// }));
 
 const intervalInputProps = {
   startAdornment: <InputAdornment position="start">минуты</InputAdornment>,
@@ -129,7 +73,9 @@ const OverheatProtectionTab: React.FC = () => {
   //   timestamp: Date.now(),
   // }; //
   const health = useSelector(selectCurrentHealth);
-  const screens = useSelector(selectScreens);
+  const { data: screensData } = useGetScreensQuery();
+  // const screens = screensData && selectScreens(screensData);
+  // const screens = useSelector(selectScreens);
   return (
     <Box
       sx={{
@@ -214,32 +160,35 @@ const OverheatProtectionTab: React.FC = () => {
           <Params>
             {Object.entries(health.screens).map(([id, screenHealth]) => {
               const [maximum, average, median] = screenHealth.aggregations;
+              const screen = screensData && selectScreen(screensData, id);
               return (
-                <Screen key={id} legend={findById(screens, id)?.name ?? id}>
-                  <Box
-                    sx={{
-                      display: 'grid',
-                      gridTemplateColumns: '14ch 5ch',
-                      gridTemplateRows: 'auto',
-                      gap: 1,
-                    }}
-                  >
-                    <div>Максимальная</div>
-                    <Value>{maximum}&deg;C</Value>
-                    <div>Средняя</div>
-                    <Value>{average}&deg;C</Value>
-                    <div>Медиана</div>
-                    <Value>{median}&deg;C</Value>
-                    <div>Ограничение</div>
-                    <Value
+                screen && (
+                  <Screen key={id} legend={screen.name ?? id}>
+                    <Box
                       sx={{
-                        marginRight: screenHealth.maxBrightness != null ? undefined : 'auto',
+                        display: 'grid',
+                        gridTemplateColumns: '14ch 5ch',
+                        gridTemplateRows: 'auto',
+                        gap: 1,
                       }}
                     >
-                      {screenHealth.maxBrightness ? `${screenHealth.maxBrightness}%` : '-'}
-                    </Value>
-                  </Box>
-                </Screen>
+                      <div>Максимальная</div>
+                      <Value>{maximum}&deg;C</Value>
+                      <div>Средняя</div>
+                      <Value>{average}&deg;C</Value>
+                      <div>Медиана</div>
+                      <Value>{median}&deg;C</Value>
+                      <div>Ограничение</div>
+                      <Value
+                        sx={{
+                          marginRight: screenHealth.maxBrightness != null ? undefined : 'auto',
+                        }}
+                      >
+                        {screenHealth.maxBrightness ? `${screenHealth.maxBrightness}%` : '-'}
+                      </Value>
+                    </Box>
+                  </Screen>
+                )
               );
             })}
           </Params>

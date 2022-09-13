@@ -56,7 +56,7 @@ const calculateSensors = (sensors: Draft<SensorDictionary>, interval: number): v
       ([timestamp]) => timestamp,
     );
     state.history = history;
-    if (current && Date.now() - current[0] > (MIN_INTERVAL + 1) * 1000) state.current = undefined;
+    if (current && Date.now() - current[0] > 2 * MIN_INTERVAL * 1000) state.current = undefined;
 
     if (history.length === 0) {
       state.average = state.current?.[1];

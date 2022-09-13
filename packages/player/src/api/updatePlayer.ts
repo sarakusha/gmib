@@ -1,0 +1,60 @@
+import type { SetStateAction } from 'react';
+
+import createDebouncedAsyncThunk from '/@common/createDebouncedAsyncThunk';
+import type { Player } from '/@common/video';
+
+import type { AppThunk, AppThunkConfig } from '../store';
+import { setDuration, setPlaybackState, setPosition } from '../store/currentSlice';
+import { sourceId } from '../utils';
+
+import playerApi, { playerAdapter, selectPlayer } from './player';
+import playlistApi, { selectPlaylistById } from './playlists';
+
+const debouncedUpdatePlayer = createDebouncedAsyncThunk<void, Player, AppThunkConfig>(
+  'playerApi/pendingUpdate',
+  (player, { dispatch }) => {
+    dispatch(playerApi.endpoints.updatePlayer.initiate(player));
+  },
+  100,
+  { selectId: player => player.id, maxWait: 500 },
+);
+
+const updatePlayer =
+  (id: number, update: SetStateAction<Player>): AppThunk =>
+  (dispatch, getState) => {
+    dispatch(
+      playerApi.util.updateQueryData('getPlayers', undefined, draft => {
+        const prev = selectPlayer(draft, id);
+        if (!prev) throw new Error(`Unknown player: ${id}`);
+        const player: Player = typeof update === 'function' ? update(prev) : update;
+        const playlistsData = playlistApi.endpoints.getPlaylists.select()(getState()).data;
+        if (playlistsData && player.playlistId && player.current) {
+          const playlist = selectPlaylistById(playlistsData, player.playlistId);
+          const length = playlist?.items.length;
+          if (length && player.current >= length) {
+            player.current = 0;
+          }
+        }
+        playerAdapter.setOne(draft, player);
+        dispatch(debouncedUpdatePlayer(player));
+      }),
+    );
+  };
+
+export const playerPlay = () => updatePlayer(sourceId, props => ({ ...props, autoPlay: true }));
+export const playerPause = () => updatePlayer(sourceId, props => ({ ...props, autoPlay: false }));
+export const playerNext = () =>
+  updatePlayer(sourceId, props => ({ ...props, current: props.current + 1 }));
+export const playerStop = (): AppThunk => dispatch => {
+  dispatch(updatePlayer(sourceId, props => ({ ...props, current: 0, autoPlay: false })));
+  dispatch(setPosition(0));
+  setTimeout(() => dispatch(setDuration(0)), 0);
+};
+export const clearPlayer = (): AppThunk => dispatch => {
+  updatePlayer(sourceId, props => ({ ...props, autoPlay: false, current: 0, playlistId: null }));
+  dispatch(setPlaybackState('none'));
+  dispatch(setPosition(0));
+  setTimeout(() => dispatch(setDuration(0)), 0);
+};
+
+export default updatePlayer;

@@ -1,5 +1,6 @@
 import { builtinModules } from 'module';
 import { join } from 'path';
+import { nodeResolve } from '@rollup/plugin-node-resolve';
 
 import { chrome } from '../../.electron-vendors.cache.json';
 
@@ -21,11 +22,12 @@ const config = {
     alias: {
       '/@main/': join(PACKAGE_ROOT, '../main/src') + '/',
       '/@renderer/': join(PACKAGE_ROOT, '../renderer/src') + '/',
+      '/@player/': join(PACKAGE_ROOT, '../player/src') + '/',
       '/@common/': join(PACKAGE_ROOT, '../common') + '/',
     },
   },
   // optimizeDeps: {
-  //   exclude: ['@novastar/screen/lib/api'],
+  //   include: ['@novastar/codec'],
   // },
   build: {
     sourcemap: false,
@@ -39,6 +41,8 @@ const config = {
     },
     rollupOptions: {
       plugins: [
+        nodeResolve(),
+        /*
         {
           name: 'disable-treeshake',
           transform(code, id) {
@@ -56,8 +60,10 @@ const config = {
             return null;
           },
         },
+*/
       ],
       external: [
+        'iconv-lite',
         'electron',
         'electron-store',
         '@nibus/detection',
@@ -66,12 +72,15 @@ const config = {
       ],
       output: {
         entryFileNames: '[name].cjs',
+        manualChunks() {
+          return 'index';
+        },
       },
     },
-    commonjsOptions: {
-      dynamicRequireTargets: ['node_modules/@blu3r4y/lzma/src/lzma_worker.js'],
-    },
-    emptyOutDir: true,
+    // commonjsOptions: {
+    //   include: [], // Important!!! Error: 'default' is not exported by...
+    // },
+    emptyOutDir: false,
     brotliSize: false,
   },
 };

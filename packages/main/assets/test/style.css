@@ -1,0 +1,14 @@
+html, body, canvas {
+    padding: 0;
+    margin: 0;
+    /*overflow: hidden;*/
+    /*cursor: none;*/
+    user-select: none;
+}
+video {
+    object-fit: cover;
+}
+canvas {
+    background-color: black;
+    color: white;
+}

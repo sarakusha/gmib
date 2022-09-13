@@ -1,17 +1,19 @@
 import { app } from 'electron';
 import fs from 'fs';
 
-import service from '@nibus/cli';
 import debugFactory from 'debug';
 import log from 'electron-log';
 import { Tail } from 'tail';
 import tcpPortUsed from 'tcp-port-used';
 
 import config from './config';
-import { getBrightnessHistory } from './db';
 import getAllDisplays from './getAllDisplays';
+import { getBrightnessHistoryOn } from './history';
 import localConfig from './localConfig';
 import Reader from './reader';
+
+import service from '@nibus/cli';
+// import { updateScreens } from './updateScreens';
 
 const reader = new Reader(200);
 
@@ -35,7 +37,7 @@ const closeNibus = (): void => {
     debug('Port already in use');
     return;
   }
-  // const { default: svc } = await import('@nibus/cli/lib/service');
+  // const { default: svc } = await import('@nibus/cli/service');
   // service = svc;
   service.server.on('connection', socket => {
     const file = log.transports.file.getFile().path;
@@ -54,11 +56,14 @@ const closeNibus = (): void => {
       config.store = store as typeof config.store;
     } catch (err) {
       debug(`Error while save config: ${(err as Error).message}`, true);
-      service?.server.send(socket, 'config', config.store);
+      service.server.send(socket, 'config', config.store);
     }
   });
   service.server.on('client:getBrightnessHistory', (socket, dt) => {
-    getBrightnessHistory(dt).then(rows => service?.server.send(socket, 'brightnessHistory', rows));
+    if (dt != null)
+      getBrightnessHistoryOn(dt).then(rows =>
+        service.server.send(socket, 'brightnessHistory', rows),
+      );
   });
   debug('Starting local NIBUS...');
   await service.start();
@@ -78,5 +83,21 @@ localConfig.onDidChange('health', health => {
 
 const tail = new Tail(log.transports.file.getFile().path);
 tail.on('line', line => service.server.broadcast('log', line));
+
+// TODO: Screens
+/*
+app.once('ready', () => {
+  const broadcastDisplays = (): void => {
+    service?.server?.broadcast('displays', getAllDisplays());
+    setTimeout(() => {
+      const screens = config.get('screens');
+      updateScreens(screens, screens);
+    }, 3000).unref();
+  };
+
+  screen.on('display-added', broadcastDisplays);
+  screen.on('display-removed', broadcastDisplays);
+});
+*/
 
 app.once('quit', closeNibus);

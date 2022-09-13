@@ -1,0 +1,116 @@
+import { createEntityAdapter, type EntityState } from '@reduxjs/toolkit';
+import { createApi } from '@reduxjs/toolkit/query/react';
+
+import baseQuery from '/@common/baseQuery';
+import type { Player } from '/@common/video';
+
+export const playerAdapter = createEntityAdapter<Player>();
+
+export const { selectAll: selectPlayers, selectById: selectPlayer } = playerAdapter.getSelectors();
+
+const defaultPlayer: Omit<Player, 'id'> = {
+  name: 'Новый плеер',
+  width: 320,
+  height: 240,
+  current: 0,
+};
+
+const playerApi = createApi({
+  baseQuery,
+  reducerPath: 'playerApi',
+  tagTypes: ['player'],
+  endpoints: build => ({
+    getPlayers: build.query<EntityState<Player>, void>({
+      query: () => 'player',
+      transformResponse: (response: Player[]) =>
+        playerAdapter.addMany(playerAdapter.getInitialState(), response),
+    }),
+    // getPlayer: build.query<Player, number>({
+    //   query: id => `/player/${id}`,
+    // }),
+    updatePlayer: build.mutation<Player, Player>({
+      query: player => ({
+        url: '/player',
+        method: 'PUT',
+        body: player,
+      }),
+      async onQueryStarted(player, { dispatch, queryFulfilled }) {
+        const patchResult = dispatch(
+          playerApi.util.updateQueryData('getPlayers', undefined, draft => {
+            playerAdapter.setOne(draft, player);
+          }),
+        );
+        queryFulfilled.catch(patchResult.undo);
+
+        // try {
+        //   const { data } = await queryFulfilled;
+        //   dispatch(
+        //     playerApi.util.updateQueryData('getPlayers', undefined, draft => {
+        //       playerAdapter.setOne(draft, data);
+        //     }),
+        //   );
+        // } catch (e) {
+        //   // console.error('error while updatePlayer', e);
+        //   dispatch(playerApi.endpoints.getPlayers.initiate());
+        // }
+      },
+    }),
+    createPlayer: build.mutation<Player, Partial<Player>>({
+      query: player => ({
+        url: '/player',
+        method: 'POST',
+        body: { ...defaultPlayer, ...player },
+      }),
+      onQueryStarted(_, { dispatch, queryFulfilled }) {
+        queryFulfilled.then(({ data: player }) => {
+          dispatch(
+            playerApi.util.updateQueryData('getPlayers', undefined, draft => {
+              playerAdapter.setOne(draft, player);
+            }),
+          );
+        });
+      },
+    }),
+    deletePlayer: build.mutation<void, number>({
+      query: id => ({
+        url: `/player/${id}`,
+        method: 'DELETE',
+      }),
+      onQueryStarted(id, { dispatch, queryFulfilled }) {
+        const patchResult = dispatch(
+          playerApi.util.updateQueryData('getPlayers', undefined, draft => {
+            playerAdapter.removeOne(draft, id);
+          }),
+        );
+        queryFulfilled.catch(patchResult.undo);
+      },
+    }),
+  }),
+});
+
+export const usePlayers = () =>
+  playerApi.useGetPlayersQuery(undefined, {
+    selectFromResult: ({ data, ...other }) => ({
+      data: data && selectPlayers(data),
+      ...other,
+    }),
+    // pollingInterval: 10000,
+  });
+
+export const usePlayer = (id?: number | null) =>
+  playerApi.useGetPlayersQuery(undefined, {
+    skip: !id,
+    selectFromResult: ({ data, ...other }) => ({
+      data: data && id ? selectPlayer(data, id) : undefined,
+      ...other,
+    }),
+  });
+
+export const {
+  useGetPlayersQuery,
+  useUpdatePlayerMutation,
+  useCreatePlayerMutation,
+  useDeletePlayerMutation,
+} = playerApi;
+
+export default playerApi;

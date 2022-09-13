@@ -16,9 +16,9 @@ import {
 } from '@mui/material';
 import type { Theme } from '@mui/material/styles';
 import { css, styled } from '@mui/material/styles';
-import Address from '@nibus/core/lib/Address';
 import React, { useCallback, useMemo } from 'react';
 
+import { useGetAddressesQuery } from '../api/screens';
 import { useDispatch, useSelector } from '../store';
 import type { TabValues } from '../store/currentSlice';
 import { setCurrentDevice, setCurrentTab } from '../store/currentSlice';
@@ -29,12 +29,13 @@ import {
   selectAllNovastars,
   selectCurrentDeviceId,
   selectCurrentTab,
-  selectScreenAddresses,
 } from '../store/selectors';
 // import { reloadSession } from '../store/sessionSlice';
 
 import AccordionList from './AccordionList';
 import DeviceIcon from './DeviceIcon';
+
+import Address from '@nibus/core/Address';
 
 const tabName = 'devices';
 
@@ -102,18 +103,16 @@ const Devices: React.FC = () => {
   const dispatch = useDispatch();
   const devices = useSelector(selectAllDevicesWithParent);
   const current = useSelector(selectCurrentDeviceId);
-  const addresses = useSelector(selectScreenAddresses);
+  const { data: addresses = [] } = useGetAddressesQuery();
+  // const addresses = useSelector(selectScreenAddresses);
   const tab = useSelector(selectCurrentTab);
   const novastars = useSelector(selectAllNovastars);
   // const [, setAccordion] = useAccordion();
-  const reloadHandler = useCallback<React.MouseEventHandler<HTMLButtonElement>>(
-    e => {
-      window.nibus.reloadDevices();
-      window.novastar.findNetDevices();
-      e.stopPropagation();
-    },
-    [],
-  );
+  const reloadHandler = useCallback<React.MouseEventHandler<HTMLButtonElement>>(e => {
+    window.nibus.reloadDevices();
+    window.novastar.findNetDevices();
+    e.stopPropagation();
+  }, []);
   const clickHandler = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       const { id } = e.currentTarget.dataset; // as DeviceId;
@@ -209,6 +208,7 @@ const Devices: React.FC = () => {
           selected={card.path === current}
           data-id={card.path}
           onClick={clickHandler}
+          disabled={!card.connected}
         >
           <ListItemIcon>
             <Wrapper>

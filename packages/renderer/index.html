@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8">
 <!--  <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-eval'">-->
-  <meta http-equiv="Content-Security-Policy" content="script-src 'self' blob:">
+  <meta http-equiv="Content-Security-Policy" content="script-src 'self' localhost:* blob:">
+  <meta http-equiv="Content-Security-Policy" content="child-src blob:">
+  <meta http-equiv="Content-Security-Policy" content="worker-src blob:">
   <meta content="width=device-width, initial-scale=1.0" name="viewport">
 </head>
 <body>

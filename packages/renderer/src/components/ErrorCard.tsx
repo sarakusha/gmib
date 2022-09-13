@@ -1,4 +1,3 @@
-
 import { Button, Card, CardActions, CardContent, Typography } from '@mui/material';
 import React from 'react';
 
@@ -31,7 +30,7 @@ const ErrorCard: React.FC<Props> = ({ error, onAction, onRelease }) => (
       <Typography sx={{ fontSize: '14px' }} color="textSecondary" gutterBottom>
         Возникла ошибка!
       </Typography>
-      <Typography variant="h6">{(error as Error).message || error}</Typography>
+      <Typography variant="h6">{typeof error === 'string' ? error : error.message}</Typography>
     </CardContent>
     <CardActions>
       {onAction && (

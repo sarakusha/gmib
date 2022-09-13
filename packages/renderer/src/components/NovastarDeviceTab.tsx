@@ -5,10 +5,6 @@ import type { InputProps, SelectProps, TextFieldProps } from '@mui/material';
 import { Box, Paper, TextField, Typography } from '@mui/material';
 import type { Theme } from '@mui/material/styles';
 import { css, styled } from '@mui/material/styles';
-import { ChipTypeEnum } from '@novastar/native/lib/generated/ChipType';
-import { DviSelectModeEnum } from '@novastar/native/lib/generated/DviSelectMode';
-import type { BrightnessRGBV } from '@novastar/screen';
-import getScreenLocation from '@novastar/screen/lib/getScreenLocation';
 import React, { useCallback, useEffect, useState } from 'react';
 
 import { useToolbar } from '../providers/ToolbarProvider';
@@ -23,66 +19,10 @@ import {selectCurrentTab} from '../store/selectors';
 import DisplayModeSelector from './DisplayModeSelector';
 import NovastarToolbar from './NovastarToolbar';
 
-// const useStyles = makeStyles(theme => ({
-//   root: {
-//     // padding: theme.spacing(1),
-//     // marginLeft: 'auto',
-//     // marginRight: 'auto',
-//     // margin: theme.spacing(1),
-//     // display: 'flex',
-//     // flexDirection: 'column',
-//     // alignItems: 'center',
-//     // width: '100%',
-//   },
-//   paper: {
-//     padding: theme.spacing(1),
-//     minWidth: '100%',
-//     overflowY: 'auto',
-//   },
-//   grid: {
-//     display: 'grid',
-//     gridTemplateColumns: '30px auto 1fr',
-//     gap: 2,
-//   },
-//   itemValue: {
-//     gridColumnStart: 3,
-//     padding: 4,
-//   },
-//   propertyName: {
-//     gridColumnStart: 'span 2',
-//     fontWeight: 500,
-//     backgroundColor: theme.palette.action.selected,
-//     padding: 4,
-//   },
-//   brightness: {
-//     gridRowStart: 'span 5',
-//     writingMode: 'vertical-lr',
-//     transform: 'rotate(180deg)',
-//     textAlign: 'center',
-//   },
-//   center: {
-//     textAlign: 'center',
-//   },
-//   bold: {
-//     fontWeight: 500,
-//     backgroundColor: theme.palette.action.selected,
-//     padding: 4,
-//   },
-//   RGBV: {
-//     gridColumnStart: 2,
-//   },
-//   screens: {
-//     display: 'flex',
-//     alignItems: 'center',
-//     gap: 2,
-//   },
-//   item: {
-//     // flexGrow: 1,
-//     width: 130,
-//     paddingLeft: 4,
-//     paddingRight: 4,
-//   },
-// }));
+import { ChipTypeEnum } from '@novastar/native/ChipType';
+import { DviSelectModeEnum } from '@novastar/native/DviSelectMode';
+import type { BrightnessRGBV } from '@novastar/screen/ScreenConfigurator';
+import getScreenLocation from '@novastar/screen/getScreenLocation';
 
 type RGBVItemProps = { kind: keyof BrightnessRGBV } & Omit<
   TextFieldProps,
@@ -335,7 +275,7 @@ const NovastarDeviceTab: React.FC<{ device: Novastar | undefined; selected?: boo
                       css={itemStyle}
                       name={`${index}:${name}`}
                       onChange={rgbvChanged}
-                      disabled={rgbv == null}
+                      disabled={rgbv == null || !device.connected}
                     />
                   ))}
                 </Screens>
@@ -350,9 +290,9 @@ const NovastarDeviceTab: React.FC<{ device: Novastar | undefined; selected?: boo
                   css={itemStyle}
                   type="number"
                   inputProps={gammaInputProps}
-                  value={gamma}
+                  value={gamma ?? ''}
                   onChange={gammaHandler}
-                  disabled={gamma == null}
+                  disabled={gamma == null || !device.connected}
                   variant="standard"
                 />
               ))}
@@ -364,10 +304,10 @@ const NovastarDeviceTab: React.FC<{ device: Novastar | undefined; selected?: boo
                   <DisplayModeSelector
                     variant="standard"
                     fullWidth
-                    value={mode}
+                    value={mode ?? ''}
                     name={`${screen}`}
                     onChange={modeHandler}
-                    disabled={mode == null}
+                    disabled={mode == null || !device.connected}
                   />
                 </Box>
               ))}

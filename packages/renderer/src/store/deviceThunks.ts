@@ -1,9 +1,8 @@
-import type { DeviceId } from '@nibus/core';
-import { MCDVI_TYPE, MINIHOST_TYPE } from '@nibus/core/lib/common';
-
 import { tuplify } from '/@common/helpers';
 
 import { createAsyncThunk } from '@reduxjs/toolkit';
+
+import screenApi from '../api/screens';
 
 import { setCurrentTab } from './currentSlice';
 import { setConnected } from './devicesSlice';
@@ -12,13 +11,16 @@ import {
   selectAllDevices,
   selectCurrentDeviceId,
   selectDevicesByAddress,
-  selectScreenAddresses,
+  // selectScreenAddresses,
 } from './selectors';
 import { setOnline } from './sessionSlice';
 
 import { isRemoteSession } from '/@common/remote';
 
 import type { AppThunk, AppThunkConfig } from './index';
+
+import type { DeviceId } from '@nibus/core';
+import { MCDVI_TYPE, MINIHOST_TYPE } from '@nibus/core/common';
 
 const PING_INTERVAL = 10000;
 
@@ -37,7 +39,8 @@ export const ping = (): AppThunk => (dispatch, getState) => {
     window.setTimeout(() => dispatch(ping()), 300);
     return;
   }
-  const inaccessibleAddresses = selectScreenAddresses(state).filter(
+  const { data: addresses = [] } = screenApi.endpoints.getAddresses.select()(state);
+  const inaccessibleAddresses = addresses.filter(
     address => selectDevicesByAddress(state, address).length === 0,
   );
   if (inaccessibleAddresses.length === 0) return;

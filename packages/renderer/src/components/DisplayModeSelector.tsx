@@ -1,8 +1,9 @@
 
 import type { SelectProps } from '@mui/material';
 import { MenuItem, Select } from '@mui/material';
-import { TestModeEnum } from '@novastar/native/lib/generated/TestMode';
 import React from 'react';
+
+import { TestModeEnum } from '@novastar/native/TestMode';
 
 const modes: Partial<Record<TestModeEnum, string>> = {
   [TestModeEnum.Reserved1_Mode]: 'Видео',

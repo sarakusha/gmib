@@ -1,5 +1,6 @@
 import type { Kind } from '@nibus/core';
-import { FlashKinds } from '@nibus/core/lib/flash/FlashKinds';
+import { FlashKinds } from '@nibus/core/flash/FlashKinds';
+
 import type {
   Dispatch,
   Reducer,
@@ -77,7 +78,7 @@ export const useFlashState = (kind: Kind): FlashState & FlashSetters => {
   return { ...state[kind], setColumn, setRow, setFile };
 };
 
-export const FlashStateProvider: React.FC = ({ children }) => {
+export const FlashStateProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
   const [state, dispatch] = useReducer<FlashReducer>(
     flashReducer,
     Object.fromEntries(

@@ -1,6 +1,9 @@
-import type { ChipTypeEnum } from '@novastar/native/lib/generated/ChipType';
-import type { TestModeEnum } from '@novastar/native/lib/generated/TestMode';
-import type { BrightnessRGBV, DeviceInfo, LEDDisplayInfo } from '@novastar/screen';
+import type { ChipTypeEnum } from '@novastar/native/ChipType';
+import type { TestModeEnum } from '@novastar/native/TestMode';
+import type { BrightnessRGBV } from '@novastar/screen/ScreenConfigurator';
+import type { DeviceInfo } from '@novastar/screen/DeviceInfo';
+import type { LEDDisplayInfo } from '@novastar/screen/common';
+
 import type { Draft, EntityState, PayloadAction } from '@reduxjs/toolkit';
 import { createEntityAdapter, createSlice } from '@reduxjs/toolkit';
 
@@ -28,6 +31,7 @@ export type Novastar = {
   info?: Readonly<DeviceInfo>;
   screens?: ReadonlyArray<Screen>;
   isBusy: number;
+  connected: boolean;
   error?: string;
 };
 

@@ -1,4 +1,3 @@
-
 import ErrorIcon from '@mui/icons-material/Clear';
 import { Box, Paper, Tooltip, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
@@ -245,7 +244,7 @@ const ModuleInfo: React.FC<Props> = ({ info, error, x, y }) => (
   >
     <Position x={x} y={y} />
     {error && (
-      <Tooltip title={error} enterDelay={300}>
+      <Tooltip title={typeof error === 'string' ? error : error.message} enterDelay={300}>
         <Box
           sx={{
             width: 1,

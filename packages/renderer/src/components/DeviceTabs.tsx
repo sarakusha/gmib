@@ -1,6 +1,5 @@
 
 import { Box, Container, Paper, Tab, Tabs } from '@mui/material';
-import type { DeviceId } from '@nibus/core';
 import React, { useState } from 'react';
 
 import { useSelector } from '../store';
@@ -9,6 +8,8 @@ import { selectCurrentDevice } from '../store/selectors';
 import FirmwareTab from './FirmwareTab';
 import PropertyGridTab from './PropertyGridTab';
 import TelemetryTab from './TelemetryTab';
+
+import type { DeviceId } from '@nibus/core';
 
 type Props = {
   id: DeviceId;

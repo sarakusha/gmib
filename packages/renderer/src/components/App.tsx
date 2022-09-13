@@ -26,19 +26,16 @@ import RemoteHostsDialog from '../dialogs/RemoteHostsDialog';
 import SearchDialog from '../dialogs/SearchDialog';
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useDevices, useDispatch, useSelector } from '../store';
+import { setAutobrightness, setProtectionProp } from '../store/configSlice';
+import { setCurrentTab, setRemoteDialogOpen } from '../store/currentSlice';
 import {
-  setAutobrightness,
-  setProtectionProp,
-} from '../store/configSlice';
-import {
-  setCurrentTab,
-  setRemoteDialogOpen,
-} from '../store/currentSlice';
-import {
-    selectAutobrightness, selectCurrentTab, selectIsClosed, selectIsOnline,
-    selectIsRemoteDialogOpen,
-    selectLoading,
-    selectOverheatProtection,
+  selectAutobrightness,
+  selectCurrentTab,
+  selectIsClosed,
+  selectIsOnline,
+  selectIsRemoteDialogOpen,
+  selectLoading,
+  selectOverheatProtection,
 } from '../store/selectors';
 
 import AppBar from './AppBar';
@@ -155,17 +152,19 @@ const App: React.FC = () => {
             {toolbar}
             {/* TODO: novastar */}
             <Tooltip title="Поиск новых устройств" enterDelay={500}>
-              <IconButton
-                // edge="start"
-                color="inherit"
-                onClick={searchOpen}
-                disabled={!isLinkingDevice}
-                hidden={tab !== 'devices'}
-                sx={{ display: tab !== 'devices' ? 'none' : 'inherit' }}
-                size="large"
-              >
-                <SearchIcon />
-              </IconButton>
+              <div>
+                <IconButton
+                  // edge="start"
+                  color="inherit"
+                  onClick={searchOpen}
+                  disabled={!isLinkingDevice}
+                  hidden={tab !== 'devices'}
+                  sx={{ display: tab !== 'devices' ? 'none' : 'inherit' }}
+                  size="large"
+                >
+                  <SearchIcon />
+                </IconButton>
+              </div>
             </Tooltip>
           </Toolbar>
         </AppBar>
@@ -201,6 +200,7 @@ const App: React.FC = () => {
             }}
           >
             <Devices />
+{/*
             <Item onClick={() => dispatch(setCurrentTab('playlist'))} selected={tab === 'playlist'}>
               <ListItemText primary="Плейлисты" />
             </Item>
@@ -213,6 +213,7 @@ const App: React.FC = () => {
             >
               <ListItemText primary="Планировщик" />
             </Item>
+*/}
             <HttpPages />
             <Item
               onClick={() => dispatch(setCurrentTab('autobrightness'))}

@@ -1,8 +1,11 @@
-import type { DeviceId } from '@nibus/core';
 import type { Action, ThunkAction } from '@reduxjs/toolkit';
 import { configureStore } from '@reduxjs/toolkit';
 import type { TypedUseSelectorHook } from 'react-redux';
 import { useDispatch as origUseDispatch, useSelector as origUseSelector } from 'react-redux';
+
+import type { AppThunkConfig as OriginalAppThunkConfig } from '/@common/createDebouncedAsyncThunk';
+
+import * as api from '../api';
 
 import configReducer from './configSlice';
 import currentReducer from './currentSlice';
@@ -14,14 +17,19 @@ import logReducer from './logSlice';
 import mibsReducer from './mibsSlice';
 import novastarsReducer from './novastarsSlice';
 import remoteHostsReducer from './remoteHostsSlice';
+// import screensReducer from './screensSlice';
 import { selectAllDevices, selectDeviceById } from './selectors';
 import sensorsReducer from './sensorsSlice';
 import sessionReducer from './sessionSlice';
+
+import type { DeviceId } from '@nibus/core';
 
 import './configThunks';
 import './deviceThunks';
 import './healthThunks';
 import './novastarThunks';
+import './sensorThunks';
+// import './screensThunks';
 
 export const store = configureStore({
   reducer: {
@@ -35,6 +43,8 @@ export const store = configureStore({
     novastars: novastarsReducer,
     log: logReducer,
     flasher: flasherReducer,
+    // screens: screensReducer,
+    ...api.reducer,
   },
   middleware: getDefaultMiddleware =>
     getDefaultMiddleware({
@@ -43,7 +53,9 @@ export const store = configureStore({
         ignoredPaths: ['mibs.entities'],
         ignoredActions: ['mibs/addMib'],
       },
-    }).prepend(listenerMiddleware.middleware),
+    })
+      .prepend(listenerMiddleware.middleware)
+      .concat(...api.middleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;
@@ -54,16 +66,7 @@ export type AppThunk<ReturnType = void> = ThunkAction<
   Action<string>
 >;
 export type AppDispatch = typeof store.dispatch;
-export type AppThunkConfig = {
-  dispatch: AppDispatch;
-  state: RootState;
-  extra?: unknown;
-  rejectValue?: unknown;
-  serializedErrorType?: unknown;
-  pendingMeta?: unknown;
-  fulfilledMeta?: unknown;
-  rejectedMeta?: unknown;
-};
+export type AppThunkConfig = OriginalAppThunkConfig<RootState, AppDispatch>;
 
 export const useDispatch = (): AppDispatch => origUseDispatch<AppDispatch>();
 export const useSelector: TypedUseSelectorHook<RootState> = origUseSelector;

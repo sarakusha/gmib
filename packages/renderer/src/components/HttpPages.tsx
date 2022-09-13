@@ -1,4 +1,3 @@
-
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
@@ -15,22 +14,16 @@ import { nanoid } from '@reduxjs/toolkit';
 import React, { useCallback, useState } from 'react';
 import { isUri } from 'valid-url';
 
+import { selectScreen, updateScreen, useGetScreensQuery } from '../api/screens';
 import HttpPageDialog from '../dialogs/HttpPageDialog';
 import { useDispatch, useSelector } from '../store';
-import {
-  removeHttpPage,
-  showHttpPage,
-  upsertHttpPage,
-} from '../store/configSlice';
-import type {
-  TabValues} from '../store/currentSlice';
-import {
-  setCurrentTab,
-} from '../store/currentSlice';
+import { removeHttpPage, upsertHttpPage } from '../store/configSlice';
+import type { TabValues } from '../store/currentSlice';
+import { setCurrentTab } from '../store/currentSlice';
 
 import type { Page } from '/@common/config';
 
-import {selectAllPages, selectCurrentScreenId, selectCurrentTab, selectScreenById} from '../store/selectors';
+import { selectAllPages, selectCurrentScreenId, selectCurrentTab } from '../store/selectors';
 
 import AccordionList from './AccordionList';
 /*
@@ -63,14 +56,23 @@ const noWrap = { noWrap: true };
 
 const HttpPages: React.FC = () => {
   const dispatch = useDispatch();
+  const { data: screensData } = useGetScreensQuery();
   const screen = useSelector(selectCurrentScreenId);
-  const current = useSelector(state => selectScreenById(state, screen))?.output;
+  /* TODO: ! */
+  const current =
+    screensData && screen !== undefined ? selectScreen(screensData, screen)?.test : undefined;
   const pages = useSelector(selectAllPages);
   const tab = useSelector(selectCurrentTab);
   const [selected, setSelected] = useState<string>();
   const visibleHandler = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>, checked: boolean) => {
-      screen && dispatch(showHttpPage([screen, checked ? event.currentTarget.id : undefined]));
+      screen &&
+        dispatch(
+          updateScreen(screen, prev => ({
+            ...prev,
+            test: checked ? event.currentTarget.id : undefined,
+          })),
+        );
     },
     [dispatch, screen],
   );
