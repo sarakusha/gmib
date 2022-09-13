@@ -13,8 +13,6 @@ import { Provider } from 'react-redux';
 // import Html5DndProvider from '/@common/Html5DndProvider';
 import theme from '/@common/theme';
 
-import ToolbarProvider from '../../renderer/gmib/src/providers/ToolbarProvider';
-
 import App from './components/App';
 import { VideoProvider } from './hooks/useMediaStream';
 import store from './store';
@@ -35,23 +33,21 @@ root.render(
     <MuiThemeProvider theme={theme}>
       <CssBaseline />
       <Provider store={store}>
-        <ToolbarProvider>
-          <SnackbarProvider
-            anchorOrigin={{
-              vertical: 'bottom',
-              horizontal: 'right',
-            }}
-            maxSnack={10}
-            dense
-            preventDuplicate
-          >
-            <Html5DndProvider>
-              <VideoProvider>
-                <App />
-              </VideoProvider>
-            </Html5DndProvider>
-          </SnackbarProvider>
-        </ToolbarProvider>
+        <SnackbarProvider
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'right',
+          }}
+          maxSnack={10}
+          dense
+          preventDuplicate
+        >
+          <Html5DndProvider>
+            <VideoProvider>
+              <App />
+            </VideoProvider>
+          </Html5DndProvider>
+        </SnackbarProvider>
       </Provider>
     </MuiThemeProvider>
   </React.StrictMode>,

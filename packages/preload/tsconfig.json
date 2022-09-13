@@ -21,10 +21,10 @@
         "../main/src/*"
       ],
       "/@renderer/store/*": [
-        "../renderer/src/store/*"
+        "../renderer/gmib/store/*"
       ],
       "/@player/store": [
-        "../player/src/store"
+        "../renderer/player/store"
       ],
       "/@common/*": [
         "../common/*"

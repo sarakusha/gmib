@@ -21,7 +21,7 @@ let mainWindow: BrowserWindow | null = null;
 // let mainWindowPromise: Promise<BrowserWindow> | null = null;
 
 const gmibPreload = join(__dirname, '../../preload/dist/index.cjs');
-const playerPreload = join(__dirname, '../../playerPreload/dist/index.cjs');
+// const playerPreload = join(__dirname, '../../playerPreload/dist/index.cjs');
 
 export const createAppWindow = (
   port = +(process.env['NIBUS_PORT'] ?? 9001),
@@ -30,7 +30,7 @@ export const createAppWindow = (
   // eslint-disable-next-line no-multi-assign
   const browserWindow = createWindow(
     getTitle(port, host),
-    import.meta.env.VITE_PLAYER === '1' ? playerPreload : gmibPreload,
+    gmibPreload,
   );
   if (!host) {
     browserWindow.once('ready-to-show', async () => {

@@ -21,8 +21,8 @@ const config = {
   resolve: {
     alias: {
       '/@main/': join(PACKAGE_ROOT, '../main/src') + '/',
-      '/@renderer/': join(PACKAGE_ROOT, '../renderer/src') + '/',
-      '/@player/': join(PACKAGE_ROOT, '../player/src') + '/',
+      '/@renderer/': join(PACKAGE_ROOT, '../renderer/gmib') + '/',
+      '/@player/': join(PACKAGE_ROOT, '../renderer/player') + '/',
       '/@common/': join(PACKAGE_ROOT, '../common') + '/',
     },
   },

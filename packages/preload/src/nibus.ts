@@ -606,7 +606,7 @@ export const getBrightnessHistory = session.getBrightnessHistory.bind(session);
 
 type EntryType<T> = T extends Record<infer N, infer V> ? [N, V] : never;
 
-const entries = <T>(obj: T): EntryType<T>[] => Object.entries(obj) as EntryType<T>[];
+const entries = <T extends Record<string, unknown>>(obj: T): EntryType<T>[] => Object.entries(obj) as EntryType<T>[];
 
 export const mibTypes = sortBy(
   entries(getMibTypesOrig())

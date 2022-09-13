@@ -67,12 +67,6 @@ if (import.meta.env.DEV) {
       new Set(),
     );
   }
-  if (import.meta.env.VITE_PLAYER_DEV_SERVER_URL) {
-    ALLOWED_ORIGINS_AND_PERMISSIONS.set(
-      import.meta.env.VITE_PLAYER_DEV_SERVER_URL.replace(/\/$/, ''),
-      new Set(),
-    );
-  }
 }
 
 /**

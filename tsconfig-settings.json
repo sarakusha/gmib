@@ -39,6 +39,10 @@
     "types": ["node", "jest", "vite"]
   },
   "exclude": ["node_modules/**"],
-  "include": ["packages/{main,preload,renderer}/src/**/*.ts", "packages/common/**/*.ts"],
+  "include": [
+    "packages/common/**/*.ts",
+    "packages/main/src/**/*.ts",
+    "packages/preload/src/**/*.ts"
+  ],
   "compileOnSave": false
 }

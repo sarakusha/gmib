@@ -44,6 +44,7 @@ app.use(bodyParser.urlencoded({ extended: false }));
 if (!import.meta.env.DEV) {
   const root = path.join(__dirname, '../../renderer/dist');
   app.get('/index.html', isAuthorized);
+  app.get('/player.html', isAuthorized);
   app.use(express.static(root));
 }
 
@@ -62,7 +63,7 @@ app.use(
   express.static(outputRoot),
 );
 
-app.use('/player', express.static(path.resolve(__dirname, '../../player/dist')));
+// app.use('/player', express.static(path.resolve(__dirname, '../../player/dist')));
 
 const errorHandler: ErrorRequestHandler = (error, req, res, next) => {
   if ('errno' in error && 'code' in error && error.code === 'SQLITE_CONSTRAINT') {

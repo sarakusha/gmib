@@ -38,9 +38,9 @@ export const openPlayer = async (
   const query = `source_id=${id}&host=${host}&access_token=${secret}`;
   if (!browserWindow) {
     const url =
-      import.meta.env.DEV && import.meta.env.VITE_PLAYER_DEV_SERVER_URL
-        ? `${import.meta.env.VITE_PLAYER_DEV_SERVER_URL}?${query}`
-        : `http://localhost:${+(process.env['NIBUS_PORT'] ?? 9001) + 1}/player/index.html?${query}`;
+      import.meta.env.DEV && import.meta.env.VITE_DEV_SERVER_URL
+        ? `${import.meta.env.VITE_DEV_SERVER_URL}player.html?${query}`
+        : `http://localhost:${+(process.env['NIBUS_PORT'] ?? 9001) + 1}/player.html?${query}`;
     browserWindow = createWindow(getPlayerTitle(player), preload);
     playerWindows.set(id, browserWindow);
     browserWindow.loadURL(url).catch(err => {

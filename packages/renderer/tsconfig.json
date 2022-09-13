@@ -43,11 +43,16 @@
     ]
   },
   "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx",
-//    "../common/*.ts",
+    "gmib/**/*.ts",
+    "gmib/**/*.tsx",
+    "player/**/*.ts",
+    "player/**/*.tsx",
     "../../types/**/*.d.ts",
-    "../preload/exposedInMainWorld.d.ts"
+    "../preload/exposedInMainWorld.d.ts",
+    "../playerPreload/exposedInMainWorld.d.ts",
+    "../../node_modules/@types/dom-webcodecs/webcodecs.generated.d.ts",
+    "../../node_modules/@types/offscreencanvas/index.d.ts",
+    "../../node_modules/@types/dom-mediacapture-transform/index.d.ts"
   ],
   "exclude": [
     "../preload/src/**",

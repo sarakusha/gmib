@@ -19,9 +19,6 @@ const { chrome } = require('../../.electron-vendors.cache.json');
 const PACKAGE_ROOT = path.dirname(fileURLToPath(import.meta.url));
 // const PACKAGE_ROOT = __dirname;
 
-const playerInput = path.resolve(PACKAGE_ROOT, '../player/index.html');
-console.log({ playerInput });
-
 process.env.VITE_APP_NAME = process.env['npm_package_name'];
 process.env.VITE_APP_VERSION = process.env['npm_package_version'];
 process.env.VITE_DEBUG = `nibus:*,novastar:*,${process.env.VITE_APP_NAME}:*`;
@@ -68,7 +65,7 @@ export default defineConfig({
       strict: true,
     },
     proxy: {
-      '^/(api|public|player)': {
+      '^/(api|public)': {
         target: `http://localhost:${+(process.env['NIBUS_PORT'] ?? 9001) + 1}`,
         changeOrigin: true,
       },
@@ -80,11 +77,11 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: '.',
     // assetsInlineLimit: 12*1024,
-    minify: false, //process.env.MODE !== 'development',
+    minify: process.env.MODE !== 'development',
     rollupOptions: {
       input: {
-        renderer: path.join(PACKAGE_ROOT, 'index.html'),
-        // player: playerInput, // path.resolve(PACKAGE_ROOT, '../player/index.html'),
+        gmib: path.join(PACKAGE_ROOT, 'index.html'),
+        player: path.join(PACKAGE_ROOT, 'player.html'),
       },
       external: ['electron', ...builtinModules.flatMap(p => [p, `node:${p}`])],
     },
