@@ -1,15 +1,29 @@
-import { Box, Checkbox, FormControlLabel, Paper, TextField } from '@mui/material';
+import {
+  Box,
+  Checkbox,
+  FormControlLabel,
+  MenuItem,
+  Paper,
+  Select,
+  TextField,
+  Typography,
+} from '@mui/material';
 import { styled } from '@mui/material/styles';
 import ChipInput from '@sarakusha/material-ui-chip-input';
 import React, { useCallback } from 'react';
 
-import { selectScreen, updateScreen, useGetScreensQuery } from '../api/screens';
+import { updateScreen, useScreen } from '../api/screens';
 import { useDispatch } from '../store';
 
+import { DefaultDisplays } from '/@common/video';
 import { reAddress } from '/@common/config';
-import { toNumber } from '/@common/helpers';
+import FormikTextField from '/@common/FormikTextField';
+import { toHexId } from '/@common/helpers';
+import SubmitListener from '/@common/SubmitListener';
 
 import FormFieldSet from './FormFieldSet';
+import { Field, Form, Formik } from 'formik';
+import { useDisplays } from '../api/displays';
 
 // import type { Screen } from '/@common/video';
 
@@ -24,7 +38,7 @@ const FieldSet = styled(FormFieldSet)(({ theme }) => ({
   width: '26ch',
 }));
 
-const Field = styled(TextField)(({ theme }) => ({
+const StyledFormikTextField = styled(FormikTextField)(({ theme }) => ({
   flex: 1,
   '& ~ &': {
     marginLeft: theme.spacing(2),
@@ -58,6 +72,8 @@ type Props = {
   single?: boolean;
 };
 
+const keys = ['width', 'height'] as const;
+
 const ScreenComponent: React.FC<Props> = ({
   id: scrId,
   selected,
@@ -65,36 +81,10 @@ const ScreenComponent: React.FC<Props> = ({
   single = true,
 }) => {
   const dispatch = useDispatch();
-  const { data: screensData } = useGetScreensQuery();
-  const current = screensData && selectScreen(screensData, scrId);
-  // const refScreen = useRef<any>();
-  // refScreen.current = current;
-  const changeHandler = useCallback<React.ChangeEventHandler<HTMLInputElement>>(
-    e => {
-      const { value, id, type, checked } = e.target;
-      // console.log({ id, value, type, checked });
-      // const scr = { ...refScreen.current };
-      let newValue: unknown = value;
-      switch (type) {
-        case 'number': {
-          const res = toNumber(value);
-          if (res === undefined || res.toString() === value.trim()) newValue = res;
-          break;
-        }
-        case 'checkbox':
-          newValue = checked;
-          break;
-        default:
-          newValue = value;
-          break;
-      }
-      dispatch(updateScreen(scrId, prev => ({ ...prev, [id]: newValue })));
-    },
-    [dispatch, scrId],
-  );
+  const { screen } = useScreen(scrId);
+  const { displays = [] } = useDisplays();
   const addAddress = useCallback(
     (address: string) => {
-      // const { addresses = [], ...other } = refScreen.current as Screen;
       dispatch(
         updateScreen(scrId, prev => ({ ...prev, addresses: [...(prev.addresses ?? []), address] })),
       );
@@ -116,226 +106,247 @@ const ScreenComponent: React.FC<Props> = ({
     },
     [dispatch, scrId],
   );
-  // const current = useSelector(state => selectScreen(state, scrId));
-  // const displays = useSelector(selectDisplays);
-  // const [name, setName] = useState(current?.name ?? '');
-  // const changeNumberHandler = useCallback<React.ChangeEventHandler<HTMLInputElement>>(
-  //   e => {
-  //     const { value, id } = e.currentTarget;
-  //     const res = toNumber(value);
-  //     if (res === undefined || res.toString() === value.trim())
-  //       dispatch(setScreenProp([scrId, [id as keyof Screen, res]]));
-  //   },
-  //   [dispatch, scrId],
-  // );
-  // const [/* displayChanged, */ changeHandler, onBeforeAddAddress, setName] = useMemo(
-  //   () => [
-  //     // (event: SelectChangeEvent): void => {
-  //     //   dispatch(setScreenProp([scrId, ['display', toDisplay(`${event.target.value}`)]]));
-  //     // },
-  //     (event: React.ChangeEvent<HTMLInputElement>): void => {
-  //       const { value, id, type, checked } = event.target;
-  //       dispatch(
-  //         setScreenProp([scrId, [id as keyof Screen, type === 'checkbox' ? checked : value]]),
-  //       );
-  //     },
-  //     (value: string): boolean => reAddress.test(value),
-  //     (value: string): AnyAction => setScreenProp([scrId, ['name', value]]),
-  //   ],
-  //   [dispatch, scrId],
-  // );
-  // const [name, nameChanged] = useDelayUpdate(current?.name ?? '', setName);
-  return !current ? null : (
+  const validDisplays = [
+    ...displays.map(display => display.id),
+    DefaultDisplays.None,
+    DefaultDisplays.Primary,
+    DefaultDisplays.Secondary,
+  ];
+  const {
+    name = '',
+    width = 320,
+    height = 240,
+    moduleWidth = 40,
+    moduleHeight = 40,
+    left = 0,
+    top = 0,
+    display = DefaultDisplays.None,
+    addresses = [],
+    downToTop = false,
+    rightToLeft = false,
+    borderTop = 0,
+    borderBottom = 0,
+    borderLeft = 0,
+    borderRight = 0,
+    brightnessFactor = 1,
+  } = screen ?? {};
+  return !screen ? null : (
     <Paper sx={{ height: 1, p: 1, '& > * ~ *': { mt: 1 } }} hidden={scrId !== selected}>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-        <FieldSet legend="Название" disabled={readonly}>
-          <TextField
-            id="name"
-            value={current.name}
-            onChange={changeHandler}
-            fullWidth
-            disabled={readonly}
-            variant="standard"
-          />
-        </FieldSet>
-        <FieldSet
-          legend="Коэффициент яркости"
-          disabled={readonly}
-          title="Применяется при использовании нескольких типов экранов"
-        >
-          <TextField
-            variant="standard"
-            id="brightnessFactor"
-            value={current.brightnessFactor}
-            type="number"
-            inputProps={inputFactor}
-            onChange={changeHandler}
-            fullWidth
-            disabled={readonly || single}
-          />
-        </FieldSet>
-        <FieldSet legend="По горизонтали" disabled={readonly} title="Порядок модулей">
-          <FormControlLabel
-            control={
-              <Checkbox checked={!!current.rightToLeft} onChange={changeHandler} id="rightToLeft" />
-            }
-            label="Справа налево"
-          />
-        </FieldSet>
-        <FieldSet legend="По вертикали" disabled={readonly} title="Порядок модулей">
-          <FormControlLabel
-            control={
-              <Checkbox checked={!!current.downToTop} onChange={changeHandler} id="downToTop" />
-            }
-            label="Сверху вниз"
-          />
-        </FieldSet>
-        <FieldSet legend="Экран" title="Размеры в пикселях">
-          <Field
-            variant="standard"
-            id="width"
-            label="Ширина"
-            value={current.width ?? ''}
-            onChange={changeHandler}
-            type="number"
-            inputProps={inputSize}
-            disabled={readonly}
-          />
-          <Field
-            variant="standard"
-            id="height"
-            label="Высота"
-            value={current.height ?? ''}
-            onChange={changeHandler}
-            type="number"
-            inputProps={inputSize}
-            disabled={readonly}
-          />
-        </FieldSet>
-        <FieldSet legend="Модуль" title="Размеры в пикселях">
-          <Field
-            variant="standard"
-            id="moduleWidth"
-            label="Ширина"
-            value={current.moduleWidth ?? ''}
-            onChange={changeHandler}
-            type="number"
-            inputProps={inputSize}
-            disabled={readonly}
-          />
-          <Field
-            variant="standard"
-            id="moduleHeight"
-            label="Высота"
-            value={current.moduleHeight ?? ''}
-            onChange={changeHandler}
-            type="number"
-            inputProps={inputSize}
-            disabled={readonly}
-          />
-        </FieldSet>
-        <FieldSet legend="Рамка">
-          <Field
-            variant="standard"
-            id="borderLeft"
-            label="Слева"
-            value={current.borderLeft ?? ''}
-            onChange={changeHandler}
-            type="number"
-            disabled={readonly}
-          />
-          <Field
-            variant="standard"
-            id="borderRight"
-            label="Справа"
-            value={current.borderRight ?? ''}
-            onChange={changeHandler}
-            type="number"
-            disabled={readonly}
-          />
-        </FieldSet>
-        <FieldSet legend="Рамка">
-          <Field
-            variant="standard"
-            id="borderTop"
-            label="Сверху"
-            value={current.borderTop ?? ''}
-            onChange={changeHandler}
-            type="number"
-            disabled={readonly}
-          />
-          <Field
-            variant="standard"
-            id="borderBottom"
-            label="Снизу"
-            value={current.borderBottom ?? ''}
-            onChange={changeHandler}
-            type="number"
-            disabled={readonly}
-          />
-        </FieldSet>
-        <FieldSet legend="Отступ" title="Отступ изображения от края монитора">
-          <Field
-            variant="standard"
-            id="x"
-            label="Слева"
-            value={current.left ?? ''}
-            onChange={changeHandler}
-            type="number"
-            disabled={readonly}
-          />
-          <Field
-            variant="standard"
-            id="y"
-            label="Сверху"
-            value={current.top ?? ''}
-            onChange={changeHandler}
-            type="number"
-            disabled={readonly}
-          />
-        </FieldSet>
-        {/*
-        <FieldSet legend="Дисплей" disabled={readonly}>
-          <Select
-            variant="standard"
-            labelId="display-label"
-            value={(current.display ?? true).toString()}
-            onChange={displayChanged}
-            fullWidth
-          >
-            <MenuItem value="true">Основной</MenuItem>
-            <MenuItem value="false">Второстепенный</MenuItem>
-            {displays.map(({ id, bounds, primary, internal }) => (
-              <MenuItem value={id.toString()} key={id}>
-                <Typography variant="subtitle1" noWrap>
-                  id:{id}&nbsp;
-                </Typography>
-                <Typography variant="subtitle2" noWrap>
-                  {bounds.width}x{bounds.height} {primary ? ' основной' : ''}
-                  {internal ? ' встроенный' : ''}
-                </Typography>
-              </MenuItem>
-            ))}
-            {typeof current.display === 'string' &&
-              displays.findIndex(({ id }) => id.toString() === current.display) === -1 && (
-                <MenuItem value={current.display}>{current.display} (отключен)</MenuItem>
-              )}
-          </Select>
-        </FieldSet>
-*/}
-      </Box>
+      <Formik
+        initialValues={{
+          name,
+          width,
+          height,
+          moduleWidth,
+          moduleHeight,
+          left,
+          top,
+          display,
+          addresses,
+          downToTop,
+          rightToLeft,
+          borderTop,
+          borderBottom,
+          borderLeft,
+          borderRight,
+          brightnessFactor,
+        }}
+        onSubmit={(newValues, { setSubmitting }) => {
+          dispatch(updateScreen(scrId, prev => ({ ...prev, ...newValues })));
+          setSubmitting(false);
+        }}
+        validate={props => {
+          const errs: Partial<Record<keyof typeof props, string>> = {};
+          if (!props.name.trim()) errs.name = 'Требуется';
+          keys.forEach(key => {
+            if (props[key] < 4) errs[key] = 'Должно быть не меньше 4';
+            else if (props[key] % 2 !== 0) errs[key] = 'Должно быть четным';
+          });
+          return errs;
+        }}
+        enableReinitialize
+      >
+        {({ values, handleChange, handleBlur }) => (
+          <Form id="screen">
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              <FieldSet legend="Название" disabled={readonly}>
+                <Field name="name" component={FormikTextField} fullWidth disabled={readonly} />
+              </FieldSet>
+              <FieldSet
+                legend="Коэффициент яркости"
+                disabled={readonly}
+                title="Применяется при использовании нескольких типов экранов"
+              >
+                <Field
+                  name="brightnessFactor"
+                  component={FormikTextField}
+                  type="number"
+                  fullWidth
+                  disabled={readonly || single}
+                />
+              </FieldSet>
+              <FieldSet legend="По горизонтали" disabled={readonly} title="Порядок модулей">
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={!!values.rightToLeft}
+                      onChange={handleChange}
+                      name="rightToLeft"
+                    />
+                  }
+                  label="Справа налево"
+                />
+              </FieldSet>
+              <FieldSet legend="По вертикали" disabled={readonly} title="Порядок модулей">
+                <FormControlLabel
+                  control={
+                    <Checkbox checked={!!values.downToTop} onChange={handleChange} id="downToTop" />
+                  }
+                  label="Снизу вверх"
+                />
+              </FieldSet>
+              <FieldSet legend="Экран" title="Размеры в пикселях">
+                <Field
+                  variant="standard"
+                  name="width"
+                  label="Ширина"
+                  type="number"
+                  component={StyledFormikTextField}
+                  inputProps={inputSize}
+                  disabled={readonly}
+                />
+                <Field
+                  variant="standard"
+                  name="height"
+                  label="Высота"
+                  type="number"
+                  component={StyledFormikTextField}
+                  inputProps={inputSize}
+                  disabled={readonly}
+                />
+              </FieldSet>
+              <FieldSet legend="Модуль" title="Размеры в пикселях">
+                <Field
+                  variant="standard"
+                  name="moduleWidth"
+                  label="Ширина"
+                  type="number"
+                  component={StyledFormikTextField}
+                  inputProps={inputSize}
+                  disabled={readonly}
+                />
+                <Field
+                  variant="standard"
+                  name="moduleHeight"
+                  label="Высота"
+                  type="number"
+                  component={StyledFormikTextField}
+                  inputProps={inputSize}
+                  disabled={readonly}
+                />
+              </FieldSet>
+              <FieldSet legend="Рамка">
+                <Field
+                  variant="standard"
+                  name="borderLeft"
+                  label="Слева"
+                  type="number"
+                  component={StyledFormikTextField}
+                  disabled={readonly}
+                />
+                <Field
+                  variant="standard"
+                  name="borderRight"
+                  label="Справа"
+                  type="number"
+                  component={StyledFormikTextField}
+                  disabled={readonly}
+                />
+              </FieldSet>
+              <FieldSet legend="Рамка">
+                <Field
+                  variant="standard"
+                  name="borderTop"
+                  label="Сверху"
+                  type="number"
+                  component={StyledFormikTextField}
+                  disabled={readonly}
+                />
+                <Field
+                  variant="standard"
+                  name="borderBottom"
+                  label="Снизу"
+                  type="number"
+                  component={StyledFormikTextField}
+                  disabled={readonly}
+                />
+              </FieldSet>
+              <FieldSet legend="Отступ" title="Отступ изображения от края монитора">
+                <Field
+                  variant="standard"
+                  name="left"
+                  label="Слева"
+                  type="number"
+                  component={StyledFormikTextField}
+                  disabled={readonly}
+                />
+                <Field
+                  variant="standard"
+                  name="top"
+                  label="Сверху"
+                  type="number"
+                  component={StyledFormikTextField}
+                  disabled={readonly}
+                />
+              </FieldSet>
+              <FieldSet legend="Дисплей" disabled={readonly}>
+                <Select
+                  variant="standard"
+                  labelId="display-label"
+                  value={values.display}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  fullWidth
+                  name="display"
+                >
+                  <MenuItem value={DefaultDisplays.None}>Не задан</MenuItem>
+                  <MenuItem value={DefaultDisplays.Primary}>Основной</MenuItem>
+                  <MenuItem value={DefaultDisplays.Secondary}>Второстепенный</MenuItem>
+                  {displays.map(({ id, bounds, primary, internal }) => (
+                    <MenuItem value={id} key={id}>
+                      <Typography variant="subtitle1" noWrap>
+                        #{toHexId(id)}&nbsp;
+                        <small>
+                          {bounds.width}x{bounds.height} {primary ? ' основной' : ''}
+                          {internal ? ' встроенный' : ''}
+                        </small>
+                      </Typography>
+                    </MenuItem>
+                  ))}
+                  {values.display && !validDisplays.includes(values.display) && (
+                    <MenuItem value={values.display}>
+                      #{toHexId(values.display)} (отключен)
+                    </MenuItem>
+                  )}
+                </Select>
+              </FieldSet>
+            </Box>
 
-      <ChipInput
-        label="Адреса минихостов"
-        value={current.addresses}
-        onBeforeAdd={onBeforeAddress}
-        onAdd={addAddress}
-        onDelete={removeAddress}
-        // alwaysShowPlaceholder
-        placeholder="address+X,Y:WxH"
-        fullWidth
-        disabled={readonly}
-      />
+            <ChipInput
+              label="Адреса минихостов"
+              value={values.addresses}
+              onBeforeAdd={onBeforeAddress}
+              onAdd={addAddress}
+              onDelete={removeAddress}
+              // alwaysShowPlaceholder
+              placeholder="address+X,Y:WxH"
+              fullWidth
+              disabled={readonly}
+            />
+            <SubmitListener />
+          </Form>
+        )}
+      </Formik>
     </Paper>
   );
 };

@@ -56,9 +56,9 @@ const ProgressControl: React.FC<Props> = ({ duration, position }) => {
     <Slider
       aria-label="time-indicator"
       size="small"
-      value={/* value ?? */ position}
+      value={/* value ?? */ Math.min(position ?? 0, duration ?? 0)}
       min={0}
-      max={duration}
+      max={Math.max(duration ?? 0, 0.0001)}
       // step={1}
       // onChange={changeHandler}
       // onChangeCommitted={commitHandler}

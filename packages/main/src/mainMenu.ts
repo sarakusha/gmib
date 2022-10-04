@@ -12,11 +12,9 @@ import { openPlayer } from './playerWindow';
 import { getPlayers, hasPlayers, insertPlayer, uniquePlayerName } from './screen';
 import { dbReady } from './db';
 
-export const PlayerLabel = 'Плеер';
-
-const createNewPlayer = async (): Promise<void> => {
+const createNewPlayer = async (name = 'Новый плеер'): Promise<void> => {
   await dbReady;
-  const player = await uniquePlayerName({ name: 'Новый плеер' });
+  const player = await uniquePlayerName({ name });
   /* const { lastID } = */ await insertPlayer(player);
   // await openPlayer(lastID);
   // eslint-disable-next-line @typescript-eslint/no-use-before-define
@@ -28,33 +26,26 @@ type AppMenuItem = Omit<MenuItemConstructorOptions, 'submenu'> & {
 };
 
 export const playerMenu: AppMenuItem = {
-  label: PlayerLabel,
-  submenu: [], // [{ label: 'Создать новый', click: createNewPlayer }, { type: 'separator' }],
+  label: 'Плеер',
+  submenu: [],
 };
 
 export const updatePlayerMenu = (): Promise<void> =>
   dbReady.then(() =>
     getPlayers().then(players => {
-      // const { submenu } = playerMenu;
       playerMenu.submenu = [
-        // submenu.splice(
-        //   2,
-        //   submenu.length,
         ...players.map<MenuItemConstructorOptions>(({ id, name }) => ({
           label: name ?? `player#${id}`,
           click: () => {
             openPlayer(id);
           },
         })),
-        // );
       ];
     }),
   );
 
-const SessionsLabel = 'NiBUS сессии';
-
 const remoteMenu: AppMenuItem = {
-  label: SessionsLabel,
+  label: 'GMIB',
   submenu: [
     {
       label: 'Автозапуск',
@@ -72,7 +63,6 @@ const remoteMenu: AppMenuItem = {
 const template: MenuItemConstructorOptions[] = [
   remoteMenu,
   playerMenu,
-  // ... import.meta.env.VITE_PLAYER === '1' ? [playerMenu] : [],
   {
     label: 'Правка',
     role: 'editMenu',
@@ -300,4 +290,4 @@ localConfig.onDidChange('autostart', (autostart = false) => {
   updateTray();
 });
 
-dbReady.then(hasPlayers).then(async res => res || (await createNewPlayer()));
+dbReady.then(hasPlayers).then(async res => res || (await createNewPlayer('Плеер')));

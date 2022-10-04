@@ -14,19 +14,21 @@ import {
 } from '@mui/material';
 import * as React from 'react';
 import { TransitionGroup } from 'react-transition-group';
+import { getDisplayLabel } from '/@common/video';
 
-import useShiftAlert from '../hooks/useShiftAlert';
 import { useDisplays } from '../api/displays';
 import { useDeletePlayerMutation, usePlayers } from '../api/player';
+import useShiftAlert from '../hooks/useShiftAlert';
 import { useDispatch, useSelector } from '../store';
 import { setSettingsNode } from '../store/currentSlice';
 import { selectSettingsNode } from '../store/selectors';
 
 import FixedHeadLayout from './FixedHeadLayout';
-import OutputSettings, { getDisplayLabel } from './OutputSettings';
+import OutputSettings from './OutputSettings';
 import PlayerSettings from './PlayerSettings';
 import SettingsToolbar from './SettingsToolbar';
 import TabPanel from './TabPanel';
+import { PlayerMappingDialogProvider } from '../hooks/usePlayerMappingDialog';
 
 const MinusSquare: React.FC<SvgIconProps> = props => (
   <SvgIcon fontSize="inherit" style={{ width: 14, height: 14 }} {...props}>
@@ -95,7 +97,13 @@ const TreeItem = React.forwardRef<TreeItemProps['ref'], React.PropsWithoutRef<St
             {props.label}
           </Typography>
           {onDelete && (
-            <IconButton size="small" title="Удалить" onClick={onDelete} color="secondary">
+            <IconButton
+              size="small"
+              title="Удалить"
+              onClick={onDelete}
+              color="secondary"
+              tabIndex={-1}
+            >
               <CloseIcon fontSize="inherit" sx={{ opacity: 0 }} />
             </IconButton>
           )}
@@ -106,8 +114,8 @@ const TreeItem = React.forwardRef<TreeItemProps['ref'], React.PropsWithoutRef<St
 );
 
 const SettingsTab: React.FC = () => {
-  const { data: displays = [] } = useDisplays();
-  const { data: players = [] } = usePlayers();
+  const { displays = [] } = useDisplays();
+  const { players = [] } = usePlayers();
   const dispatch = useDispatch();
   const selected = useSelector(selectSettingsNode);
   const [deletePlayer] = useDeletePlayerMutation();
@@ -119,54 +127,65 @@ const SettingsTab: React.FC = () => {
     if (e.shiftKey) deletePlayer(id);
     else showAlert();
   };
+  const [expanded, setExpanded] = React.useState<string[]>([]);
   const [group = '', id, index] = selected?.split(':', 3) ?? [];
+  React.useEffect(() => {
+    setExpanded(prev => (prev.some(nodeId => nodeId.startsWith(group)) ? prev : [...prev, group]));
+  }, [selected, group]);
   return (
     <Container maxWidth="sm" disableGutters sx={{ height: 1, width: 1, display: 'flex' }}>
-      <FixedHeadLayout gap={0}>
-        <SettingsToolbar group={group} id={+id} />
-        <Stack direction="row" gap={1}>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <TreeView selected={selected} onNodeSelect={handleSelect}>
-              <TreeItem nodeId="players" label="Плееры">
-                <TransitionGroup>
-                  {players.map((player, i) => (
-                    <Collapse key={player.id}>
-                      <TreeItem
-                        nodeId={`players:${player.id}:${i}`}
-                        label={player.name}
-                        onDelete={deleteHandler(player.id)}
-                      />
-                    </Collapse>
-                  ))}
-                </TransitionGroup>
-              </TreeItem>
-              <TreeItem nodeId="displays" label="Устройства вывода">
-                <TransitionGroup>
-                  {displays.map((display, i) => (
-                    <Collapse key={display.id}>
-                      <TreeItem
-                        nodeId={`displays:${display.id}:${i}`}
-                        label={getDisplayLabel(display, i)}
-                        bold={display.primary}
-                      />
-                    </Collapse>
-                  ))}
-                </TransitionGroup>
-              </TreeItem>
-            </TreeView>
-          </Box>
-          <Box sx={{ flex: 2 }}>
-            <TabContext value={group}>
-              <TabPanel value="players" dense>
-                <PlayerSettings id={Number(id)} />
-              </TabPanel>
-              <TabPanel value="displays" dense>
-                <OutputSettings id={Number(id)} index={Number(index)} />
-              </TabPanel>
-            </TabContext>
-          </Box>
-        </Stack>
-      </FixedHeadLayout>
+      <PlayerMappingDialogProvider>
+        <FixedHeadLayout gap={0}>
+          <SettingsToolbar group={group} id={+id} />
+          <Stack direction="row" gap={1} sx={{ height: 1 }}>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <TreeView
+                selected={selected}
+                onNodeSelect={handleSelect}
+                expanded={expanded}
+                onNodeToggle={(_, ids) => setExpanded(ids)}
+              >
+                <TreeItem nodeId="players" label="Плееры">
+                  <TransitionGroup>
+                    {players.map(player => (
+                      <Collapse key={player.id}>
+                        <TreeItem
+                          nodeId={`players:${player.id}`}
+                          label={player.name}
+                          onDelete={deleteHandler(player.id)}
+                        />
+                      </Collapse>
+                    ))}
+                  </TransitionGroup>
+                </TreeItem>
+                <TreeItem nodeId="displays" label="Устройства вывода">
+                  <TransitionGroup>
+                    {displays.map((display, i) => (
+                      <Collapse key={display.id}>
+                        <TreeItem
+                          nodeId={`displays:${display.id}:${i}`}
+                          label={getDisplayLabel(display, i)}
+                          bold={display.primary}
+                        />
+                      </Collapse>
+                    ))}
+                  </TransitionGroup>
+                </TreeItem>
+              </TreeView>
+            </Box>
+            <Box sx={{ flex: 2, height: 1 }}>
+              <TabContext value={group}>
+                <TabPanel value="players" dense>
+                  <PlayerSettings id={Number(id)} />
+                </TabPanel>
+                <TabPanel value="displays" dense>
+                  <OutputSettings id={Number(id)} index={Number(index)} />
+                </TabPanel>
+              </TabContext>
+            </Box>
+          </Stack>
+        </FixedHeadLayout>
+      </PlayerMappingDialogProvider>
     </Container>
   );
 };

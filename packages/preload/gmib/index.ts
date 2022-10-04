@@ -3,6 +3,7 @@
  */
 
 import { contextBridge } from 'electron';
+// import '@sentry/electron/preload';
 
 import { setDispatch } from '/@common/ipcDispatch';
 import log from '/@main/initlog';
@@ -13,6 +14,7 @@ import * as dialogs from './dialogs';
 import * as nibus from './nibus';
 import * as novastar from './novastar';
 import * as output from './output';
+import * as identify from './identify';
 
 import expandTypes from '/@common/expandTypes';
 
@@ -49,3 +51,4 @@ contextBridge.exposeInMainWorld('dialogs', expandTypes(dialogs));
 contextBridge.exposeInMainWorld('db', expandTypes(db));
 contextBridge.exposeInMainWorld('log', log.log.bind(log));
 contextBridge.exposeInMainWorld('output', expandTypes(output));
+contextBridge.exposeInMainWorld('identify', expandTypes(identify));

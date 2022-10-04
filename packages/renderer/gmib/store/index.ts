@@ -15,7 +15,7 @@ import flasherReducer from './flasherSlice';
 import listenerMiddleware from './listenerMiddleware';
 import logReducer from './logSlice';
 import mibsReducer from './mibsSlice';
-import novastarsReducer from './novastarsSlice';
+import novastarReducer from './novastarSlice';
 import remoteHostsReducer from './remoteHostsSlice';
 // import screensReducer from './screensSlice';
 import { selectAllDevices, selectDeviceById } from './selectors';
@@ -30,6 +30,7 @@ import './healthThunks';
 import './novastarThunks';
 import './sensorThunks';
 // import './screensThunks';
+import authMiddleware from './authMiddleware';
 
 export const store = configureStore({
   reducer: {
@@ -40,7 +41,7 @@ export const store = configureStore({
     mibs: mibsReducer,
     sensors: sensorsReducer,
     remoteHosts: remoteHostsReducer,
-    novastars: novastarsReducer,
+    novastar: novastarReducer,
     log: logReducer,
     flasher: flasherReducer,
     // screens: screensReducer,
@@ -55,7 +56,7 @@ export const store = configureStore({
       },
     })
       .prepend(listenerMiddleware.middleware)
-      .concat(...api.middleware),
+      .concat(...api.middleware, authMiddleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;

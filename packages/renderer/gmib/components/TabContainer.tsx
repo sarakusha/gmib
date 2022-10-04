@@ -16,6 +16,7 @@ import type { DeviceId } from '@nibus/core';
 export type Props = React.PropsWithChildren<{
   id: string;
   selected?: boolean;
+  unmount?: boolean;
 }>;
 
 export type MinihostTabProps = {
@@ -23,19 +24,16 @@ export type MinihostTabProps = {
   selected?: boolean;
 };
 
-const TabContainer: React.FC<Props> = ({
-  id,
-  children,
-  selected = true,
-}) => (
-  <Box
-    id={`tabpanel-${id}`}
-    aria-labelledby={`tab-${id}`}
-    hidden={!selected}
-    sx={{ display: selected ? 'flex' : 'none', width: '100%' }}
-  >
-    {children}
-  </Box>
-);
+const TabContainer: React.FC<Props> = ({ id, children, selected = true, unmount = false }) =>
+  selected || !unmount ? (
+    <Box
+      id={`tabpanel-${id}`}
+      aria-labelledby={`tab-${id}`}
+      hidden={!selected}
+      sx={{ display: selected ? 'flex' : 'none', width: '100%' }}
+    >
+      {children}
+    </Box>
+  ) : null;
 
 export default TabContainer;

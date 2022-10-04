@@ -42,7 +42,10 @@
   "include": [
     "packages/common/**/*.ts",
     "packages/main/src/**/*.ts",
-    "packages/preload/src/**/*.ts"
+    "packages/preload/gmib/**/*.ts",
+    "packages/renderer/gmib/**/*.ts",
+    "packages/renderer/player/**/*.ts",
+    "packages/playerPreload/player/**/*.ts"
   ],
   "compileOnSave": false
 }

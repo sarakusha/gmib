@@ -44,7 +44,6 @@ export const parseDate = (value?: string): string | undefined =>
   typeof value === 'undefined' ? undefined : dayjs(value, DATETIME_FORMAT).toISOString();
 
 function createTables(): void {
-  debug('START CREATION DB');
   db.serialize(() => {
     db.run(
       `CREATE TABLE IF NOT EXISTS telemetry (
@@ -133,18 +132,36 @@ function createTables(): void {
     );
 
     db.run(
-      `CREATE TABLE IF NOT EXISTS videoOutput (
-        id INTEGER PRIMARY KEY,
-        name TEXT,
-        minWidth INTEGER,
-        minHeight INTEGER,
-        "left" INTEGER,
-        top INTEGER,
-        display INTEGER,
-        flags INTEGER DEFAULT 0
-    )`,
-      err => err && debug(`error while create videoOutput ${err}`),
+      `CREATE TABLE IF NOT EXISTS playerMapping (
+          id INTEGER PRIMARY KEY,
+          name TEXT NOT NULL,
+          player INTEGER NOT NULL,
+          display INTEGER,
+          "left" INTEGER DEFAULT 0,
+          top INTEGER DEFAULT 0,
+          width INTEGER,
+          height INTEGER,
+          shader TEXT,
+          zOrder INTEGER DEFAULT 0,
+          flags INTEGER DEFAULT 0,
+          FOREIGN KEY (player)
+            REFERENCES player (id) ON DELETE CASCADE
+        )`,
+      err => err && debug(`error while create playerMapping: ${err}`),
     );
+    // db.run(
+    //   `CREATE TABLE IF NOT EXISTS videoOutput (
+    //     id INTEGER PRIMARY KEY,
+    //     name TEXT,
+    //     minWidth INTEGER,
+    //     minHeight INTEGER,
+    //     "left" INTEGER,
+    //     top INTEGER,
+    //     display INTEGER,
+    //     flags INTEGER DEFAULT 0
+    //    )`,
+    //   err => err && debug(`error while create videoOutput ${err}`),
+    // );
     db.run(
       `CREATE TABLE IF NOT EXISTS screen (
             id INTEGER PRIMARY KEY,
@@ -162,9 +179,7 @@ function createTables(): void {
             borderRight INTEGER DEFAULT 0,
             brightnessFactor REAL DEFAULT 1,
             test TEXT,
-            output INTEGER,
-            FOREIGN KEY (output)
-                REFERENCES videoOutput (id) ON DELETE SET NULL
+            display INTEGER
         )`,
       err => err && debug(`error while create screen ${err}`),
     );
@@ -179,6 +194,23 @@ function createTables(): void {
     );
 
     db.run(
+      `CREATE TABLE IF NOT EXISTS isecret (
+        id TEXT NOT NULL PRIMARY KEY,
+        secret TEXT NOT NULL,
+        created INTEGER NOT NULL
+      )`,
+      err => err && debug(`error while create isecret: ${err}`),
+    );
+
+    db.run(
+      `CREATE TABLE IF NOT EXISTS osecret (
+        id TEXT NOT NULL PRIMARY KEY,
+        secret TEXT NOT NULL
+      )`,
+      err => err && debug(`error while create isecret: ${err}`),
+    );
+
+    db.run(
       `CREATE TABLE IF NOT EXISTS player (
             id INTEGER PRIMARY KEY,
             "name" TEXT,
@@ -190,36 +222,42 @@ function createTables(): void {
             FOREIGN KEY (playlistId)
                 REFERENCES playlist (id) ON DELETE SET NULL
         )`,
-      err => err && debug(`error while create player ${err}`),
-    );
-    db.run(
-      `CREATE TABLE IF NOT EXISTS tile (
-        id INTEGER PRIMARY KEY,
-        name TEXT,
-        player INTEGER NOT NULL,
-        sWidth INTEGER NOT NULL,
-        sHeight INTEGER NOT NULL,
-        sx INTEGER NOT NULL,
-        sy INTEGER NOT NULL,
-        output INTEGER NOT NULL,
-        dWidth INTEGER NOT NULL,
-        dHeight INTEGER NOT NULL,
-        dx INTEGER NOT NULL,
-        dy INTEGER NOT NULL,
-        FOREIGN KEY (player)
-            REFERENCES player (id) ON DELETE CASCADE,
-        FOREIGN KEY (output)
-            REFERENCES videoOutput (id) ON DELETE CASCADE
-    )`,
       err => {
-        if (err) debug(`error while create tile ${err}`);
+        if (err) debug(`error while create player ${err}`);
         else
           setTimeout(() => {
             dbDeferred.resolve();
-            debug('DB READY');
           }, 100);
       },
     );
+    // db.run(
+    //   `CREATE TABLE IF NOT EXISTS tile (
+    //     id INTEGER PRIMARY KEY,
+    //     name TEXT,
+    //     player INTEGER NOT NULL,
+    //     sWidth INTEGER NOT NULL,
+    //     sHeight INTEGER NOT NULL,
+    //     sx INTEGER NOT NULL,
+    //     sy INTEGER NOT NULL,
+    //     output INTEGER NOT NULL,
+    //     dWidth INTEGER NOT NULL,
+    //     dHeight INTEGER NOT NULL,
+    //     dx INTEGER NOT NULL,
+    //     dy INTEGER NOT NULL,
+    //     FOREIGN KEY (player)
+    //         REFERENCES player (id) ON DELETE CASCADE,
+    //     FOREIGN KEY (output)
+    //         REFERENCES videoOutput (id) ON DELETE CASCADE
+    // )`,
+    //   err => {
+    //     if (err) debug(`error while create tile ${err}`);
+    //     else
+    //       setTimeout(() => {
+    //         dbDeferred.resolve();
+    //         debug('DB READY');
+    //       }, 100);
+    //   },
+    // );
 
     const date = new Date();
     date.setDate(date.getDate() - 7);

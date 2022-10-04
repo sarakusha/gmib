@@ -1,9 +1,8 @@
-
 import { Box, Container, Paper, Tab, Tabs } from '@mui/material';
 import React, { useState } from 'react';
 
 import { useSelector } from '../store';
-import { selectCurrentDevice } from '../store/selectors';
+import { selectCurrentDeviceId, selectCurrentTab, selectDeviceById } from '../store/selectors';
 
 import FirmwareTab from './FirmwareTab';
 import PropertyGridTab from './PropertyGridTab';
@@ -18,18 +17,20 @@ type Props = {
 type TabState = 'props' | 'telemetry' | 'firmware';
 
 const DeviceTabs: React.FC<Props> = ({ id }) => {
-  const device = useSelector(selectCurrentDevice);
+  const currentId = useSelector(selectCurrentDeviceId);
+  const device = useSelector(state => selectDeviceById(state, id));
   const isEmpty = !device || device.isEmptyAddress;
   const [value, setValue] = useState<TabState>('props');
   const mib = device?.mib;
   const isMinihost = mib?.startsWith('minihost');
   const isMinihost3 = mib === 'minihost3';
-  if (!id) return null;
+  const tab = useSelector(selectCurrentTab);
+  if (!device) return null;
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', width: 1 }}>
       <Paper square>
         <Tabs
-          value={value}
+          value={tab === 'devices' && id === currentId ? value : false}
           indicatorColor="primary"
           textColor="primary"
           onChange={(_, newValue) => setValue(newValue ?? 'props')}
@@ -44,8 +45,12 @@ const DeviceTabs: React.FC<Props> = ({ id }) => {
       </Paper>
       <Container maxWidth={value !== 'telemetry' ? 'sm' : undefined} sx={{ flexGrow: 1, pt: 1 }}>
         <PropertyGridTab id={id} selected={value === 'props' && device !== undefined} />
-        <TelemetryTab id={id} selected={value === 'telemetry' && device !== undefined} />
-         <FirmwareTab id={id} selected={value === 'firmware' && device !== undefined} />
+        {isMinihost && (
+          <TelemetryTab id={id} selected={value === 'telemetry' && device !== undefined} />
+        )}
+        {isMinihost && (
+          <FirmwareTab id={id} selected={value === 'firmware' && device !== undefined} />
+        )}
       </Container>
     </Box>
   );

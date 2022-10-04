@@ -6,6 +6,7 @@ import find from 'lodash/find';
 import getAllDisplays from './getAllDisplays';
 
 import type { Display as DisplayType } from '@nibus/core';
+import { DefaultDisplays } from '../../common/video';
 
 type Handler = Parameters<WebContents['setWindowOpenHandler']>[0];
 
@@ -34,14 +35,17 @@ const openHandler: Handler = ({ url }) => {
   const kiosk = !!toNumber(searchParams.get('kiosk'), 0);
   const transparent = !!toNumber(searchParams.get('transparent'), 0);
   let display: DisplayType | undefined;
-  if (Number.isInteger(displayId)) {
-    display = find(displays, { id: displayId });
-  }
-  if (displayParam === 'primary' || displayParam === 'true') {
-    display = find(displays, { primary: true });
-  }
-  if (!display) {
-    display = find(displays, { primary: false });
+  switch (displayId) {
+    case DefaultDisplays.Primary:
+      display = find(displays, { primary: true });
+      break;
+    case DefaultDisplays.Secondary:
+      display = find(displays, { primary: false });
+      break;
+    default:
+      if (Number.isInteger(displayId)) {
+        display = find(displays, { id: displayId });
+      }
   }
   if (!display) {
     debug(`${url} open denied`);
@@ -55,7 +59,7 @@ const openHandler: Handler = ({ url }) => {
     frame: kiosk,
     backgroundColor: transparent ? undefined : '#000',
     focusable: false,
-    fullscreen: kiosk,
+    // fullscreen: kiosk,
     // simpleFullscreen: true,
     kiosk,
     transparent,

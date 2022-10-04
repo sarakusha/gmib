@@ -250,6 +250,7 @@ const MediaItem = React.forwardRef<HTMLLIElement, MediaItemProps>((props, ref) =
               sx={{ color: 'secondary.main' }}
               size="small"
               title={deleteTitle}
+              tabIndex={-1}
             >
               <DeleteCloseIcon
                 fontSize="inherit"

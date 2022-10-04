@@ -53,9 +53,9 @@
     "../../node_modules/@types/dom-webcodecs/webcodecs.generated.d.ts",
     "../../node_modules/@types/offscreencanvas/index.d.ts",
     "../../node_modules/@types/dom-mediacapture-transform/index.d.ts"
-  ],
+, "../common/gmibBaseQuery.ts", "authBaseQuery.ts"  ],
   "exclude": [
-    "../preload/src/**",
+    "../preload/gmib/**",
     "**/*.spec.ts",
     "**/*.test.ts"
   ],

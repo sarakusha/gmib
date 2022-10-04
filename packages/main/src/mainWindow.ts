@@ -6,7 +6,6 @@ import debugFactory from 'debug';
 import createWindow from './createWindow';
 import localConfig from './localConfig';
 import { addRemoteFactory, getTitle, setRemoteEditClick, setRemotesFactory } from './mainMenu';
-import secret from './secret';
 import { closeScreens, screenWindows } from './windows';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:wnd`);
@@ -48,7 +47,7 @@ export const createAppWindow = (
       });
     });
   }
-  const query = `port=${port}${host ? `&host=${host}` : ''}&access_token=${secret}`;
+  const query = `port=${port}${host ? `&host=${host}` : ''}`;
   const pageUrl =
     import.meta.env.DEV && import.meta.env.VITE_DEV_SERVER_URL !== undefined
       ? `${import.meta.env.VITE_DEV_SERVER_URL}?${query}`
@@ -60,7 +59,7 @@ export const createAppWindow = (
   });
   browserWindow.webContents.on('render-process-gone', (event, details) => {
     debug(`<<<<CRASH>>>>: renderer process gone: ${details.reason} (${details.exitCode})`);
-    if (import.meta.env.PROD /* && !['clean-exit', 'killed'].includes(details.reason) */) {
+    if (import.meta.env.PROD && !['clean-exit', 'killed'].includes(details.reason)) {
       debug('relaunch...');
       app.relaunch();
       app.quit();
@@ -158,11 +157,12 @@ export function createTestWindow(
     focusable: false,
     // fullscreen: true,
     // kiosk: true,
+    // simpleFullscreen: true,
     show: false,
     alwaysOnTop: true,
     skipTaskbar: true,
     hasShadow: false,
-    // transparent: true,
+    transparent: true,
     roundedCorners: false,
     webPreferences: {
       // nativeWindowOpen: true,
@@ -177,7 +177,7 @@ export function createTestWindow(
     });
   }
   window.on('closed', () => {
-    const [id] = [...screenWindows.entries()].find(([, w]) => window === w) ?? [];
+    const [id] = [...screenWindows.entries()].find(([, [w]]) => window === w) ?? [];
     if (id) screenWindows.delete(id);
     // log.log(`close and delete screenWindow ${id}`);
     // testWindow = null;

@@ -51,19 +51,19 @@ export type ScreenBrightness = ScreenId & {
   percent: number;
 };
 
-export const novastarsAdapter = createEntityAdapter<Novastar>({ selectId: ({ path }) => path });
+export const novastarAdapter = createEntityAdapter<Novastar>({ selectId: ({ path }) => path });
 
-const novastarsSlice = createSlice({
-  name: 'novastars',
-  initialState: novastarsAdapter.getInitialState(),
+const novastarSlice = createSlice({
+  name: 'novastar',
+  initialState: novastarAdapter.getInitialState(),
   reducers: {
-    addNovastar: novastarsAdapter.addOne,
-    removeNovastar: novastarsAdapter.removeOne,
-    updateNovastar: novastarsAdapter.updateOne,
+    addNovastar: novastarAdapter.addOne,
+    removeNovastar: novastarAdapter.removeOne,
+    updateNovastar: novastarAdapter.updateOne,
     novastarBusy(state, { payload: path }: PayloadAction<string>) {
       const entity = state.entities[path];
       if (!entity) return;
-      novastarsAdapter.updateOne(state, {
+      novastarAdapter.updateOne(state, {
         id: path,
         changes: {
           isBusy: entity.isBusy + 1,
@@ -73,7 +73,7 @@ const novastarsSlice = createSlice({
     novastarReady(state, { payload: path }: PayloadAction<string>) {
       const entity = state.entities[path];
       if (!entity) return;
-      novastarsAdapter.updateOne(state, {
+      novastarAdapter.updateOne(state, {
         id: path,
         changes: {
           isBusy: entity.isBusy - 1,
@@ -145,6 +145,6 @@ export const {
   setScreenColorBrightness,
   updateNovastar,
   updateScreen,
-} = novastarsSlice.actions;
+} = novastarSlice.actions;
 
-export default novastarsSlice.reducer;
+export default novastarSlice.reducer;

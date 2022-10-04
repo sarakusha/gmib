@@ -1,7 +1,8 @@
 import { createEntityAdapter, type EntityState } from '@reduxjs/toolkit';
 import { createApi } from '@reduxjs/toolkit/query/react';
+import { sourceId } from '../utils';
 
-import baseQuery from '/@common/baseQuery';
+import baseQuery from '../../authBaseQuery';
 import type { Player } from '/@common/video';
 
 export const playerAdapter = createEntityAdapter<Player>();
@@ -85,13 +86,19 @@ const playerApi = createApi({
         queryFulfilled.catch(patchResult.undo);
       },
     }),
+    stopPlayer: build.mutation<void, void>({
+      query: () => ({
+        url: `/player/${sourceId}/stop`,
+        method: 'PUT',
+      }),
+    }),
   }),
 });
 
 export const usePlayers = () =>
   playerApi.useGetPlayersQuery(undefined, {
     selectFromResult: ({ data, ...other }) => ({
-      data: data && selectPlayers(data),
+      players: data && selectPlayers(data),
       ...other,
     }),
     // pollingInterval: 10000,
@@ -101,7 +108,7 @@ export const usePlayer = (id?: number | null) =>
   playerApi.useGetPlayersQuery(undefined, {
     skip: !id,
     selectFromResult: ({ data, ...other }) => ({
-      data: data && id ? selectPlayer(data, id) : undefined,
+      player: data && id ? selectPlayer(data, id) : undefined,
       ...other,
     }),
   });

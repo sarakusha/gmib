@@ -30,7 +30,7 @@ const ControlBar = React.forwardRef<HTMLDivElement, Props>(
 */}
       </div>
       <ProgressControl duration={duration} position={position} />
-      <TimeDisplay prefix={duration ? '-' : ''} seconds={duration ? duration - position : NaN} />
+      <TimeDisplay prefix={duration ? '-' : ''} seconds={duration ? Math.ceil(duration - position) : NaN} />
       <PictureInPicture />
     </Stack>
   ),

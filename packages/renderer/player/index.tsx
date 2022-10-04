@@ -1,4 +1,4 @@
-import { CssBaseline } from '@mui/material';
+import { Box, CssBaseline } from '@mui/material';
 import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 import dayjs from 'dayjs';
 import Duration from 'dayjs/plugin/duration';
@@ -9,12 +9,12 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import 'typeface-roboto/index.css';
 import { Provider } from 'react-redux';
+// import * as Sentry from '@sentry/electron/renderer';
 
-// import Html5DndProvider from '/@common/Html5DndProvider';
+import Html5DndProvider from '/@common/Html5DndProvider';
 import theme from '/@common/theme';
 
 import App from './components/App';
-import { VideoProvider } from './hooks/useMediaStream';
 import store from './store';
 
 debugFactory.log = window.log;
@@ -25,8 +25,11 @@ dayjs.locale('ru');
 
 const container = document.getElementById('app') as HTMLElement;
 const root = createRoot(container);
+// Sentry.init({ dsn: 'https://fbd4024789d247fcb5eb2493d1aa28b6@o1412889.ingest.sentry.io/6752393' });
 
-const Html5DndProvider = React.lazy(() => import('/@common/Html5DndProvider'));
+window.setDispatch(store.dispatch.bind(store));
+
+// const Html5DndProvider = React.lazy(() => import('/@common/Html5DndProvider'));
 
 root.render(
   <React.StrictMode>
@@ -43,9 +46,8 @@ root.render(
           preventDuplicate
         >
           <Html5DndProvider>
-            <VideoProvider>
-              <App />
-            </VideoProvider>
+            <App />
+            <Box id="videoContainer" sx={{ display: 'none' }}/>
           </Html5DndProvider>
         </SnackbarProvider>
       </Provider>

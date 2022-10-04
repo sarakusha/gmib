@@ -9,21 +9,15 @@ import {
 } from '@mui/material';
 import React from 'react';
 
-import type { DisplayType } from '../api/displays';
-import { useDisplay } from '../api/displays';
+import { getDisplayLabel } from '/@common/video';
+
+import { useDisplay } from '../../gmib/api/displays';
+import { toHexId } from '../utils';
 
 type Props = {
   id?: number;
   index?: number;
 };
-
-export const getDisplayLabel = (display: DisplayType, index: number): string => {
-  // if (display.primary) return 'Основной';
-  if (display.internal) return 'Встроенный';
-  return `Дисплей ${index + 1}`;
-};
-
-const getId = (id: number): string => id.toString(16).toUpperCase().padStart(8, '0');
 
 const readonly = { readOnly: true };
 
@@ -42,11 +36,11 @@ const ReadonlyField = React.forwardRef<HTMLDivElement, React.PropsWithoutRef<Tex
 );
 
 const OutputSettings: React.FC<Props> = ({ id, index = 0 }) => {
-  const { data: display = null } = useDisplay(id);
+  const { display = null } = useDisplay(id);
   return (
     display && (
       <FormControl component="fieldset" sx={{ width: 1 }}>
-        <FormLabel component="legend">Дисплей #{getId(display.id)}</FormLabel>
+        <FormLabel component="legend">Дисплей #{toHexId(display.id)}</FormLabel>
         <TextField name="name" value={getDisplayLabel(display, index)} label="Имя" />
         <Stack direction="row" gap={2}>
           <ReadonlyField name="width" label="Ширина" value={display.bounds.width} />

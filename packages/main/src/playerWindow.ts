@@ -15,6 +15,7 @@ import localConfig from './localConfig';
 import type { Player } from '/@common/video';
 
 const preload = path.join(__dirname, '../../playerPreload/dist/index.cjs');
+const remotePreload = path.join(__dirname, '../../remotePlayerPreload/dist/index.cjs');
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:playerWindow`);
 
 let isQuiting = false;
@@ -30,12 +31,14 @@ export const getPlayerTitle = (player: Player): string =>
 export const openPlayer = async (
   id: number,
   host = 'localhost',
+  port = +(process.env['NIBUS_PORT'] ?? 9001) + 1,
+  token = secret,
 ): Promise<BrowserWindow | undefined> => {
   await dbReady;
   const player = await getPlayer(id);
   if (!player) return undefined;
   let browserWindow = playerWindows.get(id); // [...windows.values()].find(w => w.title === title);
-  const query = `source_id=${id}&host=${host}&access_token=${secret}`;
+  const query = `source_id=${id}&host=${host}&port=${port}&access_token=${token}`;
   if (!browserWindow) {
     const url =
       import.meta.env.DEV && import.meta.env.VITE_DEV_SERVER_URL
@@ -56,7 +59,7 @@ export const openPlayer = async (
     // browserWindow.show();
     browserWindow.webContents.on('render-process-gone', (event, details) => {
       debug(`<<<<CRASH>>>> player process gone: ${details.reason} (${details.exitCode})`);
-      if (import.meta.env.PROD /*  && !['clean-exit', 'killed'].includes(details.reason) */) {
+      if (import.meta.env.PROD && !['clean-exit', 'killed'].includes(details.reason)) {
         debug('relaunch...');
         app.relaunch();
         app.quit();

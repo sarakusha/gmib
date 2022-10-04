@@ -18,8 +18,9 @@ import PropertyValueCell from './PropertyValueCell';
 import type { MinihostTabProps } from './TabContainer';
 import TableCell from './TableCell';
 
-const StyledAccordionList = styled(AccordionList)(({ theme }) => ({
+const StyledAccordionList = styled(AccordionList)(({ theme, title }) => ({
   '&.MuiAccordionSummary-root': {
+    display: title ? 'flex' : 'none',
     opacity: 0.6,
     '& > *': {
       backgroundColor: 'transparent',

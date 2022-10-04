@@ -1,4 +1,3 @@
-
 /* eslint-disable indent,@typescript-eslint/no-explicit-any */
 import type { SelectChangeEvent } from '@mui/material';
 import { Box, MenuItem, Select } from '@mui/material';
@@ -17,23 +16,6 @@ const capitalize = <T extends string | undefined>(
   str: T,
 ): T extends string ? Capitalize<T> : undefined =>
   str && ((str.charAt(0).toUpperCase() + str.slice(1)) as any);
-
-// const safeParseNumber = ({ value }: ValueState): number => parseFloat(value as string) || 0;
-
-// const useStyles = makeStyles(_theme => ({
-//   select: {
-//     fontSize: 'inherit',
-//   },
-//   inputDirty: {
-//     fontWeight: 'bold',
-//   },
-//   error: {
-//     color: 'rgba(255,0,0,0.875) !important',
-//   },
-//   // readonly: {
-//   //   whiteSpace: 'nowrap',
-//   // },
-// }));
 
 type Props = {
   meta: PropMetaInfo;
@@ -63,7 +45,7 @@ const PropertyValueCell: React.FC<Props> = ({ meta, name, state, onChangePropert
     if (step === undefined) {
       step = simpleType === 'xs:float' || simpleType === 'xs.double' ? 0.01 : 1;
     }
-    const selectChanged = (event: SelectChangeEvent): void => {
+    const selectChanged = (event: SelectChangeEvent<ValueType>): void => {
       onChangeProperty(name, event.target.value);
     };
     const rawValue = ({ error, value }: ValueState): ValueType => error ?? convertFrom(value) ?? '';
@@ -95,7 +77,7 @@ const PropertyValueCell: React.FC<Props> = ({ meta, name, state, onChangePropert
                 </MenuItem>
               )}
               {enumeration.map(([key, itemValue]) => (
-                <MenuItem key={key} value={itemValue}>
+                <MenuItem key={key} value={String(itemValue)}>
                   {key}
                 </MenuItem>
               ))}

@@ -5,12 +5,7 @@ import { styled } from '@mui/material/styles';
 import { useSnackbar } from 'notistack';
 import React, { useEffect, useState } from 'react';
 
-import {
-  selectScreens,
-  useCreateScreenMutation,
-  useDeleteScreenMutation,
-  useGetScreensQuery,
-} from '../api/screens';
+import { useCreateScreenMutation, useDeleteScreenMutation, useScreens } from '../api/screens';
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useDispatch, useSelector } from '../store';
 // import { removeScreen } from '../store/configSlice';
@@ -34,11 +29,9 @@ const Label = styled('span')`
 `;
 
 const Screens: React.FC = () => {
+  const { screens = [], isSuccess } = useScreens();
   const value = useSelector(selectCurrentScreenId);
-  const { data: screensData, isSuccess } = useGetScreensQuery();
-  const screens = screensData ? selectScreens(screensData) : [];
   const needSelect = value == null && isSuccess && screens.length > 0 && screens[0].id;
-  // const screens = useSelector(selectScreens);
   const dispatch = useDispatch();
   useEffect(() => {
     if (needSelect) dispatch(setCurrentScreen(needSelect));
@@ -76,11 +69,12 @@ const Screens: React.FC = () => {
       }
     };
   const single = screens.length === 1;
+  const [active, setActive] = React.useState(false);
   return (
     <Box sx={{ width: 1 }}>
       <Paper square>
         <Tabs
-          value={value ?? 'addScreen'}
+          value={isSuccess && value ? value : false}
           indicatorColor="primary"
           textColor="primary"
           variant="scrollable"
@@ -117,7 +111,7 @@ const Screens: React.FC = () => {
               // textColor="secondary"
               onClick={() => createScreen()}
               title="Добавить экран"
-              value="addScreen"
+              value={-1}
               disabled={readonly}
             />
           )}

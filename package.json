@@ -1,6 +1,6 @@
 {
   "name": "gmib",
-  "version": "3.6.0",
+  "version": "3.6.1",
   "description": "Nata-Info gmib tool",
   "private": true,
   "engines": {
@@ -17,9 +17,10 @@
   "main": "packages/main/dist/index.cjs",
   "repository": "https://github.com/sarakusha/gmib.git",
   "scripts": {
-    "build": "cross-env MODE=production run-p build:main build:preload build:playerPreload build:renderer",
+    "build": "cross-env MODE=production run-p build:preload:types build:playerPreload:types && run-p build:main build:preload build:playerPreload build:remotePlayerPreload build:renderer",
     "build:main": "cd ./packages/main && vite build",
     "build:preload": "cd ./packages/preload && vite build",
+    "build:remotePlayerPreload": "cd ./packages/remotePlayerPreload && vite build",
     "build:playerPreload": "cd ./packages/playerPreload && vite build",
     "build:preload:types": "dts-cb -i packages/preload/tsconfig.json -o packages/preload/exposedInMainWorld.d.ts",
     "build:playerPreload:types": "dts-cb -i packages/playerPreload/tsconfig.json -o packages/playerPreload/exposedInMainWorld.d.ts",
@@ -37,7 +38,7 @@
     "typecheck:main": "tsc --noEmit -p packages/main/tsconfig.json",
     "typecheck:preload": "tsc --noEmit -p packages/preload/tsconfig.json",
     "typecheck:playerPreload": "tsc --noEmit -p packages/playerPreload/tsconfig.json",
-    "typecheck:renderer": "npm run build:preload:types && tsc --noEmit -p packages/renderer/tsconfig.json",
+    "typecheck:renderer": "run-p build:preload:types build:playerPreload:types && tsc --noEmit -p packages/renderer/tsconfig.json",
     "typecheck": "run-p typecheck:*",
     "release:mac": "electron-builder -p always -m --x64",
     "dist:mac": "electron-builder --config .electron-builder.config.js -m --x64",
@@ -54,6 +55,7 @@
     "@rollup/plugin-commonjs": "^22.0.2",
     "@rollup/plugin-node-resolve": "^14.0.0",
     "@types/color-hash": "^1.0.2",
+    "@types/cors": "^2.8.12",
     "@types/dom-webcodecs": "^0.1.4",
     "@types/ebml": "^3.0.2",
     "@types/express": "^4.17.13",
@@ -66,13 +68,15 @@
     "@types/react-virtualized-auto-sizer": "^1.0.1",
     "@types/react-window": "^1.8.5",
     "@types/sanitize-html": "^2.6.2",
+    "@types/sjcl": "^1.0.30",
     "@types/smpte-timecode": "^1.2.1",
     "@types/sqlite3": "^3.1.8",
     "@types/suncalc": "^1.8.1",
     "@types/tail": "^2.2.1",
     "@types/tcp-port-used": "^1.0.1",
     "@types/valid-url": "^1.0.3",
-    "@types/web": "^0.0.72",
+    "@types/web": "^0.0.75",
+    "@types/ws": "^8.5.3",
     "@typescript-eslint/eslint-plugin": "^5.36.1",
     "@typescript-eslint/parser": "^5.36.1",
     "@vitejs/plugin-react": "^2.0.1",
@@ -126,13 +130,16 @@
     "@reduxjs/toolkit": "^1.8.5",
     "@sarakusha/ebml": "file:.yalc/@sarakusha/ebml",
     "@sarakusha/lzma": "^2.3.4",
-    "@sarakusha/material-ui-chip-input": "^2.0.0",
+    "@sarakusha/material-ui-chip-input": "^2.0.1",
+    "@sarakusha/tssrp6a": "^3.0.0",
+    "@sentry/electron": "^4.0.2",
     "@types/dom-mediacapture-transform": "^0.1.3",
     "ajv": "^8.11.0",
     "ansicolor": "^1.1.100",
     "body-parser": "^1.20.0",
     "bonjour-hap": "^3.6.3",
     "color-hash": "^2.0.1",
+    "cors": "^2.8.5",
     "dayjs": "^1.11.5",
     "debug": "^4.3.4",
     "dnd-core": "^16.0.1",
@@ -141,6 +148,7 @@
     "electron-updater": "^5.2.1",
     "execa": "^6.1.0",
     "express": "^4.18.1",
+    "express-unless": "^2.1.2",
     "file-type": "^18.0.0",
     "formidable": "^2.0.1",
     "formik": "^2.2.9",
@@ -157,6 +165,7 @@
     "material-ui-popup-state": "^4.0.2",
     "minimist": "^1.2.6",
     "mp4box": "^0.5.2",
+    "node-fetch": "^3.2.10",
     "notistack": "^2.0.5",
     "p-map": "^5.5.0",
     "react": "^18.2.0",
@@ -179,14 +188,21 @@
     "tiny-typed-emitter": "^2.1.0",
     "typed-struct": "^2.3.0",
     "typeface-roboto": "^1.1.13",
-    "valid-url": "^1.0.9"
+    "valid-url": "^1.0.9",
+    "ws": "^8.9.0"
   },
   "overrides": {
     "node-gyp": "9.1.0",
-    "nan": "2.16.0"
+    "nan": "2.16.0",
+    "react": "^18.2.0"
   },
   "resolutions": {
     "node-gyp": "9.1.0",
-    "nan": "2.16.0"
+    "nan": "2.16.0",
+    "react": "^18.2.0"
+  },
+  "optionalDependencies": {
+    "bufferutil": "^4.0.6",
+    "utf-8-validate": "^5.0.9"
   }
 }

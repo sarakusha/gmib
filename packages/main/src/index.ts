@@ -1,5 +1,5 @@
-import { app, powerSaveBlocker } from 'electron';
-
+import { app, crashReporter, powerSaveBlocker } from 'electron';
+// import * as Sentry from '@sentry/electron/main';
 import debugFactory from 'debug';
 
 import './security-restrictions';
@@ -13,12 +13,16 @@ import './tray';
 import './linux';
 import './dialogs';
 import './express';
+import './ipc';
+import './rtc';
 // import './channels';
 import { createMainWindow } from './mainWindow';
 import openHandler from './openHandler';
 import { launchPlayers } from './playerWindow';
 
 // import {REDUX_DEVTOOLS} from 'electron-devtools-installer';
+// import.meta.env.PROD && Sentry.init({ dsn: 'https://fbd4024789d247fcb5eb2493d1aa28b6@o1412889.ingest.sentry.io/6752393' });
+crashReporter.start({ uploadToServer: false });
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:main`);
 // debug(`Starting ${__filename}|${process.pid}|${new Error().stack}...`);

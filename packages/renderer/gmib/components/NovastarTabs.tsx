@@ -1,7 +1,7 @@
 import { Box, Container, Paper, Tab, Tabs } from '@mui/material';
 import React, { useState } from 'react';
 
-import type { Novastar } from '../store/novastarsSlice';
+import type { Novastar } from '../store/novastarSlice';
 
 import NovastarDeviceTab from './NovastarDeviceTab';
 import NovastarTelemetryTab from './NovastarTelemetryTab';

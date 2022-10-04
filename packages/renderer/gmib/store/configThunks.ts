@@ -1,13 +1,11 @@
 import { createAsyncThunk, isAnyOf } from '@reduxjs/toolkit';
-// import debugFactory from 'debug';
 import sortBy from 'lodash/sortBy';
 import SunCalc from 'suncalc';
 
-import screenApi, { selectScreens } from '../api/screens';
+import screenApi, { parseLocation, selectScreens } from '../api/screens';
 import type { Point } from '../util/MonotonicCubicSpline';
 import MonotonicCubicSpline from '../util/MonotonicCubicSpline';
 
-import { reAddress } from '/@common/config';
 import { MINUTE, notEmpty, tuplify } from '/@common/helpers';
 import { isRemoteSession } from '/@common/remote';
 import createDebouncedAsyncThunk from '/@common/createDebouncedAsyncThunk';
@@ -40,67 +38,12 @@ import {
 import type { AppThunkConfig, RootState } from './index';
 
 import type { DeviceId } from '@nibus/core';
-import Address from '@nibus/core/Address';
 import { hasProps } from '@novastar/screen/common';
-
-// const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:config`);
 
 export const BRIGHTNESS_INTERVAL = 60 * 1000;
 
 const getValue = (value: number, min: number, max: number): number =>
   Math.min(Math.max(value, min), max);
-
-type Location = {
-  address: Address;
-  left?: number;
-  top?: number;
-  width?: number;
-  height?: number;
-};
-
-// type HostParams = Required<Location>;
-
-const safeNumber = (value: string | undefined): number | undefined =>
-  value !== undefined ? +value : undefined;
-
-const parseLocation = (location: string): Location | undefined => {
-  const matches = location.match(reAddress);
-  if (!matches) return undefined;
-  const [, address, l, t, w, h] = matches;
-  return {
-    address: new Address(address),
-    left: safeNumber(l),
-    top: safeNumber(t),
-    width: safeNumber(w),
-    height: safeNumber(h),
-  };
-};
-
-// type Input = Pick<Required<Screen>, 'width' | 'height' | 'left' | 'top'>;
-
-/*
-const getHostParams =
-  (screen: Input) =>
-  (expr: string): HostParams | undefined => {
-    // const matches = expr.match(reAddress);
-    // if (!matches) return undefined;
-    // const [, address, l, t, w, h] = matches;
-    // const left = l ? +l : 0;
-    // const top = t ? +(+t) : 0;
-    const location = parseLocation(expr);
-    if (!location) return undefined;
-    const { left = 0, top = 0, address } = location;
-    const width = location.width ?? Math.max(screen.width - left, 0);
-    const height = location.height ?? Math.max(screen.height - top, 0);
-    return {
-      address,
-      left: screen.x + left,
-      top: screen.y + top,
-      width,
-      height,
-    };
-  };
-*/
 
 const hasBrightnessFactor = hasProps('brightnessFactor');
 
@@ -257,88 +200,6 @@ export const createScreen = (): AppThunk => (dispatch, getState) => {
   // dispatch(setCurrentScreen(id));
 };
 
-export const updateScreen = createDebouncedAsyncThunk<void, string | undefined>(
-  'config/updateScreen',
-  (scrId, { getState }) => {
-    const state = getState() as RootState;
-    const scr = scrId && selectScreen(state, scrId);
-    const screens = scr ? [scr] : selectConfig(state).screens;
-    screens.forEach(screen => {
-      const { addresses, moduleHres, moduleVres, dirh, dirv } = screen;
-      const getParams = getHostParams(screen as Input);
-      try {
-        if (addresses) {
-          addresses
-            .map(getParams)
-            .filter(notEmpty)
-            .forEach(({ address, left, top, width, height }) => {
-              const target = new Address(address);
-              const devices = selectDevicesByAddress(state, target);
-              devices
-                .filter(notEmpty)
-                // .filter(({ mib }) => mib.startsWith('minihost'))
-                .forEach(({ id, address: devAddress, mib }) => {
-                  debug(`initialize ${devAddress}`);
-                  const setValue = window.nibus.setDeviceValue(id);
-                  let props: Record<string, ValueType | undefined> = {};
-                  switch (mib) {
-                    case 'minihost3':
-                      props = {
-                        hoffs: left,
-                        voffs: top,
-                        hres: width,
-                        vres: height,
-                        moduleHres,
-                        moduleVres,
-                        indication: 0,
-                        dirh,
-                        dirv,
-                      };
-                      break;
-                    case 'minihost_v2.06b':
-                      props = {
-                        hoffs: left,
-                        voffs: top,
-                        hres: width,
-                        vres: height,
-                        moduleHres,
-                        moduleVres,
-                        indication: 0,
-                        hinvert: dirh,
-                        vinvert: dirv,
-                      };
-                      break;
-                    case 'mcdvi':
-                      props = {
-                        indication: 0,
-                        hres: width,
-                        vres: height,
-                        hofs: left,
-                        vofs: top,
-                      };
-                      break;
-                    default:
-                      break;
-                  }
-                  Object.entries(props).forEach(([name, value]) => {
-                    // debug(`setValue ${name} = ${value}`);
-                    value !== undefined && value !== null && setValue(name, value);
-                  });
-                });
-            });
-        }
-      } catch (err) {
-        debug(`error while initialize screen ${screen.name}: ${toErrorMessage(err)}`);
-      }
-    });
-  },
-  400,
-  {
-    selectId: id => id,
-    leading: true,
-    maxWait: 1000,
-  },
-);
 */
 
 // const updateScreen = debounce((dispatch: AppDispatch, scrId: string): void => {

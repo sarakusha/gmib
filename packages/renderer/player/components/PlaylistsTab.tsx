@@ -71,6 +71,13 @@ const PlaylistsTab: React.FC = () => {
   const moveFinishedHandler = useCallback(() => {
     current && dispatch(updatePlaylist(current, playlist => playlist));
   }, [current, dispatch]);
+  // React.useEffect(() => {
+  //   console.log('TRY');
+  //   const timer = setTimeout(createRemotes, 200);
+  //   return () => {
+  //     clearTimeout(timer);
+  //   };
+  // }, []);
   return (
     <Container
       maxWidth="md"

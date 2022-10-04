@@ -73,3 +73,5 @@ export const shuffleItems = <T extends { md5: string }>(items: T[]): T[] => {
 };
 
 export const getMediaUri = (name?: string) => name && `/public/${name}`;
+
+export const toHexId = (id: number): string => id.toString(16).toUpperCase().padStart(8, '0');

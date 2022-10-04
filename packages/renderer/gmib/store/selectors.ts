@@ -13,7 +13,7 @@ import { devicesAdapter } from './devicesSlice';
 import type { FlasherState } from './flasherSlice';
 import { logAdapter } from './logSlice';
 import { mibsAdapter } from './mibsSlice';
-import { novastarsAdapter } from './novastarsSlice';
+import { novastarAdapter } from './novastarSlice';
 import { remoteHostsAdapter } from './remoteHostsSlice';
 import type { SensorDictionary, SensorKind, SensorsState, SensorState } from './sensorsSlice';
 import type { FinderState, SessionState } from './sessionSlice';
@@ -34,7 +34,7 @@ export const {
   selectAll: selectAllNovastars,
   selectById: selectNovastarByPath,
   selectIds: selectNovastarIds,
-} = novastarsAdapter.getSelectors<RootState>(state => state.novastars);
+} = novastarAdapter.getSelectors<RootState>(state => state.novastar);
 
 export const selectNovastarScreen = createSelector(
   [selectNovastarByPath, (_state, _path, screen: number) => screen],
@@ -75,6 +75,7 @@ export const selectCurrentDevice = (state: RootState): DeviceState | undefined =
 };
 export const selectCurrentHealth = (state: RootState): Health | undefined =>
   selectCurrent(state).health;
+export const selectIsLoggedIn = (state: RootState): boolean => selectCurrent(state).isLoggedIn;
 export const selectNovastarIsBusy = (state: RootState): boolean => {
   const path = selectCurrentDeviceId(state);
   const novastar = path !== undefined && selectNovastarByPath(state, path);
@@ -106,13 +107,11 @@ export const selectAllDevicesWithParent = (state: RootState): DeviceStateWithPar
     parent: typeof parent !== 'undefined' ? selectDeviceById(state, parent) : undefined,
   }));
 export const filterDevicesByAddress = <D extends Pick<DeviceState, 'address' | 'mib' | 'props'>>(
-  // export const filterDevicesByAddress = <D extends { address: Address; mib: string; props: {
-  // domain?: number, subnet?} }>(
   devices: D[],
   address: Address,
 ): D[] =>
   devices.filter(device => {
-    if (address.type === AddressType.mac) return address.equals(device.address);
+    if (address.equals(device.address)) return true;
     if (address.type === AddressType.net) {
       if (device.mib.startsWith('minihost')) {
         // debug(`${device.props.domain?.raw}.${device.props.subnet?.raw}.${device.props.did?.raw}`);
@@ -132,6 +131,7 @@ export const filterDevicesByAddress = <D extends Pick<DeviceState, 'address' | '
     }
     return false;
   });
+
 export const selectDevicesByAddress: (state: RootState, address: AddressParam) => DeviceState[] =
   createSelector(
     [selectAllDevices, (state, address: AddressParam) => new Address(address)],

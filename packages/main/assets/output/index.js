@@ -1,6 +1,6 @@
 const search = new URLSearchParams(window.location.search);
-const sourceId = +search.get('source_id');
-const outputId = +search.get('output_id');
+// const sourceId = +search.get('source_id');
+// const outputId = +search.get('output_id');
 const width = +search.get('width');
 const height = +search.get('height');
 

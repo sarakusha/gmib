@@ -154,12 +154,11 @@ const App: React.FC = () => {
             <Tooltip title="Поиск новых устройств" enterDelay={500}>
               <div>
                 <IconButton
-                  // edge="start"
                   color="inherit"
                   onClick={searchOpen}
                   disabled={!isLinkingDevice}
                   hidden={tab !== 'devices'}
-                  sx={{ display: tab !== 'devices' ? 'none' : 'inherit' }}
+                  sx={{ ...(tab !== 'devices' && { display: 'none' }) }}
                   size="large"
                 >
                   <SearchIcon />
@@ -200,20 +199,6 @@ const App: React.FC = () => {
             }}
           >
             <Devices />
-{/*
-            <Item onClick={() => dispatch(setCurrentTab('playlist'))} selected={tab === 'playlist'}>
-              <ListItemText primary="Плейлисты" />
-            </Item>
-            <Item onClick={() => dispatch(setCurrentTab('media'))} selected={tab === 'media'}>
-              <ListItemText primary="Медиатека" />
-            </Item>
-            <Item
-              onClick={() => dispatch(setCurrentTab('scheduler'))}
-              selected={tab === 'scheduler'}
-            >
-              <ListItemText primary="Планировщик" />
-            </Item>
-*/}
             <HttpPages />
             <Item
               onClick={() => dispatch(setCurrentTab('autobrightness'))}

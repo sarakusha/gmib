@@ -162,9 +162,11 @@ export type Nullable<T> = { [P in keyof T]: T[P] | null };
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type NullableOptional<T = any> = PickRequired<T> & Nullable<PickOptional<T>>;
 
-export const findById = <T extends { id: string }>(
+export type WithRequiredProp<T, K extends keyof T> = Omit<T, K> & Required<Pick<T, K>>;
+
+export const findById = <T extends { id: string | number }>(
   items: T[] | undefined,
-  id: string,
+  id: T['id'],
 ): T | undefined => items?.find(item => item.id === id);
 
 const nameCountRegexp = /(?:(?:-([\d]+))?)?$/;
@@ -276,6 +278,9 @@ export type LocalConfig = {
   hosts: CustomHost[];
   autostart: boolean;
   health: Health;
+  salt?: string;
+  verifier?: string;
+  readonly identifier: string;
 };
 
 export type Modules = IModuleInfo<Minihost2Info | Minihost3Info>[];
@@ -321,3 +326,11 @@ export type TelemetryOpts = {
   y: number;
   temperature: number;
 };
+
+export const toHexId = (id: number): string => id.toString(16).toUpperCase().padStart(8, '0');
+
+export const asyncSerial = <T>(
+  input: T[],
+  action: (item: T, index: number) => Promise<void>,
+): Promise<void> =>
+  input.reduce((acc, item, index) => acc.then(() => action(item, index)), Promise.resolve());

@@ -11,6 +11,7 @@ import currentReducer, { setPiP } from './currentSlice';
 import listenerMiddleware from './listenerMiddleware';
 
 import './currentThunk';
+import mediaApi, { selectMediaById } from '../api/media';
 // import playerReducer from './playerSlice';
 // import './playerThunks';
 // import { selectPlayerSate } from './selectors';
@@ -64,4 +65,11 @@ window.addEventListener('message', ({ data, source }) => {
 
 document.addEventListener('enterpictureinpicture', () => store.dispatch(setPiP(true)));
 document.addEventListener('leavepictureinpicture', () => store.dispatch(setPiP(false)));
+
+// window.mediaStream.setMediaInfoGetter(id => {
+//   const { data } = mediaApi.endpoints.getMedia.select()(store.getState());
+//   return data && selectMediaById(data, id);
+// });
+
 export default store;
+

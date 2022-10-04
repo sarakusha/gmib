@@ -2,7 +2,7 @@
 import MinihostLoader from './MinihostLoader';
 
 import type { DeviceId } from '@nibus/core';
-import { findDeviceById } from '@nibus/core';
+import { findDeviceById } from '@nibus/core/session/NibusSession';
 
 import type { Minihost2Info } from '/@common/helpers';
 

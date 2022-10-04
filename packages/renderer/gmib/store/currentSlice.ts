@@ -2,10 +2,11 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 import { createSlice } from '@reduxjs/toolkit';
 
 import type { Health } from '/@common/helpers';
+import { isRemoteSession } from '/@common/remote';
 
 // import { addScreen, removeScreen, showHttpPage } from './configSlice';
 import { addDevice, removeDevice } from './devicesSlice';
-import { addNovastar, removeNovastar } from './novastarsSlice';
+import { addNovastar, removeNovastar } from './novastarSlice';
 
 export type TabValues = 'devices' | 'screens' | 'autobrightness' | 'overheat' | 'log';
 // | 'media'
@@ -18,6 +19,7 @@ export interface CurrentState {
   screen: number | undefined;
   health: Health | undefined;
   isRemoteDialogOpen: boolean;
+  isLoggedIn: boolean;
   // playlist: number | undefined;
 }
 
@@ -27,6 +29,7 @@ const initialState: CurrentState = {
   screen: undefined,
   health: undefined,
   isRemoteDialogOpen: false,
+  isLoggedIn: true, // isRemoteSession ? !!window.identify.getSecret() : true,
   // playlist: undefined,
 };
 
@@ -48,6 +51,9 @@ const currentSlice = createSlice({
     },
     setRemoteDialogOpen(state, { payload: open }: PayloadAction<boolean>) {
       state.isRemoteDialogOpen = open;
+    },
+    setLoggedIn(state, { payload: isLoggedIn }: PayloadAction<boolean>) {
+      state.isLoggedIn = isLoggedIn;
     },
     // setCurrentPlaylist(state, { payload: id }: PayloadAction<number| undefined>) {
     //   state.playlist = id;
@@ -106,6 +112,7 @@ export const {
   setCurrentHealth,
   setRemoteDialogOpen,
   // setCurrentPlaylist,
+  setLoggedIn,
 } = currentSlice.actions;
 
 export default currentSlice.reducer;

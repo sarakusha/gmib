@@ -15,7 +15,7 @@
       "vite/client"
     ],
     "lib": [
-//      "webworker",
+      "webworker",
       "DOM",
       "ESNext"
     ],
@@ -30,11 +30,15 @@
       "/@common/*": [
         "../common/*"
       ],
+      "/@player/store/*": [
+        "../renderer/player/store/*"
+      ]
     }
   },
   "include": [
-    "src/**/*.ts",
+    "player/**/*.ts",
     "../common/*.ts",
+    "../rendered/player/store/*Slice.ts",
     "../../types/**/*.d.ts",
     "../../node_modules/@types/dom-mediacapture-transform/index.d.ts",
     "../../node_modules/@types/dom-webcodecs/webcodecs.generated.d.ts",

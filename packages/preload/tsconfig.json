@@ -23,20 +23,17 @@
       "/@renderer/store/*": [
         "../renderer/gmib/store/*"
       ],
-      "/@player/store": [
-        "../renderer/player/store"
-      ],
       "/@common/*": [
         "../common/*"
       ]
     }
   },
   "include": [
-    "src/**/*.ts",
-    "../renderer/src/store/*Slice.ts",
+    "gmib/**/*.ts",
+    "../renderer/gmib/store/*Slice.ts",
     "../common/*.ts",
     "../../types/**/*.d.ts"
-  ],
+, "../renderer/gmib/util/authBaseQuery.ts", "../renderer/authBaseQuery.ts"  ],
   "exclude": [
     "**/*.spec.ts",
     "**/*.test.ts"

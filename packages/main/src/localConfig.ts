@@ -1,7 +1,12 @@
 import type { Schema } from 'electron-store';
 import Store from 'electron-store';
+import debugFactory from 'debug';
+import { createVerifierAndSalt, SRPParameters, SRPRoutines } from '@sarakusha/tssrp6a';
 
 import type { LocalConfig } from '/@common/helpers';
+import { nanoid } from '@reduxjs/toolkit';
+
+const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:config`);
 
 const localConfigSchema: Schema<LocalConfig> = {
   hosts: {
@@ -41,6 +46,9 @@ const localConfigSchema: Schema<LocalConfig> = {
     },
     default: {},
   },
+  salt: { type: 'string' },
+  verifier: { type: 'string' },
+  identifier: { type: 'string', default: nanoid(), readOnly: true },
 };
 
 const localConfig = new Store<LocalConfig>({
@@ -49,5 +57,15 @@ const localConfig = new Store<LocalConfig>({
   clearInvalidConfig: true,
   watch: true,
 });
+
+if (!localConfig.get('salt') || !localConfig.get('verifier')) {
+  const routines = new SRPRoutines(new SRPParameters());
+  const password = 'nata-info';
+  createVerifierAndSalt(routines, 'gmib', password).then(({ v, s }) => {
+    debug(`set default password: ${password}`);
+    localConfig.set('verifier', `0x${v.toString(16)}`);
+    localConfig.set('salt', `0x${s.toString(16)}`);
+  });
+}
 
 export default localConfig;

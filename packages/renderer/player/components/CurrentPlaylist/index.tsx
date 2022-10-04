@@ -27,7 +27,7 @@ type Props = {
 };
 
 const CurrentPlaylist: React.FC<Props> = ({ playerId, className }) => {
-  const { data: player } = usePlayer(playerId);
+  const { player } = usePlayer(playerId);
   const { current, playlistId } = player ?? {};
   const { data: currentPlaylist } = useGetPlaylistById(playlistId);
   const { data: mediaData } = useGetMediaQuery();

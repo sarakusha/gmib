@@ -1,21 +1,22 @@
+import AddCircleOutlinedIcon from '@mui/icons-material/AddCircleOutlined';
+import CachedIcon from '@mui/icons-material/Cached';
+import FeaturedVideoOutlinedIcon from '@mui/icons-material/FeaturedVideoOutlined';
 import LocationSearchingIcon from '@mui/icons-material/LocationSearching';
 import SmartDisplayOutlinedIcon from '@mui/icons-material/SmartDisplayOutlined';
 import { IconButton } from '@mui/material';
 import type { IconButtonProps } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import { useSnackbar } from 'notistack';
 import React from 'react';
 // import FeaturedVideoIcon from '@mui/icons-material/FeaturedVideo';
-import FeaturedVideoOutlinedIcon from '@mui/icons-material/FeaturedVideoOutlined';
-import AddCircleOutlinedIcon from '@mui/icons-material/AddCircleOutlined';
-import { styled } from '@mui/material/styles';
 
 import { useDisplay } from '../api/displays';
+import { useCreatePlayerMutation } from '../api/player';
 import { useDispatch } from '../store';
 import { setSettingsNode } from '../store/currentSlice';
 
 import Toolbar from './StyledToolbar';
-
-import { useCreatePlayerMutation } from '../api/player';
+import usePlayerMappingDialog from '../hooks/usePlayerMappingDialog';
 
 type Props = {
   group?: string;
@@ -33,7 +34,7 @@ const AddOverlappedIcon = styled(AddCircleOutlinedIcon)(({ theme }) => ({
 }));
 
 const SettingsToolbar: React.FC<Props> = ({ size, group, id }) => {
-  const { data: display = null } = useDisplay(group === 'displays' ? id : undefined);
+  const { display = null, refetch } = useDisplay(group === 'displays' ? id : undefined);
   const [highlight, setHighlight] = React.useState<Window | null>();
   const [createPlayer] = useCreatePlayerMutation();
   const { closeSnackbar, enqueueSnackbar } = useSnackbar();
@@ -42,7 +43,7 @@ const SettingsToolbar: React.FC<Props> = ({ size, group, id }) => {
     createPlayer({})
       .unwrap()
       .then(player => {
-        if (player) dispatch(setSettingsNode(`player:${player.id}`));
+        if (player) setTimeout(() => dispatch(setSettingsNode(`players:${player.id}`)), 0);
       })
       .catch(err => {
         enqueueSnackbar(`Не удалось создать плеер: ${err.message}`, {
@@ -65,11 +66,18 @@ const SettingsToolbar: React.FC<Props> = ({ size, group, id }) => {
       setHighlight(win);
     }
   };
+  const openPlayerMappingDialog = usePlayerMappingDialog();
   return (
     <Toolbar>
       {group === 'players' && (
         <>
-          <IconButton color="inherit" size={size} title="Добавить область вывода" disabled={!id}>
+          <IconButton
+            color="inherit"
+            size={size}
+            title="Добавить область вывода"
+            disabled={!id}
+            onClick={() => id && openPlayerMappingDialog(id)}
+          >
             <FeaturedVideoOutlinedIcon fontSize="inherit" />
             <AddOverlappedIcon />
           </IconButton>
@@ -85,15 +93,20 @@ const SettingsToolbar: React.FC<Props> = ({ size, group, id }) => {
         </>
       )}
       {group === 'displays' && (
-        <IconButton
-          color="inherit"
-          size={size}
-          title="Определить дисплей"
-          onClick={highlightDisplay}
-          disabled={!id}
-        >
-          <LocationSearchingIcon />
-        </IconButton>
+        <>
+          <IconButton
+            color="inherit"
+            size={size}
+            title="Определить дисплей"
+            onClick={highlightDisplay}
+            disabled={!id}
+          >
+            <LocationSearchingIcon />
+          </IconButton>
+          <IconButton color="inherit" size={size} title="Обновить" onClick={refetch}>
+            <CachedIcon fontSize="inherit" />
+          </IconButton>
+        </>
       )}
     </Toolbar>
   );

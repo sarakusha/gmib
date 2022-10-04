@@ -26,6 +26,7 @@ const config = {
       strtok3: require.resolve('strtok3'),
       'iconv-lite': require.resolve('iconv-lite'),
       hexoid: require.resolve('hexoid'),
+      ws: require.resolve('ws'),
     },
     // conditions: ['node', 'require', 'default'],
   },

@@ -5,7 +5,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useSelector } from '../store';
-import type { Novastar } from '../store/novastarsSlice';
+import type { Novastar } from '../store/novastarSlice';
 import { selectCurrentTab } from '../store/selectors';
 
 import type { CabinetInfo } from '/@common/helpers';

@@ -36,7 +36,7 @@
     "../../types/**/*.d.ts",
     "../../node_modules/@types/dom-webcodecs/webcodecs.generated.d.ts",
     "../../node_modules/@types/offscreencanvas/index.d.ts"
-  ],
+, "../renderer/gmib/util/authBaseQuery.ts", "../renderer/authBaseQuery.ts"  ],
   "exclude": [
     "**/*.spec.ts",
     "**/*.test.ts"

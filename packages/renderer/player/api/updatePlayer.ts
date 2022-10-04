@@ -10,12 +10,12 @@ import { sourceId } from '../utils';
 import playerApi, { playerAdapter, selectPlayer } from './player';
 import playlistApi, { selectPlaylistById } from './playlists';
 
-const debouncedUpdatePlayer = createDebouncedAsyncThunk<void, Player, AppThunkConfig>(
+export const debouncedUpdatePlayer = createDebouncedAsyncThunk<void, Player, AppThunkConfig>(
   'playerApi/pendingUpdate',
   (player, { dispatch }) => {
     dispatch(playerApi.endpoints.updatePlayer.initiate(player));
   },
-  100,
+  200,
   { selectId: player => player.id, maxWait: 500 },
 );
 
@@ -34,9 +34,19 @@ const updatePlayer =
           if (length && player.current >= length) {
             player.current = 0;
           }
+          // if (player.playlistId !== prev.playlistId) {
+          //   window.mediaStream.setPlaylist(playlist);
+          // }
         }
-        playerAdapter.setOne(draft, player);
+        // if (prev.current !== player.current) {
+        //   window.mediaStream.setCurrent(player.current);
+        // }
+        // window.mediaStream.setFadeOptions({
+        //   disableIn: player.disableFadeIn,
+        //   disableOut: player.disableFadeOut,
+        // });
         dispatch(debouncedUpdatePlayer(player));
+        playerAdapter.setOne(draft, player);
       }),
     );
   };
@@ -48,13 +58,13 @@ export const playerNext = () =>
 export const playerStop = (): AppThunk => dispatch => {
   dispatch(updatePlayer(sourceId, props => ({ ...props, current: 0, autoPlay: false })));
   dispatch(setPosition(0));
-  setTimeout(() => dispatch(setDuration(0)), 0);
+  // dispatch(setDuration(0));
 };
 export const clearPlayer = (): AppThunk => dispatch => {
   updatePlayer(sourceId, props => ({ ...props, autoPlay: false, current: 0, playlistId: null }));
   dispatch(setPlaybackState('none'));
   dispatch(setPosition(0));
-  setTimeout(() => dispatch(setDuration(0)), 0);
+  dispatch(setDuration(0));
 };
 
 export default updatePlayer;

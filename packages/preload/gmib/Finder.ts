@@ -5,7 +5,7 @@ import type { RunnableEvents } from './Runnable';
 import Runnable from './Runnable';
 
 import type { DeviceId, INibusConnection, SarpDatagram } from '@nibus/core';
-import { findDeviceById } from '@nibus/core';
+import { findDeviceById } from '@nibus/core/session/NibusSession';
 import Address, { AddressType } from '@nibus/core/Address';
 import { createSarp, SarpQueryType } from '@nibus/core/sarp';
 

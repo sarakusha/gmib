@@ -2,8 +2,8 @@ import debugFactory from 'debug';
 
 import { setBrightness } from './configSlice';
 import { startAppListening } from './listenerMiddleware';
-import type { ScreenBrightness, ScreenId } from './novastarsSlice';
-import { addNovastar, removeNovastar, setScreenColorBrightness } from './novastarsSlice';
+import type { ScreenBrightness, ScreenId } from './novastarSlice';
+import { addNovastar, removeNovastar, setScreenColorBrightness } from './novastarSlice';
 import { selectBrightness, selectNovastarIds, selectNovastarScreen } from './selectors';
 import { MIN_INTERVAL } from './sensorsSlice';
 

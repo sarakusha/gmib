@@ -18,6 +18,8 @@
             <excludedPath local="true" path="$PROJECT_DIR$/.git" />
             <excludedPath local="true" path="$PROJECT_DIR$/.yalc" />
             <excludedPath local="true" path="$PROJECT_DIR$/dist" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/playerPreload/exposedInMainWorld.d.ts" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/preload/exposedInMainWorld.d.ts" />
           </excludedPaths>
         </serverdata>
       </paths>

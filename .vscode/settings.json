@@ -24,5 +24,11 @@
     }
   ],
   "sqltools.useNodeRuntime": true,
-  "npm.exclude": ""
+  "npm.exclude": "",
+  "cSpell.words": [
+    "Minihost",
+    "novastar",
+    "RGBV",
+    "tssrp"
+  ]
 }

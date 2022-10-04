@@ -60,14 +60,14 @@ async function updateTestsImpl(): Promise<void> {
       };
     }),
   );
-  const preload = path.resolve(__dirname, '../../playerPreload/dist/index.cjs');
-  tests.push({
-    id: 'player',
-    title: 'Video Player',
-    url: `http://localhost:${9002}/player/index.html`,
-    preload,
-    permanent: true,
-  });
+  // const preload = path.resolve(__dirname, '../../playerPreload/dist/index.cjs');
+  // tests.push({
+  //   id: 'player',
+  //   title: 'Video Player',
+  //   url: `http://localhost:${9002}/player/index.html`,
+  //   preload,
+  //   permanent: true,
+  // });
   const prev = config.get('pages');
   const items = uniqBy(tests.concat(prev), 'id');
   if (!isEqual(prev, items)) config.set('pages', items);

@@ -36,7 +36,11 @@ const config = {
     assetsDir: '.',
     minify: process.env.MODE !== 'development',
     lib: {
-      entry: 'src/index.ts',
+      entry: {
+        gmib: 'gmib/index.ts',
+        player: 'player/index.ts',
+        remote: 'remote/index.ts',
+      },
       formats: ['cjs'],
     },
     rollupOptions: {
@@ -72,9 +76,9 @@ const config = {
       ],
       output: {
         entryFileNames: '[name].cjs',
-        manualChunks() {
-          return 'index';
-        },
+        // manualChunks() {
+        //   return 'index';
+        // },
       },
     },
     // commonjsOptions: {

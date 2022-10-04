@@ -31,7 +31,7 @@ const LogLine: React.FC<LogItem> = ({ prefix, tag, info, delta }) => (
           ${tag.css}
         `}
       >
-        {tag.text}
+        {tag.text.replace('novastar', 'nova')}
       </b>
     )}
     {info &&

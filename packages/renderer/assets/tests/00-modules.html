@@ -92,17 +92,17 @@
   const params = new URLSearchParams(window.location.search);
   const width = +params.get('width');
   const height = +params.get('height');
-  const moduleHres = +params.get('moduleHres') || 32;
-  const moduleVres = +params.get('moduleVres') || 32;
+  const moduleWidth = +params.get('moduleWidth') || 32;
+  const moduleHeight = +params.get('moduleHeight') || 32;
   const i = 0;
   let xPos = 0, yPos = 0, opacity = 0, xy = 0;
   const grid = document.getElementsByClassName('grid')[0];
-  grid.style['background-size'] = (moduleHres * 2) + 'px ' + (moduleVres * 2) + 'px';
-  document.body.style['font-size'] = moduleHres / (Math.log10(moduleHres) * 1.6) + 'px';
+  grid.style['background-size'] = (moduleWidth * 2) + 'px ' + (moduleHeight * 2) + 'px';
+  document.body.style['font-size'] = moduleWidth / (Math.log10(moduleWidth) * 1.6) + 'px';
   if (width && height) {
-    const rows = Math.ceil(height / moduleVres);
-    const cols = Math.ceil(width / moduleHres);
-    document.write(`<table width="${cols * moduleHres}" height="${rows * moduleVres}">`);
+    const rows = Math.ceil(height / moduleHeight);
+    const cols = Math.ceil(width / moduleWidth);
+    document.write(`<table width="${cols * moduleWidth}" height="${rows * moduleHeight}">`);
     for (let y = 0; y < rows; y++) {
       document.write('<tr>');
       for (let x = 0; x < cols; x++) {
@@ -115,9 +115,9 @@
   function next() {
     if (!opacity) {
       if (!xy) {
-        xPos = moduleHres - xPos;
+        xPos = moduleWidth - xPos;
       } else {
-        yPos = moduleVres - yPos;
+        yPos = moduleHeight - yPos;
       }
       xy = 1- xy;
       grid.style['background-position'] = xPos + 'px ' + yPos + 'px';

@@ -9,8 +9,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useDispatch, useSelector } from '../store';
-import type { Novastar } from '../store/novastarsSlice';
-import { setScreenColorBrightness } from '../store/novastarsSlice';
+import type { Novastar } from '../store/novastarSlice';
+import { setScreenColorBrightness } from '../store/novastarSlice';
 
 import { noop } from '/@common/helpers';
 

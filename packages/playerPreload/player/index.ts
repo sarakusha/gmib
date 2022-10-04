@@ -3,11 +3,14 @@ import { contextBridge } from 'electron';
 // import debugFactory from 'debug';
 
 import log from '/@main/initlog';
-import expandTypes from '/@common/expandTypes';
-// import { setDispatch } from '/@common/ipcDispatch';
+// import expandTypes from '/@common/expandTypes';
+import { setDispatch } from '/@common/ipcDispatch';
+// import '@sentry/electron/preload';
 
-import * as nodeCrypto from './nodeCrypto';
+import { updateSrcObject } from './mediaStream';
+// import * as nodeCrypto from './nodeCrypto';
 
+import './videoOuts';
 // const search = new URLSearchParams(window.location.search);
 // const sourceId = +(search.get('source_id') ?? 1);
 
@@ -15,9 +18,10 @@ import * as nodeCrypto from './nodeCrypto';
 
 // ipcRenderer.send('register-source-channel', sourceId);
 
-contextBridge.exposeInMainWorld('nodeCrypto', expandTypes(nodeCrypto));
+// contextBridge.exposeInMainWorld('nodeCrypto', expandTypes(nodeCrypto));
+contextBridge.exposeInMainWorld('mediaStream', { updateSrcObject });
 contextBridge.exposeInMainWorld('log', log.log.bind(log));
-// contextBridge.exposeInMainWorld('setDispatch', setDispatch);
+contextBridge.exposeInMainWorld('setDispatch', setDispatch);
 contextBridge.exposeInMainWorld('server', {
   port: +(process.env['NIBUS_PORT'] ?? 9001) + 1,
 });

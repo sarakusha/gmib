@@ -6,7 +6,6 @@ import React from 'react';
 import { selectMediaById, useGetMediaQuery } from '../api/media';
 import { usePlayer } from '../api/player';
 import { useGetPlaylistById } from '../api/playlists';
-import useMediaStream from '../hooks/useMediaStream';
 import { useSelector } from '../store';
 import { selectCurrent } from '../store/selectors';
 
@@ -20,10 +19,11 @@ type Props = {
 };
 
 const Player: React.FC<Props> = ({ className, playerId = 0 }) => {
-  const { data: player } = usePlayer(playerId);
+  const { player } = usePlayer(playerId);
   const { data: playlist } = useGetPlaylistById(player?.playlistId);
   const { data: mediaData } = useGetMediaQuery();
-  const { duration, position = 0, playbackState } = useSelector(selectCurrent);
+  const { duration, playbackState } = useSelector(selectCurrent);
+  const [position, setPosition] = React.useState(0);
   const { width = 320, height = 240 } = player ?? {};
   let current: MediaInfo | undefined;
   if (player && playlist?.items && mediaData) {
@@ -31,28 +31,20 @@ const Player: React.FC<Props> = ({ className, playerId = 0 }) => {
     current = item && selectMediaById(mediaData, item.md5);
   }
   const pip = document.pictureInPictureElement; // useSelector(selectPiP);
-  const stream = useMediaStream();
-  const refVideo = React.useRef<HTMLVideoElement>(null);
   React.useEffect(() => {
-    const { current: video } = refVideo;
-    if (video) {
-      // console.log('UPDATE SRCOBJECT');
-      video.srcObject = stream;
-      video.played || video.play();
-    }
-  }, [stream]);
+    window.mediaStream.updateSrcObject('video#player');
+  }, []);
+  const refVideo = React.useRef<HTMLVideoElement>(null);
   const [show, setShow] = React.useState(false);
-  // const [seeking, setSeeking] = React.useState(false);
-  /*   React.useEffect(() => {
-    const seekingHandler = () => setSeeking(true);
-    const seekedHandler = () => setSeeking(false);
-    video?.addEventListener('seeking', seekingHandler);
-    video?.addEventListener('seeked', seekedHandler);
-    return () => {
-      video?.removeEventListener('seeked', seekedHandler);
-      video?.removeEventListener('seeking', seekingHandler);
-    };
-  }, [video]); */
+
+  const stopped = playbackState === 'none';
+  const onTimeUpdate = React.useCallback<React.ReactEventHandler<HTMLVideoElement>>(
+    e => {
+      const { currentTime } = e.target as HTMLVideoElement;
+      setPosition(stopped ? 0 : currentTime);
+    },
+    [stopped],
+  );
   return (
     <Box sx={{ width: 1, position: 'relative' }}>
       <Box
@@ -70,7 +62,6 @@ const Player: React.FC<Props> = ({ className, playerId = 0 }) => {
       >
         <video
           id="player"
-          ref={refVideo}
           autoPlay
           css={{
             width: '100%',
@@ -78,6 +69,7 @@ const Player: React.FC<Props> = ({ className, playerId = 0 }) => {
             objectFit: 'cover',
             backgroundColor: 'black',
           }}
+          onTimeUpdate={onTimeUpdate}
         >
           {current?.filename}
         </video>

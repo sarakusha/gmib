@@ -22,9 +22,7 @@ import { useDispatch, useSelector } from '../store';
 import { selectDescending, selectSearch, selectSortOrder } from '../store/selectors';
 import { setDescending, setSearch, setSortOrder } from '../store/currentSlice';
 
-import type { MediaInfo } from '/@common/mediaInfo';
-
-export type SortOrder = keyof Pick<MediaInfo, 'filename' | 'uploadTime' | 'duration' | 'size'>;
+import type { SortOrder } from '/@common/mediaInfo';
 
 type Props = {
   // upload?: (files: FileList | null) => void;

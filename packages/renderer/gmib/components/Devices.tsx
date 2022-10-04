@@ -51,7 +51,8 @@ const getItems = (addresses: string[], devices: DeviceStateWithParent[]): Device
       rest = rest.filter(({ id }) => !ids.includes(id));
       result.push(
         ...subs.map(device => {
-          const serno = new Address(device.props.serno.value as string).toString();
+          const { value } = device.props.serno;
+          const serno = typeof value === 'string' ? new Address(value).toString() : '';
           return {
             name: (
               <span title={serno}>
@@ -104,7 +105,6 @@ const Devices: React.FC = () => {
   const devices = useSelector(selectAllDevicesWithParent);
   const current = useSelector(selectCurrentDeviceId);
   const { data: addresses = [] } = useGetAddressesQuery();
-  // const addresses = useSelector(selectScreenAddresses);
   const tab = useSelector(selectCurrentTab);
   const novastars = useSelector(selectAllNovastars);
   // const [, setAccordion] = useAccordion();
@@ -221,7 +221,7 @@ const Devices: React.FC = () => {
           <ListItemText
             primaryTypographyProps={noWrap}
             primary={card.info?.name}
-            secondary="novastar"
+            secondary="nova"
             secondaryTypographyProps={noWrap}
           />
         </ListItemButton>

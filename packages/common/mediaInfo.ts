@@ -25,3 +25,5 @@ export type MediaInfo = {
   uploadTime?: ISODate;
   thumbnail?: string;
 };
+
+export type SortOrder = keyof Pick<MediaInfo, 'filename' | 'uploadTime' | 'duration' | 'size'>;

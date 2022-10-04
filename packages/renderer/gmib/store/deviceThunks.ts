@@ -1,29 +1,33 @@
-import { tuplify } from '/@common/helpers';
-
+// import debugFactory from 'debug';
 import { createAsyncThunk } from '@reduxjs/toolkit';
+import type { DeviceId } from '@nibus/core';
+import Address, { AddressType } from '@nibus/core/Address';
+import { MCDVI_TYPE, MINIHOST_TYPE } from '@nibus/core/common';
 
-import screenApi from '../api/screens';
+import screenApi, { selectScreens, updateMinihosts } from '../api/screens';
 
 import { setCurrentTab } from './currentSlice';
-import { setConnected } from './devicesSlice';
+import { addDevice, setConnected } from './devicesSlice';
 import { startAppListening } from './listenerMiddleware';
 import {
+  filterDevicesByAddress,
   selectAllDevices,
   selectCurrentDeviceId,
   selectDevicesByAddress,
   // selectScreenAddresses,
 } from './selectors';
 import { setOnline } from './sessionSlice';
-
-import { isRemoteSession } from '/@common/remote';
-
 import type { AppThunk, AppThunkConfig } from './index';
 
-import type { DeviceId } from '@nibus/core';
-import { MCDVI_TYPE, MINIHOST_TYPE } from '@nibus/core/common';
+import { isRemoteSession } from '/@common/remote';
+import { asyncSerial, delay } from '/@common/helpers';
 
+// const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:config`);
 const PING_INTERVAL = 10000;
 
+let pingTimer = 0;
+
+// eslint-disable-next-line import/prefer-default-export
 export const reloadDevice = createAsyncThunk<Promise<void>, DeviceId, AppThunkConfig>(
   'devices/reload',
   id => window.nibus.reloadDevice(id),
@@ -32,28 +36,40 @@ export const reloadDevice = createAsyncThunk<Promise<void>, DeviceId, AppThunkCo
 const isSlaveMinihostOrMcdvi = (info?: { type: number; owner?: string }): boolean =>
   Boolean(info && ((info.type === MINIHOST_TYPE && info.owner) || info.type === MCDVI_TYPE));
 
-export const ping = (): AppThunk => (dispatch, getState) => {
+const selectAddresses = screenApi.endpoints.getAddresses.select();
+const selectScreenData = screenApi.endpoints.getScreens.select();
+
+const discoverScreenDevices = (): AppThunk => async (dispatch, getState) => {
   const state = getState();
   const isReady = !selectAllDevices(state).some(({ isBusy }) => isBusy);
-  if (!isReady) {
-    window.setTimeout(() => dispatch(ping()), 300);
-    return;
+  if (isReady) {
+    const { data: screenData } = selectScreenData(state);
+    const screens = screenData && selectScreens(screenData);
+    const { data: addresses = [] } = selectAddresses(state);
+    const deviceAddressExists = (address: string): boolean =>
+      selectDevicesByAddress(getState(), address).length > 0;
+    const needUpdate = new Set<number>();
+    asyncSerial(addresses, async address => {
+      if (!deviceAddressExists(address)) {
+        const [timeout, info] = await window.nibus.ping(address);
+        if (
+          timeout !== -1 &&
+          isSlaveMinihostOrMcdvi(info) &&
+          info.owner &&
+          !deviceAddressExists(address)
+        ) {
+          window.nibus.createDevice(info.owner, address, info.type, info.version);
+          await delay(5);
+          screens &&
+            screens
+              .filter(item => item.addresses?.includes(address))
+              .forEach(item => needUpdate.add(item.id));
+        }
+      }
+    });
+    needUpdate.forEach(screenId => dispatch(updateMinihosts(screenId)));
   }
-  const { data: addresses = [] } = screenApi.endpoints.getAddresses.select()(state);
-  const inaccessibleAddresses = addresses.filter(
-    address => selectDevicesByAddress(state, address).length === 0,
-  );
-  if (inaccessibleAddresses.length === 0) return;
-  Promise.all(
-    inaccessibleAddresses.map(async address => tuplify(await window.nibus.ping(address), address)),
-  ).then(res =>
-    res
-      .filter(([[timeout, info]]) => timeout > 0 && isSlaveMinihostOrMcdvi(info))
-      .forEach(([[, info], address]) => {
-        // debug(`source: ${info?.source}`);
-        info.owner && window.nibus.createDevice(info.owner, address, info.type, info.version);
-      }),
-  );
+  pingTimer = window.setTimeout(() => dispatch(discoverScreenDevices()), isRemoteSession ? PING_INTERVAL * 4 : PING_INTERVAL);
 };
 
 startAppListening({
@@ -63,21 +79,19 @@ startAppListening({
   },
 });
 
-let pingTimer = 0;
-
-if (!isRemoteSession) {
+// if (!isRemoteSession) {
   startAppListening({
     actionCreator: setOnline,
     effect({ payload: online }, { dispatch }) {
       if (!online) {
-        window.clearInterval(pingTimer);
+        window.clearTimeout(pingTimer);
         pingTimer = 0;
       } else if (!pingTimer) {
-        pingTimer = window.setInterval(() => dispatch(ping()), PING_INTERVAL);
+        window.setTimeout(() => dispatch(discoverScreenDevices()), PING_INTERVAL);
       }
     },
   });
-}
+// }
 
 startAppListening({
   predicate(_, currentState, previousState) {
@@ -86,5 +100,29 @@ startAppListening({
   },
   effect(_, { dispatch }) {
     dispatch(setCurrentTab('devices'));
+  },
+});
+
+startAppListening({
+  actionCreator: addDevice,
+  effect({ payload: device }, { dispatch, getState }) {
+    const state = getState();
+    const deviceAddress = new Address(device.address);
+    if (deviceAddress.type !== AddressType.mac) return;
+    const { data: addresses } = selectAddresses(state);
+    if (addresses) {
+      for (let i = 0; i < addresses.length; i += 1) {
+        const address = addresses[i];
+        const [found] = filterDevicesByAddress([device], new Address(address));
+        if (found) {
+          const { data: screenData } = selectScreenData(state);
+          const screens = screenData ? selectScreens(screenData) : [];
+          screens.forEach(item => {
+            if (item.addresses?.includes(address)) dispatch(updateMinihosts(item.id));
+          });
+          return;
+        }
+      }
+    }
   },
 });

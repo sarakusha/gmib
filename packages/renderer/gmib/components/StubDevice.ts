@@ -17,6 +17,8 @@ export default class StubDevice extends EventEmitter implements IDevice {
     this.id = timeid() as DeviceId;
   }
 
+  readonly lastActivity = 0;
+
   download(_domain: string, _data: Buffer, _offset?: number, _noTerm?: boolean): Promise<void> {
     return Promise.reject(new Error('Not realized'));
   }
@@ -68,4 +70,6 @@ export default class StubDevice extends EventEmitter implements IDevice {
   toJSON(): unknown {
     return {};
   }
+
+  ping = () => Promise.resolve(-1);
 }

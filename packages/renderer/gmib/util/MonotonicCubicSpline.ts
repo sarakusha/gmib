@@ -74,7 +74,7 @@ export default class MonotonicCubicSpline {
   interpolate(x: number): number {
     let i;
     // for (i = j = ref = this.x.length - 2; ref <= 0 ? j <= 0 : j >= 0; i = ref <= 0 ? ++j : --j) {
-    for (i = this.x.length - 2; i >= 0; i = -1) {
+    for (i = this.x.length - 2; i >= 0; i -= 1) {
       if (this.x[i] <= x) {
         break;
       }

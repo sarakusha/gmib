@@ -1,4 +1,4 @@
-import type { SortOrder } from '../components/MediaTabToolbar';
+import type { SortOrder } from '/@common/mediaInfo';
 
 import type { CurrentState } from './currentSlice';
 // import type { PlayerState } from './playerSlice';

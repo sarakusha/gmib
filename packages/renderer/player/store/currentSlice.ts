@@ -1,7 +1,7 @@
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { createSlice } from '@reduxjs/toolkit';
 
-import type { SortOrder } from '../components/MediaTabToolbar';
+import type { SortOrder } from '/@common/mediaInfo';
 
 export const tabNames = ['player', 'media', 'scheduler', 'settings'] as const;
 
@@ -76,6 +76,11 @@ const currentSlice = createSlice({
     setSettingsNode(state, { payload: settingsNode }: PayloadAction<string>) {
       state.settingsNode = settingsNode;
     },
+    setCurrentPlaylistItem(_, __: PayloadAction<number>) {
+      /**
+       * see startAppListening
+       */
+    },
   },
 });
 
@@ -83,7 +88,6 @@ export const {
   setCurrentTab,
   setCurrentPlaylist,
   setPosition,
-  setDuration,
   setPlaybackState,
   setPlaybackRate,
   setPiP,
@@ -92,6 +96,9 @@ export const {
   setSearch,
   togglePlaybackState,
   setSettingsNode,
+  setCurrentPlaylistItem,
+  setDuration,
 } = currentSlice.actions;
+
 
 export default currentSlice.reducer;

@@ -17,12 +17,8 @@ import db, {
 
 const enum ScreenFlags {
   None = 0,
-  // PrimaryDisplay = 1 << 0,
-  // SecondaryDisplay = 1 << 1,
   DownToTop = 1 << 0,
   RightToLeft = 1 << 1,
-  // Transparent = 1 << 2,
-  // Kiosk = 1 << 3,
 }
 
 const enum PlayerFlags {
@@ -37,17 +33,8 @@ const toScreen = (result: NullableOptional): Omit<Screen, 'addresses'> => {
   const { flags = 0, ...props } = removeNull(result);
 
   return {
-    // display:
-    //   // eslint-disable-next-line no-nested-ternary
-    //   flags & ScreenFlags.PrimaryDisplay
-    //     ? true
-    //     : flags & ScreenFlags.SecondaryDisplay
-    //     ? false
-    //     : display,
     downToTop: Boolean(flags & ScreenFlags.DownToTop),
     rightToLeft: Boolean(flags & ScreenFlags.RightToLeft),
-    // transparent: flags & ScreenFlags.Transparent,
-    // kiosk: flags & ScreenFlags.Kiosk,
     ...props,
   };
 };
@@ -83,9 +70,9 @@ const screenEncoder = (screen: Omit<Screen, 'id' | 'addresses'>) => {
     borderBottom,
     borderLeft,
     borderRight,
-    output,
     brightnessFactor,
     test,
+    display,
   } = screen;
   const $flags =
     flag(downToTop, ScreenFlags.DownToTop) + flag(rightToLeft, ScreenFlags.RightToLeft);
@@ -98,17 +85,15 @@ const screenEncoder = (screen: Omit<Screen, 'id' | 'addresses'>) => {
     $moduleHeight: moduleHeight,
     $left: left,
     $top: top,
-    // $display: typeof display === 'string' ? display : null,
+    $display: display,
     $borderTop: borderTop,
     $borderBottom: borderBottom,
     $borderLeft: borderLeft,
     $borderRight: borderRight,
-    $output: output,
     $brightnessFactor: brightnessFactor,
     $flags,
     $test: test,
   };
-  // console.log({ res });
   return res;
 };
 
@@ -138,6 +123,15 @@ export const getAddressesForScreen = promisifyAll(
   (id: number) => id,
   result => (result as { address: string }).address,
 );
+
+export const loadScreen = async (id: number): Promise<Screen | undefined> => {
+  const screen = await getScreen(id);
+  if (!screen) return undefined;
+  return {
+    ...screen,
+    addresses: await getAddressesForScreen(screen.id),
+  };
+};
 
 export const getAddresses = promisifyAll(
   `SELECT address
@@ -267,9 +261,9 @@ export const uniquePlayerName = uniqueField('name', existsPlayerName);
 
 export const insertScreen = promisifyRun(
   `INSERT INTO screen (name, width, height, moduleWidth, moduleHeight, "left", top, flags, borderTop,
-                       borderBottom, borderLeft, borderRight, output, brightnessFactor)
+                       borderBottom, borderLeft, borderRight, display, brightnessFactor, test)
    VALUES ($name, $width, $height, $moduleWidth, $moduleHeight, $left, $top, $flags, $borderTop,
-           $borderBottom, $borderLeft, $borderRight, $output, $brightnessFactor)`,
+           $borderBottom, $borderLeft, $borderRight, $display, $brightnessFactor, $test)`,
   screenEncoder,
 );
 
@@ -287,7 +281,7 @@ export const updateScreen = promisifyRun(
        borderBottom=$borderBottom,
        borderLeft=$borderLeft,
        borderRight=$borderRight,
-       output=$output,
+       display=$display,
        brightnessFactor=$brightnessFactor,
        test=$test
    WHERE id = $id`,

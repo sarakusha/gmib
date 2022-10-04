@@ -62,6 +62,7 @@ onmessage = async ({ data }) => {
       close();
     }
   } else if ('play' in data && data.play) {
+    postMessage({ state: 'playing...', noop: play === noop });
     play();
   } else if ('pause' in data && data.pause) {
     pause();

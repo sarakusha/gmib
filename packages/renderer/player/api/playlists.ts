@@ -3,7 +3,7 @@ import { createApi } from '@reduxjs/toolkit/query/react';
 import type { SetStateAction } from 'react';
 
 import type { CreatePlaylist, InsertMedia, Playlist, RemoveMedia } from '/@common/playlist';
-import baseQuery from '/@common/baseQuery';
+import baseQuery from '../../authBaseQuery';
 import createDebouncedAsyncThunk from '/@common/createDebouncedAsyncThunk';
 
 import type { AppThunk, AppThunkConfig, RootState } from '../store';

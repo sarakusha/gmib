@@ -1,18 +1,20 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import crypto from 'crypto';
-import { app as electronApp } from 'electron';
+import type { Display } from 'electron';
+import { app as electronApp, screen } from 'electron';
 import fs from 'fs';
 import path from 'path';
-
 import { nanoid } from '@reduxjs/toolkit';
 import debugFactory from 'debug';
 import express from 'express';
 import type { File } from 'formidable';
 import formidable from 'formidable';
 import pMap from 'p-map';
+import type { SRPServerSessionStep1 } from '@sarakusha/tssrp6a';
+import { SRPParameters, SRPRoutines, SRPServerSession } from '@sarakusha/tssrp6a';
 
 import type { MediaInfo } from '/@common/mediaInfo';
-import { notEmpty } from '/@common/helpers';
+import { findById, notEmpty } from '/@common/helpers';
 import type { CreatePlaylist, Playlist } from '/@common/playlist';
 
 import { beginTransaction, commitTransaction, incrementCounterString, rollback } from './db';
@@ -41,6 +43,14 @@ import {
   getMediaByOriginalMD5,
   insertMedia,
 } from './media';
+import {
+  deletePlayerMapping,
+  getPlayerMappingById,
+  getPlayerMappings,
+  insertPlayerMapping,
+  uniquePlayerMappingName,
+  updatePlayerMapping,
+} from './playerMapping';
 import { getPlayerTitle } from './playerWindow';
 import {
   deleteAllPlaylistItems,
@@ -66,23 +76,36 @@ import {
   getAddressesForScreen,
   getPlayer,
   getPlayers,
-  getScreen,
   getScreens,
   insertAddress,
   insertPlayer,
   insertScreen,
+  loadScreen,
   uniquePlayerName,
   uniqueScreenName,
   updatePlayer,
   updateScreen,
 } from './screen';
 
-// import updateScreens from './updateScreens';
 import type { Screen } from '/@common/video';
+import { DefaultDisplays } from '/@common/video';
 
-import { playerWindows } from './windows';
+import { createSearchParams, isEqualOptions, playerWindows, screenWindows } from './windows';
+import { createTestWindow, getMainWindow } from './mainWindow';
+import config, { port } from './config';
+import Deferred from '/@common/Deferred';
+import localConfig from './localConfig';
+import { setIncomingSecret } from './secret';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:api`);
+
+const peers = new Map<
+  number,
+  // RTCPeerConnection
+  { pc: RTCPeerConnection; candidate: Promise<RTCIceCandidateInit> }
+>();
+
+const sessions = new Map<string, SRPServerSessionStep1>();
 
 export const mediaRoot = path.join(electronApp.getPath('userData'), 'media');
 
@@ -210,6 +233,74 @@ const loadMedia = async (file: File, force = false): Promise<MediaInfo> => {
   return mediaInfo;
 };
 
+const updateTest = (scr: Screen) => {
+  const primary = screen.getPrimaryDisplay();
+  const displays = screen.getAllDisplays();
+  debug(`updateTest: ${scr.display}, ${typeof scr.display} ${typeof primary.id}`);
+
+  const { id } = scr;
+  const [win, prev] = screenWindows.get(id) ?? [];
+  let display: Display | undefined;
+  if (!scr.width || !scr.height) {
+    if (win) {
+      win.close();
+      screenWindows.delete(id);
+    }
+    return;
+  }
+  switch (scr.display) {
+    case DefaultDisplays.Primary:
+      display = primary;
+      break;
+    case DefaultDisplays.Secondary:
+      display = displays.find(item => item.id !== primary.id);
+      break;
+    default:
+      if (typeof scr.display === 'number') {
+        display = findById(displays, scr.display);
+      }
+      break;
+  }
+  const page = scr.test ? findById(config.get('pages'), scr.test) : undefined;
+  debug(`display: ${JSON.stringify(display?.bounds)}`);
+  if (!display || !page) {
+    win?.hide();
+    return;
+  }
+
+  const needReload = !win || !prev || !isEqualOptions(scr, prev);
+  const params = createSearchParams(scr);
+  params.append('port', port.toString());
+  const url = page.permanent ? `${page.url}?${params}` : page.url;
+  const testWindow =
+    win ??
+    createTestWindow(
+      scr.width,
+      scr.height,
+      scr.left + display.bounds.x,
+      scr.top + display.bounds.y,
+    );
+  screenWindows.set(id, [testWindow, scr]);
+  const contents = testWindow.webContents;
+  contents.on('did-fail-load', (event, errorCode, errorDescription) => {
+    debug(
+      `Loading error. url: ${url}, errorCode: ${errorCode}, errorDescription: ${errorDescription}`,
+    );
+    /* ERR_FILE_NOT_FOUND */
+    if (errorCode !== -6) setTimeout(() => contents.reload(), 5000).unref();
+  });
+  testWindow.setPosition(scr.left + display.bounds.x, scr.top + display.bounds.y);
+  testWindow.setSize(scr.width, scr.height);
+  needReload && url && testWindow.loadURL(url);
+  testWindow.show();
+  debug(`test: ${url}`);
+};
+
+electronApp.whenReady().then(async () => {
+  const screens = await getScreens();
+  screens.forEach(updateTest);
+});
+
 /*
 const parseNumber = (value: unknown): number | undefined => {
   if (value == null) return undefined;
@@ -323,8 +414,7 @@ api.get('/playlist/:id', async (req, res, next) => {
 
 api.delete('/playlist/:id', (req, res, next) => {
   deletePlaylist(+req.params.id).then(result => {
-    if (result.changes > 0) res.sendStatus(204);
-    else res.sendStatus(404);
+    res.sendStatus(result.changes ? 204 : 404);
   }, next);
 });
 
@@ -367,6 +457,7 @@ api.put('/playlist', async (req, res, next) => {
     const playlist = await getPlaylist(id);
     const playlistItems = await getPlaylistItems(id);
     res.json({ ...playlist, items: playlistItems });
+    playerWindows.forEach(win => win.webContents.send('playlist', id));
   } catch (e) {
     if (transaction) await rollback();
     next(e);
@@ -424,9 +515,9 @@ api.get('/screen', (req, res, next) => {
   getScreens()
     .then(screens =>
       Promise.all(
-        screens.map(async screen => ({
-          ...screen,
-          addresses: await getAddressesForScreen(screen.id),
+        screens.map(async props => ({
+          ...props,
+          addresses: await getAddressesForScreen(props.id),
         })),
       ),
     )
@@ -434,21 +525,12 @@ api.get('/screen', (req, res, next) => {
     .catch(next);
 });
 
-const loadScreen = async (id: number): Promise<Screen | undefined> => {
-  const screen = await getScreen(id);
-  if (!screen) return undefined;
-  return {
-    ...screen,
-    addresses: await getAddressesForScreen(screen.id),
-  };
-};
-
 api.get('/screen/:id', (req, res, next) => {
   debug('GET SCREENS');
   loadScreen(+req.params.id)
-    .then(screen => {
-      if (!screen) res.sendStatus(404);
-      else res.json(screen);
+    .then(props => {
+      if (!props) res.sendStatus(404);
+      else res.json(props);
     })
     .catch(next);
 });
@@ -456,8 +538,9 @@ api.get('/screen/:id', (req, res, next) => {
 api.post('/screen', async (req, res, next) => {
   try {
     const { lastID } = await insertScreen(await uniqueScreenName(req.body));
-    const screen = await loadScreen(lastID);
-    res.json(screen);
+    const scr = await loadScreen(lastID);
+    scr && updateTest(scr);
+    res.json(scr);
     // await updateScreens();
   } catch (e) {
     next(e);
@@ -465,10 +548,15 @@ api.post('/screen', async (req, res, next) => {
 });
 
 api.delete('/screen/:id', (req, res, next) => {
-  deleteScreen(+req.params.id)
+  const id = +req.params.id;
+  const [win] = screenWindows.get(id) ?? [];
+  if (win) {
+    win.close();
+    screenWindows.delete(id);
+  }
+  deleteScreen(id)
     .then(({ changes }) => {
-      if (changes > 0) res.sendStatus(204);
-      else res.sendStatus(404);
+      res.sendStatus(changes ? 204 : 404);
       // return updateScreens();
     })
     .catch(next);
@@ -476,8 +564,8 @@ api.delete('/screen/:id', (req, res, next) => {
 
 api.put('/screen', async (req, res, next) => {
   try {
-    const { addresses, ...screen } = req.body as Screen;
-    const { changes } = await updateScreen(await uniqueScreenName(screen));
+    const { addresses, ...props } = req.body as Screen;
+    const { changes } = await updateScreen(await uniqueScreenName(props));
     if (changes === 0) {
       res.sendStatus(404);
       return;
@@ -485,13 +573,13 @@ api.put('/screen', async (req, res, next) => {
     if (addresses && addresses.length > 0) {
       await Promise.all(
         addresses.map(async address => {
-          if (!(await existsAddress(screen.id, address))) {
-            await insertAddress(screen.id, address);
+          if (!(await existsAddress(props.id, address))) {
+            await insertAddress(props.id, address);
           }
         }),
       );
     }
-    await deleteExtraAddresses(screen.id, addresses);
+    await deleteExtraAddresses(props.id, addresses);
     // let ids: number[] | undefined;
     // if (players && players.length > 0) {
     //   ids = await Promise.all(
@@ -506,7 +594,12 @@ api.put('/screen', async (req, res, next) => {
     //   );
     // }
     // await deleteExtraPlayers(screen.id, ids);
-    res.json(await loadScreen(screen.id));
+    const result = await loadScreen(props.id);
+    result && updateTest(result);
+    res.json(result);
+    // if (result?.addresses?.length) {
+    //   getMainWindow()?.webContents.send('screenChanged', props.id);
+    // }
     // await updateScreens();
   } catch (e) {
     next(e);
@@ -536,7 +629,7 @@ api.delete('/screen/:screenId/player/:playerId', async (req, res, next) => {
 
 api.get('/address', (req, res, next) => {
   getAddresses()
-    .then(addresses => res.json(addresses))
+    .then(addresses => res.json([...new Set(addresses)]))
     .catch(next);
 });
 
@@ -560,8 +653,7 @@ api.delete('/player/:id', (req, res, next) => {
   const id = +req.params.id;
   deletePlayer(id)
     .then(({ changes }) => {
-      if (!changes) res.sendStatus(404);
-      else res.sendStatus(204);
+      res.sendStatus(changes ? 204 : 404);
     })
     .catch(next);
 });
@@ -586,7 +678,10 @@ api.put('/player', async (req, res, next) => {
       else {
         res.json(player);
         const win = playerWindows.get(player.id);
-        if (win) win.setTitle(getPlayerTitle(player));
+        if (win) {
+          win.setTitle(getPlayerTitle(player));
+          win.webContents.send('player', player);
+        }
         updateMenu();
       }
     }
@@ -597,6 +692,124 @@ api.put('/player', async (req, res, next) => {
 
 api.get('/display', (req, res) => {
   res.json(getAllDisplays());
+});
+
+api.get('/mapping', async (req, res) => res.json(await getPlayerMappings()));
+
+api.post('/mapping', async (req, res, next) => {
+  try {
+    const data = await uniquePlayerMappingName(req.body);
+    const { lastID } = await insertPlayerMapping(data);
+    const mapping = await getPlayerMappingById(lastID);
+    const win = mapping && playerWindows.get(mapping.player);
+    if (win) win.webContents.send('updateVideoOuts');
+    res.json(mapping);
+  } catch (e) {
+    next(e);
+  }
+});
+
+api.put('/mapping', async (req, res, next) => {
+  try {
+    const { id, ...props } = await uniquePlayerMappingName(req.body);
+    const { changes } = await updatePlayerMapping(id, props);
+    if (!changes) {
+      res.sendStatus(404);
+      return;
+    }
+    const mapping = await getPlayerMappingById(id);
+    const win = mapping && playerWindows.get(mapping.player);
+    if (win) win.webContents.send('updateVideoOuts');
+    res.json(mapping);
+  } catch (e) {
+    next(e);
+  }
+});
+
+api.delete('/mapping/:id', async (req, res) => {
+  const id = +req.params.id;
+  const mapping = await getPlayerMappingById(id);
+  if (!mapping) {
+    res.sendStatus(404);
+  } else {
+    await deletePlayerMapping(id);
+    const win = mapping && playerWindows.get(mapping.player);
+    if (win) win.webContents.send('updateVideoOuts');
+    res.sendStatus(204);
+  }
+});
+
+api.put('/player/:id/stop', (req, res) => {
+  const win = playerWindows.get(+req.params.id);
+  if (win) win.webContents.send('stop', +req.params.id);
+  res.end();
+});
+
+// api.get('/call', (req, res) => {
+//   const pc = new RTCPeerConnection();
+//   const deferred = new Deferred<RTCIceCandidateInit>();
+//   const timeout = global
+//     .setTimeout(() => {
+//       pc.close();
+//       peers.delete(+timeout);
+//       deferred.reject(new Error('timeout'));
+//     }, 10000)
+//     .unref();
+//   res.json({ id: +timeout });
+//   pc.onicecandidate = e => {
+//     if (e.candidate) {
+//       const { candidate, sdpMid, sdpMLineIndex } = e.candidate;
+//       deferred.resolve({ candidate, sdpMLineIndex, sdpMid });
+//     }
+//   };
+//   peers.set(+timeout, { pc, candidate: deferred.promise });
+// });
+
+api.get('/handshake/:id', async (req, res) => {
+  const server = new SRPServerSession(new SRPRoutines(new SRPParameters()));
+  const salt = localConfig.get('salt');
+  const verifier = localConfig.get('verifier');
+  if (!salt || !verifier) return res.sendStatus(501);
+  const { id } = req.params;
+  try {
+    const handshake = await server.step1('gmib', BigInt(salt), BigInt(verifier));
+    sessions.set(id, handshake);
+    setTimeout(() => {
+      sessions.delete(id);
+    }, 10000).unref();
+    return res.json({
+      id,
+      salt,
+      B: `0x${handshake.B.toString(16)}`,
+    });
+  } catch (e) {
+    return res.status(500).send((e as Error).message);
+  }
+});
+
+api.post('/login/:id', async (req, res) => {
+  const { id } = req.params;
+  const handshake = sessions.get(id);
+  if (!handshake) return res.sendStatus(404);
+  const { salt, verifier } = req.body;
+  try {
+    const A = BigInt(req.body.A);
+    const M1 = BigInt(req.body.M1);
+    const M2 = await handshake.step2(A, M1);
+    if (salt && verifier) {
+      localConfig.set('salt', salt);
+      localConfig.set('verifier', verifier);
+    }
+    const apiSecret = await handshake.sessionKey(A);
+    setIncomingSecret(id, apiSecret);
+    return res.json({ M2: `0x${M2.toString(16)}` });
+  } catch (e) {
+    return res.status(401).send(JSON.stringify(e));
+  }
+});
+
+api.get('/identifier', (req, res) => {
+  res.send(localConfig.get('identifier'));
 });
 
 export default api;

@@ -8,7 +8,7 @@ import ScreenConfigurator from '@novastar/screen/ScreenConfigurator';
 // import '@novastar/screen/api';
 import debugFactory from 'debug';
 
-import type { Screen, ScreenArg, ScreenBrightness } from '/@renderer/store/novastarsSlice';
+import type { Screen, ScreenArg, ScreenBrightness } from '../../renderer/gmib/store/novastarSlice';
 import {
   addNovastar,
   novastarBusy,
@@ -16,7 +16,7 @@ import {
   removeNovastar,
   updateNovastar,
   updateScreen,
-} from '/@renderer/store/novastarsSlice';
+} from '../../renderer/gmib/store/novastarSlice';
 import { pushSensorValue } from '/@renderer/store/sensorsSlice';
 import { isRemoteSession } from '/@common/remote';
 

@@ -14,7 +14,7 @@ import { nanoid } from '@reduxjs/toolkit';
 import React, { useCallback, useState } from 'react';
 import { isUri } from 'valid-url';
 
-import { selectScreen, updateScreen, useGetScreensQuery } from '../api/screens';
+import { selectScreen, updateScreen, useScreen } from '../api/screens';
 import HttpPageDialog from '../dialogs/HttpPageDialog';
 import { useDispatch, useSelector } from '../store';
 import { removeHttpPage, upsertHttpPage } from '../store/configSlice';
@@ -56,25 +56,23 @@ const noWrap = { noWrap: true };
 
 const HttpPages: React.FC = () => {
   const dispatch = useDispatch();
-  const { data: screensData } = useGetScreensQuery();
-  const screen = useSelector(selectCurrentScreenId);
+  const screenId = useSelector(selectCurrentScreenId);
   /* TODO: ! */
-  const current =
-    screensData && screen !== undefined ? selectScreen(screensData, screen)?.test : undefined;
+  const { screen } = useScreen(screenId);
   const pages = useSelector(selectAllPages);
   const tab = useSelector(selectCurrentTab);
   const [selected, setSelected] = useState<string>();
   const visibleHandler = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>, checked: boolean) => {
-      screen &&
+      screenId &&
         dispatch(
-          updateScreen(screen, prev => ({
+          updateScreen(screenId, prev => ({
             ...prev,
             test: checked ? event.currentTarget.id : undefined,
           })),
         );
     },
-    [dispatch, screen],
+    [dispatch, screenId],
   );
   const [open, setOpen] = useState(false);
   const closeDialog = (): void => setOpen(false);
@@ -110,7 +108,7 @@ const HttpPages: React.FC = () => {
             <ListItemButton key={id}>
               <ListItemIcon>
                 <Switch
-                  checked={current === id}
+                  checked={screen?.test === id}
                   id={id}
                   onChange={visibleHandler}
                   disabled={!isValid}

@@ -11,6 +11,7 @@ import getAllDisplays from './getAllDisplays';
 import { getBrightnessHistoryOn } from './history';
 import localConfig from './localConfig';
 import Reader from './reader';
+import secret from './secret';
 
 import service from '@nibus/cli';
 // import { updateScreens } from './updateScreens';
@@ -54,6 +55,7 @@ const closeNibus = (): void => {
   service.server.on('client:config', (socket, store) => {
     try {
       config.store = store as typeof config.store;
+      service.server.broadcast('config', config.store);
     } catch (err) {
       debug(`Error while save config: ${(err as Error).message}`, true);
       service.server.send(socket, 'config', config.store);
@@ -66,7 +68,7 @@ const closeNibus = (): void => {
       );
   });
   debug('Starting local NIBUS...');
-  await service.start();
+  await service.start(secret);
   // sendStatusToWindow(`NiBUS started. Detection file: ${detectionPath}`);
 })().catch(e => {
   debug(`Error while nibus starting: ${(e as Error).stack}`);

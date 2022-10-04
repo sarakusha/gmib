@@ -65,7 +65,7 @@ export default defineConfig({
       strict: true,
     },
     proxy: {
-      '^/(api|public)': {
+      '^/(api|public|output)': {
         target: `http://localhost:${+(process.env['NIBUS_PORT'] ?? 9001) + 1}`,
         changeOrigin: true,
       },
