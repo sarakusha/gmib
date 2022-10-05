@@ -13,6 +13,7 @@ interface Window {
     readonly dialogs: { readonly showOpenDialogSync: { (browserWindow: Electron.BrowserWindow, options: Electron.OpenDialogSyncOptions): string[] | undefined; (options: Electron.OpenDialogSyncOptions): string[] | undefined; }; readonly showErrorBox: (title: string, content: string) => void; readonly saveJSON: (options: SaveOpts) => boolean; readonly loadJSON: (title?: string) => Record<string, unknown> | null; };
     readonly db: { readonly addTelemetry: (options: import("/Users/sarakusha/WebstormProjects/gmib/packages/common/helpers").TelemetryOpts) => void; };
     readonly log: (...params: any[]) => void;
+    readonly setLogLevel: (logLevel: 'nibus' | 'none' | 'hex') => void;
     readonly output: { readonly dispatch: (screenId: number, action: import("/Users/sarakusha/WebstormProjects/gmib/node_modules/redux/index").AnyAction) => void; };
     readonly identify: { readonly getSecret: () => string | undefined; readonly setSecret: (apiSecret: bigint) => void; readonly getIdentifier: () => string | undefined; readonly generateSignature: (method: string, uri: string, timestamp: number, body?: unknown) => string | undefined; };
 }

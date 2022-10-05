@@ -2,6 +2,8 @@ import { createAsyncThunk, isAnyOf } from '@reduxjs/toolkit';
 import sortBy from 'lodash/sortBy';
 import SunCalc from 'suncalc';
 
+import { reAddress } from '/@common/config';
+
 import createDebouncedAsyncThunk from '../../common/createDebouncedAsyncThunk';
 import screenApi, { parseLocation, selectScreens } from '../api/screens';
 import type { Point } from '../util/MonotonicCubicSpline';
@@ -39,7 +41,6 @@ import type { AppThunkConfig, RootState } from './index';
 
 import type { DeviceId } from '@nibus/core';
 import { hasProps } from '@novastar/screen/common';
-import { reAddress } from '../../../common/config';
 
 export const BRIGHTNESS_INTERVAL = 60 * 1000;
 
@@ -61,33 +62,36 @@ export const updateBrightness = createDebouncedAsyncThunk<void, void, AppThunkCo
     const tasks = screens
       .filter(hasBrightnessFactor)
       .filter(({ brightnessFactor }) => brightnessFactor > 0)
-      .reduce<[DeviceId, number][]>((res, { brightnessFactor, addresses: original, id: screenId }) => {
-        const addresses = original?.filter(address => reAddress.test(address));
-        if (!addresses) return res;
-        const isValid = timestamp && interval && Date.now() - timestamp < 2 * interval * MINUTE;
-        const actualBrightness = Math.min(Math.round(brightnessFactor * brightness), 100);
-        return [
-          ...res,
-          ...addresses
-            .map(location => parseLocation(location)?.address)
-            .filter(notEmpty)
-            .reduce<DeviceState[]>(
-              (devs, address) => [...devs, ...selectDevicesByAddress(state, address)],
-              [],
-            )
-            .map(({ id }) =>
-              tuplify(
-                id,
-                isValid
-                  ? Math.min(
-                      actualBrightness,
-                      scr?.[screenId]?.maxBrightness ?? Number.MAX_SAFE_INTEGER,
-                    )
-                  : actualBrightness,
+      .reduce<[DeviceId, number][]>(
+        (res, { brightnessFactor, addresses: original, id: screenId }) => {
+          const addresses = original?.filter(address => reAddress.test(address));
+          if (!addresses) return res;
+          const isValid = timestamp && interval && Date.now() - timestamp < 2 * interval * MINUTE;
+          const actualBrightness = Math.min(Math.round(brightnessFactor * brightness), 100);
+          return [
+            ...res,
+            ...addresses
+              .map(location => parseLocation(location)?.address)
+              .filter(notEmpty)
+              .reduce<DeviceState[]>(
+                (devs, address) => [...devs, ...selectDevicesByAddress(state, address)],
+                [],
+              )
+              .map(({ id }) =>
+                tuplify(
+                  id,
+                  isValid
+                    ? Math.min(
+                        actualBrightness,
+                        scr?.[screenId]?.maxBrightness ?? Number.MAX_SAFE_INTEGER,
+                      )
+                    : actualBrightness,
+                ),
               ),
-            ),
-        ];
-      }, []);
+          ];
+        },
+        [],
+      );
     await Promise.allSettled(
       tasks.map(([id, value]) => window.nibus.setDeviceValue(id)('brightness', value)),
     );
@@ -270,7 +274,8 @@ startAppListening({
   matcher: isAnyOf(setLogLevel, updateConfig),
   effect(_, { getState }) {
     const logLevel = selectLogLevel(getState());
-    window.nibus.setLogLevel(logLevel);
+    window.setLogLevel(logLevel);
+    // window.nibus.setLogLevel(logLevel);
   },
 });
 

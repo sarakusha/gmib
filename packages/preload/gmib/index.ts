@@ -6,7 +6,7 @@ import { contextBridge } from 'electron';
 // import '@sentry/electron/preload';
 
 import { setDispatch } from '../common/ipcDispatch';
-import log from '../common/initlog';
+import log, { setLogLevel } from '../common/initlog';
 
 import * as config from './config';
 import * as db from './db';
@@ -18,6 +18,7 @@ import * as output from './output';
 import * as identify from '../common/identify';
 
 import expandTypes from '/@common/expandTypes';
+import type { LogLevel } from '@nibus/core/common';
 
 /**
  * The "Main World" is the JavaScript context that your main renderer code runs in.
@@ -51,5 +52,9 @@ contextBridge.exposeInMainWorld('config', expandTypes(config));
 contextBridge.exposeInMainWorld('dialogs', expandTypes(dialogs));
 contextBridge.exposeInMainWorld('db', expandTypes(db));
 contextBridge.exposeInMainWorld('log', log.log.bind(log));
+contextBridge.exposeInMainWorld('setLogLevel', (logLevel: LogLevel) => {
+  setLogLevel(logLevel);
+  nibus.setLogLevel(logLevel);
+});
 contextBridge.exposeInMainWorld('output', expandTypes(output));
 contextBridge.exposeInMainWorld('identify', expandTypes(identify));
