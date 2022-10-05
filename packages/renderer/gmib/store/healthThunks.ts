@@ -6,6 +6,7 @@ import intersection from 'lodash/intersection';
 import type { Aggregations } from '/@common/helpers';
 import { Minihost3Selector, minmax, MINUTE, notEmpty } from '/@common/helpers';
 import { isRemoteSession } from '/@common/remote';
+import { reAddress } from '/@common/config';
 
 import screenApi, { selectScreen, selectScreens } from '../api/screens';
 
@@ -27,7 +28,6 @@ import type { AppThunk, RootState } from './index';
 import type { DeviceId } from '@nibus/core';
 import Address from '@nibus/core/Address';
 import { series as pMap } from '@novastar/codec/helper';
-import { reAddress } from '../../../common/config';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:health`);
 

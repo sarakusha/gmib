@@ -5,8 +5,9 @@
 import { contextBridge } from 'electron';
 // import '@sentry/electron/preload';
 
-import { setDispatch } from '../common/ipcDispatch';
+import * as identify from '../common/identify';
 import log, { setLogLevel } from '../common/initlog';
+import { setDispatch } from '../common/ipcDispatch';
 
 import * as config from './config';
 import * as db from './db';
@@ -15,9 +16,9 @@ import * as nibus from './nibus';
 import * as novastar from './novastar';
 import * as output from './output';
 
-import * as identify from '../common/identify';
 
 import expandTypes from '/@common/expandTypes';
+
 import type { LogLevel } from '@nibus/core/common';
 
 /**

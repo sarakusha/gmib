@@ -129,9 +129,13 @@ const screenApi = createApi({
               adapter.setOne(state, data);
             }),
           );
-          // console.log('addresses', screen.addresses);
-          // eslint-disable-next-line @typescript-eslint/no-use-before-define
-          screen.addresses && screen.addresses.filter(address => reAddress.test(address)).length && dispatch(updateMinihosts(screen.id));
+          if (
+            screen.addresses &&
+            screen.addresses.filter(address => reAddress.test(address)).length
+          ) {
+            // eslint-disable-next-line @typescript-eslint/no-use-before-define
+            dispatch(updateMinihosts(screen.id));
+          }
         } catch {
           dispatch(screenApi.endpoints.getScreens.initiate());
         }

@@ -36,6 +36,7 @@ import AccordionList from './AccordionList';
 import DeviceIcon from './DeviceIcon';
 
 import Address from '@nibus/core/Address';
+
 import { reAddress } from '/@common/config';
 
 const tabName = 'devices';
