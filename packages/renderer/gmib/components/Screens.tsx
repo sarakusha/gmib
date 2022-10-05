@@ -69,7 +69,6 @@ const Screens: React.FC = () => {
       }
     };
   const single = screens.length === 1;
-  const [active, setActive] = React.useState(false);
   return (
     <Box sx={{ width: 1 }}>
       <Paper square>

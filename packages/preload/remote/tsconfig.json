@@ -1,0 +1,31 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": [
+      "vite/client"
+    ],
+    "lib": [
+      "DOM",
+      "ESNext"
+    ],
+    "paths": {
+      "/@common/*": [
+        "../common/*"
+      ]
+    }
+  },
+  "include": [
+    "*.ts",
+    "../common/*.ts",
+    "../../common/*.ts",
+    "../../rendered/player/store/*Slice.ts",
+    "../../../types/**/*.d.ts",
+    "../../../node_modules/@types/dom-mediacapture-transform/index.d.ts",
+    "../../../node_modules/@types/dom-webcodecs/webcodecs.generated.d.ts",
+    "../../../node_modules/@types/offscreencanvas/index.d.ts"
+  ],
+  "exclude": [
+    "**/*.spec.ts",
+    "**/*.test.ts"
+  ]
+}

@@ -1,20 +1,20 @@
+import { createServer } from 'http';
 import path from 'path';
 
 import bodyParser from 'body-parser';
 import debugFactory from 'debug';
 import express from 'express';
-import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
 import type { ErrorRequestHandler } from 'express-serve-static-core';
 import helmet from 'helmet';
 import cors from 'cors';
 
 import api, { mediaRoot } from './api';
+import auth from './auth';
 import { port } from './config';
 import { dbReady } from './db';
 
 import preventLoadSourceMap from '/@common/preventLoadSourceMap';
-import auth from './auth';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:express`);
 

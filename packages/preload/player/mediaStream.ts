@@ -1,12 +1,16 @@
 import { type MergeableStream, mergeStreams } from '@sarakusha/ebml';
+
 import { ipcRenderer } from 'electron';
-import debugFactory from 'debug';
+
+// import debugFactory from 'debug';
 
 import VideoSource from './VideoSource';
 
 import type { MediaInfo } from '/@common/mediaInfo';
 import type { Playlist } from '/@common/playlist';
-import ipcDispatch from '/@common/ipcDispatch';
+
+import ipcDispatch from '../common/ipcDispatch';
+
 import { setCurrentPlaylistItem, setDuration } from '/@player/store/currentSlice';
 import type { Player } from '/@common/video';
 import type { CandidateMessage, RtcMessage, WithWebSocketKey } from '/@common/rtc';
@@ -23,7 +27,7 @@ const search = new URLSearchParams(window.location.search);
 const sourceId = +(search.get('source_id') ?? 1);
 
 const stream = new MediaStream();
-const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:mediastream`);
+// const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:mediastream`);
 
 const getMediaUri = (name?: string) =>
   name && new URL(`/public/${name}`, new URL(import.meta.url).origin).href;
@@ -251,7 +255,7 @@ ipcRenderer.on('stop', () => {
   ipcDispatch(setDuration(duration));
 });
 
-ipcRenderer.on('playlist', (_, id: number) => {});
+// ipcRenderer.on('playlist', (_, id: number) => {});
 
 const peers = new Map<string, RTCPeerConnection>();
 

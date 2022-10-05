@@ -2,8 +2,9 @@ import { contextBridge } from 'electron';
 
 // import debugFactory from 'debug';
 
-import log from '/@main/initlog';
-import { setDispatch } from '/@common/ipcDispatch';
+import log from '../common/initlog';
+import { setDispatch } from '../common/ipcDispatch';
+
 import type { CandidateMessage, OfferMessage, RtcMessage } from '/@common/rtc';
 import Deferred from '/@common/Deferred';
 
@@ -73,8 +74,8 @@ ws.onopen = async () => {
           console.warn(`Unknown msg: ${msg}`);
           break;
       }
-    } catch (e: any) {
-      console.error(`error while parse websocket message: ${e.message}`);
+    } catch (e) {
+      console.error(`error while parse websocket message: ${(e as Error).message}`);
     }
   };
 };

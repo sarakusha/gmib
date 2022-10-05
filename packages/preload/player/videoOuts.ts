@@ -1,7 +1,8 @@
 import { ipcRenderer } from 'electron';
-import isEqual from 'lodash/isEqual';
+
 import debugFactory from 'debug';
-import Deferred from '/@common/Deferred';
+import isEqual from 'lodash/isEqual';
+
 import type { PlayerMapping } from '/@common/video';
 
 import stream from './mediaStream';

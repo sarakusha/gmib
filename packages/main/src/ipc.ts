@@ -1,4 +1,5 @@
 import { app, ipcMain } from 'electron';
+
 import { getMediaByMD5 } from './media';
 import { getPlayerMappingsForPlayer } from './playerMapping';
 import { getPlaylist, getPlaylistItems } from './playlist';
@@ -8,7 +9,7 @@ app.whenReady().then(() => {
   ipcMain.handle('getPlayer', (_, id) => getPlayer(id));
   ipcMain.handle('getPlaylist', async (_, id) => {
     const playlist = await getPlaylist(id);
-    const items = await getPlaylistItems(id) ?? [];
+    const items = (await getPlaylistItems(id)) ?? [];
     return { ...playlist, items };
   });
   ipcMain.handle('getMedia', (_, md5) => getMediaByMD5(md5));

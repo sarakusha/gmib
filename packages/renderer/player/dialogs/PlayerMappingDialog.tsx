@@ -1,27 +1,28 @@
-import * as React from 'react';
+import { FormLabel, Stack } from '@mui/material';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
-import { Field, Form, Formik } from 'formik';
-
-import { useDisplays } from '../api/displays';
-import { usePlayer } from '../api/player';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
-import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
-import { FormLabel, Stack } from '@mui/material';
+import Select from '@mui/material/Select';
+import { Field, Form, Formik } from 'formik';
+import * as React from 'react';
+
+import FormikTextField from '../../common/FormikTextField';
+import { useDisplays } from '../../common/displays';
 
 import { DefaultDisplays, getDisplayLabel } from '/@common/video';
-import FormikTextField from '/@common/FormikTextField';
+
 import {
   useCreateMappingMutation,
   usePlayerMapping,
   useUpdateMappingMutation,
 } from '../api/mapping';
+import { usePlayer } from '../api/player';
 import { toHexId } from '../utils';
 
 type Props = {
@@ -39,7 +40,12 @@ const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) =
   const { mapping } = usePlayerMapping(id);
   const [updateMapping] = useUpdateMappingMutation();
   const [createMapping] = useCreateMappingMutation();
-  const validDisplays = [...displays.map(display => display.id), DefaultDisplays.None, DefaultDisplays.Primary, DefaultDisplays.Secondary];
+  const validDisplays = [
+    ...displays.map(display => display.id),
+    DefaultDisplays.None,
+    DefaultDisplays.Primary,
+    DefaultDisplays.Secondary,
+  ];
   return (
     <Dialog open={open && !!playerId} onClose={onClose} fullWidth maxWidth="xs">
       <DialogTitle>Окно вывода</DialogTitle>
@@ -58,7 +64,6 @@ const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) =
             }
           }
           onSubmit={async (newValues, { setSubmitting }) => {
-            console.log({ newValues, mapping });
             if (!playerId) throw new Error('Unknown player');
             if (mapping) await updateMapping({ ...mapping, ...newValues, player: playerId });
             else await createMapping({ ...newValues, player: playerId });

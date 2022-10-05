@@ -101,8 +101,12 @@ const setupPreloadPackageWatcher = ({ ws }) =>
     writeBundle() {
       // Generating exposedInMainWorld.d.ts when preload package is changed.
       generateAsync({
-        input: 'packages/preload/tsconfig.json',
-        output: 'packages/preload/exposedInMainWorld.d.ts',
+        input: 'packages/preload/gmib/tsconfig.json',
+        output: 'packages/preload/gmibInMainWorld.d.ts',
+      });
+      generateAsync({
+        input: 'packages/preload/player/tsconfig.json',
+        output: 'packages/preload/playerInMainWorld.d.ts',
       });
 
       ws.send({
@@ -111,7 +115,7 @@ const setupPreloadPackageWatcher = ({ ws }) =>
     },
   });
 
-const setupPlayerPreloadPackageWatcher = ({ ws }) =>
+/* const setupPlayerPreloadPackageWatcher = ({ ws }) =>
   getWatcher({
     name: 'reload-page-on-preload-player-package-change',
     configFile: 'packages/playerPreload/vite.config.js',
@@ -143,7 +147,7 @@ const setupRemotePlayerPreloadPackageWatcher = ({ ws }) =>
     //     type: 'full-reload',
     //   });
     // },
-  });
+  }); */
 
 (async () => {
   try {
@@ -154,10 +158,10 @@ const setupRemotePlayerPreloadPackageWatcher = ({ ws }) =>
 
     await viteDevServer.listen();
 
-    await setupPlayerPreloadPackageWatcher(viteDevServer);
+    // await setupPlayerPreloadPackageWatcher(viteDevServer);
     await setupPreloadPackageWatcher(viteDevServer);
     await setupMainPackageWatcher(viteDevServer);
-    await setupRemotePlayerPreloadPackageWatcher;(viteDevServer);
+    // await setupRemotePlayerPreloadPackageWatcher;(viteDevServer);
   } catch (e) {
     console.error(e);
     process.exit(1);

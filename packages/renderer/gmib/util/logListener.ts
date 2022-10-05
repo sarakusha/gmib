@@ -1,4 +1,4 @@
-import TypedEventTarget from '/@common/TypedEventTarget';
+import TypedEventTarget from '../../common/TypedEventTarget';
 
 type LogEvents = {
   line: (line: string) => void;

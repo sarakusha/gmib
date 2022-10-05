@@ -10,6 +10,16 @@ process.env.VITE_APP_NAME = process.env['npm_package_name'];
 process.env.VITE_APP_VERSION = process.env['npm_package_version'];
 process.env.VITE_DEBUG = `nibus:*,novastar:*,${process.env.VITE_APP_NAME}:*`;
 
+const lib = {
+  gmib: 'gmib/index.ts',
+  player: 'player/index.ts',
+  remote: 'remote/index.ts',
+};
+
+const currentLib = lib[process.env.LIB_NAME];
+if (!currentLib) {
+  throw new Error(`LIB_NAME:${process.env.LIB_NAME} is not defined or is not valid`);
+}
 /**
  * @type {import('vite').UserConfig}
  * @see https://vitejs.dev/config/
@@ -20,7 +30,7 @@ const config = {
   envDir: process.cwd(),
   resolve: {
     alias: {
-      '/@main/': join(PACKAGE_ROOT, '../main/src') + '/',
+      // '/@main/': join(PACKAGE_ROOT, '../main/src') + '/',
       '/@renderer/': join(PACKAGE_ROOT, '../renderer/gmib') + '/',
       '/@player/': join(PACKAGE_ROOT, '../renderer/player') + '/',
       '/@common/': join(PACKAGE_ROOT, '../common') + '/',
@@ -36,11 +46,13 @@ const config = {
     assetsDir: '.',
     minify: process.env.MODE !== 'development',
     lib: {
-      entry: {
-        gmib: 'gmib/index.ts',
-        player: 'player/index.ts',
-        remote: 'remote/index.ts',
-      },
+      fileName: process.env.LIB_NAME, // '[name]',
+      entry: currentLib,
+      // entry: {
+      //   gmib: 'gmib/index.ts',
+      //   player: 'player/index.ts',
+      //   remote: 'remote/index.ts',
+      // },
       formats: ['cjs'],
     },
     rollupOptions: {
@@ -75,10 +87,10 @@ const config = {
         ...builtinModules.flatMap(p => [p, `node:${p}`]),
       ],
       output: {
-        entryFileNames: '[name].cjs',
-        // manualChunks() {
-        //   return 'index';
-        // },
+        entryFileNames: `${process.env.LIB_NAME}.cjs`,
+      //   manualChunks() {
+      //     return 'index';
+      //   },
       },
     },
     // commonjsOptions: {

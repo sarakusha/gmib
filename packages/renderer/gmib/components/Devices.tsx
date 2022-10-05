@@ -221,7 +221,7 @@ const Devices: React.FC = () => {
           <ListItemText
             primaryTypographyProps={noWrap}
             primary={card.info?.name}
-            secondary="nova"
+            secondary={card.path}
             secondaryTypographyProps={noWrap}
           />
         </ListItemButton>

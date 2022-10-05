@@ -3,15 +3,13 @@ import { configureStore } from '@reduxjs/toolkit';
 import type { TypedUseSelectorHook } from 'react-redux';
 import { useDispatch as origUseDispatch, useSelector as origUseSelector } from 'react-redux';
 
-import type { AppThunkConfig as OriginalAppThunkConfig } from '/@common/createDebouncedAsyncThunk';
-
+import type { AppThunkConfig as OriginalAppThunkConfig } from '../../common/createDebouncedAsyncThunk';
 import * as api from '../api';
 
 import currentReducer, { setPiP } from './currentSlice';
 import listenerMiddleware from './listenerMiddleware';
 
 import './currentThunk';
-import mediaApi, { selectMediaById } from '../api/media';
 // import playerReducer from './playerSlice';
 // import './playerThunks';
 // import { selectPlayerSate } from './selectors';
@@ -72,4 +70,3 @@ document.addEventListener('leavepictureinpicture', () => store.dispatch(setPiP(f
 // });
 
 export default store;
-

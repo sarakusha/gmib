@@ -87,7 +87,7 @@ const RemoteHostsDialog: React.FC<RemoteHostsDialogProps> = ({
   const cancelHandler = onClose;
   // const dispatch = useDispatch();
   useEffect(() => {
-    const updateHosts = (hosts: CustomHost[]): void => {
+    const updateHosts = (hosts: CustomHost[] = []): void => {
       setCustomHosts(
         hosts.map<CustomHostItem>(({ address, port }) => ({
           address,
@@ -97,7 +97,7 @@ const RemoteHostsDialog: React.FC<RemoteHostsDialogProps> = ({
       );
       setChanged(false);
     };
-    updateHosts(window.config.get('hosts') ?? []);
+    window.config.get('hosts').then(updateHosts);
   }, [open]);
   const refLast = useRef<HTMLDivElement>(null);
 

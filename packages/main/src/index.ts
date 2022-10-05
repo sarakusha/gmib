@@ -1,4 +1,5 @@
 import { app, crashReporter, powerSaveBlocker } from 'electron';
+
 // import * as Sentry from '@sentry/electron/main';
 import debugFactory from 'debug';
 

@@ -100,5 +100,4 @@ export const {
   setDuration,
 } = currentSlice.actions;
 
-
 export default currentSlice.reducer;

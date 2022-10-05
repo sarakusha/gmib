@@ -1,4 +1,5 @@
-import displayApi from './displays';
+import displayApi from '../../common/displays';
+
 import mappingApi from './mapping';
 import mediaApi from './media';
 import playerApi from './player';

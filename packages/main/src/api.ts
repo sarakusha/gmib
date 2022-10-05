@@ -4,19 +4,21 @@ import type { Display } from 'electron';
 import { app as electronApp, screen } from 'electron';
 import fs from 'fs';
 import path from 'path';
+
 import { nanoid } from '@reduxjs/toolkit';
+import type { SRPServerSessionStep1 } from '@sarakusha/tssrp6a';
+import { SRPParameters, SRPRoutines, SRPServerSession } from '@sarakusha/tssrp6a';
 import debugFactory from 'debug';
 import express from 'express';
 import type { File } from 'formidable';
 import formidable from 'formidable';
 import pMap from 'p-map';
-import type { SRPServerSessionStep1 } from '@sarakusha/tssrp6a';
-import { SRPParameters, SRPRoutines, SRPServerSession } from '@sarakusha/tssrp6a';
 
 import type { MediaInfo } from '/@common/mediaInfo';
 import { findById, notEmpty } from '/@common/helpers';
 import type { CreatePlaylist, Playlist } from '/@common/playlist';
 
+import config, { port } from './config';
 import { beginTransaction, commitTransaction, incrementCounterString, rollback } from './db';
 import {
   convertCopy,
@@ -35,7 +37,9 @@ import {
   renderThumbnailFromImage,
 } from './ffmpeg';
 import getAllDisplays from './getAllDisplays';
+import localConfig from './localConfig';
 import { updateMenu } from './mainMenu';
+import { createTestWindow } from './mainWindow';
 import {
   deleteMedia,
   getAllMedia,
@@ -90,20 +94,16 @@ import {
 import type { Screen } from '/@common/video';
 import { DefaultDisplays } from '/@common/video';
 
-import { createSearchParams, isEqualOptions, playerWindows, screenWindows } from './windows';
-import { createTestWindow, getMainWindow } from './mainWindow';
-import config, { port } from './config';
-import Deferred from '/@common/Deferred';
-import localConfig from './localConfig';
 import { setIncomingSecret } from './secret';
+import { createSearchParams, isEqualOptions, playerWindows, screenWindows } from './windows';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:api`);
 
-const peers = new Map<
-  number,
-  // RTCPeerConnection
-  { pc: RTCPeerConnection; candidate: Promise<RTCIceCandidateInit> }
->();
+// const peers = new Map<
+//   number,
+//   // RTCPeerConnection
+//   { pc: RTCPeerConnection; candidate: Promise<RTCIceCandidateInit> }
+// >();
 
 const sessions = new Map<string, SRPServerSessionStep1>();
 

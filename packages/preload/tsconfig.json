@@ -11,31 +11,20 @@
     "noEmit": true,
     // Don't automatically include anything.
     // Only include `@types` packages that we need to import.
-    "types": [],
+    "types": [
+      "vite/client"
+    ],
     "baseUrl": ".",
     "paths": {
-      "bonjour-hap": [
-        "../../types/bonjour-hap"
-      ],
-      "/@main/*": [
-        "../main/src/*"
+      "/@common/*": [
+        "../common/*"
       ],
       "/@renderer/store/*": [
         "../renderer/gmib/store/*"
       ],
-      "/@common/*": [
-        "../common/*"
+      "/@player/store/*": [
+        "../renderer/player/store/*"
       ]
     }
-  },
-  "include": [
-    "gmib/**/*.ts",
-    "../renderer/gmib/store/*Slice.ts",
-    "../common/*.ts",
-    "../../types/**/*.d.ts"
-, "../renderer/gmib/util/authBaseQuery.ts", "../renderer/authBaseQuery.ts"  ],
-  "exclude": [
-    "**/*.spec.ts",
-    "**/*.test.ts"
-  ]
+  }
 }

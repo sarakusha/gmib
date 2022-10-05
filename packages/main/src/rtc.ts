@@ -1,5 +1,7 @@
 import type { RtcMessage, WithWebSocketKey } from '/@common/rtc';
+
 import { app, ipcMain } from 'electron';
+
 import type { WebSocket } from 'ws';
 
 import { wss } from './express';
@@ -16,7 +18,7 @@ wss.on('connection', (ws, req) => {
     if (!isBinary) {
       const msg = JSON.parse(data.toString()) as RtcMessage;
       if (['candidate', 'offer'].includes(msg.event)) {
-        const win = playerWindows.get(msg.sourceId) ?? await openPlayer(msg.sourceId);
+        const win = playerWindows.get(msg.sourceId) ?? (await openPlayer(msg.sourceId));
         if (win) {
           win.webContents.send('socket', { ...msg, id });
         }

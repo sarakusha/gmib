@@ -20,7 +20,9 @@
     "../common/*.ts",
     "src/**/*.ts",
     "../../types/**/*.d.ts"
-, "../renderer/gmib/util/authBaseQuery.ts", "../renderer/authBaseQuery.ts"  ],
+, "../renderer/gmib/util/authBaseQuery.ts",
+    "../renderer/common/authBaseQuery.ts"
+  ],
   "exclude": [
     "**/*.spec.ts",
     "**/*.test.ts",

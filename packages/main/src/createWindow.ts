@@ -1,4 +1,4 @@
-import { BrowserWindow, screen } from 'electron';
+import { app, BrowserWindow, screen } from 'electron';
 
 // import debugFactory from 'debug';
 
@@ -12,19 +12,12 @@ const createWindow = (title: string, preload: string, random = true): BrowserWin
     width: 840,
     height: 620,
   };
-  const display = screen.getPrimaryDisplay().workAreaSize;
-  const pos = random
-    ? {
-        x: Math.round(Math.random() * Math.max(0, display.width - size.width)),
-        y: Math.round(Math.random() * Math.max(0, display.height - size.height)),
-      }
-    : {};
   const browserWindow = new BrowserWindow({
     show: false, // Use 'ready-to-show' event to show window
     skipTaskbar: true,
     backgroundColor: '#fff',
     useContentSize: true,
-    ...pos,
+    // ...pos,
     ...size,
     title,
     webPreferences: {
@@ -37,6 +30,14 @@ const createWindow = (title: string, preload: string, random = true): BrowserWin
       // contextIsolation: false,
     },
   });
+
+  random &&
+    app.whenReady().then(() => {
+      const display = screen.getPrimaryDisplay().workAreaSize;
+      const x = Math.round(Math.random() * Math.max(0, display.width - size.width));
+      const y = Math.round(Math.random() * Math.max(0, display.height - size.height));
+      browserWindow.setPosition(x, y);
+    });
 
   windows.add(browserWindow);
   browserWindow.on('closed', () => {

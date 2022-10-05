@@ -1,8 +1,9 @@
 import { createEntityAdapter, type EntityState } from '@reduxjs/toolkit';
 import { createApi } from '@reduxjs/toolkit/query/react';
-import { sourceId } from '../utils';
 
-import baseQuery from '../../authBaseQuery';
+import { sourceId } from '../utils';
+import baseQuery from '../../common/authBaseQuery';
+
 import type { Player } from '/@common/video';
 
 export const playerAdapter = createEntityAdapter<Player>();

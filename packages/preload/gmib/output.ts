@@ -3,7 +3,7 @@ import { ipcRenderer } from 'electron';
 import type { AnyAction } from '@reduxjs/toolkit';
 import debugFactory from 'debug';
 
-import ipcDispatch from '/@common/ipcDispatch';
+import ipcDispatch from '../common/ipcDispatch';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:preload:output`);
 

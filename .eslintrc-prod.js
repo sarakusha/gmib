@@ -67,6 +67,7 @@ module.exports = {
      * Just for beauty
      */
     quotes: ['warn', 'single'],
+    'no-console': ["error", { allow: ["warn", "error"] }]
   },
   settings: {
     react: {

@@ -4,14 +4,7 @@
 import type { NullableOptional } from '/@common/helpers';
 import type { Player, Screen } from '/@common/video';
 
-import db, {
-  flag,
-  promisifyAll,
-  promisifyGet,
-  promisifyRun,
-  removeNull,
-  uniqueField,
-} from './db';
+import db, { flag, promisifyAll, promisifyGet, promisifyRun, removeNull, uniqueField } from './db';
 
 // const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:main`);
 

@@ -11,7 +11,7 @@ import React from 'react';
 
 import { getDisplayLabel } from '/@common/video';
 
-import { useDisplay } from '../../gmib/api/displays';
+import { useDisplay } from '../../common/displays';
 import { toHexId } from '../utils';
 
 type Props = {

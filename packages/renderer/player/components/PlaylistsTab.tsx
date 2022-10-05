@@ -16,6 +16,7 @@ import React, { useCallback } from 'react';
 import { useResizeDetector } from 'react-resize-detector';
 import { TransitionGroup } from 'react-transition-group';
 
+import SubmitListener from '../../common/SubmitListener';
 import { selectMediaById, useGetMediaQuery } from '../api/media';
 import {
   moveItem,
@@ -30,7 +31,6 @@ import { selectCurrentPlaylist } from '../store/selectors';
 import { sourceId } from '../utils';
 
 import { notEmpty } from '/@common/helpers';
-import SubmitListener from '/@common/SubmitListener';
 
 import CurrentPlaylist from './CurrentPlaylist';
 import FixedHeadLayout from './FixedHeadLayout';

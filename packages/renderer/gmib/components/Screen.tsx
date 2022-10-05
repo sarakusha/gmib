@@ -5,25 +5,26 @@ import {
   MenuItem,
   Paper,
   Select,
-  TextField,
   Typography,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import ChipInput from '@sarakusha/material-ui-chip-input';
+import { Field, Form, Formik } from 'formik';
 import React, { useCallback } from 'react';
 
+import FormikTextField from '../../common/FormikTextField';
+import SubmitListener from '../../common/SubmitListener';
+import { useDisplays } from '../../common/displays';
 import { updateScreen, useScreen } from '../api/screens';
 import { useDispatch } from '../store';
 
 import { DefaultDisplays } from '/@common/video';
 import { reAddress } from '/@common/config';
-import FormikTextField from '/@common/FormikTextField';
 import { toHexId } from '/@common/helpers';
-import SubmitListener from '/@common/SubmitListener';
+
 
 import FormFieldSet from './FormFieldSet';
-import { Field, Form, Formik } from 'formik';
-import { useDisplays } from '../api/displays';
+
 
 // import type { Screen } from '/@common/video';
 
@@ -63,7 +64,7 @@ const toDisplay = (value: string): boolean | string => {
 // const screenReducer = createPropsReducer<Record<NumberProps, string>>();
 
 const inputSize = { min: 8, step: 4 };
-const inputFactor = { min: 0, max: 4, step: 0.01 };
+// const inputFactor = { min: 0, max: 4, step: 0.01 };
 
 type Props = {
   id: number;

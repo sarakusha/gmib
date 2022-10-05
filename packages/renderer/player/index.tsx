@@ -9,10 +9,11 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import 'typeface-roboto/index.css';
 import { Provider } from 'react-redux';
+import '../../preload/playerInMainWorld.d';
 // import * as Sentry from '@sentry/electron/renderer';
 
-import Html5DndProvider from '/@common/Html5DndProvider';
-import theme from '/@common/theme';
+import Html5DndProvider from '../common/Html5DndProvider';
+import theme from '../common/theme';
 
 import App from './components/App';
 import store from './store';
@@ -47,7 +48,7 @@ root.render(
         >
           <Html5DndProvider>
             <App />
-            <Box id="videoContainer" sx={{ display: 'none' }}/>
+            <Box id="videoContainer" sx={{ display: 'none' }} />
           </Html5DndProvider>
         </SnackbarProvider>
       </Provider>

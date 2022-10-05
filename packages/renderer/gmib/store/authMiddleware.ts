@@ -1,5 +1,6 @@
 import { isRejectedWithValue } from '@reduxjs/toolkit';
 import type { Middleware } from '@reduxjs/toolkit';
+
 import { setLoggedIn } from './currentSlice';
 
 const authMiddleware: Middleware =

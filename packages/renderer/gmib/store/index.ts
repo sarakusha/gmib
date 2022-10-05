@@ -3,10 +3,10 @@ import { configureStore } from '@reduxjs/toolkit';
 import type { TypedUseSelectorHook } from 'react-redux';
 import { useDispatch as origUseDispatch, useSelector as origUseSelector } from 'react-redux';
 
-import type { AppThunkConfig as OriginalAppThunkConfig } from '/@common/createDebouncedAsyncThunk';
-
+import type { AppThunkConfig as OriginalAppThunkConfig } from '../../common/createDebouncedAsyncThunk';
 import * as api from '../api';
 
+import authMiddleware from './authMiddleware';
 import configReducer from './configSlice';
 import currentReducer from './currentSlice';
 import devicesReducer from './devicesSlice';
@@ -30,7 +30,6 @@ import './healthThunks';
 import './novastarThunks';
 import './sensorThunks';
 // import './screensThunks';
-import authMiddleware from './authMiddleware';
 
 export const store = configureStore({
   reducer: {

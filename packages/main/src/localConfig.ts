@@ -1,10 +1,12 @@
+import { app, ipcMain } from 'electron';
+
+import { nanoid } from '@reduxjs/toolkit';
+import { createVerifierAndSalt, SRPParameters, SRPRoutines } from '@sarakusha/tssrp6a';
+import debugFactory from 'debug';
 import type { Schema } from 'electron-store';
 import Store from 'electron-store';
-import debugFactory from 'debug';
-import { createVerifierAndSalt, SRPParameters, SRPRoutines } from '@sarakusha/tssrp6a';
 
 import type { LocalConfig } from '/@common/helpers';
-import { nanoid } from '@reduxjs/toolkit';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:config`);
 
@@ -68,4 +70,10 @@ if (!localConfig.get('salt') || !localConfig.get('verifier')) {
   });
 }
 
+app.whenReady().then(() => {
+  ipcMain.handle('getLocalConfig', (_, name: keyof LocalConfig) => localConfig.get(name));
+  ipcMain.handle('setLocalConfig', (_, name: keyof LocalConfig, value: unknown) => {
+    localConfig.set(name, value);
+  });
+});
 export default localConfig;

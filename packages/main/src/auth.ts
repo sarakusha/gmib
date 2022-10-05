@@ -3,6 +3,7 @@ import { unless } from 'express-unless';
 // import debugFactory from 'debug';
 
 import generateSignature from '/@common/generateSignature';
+
 import secret, { getIncomingSecret } from './secret';
 
 // const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:auth`);

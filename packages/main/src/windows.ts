@@ -23,13 +23,10 @@ export const isEqualOptions = <T extends ScreenOptions>(a: T, b: T): boolean =>
 
 export const createSearchParams = <T extends ScreenOptions>(options: T): URLSearchParams =>
   new URLSearchParams(
-    impScreenProps.reduce<[string, string][]>(
-      (res, key) => {
-        const value = options[key];
-        return (value != null ? [...res, [key, value.toString()]] : res);
-      },
-      [],
-    ),
+    impScreenProps.reduce<[string, string][]>((res, key) => {
+      const value = options[key];
+      return value != null ? [...res, [key, value.toString()]] : res;
+    }, []),
   );
 
 export const screenWindows = new Map<number, [BrowserWindow, ScreenOptions | undefined]>();

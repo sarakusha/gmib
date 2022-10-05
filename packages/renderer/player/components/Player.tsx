@@ -34,7 +34,6 @@ const Player: React.FC<Props> = ({ className, playerId = 0 }) => {
   React.useEffect(() => {
     window.mediaStream.updateSrcObject('video#player');
   }, []);
-  const refVideo = React.useRef<HTMLVideoElement>(null);
   const [show, setShow] = React.useState(false);
 
   const stopped = playbackState === 'none';

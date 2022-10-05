@@ -1,9 +1,10 @@
+import { ipcRenderer } from 'electron';
+
 import type { LocalConfig } from '/@common/helpers';
-import localConfig from '/@main/localConfig';
 
-export const get = <Key extends keyof LocalConfig>(key: Key): LocalConfig[Key] =>
-  localConfig.get(key);
-export const set = <Key extends keyof LocalConfig>(key: Key, value: LocalConfig[Key]): void =>
-  localConfig.set(key, value);
-
-// set('hosts', true);
+export const get = <Key extends keyof LocalConfig>(key: Key): Promise<LocalConfig[Key]> =>
+  ipcRenderer.invoke('getLocalConfig', key);
+export const set = <Key extends keyof LocalConfig>(
+  key: Key,
+  value: LocalConfig[Key],
+): Promise<void> => ipcRenderer.invoke('setLocalConfig', key, value);

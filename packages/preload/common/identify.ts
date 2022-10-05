@@ -1,4 +1,5 @@
 import { ipcRenderer } from 'electron';
+
 // import debugFactory from 'debug';
 import genSignature from '/@common/generateSignature';
 import type { Identity } from '/@common/Identity';

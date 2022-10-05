@@ -14,10 +14,12 @@ import {
 } from '@mui/material';
 import * as React from 'react';
 import { TransitionGroup } from 'react-transition-group';
+
 import { getDisplayLabel } from '/@common/video';
 
-import { useDisplays } from '../api/displays';
+import { useDisplays } from '../../common/displays';
 import { useDeletePlayerMutation, usePlayers } from '../api/player';
+import { PlayerMappingDialogProvider } from '../hooks/usePlayerMappingDialog';
 import useShiftAlert from '../hooks/useShiftAlert';
 import { useDispatch, useSelector } from '../store';
 import { setSettingsNode } from '../store/currentSlice';
@@ -28,7 +30,6 @@ import OutputSettings from './OutputSettings';
 import PlayerSettings from './PlayerSettings';
 import SettingsToolbar from './SettingsToolbar';
 import TabPanel from './TabPanel';
-import { PlayerMappingDialogProvider } from '../hooks/usePlayerMappingDialog';
 
 const MinusSquare: React.FC<SvgIconProps> = props => (
   <SvgIcon fontSize="inherit" style={{ width: 14, height: 14 }} {...props}>

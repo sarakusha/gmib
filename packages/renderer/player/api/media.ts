@@ -2,7 +2,8 @@ import { createEntityAdapter, type EntityState } from '@reduxjs/toolkit';
 import { createApi } from '@reduxjs/toolkit/query/react';
 
 import type { MediaInfo } from '/@common/mediaInfo';
-import baseQuery from '../../authBaseQuery';
+
+import baseQuery from '../../common/authBaseQuery';
 
 const mediaAdapter = createEntityAdapter<MediaInfo>({
   selectId: ({ md5 }) => md5,

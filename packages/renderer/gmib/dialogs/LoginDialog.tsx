@@ -1,4 +1,3 @@
-import * as React from 'react';
 import {
   Button,
   Dialog,
@@ -8,11 +7,15 @@ import {
   TextField,
 } from '@mui/material';
 import { SRPClientSession, SRPParameters, SRPRoutines } from '@sarakusha/tssrp6a';
-import fetchJson, { FetchError } from '/@common/fetchJson';
+import * as React from 'react';
+
+import fetchJson, { FetchError } from '../../common/fetchJson';
+
 import { host, port } from '/@common/remote';
+
 import { useDispatch, useSelector } from '../store';
-import { selectIsLoggedIn } from '../store/selectors';
 import { setLoggedIn } from '../store/currentSlice';
+import { selectIsLoggedIn } from '../store/selectors';
 
 const login = async (password: string) => {
   const routines = new SRPRoutines(new SRPParameters());

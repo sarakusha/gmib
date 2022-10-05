@@ -1,14 +1,8 @@
 /* eslint-disable import/prefer-default-export */
-import { isAnyOf, isAsyncThunkAction } from '@reduxjs/toolkit';
+import { isAnyOf } from '@reduxjs/toolkit';
 
-import playlistApi, { selectPlaylistById } from '../api/playlists';
 import playerApi, { selectPlayer } from '../api/player';
-import updatePlayer, {
-  debouncedUpdatePlayer,
-  playerPause,
-  playerPlay,
-  playerStop,
-} from '../api/updatePlayer';
+import updatePlayer, { playerPause, playerPlay, playerStop } from '../api/updatePlayer';
 import { sourceId } from '../utils';
 
 import {
@@ -23,7 +17,7 @@ import { startAppListening } from './listenerMiddleware';
 import { selectCurrent, selectPlaybackState } from './selectors';
 
 const selectPlayersData = playerApi.endpoints.getPlayers.select();
-const selectPlaylistsData = playlistApi.endpoints.getPlaylists.select();
+// const selectPlaylistsData = playlistApi.endpoints.getPlaylists.select();
 
 startAppListening({
   matcher: isAnyOf(setPosition, setDuration, setPlaybackRate),

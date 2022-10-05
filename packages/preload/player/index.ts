@@ -2,9 +2,10 @@ import { contextBridge } from 'electron';
 
 // import debugFactory from 'debug';
 
-import log from '/@main/initlog';
+import * as identify from '../common/identify';
+import log from '../common/initlog';
 // import expandTypes from '/@common/expandTypes';
-import { setDispatch } from '/@common/ipcDispatch';
+import { setDispatch } from '../common/ipcDispatch';
 // import '@sentry/electron/preload';
 
 import { updateSrcObject } from './mediaStream';
@@ -25,3 +26,4 @@ contextBridge.exposeInMainWorld('setDispatch', setDispatch);
 contextBridge.exposeInMainWorld('server', {
   port: +(process.env['NIBUS_PORT'] ?? 9001) + 1,
 });
+contextBridge.exposeInMainWorld('identify', identify);

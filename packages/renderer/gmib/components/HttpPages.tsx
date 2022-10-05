@@ -14,7 +14,7 @@ import { nanoid } from '@reduxjs/toolkit';
 import React, { useCallback, useState } from 'react';
 import { isUri } from 'valid-url';
 
-import { selectScreen, updateScreen, useScreen } from '../api/screens';
+import { updateScreen, useScreen } from '../api/screens';
 import HttpPageDialog from '../dialogs/HttpPageDialog';
 import { useDispatch, useSelector } from '../store';
 import { removeHttpPage, upsertHttpPage } from '../store/configSlice';

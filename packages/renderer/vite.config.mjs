@@ -35,7 +35,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '/@common/': path.join(PACKAGE_ROOT, '../common') + '/',
-      // '/@player/': path.join(PACKAGE_ROOT, '../player/src') + '/',
+      // '/@preload/': path.join(PACKAGE_ROOT, '../preload') + '/',
     },
   },
   plugins: [

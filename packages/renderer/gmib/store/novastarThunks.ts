@@ -1,5 +1,7 @@
 import debugFactory from 'debug';
 
+import createDebouncedAsyncThunk from '../../common/createDebouncedAsyncThunk';
+
 import { setBrightness } from './configSlice';
 import { startAppListening } from './listenerMiddleware';
 import type { ScreenBrightness, ScreenId } from './novastarSlice';
@@ -10,7 +12,6 @@ import { MIN_INTERVAL } from './sensorsSlice';
 import type { AppThunkConfig } from './index';
 
 import { isRemoteSession } from '/@common/remote';
-import createDebouncedAsyncThunk from '/@common/createDebouncedAsyncThunk';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:novastar`);

@@ -20,8 +20,6 @@ const toPlayerMapping = (row: NullableOptional): PlayerMapping => {
   };
 };
 
-type CreatePlayerMapping = Partial<Omit<PlayerMapping, 'id' | 'player'>>;
-
 export const getPlayerMappings = promisifyAll(
   'SELECT * FROM playerMapping',
   () => {},

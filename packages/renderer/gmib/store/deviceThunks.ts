@@ -1,5 +1,6 @@
 // import debugFactory from 'debug';
 import { createAsyncThunk } from '@reduxjs/toolkit';
+
 import type { DeviceId } from '@nibus/core';
 import Address, { AddressType } from '@nibus/core/Address';
 import { MCDVI_TYPE, MINIHOST_TYPE } from '@nibus/core/common';
@@ -17,6 +18,7 @@ import {
   // selectScreenAddresses,
 } from './selectors';
 import { setOnline } from './sessionSlice';
+
 import type { AppThunk, AppThunkConfig } from './index';
 
 import { isRemoteSession } from '/@common/remote';
@@ -69,7 +71,10 @@ const discoverScreenDevices = (): AppThunk => async (dispatch, getState) => {
     });
     needUpdate.forEach(screenId => dispatch(updateMinihosts(screenId)));
   }
-  pingTimer = window.setTimeout(() => dispatch(discoverScreenDevices()), isRemoteSession ? PING_INTERVAL * 4 : PING_INTERVAL);
+  pingTimer = window.setTimeout(
+    () => dispatch(discoverScreenDevices()),
+    isRemoteSession ? PING_INTERVAL * 4 : PING_INTERVAL,
+  );
 };
 
 startAppListening({
@@ -80,17 +85,17 @@ startAppListening({
 });
 
 // if (!isRemoteSession) {
-  startAppListening({
-    actionCreator: setOnline,
-    effect({ payload: online }, { dispatch }) {
-      if (!online) {
-        window.clearTimeout(pingTimer);
-        pingTimer = 0;
-      } else if (!pingTimer) {
-        window.setTimeout(() => dispatch(discoverScreenDevices()), PING_INTERVAL);
-      }
-    },
-  });
+startAppListening({
+  actionCreator: setOnline,
+  effect({ payload: online }, { dispatch }) {
+    if (!online) {
+      window.clearTimeout(pingTimer);
+      pingTimer = 0;
+    } else if (!pingTimer) {
+      window.setTimeout(() => dispatch(discoverScreenDevices()), PING_INTERVAL);
+    }
+  },
+});
 // }
 
 startAppListening({

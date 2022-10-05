@@ -2,7 +2,6 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 import { createSlice } from '@reduxjs/toolkit';
 
 import type { Health } from '/@common/helpers';
-import { isRemoteSession } from '/@common/remote';
 
 // import { addScreen, removeScreen, showHttpPage } from './configSlice';
 import { addDevice, removeDevice } from './devicesSlice';

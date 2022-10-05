@@ -57,8 +57,8 @@ const calcMedian = (sorted: number[]): number => {
 
 const updateMaxBrightness =
   (id: number, aggregations: Aggregations, desiredBrightness: number): AppThunk =>
-  (dispatch, getState) => {
-    const health = window.config.get('health') ?? {};
+  async (dispatch, getState) => {
+    const health = (await window.config.get('health')) ?? {};
     if (!health.screens) {
       health.screens = {};
     }
@@ -199,13 +199,12 @@ const checkTemperature =
         },
       ),
     );
+    const health = await window.config.get('health');
     all.forEach(({ screens, temperatures }) => {
       if (temperatures.length === 0) {
-        const health = window.config.get('health');
         if (health) {
           screens.forEach(name => delete health.screens[name]);
         }
-        window.config.set('health', health);
         return;
       }
       const sorted = temperatures.sort();
@@ -224,12 +223,12 @@ const checkTemperature =
       });
     });
     const existingScreens = flatten(groups.map(({ screens }) => screens));
-    const health = window.config.get('health');
+    // const health = window.config.get('health');
     Object.keys(health.screens).forEach(id => {
       existingScreens.includes(Number(id)) || delete health.screens[id];
     });
     health.timestamp = Date.now();
-    window.config.set('health', health);
+    await window.config.set('health', health);
     dispatch(updateBrightness());
 
     running = false;

@@ -1,5 +1,6 @@
+import displayApi from '../../common/displays';
+
 import screenApi from './screens';
-import displayApi from './displays';
 
 export const reducer = {
   [screenApi.reducerPath]: screenApi.reducer,

@@ -10,7 +10,8 @@ import type {
   Kind,
   NibusSessionEvents,
   PortArg,
-  VersionInfo} from '@nibus/core';
+  VersionInfo,
+} from '@nibus/core';
 import {
   findDeviceById,
   findMibByType,
@@ -41,7 +42,9 @@ import {
 } from '/@renderer/store/devicesSlice';
 import type { MibInfo, PropMetaInfo } from '/@renderer/store/mibsSlice';
 import { addMib } from '/@renderer/store/mibsSlice';
+
 import { addNovastar } from '../../renderer/gmib/store/novastarSlice';
+
 import { addRemoteHost, getRemoteId, removeRemoteHost } from '/@renderer/store/remoteHostsSlice';
 import { ILLUMINATION, pushSensorValue, TEMPERATURE } from '/@renderer/store/sensorsSlice';
 import {
@@ -71,7 +74,7 @@ import Finder from './Finder';
 import Minihost2Loader from './Minihost2Loader';
 import Minihost3Loader from './Minihost3Loader';
 
-import ipcDispatch from '/@common/ipcDispatch';
+import ipcDispatch from '../common/ipcDispatch';
 
 import { createConnection } from './novastar';
 
@@ -461,7 +464,7 @@ export const telemetry = memoize((id: DeviceId): NibusTelemetry => {
       loader = new Minihost2Loader(id);
       break;
     default: {
-      console.log(`Invalid mib: ${mib}`);
+      debug(`Invalid mib: ${mib}`);
       const err = new Error(`Invalid mib: ${mib}`);
       return { start: () => Promise.reject(err), cancel: () => Promise.reject(err) };
     }

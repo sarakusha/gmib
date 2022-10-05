@@ -1,3 +1,4 @@
+import ClearIcon from '@mui/icons-material/Clear';
 import {
   Box,
   Checkbox,
@@ -12,25 +13,23 @@ import {
   ListItemSecondaryAction,
   ListItemText,
   Stack,
-  Typography,
 } from '@mui/material';
 import { Field, Form, Formik } from 'formik';
 import React from 'react';
-import ClearIcon from '@mui/icons-material/Clear';
+import { TransitionGroup } from 'react-transition-group';
 
-import SubmitListener from '/@common/SubmitListener';
-import FormikTextField from '/@common/FormikTextField';
-
+import FormikTextField from '../../common/FormikTextField';
+import SubmitListener from '../../common/SubmitListener';
+import { useDisplays } from '../../common/displays';
+import { useDeleteMappingMutation, usePlayerMappings } from '../api/mapping';
 import { usePlayer } from '../api/player';
 import updatePlayer from '../api/updatePlayer';
-import { useDispatch } from '../store';
-
-import { useDeleteMappingMutation, usePlayerMappings } from '../api/mapping';
-import { TransitionGroup } from 'react-transition-group';
-import { selectDisplay, useDisplays, useGetDisplaysQuery } from '../api/displays';
-import { DefaultDisplays, getDisplayLabel } from '/@common/video';
-import { toHexId } from '../utils';
 import usePlayerMappingDialog from '../hooks/usePlayerMappingDialog';
+import { useDispatch } from '../store';
+import { toHexId } from '../utils';
+
+import { DefaultDisplays, getDisplayLabel } from '/@common/video';
+
 
 const keys = ['width', 'height'] as const;
 const stopPropagation: React.MouseEventHandler = e => e.stopPropagation();

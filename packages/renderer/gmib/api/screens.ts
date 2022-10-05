@@ -1,11 +1,12 @@
 import { createEntityAdapter, type EntityState } from '@reduxjs/toolkit';
 import { createApi } from '@reduxjs/toolkit/query/react';
-import type { SetStateAction } from 'react';
 import debugFactory from 'debug';
-import Address from '@nibus/core/Address';
+import type { SetStateAction } from 'react';
+
+import baseQuery from '../../common/authBaseQuery';
+import createDebouncedAsyncThunk from '../../common/createDebouncedAsyncThunk';
 
 import type { Screen } from '/@common/video';
-import createDebouncedAsyncThunk from '/@common/createDebouncedAsyncThunk';
 import { reAddress } from '/@common/config';
 import type { ValueType, WithRequiredProp } from '/@common/helpers';
 import { notEmpty, toErrorMessage } from '/@common/helpers';
@@ -13,7 +14,8 @@ import { notEmpty, toErrorMessage } from '/@common/helpers';
 import type { AppThunk, AppThunkConfig, RootState } from '../store';
 import { setCurrentScreen } from '../store/currentSlice';
 import { selectCurrentScreenId, selectDevicesByAddress } from '../store/selectors';
-import baseQuery from '../../authBaseQuery';
+
+import Address from '@nibus/core/Address';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:screen`);
 
@@ -127,7 +129,7 @@ const screenApi = createApi({
               adapter.setOne(state, data);
             }),
           );
-          console.log('addresses', screen.addresses);
+          // console.log('addresses', screen.addresses);
           // eslint-disable-next-line @typescript-eslint/no-use-before-define
           screen.addresses?.length && dispatch(updateMinihosts(screen.id));
         } catch {

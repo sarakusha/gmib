@@ -1,12 +1,7 @@
 import { connect } from 'net';
 
-import Connection from '@novastar/codec/Connection';
-import { series as pMap } from '@novastar/codec/helper';
-import net, { findNetDevices as novaFindNetDevices } from '@novastar/net';
-import ScreenConfigurator from '@novastar/screen/ScreenConfigurator';
-
-// import '@novastar/screen/api';
 import debugFactory from 'debug';
+import memoize from 'lodash/memoize';
 
 import type { Screen, ScreenArg, ScreenBrightness } from '../../renderer/gmib/store/novastarSlice';
 import {
@@ -17,16 +12,20 @@ import {
   updateNovastar,
   updateScreen,
 } from '../../renderer/gmib/store/novastarSlice';
-import { pushSensorValue } from '/@renderer/store/sensorsSlice';
-import { isRemoteSession } from '/@common/remote';
-
-import memoize from 'lodash/memoize';
-
-import type { CabinetInfo, NovastarTelemetry } from '/@common/helpers';
+import ipcDispatch from '../common/ipcDispatch';
 
 import NovastarLoader from './NovastarLoader';
 
-import ipcDispatch from '/@common/ipcDispatch';
+import Connection from '@novastar/codec/Connection';
+import { series as pMap } from '@novastar/codec/helper';
+import net, { findNetDevices as novaFindNetDevices } from '@novastar/net';
+import ScreenConfigurator from '@novastar/screen/ScreenConfigurator';
+
+// import '@novastar/screen/api';
+
+import { pushSensorValue } from '/@renderer/store/sensorsSlice';
+import { isRemoteSession } from '/@common/remote';
+import type { CabinetInfo, NovastarTelemetry } from '/@common/helpers';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:nspreload`);
 

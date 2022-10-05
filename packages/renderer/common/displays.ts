@@ -2,7 +2,8 @@ import { createEntityAdapter, type EntityState } from '@reduxjs/toolkit';
 import { createApi } from '@reduxjs/toolkit/query/react';
 
 import type { DisplayType } from '/@common/video';
-import baseQuery from '../../authBaseQuery';
+
+import baseQuery from './authBaseQuery';
 
 const displayAdapter = createEntityAdapter<DisplayType>({
   sortComparer: (a, b) => {

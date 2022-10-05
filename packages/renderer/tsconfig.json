@@ -14,7 +14,9 @@
     "jsxImportSource": "@emotion/react",
     // Don't automatically include anything.
     // Only include `@types` packages that we need to import.
-    "types": [],
+    "types": [
+      "vite/client"
+    ],
     "baseUrl": ".",
     "paths": {
       //      "/@/*": [
@@ -43,21 +45,21 @@
     ]
   },
   "include": [
-    "gmib/**/*.ts",
-    "gmib/**/*.tsx",
-    "player/**/*.ts",
-    "player/**/*.tsx",
+    "**/*.ts",
+    "**/*.tsx",
     "../../types/**/*.d.ts",
-    "../preload/exposedInMainWorld.d.ts",
-    "../playerPreload/exposedInMainWorld.d.ts",
+    //    "../preload/exposedInMainWorld.d.ts",
+    //    "../playerPreload/exposedInMainWorld.d.ts",
     "../../node_modules/@types/dom-webcodecs/webcodecs.generated.d.ts",
     "../../node_modules/@types/offscreencanvas/index.d.ts",
-    "../../node_modules/@types/dom-mediacapture-transform/index.d.ts"
-, "../common/gmibBaseQuery.ts", "authBaseQuery.ts"  ],
+    "../../node_modules/@types/dom-mediacapture-transform/index.d.ts",
+    "common/authBaseQuery.ts"
+  ],
   "exclude": [
     "../preload/gmib/**",
     "**/*.spec.ts",
-    "**/*.test.ts"
+    "**/*.test.ts",
+    "bak/**"
   ],
   "paths": {
     "@mdx-js/react": [

@@ -1,6 +1,7 @@
 import type { SetStateAction } from 'react';
 
-import createDebouncedAsyncThunk from '/@common/createDebouncedAsyncThunk';
+import createDebouncedAsyncThunk from '../../common/createDebouncedAsyncThunk';
+
 import type { PlayerMapping } from '/@common/video';
 
 import type { AppThunk, AppThunkConfig } from '../store';
@@ -18,7 +19,7 @@ const debouncedUpdateMapping = createDebouncedAsyncThunk<void, PlayerMapping, Ap
 
 const updateMapping =
   (id: number, update: SetStateAction<PlayerMapping>): AppThunk =>
-  (dispatch, getState) => {
+  dispatch => {
     dispatch(
       mappingApi.util.updateQueryData('getMappings', undefined, draft => {
         const prev = selectMappingById(draft, id);

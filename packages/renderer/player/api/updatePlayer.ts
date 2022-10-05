@@ -1,6 +1,7 @@
 import type { SetStateAction } from 'react';
 
-import createDebouncedAsyncThunk from '/@common/createDebouncedAsyncThunk';
+import createDebouncedAsyncThunk from '../../common/createDebouncedAsyncThunk';
+
 import type { Player } from '/@common/video';
 
 import type { AppThunk, AppThunkConfig } from '../store';

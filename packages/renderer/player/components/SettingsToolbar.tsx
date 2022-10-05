@@ -10,13 +10,13 @@ import { useSnackbar } from 'notistack';
 import React from 'react';
 // import FeaturedVideoIcon from '@mui/icons-material/FeaturedVideo';
 
-import { useDisplay } from '../api/displays';
+import { useDisplay } from '../../common/displays';
 import { useCreatePlayerMutation } from '../api/player';
+import usePlayerMappingDialog from '../hooks/usePlayerMappingDialog';
 import { useDispatch } from '../store';
 import { setSettingsNode } from '../store/currentSlice';
 
 import Toolbar from './StyledToolbar';
-import usePlayerMappingDialog from '../hooks/usePlayerMappingDialog';
 
 type Props = {
   group?: string;

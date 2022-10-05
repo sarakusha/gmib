@@ -1,9 +1,12 @@
 import { randomBytes } from 'crypto';
 import { app, ipcMain } from 'electron';
-import fetch from 'node-fetch';
+
 import debugFactory from 'debug';
+import fetch from 'node-fetch';
+
 import type { NullableOptional } from '/@common/helpers';
 import type { Identity } from '/@common/Identity';
+
 import { promisifyGet, promisifyRun, removeNull } from './db';
 import localConfig from './localConfig';
 

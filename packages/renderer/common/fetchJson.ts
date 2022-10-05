@@ -3,10 +3,7 @@ export class FetchError extends Error {
 
   readonly name = 'FetchError';
 
-  constructor(
-    message: string,
-    response: Response,
-  ) {
+  constructor(message: string, response: Response) {
     // Pass remaining arguments (including vendor specific ones) to parent constructor
     super(message);
 
@@ -31,8 +28,5 @@ export default async function fetchJson<JSON = unknown>(
     return response.json();
   }
 
-  throw new FetchError(
-    await response.text(),
-    response,
-  );
+  throw new FetchError(await response.text(), response);
 }

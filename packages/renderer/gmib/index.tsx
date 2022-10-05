@@ -6,6 +6,7 @@ import 'dayjs/locale/ru';
 import debugFactory from 'debug';
 import { SnackbarProvider } from 'notistack';
 import React from 'react';
+import '../../preload/gmibInMainWorld.d';
 // import { DndProvider } from 'react-dnd';
 // import { HTML5Backend } from 'react-dnd-html5-backend';
 import { createRoot } from 'react-dom/client';
@@ -13,12 +14,12 @@ import 'typeface-roboto/index.css';
 import { Provider } from 'react-redux';
 // import * as Sentry from '@sentry/electron/renderer';
 
-import theme from '/@common/theme';
+import theme from '../common/theme';
 
 import App from './components/App';
+import LoginDialog from './dialogs/LoginDialog';
 import ToolbarProvider from './providers/ToolbarProvider';
 import { store } from './store';
-import LoginDialog from './dialogs/LoginDialog';
 
 debugFactory.log = window.log;
 import.meta.env.VITE_DEBUG && debugFactory.enable(import.meta.env.VITE_DEBUG);
@@ -33,7 +34,7 @@ window.setDispatch(store.dispatch.bind(store));
 const container = document.getElementById('app') as HTMLElement;
 const root = createRoot(container);
 
-const Html5DndProvider = React.lazy(() => import('/@common/Html5DndProvider'));
+const Html5DndProvider = React.lazy(() => import('../common/Html5DndProvider'));
 root.render(
   <React.StrictMode>
     <MuiThemeProvider theme={theme}>

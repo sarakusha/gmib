@@ -19,7 +19,7 @@ app.once('quit', () => {
 let mainWindow: BrowserWindow | null = null;
 // let mainWindowPromise: Promise<BrowserWindow> | null = null;
 
-const gmibPreload = join(__dirname, '../../preload/dist/index.cjs');
+const gmibPreload = join(__dirname, '../../preload/dist/gmib.cjs');
 // const playerPreload = join(__dirname, '../../playerPreload/dist/index.cjs');
 
 export const createAppWindow = (
@@ -27,10 +27,7 @@ export const createAppWindow = (
   host: string | undefined = undefined,
 ): BrowserWindow => {
   // eslint-disable-next-line no-multi-assign
-  const browserWindow = createWindow(
-    getTitle(port, host),
-    gmibPreload,
-  );
+  const browserWindow = createWindow(getTitle(port, host), gmibPreload);
   if (!host) {
     browserWindow.once('ready-to-show', async () => {
       setRemoteEditClick(() => browserWindow.webContents.send('editRemoteHosts'));

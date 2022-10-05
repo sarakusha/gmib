@@ -1,4 +1,5 @@
 import * as React from 'react';
+
 import PlayerMappingDialog from '../dialogs/PlayerMappingDialog';
 
 type Context = (playerId: number, id?: number) => void;
@@ -19,7 +20,6 @@ export const PlayerMappingDialogProvider: React.FC<React.PropsWithChildren> = ({
         open={open}
         onClose={() => {
           setOpen(false);
-          console.log('close');
         }}
         playerId={params.playerId}
         id={params.id}

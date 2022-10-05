@@ -3,10 +3,11 @@ import type { BrowserWindowConstructorOptions, WebContents } from 'electron';
 import debugFactory from 'debug';
 import find from 'lodash/find';
 
+import { DefaultDisplays } from '../../common/video';
+
 import getAllDisplays from './getAllDisplays';
 
 import type { Display as DisplayType } from '@nibus/core';
-import { DefaultDisplays } from '../../common/video';
 
 type Handler = Parameters<WebContents['setWindowOpenHandler']>[0];
 

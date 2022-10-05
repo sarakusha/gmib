@@ -2,13 +2,13 @@ import { createAsyncThunk, isAnyOf } from '@reduxjs/toolkit';
 import sortBy from 'lodash/sortBy';
 import SunCalc from 'suncalc';
 
+import createDebouncedAsyncThunk from '../../common/createDebouncedAsyncThunk';
 import screenApi, { parseLocation, selectScreens } from '../api/screens';
 import type { Point } from '../util/MonotonicCubicSpline';
 import MonotonicCubicSpline from '../util/MonotonicCubicSpline';
 
 import { MINUTE, notEmpty, tuplify } from '/@common/helpers';
 import { isRemoteSession } from '/@common/remote';
-import createDebouncedAsyncThunk from '/@common/createDebouncedAsyncThunk';
 
 import {
   removeHttpPage,
@@ -56,12 +56,12 @@ export const updateBrightness = createDebouncedAsyncThunk<void, void, AppThunkCo
     if (brightness === undefined) return;
     const { data: screensData } = screenApi.endpoints.getScreens.select()(state);
     const screens = screensData ? selectScreens(screensData) : [];
+    const { timestamp, screens: scr } = await window.config.get('health');
     const tasks = screens
       .filter(hasBrightnessFactor)
       .filter(({ brightnessFactor }) => brightnessFactor > 0)
       .reduce<[DeviceId, number][]>((res, { brightnessFactor, addresses, id: screenId }) => {
         if (!addresses) return res;
-        const { timestamp, screens: scr } = window.config.get('health');
         const isValid = timestamp && interval && Date.now() - timestamp < 2 * interval * MINUTE;
         const actualBrightness = Math.min(Math.round(brightnessFactor * brightness), 100);
         return [

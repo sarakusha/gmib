@@ -68,7 +68,7 @@ const closeNibus = (): void => {
       );
   });
   debug('Starting local NIBUS...');
-  await service.start(secret);
+  await service.start(secret.toString('base64'));
   // sendStatusToWindow(`NiBUS started. Detection file: ${detectionPath}`);
 })().catch(e => {
   debug(`Error while nibus starting: ${(e as Error).stack}`);

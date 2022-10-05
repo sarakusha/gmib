@@ -8,20 +8,19 @@ import createWindow from './createWindow';
 import { dbReady } from './db';
 import openHandler from './openHandler';
 import { getPlayer, getPlayers, updateHidePlayer, updateShowPlayer } from './screen';
-import secret from './secret';
 import { playerWindows } from './windows';
 import localConfig from './localConfig';
 
 import type { Player } from '/@common/video';
 
-const preload = path.join(__dirname, '../../playerPreload/dist/index.cjs');
-const remotePreload = path.join(__dirname, '../../remotePlayerPreload/dist/index.cjs');
+const preload = path.join(__dirname, '../../preload/dist/player.cjs');
+// const remotePreload = path.join(__dirname, '../../preload/dist/remote.cjs');
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:playerWindow`);
 
-let isQuiting = false;
+let isQuitting = false;
 
 app.once('quit', () => {
-  isQuiting = true;
+  isQuitting = true;
 });
 
 export const getPlayerTitle = (player: Player): string =>
@@ -31,14 +30,14 @@ export const getPlayerTitle = (player: Player): string =>
 export const openPlayer = async (
   id: number,
   host = 'localhost',
-  port = +(process.env['NIBUS_PORT'] ?? 9001) + 1,
-  token = secret,
+  port = +(process.env['NIBUS_PORT'] ?? 9001),
+  // token = secret,
 ): Promise<BrowserWindow | undefined> => {
   await dbReady;
   const player = await getPlayer(id);
   if (!player) return undefined;
   let browserWindow = playerWindows.get(id); // [...windows.values()].find(w => w.title === title);
-  const query = `source_id=${id}&host=${host}&port=${port}&access_token=${token}`;
+  const query = `source_id=${id}&host=${host}&port=${port}`;
   if (!browserWindow) {
     const url =
       import.meta.env.DEV && import.meta.env.VITE_DEV_SERVER_URL
@@ -66,8 +65,8 @@ export const openPlayer = async (
       }
     });
     browserWindow.on('close', event => {
-      isQuiting || updateHidePlayer(id);
-      if (!isQuiting && localConfig.get('autostart')) {
+      isQuitting || updateHidePlayer(id);
+      if (!isQuitting && localConfig.get('autostart')) {
         event.preventDefault();
         browserWindow?.hide();
       } else {
@@ -78,10 +77,10 @@ export const openPlayer = async (
       updateShowPlayer(id);
     });
     // player.hidden ||
-      browserWindow.once('ready-to-show', () => {
-        browserWindow?.show();
-      });
-      // browserWindow.setSkipTaskbar(false);
+    browserWindow.once('ready-to-show', () => {
+      browserWindow?.show();
+    });
+    // browserWindow.setSkipTaskbar(false);
   } else {
     browserWindow.show();
     browserWindow.focus();
