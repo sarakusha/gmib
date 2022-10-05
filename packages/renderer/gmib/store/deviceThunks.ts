@@ -23,6 +23,7 @@ import type { AppThunk, AppThunkConfig } from './index';
 
 import { isRemoteSession } from '/@common/remote';
 import { asyncSerial, delay } from '/@common/helpers';
+import { reAddress } from '../../../common/config';
 
 // const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:config`);
 const PING_INTERVAL = 10000;
@@ -52,7 +53,7 @@ const discoverScreenDevices = (): AppThunk => async (dispatch, getState) => {
       selectDevicesByAddress(getState(), address).length > 0;
     const needUpdate = new Set<number>();
     asyncSerial(addresses, async address => {
-      if (!deviceAddressExists(address)) {
+      if (reAddress.test(address) && !deviceAddressExists(address)) {
         const [timeout, info] = await window.nibus.ping(address);
         if (
           timeout !== -1 &&
@@ -118,14 +119,16 @@ startAppListening({
     if (addresses) {
       for (let i = 0; i < addresses.length; i += 1) {
         const address = addresses[i];
-        const [found] = filterDevicesByAddress([device], new Address(address));
-        if (found) {
-          const { data: screenData } = selectScreenData(state);
-          const screens = screenData ? selectScreens(screenData) : [];
-          screens.forEach(item => {
-            if (item.addresses?.includes(address)) dispatch(updateMinihosts(item.id));
-          });
-          return;
+        if (reAddress.test(address)) {
+          const [found] = filterDevicesByAddress([device], new Address(address));
+          if (found) {
+            const { data: screenData } = selectScreenData(state);
+            const screens = screenData ? selectScreens(screenData) : [];
+            screens.forEach(item => {
+              if (item.addresses?.includes(address)) dispatch(updateMinihosts(item.id));
+            });
+            return;
+          }
         }
       }
     }

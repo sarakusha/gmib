@@ -27,6 +27,7 @@ import type { AppThunk, RootState } from './index';
 import type { DeviceId } from '@nibus/core';
 import Address from '@nibus/core/Address';
 import { series as pMap } from '@novastar/codec/helper';
+import { reAddress } from '../../../common/config';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:health`);
 
@@ -99,15 +100,20 @@ const groupDevicesByScreens = (state: RootState): GroupedByScreens[] => {
   // const screens = selectScreens(state);
   const allDevices = selectAllDevices(state);
   const series = screens
-    .filter(({ addresses }) => addresses !== undefined && addresses.length > 0)
+    .filter(
+      ({ addresses }) =>
+        addresses !== undefined && addresses.filter(address => reAddress.test(address)).length > 0,
+    )
     .map(({ id, addresses = [] }) => ({
       screens: [id],
       devices: flatten(
-        addresses.map(address =>
-          filterDevicesByAddress(allDevices, new Address(address)).map(
-            ({ id: deviceId }) => deviceId,
+        addresses
+          .filter(address => reAddress.test(address))
+          .map(address =>
+            filterDevicesByAddress(allDevices, new Address(address)).map(
+              ({ id: deviceId }) => deviceId,
+            ),
           ),
-        ),
       ),
     }))
     .filter(({ devices }) => devices.length > 0);

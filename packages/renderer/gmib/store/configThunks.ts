@@ -39,6 +39,7 @@ import type { AppThunkConfig, RootState } from './index';
 
 import type { DeviceId } from '@nibus/core';
 import { hasProps } from '@novastar/screen/common';
+import { reAddress } from '../../../common/config';
 
 export const BRIGHTNESS_INTERVAL = 60 * 1000;
 
@@ -60,7 +61,8 @@ export const updateBrightness = createDebouncedAsyncThunk<void, void, AppThunkCo
     const tasks = screens
       .filter(hasBrightnessFactor)
       .filter(({ brightnessFactor }) => brightnessFactor > 0)
-      .reduce<[DeviceId, number][]>((res, { brightnessFactor, addresses, id: screenId }) => {
+      .reduce<[DeviceId, number][]>((res, { brightnessFactor, addresses: original, id: screenId }) => {
+        const addresses = original?.filter(address => reAddress.test(address));
         if (!addresses) return res;
         const isValid = timestamp && interval && Date.now() - timestamp < 2 * interval * MINUTE;
         const actualBrightness = Math.min(Math.round(brightnessFactor * brightness), 100);

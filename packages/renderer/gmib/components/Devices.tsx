@@ -36,6 +36,7 @@ import AccordionList from './AccordionList';
 import DeviceIcon from './DeviceIcon';
 
 import Address from '@nibus/core/Address';
+import { reAddress } from '/@common/config';
 
 const tabName = 'devices';
 
@@ -44,7 +45,7 @@ type DeviceItem = { name: React.ReactNode; device: DeviceStateWithParent };
 const getItems = (addresses: string[], devices: DeviceStateWithParent[]): DeviceItem[] => {
   let rest = [...devices];
   const result: DeviceItem[] = [];
-  addresses.forEach(address => {
+  addresses.filter(address => reAddress.test(address)).forEach(address => {
     const subs = filterDevicesByAddress(devices, new Address(address));
     if (subs.length > 0) {
       const ids = subs.map(({ id }) => id);

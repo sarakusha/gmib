@@ -131,7 +131,7 @@ const screenApi = createApi({
           );
           // console.log('addresses', screen.addresses);
           // eslint-disable-next-line @typescript-eslint/no-use-before-define
-          screen.addresses?.length && dispatch(updateMinihosts(screen.id));
+          screen.addresses && screen.addresses.filter(address => reAddress.test(address)).length && dispatch(updateMinihosts(screen.id));
         } catch {
           dispatch(screenApi.endpoints.getScreens.initiate());
         }
@@ -216,6 +216,7 @@ export const updateMinihosts = createDebouncedAsyncThunk<void, number>(
       const getParams = getHostParams(screen);
       try {
         addresses
+          .filter(address => reAddress.test(address))
           .map(getParams)
           .filter(notEmpty)
           .forEach(({ address, left, top, width, height }) => {

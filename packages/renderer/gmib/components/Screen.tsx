@@ -28,7 +28,7 @@ import FormFieldSet from './FormFieldSet';
 
 // import type { Screen } from '/@common/video';
 
-const onBeforeAddress = (value: string): boolean => reAddress.test(value);
+const onBeforeAddress = (value: string): boolean => reAddress.test(value) || /^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$/.test(value);
 
 const FieldSet = styled(FormFieldSet)(({ theme }) => ({
   padding: theme.spacing(1),
