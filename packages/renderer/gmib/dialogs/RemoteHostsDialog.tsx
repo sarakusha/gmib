@@ -11,6 +11,7 @@ import {
   TextField,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
+import { hasProps } from '@novastar/screen/common';
 import React, { useEffect, useRef, useState } from 'react';
 import type { MouseEvent } from 'react';
 
@@ -21,7 +22,6 @@ import { useSelector } from '../store';
 import { selectAllRemoteHosts } from '../store/selectors';
 import timeid from '../util/timeid';
 
-import { hasProps } from '@novastar/screen/common';
 import IPut from 'iput';
 
 export type RemoteHostsDialogProps = {

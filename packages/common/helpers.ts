@@ -1,9 +1,9 @@
+import type { HWStatus } from '@novastar/screen/HWStatus';
+import type { CabinetPosition } from '@novastar/screen/getCabinetPosition';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import type React from 'react';
 
 import type { DeviceId } from '@nibus/core';
-import type { HWStatus } from '@novastar/screen/HWStatus';
-import type { CabinetPosition } from '@novastar/screen/getCabinetPosition';
 import type { BaseService } from 'bonjour-hap';
 
 export const MINUTE = 60 * 1000;
@@ -334,3 +334,5 @@ export const asyncSerial = <T>(
   action: (item: T, index: number) => Promise<void>,
 ): Promise<void> =>
   input.reduce((acc, item, index) => acc.then(() => action(item, index)), Promise.resolve());
+
+export const reIPv4 = /^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$/;

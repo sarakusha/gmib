@@ -3,7 +3,6 @@ import type { TestModeEnum } from '@novastar/native/TestMode';
 import type { BrightnessRGBV } from '@novastar/screen/ScreenConfigurator';
 import type { DeviceInfo } from '@novastar/screen/DeviceInfo';
 import type { LEDDisplayInfo } from '@novastar/screen/common';
-
 import type { Draft, EntityState, PayloadAction } from '@reduxjs/toolkit';
 import { createEntityAdapter, createSlice } from '@reduxjs/toolkit';
 
@@ -51,7 +50,10 @@ export type ScreenBrightness = ScreenId & {
   percent: number;
 };
 
-export const novastarAdapter = createEntityAdapter<Novastar>({ selectId: ({ path }) => path });
+export const novastarAdapter = createEntityAdapter<Novastar>({
+  selectId: ({ path }) => path,
+  sortComparer: (a, b) => a.path.localeCompare(b.path),
+});
 
 const novastarSlice = createSlice({
   name: 'novastar',

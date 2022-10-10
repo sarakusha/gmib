@@ -16,7 +16,6 @@ import * as nibus from './nibus';
 import * as novastar from './novastar';
 import * as output from './output';
 
-
 import expandTypes from '/@common/expandTypes';
 
 import type { LogLevel } from '@nibus/core/common';

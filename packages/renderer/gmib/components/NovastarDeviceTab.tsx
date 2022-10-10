@@ -5,6 +5,10 @@ import type { InputProps, SelectProps, TextFieldProps } from '@mui/material';
 import { Box, Paper, TextField, Typography } from '@mui/material';
 import type { Theme } from '@mui/material/styles';
 import { css, styled } from '@mui/material/styles';
+import { ChipTypeEnum } from '@novastar/native/ChipType';
+import { DviSelectModeEnum } from '@novastar/native/DviSelectMode';
+import type { BrightnessRGBV } from '@novastar/screen/ScreenConfigurator';
+import getScreenLocation from '@novastar/screen/getScreenLocation';
 import React, { useCallback, useEffect, useState } from 'react';
 
 import { useToolbar } from '../providers/ToolbarProvider';
@@ -19,10 +23,6 @@ import {selectCurrentTab} from '../store/selectors';
 import DisplayModeSelector from './DisplayModeSelector';
 import NovastarToolbar from './NovastarToolbar';
 
-import { ChipTypeEnum } from '@novastar/native/ChipType';
-import { DviSelectModeEnum } from '@novastar/native/DviSelectMode';
-import type { BrightnessRGBV } from '@novastar/screen/ScreenConfigurator';
-import getScreenLocation from '@novastar/screen/getScreenLocation';
 
 type RGBVItemProps = { kind: keyof BrightnessRGBV } & Omit<
   TextFieldProps,
@@ -207,7 +207,7 @@ const NovastarDeviceTab: React.FC<{ device: Novastar | undefined; selected?: boo
           >
             <Name>Модель</Name>
             <Value>{info.name}</Value>
-            <Name>mac</Name>
+            <Name>S/N</Name>
             <Value>{info.mac}</Value>
             <Name>Вход</Name>
             <Value>{info.dviSelect ? DviSelectModeEnum[info.dviSelect] || 'DVI' : '-'}</Value>

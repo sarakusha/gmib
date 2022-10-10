@@ -1,7 +1,7 @@
 import type { AddressParam, DeviceId, Display, LogLevel } from '@nibus/core';
 import Address, { AddressType } from '@nibus/core/Address';
-import { hasProps } from '@novastar/screen/common';
 
+import { hasProps } from '@novastar/screen/common';
 import { createSelector } from '@reduxjs/toolkit';
 import maxBy from 'lodash/maxBy';
 import pick from 'lodash/pick';
