@@ -48,7 +48,7 @@ const Brightness: React.FC<BrightnessProps> = ({
         onChange={onChange}
         disabled={disabled}
         {...props}
-        color={'active1' as 'primary'}
+        color={'active' as 'primary'}
         size="small"
       />
       <RepeatButton
