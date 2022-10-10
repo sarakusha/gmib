@@ -6,6 +6,7 @@ import UsbIcon from '@mui/icons-material/Usb';
 import type { Interpolation } from '@mui/material';
 import {
   Box,
+  Collapse,
   IconButton,
   ListItemButton,
   ListItemIcon,
@@ -17,12 +18,14 @@ import {
 import type { Theme } from '@mui/material/styles';
 import { css, styled } from '@mui/material/styles';
 import React, { useCallback, useMemo } from 'react';
+import { TransitionGroup } from 'react-transition-group';
 
 import { useGetAddressesQuery } from '../api/screens';
 import { useDispatch, useSelector } from '../store';
 import type { TabValues } from '../store/currentSlice';
 import { setCurrentDevice, setCurrentTab } from '../store/currentSlice';
 import type { DeviceStateWithParent } from '../store/devicesSlice';
+import { updateNovastarDevices } from '../store/novastarThunks';
 import {
   filterDevicesByAddress,
   selectAllDevicesWithParent,
@@ -46,28 +49,30 @@ type DeviceItem = { name: React.ReactNode; device: DeviceStateWithParent };
 const getItems = (addresses: string[], devices: DeviceStateWithParent[]): DeviceItem[] => {
   let rest = [...devices];
   const result: DeviceItem[] = [];
-  addresses.filter(address => reAddress.test(address)).forEach(address => {
-    const subs = filterDevicesByAddress(devices, new Address(address));
-    if (subs.length > 0) {
-      const ids = subs.map(({ id }) => id);
-      rest = rest.filter(({ id }) => !ids.includes(id));
-      result.push(
-        ...subs.map(device => {
-          const { value } = device.props.serno;
-          const serno = typeof value === 'string' ? new Address(value).toString() : '';
-          return {
-            name: (
-              <span title={serno}>
-                {address}
-                {device.connected && <small>&nbsp;{serno}</small>}
-              </span>
-            ),
-            device,
-          };
-        }),
-      );
-    }
-  });
+  addresses
+    .filter(address => reAddress.test(address))
+    .forEach(address => {
+      const subs = filterDevicesByAddress(devices, new Address(address));
+      if (subs.length > 0) {
+        const ids = subs.map(({ id }) => id);
+        rest = rest.filter(({ id }) => !ids.includes(id));
+        result.push(
+          ...subs.map(device => {
+            const { value } = device.props.serno;
+            const serno = typeof value === 'string' ? new Address(value).toString() : '';
+            return {
+              name: (
+                <span title={serno}>
+                  {address}
+                  {device.connected && <small>&nbsp;{serno}</small>}
+                </span>
+              ),
+              device,
+            };
+          }),
+        );
+      }
+    });
   return [
     ...result,
     ...rest.map(device => ({
@@ -110,11 +115,14 @@ const Devices: React.FC = () => {
   const tab = useSelector(selectCurrentTab);
   const novastars = useSelector(selectAllNovastars);
   // const [, setAccordion] = useAccordion();
-  const reloadHandler = useCallback<React.MouseEventHandler<HTMLButtonElement>>(e => {
-    window.nibus.reloadDevices();
-    window.novastar.findNetDevices();
-    e.stopPropagation();
-  }, []);
+  const reloadHandler = useCallback<React.MouseEventHandler<HTMLButtonElement>>(
+    e => {
+      window.nibus.reloadDevices();
+      dispatch(updateNovastarDevices());
+      e.stopPropagation();
+    },
+    [dispatch],
+  );
   const clickHandler = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       const { id } = e.currentTarget.dataset; // as DeviceId;
@@ -143,91 +151,99 @@ const Devices: React.FC = () => {
       selected={tab === 'devices' && !hasDevices}
       onChange={currentTab => dispatch(setCurrentTab(currentTab as TabValues))}
     >
-      {items.map(({ name, device }) => {
-        const { id, connected, path, mib, isEmptyAddress, parent, address, category } = device;
-        const removable = Boolean(parent || address.indexOf('.') !== -1);
-        // Reflect.getMetadata('parent', device);
-        // const mib = Reflect.getMetadata('mib', device);
-        // const desc = device.connection?.description ?? {};
-        // let Icon = DeviceIcon;
-        // if (!parent && desc.link) {
-        //   Icon = DeviceHubIcon;
-        // } else if (mib && mib.startsWith('minihost')) {
-        //   Icon = TvIcon;
-        // }
-        return (
-          <ListItemButton
-            key={id}
-            onClick={clickHandler}
-            data-id={id}
-            selected={id === current}
-            disabled={!connected}
-            id={`tab-${id}`}
-            aria-controls={`tabpanel-${id}`}
-          >
-            <ListItemIcon>
-              <Wrapper>
-                <DeviceIcon color="inherit" device={device} />
-                {parent ? (
-                  <Tooltip title={parent.address}>
-                    <StyledLinkIcon />
-                  </Tooltip>
-                ) : (
-                  path && (
-                    <Tooltip title={path}>
-                      <StyledUsbIcon />
-                    </Tooltip>
-                  )
+      <TransitionGroup>
+        {items.map(({ name, device }) => {
+          const { id, connected, path, mib, isEmptyAddress, parent, address, category } = device;
+          const removable = Boolean(parent || address.indexOf('.') !== -1);
+          // Reflect.getMetadata('parent', device);
+          // const mib = Reflect.getMetadata('mib', device);
+          // const desc = device.connection?.description ?? {};
+          // let Icon = DeviceIcon;
+          // if (!parent && desc.link) {
+          //   Icon = DeviceHubIcon;
+          // } else if (mib && mib.startsWith('minihost')) {
+          //   Icon = TvIcon;
+          // }
+          return (
+            <Collapse key={id}>
+              <ListItemButton
+                onClick={clickHandler}
+                data-id={id}
+                selected={id === current}
+                disabled={!connected}
+                id={`tab-${id}`}
+                aria-controls={`tabpanel-${id}`}
+              >
+                <ListItemIcon>
+                  <Wrapper>
+                    <DeviceIcon color="inherit" device={device} />
+                    {parent ? (
+                      <Tooltip title={parent.address}>
+                        <StyledLinkIcon />
+                      </Tooltip>
+                    ) : (
+                      path && (
+                        <Tooltip title={path}>
+                          <StyledUsbIcon />
+                        </Tooltip>
+                      )
+                    )}
+                  </Wrapper>
+                </ListItemIcon>
+                <ListItemText
+                  primaryTypographyProps={noWrap}
+                  primary={isEmptyAddress ? category : name}
+                  secondary={isEmptyAddress ? id : mib}
+                />
+                {removable && id && (
+                  <ListItemSecondaryAction>
+                    <IconButton
+                      edge="end"
+                      aria-label="delete"
+                      size="small"
+                      onClick={event => {
+                        event.stopPropagation();
+                        window.nibus.releaseDevice(id);
+                      }}
+                    >
+                      <CloseIcon fontSize="inherit" />
+                    </IconButton>
+                  </ListItemSecondaryAction>
                 )}
-              </Wrapper>
-            </ListItemIcon>
-            <ListItemText
-              primaryTypographyProps={noWrap}
-              primary={isEmptyAddress ? category : name}
-              secondary={isEmptyAddress ? id : mib}
-            />
-            {removable && id && (
-              <ListItemSecondaryAction>
-                <IconButton
-                  edge="end"
-                  aria-label="delete"
-                  size="small"
-                  onClick={event => {
-                    event.stopPropagation();
-                    window.nibus.releaseDevice(id);
-                  }}
-                >
-                  <CloseIcon fontSize="inherit" />
-                </IconButton>
-              </ListItemSecondaryAction>
-            )}
-          </ListItemButton>
-        );
-      })}
-      {novastars.map(card => (
-        <ListItemButton
-          key={card.path}
-          selected={card.path === current}
-          data-id={card.path}
-          onClick={clickHandler}
-          disabled={!card.connected}
-        >
-          <ListItemIcon>
-            <Wrapper>
-              <DeviceIcon color="inherit" />
-              <Tooltip title={card.path}>
-                {card.path[0] >= '0' && card.path[0] <= '9' ? <StyledLanIcon /> : <StyledUsbIcon />}
-              </Tooltip>
-            </Wrapper>
-          </ListItemIcon>
-          <ListItemText
-            primaryTypographyProps={noWrap}
-            primary={card.info?.name}
-            secondary={card.path}
-            secondaryTypographyProps={noWrap}
-          />
-        </ListItemButton>
-      ))}
+              </ListItemButton>
+            </Collapse>
+          );
+        })}
+        {novastars.map(card => (
+          <Collapse key={card.path}>
+            <ListItemButton
+              selected={card.path === current}
+              data-id={card.path}
+              onClick={clickHandler}
+              disabled={!card.connected}
+            >
+              <ListItemIcon>
+                <Wrapper>
+                  <DeviceIcon color="inherit" />
+                  <Tooltip title={card.path}>
+                    {card.path[0] >= '0' && card.path[0] <= '9' ? (
+                      <StyledLanIcon />
+                    ) : (
+                      <StyledUsbIcon />
+                    )}
+                  </Tooltip>
+                </Wrapper>
+              </ListItemIcon>
+              <ListItemText
+                primaryTypographyProps={noWrap}
+                primary={card.info?.name}
+                secondary={card.path}
+                secondaryTypographyProps={noWrap}
+              />
+            </ListItemButton>
+          </Collapse>
+        ))}
+      </TransitionGroup>
     </AccordionList>
   );
 };
