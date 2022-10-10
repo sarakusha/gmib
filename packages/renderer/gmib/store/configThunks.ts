@@ -1,18 +1,20 @@
 import { createAsyncThunk, isAnyOf } from '@reduxjs/toolkit';
+import flatten from 'lodash/flatten';
 import sortBy from 'lodash/sortBy';
 import SunCalc from 'suncalc';
 
-import { reAddress } from '/@common/config';
+// import { reAddress } from '/@common/config';
 
 import createDebouncedAsyncThunk from '../../common/createDebouncedAsyncThunk';
-import screenApi, { parseLocation, selectScreens } from '../api/screens';
+import screenApi, { parseLocation, selectScreen, selectScreens } from '../api/screens';
 import type { Point } from '../util/MonotonicCubicSpline';
 import MonotonicCubicSpline from '../util/MonotonicCubicSpline';
 
-import { MINUTE, notEmpty, tuplify } from '/@common/helpers';
+import { asyncSerial, MINUTE, notEmpty } from '/@common/helpers';
 import { isRemoteSession } from '/@common/remote';
 
 import {
+  invalidateBrightness,
   removeHttpPage,
   setAutobrightness,
   setBrightness,
@@ -23,8 +25,10 @@ import {
   updateConfig,
   upsertHttpPage,
 } from './configSlice';
-import type { DeviceState } from './devicesSlice';
+// import type { DeviceState } from './devicesSlice';
 import { startAppListening } from './listenerMiddleware';
+import { addNovastar } from './novastarSlice';
+import { debouncedUpdateNovastarDevices } from './novastarThunks';
 import {
   selectAutobrightness,
   selectBrightness,
@@ -39,67 +43,92 @@ import {
 
 import type { AppThunkConfig, RootState } from './index';
 
-import type { DeviceId } from '@nibus/core';
-import { hasProps } from '@novastar/screen/common';
+// import { hasProps } from '@novastar/screen/common';
 
 export const BRIGHTNESS_INTERVAL = 60 * 1000;
 
 const getValue = (value: number, min: number, max: number): number =>
   Math.min(Math.max(value, min), max);
 
-const hasBrightnessFactor = hasProps('brightnessFactor');
+// const hasBrightnessFactor = hasProps('brightnessFactor');
 
-export const updateBrightness = createDebouncedAsyncThunk<void, void, AppThunkConfig>(
+const selectScreensData = screenApi.endpoints.getScreens.select();
+
+export const updateBrightness = createDebouncedAsyncThunk<void, undefined | number, AppThunkConfig>(
   'config/updateBrightness',
-  async (_, { getState }) => {
+  async (id, { getState }) => {
     const state = getState();
+    debouncedUpdateNovastarDevices(state);
     const brightness = selectBrightness(state);
     const { interval } = selectOverheatProtection(state) ?? {};
-    if (brightness === undefined) return;
-    const { data: screensData } = screenApi.endpoints.getScreens.select()(state);
-    const screens = screensData ? selectScreens(screensData) : [];
-    const { timestamp, screens: scr } = await window.config.get('health');
-    const tasks = screens
-      .filter(hasBrightnessFactor)
-      .filter(({ brightnessFactor }) => brightnessFactor > 0)
-      .reduce<[DeviceId, number][]>(
-        (res, { brightnessFactor, addresses: original, id: screenId }) => {
-          const addresses = original?.filter(address => reAddress.test(address));
-          if (!addresses) return res;
-          const isValid = timestamp && interval && Date.now() - timestamp < 2 * interval * MINUTE;
-          const actualBrightness = Math.min(Math.round(brightnessFactor * brightness), 100);
-          return [
-            ...res,
-            ...addresses
-              .map(location => parseLocation(location)?.address)
-              .filter(notEmpty)
-              .reduce<DeviceState[]>(
-                (devs, address) => [...devs, ...selectDevicesByAddress(state, address)],
-                [],
-              )
-              .map(({ id }) =>
-                tuplify(
-                  id,
-                  isValid
-                    ? Math.min(
-                        actualBrightness,
-                        scr?.[screenId]?.maxBrightness ?? Number.MAX_SAFE_INTEGER,
-                      )
-                    : actualBrightness,
-                ),
-              ),
-          ];
-        },
-        [],
-      );
+    const { data: screensData } = selectScreensData(state);
+    if (!screensData) return;
+    const screens = id ? [selectScreen(screensData, id)] : selectScreens(screensData);
+    const { timestamp, screens: scr = {} } = await window.config.get('health');
+    const isValid = timestamp && interval && Date.now() - timestamp < 2 * interval * MINUTE;
+    const tasks = flatten(
+      screens
+        .filter(notEmpty)
+        .map(({ brightnessFactor, brightness: scrBrightness, addresses, id: screenId }) => {
+          const desired =
+            brightnessFactor && brightnessFactor > 0
+              ? Math.round(brightnessFactor * brightness)
+              : scrBrightness ?? 60;
+          const value = Math.min(desired, isValid ? scr[screenId]?.maxBrightness ?? 100 : 100);
+          return addresses
+            ?.map(address => parseLocation(address)?.address ?? address)
+            .map(address => [address, value] as const);
+        })
+        .filter(notEmpty),
+    );
+    // const tasks = screens
+    //   .filter(hasBrightnessFactor)
+    //   .filter(({ brightnessFactor }) => brightnessFactor > 0)
+    //   .reduce<[DeviceId, number][]>(
+    //     (res, { brightnessFactor, addresses: original, id: screenId }) => {
+    //       const addresses = original?.filter(address => reAddress.test(address));
+    //       if (!addresses) return res;
+    //       const isValid = timestamp && interval && Date.now() - timestamp < 2 * interval * MINUTE;
+    //       const actualBrightness = Math.min(Math.round(brightnessFactor * brightness), 100);
+    //       return [
+    //         ...res,
+    //         ...addresses
+    //           .map(location => parseLocation(location)?.address ?? location)
+    //           .filter(notEmpty)
+    //           .reduce<DeviceState[]>(
+    //             (devs, address) => [...devs, ...selectDevicesByAddress(state, address)],
+    //             [],
+    //           )
+    //           .map(({ id }) =>
+    //             tuplify(
+    //               id,
+    //               isValid
+    //                 ? Math.min(
+    //                     actualBrightness,
+    //                     scr?.[screenId]?.maxBrightness ?? Number.MAX_SAFE_INTEGER,
+    //                   )
+    //                 : actualBrightness,
+    //             ),
+    //           ),
+    //       ];
+    //     },
+    //     [],
+    //   );
     await Promise.allSettled(
-      tasks.map(([id, value]) => window.nibus.setDeviceValue(id)('brightness', value)),
+      tasks.map(([address, value]) =>
+        typeof address === 'string'
+          ? window.novastar.setBrightness({ path: address, screen: -1, percent: value })
+          : asyncSerial(selectDevicesByAddress(state, address), ({ id: deviceId }) =>
+              window.nibus.setDeviceValue(deviceId)('brightness', value),
+            ),
+      ),
     );
   },
-  100,
+  200,
   {
     maxWait: 1000,
     leading: true,
+    selectId: id => id ?? 0,
   },
 );
 
@@ -298,3 +327,18 @@ if (!isRemoteSession) {
     },
   });
 }
+
+startAppListening({
+  actionCreator: invalidateBrightness,
+  effect({ payload: screenId }, { dispatch }) {
+    dispatch(updateBrightness(screenId));
+  },
+});
+
+startAppListening({
+  actionCreator: addNovastar,
+  effect: async ({ payload: { path } }, { dispatch }) => {
+    await window.novastar.reload(path);
+    dispatch(updateBrightness());
+  },
+});

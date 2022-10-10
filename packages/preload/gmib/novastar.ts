@@ -3,7 +3,7 @@ import { connect } from 'net';
 import debugFactory from 'debug';
 import memoize from 'lodash/memoize';
 
-import type { Screen, ScreenArg, ScreenBrightness } from '../../renderer/gmib/store/novastarSlice';
+import type { Screen, ScreenArg, ScreenBrightness } from '/@renderer/store/novastarSlice';
 import {
   addNovastar,
   novastarBusy,
@@ -11,14 +11,15 @@ import {
   removeNovastar,
   updateNovastar,
   updateScreen,
-} from '../../renderer/gmib/store/novastarSlice';
+} from '/@renderer/store/novastarSlice';
+
 import ipcDispatch from '../common/ipcDispatch';
 
 import NovastarLoader from './NovastarLoader';
 
 import Connection from '@novastar/codec/Connection';
 import { series as pMap } from '@novastar/codec/helper';
-import net, { findNetDevices as novaFindNetDevices } from '@novastar/net';
+import net, { findNetDevices } from '@novastar/net';
 import ScreenConfigurator from '@novastar/screen/ScreenConfigurator';
 
 // import '@novastar/screen/api';
@@ -102,51 +103,61 @@ net.on('close', address => {
 });
 */
 
-export const findNetDevices = (): void => {
-  debug('find');
-  if (!isRemoteSession) {
-    novaFindNetDevices().then(addresses => {
-      addresses.forEach(address => net.open(address));
-    });
-  }
+// export const findNetDevices = (): void => {
+//   if (!isRemoteSession) {
+//     novaFindNetDevices().then(addresses => {
+//       addresses.forEach(address => net.open(address));
+//     });
+//   }
+// };
+
+export { findNetDevices };
+
+export const open = (path: string) => {
+  net.open(path);
 };
 
-export const reloadNovastar = async (path: string): Promise<void> => {
+export const reload = async (path: string): Promise<void> => {
   const controller = novastarControls[path];
   if (!controller) {
     ipcDispatch(removeNovastar(path));
     return;
   }
-  ipcDispatch(novastarBusy(path));
-  await controller.reload();
-  const hasDVISignalIn = await controller.ReadHasDVISignalIn();
-  if (hasDVISignalIn == null) {
-    controller.session.close();
-    // ipcDispatch(removeNovastar(path));
-    return;
+  try {
+    ipcDispatch(novastarBusy(path));
+    await controller.reload();
+    const hasDVISignalIn = await controller.ReadHasDVISignalIn();
+    if (hasDVISignalIn == null) {
+      controller.session.close();
+      // ipcDispatch(removeNovastar(path));
+      return;
+    }
+    const screens = await pMap(controller.screens, async (info, index) => {
+      const screen: Screen = {
+        info,
+        mode: await controller.ReadFirstDisplayMode(index),
+        rgbv: await controller.ReadFirstRGBVBrightness(index),
+        gamma: await controller.ReadFirstGamma(index),
+        chipType: await controller.ReadFirstChipType(index),
+      };
+      return screen;
+    });
+    ipcDispatch(
+      updateNovastar({
+        id: path,
+        changes: {
+          path,
+          info: controller.devices[0],
+          screens,
+          hasDVISignalIn,
+        },
+      }),
+    );
+  } catch (e) {
+    debug(`error while reload ${path}: ${(e as Error).message}`);
+  } finally {
+    ipcDispatch(novastarReady(path));
   }
-  const screens = await pMap(controller.screens, async (info, index) => {
-    const screen: Screen = {
-      info,
-      mode: await controller.ReadFirstDisplayMode(index),
-      rgbv: await controller.ReadFirstRGBVBrightness(index),
-      gamma: await controller.ReadFirstGamma(index),
-      chipType: await controller.ReadFirstChipType(index),
-    };
-    return screen;
-  });
-  ipcDispatch(
-    updateNovastar({
-      id: path,
-      changes: {
-        path,
-        info: controller.devices[0],
-        screens,
-        hasDVISignalIn,
-      },
-    }),
-  );
-  ipcDispatch(novastarReady(path));
 };
 
 export const readLightSensor = async (path: string): Promise<number | null> => {
@@ -242,9 +253,10 @@ export const setRGBVBrightness = async ({
 };
 
 export const setBrightness = async ({ path, screen, percent }: ScreenBrightness): Promise<void> => {
-  const controller = novastarControls[path];
+  const key = path.indexOf(':') === -1 ? `${path}:5200` : path;
+  const controller = novastarControls[key];
   if (!controller) {
-    ipcDispatch(removeNovastar(path));
+    ipcDispatch(removeNovastar(key));
     return;
   }
   const res = await controller.WriteBrightness(percent, screen);
@@ -258,7 +270,7 @@ export const setBrightness = async ({ path, screen, percent }: ScreenBrightness)
     const value = await controller.ReadFirstRGBVBrightness(scr);
     ipcDispatch(
       updateScreen({
-        path,
+        path: key,
         screen: scr,
         name: 'rgbv',
         value,
@@ -267,7 +279,22 @@ export const setBrightness = async ({ path, screen, percent }: ScreenBrightness)
   });
 };
 
+const sensors: Record<string, number> = {};
+
 const watchNetNovastars = (): void => {
+  const updateState = async (address: string) => {
+    if (!novastarControls[address]) return;
+    await updateHasDviIn(address);
+    let attempts = sensors[address] ?? 3;
+    if (attempts > 0) {
+      const value = await readLightSensor(address);
+      if (value != null) sensors[address] = 3;
+    }
+    attempts -= 1;
+    if (attempts <= -5) attempts = 1;
+    sensors[address] = attempts;
+    window.setTimeout(() => updateState(address), 10000);
+  };
   const openHandler = async (address: string): Promise<void> => {
     const session = net.sessions[address];
     if (!session) {
@@ -285,6 +312,7 @@ const watchNetNovastars = (): void => {
           connected: true,
         }),
       );
+      window.setTimeout(() => updateState(address), 20000);
     }
   };
 
@@ -301,7 +329,7 @@ const watchNetNovastars = (): void => {
   net.on('disconnect', disconnectHandler);
   net.on('close', closeHandler);
 
-  findNetDevices();
+  // findNetDevices();
 };
 
 if (!isRemoteSession) {

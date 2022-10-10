@@ -18,14 +18,13 @@ import {
   Typography,
 } from '@mui/material';
 import { keyframes, styled } from '@mui/material/styles';
-import some from 'lodash/some';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 
 import nata from '../../assets/nata.svg';
 import RemoteHostsDialog from '../dialogs/RemoteHostsDialog';
 import SearchDialog from '../dialogs/SearchDialog';
 import { useToolbar } from '../providers/ToolbarProvider';
-import { useDevices, useDispatch, useSelector } from '../store';
+import { useDispatch, useSelector } from '../store';
 import { setAutobrightness, setProtectionProp } from '../store/configSlice';
 import { setCurrentTab, setRemoteDialogOpen } from '../store/currentSlice';
 import {
@@ -68,12 +67,7 @@ const App: React.FC = () => {
   const [isSearchOpen, setSearchOpen] = useState(false);
   const searchOpen = useCallback(() => setSearchOpen(true), [setSearchOpen]);
   const searchClose = useCallback(() => setSearchOpen(false), [setSearchOpen]);
-  const [isLinkingDevice, setLinkingDevice] = useState(false);
-  const devices = useDevices();
   const autobrightness = useSelector(selectAutobrightness);
-  useEffect(() => {
-    setLinkingDevice(some(devices, device => !!device?.isLinkingDevice));
-  }, [devices]);
   const [toolbar] = useToolbar();
   const dispatch = useDispatch();
   const tab = useSelector(selectCurrentTab);
@@ -156,7 +150,7 @@ const App: React.FC = () => {
                 <IconButton
                   color="inherit"
                   onClick={searchOpen}
-                  disabled={!isLinkingDevice}
+                  // disabled={!isLinkingDevice}
                   hidden={tab !== 'devices'}
                   sx={{ ...(tab !== 'devices' && { display: 'none' }) }}
                   size="large"

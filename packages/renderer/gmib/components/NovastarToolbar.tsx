@@ -15,7 +15,7 @@ const NovastarToolbar: React.FC = () => {
     <BusyButton
       icon={<ReloadIcon />}
       title="Обновить"
-      onClick={() => path && window.novastar.reloadNovastar(path)}
+      onClick={() => path && window.novastar.reload(path)}
       isBusy={device && device.isBusy > 0}
       disabled={!device || !device.connected}
     />

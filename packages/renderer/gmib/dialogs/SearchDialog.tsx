@@ -31,12 +31,13 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import DeviceIcon from '../components/DeviceIcon';
 import { useDevices, useDispatch, useSelector } from '../store';
-import { selectFinder, selectLinks } from '../store/selectors';
+import { selectFinder, selectLinks, selectNovastarIds } from '../store/selectors';
 import type { DeviceInfo } from '../store/sessionSlice';
-import { resetDetected } from '../store/sessionSlice';
+import { addDetected, resetDetected } from '../store/sessionSlice';
 import useDefaultKeys from '../util/useDefaultKeys';
 
 import type { FinderOptions } from '/@common/helpers';
+import { reIPv4 } from '/@common/helpers';
 
 type Props = {
   open: boolean;
@@ -88,13 +89,23 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
     }
     if (isSearching) {
       window.nibus.cancelSearch();
-    } else {
+    } else if (options.type !== 0 && !(options.address && reIPv4.test(options.address))) {
       window.nibus.findDevices(options).then(
         () => setInvalidAddress(false),
         () => setInvalidAddress(true),
       );
+    } else {
+      window.novastar
+        .findNetDevices(
+          options.address && reIPv4.test(options.address) ? options.address : undefined,
+        )
+        .then(addresses => {
+          addresses.map(address =>
+            dispatch(addDetected({ address, type: 0, owner: 'nova' as DeviceId })),
+          );
+        });
     }
-  }, [links, kind, isSearching /* , finder */]);
+  }, [links, kind, isSearching, dispatch]);
   useEffect(() => {
     window.nibus.cancelSearch();
     if (!open) {
@@ -102,10 +113,13 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
       mibTypeRef.current && (defaultValues.current.type = mibTypeRef.current.value);
     }
   }, [open, kind]);
+  const novastarIds = useSelector(selectNovastarIds) as string[];
   const addDevice = (key: string): void => {
     const dev = detected.find(item => deviceKey(item) === key);
     if (!dev?.owner) return;
-    if (
+    if (dev.owner === 'nova') {
+      if (!novastarIds.includes(dev.address)) window.novastar.open(dev.address);
+    } else if (
       devices.findIndex(device => device.address === dev.address && device.parent === dev.owner) ===
       -1
     ) {
@@ -183,12 +197,13 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
               input={<Input name="mibtype" id="mibtype" inputRef={mibTypeRef} />}
               fullWidth
             >
-              <MenuItem value="0">Не выбран</MenuItem>
-              {window.nibus.mibTypes.map(({ name, value }) => (
-                <MenuItem key={value} value={value}>
-                  {name}
-                </MenuItem>
-              ))}
+              <MenuItem value="0">Ethernet</MenuItem>
+              {links.length > 0 &&
+                window.nibus.mibTypes.map(({ name, value }) => (
+                  <MenuItem key={value} value={value}>
+                    {name}
+                  </MenuItem>
+                ))}
             </Select>
           </FormControl>
         </Box>
