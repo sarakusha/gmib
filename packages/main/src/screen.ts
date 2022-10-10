@@ -66,6 +66,7 @@ const screenEncoder = (screen: Omit<Screen, 'id' | 'addresses'>) => {
     brightnessFactor,
     test,
     display,
+    brightness,
   } = screen;
   const $flags =
     flag(downToTop, ScreenFlags.DownToTop) + flag(rightToLeft, ScreenFlags.RightToLeft);
@@ -86,6 +87,7 @@ const screenEncoder = (screen: Omit<Screen, 'id' | 'addresses'>) => {
     $brightnessFactor: brightnessFactor,
     $flags,
     $test: test,
+    $brightness: brightness,
   };
   return res;
 };
@@ -276,7 +278,8 @@ export const updateScreen = promisifyRun(
        borderRight=$borderRight,
        display=$display,
        brightnessFactor=$brightnessFactor,
-       test=$test
+       test=$test,
+       brightness=$brightness
    WHERE id = $id`,
   (screen: Omit<Screen, 'addresses'>) => ({ $id: screen.id, ...screenEncoder(screen) }),
 );

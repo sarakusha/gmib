@@ -112,6 +112,9 @@ export const configSlice = createSlice({
       if (!state.overheatProtection) state.overheatProtection = DEFAULT_OVERHEAD_PROTECTION;
       Object.assign(state.overheatProtection, { [name]: value });
     },
+    invalidateBrightness(_, __: PayloadAction<number>) {
+      // side effect - appListener
+    },
   },
 });
 
@@ -131,6 +134,7 @@ export const {
   setBrightness,
   // setScreenProp,
   setProtectionProp,
+  invalidateBrightness,
 } = configSlice.actions;
 
 export default configSlice.reducer;

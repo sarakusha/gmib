@@ -12,6 +12,7 @@ import type { ValueType, WithRequiredProp } from '/@common/helpers';
 import { notEmpty, toErrorMessage } from '/@common/helpers';
 
 import type { AppThunk, AppThunkConfig, RootState } from '../store';
+import { invalidateBrightness } from '../store/configSlice';
 import { setCurrentScreen } from '../store/currentSlice';
 import { selectCurrentScreenId, selectDevicesByAddress } from '../store/selectors';
 
@@ -165,7 +166,7 @@ const debouncedUpdateScreen = createDebouncedAsyncThunk<void, Screen, AppThunkCo
     dispatch(screenApi.endpoints.updateScreen.initiate(screen));
   },
   200,
-  { selectId: screen => screen.id, maxWait: 500 },
+  { selectId: screen => screen.id },
 );
 
 export const updateScreen =
@@ -177,6 +178,12 @@ export const updateScreen =
         if (!prev) throw new Error(`Unknown screen id: ${id}`);
         const screen = { id, ...(typeof update === 'function' ? update(prev) : update) };
         adapter.setOne(state, screen);
+        if (
+          (prev.brightness !== screen.brightness && !screen.brightnessFactor) ||
+          Boolean(prev.brightnessFactor) !== Boolean(screen.brightnessFactor)
+        ) {
+          setTimeout(() => dispatch(invalidateBrightness(id)), 0);
+        }
         dispatch(debouncedUpdateScreen(screen));
       }),
     );
@@ -188,7 +195,6 @@ export const useScreens = () =>
       screens: data && selectScreens(data),
       ...other,
     }),
-    pollingInterval: 3000,
   });
 
 export const useScreen = (id?: number) =>
@@ -198,7 +204,6 @@ export const useScreen = (id?: number) =>
       screen: data && id ? selectScreen(data, id) : undefined,
       ...other,
     }),
-    pollingInterval: 3000,
   });
 
 const selectScreenData = screenApi.endpoints.getScreens.select();

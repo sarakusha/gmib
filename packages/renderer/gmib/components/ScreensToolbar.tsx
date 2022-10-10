@@ -1,11 +1,16 @@
+import BrightnessAutoIcon from '@mui/icons-material/BrightnessAuto';
 import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
-// import SaveIcon from '@mui/icons-material/Save';
-// import LoadIcon from '@mui/icons-material/SystemUpdateAlt';
 import { IconButton, Tooltip } from '@mui/material';
 import React from 'react';
 
 import { noop } from '/@common/helpers';
+
+import { updateScreen, useScreen } from '../api/screens';
+import { useDispatch, useSelector } from '../store';
+import { selectBrightness, selectCurrentScreenId } from '../store/selectors';
+
+import Brightness from './HBrightness';
 
 /*
 const load = (): void => {
@@ -30,29 +35,48 @@ const save = (config: ConfigState): void => {
 const ScreensToolbar: React.FC<{ readonly?: boolean; toggle?: () => void }> = ({
   readonly = true,
   toggle = noop,
-}) => 
-  // const config = useSelector(selectConfig);
-   (
+}) => {
+  const brightness = useSelector(selectBrightness);
+  const dispatch = useDispatch();
+  const screenId = useSelector(selectCurrentScreenId);
+  const { screen } = useScreen(screenId);
+  const handleBrightness = React.useCallback(
+    (e: unknown, value: number | number[]) =>
+      !Array.isArray(value) &&
+      screenId &&
+      dispatch(updateScreen(screenId, prev => ({ ...prev, brightness: value }))),
+    [dispatch, screenId],
+  );
+  const disabled = !screen || screen.brightnessFactor !== 0;
+  return (
     <>
-{/*
-      <Tooltip title="Загрузить конфигурацию из файла">
-        <IconButton color="inherit" size="large">
-          <LoadIcon />
-        </IconButton>
-      </Tooltip>
-      <Tooltip title="Сохранить конфигурацию в файл">
-        <IconButton color="inherit"  size="large">
-          <SaveIcon />
-        </IconButton>
-      </Tooltip>
-*/}
+      <IconButton
+        color={disabled ? 'inherit' : 'default'}
+        onClick={() =>
+          screenId &&
+          dispatch(
+            updateScreen(screenId, prev => ({
+              ...prev,
+              brightnessFactor: prev.brightnessFactor ? 0 : 1,
+            })),
+          )
+        }
+        title="Автояркость"
+        size="large"
+      >
+        <BrightnessAutoIcon />
+      </IconButton>
+      <Brightness
+        value={disabled ? brightness * (screen?.brightnessFactor ?? 1) : screen.brightness}
+        onChange={handleBrightness}
+        disabled={disabled}
+      />
       <Tooltip title={readonly ? 'Разблокировать' : 'Заблокировать'}>
         <IconButton onClick={toggle} color="inherit" size="large">
           {readonly ? <LockIcon /> : <LockOpenIcon />}
         </IconButton>
       </Tooltip>
     </>
-  )
-;
-
+  );
+};
 export default ScreensToolbar;
