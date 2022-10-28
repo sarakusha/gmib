@@ -1,17 +1,18 @@
 import { Box } from '@mui/material';
 import React, { useEffect, useState } from 'react';
 
+import { useNovastar } from '../api/novastar';
 import { useSelector } from '../store';
 import {
   selectCurrentDeviceId,
   selectCurrentTab,
   selectDeviceById,
   selectDeviceIds,
-  selectNovastarByPath,
 } from '../store/selectors';
 
 import Autobrightness from './Autobrightness';
 import DeviceTabs from './DeviceTabs';
+import Help from './Help/Help';
 import Log from './Log';
 // import MediaTab from './MediaTab';
 import NovastarTabs from './NovastarTabs';
@@ -30,7 +31,7 @@ const Tabs: React.FC = () => {
   const ids = useSelector(selectDeviceIds);
   const currentDeviceId = useSelector(selectCurrentDeviceId) as DeviceId;
   const currentDevice = useSelector(state => selectDeviceById(state, currentDeviceId));
-  const currentNovastar = useSelector(state => selectNovastarByPath(state, currentDeviceId));
+  const { novastar: currentNovastar } = useNovastar(currentDeviceId); // useSelector(state => selectNovastarByPath(state, currentDeviceId));
   if (currentDevice) {
     const curChild = devChildren.find(({ props }) => props.id === currentDeviceId);
     /**
@@ -65,7 +66,11 @@ const Tabs: React.FC = () => {
           selected: currentDeviceId === child.props.id && tab === 'devices',
         }),
       )}
-      <TabContainer id="novastar" selected={tab === 'devices' && currentNovastar !== undefined} unmount>
+      <TabContainer
+        id="novastar"
+        selected={tab === 'devices' && currentNovastar !== undefined}
+        unmount
+      >
         <NovastarTabs device={currentNovastar} />
       </TabContainer>
       <TabContainer id="test" selected={tab === 'screens'} unmount>
@@ -79,6 +84,9 @@ const Tabs: React.FC = () => {
       </TabContainer>
       <TabContainer id="overheat" selected={tab === 'overheat'}>
         <OverheatProtectionTab />
+      </TabContainer>
+      <TabContainer id="help" selected={tab === 'help'}>
+        <Help />
       </TabContainer>
       {/*
       <TabContainer id="media" selected={tab === 'media'}>

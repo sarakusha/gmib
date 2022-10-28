@@ -18,6 +18,7 @@ import { selectCurrentScreenId, selectCurrentTab, selectSessionVersion } from '.
 
 import Screen from './Screen';
 import ScreensToolbar from './ScreensToolbar';
+import FixedHeadLayout from '../../common/FixedHeadLayout';
 
 const Label = styled('span')`
   display: flex;
@@ -70,7 +71,7 @@ const Screens: React.FC = () => {
     };
   const single = screens.length === 1;
   return (
-    <Box sx={{ width: 1 }}>
+    <FixedHeadLayout>
       <Paper square>
         <Tabs
           value={isSuccess && value ? value : false}
@@ -116,12 +117,12 @@ const Screens: React.FC = () => {
           )}
         </Tabs>
       </Paper>
-      <Container maxWidth="md" sx={{ px: 2, py: 1 }}>
+      <Container maxWidth="md">
         {screens.map(({ id }) => (
           <Screen id={id} key={id} selected={value} readonly={readonly} single={single} />
         ))}
       </Container>
-    </Box>
+    </FixedHeadLayout>
   );
 };
 

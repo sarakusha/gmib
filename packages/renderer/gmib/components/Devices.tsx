@@ -20,16 +20,16 @@ import { css, styled } from '@mui/material/styles';
 import React, { useCallback, useMemo } from 'react';
 import { TransitionGroup } from 'react-transition-group';
 
+import { useNovastars } from '../api/novastar';
 import { useGetAddressesQuery } from '../api/screens';
 import { useDispatch, useSelector } from '../store';
 import type { TabValues } from '../store/currentSlice';
 import { setCurrentDevice, setCurrentTab } from '../store/currentSlice';
 import type { DeviceStateWithParent } from '../store/devicesSlice';
-import { updateNovastarDevices } from '../store/novastarThunks';
+// import { updateNovastarDevices } from '../store/novastarThunks';
 import {
   filterDevicesByAddress,
   selectAllDevicesWithParent,
-  selectAllNovastars,
   selectCurrentDeviceId,
   selectCurrentTab,
 } from '../store/selectors';
@@ -113,16 +113,20 @@ const Devices: React.FC = () => {
   const current = useSelector(selectCurrentDeviceId);
   const { data: addresses = [] } = useGetAddressesQuery();
   const tab = useSelector(selectCurrentTab);
-  const novastars = useSelector(selectAllNovastars);
+  const { novastars = [] } = useNovastars(); // useSelector(selectAllNovastars);
   // const [, setAccordion] = useAccordion();
   const reloadHandler = useCallback<React.MouseEventHandler<HTMLButtonElement>>(
     e => {
       window.nibus.reloadDevices();
-      dispatch(updateNovastarDevices());
+      // TODO: force update novastar device list
+      // dispatch(updateNovastarDevices());
       e.stopPropagation();
     },
-    [dispatch],
+    [],
   );
+  // if (!current && (devices.length > 0 || novastars.length > 0)) {
+  //   dispatch(setCurrentDevice(devices[0]?.id ?? novastars[0]?.path));
+  // }
   const clickHandler = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       const { id } = e.currentTarget.dataset; // as DeviceId;
