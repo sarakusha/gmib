@@ -1,16 +1,15 @@
 import { createServer } from 'http';
 import path from 'path';
 
-import bodyParser from 'body-parser';
 import debugFactory from 'debug';
 import express from 'express';
 import { WebSocketServer } from 'ws';
 import type { ErrorRequestHandler } from 'express-serve-static-core';
 import helmet from 'helmet';
 import cors from 'cors';
+import bodyParser from 'body-parser';
 
 import api, { mediaRoot } from './api';
-import auth from './auth';
 import { port } from './config';
 import { dbReady } from './db';
 
@@ -40,7 +39,7 @@ app.use(
     contentSecurityPolicy: false,
   }),
 );
-app.use(cors({ origin: '*' }));
+app.use(cors({ origin: '*', exposedHeaders: ['x-ni-identifier', 'x-from'] }));
 import.meta.env.PROD && app.use(preventLoadSourceMap);
 
 app.use(bodyParser.json());
@@ -85,7 +84,6 @@ app.use(
   (_, __, next) => {
     dbReady.then(next);
   },
-  auth.unless({ path: [/\/api\/login\/.*/, /\/api\/handshake\/.*/, '/api/identifier'] }),
   api,
 );
 app.use(errorHandler);

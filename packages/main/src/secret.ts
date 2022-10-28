@@ -5,7 +5,8 @@ import debugFactory from 'debug';
 import fetch from 'node-fetch';
 
 import type { NullableOptional } from '/@common/helpers';
-import type { Identity } from '/@common/Identity';
+
+import type { Credentials } from '../../common/Credentials';
 
 import { promisifyGet, promisifyRun, removeNull } from './db';
 import localConfig from './localConfig';
@@ -70,24 +71,22 @@ export const getOutgoingSecret = async (id: string) =>
 const secret = randomBytes(48);
 
 app.whenReady().then(() => {
-  ipcMain.handle('getRemoteIdentification', async (_, url): Promise<Identity | undefined> => {
+  ipcMain.handle('getRemoteCredentials', async (_, url): Promise<Credentials | undefined> => {
     const response = await fetch(url);
     debug(`${url}, ${response.ok}:${response}`);
     if (!response.ok) return undefined;
-    const identifier = await response.text();
-
-    const apiSecret = await getOutgoingSecret(identifier);
+    const remote = await response.text();
     return {
-      identifier,
-      apiSecret,
+      identifier: localConfig.get('identifier'),
+      apiSecret: await getOutgoingSecret(remote),
     };
   });
   ipcMain.handle(
-    'getLocalIdentification',
-    (): Identity => ({ identifier: localConfig.get('identifier'), apiSecret: secret }),
+    'getLocalCredentials',
+    (): Credentials => ({ identifier: localConfig.get('identifier'), apiSecret: secret }),
   );
-  ipcMain.handle('setRemoteSecret', async (_, id: string, apiSecret: bigint) => {
-    await setOutgoingSecret(id, apiSecret);
+  ipcMain.on('setRemoteSecret', (_, id: string, apiSecret: bigint) => {
+    setOutgoingSecret(id, apiSecret);
   });
 });
 
