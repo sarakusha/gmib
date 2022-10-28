@@ -42,9 +42,6 @@ import {
 } from '/@renderer/store/devicesSlice';
 import type { MibInfo, PropMetaInfo } from '/@renderer/store/mibsSlice';
 import { addMib } from '/@renderer/store/mibsSlice';
-
-import { addNovastar } from '../../renderer/gmib/store/novastarSlice';
-
 import { addRemoteHost, getRemoteId, removeRemoteHost } from '/@renderer/store/remoteHostsSlice';
 import { ILLUMINATION, pushSensorValue, TEMPERATURE } from '/@renderer/store/sensorsSlice';
 import {
@@ -69,6 +66,9 @@ import type {
   ValueType,
 } from '/@common/helpers';
 import { toErrorMessage } from '/@common/helpers';
+import { host, isRemoteSession, port } from '/@common/remote';
+
+import { getSecret } from '../common/identify';
 
 import Finder from './Finder';
 import Minihost2Loader from './Minihost2Loader';
@@ -76,7 +76,7 @@ import Minihost3Loader from './Minihost3Loader';
 
 import ipcDispatch from '../common/ipcDispatch';
 
-import { createConnection } from './novastar';
+// import { createConnection } from './novastar';
 
 import { validateConfig } from '/@common/schema';
 import { enqueueSnackbar, setFlashing, setProgress } from '/@renderer/store/flasherSlice';
@@ -88,11 +88,6 @@ const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:preload`);
 const RESTART_DELAY = 3000;
 
 let isConnected = false;
-
-const query = new URLSearchParams(window.location.search);
-const port = +(query.get('port') ?? 9001);
-const host = query.get('host') ?? 'localhost';
-// let token: string | undefined;
 
 const session = getNibusSession(port, host);
 
@@ -133,8 +128,6 @@ const getProps = (device: IDevice, idsOrNames?: (number | string)[]): DeviceProp
   const getProp = getDeviceProp(device);
   return Object.fromEntries<ValueState>(names.map(getProp));
 };
-
-const isRemoteSession = host !== 'localhost';
 
 export { findMibByType };
 
@@ -248,14 +241,29 @@ const getChildren = (parent: IDevice): IDevice[] =>
     description,
   }: PortArg): Promise<void> => {
     if (description.category !== 'novastar') return;
-    await createConnection(path, port, host);
-    ipcDispatch(
-      addNovastar({
-        path,
-        isBusy: 0,
-        connected: true,
-      }),
-    );
+    // console.log(`http://${host}:${port + 1}/api/novastar/serial`);
+    // const x = new AbortController();
+    // const timeout = setTimeout(() => x.abort(), 3000);
+    fetch(`http://${host}:${port + 1}/api/novastar/serial`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        authorization: `Bearer ${getSecret()}`,
+      },
+      body: JSON.stringify({ path, port }),
+      // signal: x.signal,
+    });
+    // .then(() => console.log('finish'), err => console.error(err)).finally(() => {
+    //   clearTimeout(timeout);
+    // });
+    // await createConnection(path, port, host);
+    // ipcDispatch(
+    //   addNovastar({
+    //     path,
+    //     isBusy: 0,
+    //     connected: true,
+    //   }),
+    // );
   };
 
   const informationListener: NibusSessionEvents['informationReport'] = (
@@ -295,7 +303,9 @@ const getChildren = (parent: IDevice): IDevice[] =>
   session.on('config', configHandler);
   session.once('host', hostHandler);
   session.on('informationReport', informationListener);
-  session.on('foreign', addForeignDeviceHandler);
+  if (!isRemoteSession) {
+    session.on('foreign', addForeignDeviceHandler);
+  }
   session.on('health', healthHandler);
   session.devices.on('new', updateDevices);
   session.devices.on('delete', updateDevices);
@@ -396,8 +406,8 @@ export const reloadDevice = async (deviceId: DeviceId): Promise<void> => {
   if (!device.connection) return;
   ipcDispatch(deviceBusy(deviceId));
   await device.read();
-  ipcDispatch(deviceReady(deviceId));
   ipcDispatch(updateProps([deviceId, getProps(device)]));
+  ipcDispatch(deviceReady(deviceId));
 };
 
 export const releaseDevice = (deviceId: DeviceId): void => {

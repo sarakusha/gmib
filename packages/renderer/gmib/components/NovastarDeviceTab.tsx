@@ -13,16 +13,16 @@ import React, { useCallback, useEffect, useState } from 'react';
 
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useDispatch, useSelector } from '../store';
-import type { Novastar } from '../store/novastarSlice';
-import { setScreenColorBrightness } from '../store/novastarSlice';
+import { updateNovastarScreens } from '../api/novastar';
 
-import { noop } from '/@common/helpers';
+import { minmax, noop } from '/@common/helpers';
 
-import {selectCurrentTab} from '../store/selectors';
+import { selectCurrentTab } from '../store/selectors';
 
 import DisplayModeSelector from './DisplayModeSelector';
 import NovastarToolbar from './NovastarToolbar';
 
+import type { Novastar } from '/@common/novastar';
 
 type RGBVItemProps = { kind: keyof BrightnessRGBV } & Omit<
   TextFieldProps,
@@ -115,6 +115,8 @@ const NovastarDeviceTab: React.FC<{ device: Novastar | undefined; selected?: boo
   const tab = useSelector(selectCurrentTab);
   const active = selected && tab === 'devices' && device !== undefined;
   const path = device?.path;
+  // const [setGamma] = useSetGammaMutation();
+  // const [setDisplayMode] = useSetDisplayModeMutation();
   useEffect(() => {
     if (active) {
       // path && dispatch(reloadNovastar(path));
@@ -128,16 +130,18 @@ const NovastarDeviceTab: React.FC<{ device: Novastar | undefined; selected?: boo
     e => {
       const { name, value } = e.target;
       const [index, color] = name.split(':', 2);
-      const screen = Number(index);
+      const screen = Number(index) as 0;
       path &&
         isBrightnessProps(color) &&
         dispatch(
-          setScreenColorBrightness({
-            path,
-            screen: Number(screen),
-            color,
-            value: Number(value),
-          }),
+          updateNovastarScreens(path, screen, 'rgbv', rgbv => ({
+            overall: rgbv?.overall ?? 255,
+            red: rgbv?.red ?? 255,
+            green: rgbv?.green ?? 255,
+            blue: rgbv?.blue ?? 255,
+            vRed: rgbv?.vRed ?? 255,
+            [color]: minmax(255, Number(value)),
+          })),
         );
     },
     [dispatch, path],
@@ -145,26 +149,16 @@ const NovastarDeviceTab: React.FC<{ device: Novastar | undefined; selected?: boo
   const gammaHandler = useCallback<React.ChangeEventHandler<HTMLInputElement>>(
     e => {
       const { name, value } = e.target;
-      path &&
-        window.novastar.setGamma({
-          path,
-          screen: Number(name),
-          value: Number(value),
-        });
+      path && dispatch(updateNovastarScreens(path, Number(name), 'gamma', Number(value)));
     },
-    [path],
+    [path, dispatch],
   );
   const modeHandler = useCallback<Required<SelectProps>['onChange']>(
     e => {
       const { name, value } = e.target;
-      path &&
-        window.novastar.setDisplayMode({
-          path,
-          screen: Number(name),
-          value: Number(value),
-        });
+      path && dispatch(updateNovastarScreens(path, Number(name), 'mode', Number(value)));
     },
-    [path],
+    [path, dispatch],
   );
 
   if (!device || !device.info) return null;

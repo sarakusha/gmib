@@ -15,21 +15,21 @@ import flasherReducer from './flasherSlice';
 import listenerMiddleware from './listenerMiddleware';
 import logReducer from './logSlice';
 import mibsReducer from './mibsSlice';
-import novastarReducer from './novastarSlice';
+// import novastarReducer from './novastarSlice';
 import remoteHostsReducer from './remoteHostsSlice';
 // import screensReducer from './screensSlice';
 import { selectAllDevices, selectDeviceById } from './selectors';
 import sensorsReducer from './sensorsSlice';
 import sessionReducer from './sessionSlice';
+import telemetryReducer from './telemetrySlice';
 
 import type { DeviceId } from '@nibus/core';
 
 import './configThunks';
 import './deviceThunks';
 import './healthThunks';
-import './novastarThunks';
 import './sensorThunks';
-// import './screensThunks';
+import './currentThunks';
 
 export const store = configureStore({
   reducer: {
@@ -40,9 +40,10 @@ export const store = configureStore({
     mibs: mibsReducer,
     sensors: sensorsReducer,
     remoteHosts: remoteHostsReducer,
-    novastar: novastarReducer,
+    // novastar: novastarReducer,
     log: logReducer,
     flasher: flasherReducer,
+    telemetry: telemetryReducer,
     // screens: screensReducer,
     ...api.reducer,
   },

@@ -3,9 +3,8 @@ import flatten from 'lodash/flatten';
 import sortBy from 'lodash/sortBy';
 import SunCalc from 'suncalc';
 
-// import { reAddress } from '/@common/config';
-
 import createDebouncedAsyncThunk from '../../common/createDebouncedAsyncThunk';
+import novastarApi, { selectNovastar } from '../api/novastar';
 import screenApi, { parseLocation, selectScreen, selectScreens } from '../api/screens';
 import type { Point } from '../util/MonotonicCubicSpline';
 import MonotonicCubicSpline from '../util/MonotonicCubicSpline';
@@ -25,14 +24,15 @@ import {
   updateConfig,
   upsertHttpPage,
 } from './configSlice';
-// import type { DeviceState } from './devicesSlice';
+import { setCurrentDevice } from './currentSlice';
 import { startAppListening } from './listenerMiddleware';
-import { addNovastar } from './novastarSlice';
-import { debouncedUpdateNovastarDevices } from './novastarThunks';
 import {
+  selectAllDevices,
   selectAutobrightness,
   selectBrightness,
   selectConfig,
+  selectCurrentDeviceId,
+  selectDeviceIds,
   selectDevicesByAddress,
   selectLastAverage,
   selectLocation,
@@ -40,10 +40,7 @@ import {
   selectOverheatProtection,
   selectSpline,
 } from './selectors';
-
 import type { AppThunkConfig, RootState } from './index';
-
-// import { hasProps } from '@novastar/screen/common';
 
 export const BRIGHTNESS_INTERVAL = 60 * 1000;
 
@@ -56,9 +53,9 @@ const selectScreensData = screenApi.endpoints.getScreens.select();
 
 export const updateBrightness = createDebouncedAsyncThunk<void, undefined | number, AppThunkConfig>(
   'config/updateBrightness',
-  async (id, { getState }) => {
+  async (id, { dispatch, getState }) => {
     const state = getState();
-    debouncedUpdateNovastarDevices(state);
+    // debouncedUpdateNovastarDevices(state);
     const brightness = selectBrightness(state);
     const { interval } = selectOverheatProtection(state) ?? {};
     const { data: screensData } = selectScreensData(state);
@@ -117,7 +114,10 @@ export const updateBrightness = createDebouncedAsyncThunk<void, undefined | numb
     await Promise.allSettled(
       tasks.map(([address, value]) =>
         typeof address === 'string'
-          ? window.novastar.setBrightness({ path: address, screen: -1, percent: value })
+          ? // ? window.novastar.setBrightness({ path: address, screen: -1, percent: value })
+            dispatch(
+              novastarApi.endpoints.setBrightness.initiate({ path: address, screen: -1, value }),
+            )
           : asyncSerial(selectDevicesByAddress(state, address), ({ id: deviceId }) =>
               window.nibus.setDeviceValue(deviceId)('brightness', value),
             ),
@@ -335,10 +335,26 @@ startAppListening({
   },
 });
 
+// startAppListening({
+//   actionCreator: addNovastar,
+//   effect: async ({ payload: { path } }, { dispatch }) => {
+//     await window.novastar.reload(path);
+//     dispatch(updateBrightness());
+//   },
+// });
+
+const selectNovastarData = novastarApi.endpoints.getNovastars.select();
+
 startAppListening({
-  actionCreator: addNovastar,
-  effect: async ({ payload: { path } }, { dispatch }) => {
-    await window.novastar.reload(path);
-    dispatch(updateBrightness());
+  predicate: (_, currentState) =>
+    !selectCurrentDeviceId(currentState) &&
+    Boolean(
+      selectNovastarData(currentState).data?.ids.length || selectDeviceIds(currentState).length,
+    ),
+  effect(_, { getState, dispatch }) {
+    const state = getState();
+    const { data } = selectNovastarData(state);
+    const id = selectAllDevices(state)[0]?.id || (data && selectNovastar(data, data.ids[0])?.path);
+    dispatch(setCurrentDevice(id));
   },
 });

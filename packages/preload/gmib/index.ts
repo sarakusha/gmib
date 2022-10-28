@@ -13,7 +13,7 @@ import * as config from './config';
 import * as db from './db';
 import * as dialogs from './dialogs';
 import * as nibus from './nibus';
-import * as novastar from './novastar';
+// import * as novastar from './novastar';
 import * as output from './output';
 
 import expandTypes from '/@common/expandTypes';
@@ -46,7 +46,7 @@ contextBridge.exposeInMainWorld('server', {
   port: +(process.env['NIBUS_PORT'] ?? 9001) + 1,
 });
 contextBridge.exposeInMainWorld('setDispatch', setDispatch);
-contextBridge.exposeInMainWorld('novastar', expandTypes(novastar));
+// contextBridge.exposeInMainWorld('novastar', expandTypes(novastar));
 contextBridge.exposeInMainWorld('nibus', expandTypes(nibus));
 contextBridge.exposeInMainWorld('config', expandTypes(config));
 contextBridge.exposeInMainWorld('dialogs', expandTypes(dialogs));

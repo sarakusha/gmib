@@ -5,20 +5,25 @@ import type { Health } from '/@common/helpers';
 
 // import { addScreen, removeScreen, showHttpPage } from './configSlice';
 import { addDevice, removeDevice } from './devicesSlice';
-import { addNovastar, removeNovastar } from './novastarSlice';
+// import { addNovastar, removeNovastar } from './novastarSlice';
 
-export type TabValues = 'devices' | 'screens' | 'autobrightness' | 'overheat' | 'log';
+export type TabValues = 'devices' | 'screens' | 'autobrightness' | 'overheat' | 'log' | 'help';
 // | 'media'
 // | 'playlist'
 // | 'scheduler';
 
+type Credentials = {
+  identifier: string;
+  host?: string;
+};
 export interface CurrentState {
   tab: TabValues | undefined;
   device: string | undefined;
   screen: number | undefined;
   health: Health | undefined;
   isRemoteDialogOpen: boolean;
-  isLoggedIn: boolean;
+  authRequired?: Credentials;
+  broadcastDetected?: string;
   // playlist: number | undefined;
 }
 
@@ -28,7 +33,7 @@ const initialState: CurrentState = {
   screen: undefined,
   health: undefined,
   isRemoteDialogOpen: false,
-  isLoggedIn: true, // isRemoteSession ? !!window.identify.getSecret() : true,
+  // isLoggedIn: true, // isRemoteSession ? !!window.identify.getSecret() : true,
   // playlist: undefined,
 };
 
@@ -51,12 +56,25 @@ const currentSlice = createSlice({
     setRemoteDialogOpen(state, { payload: open }: PayloadAction<boolean>) {
       state.isRemoteDialogOpen = open;
     },
-    setLoggedIn(state, { payload: isLoggedIn }: PayloadAction<boolean>) {
-      state.isLoggedIn = isLoggedIn;
+    // setLoggedIn(state, { payload: isLoggedIn }: PayloadAction<boolean>) {
+    //   state.isLoggedIn = isLoggedIn;
+    // },
+    setAuthRequired(state, { payload: credentials }: PayloadAction<Credentials | undefined>) {
+      state.authRequired = credentials;
     },
     // setCurrentPlaylist(state, { payload: id }: PayloadAction<number| undefined>) {
     //   state.playlist = id;
     // },
+    setBroadcastDetected(state, { payload: address }: PayloadAction<string | undefined>) {
+      if (!address) {
+        state.broadcastDetected = undefined;
+      } else if (state.broadcastDetected) {
+        if (state.broadcastDetected.split(', ').every(item => item !== address))
+          state.broadcastDetected += `, ${address}`;
+      } else {
+        state.broadcastDetected = address;
+      }
+    },
   },
   extraReducers: builder => {
     builder.addCase(addDevice, (state, { payload: { id } }) => {
@@ -69,16 +87,16 @@ const currentSlice = createSlice({
         state.device = undefined;
       }
     });
-    builder.addCase(addNovastar, (state, { payload: { path } }) => {
-      if (!state.device) {
-        state.device = path;
-      }
-    });
-    builder.addCase(removeNovastar, (state, { payload: path }) => {
-      if (state.device === path) {
-        state.device = undefined;
-      }
-    });
+    // builder.addCase(addNovastar, (state, { payload: { path } }) => {
+    //   if (!state.device) {
+    //     state.device = path;
+    //   }
+    // });
+    // builder.addCase(removeNovastar, (state, { payload: path }) => {
+    //   if (state.device === path) {
+    //     state.device = undefined;
+    //   }
+    // });
     /*
     builder.addCase(showHttpPage, state => {
       state.tab = 'screens';
@@ -111,7 +129,9 @@ export const {
   setCurrentHealth,
   setRemoteDialogOpen,
   // setCurrentPlaylist,
-  setLoggedIn,
+  // setLoggedIn,
+  setAuthRequired,
+  setBroadcastDetected,
 } = currentSlice.actions;
 
 export default currentSlice.reducer;

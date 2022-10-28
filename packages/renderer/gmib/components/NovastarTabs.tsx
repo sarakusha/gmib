@@ -1,10 +1,11 @@
 import { Box, Container, Paper, Tab, Tabs } from '@mui/material';
 import React, { useState } from 'react';
-
-import type { Novastar } from '../store/novastarSlice';
+import FixedHeadLayout from '../../common/FixedHeadLayout';
 
 import NovastarDeviceTab from './NovastarDeviceTab';
 import NovastarTelemetryTab from './NovastarTelemetryTab';
+
+import type { Novastar } from '/@common/novastar';
 
 // const useStyles = makeStyles(theme => ({
 //   root: {
@@ -25,13 +26,7 @@ type TabsType = 'props' | 'telemetry';
 const NovastarTabs: React.FC<{ device: Novastar | undefined }> = ({ device }) => {
   const [value, setValue] = useState<TabsType>('props');
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        width: 1,
-      }}
-    >
+    <FixedHeadLayout>
       <Paper square>
         <Tabs
           value={value}
@@ -44,16 +39,11 @@ const NovastarTabs: React.FC<{ device: Novastar | undefined }> = ({ device }) =>
           <Tab label="Телеметрия" value="telemetry" />
         </Tabs>
       </Paper>
-      <Container
-        sx={{
-          flexGrow: 1,
-          pt: 1,
-        }}
-      >
+      <Container>
         <NovastarDeviceTab device={device} selected={value === 'props'} />
         <NovastarTelemetryTab device={device} selected={value === 'telemetry'} />
       </Container>
-    </Box>
+    </FixedHeadLayout>
   );
 };
 
