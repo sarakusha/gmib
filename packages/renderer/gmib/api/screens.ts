@@ -125,19 +125,19 @@ const screenApi = createApi({
       async onQueryStarted(screen, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          dispatch(
-            screenApi.util.updateQueryData('getScreens', undefined, state => {
-              adapter.setOne(state, data);
-            }),
-          );
-          if (
-            screen.addresses &&
-            screen.addresses.filter(address => reAddress.test(address)).length
-          ) {
-            // eslint-disable-next-line @typescript-eslint/no-use-before-define
-            dispatch(updateMinihosts(screen.id));
+          // eslint-disable-next-line @typescript-eslint/no-use-before-define
+          if (!debouncedUpdateScreen.pending(screen.id)) {
+            dispatch(
+              screenApi.util.updateQueryData('getScreens', undefined, state => {
+                adapter.setOne(state, data);
+              }),
+            );
           }
-        } catch {
+          if (screen.addresses?.some(address => reAddress.test(address))) {
+            // eslint-disable-next-line @typescript-eslint/no-use-before-define
+            setTimeout(() => dispatch(updateMinihosts(screen.id)), 0);
+          }
+        } catch (err) {
           dispatch(screenApi.endpoints.getScreens.initiate());
         }
       },
@@ -166,7 +166,7 @@ const debouncedUpdateScreen = createDebouncedAsyncThunk<void, Screen, AppThunkCo
     dispatch(screenApi.endpoints.updateScreen.initiate(screen));
   },
   200,
-  { selectId: screen => screen.id },
+  { selectId: screen => screen.id, maxWait: 500 },
 );
 
 export const updateScreen =
@@ -195,6 +195,7 @@ export const useScreens = () =>
       screens: data && selectScreens(data),
       ...other,
     }),
+    pollingInterval: 15000,
   });
 
 export const useScreen = (id?: number) =>
@@ -208,10 +209,11 @@ export const useScreen = (id?: number) =>
 
 const selectScreenData = screenApi.endpoints.getScreens.select();
 
-export const updateMinihosts = createDebouncedAsyncThunk<void, number>(
+export const updateMinihosts = createDebouncedAsyncThunk<void, number, AppThunkConfig>(
   'updateMinihosts',
   async (scrId, { getState }) => {
-    const state = getState() as RootState;
+    // debug(`update minihost: ${scrId}`);
+    const state = getState();
     const { data: screenData } = selectScreenData(state);
     const screen = screenData && selectScreen(screenData, scrId);
     if (screen && screen.addresses) {
