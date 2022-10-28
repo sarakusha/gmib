@@ -40,7 +40,7 @@ export const pickRemoteService = (svc: RemoteService): RemoteHost | undefined =>
     host: host.replace(/\.local\.?$/, ''),
     name,
     version: txt.version ?? 'N/A',
-    address: addresses[0],
+    address: svc.referer.address ?? addresses[0],
     port,
   };
 };
