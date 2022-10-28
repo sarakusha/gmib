@@ -1,8 +1,8 @@
 import type { IDevice } from '@nibus/core';
 import type { NibusError } from '@nibus/core/errors';
 
-import type { RunnableEvents } from './Runnable';
-import Runnable from './Runnable';
+import type { RunnableEvents } from '../../common/Runnable';
+import Runnable from '../../common/Runnable';
 
 import type { IModuleInfo, LoaderOptions } from '/@common/helpers';
 import { calcMaxValue, isPositiveNumber, XMAX, YMAX } from '/@common/helpers';

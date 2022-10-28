@@ -1,8 +1,8 @@
 /* eslint-disable no-await-in-loop,no-bitwise */
 import debugFactory from 'debug';
 
-import type { RunnableEvents } from './Runnable';
-import Runnable from './Runnable';
+import type { RunnableEvents } from '../../common/Runnable';
+import Runnable from '../../common/Runnable';
 
 import type { DeviceId, INibusConnection, SarpDatagram } from '@nibus/core';
 import { findDeviceById } from '@nibus/core/session/NibusSession';
