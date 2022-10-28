@@ -31,32 +31,37 @@ dayjs.locale('ru');
 
 window.setDispatch(store.dispatch.bind(store));
 
-const container = document.getElementById('app') as HTMLElement;
-const root = createRoot(container);
+let needRender = true;
 
-const Html5DndProvider = React.lazy(() => import('../common/Html5DndProvider'));
-root.render(
-  <React.StrictMode>
-    <MuiThemeProvider theme={theme}>
-      <CssBaseline />
-      <Provider store={store}>
-        <ToolbarProvider>
-          <SnackbarProvider
-            anchorOrigin={{
-              vertical: 'bottom',
-              horizontal: 'right',
-            }}
-            maxSnack={10}
-            dense
-            preventDuplicate
-          >
-            <Html5DndProvider>
-              <App />
-              <LoginDialog />
-            </Html5DndProvider>
-          </SnackbarProvider>
-        </ToolbarProvider>
-      </Provider>
-    </MuiThemeProvider>
-  </React.StrictMode>,
-);
+if (needRender) {
+  needRender = false;
+  const container = document.getElementById('app') as HTMLElement;
+  const root = createRoot(container);
+
+  const Html5DndProvider = React.lazy(() => import('../common/Html5DndProvider'));
+  root.render(
+    <React.StrictMode>
+      <MuiThemeProvider theme={theme}>
+        <CssBaseline />
+        <Provider store={store}>
+          <ToolbarProvider>
+            <SnackbarProvider
+              anchorOrigin={{
+                vertical: 'bottom',
+                horizontal: 'right',
+              }}
+              maxSnack={10}
+              dense
+              preventDuplicate
+            >
+              <Html5DndProvider>
+                <App />
+                <LoginDialog />
+              </Html5DndProvider>
+            </SnackbarProvider>
+          </ToolbarProvider>
+        </Provider>
+      </MuiThemeProvider>
+    </React.StrictMode>,
+  );
+}
