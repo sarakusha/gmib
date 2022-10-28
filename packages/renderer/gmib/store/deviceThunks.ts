@@ -1,5 +1,5 @@
 // import debugFactory from 'debug';
-import { createAsyncThunk } from '@reduxjs/toolkit';
+import { createAsyncThunk, isAnyOf } from '@reduxjs/toolkit';
 
 import { reAddress } from '/@common/config';
 
@@ -10,12 +10,13 @@ import Address, { AddressType } from '@nibus/core/Address';
 import { MCDVI_TYPE, MINIHOST_TYPE } from '@nibus/core/common';
 
 import { setCurrentTab } from './currentSlice';
-import { addDevice, setConnected } from './devicesSlice';
+import { setConnected, updateProperty, updateProps } from './devicesSlice';
 import { startAppListening } from './listenerMiddleware';
 import {
   filterDevicesByAddress,
   selectAllDevices,
   selectCurrentDeviceId,
+  selectDeviceById,
   selectDevicesByAddress,
   // selectScreenAddresses,
 } from './selectors';
@@ -110,13 +111,25 @@ startAppListening({
   },
 });
 
+const nibusNetAddressProps = ['domain', 'subnet', 'did'];
+
 startAppListening({
-  actionCreator: addDevice,
-  effect({ payload: device }, { dispatch, getState }) {
+  matcher: isAnyOf(updateProps, updateProperty),
+  async effect({ payload: [deviceId, props] }, { dispatch, getState }) {
+    const addressChanged =
+      typeof props === 'string'
+        ? nibusNetAddressProps.includes(props)
+        : nibusNetAddressProps.some(name => props[name] !== undefined);
+    if (!addressChanged) return;
     const state = getState();
+    const device = selectDeviceById(state, deviceId);
+    if (!device) return;
     const deviceAddress = new Address(device.address);
     if (deviceAddress.type !== AddressType.mac) return;
-    const { data: addresses } = selectAddresses(state);
+    let { data: addresses } = selectAddresses(state);
+    if (addresses == null) {
+      addresses = (await dispatch(screenApi.endpoints.getAddresses.initiate())).data;
+    }
     if (addresses) {
       for (let i = 0; i < addresses.length; i += 1) {
         const address = addresses[i];
