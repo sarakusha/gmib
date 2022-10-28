@@ -33,7 +33,7 @@ import { sourceId } from '../utils';
 import { notEmpty } from '/@common/helpers';
 
 import CurrentPlaylist from './CurrentPlaylist';
-import FixedHeadLayout from './FixedHeadLayout';
+import FixedHeadLayout from '../../common/FixedHeadLayout';
 import MediaItem from './MediaItem';
 import Player from './Player';
 import PlaylistsToolbar from './PlaylistsToolbar';

@@ -11,7 +11,7 @@ import { useDeleteMediaByIdMutation, useGetMedia, useUploadMediaMutation } from 
 import { useSelector } from '../store';
 import { selectDescending, selectSearch, selectSortOrder } from '../store/selectors';
 
-import FixedHeadLayout from './FixedHeadLayout';
+import FixedHeadLayout from '../../common/FixedHeadLayout';
 import MediaItem from './MediaItem';
 import MediaTabToolbar from './MediaTabToolbar';
 

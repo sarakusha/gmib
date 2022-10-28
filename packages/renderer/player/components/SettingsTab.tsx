@@ -25,7 +25,7 @@ import { useDispatch, useSelector } from '../store';
 import { setSettingsNode } from '../store/currentSlice';
 import { selectSettingsNode } from '../store/selectors';
 
-import FixedHeadLayout from './FixedHeadLayout';
+import FixedHeadLayout from '../../common/FixedHeadLayout';
 import OutputSettings from './OutputSettings';
 import PlayerSettings from './PlayerSettings';
 import SettingsToolbar from './SettingsToolbar';
