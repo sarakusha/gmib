@@ -18,7 +18,9 @@ import {
   Typography,
 } from '@mui/material';
 import { keyframes, styled } from '@mui/material/styles';
-import React, { useCallback, useState } from 'react';
+import { useSnackbar } from 'notistack';
+import React, { useCallback, useEffect, useState } from 'react';
+import CloseIcon from '@mui/icons-material/Close';
 
 import nata from '../../assets/nata.svg';
 import RemoteHostsDialog from '../dialogs/RemoteHostsDialog';
@@ -26,13 +28,15 @@ import SearchDialog from '../dialogs/SearchDialog';
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useDispatch, useSelector } from '../store';
 import { setAutobrightness, setProtectionProp } from '../store/configSlice';
-import { setCurrentTab, setRemoteDialogOpen } from '../store/currentSlice';
+import { setBroadcastDetected, setCurrentTab, setRemoteDialogOpen } from '../store/currentSlice';
 import {
   selectAutobrightness,
+  selectBroadcastDetected,
   selectCurrentTab,
   selectIsClosed,
   selectIsOnline,
   selectIsRemoteDialogOpen,
+  selectLinks,
   selectLoading,
   selectOverheatProtection,
 } from '../store/selectors';
@@ -76,6 +80,28 @@ const App: React.FC = () => {
   const sessionClosed = useSelector(selectIsClosed);
   const isRemoteDialogOpen = useSelector(selectIsRemoteDialogOpen);
   const { enabled: protectionEnabled = false } = useSelector(selectOverheatProtection) ?? {};
+  const broadcastDetected = useSelector(selectBroadcastDetected);
+  const { closeSnackbar, enqueueSnackbar } = useSnackbar();
+  const links = useSelector(selectLinks);
+  const hasLink = links.length > 0;
+  useEffect(() => {
+    if (broadcastDetected) {
+      enqueueSnackbar(`Обнаружена рассылка с адреса ${broadcastDetected}!`, {
+        variant: 'warning',
+        persist: true,
+        // onClose: () => {
+        //   dispatch(setBroadcastDetected());
+        // },
+        // eslint-disable-next-line react/no-unstable-nested-components
+        action: key => (
+          <IconButton onClick={() => closeSnackbar(key)} size='small' >
+            <CloseIcon fontSize="inherit" />
+          </IconButton>
+        ),
+      });
+    }
+  }, [broadcastDetected, closeSnackbar, dispatch, enqueueSnackbar]);
+
   return (
     <>
       <Backdrop
@@ -144,13 +170,12 @@ const App: React.FC = () => {
               </Typography>
             </Box>
             {toolbar}
-            {/* TODO: novastar */}
             <Tooltip title="Поиск новых устройств" enterDelay={500}>
               <div>
                 <IconButton
                   color="inherit"
                   onClick={searchOpen}
-                  // disabled={!isLinkingDevice}
+                  disabled={!hasLink}
                   hidden={tab !== 'devices'}
                   sx={{ ...(tab !== 'devices' && { display: 'none' }) }}
                   size="large"
@@ -221,6 +246,9 @@ const App: React.FC = () => {
             </Item>
             <Item onClick={() => dispatch(setCurrentTab('log'))} selected={tab === 'log'}>
               <ListItemText primary="Журнал" />
+            </Item>
+            <Item onClick={() => dispatch(setCurrentTab('help'))} selected={tab === 'help'}>
+              <ListItemText primary="Справка" />
             </Item>
           </List>
         </Drawer>
