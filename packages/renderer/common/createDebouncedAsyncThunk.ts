@@ -50,7 +50,7 @@ const createDebouncedAsyncThunk = <
   payloadCreator: AsyncThunkPayloadCreator<Returned, ThunkArg, Config>,
   wait: number,
   options?: DebounceSettings<ThunkArg>,
-): AsyncThunk<Returned, ThunkArg, AppThunkConfig> => {
+): AsyncThunk<Returned, ThunkArg, AppThunkConfig> & { pending: (id: unknown) => boolean } => {
   const { maxWait = 0, leading = false, selectId = () => null } = options ?? {};
   const states = new Map<unknown, State>();
   const invoke = (state: State): void => {
@@ -68,32 +68,35 @@ const createDebouncedAsyncThunk = <
       state.resolve = undefined;
     }
   };
-  return createAsyncThunk(typePrefix, payloadCreator, {
-    condition(arg) {
-      const id = selectId(arg);
-      if (!states.has(id)) {
-        states.set(id, {
-          timer: 0,
-          maxTimer: 0,
+  return Object.assign(
+    createAsyncThunk(typePrefix, payloadCreator, {
+      condition(arg) {
+        const id = selectId(arg);
+        if (!states.has(id)) {
+          states.set(id, {
+            timer: 0,
+            maxTimer: 0,
+          });
+        }
+        const state = states.get(id);
+        if (!state) return false;
+        const immediate = leading && !state.timer;
+        window.clearTimeout(state.timer);
+        state.timer = window.setTimeout(() => {
+          invoke(state);
+          state.timer = 0;
+        }, wait);
+        if (immediate) return true;
+        cancel(state);
+        if (maxWait && !state.maxTimer)
+          state.maxTimer = window.setTimeout(() => invoke(state), maxWait);
+        return new Promise<boolean>(res => {
+          state.resolve = res;
         });
-      }
-      const state = states.get(id);
-      if (!state) return false;
-      const immediate = leading && !state.timer;
-      window.clearTimeout(state.timer);
-      state.timer = window.setTimeout(() => {
-        invoke(state);
-        state.timer = 0;
-      }, wait);
-      if (immediate) return true;
-      cancel(state);
-      if (maxWait && !state.maxTimer)
-        state.maxTimer = window.setTimeout(() => invoke(state), maxWait);
-      return new Promise<boolean>(res => {
-        state.resolve = res;
-      });
-    },
-  });
+      },
+    }),
+    { pending: (id: unknown) => Boolean(states.get(id)?.resolve) },
+  );
 };
 
 export default createDebouncedAsyncThunk;
