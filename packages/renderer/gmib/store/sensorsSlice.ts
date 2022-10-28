@@ -14,7 +14,7 @@ export type SensorState = {
 };
 
 export const DEFAULT_INTERVAL = 60;
-export const MIN_INTERVAL = 10;
+export const MIN_INTERVAL = 30;
 export const ILLUMINATION = 321;
 export const TEMPERATURE = 128;
 
