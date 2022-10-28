@@ -1,18 +1,22 @@
 // eslint-disable-next-line max-classes-per-file
-import ScreenConfigurator from '@novastar/screen/ScreenConfigurator';
-import net, { findNetDevices, MULTICAST_ADDRESS, REQ, UDP_PORT } from '@novastar/net';
-import { TypedEmitter } from 'tiny-typed-emitter';
 import type { Novastar, Screen, ScreenId } from '/@common/novastar';
+
 import { series } from '@novastar/codec/helper';
+
 import { notEmpty } from '/@common/helpers';
 import type { CabinetInfo, NovastarTelemetry } from '/@common/helpers';
+
 import debugFactory from 'debug';
+
 import { connect } from 'net';
-import os from 'os';
 import dgram, { type Socket } from 'dgram';
+
 import Connection from '@novastar/codec/Connection';
+import net, { findNetDevices, MULTICAST_ADDRESS, REQ, UDP_PORT } from '@novastar/net';
+import ScreenConfigurator from '@novastar/screen/ScreenConfigurator';
 import memoize from 'lodash/memoize';
-import tcpPortUsed from 'tcp-port-used';
+import { TypedEmitter } from 'tiny-typed-emitter';
+
 import NovastarLoader from './NovastarLoader';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:master`);

@@ -1,6 +1,5 @@
 import type { Kind } from '@nibus/core';
 import { FlashKinds } from '@nibus/core/flash/FlashKinds';
-
 import type {
   Dispatch,
   Reducer,

@@ -1,5 +1,6 @@
-import { Box, Container, Paper, Tab, Tabs } from '@mui/material';
+import { Container, Paper, Tab, Tabs } from '@mui/material';
 import React, { useState } from 'react';
+
 import FixedHeadLayout from '../../common/FixedHeadLayout';
 
 import NovastarDeviceTab from './NovastarDeviceTab';

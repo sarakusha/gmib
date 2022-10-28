@@ -1,5 +1,7 @@
 /* eslint-disable no-bitwise */
 
+import type { AddressParam, DeviceId, Display, LogLevel } from '@nibus/core';
+import Address, { AddressType } from '@nibus/core/Address';
 import { hasProps } from '@novastar/screen/common';
 import { createSelector } from '@reduxjs/toolkit';
 import maxBy from 'lodash/maxBy';
@@ -24,8 +26,6 @@ import type { Config, OverheatProtection, Page } from '/@common/config';
 import type { Health, ValueState } from '/@common/helpers';
 import { findById, notEmpty } from '/@common/helpers';
 
-import type { AddressParam, DeviceId, Display, LogLevel } from '@nibus/core';
-import Address, { AddressType } from '@nibus/core/Address';
 
 export const {
   selectAll: selectAllDevices,
@@ -224,4 +224,3 @@ export const selectTelemetry = (state: RootState) => state.telemetry;
 
 export const selectNovastarTelemetry = (state: RootState, path: string) =>
   selectNovastarTelemetryById(selectTelemetry(state).novastar, path);
-

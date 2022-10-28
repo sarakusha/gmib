@@ -23,10 +23,8 @@ import {
   Tabs,
   TextField,
 } from '@mui/material';
-
 import type { DeviceId } from '@nibus/core';
 import Address from '@nibus/core/Address';
-
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import DeviceIcon from '../components/DeviceIcon';

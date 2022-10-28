@@ -7,11 +7,11 @@ import { useDrop } from 'react-dnd';
 import { NativeTypes } from 'react-dnd-html5-backend';
 import { TransitionGroup } from 'react-transition-group';
 
+import FixedHeadLayout from '../../common/FixedHeadLayout';
 import { useDeleteMediaByIdMutation, useGetMedia, useUploadMediaMutation } from '../api/media';
 import { useSelector } from '../store';
 import { selectDescending, selectSearch, selectSortOrder } from '../store/selectors';
 
-import FixedHeadLayout from '../../common/FixedHeadLayout';
 import MediaItem from './MediaItem';
 import MediaTabToolbar from './MediaTabToolbar';
 

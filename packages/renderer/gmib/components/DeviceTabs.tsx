@@ -1,6 +1,8 @@
-import { Box, Container, Paper, Tab, Tabs } from '@mui/material';
+import { Container, Paper, Tab, Tabs } from '@mui/material';
+import type { DeviceId } from '@nibus/core';
 import React, { useState } from 'react';
 
+import FixedHeadLayout from '../../common/FixedHeadLayout';
 import { useSelector } from '../store';
 import { selectCurrentDeviceId, selectCurrentTab, selectDeviceById } from '../store/selectors';
 
@@ -8,8 +10,6 @@ import FirmwareTab from './FirmwareTab';
 import PropertyGridTab from './PropertyGridTab';
 import TelemetryTab from './TelemetryTab';
 
-import type { DeviceId } from '@nibus/core';
-import FixedHeadLayout from '../../common/FixedHeadLayout';
 
 type Props = {
   id: DeviceId;

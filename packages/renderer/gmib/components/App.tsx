@@ -1,4 +1,5 @@
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import CloseIcon from '@mui/icons-material/Close';
 import HighlightOffIcon from '@mui/icons-material/HighlightOff';
 import MenuIcon from '@mui/icons-material/Menu';
 import SearchIcon from '@mui/icons-material/Search';
@@ -20,7 +21,6 @@ import {
 import { keyframes, styled } from '@mui/material/styles';
 import { useSnackbar } from 'notistack';
 import React, { useCallback, useEffect, useState } from 'react';
-import CloseIcon from '@mui/icons-material/Close';
 
 import nata from '../../assets/nata.svg';
 import RemoteHostsDialog from '../dialogs/RemoteHostsDialog';
@@ -28,7 +28,7 @@ import SearchDialog from '../dialogs/SearchDialog';
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useDispatch, useSelector } from '../store';
 import { setAutobrightness, setProtectionProp } from '../store/configSlice';
-import { setBroadcastDetected, setCurrentTab, setRemoteDialogOpen } from '../store/currentSlice';
+import { setCurrentTab, setRemoteDialogOpen } from '../store/currentSlice';
 import {
   selectAutobrightness,
   selectBroadcastDetected,

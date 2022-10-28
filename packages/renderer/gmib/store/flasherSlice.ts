@@ -1,8 +1,8 @@
+import type { DeviceId, Kind } from '@nibus/core';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { createSlice } from '@reduxjs/toolkit';
 import type { OptionsObject, SnackbarMessage } from 'notistack';
 
-import type { DeviceId, Kind } from '@nibus/core';
 
 export type FlasherState = {
   progress: number;

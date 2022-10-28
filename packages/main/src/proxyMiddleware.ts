@@ -17,7 +17,6 @@ import bonjourHap from 'bonjour-hap';
 import generateSignature from '/@common/generateSignature';
 import Deferred from '/@common/Deferred';
 
-
 type ProxyOptions = {
   readonly host: string;
   readonly port: number;

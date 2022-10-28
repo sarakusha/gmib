@@ -1,3 +1,4 @@
+import type { DeviceId } from '@nibus/core';
 import type { Action, ThunkAction } from '@reduxjs/toolkit';
 import { configureStore } from '@reduxjs/toolkit';
 import type { TypedUseSelectorHook } from 'react-redux';
@@ -23,7 +24,6 @@ import sensorsReducer from './sensorsSlice';
 import sessionReducer from './sessionSlice';
 import telemetryReducer from './telemetrySlice';
 
-import type { DeviceId } from '@nibus/core';
 
 import './configThunks';
 import './deviceThunks';

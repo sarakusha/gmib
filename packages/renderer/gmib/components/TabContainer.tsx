@@ -1,7 +1,7 @@
 import { Box } from '@mui/material';
+import type { DeviceId } from '@nibus/core';
 import React from 'react';
 
-import type { DeviceId } from '@nibus/core';
 
 // const useStyles = makeStyles({
 //   root: {

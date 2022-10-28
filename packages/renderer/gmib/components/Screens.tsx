@@ -1,10 +1,11 @@
 import AddToQueue from '@mui/icons-material/AddToQueue';
 import CloseIcon from '@mui/icons-material/Close';
-import { Box, Container, IconButton, Paper, Tab, Tabs } from '@mui/material';
+import { Container, IconButton, Paper, Tab, Tabs } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useSnackbar } from 'notistack';
 import React, { useEffect, useState } from 'react';
 
+import FixedHeadLayout from '../../common/FixedHeadLayout';
 import { useCreateScreenMutation, useDeleteScreenMutation, useScreens } from '../api/screens';
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useDispatch, useSelector } from '../store';
@@ -18,7 +19,6 @@ import { selectCurrentScreenId, selectCurrentTab, selectSessionVersion } from '.
 
 import Screen from './Screen';
 import ScreensToolbar from './ScreensToolbar';
-import FixedHeadLayout from '../../common/FixedHeadLayout';
 
 const Label = styled('span')`
   display: flex;

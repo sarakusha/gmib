@@ -1,6 +1,7 @@
 import { app } from 'electron';
 import fs from 'fs';
 
+import service from '@nibus/cli';
 import debugFactory from 'debug';
 import log from 'electron-log';
 import { Tail } from 'tail';
@@ -13,7 +14,6 @@ import localConfig from './localConfig';
 import Reader from './reader';
 import secret from './secret';
 
-import service from '@nibus/cli';
 // import { updateScreens } from './updateScreens';
 
 const reader = new Reader(200);

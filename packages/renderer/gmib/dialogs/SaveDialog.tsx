@@ -8,9 +8,7 @@ import {
   DialogTitle,
   FormControlLabel,
 } from '@mui/material';
-
 import type { DeviceId } from '@nibus/core';
-
 import pick from 'lodash/pick';
 import some from 'lodash/some';
 import sortBy from 'lodash/sortBy';

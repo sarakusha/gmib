@@ -19,7 +19,6 @@ import {
   getMibTypes as getMibTypesOrig,
   getNibusSession,
 } from '@nibus/core';
-
 import debugFactory from 'debug';
 import debounce from 'lodash/debounce';
 import memoize from 'lodash/memoize';

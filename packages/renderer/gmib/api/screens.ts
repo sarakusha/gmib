@@ -1,3 +1,4 @@
+import Address from '@nibus/core/Address';
 import { createEntityAdapter, type EntityState } from '@reduxjs/toolkit';
 import { createApi } from '@reduxjs/toolkit/query/react';
 import debugFactory from 'debug';
@@ -16,7 +17,6 @@ import { invalidateBrightness } from '../store/configSlice';
 import { setCurrentScreen } from '../store/currentSlice';
 import { selectCurrentScreenId, selectDevicesByAddress } from '../store/selectors';
 
-import Address from '@nibus/core/Address';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:screen`);
 

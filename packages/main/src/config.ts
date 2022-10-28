@@ -2,7 +2,6 @@ import fs from 'fs';
 import path from 'path';
 
 import { config as nibusConfig } from '@nibus/core/config';
-
 import debugFactory from 'debug';
 import log from 'electron-log';
 import Store from 'electron-store';

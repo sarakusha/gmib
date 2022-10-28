@@ -1,3 +1,5 @@
+import type { DeviceId } from '@nibus/core';
+import Address from '@nibus/core/Address';
 import { series as pMap } from '@novastar/codec/helper';
 import debugFactory from 'debug';
 import flatten from 'lodash/flatten';
@@ -26,8 +28,6 @@ import {
 
 import type { AppThunk, RootState } from './index';
 
-import type { DeviceId } from '@nibus/core';
-import Address from '@nibus/core/Address';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:health`);
 

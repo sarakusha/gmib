@@ -40,6 +40,7 @@ import {
   selectOverheatProtection,
   selectSpline,
 } from './selectors';
+
 import type { AppThunkConfig, RootState } from './index';
 
 export const BRIGHTNESS_INTERVAL = 60 * 1000;

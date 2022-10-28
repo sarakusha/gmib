@@ -1,4 +1,5 @@
 import { Box } from '@mui/material';
+import type { DeviceId } from '@nibus/core';
 import React, { useEffect, useState } from 'react';
 
 import { useNovastar } from '../api/novastar';
@@ -22,7 +23,6 @@ import Screens from './Screens';
 import type { Props as ChildProps } from './TabContainer';
 import TabContainer from './TabContainer';
 
-import type { DeviceId } from '@nibus/core';
 
 const Tabs: React.FC = () => {
   const [devChildren, setDevChildren] = useState<
