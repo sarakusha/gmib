@@ -42,6 +42,8 @@ type Options = {
 
 class SafeScreenConfigurator extends ScreenConfigurator {
   #isBusy = 0;
+  
+  isSerial = false;
 
   safeReload(): Promise<void> {
     this.#isBusy += 1;
@@ -327,6 +329,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
         setTimeout(async () => {
           const connection = new Connection(socket);
           const ctrl = new SafeScreenConfigurator(connection);
+          ctrl.isSerial = true;
           // console.log('SESSION', Object.keys(ctrl.session));
           this.novastarControls.get(id)?.session.close();
           this.novastarControls.set(id, ctrl);
