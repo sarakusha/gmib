@@ -124,7 +124,7 @@
     "@mui/icons-material": "^5.10.3",
     "@mui/lab": "^5.0.0-alpha.97",
     "@mui/material": "^5.10.3",
-    "@nibus/cli": "file:.yalc/@nibus/cli",
+    "@nibus/cli": "^3.7.0",
     "@nibus/core": "^3.6.0",
     "@nibus/detection": "^3.6.0",
     "@nibus/mibs": "^3.6.0",
