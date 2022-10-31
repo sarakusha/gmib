@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+### [3.6.6](https://github.com/sarakusha/gmib/compare/v3.6.5...v3.6.6) (2022-10-31)
+
+
+### Bug Fixes
+
+* added update delay after a new device is detected ([f382d6e](https://github.com/sarakusha/gmib/commit/f382d6e717e3f30d576e39d5cdf13a76509a1777))
+
 ### 3.6.5 (2022-10-31)
 
 
