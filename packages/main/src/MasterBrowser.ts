@@ -3,7 +3,7 @@ import type { Novastar, Screen, ScreenId } from '/@common/novastar';
 
 import { series } from '@novastar/codec/helper';
 
-import { notEmpty } from '/@common/helpers';
+import { delay, notEmpty } from '/@common/helpers';
 import type { CabinetInfo, NovastarTelemetry } from '/@common/helpers';
 
 import debugFactory from 'debug';
@@ -295,13 +295,14 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
     return true;
   }
 
-  close(): boolean {
+  async close(): Promise<boolean> {
     if (!this.running) return false;
     this.running = false;
     clearTimeout(this.finder);
     [...this.novastarControls.values()].forEach(control => control.session.close());
     this.novastarControls.clear();
     this.closeBroadcastDetector();
+    await delay(0);
     this.emit('close');
     return true;
   }

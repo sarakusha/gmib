@@ -161,8 +161,8 @@ browser.on('up', remote => {
   if (isMaster && remoteRang > rang) {
     service.end();
     isMaster = false;
-    master.close();
-    debug(`close MBR: ${rang}`);
+    await master.close();
+    // debug(`close MBR: ${rang}`);
   }
   if (!isMaster && (!masterProxy || masterProxy.rang < remoteRang)) {
     createProxy(remote);
@@ -185,7 +185,12 @@ browser.on('down', remote => {
 });
 
 app.on('before-quit', () => {
-  service.destroy();
+  try {
+    if (isMaster && master) master.close();
+    service.destroy();
+  } catch (err) {
+    debug(`error while close: ${(err as Error).message}`);
+  }
 });
 
 ipcMain.on('setRemoteSecret', (_, identifier: string, secret: bigint) => {
