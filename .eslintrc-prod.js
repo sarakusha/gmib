@@ -12,6 +12,7 @@ module.exports = {
     'plugin:react-hooks/recommended',
     /** @see https://github.com/typescript-eslint/typescript-eslint/tree/master/packages/eslint-plugin#recommended-configs */
     'plugin:@typescript-eslint/recommended',
+    'plugin:mdx/recommended',
     'prettier',
   ],
   parser: '@typescript-eslint/parser',
@@ -67,7 +68,7 @@ module.exports = {
      * Just for beauty
      */
     quotes: ['warn', 'single'],
-    'no-console': ["error", { allow: ["warn", "error"] }]
+    'no-console': ['error', { allow: ['warn', 'error'] }],
   },
   settings: {
     react: {
@@ -84,9 +85,10 @@ module.exports = {
         project: 'packages/*/tsconfig.json',
       },
       node: {
-        extensions: ['.js', '.jsx', '.ts', '.tsx'],
+        extensions: ['.js', '.jsx', '.ts', '.tsx', '.md', '.mdx'],
       },
     },
     'import/core-modules': ['electron'],
+    'mdx/code-blocks': true,
   },
 };

@@ -20,6 +20,11 @@
             <excludedPath local="true" path="$PROJECT_DIR$/dist" />
             <excludedPath local="true" path="$PROJECT_DIR$/packages/playerPreload/exposedInMainWorld.d.ts" />
             <excludedPath local="true" path="$PROJECT_DIR$/packages/preload/exposedInMainWorld.d.ts" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/preload/bak" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/preload/gmibInMainWorld.d.ts" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/preload/playerInMainWorld.d.ts" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/main/tsconfig.tsbuildinfo" />
+            <excludedPath local="true" path="$PROJECT_DIR$/packages/renderer/stats.html" />
           </excludedPaths>
         </serverdata>
       </paths>

@@ -2,5 +2,6 @@ bak/
 scripts/
 *.js
 *.mjs
+*.mdx
 packages/preload/gmibInMainWorld.d.ts
 packages/preload/playerInMainWorld.d.ts

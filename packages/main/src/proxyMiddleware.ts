@@ -16,6 +16,7 @@ import bonjourHap from 'bonjour-hap';
 
 import generateSignature from '/@common/generateSignature';
 import Deferred from '/@common/Deferred';
+import { getMainWindow } from './mainWindow';
 
 type ProxyOptions = {
   readonly host: string;
