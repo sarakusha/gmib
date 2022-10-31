@@ -65,7 +65,6 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
   private broadcastDetector: Socket | undefined;
 
   telemetry = memoize((address: string): NovastarTelemetry | undefined => {
-    debug(JSON.stringify([...this.novastarControls.keys()]));
     const controller = this.novastarControls.get(address);
     if (!controller) {
       setTimeout(() => this.telemetry.cache.delete(address), 0);

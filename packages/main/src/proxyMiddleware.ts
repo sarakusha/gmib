@@ -81,9 +81,9 @@ const tryCreateMasterBrowser = () => {
         createProxy(strongest);
         isMaster = false;
         master.close();
-        debug(`close MBR: ${rang}`);
+        // debug(`close MBR: ${rang}`);
       } else {
-        debug(`MBR ${rang}`);
+        // debug(`MBR ${rang}`);
         isMaster = true;
         master.open();
         masterProxy = undefined;
