@@ -17,6 +17,7 @@ import { TransitionGroup } from 'react-transition-group';
 
 import { getDisplayLabel } from '/@common/video';
 
+import FixedHeadLayout from '../../common/FixedHeadLayout';
 import { useDisplays } from '../../common/displays';
 import { useDeletePlayerMutation, usePlayers } from '../api/player';
 import { PlayerMappingDialogProvider } from '../hooks/usePlayerMappingDialog';
@@ -25,7 +26,6 @@ import { useDispatch, useSelector } from '../store';
 import { setSettingsNode } from '../store/currentSlice';
 import { selectSettingsNode } from '../store/selectors';
 
-import FixedHeadLayout from './FixedHeadLayout';
 import OutputSettings from './OutputSettings';
 import PlayerSettings from './PlayerSettings';
 import SettingsToolbar from './SettingsToolbar';

@@ -1,20 +1,19 @@
-
 import { Box, Typography } from '@mui/material';
+import getScreenLocation from '@novastar/screen/getScreenLocation';
 import groupBy from 'lodash/groupBy';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
+import { cancelTelemetry, startTelemetry } from '../api/novastar';
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useSelector } from '../store';
-import type { Novastar } from '../store/novastarSlice';
-import { selectCurrentTab } from '../store/selectors';
+import { selectCurrentTab, selectNovastarTelemetry } from '../store/selectors';
 
-import type { CabinetInfo } from '/@common/helpers';
-import { getStateAsync, noop, NovastarSelector } from '/@common/helpers';
+import { noop, NovastarSelector } from '/@common/helpers';
 
 import ModuleInfo from './ModuleInfo';
 import TelemetryToolbar from './TelemetryToolbar';
 
-import getScreenLocation from '@novastar/screen/getScreenLocation';
+import type { Novastar } from '/@common/novastar';
 
 // const useStyles = makeStyles(theme => ({
 //   grid: {
@@ -38,35 +37,26 @@ const NovastarTelemetryTab: React.FC<{ device: Novastar | undefined; selected?: 
   const [selectors, setSelectors] = useState(
     new Set([NovastarSelector.Temperature, NovastarSelector.Voltage]),
   );
-  const [loading, setLoading] = useState(false);
-  const isBusy = !device || device.isBusy > 0;
+  // const [loading, setLoading] = useState(false);
+  const isBusy = !device || device.isBusy;
   const { path, screens = [] } = device ?? {};
   const locations = screens.map(({ info }) => info && getScreenLocation(info));
-  const [cabinets, setCabinets] = useState<CabinetInfo[]>([]);
-  const telemetry = useMemo(
-    () => (path !== undefined ? window.novastar.telemetry(path) : undefined),
-    [path],
-  );
-  const start = useCallback(async () => {
-    if (!telemetry) return;
-    setLoading(true);
-    const current = await getStateAsync(setSelectors);
-    await telemetry.start({ selectors: current }, setCabinets);
-    setLoading(false);
-  }, [telemetry]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const { isLoading, telemetry: cabinets = [] } =
+    useSelector(state => selectNovastarTelemetry(state, path ?? '')) ?? {};
   const telemetryToolbar = useMemo(
     () => (
       <TelemetryToolbar
         properties={NovastarSelector}
         selectors={selectors}
         onSelectorChanged={setSelectors}
-        loading={loading}
+        loading={isLoading}
         isBusy={isBusy}
-        start={start}
-        cancel={telemetry?.cancel}
+        start={path ? () => startTelemetry(path, [...selectors]) : undefined}
+        cancel={path ? () => cancelTelemetry(path) : undefined}
       />
     ),
-    [selectors, loading, isBusy, start, telemetry?.cancel],
+    [selectors, isLoading, isBusy, path],
   );
   useEffect(() => {
     if (active) {
@@ -80,7 +70,6 @@ const NovastarTelemetryTab: React.FC<{ device: Novastar | undefined; selected?: 
     () => Object.entries(groupBy(cabinets, cabinet => cabinet.screen)),
     [cabinets],
   );
-  useEffect(() => setCabinets([]), [path]);
   return (
     <Box display={active ? 'inline-block' : 'none'}>
       {grouped.map(([screen, cabs], index) => (

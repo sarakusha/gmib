@@ -2,6 +2,7 @@ import ReloadIcon from '@mui/icons-material/Refresh';
 import SaveIcon from '@mui/icons-material/Save';
 import LoadIcon from '@mui/icons-material/SystemUpdateAlt';
 import { IconButton, Tooltip } from '@mui/material';
+import type { DeviceId } from '@nibus/core';
 import React, { useCallback, useState } from 'react';
 
 import SaveDialog from '../dialogs/SaveDialog';
@@ -13,7 +14,6 @@ import { selectCurrentDevice } from '../store/selectors';
 
 import BusyButton from './BusyButton';
 
-import type { DeviceId } from '@nibus/core';
 
 const load = (dispatch: AppDispatch, id: DeviceId, mib: string): boolean => {
   const data = window.dialogs.loadJSON('Загрузить из');

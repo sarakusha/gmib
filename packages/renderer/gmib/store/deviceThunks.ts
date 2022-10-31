@@ -1,19 +1,22 @@
 // import debugFactory from 'debug';
-import { createAsyncThunk } from '@reduxjs/toolkit';
+import { createAsyncThunk, isAnyOf } from '@reduxjs/toolkit';
+
+import { reAddress } from '/@common/config';
+
+import screenApi, { selectScreens, updateMinihosts } from '../api/screens';
 
 import type { DeviceId } from '@nibus/core';
 import Address, { AddressType } from '@nibus/core/Address';
 import { MCDVI_TYPE, MINIHOST_TYPE } from '@nibus/core/common';
 
-import screenApi, { selectScreens, updateMinihosts } from '../api/screens';
-
 import { setCurrentTab } from './currentSlice';
-import { addDevice, setConnected } from './devicesSlice';
+import { setConnected, updateProperty, updateProps } from './devicesSlice';
 import { startAppListening } from './listenerMiddleware';
 import {
   filterDevicesByAddress,
   selectAllDevices,
   selectCurrentDeviceId,
+  selectDeviceById,
   selectDevicesByAddress,
   // selectScreenAddresses,
 } from './selectors';
@@ -52,7 +55,7 @@ const discoverScreenDevices = (): AppThunk => async (dispatch, getState) => {
       selectDevicesByAddress(getState(), address).length > 0;
     const needUpdate = new Set<number>();
     asyncSerial(addresses, async address => {
-      if (!deviceAddressExists(address)) {
+      if (reAddress.test(address) && !deviceAddressExists(address)) {
         const [timeout, info] = await window.nibus.ping(address);
         if (
           timeout !== -1 &&
@@ -108,24 +111,38 @@ startAppListening({
   },
 });
 
+const nibusNetAddressProps = ['domain', 'subnet', 'did'];
+
 startAppListening({
-  actionCreator: addDevice,
-  effect({ payload: device }, { dispatch, getState }) {
+  matcher: isAnyOf(updateProps, updateProperty),
+  async effect({ payload: [deviceId, props] }, { dispatch, getState }) {
+    const addressChanged =
+      typeof props === 'string'
+        ? nibusNetAddressProps.includes(props)
+        : nibusNetAddressProps.some(name => props[name] !== undefined);
+    if (!addressChanged) return;
     const state = getState();
+    const device = selectDeviceById(state, deviceId);
+    if (!device) return;
     const deviceAddress = new Address(device.address);
     if (deviceAddress.type !== AddressType.mac) return;
-    const { data: addresses } = selectAddresses(state);
+    let { data: addresses } = selectAddresses(state);
+    if (addresses == null) {
+      addresses = (await dispatch(screenApi.endpoints.getAddresses.initiate())).data;
+    }
     if (addresses) {
       for (let i = 0; i < addresses.length; i += 1) {
         const address = addresses[i];
-        const [found] = filterDevicesByAddress([device], new Address(address));
-        if (found) {
-          const { data: screenData } = selectScreenData(state);
-          const screens = screenData ? selectScreens(screenData) : [];
-          screens.forEach(item => {
-            if (item.addresses?.includes(address)) dispatch(updateMinihosts(item.id));
-          });
-          return;
+        if (reAddress.test(address)) {
+          const [found] = filterDevicesByAddress([device], new Address(address));
+          if (found) {
+            const { data: screenData } = selectScreenData(state);
+            const screens = screenData ? selectScreens(screenData) : [];
+            screens.forEach(item => {
+              if (item.addresses?.includes(address)) dispatch(updateMinihosts(item.id));
+            });
+            return;
+          }
         }
       }
     }

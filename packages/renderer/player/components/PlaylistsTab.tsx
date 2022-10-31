@@ -16,6 +16,7 @@ import React, { useCallback } from 'react';
 import { useResizeDetector } from 'react-resize-detector';
 import { TransitionGroup } from 'react-transition-group';
 
+import FixedHeadLayout from '../../common/FixedHeadLayout';
 import SubmitListener from '../../common/SubmitListener';
 import { selectMediaById, useGetMediaQuery } from '../api/media';
 import {
@@ -33,7 +34,6 @@ import { sourceId } from '../utils';
 import { notEmpty } from '/@common/helpers';
 
 import CurrentPlaylist from './CurrentPlaylist';
-import FixedHeadLayout from './FixedHeadLayout';
 import MediaItem from './MediaItem';
 import Player from './Player';
 import PlaylistsToolbar from './PlaylistsToolbar';

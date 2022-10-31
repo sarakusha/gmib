@@ -4,6 +4,7 @@ import { unless } from 'express-unless';
 
 import generateSignature from '/@common/generateSignature';
 
+import localConfig from './localConfig';
 import secret, { getIncomingSecret } from './secret';
 
 // const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:auth`);
@@ -18,6 +19,9 @@ export const isAuthorized = async (req: Request) => {
   const timestamp = Number(req.headers['x-ni-timestamp']);
   const expectedSignature =
     apiSecret && generateSignature(apiSecret, req.method, req.originalUrl, timestamp, req.body);
+  // debug(`id: ${id}`);
+  // debug(`method: ${req.method} ${req.originalUrl} ${timestamp}`);
+  // debug(`body: ${typeof req.body === 'string' ? req.body : JSON.stringify(req.body)}`);
   return Boolean(
     expectedSignature &&
       expectedSignature === req.headers['x-ni-signature'] &&
@@ -27,7 +31,7 @@ export const isAuthorized = async (req: Request) => {
 
 const auth = async (req: Request, res: Response, next: NextFunction) => {
   if (await isAuthorized(req)) next();
-  else res.sendStatus(401);
+  else res.status(401).send({ identifier: localConfig.get('identifier') });
 };
 
 auth.unless = unless;

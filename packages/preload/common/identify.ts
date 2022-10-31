@@ -2,32 +2,32 @@ import { ipcRenderer } from 'electron';
 
 // import debugFactory from 'debug';
 import genSignature from '/@common/generateSignature';
-import type { Identity } from '/@common/Identity';
-
+import type { Credentials } from '/@common/Credentials';
+import { host, port } from '/@common/remote';
 // const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:identify`);
-const identity: Identity = {};
+const credentials: Credentials = {};
 
-const query = new URLSearchParams(window.location.search);
-const host = query.get('host') ?? 'localhost';
-const port = +(query.get('port') ?? 9001) + 1;
+// const query = new URLSearchParams(window.location.search);
+// const host = query.get('host') ?? 'localhost';
+// const port = +(query.get('port') ?? process.env.NIBUS_PORT ?? 9001) + 1;
 
 const initialize = async () => {
   try {
-    const ident =
+    const response =
       host === 'localhost'
-        ? await ipcRenderer.invoke('getLocalIdentification')
+        ? await ipcRenderer.invoke('getLocalCredentials')
         : await ipcRenderer.invoke(
-            'getRemoteIdentification',
-            `http://${host}:${port}/api/identifier`,
+            'getRemoteCredentials',
+            `http://${host}:${port + 1}/api/identifier`,
           );
-    if (ident) {
-      identity.identifier = ident.identifier;
-      identity.apiSecret =
-        ident.apiSecret instanceof Uint8Array
+    if (response) {
+      credentials.identifier = response.identifier;
+      credentials.apiSecret =
+        response.apiSecret instanceof Uint8Array
           ? Buffer.from(
-              ident.apiSecret.buffer,
-              ident.apiSecret.byteOffset,
-              ident.apiSecret.byteLength,
+              response.apiSecret.buffer,
+              response.apiSecret.byteOffset,
+              response.apiSecret.byteLength,
             )
           : undefined;
     }
@@ -36,14 +36,14 @@ const initialize = async () => {
   }
 };
 
-export const getSecret = () => identity.apiSecret?.toString('base64');
+export const getSecret = () => credentials.apiSecret?.toString('base64');
 
-export const setSecret = (apiSecret: bigint) => {
-  ipcRenderer.invoke('setRemoteSecret', identity.identifier, apiSecret);
-  identity.apiSecret = Buffer.from(apiSecret.toString(16), 'hex');
+export const setSecret = (apiSecret: bigint, identifier = credentials.identifier) => {
+  ipcRenderer.send('setRemoteSecret', identifier, apiSecret);
+  credentials.apiSecret = Buffer.from(apiSecret.toString(16), 'hex');
 };
 
-export const getIdentifier = () => identity.identifier;
+export const getIdentifier = () => credentials.identifier;
 
 export const generateSignature = (
   method: string,
@@ -51,6 +51,6 @@ export const generateSignature = (
   timestamp: number,
   body?: unknown,
 ): string | undefined =>
-  identity.apiSecret && genSignature(identity.apiSecret, method, uri, timestamp, body);
+  credentials.apiSecret && genSignature(credentials.apiSecret, method, uri, timestamp, body);
 
 initialize();

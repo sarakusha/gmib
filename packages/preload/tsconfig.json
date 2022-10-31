@@ -16,6 +16,9 @@
     ],
     "baseUrl": ".",
     "paths": {
+      "bonjour-hap": [
+        "../../types/bonjour-hap"
+      ],
       "/@common/*": [
         "../common/*"
       ],
@@ -26,5 +29,11 @@
         "../renderer/player/store/*"
       ]
     }
-  }
+  },
+  "include": [
+    "./common/*.ts",
+    "./gmib/**/*.ts",
+    "./player/**/*.ts",
+    "../../node_modules/@types/dom-mediacapture-transform/index.d.ts"
+  ]
 }

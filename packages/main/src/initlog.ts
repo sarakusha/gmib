@@ -1,5 +1,3 @@
-import { BrowserWindow } from 'electron';
-
 import debugFactory from 'debug';
 import log from 'electron-log';
 
@@ -20,9 +18,6 @@ const updateDebugger = () => {
       : import.meta.env.VITE_DEBUG;
   if (ns) {
     debugFactory.enable(ns);
-    BrowserWindow.getAllWindows()
-      .map(window => window.webContents)
-      .forEach(wc => wc.send('DEBUG', ns));
   }
 };
 

@@ -18,6 +18,7 @@ import type { MediaInfo } from '/@common/mediaInfo';
 import { findById, notEmpty } from '/@common/helpers';
 import type { CreatePlaylist, Playlist } from '/@common/playlist';
 
+import auth from './auth';
 import config, { port } from './config';
 import { beginTransaction, commitTransaction, incrementCounterString, rollback } from './db';
 import {
@@ -47,6 +48,7 @@ import {
   getMediaByOriginalMD5,
   insertMedia,
 } from './media';
+import novastarApi from './novastarApi';
 import {
   deletePlayerMapping,
   getPlayerMappingById,
@@ -71,6 +73,7 @@ import {
   updatePlaylist,
   updatePlaylistItem,
 } from './playlist';
+import proxyMiddleware from './proxyMiddleware';
 import {
   deleteExtraAddresses,
   deletePlayer,
@@ -236,7 +239,7 @@ const loadMedia = async (file: File, force = false): Promise<MediaInfo> => {
 const updateTest = (scr: Screen) => {
   const primary = screen.getPrimaryDisplay();
   const displays = screen.getAllDisplays();
-  debug(`updateTest: ${scr.display}, ${typeof scr.display} ${typeof primary.id}`);
+  // debug(`updateTest: ${scr.display}, ${typeof scr.display} ${typeof primary.id}`);
 
   const { id } = scr;
   const [win, prev] = screenWindows.get(id) ?? [];
@@ -262,7 +265,6 @@ const updateTest = (scr: Screen) => {
       break;
   }
   const page = scr.test ? findById(config.get('pages'), scr.test) : undefined;
-  debug(`display: ${JSON.stringify(display?.bounds)}`);
   if (!display || !page) {
     win?.hide();
     return;
@@ -301,15 +303,20 @@ electronApp.whenReady().then(async () => {
   screens.forEach(updateTest);
 });
 
-/*
-const parseNumber = (value: unknown): number | undefined => {
-  if (value == null) return undefined;
-  const res = Number(value);
-  return Number.isNaN(res) ? undefined : res;
-};
-*/
-
 const api = express.Router();
+
+api.use(
+  auth.unless({
+    path: [
+      /\/api\/login\/.*/,
+      /\/api\/handshake\/.*/,
+      '/api/identifier',
+      '/api/novastar/subscribe',
+    ],
+  }),
+);
+
+api.use(proxyMiddleware);
 
 api.get('/media', (req, res, next) => {
   // const { skip, take } = req.query;
@@ -526,7 +533,6 @@ api.get('/screen', (req, res, next) => {
 });
 
 api.get('/screen/:id', (req, res, next) => {
-  debug('GET SCREENS');
   loadScreen(+req.params.id)
     .then(props => {
       if (!props) res.sendStatus(404);
@@ -565,11 +571,13 @@ api.delete('/screen/:id', (req, res, next) => {
 api.put('/screen', async (req, res, next) => {
   try {
     const { addresses, ...props } = req.body as Screen;
+    // debug(`upd0: ${props.brightness}`);
     const { changes } = await updateScreen(await uniqueScreenName(props));
     if (changes === 0) {
       res.sendStatus(404);
       return;
     }
+    // debug(`upd1: ${props.brightness}`);
     if (addresses && addresses.length > 0) {
       await Promise.all(
         addresses.map(async address => {
@@ -579,6 +587,7 @@ api.put('/screen', async (req, res, next) => {
         }),
       );
     }
+    // debug(`upd2: ${props.brightness}`);
     await deleteExtraAddresses(props.id, addresses);
     // let ids: number[] | undefined;
     // if (players && players.length > 0) {
@@ -594,14 +603,18 @@ api.put('/screen', async (req, res, next) => {
     //   );
     // }
     // await deleteExtraPlayers(screen.id, ids);
+    // debug(`upd3: ${props.brightness}`);
     const result = await loadScreen(props.id);
+    // debug(`upd4: ${props.brightness}`);
     result && updateTest(result);
+    // debug(`upd5: ${props.brightness}`);
     res.json(result);
     // if (result?.addresses?.length) {
     //   getMainWindow()?.webContents.send('screenChanged', props.id);
     // }
     // await updateScreens();
   } catch (e) {
+    debug(`error while update screen: ${e}`);
     next(e);
   }
 });
@@ -811,5 +824,7 @@ api.post('/login/:id', async (req, res) => {
 api.get('/identifier', (req, res) => {
   res.send(localConfig.get('identifier'));
 });
+
+api.use('/novastar', novastarApi);
 
 export default api;

@@ -27,6 +27,8 @@ db.exec('PRAGMA foreign_keys = ON');
 
 const beginTransactionImpl = promisify(db.exec.bind(db, 'BEGIN TRANSACTION'));
 const commitTransactionImpl = promisify(db.exec.bind(db, 'COMMIT'));
+const asyncAll = promisify(db.all.bind(db));
+const asyncRun = promisify(db.run.bind(db));
 export const beginTransaction: () => Promise<true> = () => beginTransactionImpl().then(() => true);
 export const commitTransaction: () => Promise<false> = () =>
   commitTransactionImpl().then(() => false);
@@ -42,6 +44,31 @@ export const formatDate = (date?: string): string => dayjs(date).format(DATETIME
 
 export const parseDate = (value?: string): string | undefined =>
   typeof value === 'undefined' ? undefined : dayjs(value, DATETIME_FORMAT).toISOString();
+
+type ColumnDefinition = {
+  cid: number;
+  name: string;
+  type: string;
+  notnull: 0 | 1;
+  dflt_value: null | string | number;
+  pk: 0 | 1;
+};
+
+const checkColumnExists = async (
+  table: string,
+  column: string,
+  definition: string,
+): Promise<void> => {
+  try {
+    const columns = (await asyncAll(`PRAGMA table_info(${table})`)) as ColumnDefinition[];
+    if (columns.findIndex(item => item.name === column) === -1) {
+      debug(`ALTER TABLE ${table} ADD ${column} ${definition}`);
+      await asyncRun(`ALTER TABLE ${table} ADD ${column} ${definition}`);
+    }
+  } catch (err) {
+    debug(`error while check column: ${table}.${column}: ${err}`);
+  }
+};
 
 function createTables(): void {
   db.serialize(() => {
@@ -179,10 +206,12 @@ function createTables(): void {
             borderRight INTEGER DEFAULT 0,
             brightnessFactor REAL DEFAULT 1,
             test TEXT,
-            display INTEGER
+            display INTEGER,
+            brightness INTEGER
         )`,
       err => err && debug(`error while create screen ${err}`),
     );
+    checkColumnExists('screen', 'brightness', 'INTEGER default 60');
     db.run(
       `CREATE TABLE IF NOT EXISTS address (
             address TEXT NOT NULL,

@@ -20,15 +20,13 @@ import { useDispatch } from '../store';
 
 import { DefaultDisplays } from '/@common/video';
 import { reAddress } from '/@common/config';
-import { toHexId } from '/@common/helpers';
-
+import { reIPv4, toHexId } from '/@common/helpers';
 
 import FormFieldSet from './FormFieldSet';
 
-
 // import type { Screen } from '/@common/video';
 
-const onBeforeAddress = (value: string): boolean => reAddress.test(value);
+const onBeforeAddress = (value: string): boolean => reAddress.test(value) || reIPv4.test(value);
 
 const FieldSet = styled(FormFieldSet)(({ theme }) => ({
   padding: theme.spacing(1),
@@ -174,7 +172,7 @@ const ScreenComponent: React.FC<Props> = ({
                 <Field name="name" component={FormikTextField} fullWidth disabled={readonly} />
               </FieldSet>
               <FieldSet
-                legend="Коэффициент яркости"
+                legend="Коэффициент автояркости"
                 disabled={readonly}
                 title="Применяется при использовании нескольких типов экранов"
               >

@@ -14,9 +14,21 @@ declare module '@emotion/react' {
 // declare module '@mui/private-theming' {
 //   interface DefaultTheme extends MuiTheme {}
 // }
-
+declare module '@mui/material/styles' {
+  interface Palette {
+    active: Palette['primary'];
+  }
+  interface PaletteOptions {
+    active: PaletteOptions['primary'];
+  }
+}
 // defaultProps - не работает!
 const theme = createTheme({
+  palette: {
+    active: {
+      main: '#fff',
+    },
+  },
   components: {
     MuiCssBaseline: {
       styleOverrides: `

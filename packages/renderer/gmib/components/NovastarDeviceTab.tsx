@@ -5,24 +5,24 @@ import type { InputProps, SelectProps, TextFieldProps } from '@mui/material';
 import { Box, Paper, TextField, Typography } from '@mui/material';
 import type { Theme } from '@mui/material/styles';
 import { css, styled } from '@mui/material/styles';
-import React, { useCallback, useEffect, useState } from 'react';
-
-import { useToolbar } from '../providers/ToolbarProvider';
-import { useDispatch, useSelector } from '../store';
-import type { Novastar } from '../store/novastarSlice';
-import { setScreenColorBrightness } from '../store/novastarSlice';
-
-import { noop } from '/@common/helpers';
-
-import {selectCurrentTab} from '../store/selectors';
-
-import DisplayModeSelector from './DisplayModeSelector';
-import NovastarToolbar from './NovastarToolbar';
-
 import { ChipTypeEnum } from '@novastar/native/ChipType';
 import { DviSelectModeEnum } from '@novastar/native/DviSelectMode';
 import type { BrightnessRGBV } from '@novastar/screen/ScreenConfigurator';
 import getScreenLocation from '@novastar/screen/getScreenLocation';
+import React, { useCallback, useEffect, useState } from 'react';
+
+import { useToolbar } from '../providers/ToolbarProvider';
+import { useDispatch, useSelector } from '../store';
+import { updateNovastarScreens } from '../api/novastar';
+
+import { minmax, noop } from '/@common/helpers';
+
+import { selectCurrentTab } from '../store/selectors';
+
+import DisplayModeSelector from './DisplayModeSelector';
+import NovastarToolbar from './NovastarToolbar';
+
+import type { Novastar } from '/@common/novastar';
 
 type RGBVItemProps = { kind: keyof BrightnessRGBV } & Omit<
   TextFieldProps,
@@ -115,6 +115,8 @@ const NovastarDeviceTab: React.FC<{ device: Novastar | undefined; selected?: boo
   const tab = useSelector(selectCurrentTab);
   const active = selected && tab === 'devices' && device !== undefined;
   const path = device?.path;
+  // const [setGamma] = useSetGammaMutation();
+  // const [setDisplayMode] = useSetDisplayModeMutation();
   useEffect(() => {
     if (active) {
       // path && dispatch(reloadNovastar(path));
@@ -128,16 +130,18 @@ const NovastarDeviceTab: React.FC<{ device: Novastar | undefined; selected?: boo
     e => {
       const { name, value } = e.target;
       const [index, color] = name.split(':', 2);
-      const screen = Number(index);
+      const screen = Number(index) as 0;
       path &&
         isBrightnessProps(color) &&
         dispatch(
-          setScreenColorBrightness({
-            path,
-            screen: Number(screen),
-            color,
-            value: Number(value),
-          }),
+          updateNovastarScreens(path, screen, 'rgbv', rgbv => ({
+            overall: rgbv?.overall ?? 255,
+            red: rgbv?.red ?? 255,
+            green: rgbv?.green ?? 255,
+            blue: rgbv?.blue ?? 255,
+            vRed: rgbv?.vRed ?? 255,
+            [color]: minmax(255, Number(value)),
+          })),
         );
     },
     [dispatch, path],
@@ -145,26 +149,16 @@ const NovastarDeviceTab: React.FC<{ device: Novastar | undefined; selected?: boo
   const gammaHandler = useCallback<React.ChangeEventHandler<HTMLInputElement>>(
     e => {
       const { name, value } = e.target;
-      path &&
-        window.novastar.setGamma({
-          path,
-          screen: Number(name),
-          value: Number(value),
-        });
+      path && dispatch(updateNovastarScreens(path, Number(name), 'gamma', Number(value)));
     },
-    [path],
+    [path, dispatch],
   );
   const modeHandler = useCallback<Required<SelectProps>['onChange']>(
     e => {
       const { name, value } = e.target;
-      path &&
-        window.novastar.setDisplayMode({
-          path,
-          screen: Number(name),
-          value: Number(value),
-        });
+      path && dispatch(updateNovastarScreens(path, Number(name), 'mode', Number(value)));
     },
-    [path],
+    [path, dispatch],
   );
 
   if (!device || !device.info) return null;
@@ -207,7 +201,7 @@ const NovastarDeviceTab: React.FC<{ device: Novastar | undefined; selected?: boo
           >
             <Name>Модель</Name>
             <Value>{info.name}</Value>
-            <Name>mac</Name>
+            <Name>S/N</Name>
             <Value>{info.mac}</Value>
             <Name>Вход</Name>
             <Value>{info.dviSelect ? DviSelectModeEnum[info.dviSelect] || 'DVI' : '-'}</Value>

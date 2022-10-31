@@ -1,4 +1,3 @@
-
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import BrightnessHighIcon from '@mui/icons-material/BrightnessHigh';
 import type { SliderProps } from '@mui/material';
@@ -41,11 +40,13 @@ const Brightness: React.FC<BrightnessProps> = ({
         size="small"
         onClick={e => value !== undefined && onChange?.(e, Math.min(value + 1, 100))}
         disabled={disabled || typeof value !== 'number'}
+        color="primary"
       >
-        <BrightnessHighIcon />
+        <BrightnessHighIcon fontSize="inherit" />
       </RepeatButton>
       <Box flexGrow={1} p={1}>
         <Slider
+          size="small"
           orientation="vertical"
           getAriaValueText={valuetext}
           min={0}
@@ -60,8 +61,9 @@ const Brightness: React.FC<BrightnessProps> = ({
         size="small"
         onClick={e => value !== undefined && onChange?.(e, Math.max(value - 1, 0))}
         disabled={disabled || typeof value !== 'number'}
+        color="primary"
       >
-        <Brightness4Icon />
+        <Brightness4Icon fontSize="inherit" />
       </RepeatButton>
     </Box>
   </Box>

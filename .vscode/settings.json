@@ -26,9 +26,32 @@
   "sqltools.useNodeRuntime": true,
   "npm.exclude": "",
   "cSpell.words": [
+    "автояркости",
+    "Автояркость",
+    "dflt",
+    "dirh",
+    "dirv",
+    "hinvert",
+    "hoffs",
+    "hofs",
+    "hres",
+    "isecret",
+    "isecrets",
+    "mcdvi",
     "Minihost",
+    "Minihosts",
+    "notnull",
     "novastar",
+    "novastars",
+    "osecret",
+    "osecrets",
     "RGBV",
-    "tssrp"
+    "Solidgauge",
+    "suncalc",
+    "tssrp",
+    "vinvert",
+    "voffs",
+    "vofs",
+    "vres"
   ]
 }

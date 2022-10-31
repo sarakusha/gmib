@@ -67,3 +67,4 @@ tsconfig.tsbuildinfo
 /yalc.lock
 /packages/renderer/stats.html
 bak/
+*.session.sql

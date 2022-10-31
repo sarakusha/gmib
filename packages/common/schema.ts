@@ -1,10 +1,10 @@
+import { logLevels } from '@nibus/core/common';
 import Ajv from 'ajv';
 import type { Schema } from 'electron-store';
 
 import type { Config } from './config';
 import { DEFAULT_OVERHEAD_PROTECTION, SPLINE_COUNT } from './config';
 
-import { logLevels } from '@nibus/core/common';
 
 export const configSchema: Schema<Config> = {
   location: {

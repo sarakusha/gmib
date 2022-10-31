@@ -1,3 +1,4 @@
+import Address from '@nibus/core/Address';
 import { createEntityAdapter, type EntityState } from '@reduxjs/toolkit';
 import { createApi } from '@reduxjs/toolkit/query/react';
 import debugFactory from 'debug';
@@ -12,10 +13,10 @@ import type { ValueType, WithRequiredProp } from '/@common/helpers';
 import { notEmpty, toErrorMessage } from '/@common/helpers';
 
 import type { AppThunk, AppThunkConfig, RootState } from '../store';
+import { invalidateBrightness } from '../store/configSlice';
 import { setCurrentScreen } from '../store/currentSlice';
 import { selectCurrentScreenId, selectDevicesByAddress } from '../store/selectors';
 
-import Address from '@nibus/core/Address';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:screen`);
 
@@ -124,15 +125,19 @@ const screenApi = createApi({
       async onQueryStarted(screen, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          dispatch(
-            screenApi.util.updateQueryData('getScreens', undefined, state => {
-              adapter.setOne(state, data);
-            }),
-          );
-          // console.log('addresses', screen.addresses);
           // eslint-disable-next-line @typescript-eslint/no-use-before-define
-          screen.addresses?.length && dispatch(updateMinihosts(screen.id));
-        } catch {
+          if (!debouncedUpdateScreen.pending(screen.id)) {
+            dispatch(
+              screenApi.util.updateQueryData('getScreens', undefined, state => {
+                adapter.setOne(state, data);
+              }),
+            );
+          }
+          if (screen.addresses?.some(address => reAddress.test(address))) {
+            // eslint-disable-next-line @typescript-eslint/no-use-before-define
+            setTimeout(() => dispatch(updateMinihosts(screen.id)), 0);
+          }
+        } catch (err) {
           dispatch(screenApi.endpoints.getScreens.initiate());
         }
       },
@@ -173,6 +178,12 @@ export const updateScreen =
         if (!prev) throw new Error(`Unknown screen id: ${id}`);
         const screen = { id, ...(typeof update === 'function' ? update(prev) : update) };
         adapter.setOne(state, screen);
+        if (
+          (prev.brightness !== screen.brightness && !screen.brightnessFactor) ||
+          Boolean(prev.brightnessFactor) !== Boolean(screen.brightnessFactor)
+        ) {
+          setTimeout(() => dispatch(invalidateBrightness(id)), 0);
+        }
         dispatch(debouncedUpdateScreen(screen));
       }),
     );
@@ -184,7 +195,7 @@ export const useScreens = () =>
       screens: data && selectScreens(data),
       ...other,
     }),
-    pollingInterval: 3000,
+    pollingInterval: 15000,
   });
 
 export const useScreen = (id?: number) =>
@@ -194,15 +205,15 @@ export const useScreen = (id?: number) =>
       screen: data && id ? selectScreen(data, id) : undefined,
       ...other,
     }),
-    pollingInterval: 3000,
   });
 
 const selectScreenData = screenApi.endpoints.getScreens.select();
 
-export const updateMinihosts = createDebouncedAsyncThunk<void, number>(
+export const updateMinihosts = createDebouncedAsyncThunk<void, number, AppThunkConfig>(
   'updateMinihosts',
   async (scrId, { getState }) => {
-    const state = getState() as RootState;
+    // debug(`update minihost: ${scrId}`);
+    const state = getState();
     const { data: screenData } = selectScreenData(state);
     const screen = screenData && selectScreen(screenData, scrId);
     if (screen && screen.addresses) {
@@ -216,6 +227,7 @@ export const updateMinihosts = createDebouncedAsyncThunk<void, number>(
       const getParams = getHostParams(screen);
       try {
         addresses
+          .filter(address => reAddress.test(address))
           .map(getParams)
           .filter(notEmpty)
           .forEach(({ address, left, top, width, height }) => {

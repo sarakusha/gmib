@@ -36,6 +36,6 @@ const ControlBar = React.forwardRef<HTMLDivElement, Props>(
   ),
 );
 
-ControlBar.displayName = 'ControBar';
+ControlBar.displayName = 'ControlBar';
 
 export default ControlBar;

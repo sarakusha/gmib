@@ -35,11 +35,11 @@ const Blockquote = styled(Paper)(({ theme }) => ({
 
 const mdx: MDXComponents = {
   p: ({ ref, ...props }) => <Typography paragraph {...props} />,
-  h1: ({ ref, ...props }) => <Typography {...props} component="h1" variant="h1" gutterBottom />,
-  h2: ({ ref, ...props }) => <Typography {...props} component="h2" variant="h2" gutterBottom />,
-  h3: ({ ref, ...props }) => <Typography {...props} component="h3" variant="h3" gutterBottom />,
-  h4: ({ ref, ...props }) => <Typography {...props} component="h4" variant="h4" gutterBottom />,
-  h5: ({ ref, ...props }) => <Typography {...props} component="h5" variant="h5" gutterBottom />,
+  h1: ({ ref, ...props }) => <Typography {...props} component="h1" variant="h4" gutterBottom />,
+  h2: ({ ref, ...props }) => <Typography {...props} component="h2" variant="h4" gutterBottom />,
+  h3: ({ ref, ...props }) => <Typography {...props} component="h3" variant="h5" gutterBottom />,
+  h4: ({ ref, ...props }) => <Typography {...props} component="h4" variant="h6" gutterBottom />,
+  h5: ({ ref, ...props }) => <Typography {...props} component="h5" variant="h6" gutterBottom />,
   h6: ({ ref, ...props }) => <Typography {...props} component="h6" variant="h6" gutterBottom />,
   blockquote: ({ ref, ...props }) => <Blockquote {...(props as PaperProps<'div'>)} />,
   ul: ({ ref, ...props }) => <Typography {...props} component="ul" />,

@@ -1,7 +1,8 @@
+/* eslint-disable no-bitwise */
+
 import type { AddressParam, DeviceId, Display, LogLevel } from '@nibus/core';
 import Address, { AddressType } from '@nibus/core/Address';
 import { hasProps } from '@novastar/screen/common';
-
 import { createSelector } from '@reduxjs/toolkit';
 import maxBy from 'lodash/maxBy';
 import pick from 'lodash/pick';
@@ -13,10 +14,11 @@ import { devicesAdapter } from './devicesSlice';
 import type { FlasherState } from './flasherSlice';
 import { logAdapter } from './logSlice';
 import { mibsAdapter } from './mibsSlice';
-import { novastarAdapter } from './novastarSlice';
+// import { novastarAdapter } from './novastarSlice';
 import { remoteHostsAdapter } from './remoteHostsSlice';
 import type { SensorDictionary, SensorKind, SensorsState, SensorState } from './sensorsSlice';
 import type { FinderState, SessionState } from './sessionSlice';
+import { selectNovastarTelemetryById } from './telemetrySlice';
 
 import type { RootState } from './index';
 
@@ -24,22 +26,23 @@ import type { Config, OverheatProtection, Page } from '/@common/config';
 import type { Health, ValueState } from '/@common/helpers';
 import { findById, notEmpty } from '/@common/helpers';
 
+
 export const {
   selectAll: selectAllDevices,
   selectById: selectDeviceById,
   selectIds: selectDeviceIds,
 } = devicesAdapter.getSelectors<RootState>(state => state.devices);
 
-export const {
-  selectAll: selectAllNovastars,
-  selectById: selectNovastarByPath,
-  selectIds: selectNovastarIds,
-} = novastarAdapter.getSelectors<RootState>(state => state.novastar);
+// export const {
+//   selectAll: selectAllNovastars,
+//   selectById: selectNovastarByPath,
+//   selectIds: selectNovastarIds,
+// } = novastarAdapter.getSelectors<RootState>(state => state.novastar);
 
-export const selectNovastarScreen = createSelector(
-  [selectNovastarByPath, (_state, _path, screen: number) => screen],
-  (novastar, screen) => novastar?.screens?.[screen],
-);
+// export const selectNovastarScreen = createSelector(
+//   [selectNovastarByPath, (_state, _path, screen: number) => screen],
+//   (novastar, screen) => novastar?.screens?.[screen],
+// );
 
 export const selectConfig = (state: RootState): ConfigState => state.config;
 export const selectLoading = (state: RootState): boolean => selectConfig(state).loading;
@@ -75,14 +78,15 @@ export const selectCurrentDevice = (state: RootState): DeviceState | undefined =
 };
 export const selectCurrentHealth = (state: RootState): Health | undefined =>
   selectCurrent(state).health;
-export const selectIsLoggedIn = (state: RootState): boolean => selectCurrent(state).isLoggedIn;
-export const selectNovastarIsBusy = (state: RootState): boolean => {
-  const path = selectCurrentDeviceId(state);
-  const novastar = path !== undefined && selectNovastarByPath(state, path);
-  return Boolean(novastar && novastar.isBusy > 0);
-};
+export const selectAuthRequired = (state: RootState) => selectCurrent(state).authRequired;
+// export const selectNovastarIsBusy = (state: RootState): boolean => {
+//   const path = selectCurrentDeviceId(state);
+//   const novastar = path !== undefined && selectNovastarByPath(state, path);
+//   return Boolean(novastar && novastar.isBusy > 0);
+// };
 // export const selectCurrentPlaylist = (state: RootState): number | undefined =>
 //   selectCurrent(state).playlist;
+export const selectBroadcastDetected = (state: RootState) => selectCurrent(state).broadcastDetected;
 
 export const selectAllProps = (state: RootState, id: DeviceId): DeviceProps =>
   selectDeviceById(state, id)?.props ?? {};
@@ -114,7 +118,7 @@ export const filterDevicesByAddress = <D extends Pick<DeviceState, 'address' | '
     if (address.equals(device.address)) return true;
     if (address.type === AddressType.net) {
       if (device.mib.startsWith('minihost')) {
-        // debug(`${device.props.domain?.raw}.${device.props.subnet?.raw}.${device.props.did?.raw}`);
+        // console.log(`${device.props.domain?.raw}.${device.props.subnet?.raw}.${device.props.did?.raw}`);
         return (
           address.domain === device.props.domain?.raw &&
           address.subnet === device.props.subnet?.raw &&
@@ -129,7 +133,11 @@ export const filterDevicesByAddress = <D extends Pick<DeviceState, 'address' | '
         );
       }
     }
-    return false;
+    return (
+      address.type === AddressType.mac &&
+      typeof device.props.serno?.value === 'string' &&
+      address.equals(device.props.serno.value)
+    );
   });
 
 export const selectDevicesByAddress: (state: RootState, address: AddressParam) => DeviceState[] =
@@ -211,3 +219,8 @@ export const selectScreenAddresses = (state: RootState): string[] =>
     ),
   ].sort();
 */
+
+export const selectTelemetry = (state: RootState) => state.telemetry;
+
+export const selectNovastarTelemetry = (state: RootState, path: string) =>
+  selectNovastarTelemetryById(selectTelemetry(state).novastar, path);

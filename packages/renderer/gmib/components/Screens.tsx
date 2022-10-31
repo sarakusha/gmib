@@ -1,10 +1,11 @@
 import AddToQueue from '@mui/icons-material/AddToQueue';
 import CloseIcon from '@mui/icons-material/Close';
-import { Box, Container, IconButton, Paper, Tab, Tabs } from '@mui/material';
+import { Container, IconButton, Paper, Tab, Tabs } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useSnackbar } from 'notistack';
 import React, { useEffect, useState } from 'react';
 
+import FixedHeadLayout from '../../common/FixedHeadLayout';
 import { useCreateScreenMutation, useDeleteScreenMutation, useScreens } from '../api/screens';
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useDispatch, useSelector } from '../store';
@@ -70,7 +71,7 @@ const Screens: React.FC = () => {
     };
   const single = screens.length === 1;
   return (
-    <Box sx={{ width: 1 }}>
+    <FixedHeadLayout>
       <Paper square>
         <Tabs
           value={isSuccess && value ? value : false}
@@ -116,12 +117,12 @@ const Screens: React.FC = () => {
           )}
         </Tabs>
       </Paper>
-      <Container maxWidth="md" sx={{ px: 2, py: 1 }}>
+      <Container maxWidth="md">
         {screens.map(({ id }) => (
           <Screen id={id} key={id} selected={value} readonly={readonly} single={single} />
         ))}
       </Container>
-    </Box>
+    </FixedHeadLayout>
   );
 };
 

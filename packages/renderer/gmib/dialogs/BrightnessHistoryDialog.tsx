@@ -1,5 +1,6 @@
 import { Box, Button, Dialog, DialogActions, DialogContent, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
+import type { BrightnessHistory } from '@nibus/core';
 import debugFactory from 'debug';
 import type {
   SeriesLineOptions,
@@ -18,7 +19,6 @@ import { noop } from '/@common/helpers';
 
 import { selectBrightness, selectLocation } from '../store/selectors';
 
-import type { BrightnessHistory } from '@nibus/core';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:brightness`);
 

@@ -119,7 +119,7 @@ const PlayerSettings: React.FC<{ id?: number }> = ({ id }) => {
             {/*           <FormControlLabel
             name="autoPlay"
             control={<Checkbox checked={values.autoPlay} onChange={handleChange} />}
-            label="Авозапуск"
+            label="Автозапуск"
             /> */}
             <FormControl component="fieldset" margin="normal">
               <FormLabel component="legend">Переходы между роликами</FormLabel>

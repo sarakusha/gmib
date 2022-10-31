@@ -23,15 +23,13 @@ import {
   Tabs,
   TextField,
 } from '@mui/material';
-
 import type { DeviceId } from '@nibus/core';
 import Address from '@nibus/core/Address';
-
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import DeviceIcon from '../components/DeviceIcon';
 import { useDevices, useDispatch, useSelector } from '../store';
-import { selectFinder, selectLinks } from '../store/selectors';
+import { filterDevicesByAddress, selectFinder, selectLinks } from '../store/selectors';
 import type { DeviceInfo } from '../store/sessionSlice';
 import { resetDetected } from '../store/sessionSlice';
 import useDefaultKeys from '../util/useDefaultKeys';
@@ -105,10 +103,8 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
   const addDevice = (key: string): void => {
     const dev = detected.find(item => deviceKey(item) === key);
     if (!dev?.owner) return;
-    if (
-      devices.findIndex(device => device.address === dev.address && device.parent === dev.owner) ===
-      -1
-    ) {
+    const [found] = filterDevicesByAddress(devices, new Address(dev.address));
+    if (!found || found.parent !== dev.owner) {
       window.nibus.createDevice(dev.owner, dev.address.toString(), dev.type, dev.version);
     }
   };

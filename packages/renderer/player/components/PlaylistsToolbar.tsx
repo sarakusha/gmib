@@ -170,6 +170,6 @@ const PlaylistsToolbar: React.FC<Props> = ({ size }) => {
   );
 };
 
-PlaylistsToolbar.displayName = 'PlaylistsToobar';
+PlaylistsToolbar.displayName = 'PlaylistsToolbar';
 
 export default React.memo(PlaylistsToolbar);
