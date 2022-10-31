@@ -211,9 +211,19 @@ export const { useReloadMutation } = novastarApi;
 export const sse: Middleware = api => {
   const { getState, dispatch } = api as MiddlewareAPI<AppDispatch, RootState>;
   const evtSource = new EventSource('/api/novastar/subscribe');
-  evtSource.addEventListener('add', ({ data }) => {
+  const novastarReady = new Promise<void>((resolve, reject) => {
+    setTimeout(
+      () =>
+        dispatch(novastarApi.endpoints.getNovastars.initiate())
+          .unwrap()
+          .then(() => resolve(), reject),
+      0,
+    );
+  });
+  evtSource.addEventListener('add', async ({ data }) => {
     try {
       const [device] = JSON.parse(data) as [Novastar];
+      await novastarReady;
       dispatch(
         novastarApi.util.updateQueryData('getNovastars', undefined, draft => {
           adapter.addOne(draft, device);
@@ -223,9 +233,10 @@ export const sse: Middleware = api => {
       console.error(`error while parse args: ${(err as Error).message}`);
     }
   });
-  evtSource.addEventListener('change', ({ data }) => {
+  evtSource.addEventListener('change', async ({ data }) => {
     try {
       const [id, changes] = JSON.parse(data) as [string, Partial<Novastar>];
+      await novastarReady;
       dispatch(
         novastarApi.util.updateQueryData('getNovastars', undefined, draft => {
           adapter.updateOne(draft, { id, changes });
@@ -243,9 +254,10 @@ export const sse: Middleware = api => {
       console.error(`error while parse args: ${(err as Error).message}`);
     }
   });
-  evtSource.addEventListener('remove', ({ data }) => {
+  evtSource.addEventListener('remove', async ({ data }) => {
     try {
       const [path] = JSON.parse(data) as [string];
+      await novastarReady;
       dispatch(
         novastarApi.util.updateQueryData('getNovastars', undefined, draft => {
           adapter.removeOne(draft, path);
@@ -258,9 +270,10 @@ export const sse: Middleware = api => {
       console.error(`error while parse args: ${(err as Error).message}`);
     }
   });
-  evtSource.addEventListener('screen', ({ data }) => {
+  evtSource.addEventListener('screen', async ({ data }) => {
     try {
       const [screenId, key, value] = JSON.parse(data) as [ScreenId, keyof Screen, never];
+      await novastarReady;
       dispatch(
         novastarApi.util.updateQueryData('getNovastars', undefined, draft => {
           // const device = selectNovastar(draft, screenId.path);
@@ -274,9 +287,10 @@ export const sse: Middleware = api => {
       console.error(`error while parse args: ${(err as Error).message}`);
     }
   });
-  evtSource.addEventListener('update', ({ data }) => {
+  evtSource.addEventListener('update', async ({ data }) => {
     try {
       const [device] = JSON.parse(data) as [Novastar];
+      await novastarReady;
       dispatch(
         novastarApi.util.updateQueryData('getNovastars', undefined, draft => {
           adapter.setOne(draft, device);
