@@ -333,7 +333,8 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
           this.novastarControls.get(id)?.session.close();
           this.novastarControls.set(id, ctrl);
           this.emit('add', { path: id, isBusy: ctrl.isBusy, connected: true });
-          setTimeout(() => this.reload(id), 1000);
+          this.reload(id, true);
+          setTimeout(() => this.updateState(id), 30000).unref();
           socket.once('close', () => {
             connection.close();
           });
