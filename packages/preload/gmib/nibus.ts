@@ -191,7 +191,7 @@ export const sendConfig = debounce((state: Record<string, unknown>): void => {
 const getChildren = (parent: IDevice): IDevice[] =>
   session.devices.get().filter(device => device.connection?.owner === parent && device !== parent);
 
-(function openSession() {
+function openSession() {
   const updatePortsHandler = (): void => {
     ipcDispatch(setPortCount(session.ports));
   };
@@ -371,7 +371,10 @@ const getChildren = (parent: IDevice): IDevice[] =>
   window.addEventListener('beforeunload', () => {
     session.close();
   });
-})();
+}
+
+window.onload = openSession;
+
 
 export const createDevice = (
   parent: DeviceId,
@@ -446,6 +449,8 @@ ipcRenderer.on('serviceDown', (event, remoteHost: RemoteHost) => {
   debug('serviceDown');
   ipcDispatch(removeRemoteHost(getRemoteId(remoteHost)));
 });
+
+ipcRenderer.on('reloadDevices', reloadDevices);
 
 type SaveTelemetry = (x: number, y: number, temperature: number) => void;
 

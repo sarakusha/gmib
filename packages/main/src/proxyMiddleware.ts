@@ -155,7 +155,9 @@ const createProxy = (remote: bonjourHap.RemoteService) => {
   ready.resolve();
 };
 
-browser.on('up', remote => {
+browser.on('up', async remote => {
+  // debug(`UP ${remote.referer.address}`);
+  setTimeout(() => getMainWindow()?.webContents.send('reloadDevices'), 1000).unref();
   if (isLocalhost(remote.referer.address)) return;
   const remoteRang = Number(remote.txt.rang);
   if (isMaster && remoteRang > rang) {
