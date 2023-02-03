@@ -1,6 +1,7 @@
 {
   "extends": "../../tsconfig-settings.json",
   "compilerOptions": {
+    "declaration": false,
     "sourceMap": false,
     "skipLibCheck": true,
     // Don't automatically include anything.

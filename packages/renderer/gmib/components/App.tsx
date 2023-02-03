@@ -157,7 +157,7 @@ const App: React.FC = () => {
               sx={{
                 flexGrow: 1,
                 display: 'flex',
-                alignItems: 'flex-end',
+                alignItems: 'baseline',
                 whiteSpace: 'nowrap',
               }}
             >

@@ -49,19 +49,25 @@ const parseAnsi = (info: string): Span[] => {
   );
 };
 
+// eslint-disable-next-line no-control-regex
+const removeAnsi = (value: string): string => value.replaceAll(/\x1b\[[^m]+m/g, '');
+
 const logSlice = createSlice({
   name: 'log',
   initialState: logAdapter.getInitialState(),
   reducers: {
     addLog(state, { payload: line }: PayloadAction<string>) {
-      // eslint-disable-next-line no-plusplus
-      const matches = line.match(/\[([^\]]+)] \[([^\]]+)]\s+([\d-]{10}T[\d:.]{12}Z )?(\S+)(.*)/);
+      // TODO: не работает
+      const matches = removeAnsi(line).match(
+        /\[([^\]]+)] \[([^\]]+)]\s+([\d-]{10}T[\d:.]{12}Z )?(\S+)(.*)/,
+      );
       // eslint-disable-next-line no-plusplus
       const id = ++logIndex;
       let added = false;
       if (matches) {
         const [, time, , time2, tag, tail] = matches;
         const [, info = tail, delta] = time2 ? [] : tail.match(/(.*)(\+\S+)$/) ?? [];
+        // console.log({ line, matches, time, time2, tag, info, delta });
         if (time2 || delta) {
           const css = `color: ${colorHash.hex(tag)};`;
 

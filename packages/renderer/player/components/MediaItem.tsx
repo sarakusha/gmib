@@ -26,7 +26,7 @@ import type { XYCoord } from 'dnd-core';
 import type { CSSProperties } from 'react';
 import React from 'react';
 import { useDrag, useDrop } from 'react-dnd';
-import type { ListChildComponentProps } from 'react-window';
+// import type { ListChildComponentProps } from 'react-window';
 
 import { formatTime, ItemTypes } from '../utils';
 
@@ -164,11 +164,7 @@ const MediaItem = React.forwardRef<HTMLLIElement, MediaItemProps>((props, ref) =
   const { md5, thumbnail, duration, filename } = info;
   const refInner = React.useRef<HTMLLIElement>(null);
   React.useImperativeHandle(ref, () => refInner.current as HTMLLIElement);
-  const [, drop] = useDrop<
-    { dragIndex: number },
-    void,
-    { canDrop: boolean; isOver: boolean }
-  >({
+  const [, drop] = useDrop<{ dragIndex: number }, void, { canDrop: boolean; isOver: boolean }>({
     accept: ItemTypes.Media,
     collect(monitor) {
       return { canDrop: monitor.canDrop(), isOver: monitor.isOver() };
@@ -286,10 +282,10 @@ const MediaItem = React.forwardRef<HTMLLIElement, MediaItemProps>((props, ref) =
 
 MediaItem.displayName = 'MediaItem';
 
-export const renderMediaItem = ({
-  index,
-  style,
-  data,
-}: ListChildComponentProps<MediaItemProps[]>) => <MediaItem style={style} {...data[index]} />;
+// export const renderMediaItem = ({
+//   index,
+//   style,
+//   data,
+// }: ListChildComponentProps<MediaItemProps[]>) => <MediaItem style={style} {...data[index]} />;
 
 export default React.memo(MediaItem);

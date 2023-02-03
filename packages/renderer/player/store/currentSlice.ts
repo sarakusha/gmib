@@ -5,7 +5,7 @@ import type { SortOrder } from '/@common/mediaInfo';
 
 export const tabNames = ['player', 'media', 'scheduler', 'settings'] as const;
 
-export type TabNames = typeof tabNames[number];
+export type TabNames = (typeof tabNames)[number];
 
 export type CurrentState = MediaPositionState & {
   tab: TabNames;

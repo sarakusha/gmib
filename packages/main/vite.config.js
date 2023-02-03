@@ -1,6 +1,6 @@
 import { node } from '../../.electron-vendors.cache.json';
 import path from 'path';
-import { builtinModules } from 'module';
+import cleanup from 'rollup-plugin-cleanup';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
 
 const PACKAGE_ROOT = __dirname;
@@ -21,69 +21,40 @@ const config = {
   resolve: {
     alias: {
       '/@common/': path.join(PACKAGE_ROOT, '../common') + '/',
-      'file-type': require.resolve('file-type'),
-      'strtok3/core': require.resolve('strtok3/core'),
-      strtok3: require.resolve('strtok3'),
-      'iconv-lite': require.resolve('iconv-lite'),
-      hexoid: require.resolve('hexoid'),
-      ws: require.resolve('ws'),
     },
-    // conditions: ['node', 'require', 'default'],
+    conditions: ['node', 'require'],
+    mainFields: ['main'],
   },
+  // ssr: {
+  //   format: 'cjs',
+  // },
   build: {
+    ssr: true,
     sourcemap: false,
     target: `node${node}`,
     outDir: 'dist',
     assetsDir: '.',
-    minify: process.env.MODE !== 'development',
+    // minify: process.env.MODE !== 'development',
     lib: {
       entry: path.join(__dirname, 'src/index.ts'),
       formats: ['cjs'],
     },
     rollupOptions: {
       external: [
-        'iconv-lite',
-        'electron',
-        'electron-devtools-installer',
+        // 'electron',
+        // 'electron-devtools-installer',
         '@serialport/bindings-cpp',
-        'usb-detection',
+        'usb',
         'sqlite3',
         '@nibus/detection',
-        '@nibus/mibs',
-        'formidable',
-        ...builtinModules.flatMap(p => [p, `node:${p}`]),
       ],
       output: {
-        entryFileNames: '[name].cjs',
-        manualChunks() {
-          return 'index';
-        },
+        entryFileNames: 'index.cjs',
+        interop: 'compat',
       },
-      plugins: [
-        nodeResolve(),
-        /*
-                {
-                  name: 'test',
-                  transform(code, id) {
-                    if (id.indexOf('parsers') !== -1) console.log(id);
-                    return null;
-                  },
-                  resolveDynamicImport(specifier, importer) {
-                    console.log({ specifier, importer });
-                    return null;
-                  },
-                },
-        */
-      ],
+      plugins: [nodeResolve(['require', 'node', 'main']), cleanup({ comments: 'none' })],
     },
     emptyOutDir: true,
-    brotliSize: false,
-    esbuild: {
-      legalComments: 'none',
-    },
-    // commonjsOptions: {
-    //   dynamicRequireTargets:
-    // }
   },
 };
 

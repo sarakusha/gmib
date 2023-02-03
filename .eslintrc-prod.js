@@ -1,4 +1,5 @@
-module.exports = {
+const { defineConfig } = require('eslint-define-config');
+module.exports = defineConfig({
   root: true,
   env: {
     es2021: true,
@@ -70,6 +71,14 @@ module.exports = {
     quotes: ['warn', 'single'],
     'no-console': ['error', { allow: ['warn', 'error'] }],
   },
+  overrides: [
+    {
+      files: ['packages/{renderer,preload}/**'],
+      rules: {
+        'import/no-extraneous-dependencies': 'off',
+      },
+    },
+  ],
   settings: {
     react: {
       version: 'detect',
@@ -91,4 +100,4 @@ module.exports = {
     'import/core-modules': ['electron'],
     'mdx/code-blocks': true,
   },
-};
+});

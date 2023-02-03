@@ -33,6 +33,8 @@ export const devicesAdapter = createEntityAdapter<DeviceState>({
   selectId: device => device.id,
 });
 
+const { selectAll } = devicesAdapter.getSelectors();
+
 const devicesSlice = createSlice({
   name: 'devices',
   initialState: devicesAdapter.getInitialState(),
@@ -103,6 +105,13 @@ const devicesSlice = createSlice({
           isBusy: entity.isBusy - 1,
         },
       });
+    },
+    connectionClosed(state, { payload: path }: PayloadAction<string>) {
+      const ids = selectAll(state)
+        .filter(device => device.path === path)
+        .map(({ id }) => id);
+      // ids.forEach(id => this.removeDevice(state, id)); // side effect
+      devicesAdapter.removeMany(state, ids);
     },
     // releaseDevice(state, { payload: id }: PayloadAction<DeviceId>) {
     //   const device = findDeviceById(id);
@@ -209,6 +218,7 @@ export const {
   setParent,
   updateProperty,
   updateProps,
+  connectionClosed,
 } = devicesSlice.actions;
 
 export default devicesSlice.reducer;

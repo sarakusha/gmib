@@ -1,8 +1,13 @@
-import { builtinModules } from 'module';
 import { join } from 'path';
-import { nodeResolve } from '@rollup/plugin-node-resolve';
+import { visualizer } from 'rollup-plugin-visualizer';
+import cleanup from 'rollup-plugin-cleanup';
+import { builtinModules } from 'module';
+// import { nodeResolve } from '@rollup/plugin-node-resolve';
 
 import { chrome } from '../../.electron-vendors.cache.json';
+
+import external from '../../external';
+// import { dependencies as external } from '../../package.json';
 
 const PACKAGE_ROOT = __dirname;
 
@@ -30,16 +35,18 @@ const config = {
   envDir: process.cwd(),
   resolve: {
     alias: {
-      // '/@main/': join(PACKAGE_ROOT, '../main/src') + '/',
       '/@renderer/': join(PACKAGE_ROOT, '../renderer/gmib') + '/',
       '/@player/': join(PACKAGE_ROOT, '../renderer/player') + '/',
       '/@common/': join(PACKAGE_ROOT, '../common') + '/',
     },
+    conditions: ['node', 'require', 'default', 'browser'],
+    mainFields: ['main'],
   },
-  // optimizeDeps: {
-  //   include: ['@novastar/codec'],
-  // },
+  ssr: {
+    format: 'cjs',
+  },
   build: {
+    ssr: true,
     sourcemap: false,
     target: `chrome${chrome}`,
     outDir: 'dist',
@@ -56,48 +63,32 @@ const config = {
       formats: ['cjs'],
     },
     rollupOptions: {
-      plugins: [
-        nodeResolve(),
-        /*
-        {
-          name: 'disable-treeshake',
-          transform(code, id) {
-            if (
-              /@novastar[\\/]screen[\\/]lib[\\/]api[\\/]/.test(id) ||
-              /@novastar[\\/]native[\\/]lib[\\/]generated[\\/]api[\\/]/.test(id)
-            ) {
-              // Disable tree shake for @novastar/{screen/lib,native/lib/generated}/api
-              return {
-                code,
-                map: null,
-                moduleSideEffects: 'no-treeshake',
-              };
-            }
-            return null;
-          },
-        },
-*/
-      ],
-      external: [
-        'iconv-lite',
-        'electron',
-        'electron-store',
-        '@nibus/detection',
-        '@nibus/mibs',
-        ...builtinModules.flatMap(p => [p, `node:${p}`]),
-      ],
       output: {
         entryFileNames: `${process.env.LIB_NAME}.cjs`,
-      //   manualChunks() {
-      //     return 'index';
-      //   },
+        interop: 'compat',
       },
+      plugins: [cleanup({ comments: 'none' })],
+      external,
+      // external: [
+      //   // 'debug',
+      //   'electron',
+      //   // 'electron-log',
+      //   'electron-devtools-installer',
+      //   '@serialport/bindings-cpp',
+      //   // 'usb',
+      //   // 'sqlite3',
+      //   // '@nibus/detection',
+      //   // '@nibus/core',
+      //   // '@nibus/mibs',
+      //   // '@nibus/service',
+      //   ...Object.keys(dependencies),
+      //   ...builtinModules.flatMap(p => [p, `node:${p}`]),
+      // ],
     },
     // commonjsOptions: {
-    //   include: [], // Important!!! Error: 'default' is not exported by...
+    //   include: [/ebml/], // Important!!! Error: 'default' is not exported by...
     // },
     emptyOutDir: false,
-    brotliSize: false,
   },
 };
 

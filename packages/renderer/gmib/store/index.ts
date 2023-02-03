@@ -24,7 +24,6 @@ import sensorsReducer from './sensorsSlice';
 import sessionReducer from './sessionSlice';
 import telemetryReducer from './telemetrySlice';
 
-
 import './configThunks';
 import './deviceThunks';
 import './healthThunks';

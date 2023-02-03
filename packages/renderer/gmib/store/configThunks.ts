@@ -4,7 +4,7 @@ import sortBy from 'lodash/sortBy';
 import SunCalc from 'suncalc';
 
 import createDebouncedAsyncThunk from '../../common/createDebouncedAsyncThunk';
-import novastarApi, { selectNovastar } from '../api/novastar';
+import novastarApi, { selectNovastarIds } from '../api/novastar';
 import screenApi, { parseLocation, selectScreen, selectScreens } from '../api/screens';
 import type { Point } from '../util/MonotonicCubicSpline';
 import MonotonicCubicSpline from '../util/MonotonicCubicSpline';
@@ -27,7 +27,6 @@ import {
 import { setCurrentDevice } from './currentSlice';
 import { startAppListening } from './listenerMiddleware';
 import {
-  selectAllDevices,
   selectAutobrightness,
   selectBrightness,
   selectConfig,
@@ -347,15 +346,13 @@ startAppListening({
 const selectNovastarData = novastarApi.endpoints.getNovastars.select();
 
 startAppListening({
-  predicate: (_, currentState) =>
-    !selectCurrentDeviceId(currentState) &&
-    Boolean(
-      selectNovastarData(currentState).data?.ids.length || selectDeviceIds(currentState).length,
-    ),
+  predicate: (_, currentState) => !selectCurrentDeviceId(currentState),
   effect(_, { getState, dispatch }) {
     const state = getState();
     const { data } = selectNovastarData(state);
-    const id = selectAllDevices(state)[0]?.id || (data && selectNovastar(data, data.ids[0])?.path);
-    dispatch(setCurrentDevice(id));
+    let ids = selectDeviceIds(state) as string[];
+    if (ids.length === 0 && data) ids = (data ? selectNovastarIds(data) : []) as string[];
+    const [id] = ids;
+    id && dispatch(setCurrentDevice(id));
   },
 });

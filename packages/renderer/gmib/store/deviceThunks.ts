@@ -9,14 +9,21 @@ import type { DeviceId } from '@nibus/core';
 import Address, { AddressType } from '@nibus/core/Address';
 import { MCDVI_TYPE, MINIHOST_TYPE } from '@nibus/core/common';
 
-import { setCurrentTab } from './currentSlice';
-import { setConnected, updateProperty, updateProps } from './devicesSlice';
+import { setCurrentDevice, setCurrentTab } from './currentSlice';
+import {
+  connectionClosed,
+  removeDevice,
+  setConnected,
+  updateProperty,
+  updateProps,
+} from './devicesSlice';
 import { startAppListening } from './listenerMiddleware';
 import {
   filterDevicesByAddress,
   selectAllDevices,
   selectCurrentDeviceId,
   selectDeviceById,
+  selectDeviceIds,
   selectDevicesByAddress,
   // selectScreenAddresses,
 } from './selectors';
@@ -145,6 +152,18 @@ startAppListening({
           }
         }
       }
+    }
+  },
+});
+
+startAppListening({
+  matcher: isAnyOf(removeDevice, connectionClosed),
+  effect: (_, { dispatch, getState }) => {
+    const state = getState();
+    const id = selectCurrentDeviceId(state);
+    if (id) {
+      const ids = selectDeviceIds(state);
+      if (!ids.includes(id)) dispatch(setCurrentDevice());
     }
   },
 });

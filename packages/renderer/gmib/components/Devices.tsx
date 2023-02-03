@@ -196,8 +196,9 @@ const Devices: React.FC = () => {
                 </ListItemIcon>
                 <ListItemText
                   primaryTypographyProps={noWrap}
+                  secondaryTypographyProps={noWrap}
                   primary={isEmptyAddress ? category : name}
-                  secondary={isEmptyAddress ? id : mib}
+                  secondary={isEmptyAddress ? path : mib}
                 />
                 {removable && id && (
                   <ListItemSecondaryAction>

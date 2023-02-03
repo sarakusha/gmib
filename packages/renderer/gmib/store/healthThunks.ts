@@ -28,7 +28,6 @@ import {
 
 import type { AppThunk, RootState } from './index';
 
-
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:health`);
 
 let running = false;

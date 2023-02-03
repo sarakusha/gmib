@@ -23,10 +23,10 @@ const DeviceTabs: React.FC<Props> = ({ id }) => {
   const isEmpty = !device || device.isEmptyAddress;
   const [value, setValue] = useState<TabState>('props');
   const mib = device?.mib;
-  const isMinihost = mib?.startsWith('minihost');
+  const hasTelemetry = mib && ['minihost_v2.06', 'minihost_v2.06b', 'minihost3'].includes(mib);
   const isMinihost3 = mib === 'minihost3';
   const tab = useSelector(selectCurrentTab);
-  if (!device) return null;
+  if (!device || !mib) return null;
   return (
     <FixedHeadLayout>
       <Paper square>
@@ -38,7 +38,7 @@ const DeviceTabs: React.FC<Props> = ({ id }) => {
           variant="fullWidth"
         >
           <Tab label="Свойства" disabled={isEmpty} value="props" />
-          {isMinihost && !isEmpty && (
+          {hasTelemetry && !isEmpty && (
             <Tab label="Телеметрия" disabled={isEmpty} value="telemetry" />
           )}
           {isMinihost3 && <Tab label="Прошивка" value="firmware" />}
@@ -46,10 +46,10 @@ const DeviceTabs: React.FC<Props> = ({ id }) => {
       </Paper>
       <Container maxWidth={value !== 'telemetry' ? 'sm' : undefined}>
         <PropertyGridTab id={id} selected={value === 'props' && device !== undefined} />
-        {isMinihost && (
+        {hasTelemetry && (
           <TelemetryTab id={id} selected={value === 'telemetry' && device !== undefined} />
         )}
-        {isMinihost && (
+        {hasTelemetry && (
           <FirmwareTab id={id} selected={value === 'firmware' && device !== undefined} />
         )}
       </Container>

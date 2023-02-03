@@ -1,5 +1,6 @@
 import ReloadIcon from '@mui/icons-material/Refresh';
 import SaveIcon from '@mui/icons-material/Save';
+import SdStorageIcon from '@mui/icons-material/SdStorage';
 import LoadIcon from '@mui/icons-material/SystemUpdateAlt';
 import { IconButton, Tooltip } from '@mui/material';
 import type { DeviceId } from '@nibus/core';
@@ -13,7 +14,6 @@ import type { PropTuple } from '../store/devicesSlice';
 import { selectCurrentDevice } from '../store/selectors';
 
 import BusyButton from './BusyButton';
-
 
 const load = (dispatch: AppDispatch, id: DeviceId, mib: string): boolean => {
   const data = window.dialogs.loadJSON('Загрузить из');
@@ -42,6 +42,20 @@ const PropertyGridToolbar: React.FC = () => {
   };
   return (
     <>
+      {device?.mib === 'minihost4' && (
+        <Tooltip title="Записать все изменения на устройство" enterDelay={1000}>
+          <div>
+            <IconButton
+              color="inherit"
+              onClick={() => id && window.nibus.writeToStorage(id)}
+              disabled={!mib}
+              size="large"
+            >
+              <SdStorageIcon />
+            </IconButton>
+          </div>
+        </Tooltip>
+      )}
       <Tooltip title="Загрузить свойства из файла" enterDelay={1000}>
         <div>
           <IconButton

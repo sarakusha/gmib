@@ -4,7 +4,7 @@ import { createSlice } from '@reduxjs/toolkit';
 import type { Health } from '/@common/helpers';
 
 // import { addScreen, removeScreen, showHttpPage } from './configSlice';
-import { addDevice, removeDevice } from './devicesSlice';
+import { addDevice } from './devicesSlice';
 // import { addNovastar, removeNovastar } from './novastarSlice';
 
 export type TabValues = 'devices' | 'screens' | 'autobrightness' | 'overheat' | 'log' | 'help';
@@ -82,11 +82,11 @@ const currentSlice = createSlice({
         state.device = id;
       }
     });
-    builder.addCase(removeDevice, (state, { payload: id }) => {
-      if (state.device === id) {
-        state.device = undefined;
-      }
-    });
+    // builder.addCase(removeDevice, (state, { payload: id }) => {
+    //   if (state.device === id) {
+    //     state.device = undefined;
+    //   }
+    // });
     // builder.addCase(addNovastar, (state, { payload: { path } }) => {
     //   if (!state.device) {
     //     state.device = path;

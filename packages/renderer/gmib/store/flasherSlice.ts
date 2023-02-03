@@ -3,7 +3,6 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 import { createSlice } from '@reduxjs/toolkit';
 import type { OptionsObject, SnackbarMessage } from 'notistack';
 
-
 export type FlasherState = {
   progress: number;
   flashing: boolean;

@@ -2,7 +2,6 @@ import type { DeviceId, Display, Host } from '@nibus/core';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { createSlice, current } from '@reduxjs/toolkit';
 
-
 export type SessionStatus = 'idle' | 'pending' | 'succeeded' | 'failed' | 'closed';
 
 export type DeviceInfo = {
@@ -21,7 +20,7 @@ export interface SessionState extends Partial<Host> {
   status: SessionStatus;
   error: string | undefined;
   portCount: number;
-  devices: DeviceId[];
+  // devices: DeviceId[];
   online: boolean;
   displays: Display[];
   finder: FinderState;
@@ -34,7 +33,7 @@ const initialState: SessionState = {
   status: 'idle',
   error: undefined,
   portCount: 0,
-  devices: [],
+  // devices: [],
   online: false,
   displays: [],
   finder: {
@@ -59,9 +58,9 @@ const sessionSlice = createSlice({
     setPortCount(state, { payload: portCount }: PayloadAction<number>) {
       state.portCount = portCount;
     },
-    setDevices(state, { payload: devices }: PayloadAction<DeviceId[]>) {
-      state.devices = devices;
-    },
+    // setDevices(state, { payload: devices }: PayloadAction<DeviceId[]>) {
+    //   state.devices = devices;
+    // },
     setHostDescription(state, { payload: hostDesc }: PayloadAction<Host>) {
       Object.assign(state, hostDesc);
     },
@@ -91,7 +90,7 @@ const sessionSlice = createSlice({
   },
 });
 export const {
-  setDevices,
+  // setDevices,
   setHostDescription,
   setOnline,
   setDisplays,

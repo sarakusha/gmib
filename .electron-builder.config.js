@@ -19,6 +19,19 @@ const config = {
     'packages/**/dist/**',
     'packages/renderer/assets/**',
     'packages/main/assets/output/**',
+    // 'node_modules/@babel/runtime/**',
+    '!node_modules/{@colors,@commitlint}/**/*',
+    '!node_modules/@novastar/{codec,native,net,screen}/build/module/**',
+    '!node_modules/@nibus/{cli,core,detection,mibs}/build/module/**',
+    // '!node_modules/typescript',
+    '!node_modules/rxjs/src',
+    '!node_modules/rxjs/dist/{bundles,esm,esm5}',
+    '!**/*.map',
+    '!node_modules/sqlite3/deps',
+    '!node_modules/ajv/lib',
+    '!node_modules/object.assign/test.html',
+
+    // '!node_modules/**/*',
     // 'node_modules/ajv/**/*.map',
     // ...(process.env.PLAYER !== '1'
     //   ? ['!(packages/{player,playerPreload}/**)']

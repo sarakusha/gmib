@@ -3,15 +3,17 @@
 import { defineConfig } from 'vite';
 import { fileURLToPath } from 'url';
 import path from 'path';
-import { builtinModules } from 'module';
+import cleanup from 'rollup-plugin-cleanup';
+// import { builtinModules } from 'module';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import react from '@vitejs/plugin-react';
 import mdx from '@mdx-js/rollup';
 import checker from 'vite-plugin-checker';
 import { createRequire } from 'module'; // Bring in the ability to create the 'require' method
-import { visualizer } from 'rollup-plugin-visualizer';
-import { nodeResolve } from '@rollup/plugin-node-resolve';
+// import { visualizer } from 'rollup-plugin-visualizer';
+// import { nodeResolve } from '@rollup/plugin-node-resolve';
 import helmet from 'helmet';
+// import { renderer } from 'unplugin-auto-expose';
 import preventLoadSourceMap from '../common/preventLoadSourceMap';
 
 const require = createRequire(import.meta.url);
@@ -39,8 +41,8 @@ export default defineConfig({
     },
   },
   plugins: [
-    visualizer(),
-    nodeResolve(),
+    // visualizer(),
+    // nodeResolve(),
     react({
       jsxImportSource: '@emotion/react',
       babel: {
@@ -83,21 +85,25 @@ export default defineConfig({
         gmib: path.join(PACKAGE_ROOT, 'index.html'),
         player: path.join(PACKAGE_ROOT, 'player.html'),
       },
-      external: ['electron', ...builtinModules.flatMap(p => [p, `node:${p}`])],
+      // external: ['electron', ...builtinModules.flatMap(p => [p, `node:${p}`])],
     },
     // commonjsOptions: {
     //   include: [], // Important!!! Error: 'default' is not exported by...
     // },
     emptyOutDir: true,
-    brotliSize: false,
+    reportCompressedSize: false,
     chunkSizeWarningLimit: 2000,
+    plugins: [cleanup({ comments: 'none' })],
+    // commonjsOptions: {
+    //   requireReturnsDefault: 'preferred',
+    // },
   },
   test: {
     environment: 'happy-dom',
   },
-  optimizeDeps: {
-    include: ['react/jsx-runtime'],
-  },
+  // optimizeDeps: {
+  //   include: ['react/jsx-runtime'],
+  // },
   // https://github.com/vitejs/vite/issues/8644#issuecomment-1159308803
   esbuild: {
     logOverride: { 'this-is-undefined-in-esm': 'silent' },

@@ -5,3 +5,5 @@ scripts/
 *.mdx
 packages/preload/gmibInMainWorld.d.ts
 packages/preload/playerInMainWorld.d.ts
+.github/
+.git/

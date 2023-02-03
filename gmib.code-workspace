@@ -5,6 +5,9 @@
     },
     {
       "path": "../ebml"
+    },
+    {
+      "path": ".github"
     }
   ],
   "settings": {
@@ -17,6 +20,16 @@
       }
     ],
     "sqltools.useNodeRuntime": true,
-    "npm.exclude": ""
+    "npm.exclude": "",
+    "files.exclude": {
+      "**/.git": true,
+      "**/.svn": true,
+      "**/.hg": true,
+      "**/CVS": true,
+      "**/.DS_Store": true,
+      "**/Thumbs.db": true,
+      "./.github": false
+    },
+    "liveServer.settings.multiRootWorkspaceName": "gmib"
   }
 }

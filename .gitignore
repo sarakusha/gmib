@@ -68,3 +68,4 @@ tsconfig.tsbuildinfo
 /packages/renderer/stats.html
 bak/
 *.session.sql
+stats.html

@@ -26,7 +26,6 @@ import type { Config, OverheatProtection, Page } from '/@common/config';
 import type { Health, ValueState } from '/@common/helpers';
 import { findById, notEmpty } from '/@common/helpers';
 
-
 export const {
   selectAll: selectAllDevices,
   selectById: selectDeviceById,

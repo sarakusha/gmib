@@ -22,7 +22,7 @@ export type SensorDictionary = Record<SensorAddress, SensorState>;
 
 const sensorKinds = ['temperature', 'illuminance'] as const;
 
-export type SensorKind = typeof sensorKinds[number];
+export type SensorKind = (typeof sensorKinds)[number];
 
 export interface SensorsState {
   /**
