@@ -1,22 +1,27 @@
 import { app, ipcMain } from 'electron';
 
-import ciao from '@homebridge/ciao';
+import * as ciao from '@homebridge/ciao';
 import debugFactory from 'debug';
 import express from 'express';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import type { RequestHandler } from 'http-proxy-middleware';
 import sortBy from 'lodash/sortBy';
 
+import bonjourHap from 'bonjour-hap';
+
+import { networkInterfaces } from 'os';
+
 import master from './MasterBrowser';
 import { port as currentPort } from './config';
 import localConfig from './localConfig';
 import { getOutgoingSecret } from './secret';
+import { getMainWindow } from './mainWindow';
 
-import bonjourHap from 'bonjour-hap';
 
 import generateSignature from '/@common/generateSignature';
 import Deferred from '/@common/Deferred';
-import { getMainWindow } from './mainWindow';
+import { notEmpty } from '/@common/helpers';
+
 
 type ProxyOptions = {
   readonly host: string;
@@ -59,8 +64,14 @@ const browser = bonjour.find({ type: 'novastar' }, () => {
   clearTimeout(timeout);
 });
 
-const isLocalhost = (address: string) =>
-  ['127.0.0.1', '::1', '::ffff:127.0.0.1', '0.0.0.0'].includes(address);
+const getLocalAddresses = (): string[] =>
+  Object.values(networkInterfaces())
+    .flat()
+    .filter(notEmpty)
+    .map(info => info.address);
+
+const isLocalhost = (address: string) => getLocalAddresses().includes(address);
+// ['127.0.0.1', '::1', '::ffff:127.0.0.1', '0.0.0.0'].includes(address);
 
 let isMaster = false;
 
@@ -97,7 +108,7 @@ const tryCreateMasterBrowser = () => {
     });
 };
 
-timeout = setTimeout(tryCreateMasterBrowser, 3000).unref();
+timeout = setTimeout(tryCreateMasterBrowser, 5000).unref();
 
 const createProxy = (remote: bonjourHap.RemoteService) => {
   const host = remote.referer.address;
