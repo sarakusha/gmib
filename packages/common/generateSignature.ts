@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+import nodeCrypto from 'crypto';
 
 const isEmpty = (obj: unknown) =>
   typeof obj === 'object' &&
@@ -16,7 +16,7 @@ export default function generateSignature(
   const url = new URL(uri, 'http://localhost');
   const path = url.pathname + url.search;
 
-  const hmac = crypto.createHmac('SHA256', apiSecret);
+  const hmac = nodeCrypto.createHmac('SHA256', apiSecret);
 
   hmac.update(`${method.toUpperCase()}${path}${timestamp}`);
 
