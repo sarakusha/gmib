@@ -16,7 +16,7 @@ const impScreenProps = [
   'moduleHeight',
 ] as const;
 
-type ScreenOptions = Readonly<Pick<Screen, typeof impScreenProps[number]>>;
+type ScreenOptions = Readonly<Pick<Screen, (typeof impScreenProps)[number]>>;
 
 export const isEqualOptions = <T extends ScreenOptions>(a: T, b: T): boolean =>
   impScreenProps.reduce((res, key) => res && a[key] === b[key], true);

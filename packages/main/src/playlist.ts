@@ -1,4 +1,4 @@
-// import { nanoid } from '@reduxjs/toolkit';
+// import { nanoid } from 'nanoid';
 
 import type { NullableOptional } from '/@common/helpers';
 import type { CreatePlaylist, Playlist, PlaylistItem } from '/@common/playlist';

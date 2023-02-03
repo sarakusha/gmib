@@ -4,10 +4,9 @@ import type { Display as DisplayType } from '@nibus/core';
 import debugFactory from 'debug';
 import find from 'lodash/find';
 
-import { DefaultDisplays } from '../../common/video';
+import { DefaultDisplays } from '/@common/video';
 
 import getAllDisplays from './getAllDisplays';
-
 
 type Handler = Parameters<WebContents['setWindowOpenHandler']>[0];
 
