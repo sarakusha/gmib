@@ -5,17 +5,16 @@ import { app as electronApp, screen } from 'electron';
 import fs from 'fs';
 import path from 'path';
 
-import { nanoid } from '@reduxjs/toolkit';
 import type { SRPServerSessionStep1 } from '@sarakusha/tssrp6a';
 import { SRPParameters, SRPRoutines, SRPServerSession } from '@sarakusha/tssrp6a';
 import debugFactory from 'debug';
 import express from 'express';
 import type { File } from 'formidable';
 import formidable from 'formidable';
-import pMap from 'p-map';
+import { nanoid } from 'nanoid';
 
 import type { MediaInfo } from '/@common/mediaInfo';
-import { findById, notEmpty } from '/@common/helpers';
+import { asyncSerial, findById, notEmpty } from '/@common/helpers';
 import type { CreatePlaylist, Playlist } from '/@common/playlist';
 
 import auth from './auth';
@@ -356,13 +355,12 @@ api.post('/media', (req, res, next) => {
     } else {
       // debug(JSON.stringify(files));
       const loaded = (
-        await pMap(
+        await asyncSerial(
           Object.values(files).map(file => (Array.isArray(file) ? file[0] : file)),
           file =>
             loadMedia(file).catch(e =>
               debug(`error while loading ${file.originalFilename}: ${e.message}`),
             ),
-          { concurrency: 1 },
         )
       ).filter(notEmpty);
       debug(`files uploaded: ${JSON.stringify(loaded)}`);
