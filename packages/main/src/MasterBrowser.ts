@@ -42,7 +42,7 @@ type Options = {
 
 class SafeScreenConfigurator extends ScreenConfigurator {
   #isBusy = 0;
-  
+
   isSerial = false;
 
   safeReload(): Promise<void> {
@@ -241,7 +241,11 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
         // debug(`listen on ${UDP_PORT}`);
         broadcastDetector.setBroadcast(true);
         broadcastDetector.setMulticastTTL(128);
-        broadcastDetector.addMembership(MULTICAST_ADDRESS);
+        try {
+          broadcastDetector.addMembership(MULTICAST_ADDRESS);
+        } catch (e) {
+          debug(`error while addMembership: ${(e as Error).message}`);
+        }
       });
       broadcastDetector.on('message', (msg, remote) => {
         // debug(`MULTICAST: ${msg}, ${JSON.stringify(remote)}`);
