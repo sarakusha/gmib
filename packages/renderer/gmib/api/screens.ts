@@ -17,7 +17,6 @@ import { invalidateBrightness } from '../store/configSlice';
 import { setCurrentScreen } from '../store/currentSlice';
 import { selectCurrentScreenId, selectDevicesByAddress } from '../store/selectors';
 
-
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:screen`);
 
 type Location = {

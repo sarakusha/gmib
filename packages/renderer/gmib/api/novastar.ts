@@ -1,5 +1,5 @@
-import { createEntityAdapter, type EntityState } from '@reduxjs/toolkit';
-import type { Middleware, MiddlewareAPI } from '@reduxjs/toolkit';
+import { createEntityAdapter } from '@reduxjs/toolkit';
+import type { EntityState, Middleware, MiddlewareAPI } from '@reduxjs/toolkit';
 import { createApi } from '@reduxjs/toolkit/query/react';
 
 // import debugFactory from 'debug';
