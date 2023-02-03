@@ -7,6 +7,7 @@ import type {
   FoundListener,
   Host,
   IDevice,
+  INibusConnection,
   Kind,
   NibusSessionEvents,
   PortArg,
@@ -19,6 +20,7 @@ import {
   getMibTypes as getMibTypesOrig,
   getNibusSession,
 } from '@nibus/core';
+import { nanoid } from 'nanoid';
 import debugFactory from 'debug';
 import debounce from 'lodash/debounce';
 import memoize from 'lodash/memoize';
@@ -31,6 +33,7 @@ import type { DeviceProps, DeviceState } from '/@renderer/store/devicesSlice';
 import {
   addDevice,
   changeAddress,
+  connectionClosed,
   deviceBusy,
   deviceReady,
   removeDevice,
@@ -47,7 +50,6 @@ import {
   addDetected,
   releaseSession,
   resetDetected,
-  setDevices,
   setDisplays,
   setHostDescription,
   setOnline,
@@ -75,13 +77,10 @@ import Minihost3Loader from './Minihost3Loader';
 
 import ipcDispatch from '../common/ipcDispatch';
 
-// import { createConnection } from './novastar';
-
 import { validateConfig } from '/@common/schema';
 import { enqueueSnackbar, setFlashing, setProgress } from '/@renderer/store/flasherSlice';
 
 export type { Address };
-// import patchEmitter from './patchEmitter';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:preload`);
 const RESTART_DELAY = 3000;
@@ -90,13 +89,9 @@ let isConnected = false;
 
 const session = getNibusSession(port, host);
 
-// patchEmitter(session, 'session');
-
 session.on('log', line => {
   ipcDispatch(addLog(line));
 });
-
-// console.log({ location: window.location });
 
 type PropEntity = [name: string, state: ValueState];
 
@@ -151,7 +146,7 @@ export const setDeviceValue = (
   const device = findDeviceById(deviceId);
   if (!device) {
     debug(`Unknown device ${deviceId}`);
-    return () => Promise.reject(new Error('Unknown device'));
+    return () => Promise.reject(new Error('Unknown device val'));
   }
   const drainDevice = debounce(
     async (): Promise<void> => {
@@ -191,9 +186,49 @@ export const sendConfig = debounce((state: Record<string, unknown>): void => {
 const getChildren = (parent: IDevice): IDevice[] =>
   session.devices.get().filter(device => device.connection?.owner === parent && device !== parent);
 
+export const createDevice = (
+  parent: DeviceId,
+  address: string,
+  type: number,
+  version?: number,
+): void => {
+  const device = session.devices.create(address, type, version);
+  const parentDevice = session.devices.findById(parent);
+  if (parentDevice) {
+    device.connection = parentDevice.connection;
+  }
+  setTimeout(() => ipcDispatch(setParent([device.id, parent])), 0);
+};
+
+export const reloadDevice = async (deviceId: DeviceId): Promise<void> => {
+  const device = findDeviceById(deviceId);
+  if (!device) {
+    ipcDispatch(removeDevice(deviceId));
+    return;
+  }
+  if (!device.connection) return;
+  ipcDispatch(deviceBusy(deviceId));
+  await device.read();
+  ipcDispatch(updateProps([deviceId, getProps(device)]));
+  ipcDispatch(deviceReady(deviceId));
+};
+
+export const releaseDevice = (deviceId: DeviceId): void => {
+  const device = findDeviceById(deviceId);
+  if (!device) {
+    ipcDispatch(removeDevice(deviceId));
+    return;
+  }
+  device.release();
+};
+
 function openSession() {
-  const updatePortsHandler = (): void => {
+  const addConnectionHandler = (): void => {
     ipcDispatch(setPortCount(session.ports));
+  };
+  const removeConnectionHandler = (connection: INibusConnection): void => {
+    ipcDispatch(setPortCount(session.ports));
+    ipcDispatch(connectionClosed(connection.path));
   };
   const foundHandler: FoundListener = async ({ address, connection }) => {
     try {
@@ -207,8 +242,111 @@ function openSession() {
       debug('error in found handler', e);
     }
   };
-  const updateDevices = (): void => {
-    ipcDispatch(setDevices(session.devices.get().map(device => device.id)));
+  const pureConnectionHandler = (connection: INibusConnection): void => {
+    ipcDispatch(
+      addDevice({
+        id: nanoid() as DeviceId,
+        address: '',
+        mib: '',
+        connected: true,
+        path: connection.path,
+        isEmptyAddress: true,
+        props: {},
+        category: 'c22',
+        isLinkingDevice: true,
+        isBusy: 0,
+      }),
+    );
+  };
+  const newDeviceHandler = async (device: IDevice): Promise<void> => {
+    const { id: deviceId, address, connection } = device;
+    const connectedHandler = (): void => {
+      ipcDispatch(setConnected([deviceId, !!device.connection]));
+    };
+    const disconnectedHandler = (): void => {
+      device.release();
+    };
+    const addressHandler = (prev: Address, value: Address): void => {
+      ipcDispatch(changeAddress([deviceId, value.toString()]));
+    };
+    const releaseHandler = (): void => {
+      device.off('connected', connectedHandler);
+      device.off('disconnected', disconnectedHandler);
+      device.off('release', releaseHandler);
+      device.off('addressChanged', addressHandler);
+    };
+    device.on('connected', connectedHandler);
+    device.on('disconnected', disconnectedHandler);
+    device.on('release', releaseHandler);
+    device.on('addressChanged', addressHandler);
+
+    const mib = Reflect.getMetadata('mib', device);
+    const proto = Reflect.getPrototypeOf(device) ?? {};
+    const mibProperties = (Reflect.getMetadata('mibProperties', proto) ?? []) as string[];
+    const properties = Object.fromEntries(
+      mibProperties.map<[string, PropMetaInfo]>(name => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const getPropMeta = (key: string): any => Reflect.getMetadata(key, proto, name);
+        return [
+          name,
+          {
+            id: device.getId(name),
+            displayName: getPropMeta('displayName'),
+            isReadable: getPropMeta('isReadable'),
+            isWritable: getPropMeta('isWritable'),
+            type: getPropMeta('type'),
+            simpleType: getPropMeta('simpleType'),
+            category: getPropMeta('category'),
+            rank: getPropMeta('rank'),
+            unit: getPropMeta('unit'),
+            min: getPropMeta('min'),
+            max: getPropMeta('max'),
+            step: getPropMeta('step'),
+            enumeration: getPropMeta('enum'),
+            convertFrom: getPropMeta('convertFrom'),
+          } as PropMetaInfo,
+        ];
+      }),
+    );
+    const mibInfo: MibInfo = {
+      name: mib,
+      properties,
+      disableBatchReading: Reflect.getMetadata('disableBatchReading', proto),
+    };
+    ipcDispatch(addMib(mibInfo));
+    const entity: DeviceState = {
+      id: deviceId,
+      address: address.toString(),
+      connected: !!connection,
+      path: connection?.path,
+      mib: Reflect.getMetadata('mib', device),
+      isEmptyAddress: address.isEmpty,
+      props: getProps(device),
+      isBusy: 0,
+    };
+    if (connection?.owner === device) {
+      entity.isLinkingDevice = connection.description.link;
+      entity.category = connection.description.category;
+      if (entity.isLinkingDevice) {
+        const idleHandler = () => {
+          const [older] = sortBy(getChildren(device), 'lastActivity');
+          if (older) older.ping();
+        };
+        connection.on('idle', idleHandler);
+        connection.once('close', () => {
+          connection.off('idle', idleHandler);
+        });
+      }
+    }
+    ipcDispatch(addDevice(entity));
+    await reloadDevice(deviceId);
+  };
+  const deleteDeviceHandler = (device: IDevice): void => {
+    try {
+      ipcDispatch(removeDevice(device.id));
+    } catch (e) {
+      debug(toErrorMessage(e));
+    }
   };
 
   const configHandler = (config: Record<string, unknown>): void => {
@@ -240,9 +378,6 @@ function openSession() {
     description,
   }: PortArg): Promise<void> => {
     if (description.category !== 'novastar') return;
-    // console.log(`http://${host}:${port + 1}/api/novastar/serial`);
-    // const x = new AbortController();
-    // const timeout = setTimeout(() => x.abort(), 3000);
     fetch(`http://${host}:${port + 1}/api/novastar/serial`, {
       method: 'POST',
       headers: {
@@ -250,19 +385,7 @@ function openSession() {
         authorization: `Bearer ${getSecret()}`,
       },
       body: JSON.stringify({ path, port }),
-      // signal: x.signal,
     });
-    // .then(() => console.log('finish'), err => console.error(err)).finally(() => {
-    //   clearTimeout(timeout);
-    // });
-    // await createConnection(path, port, host);
-    // ipcDispatch(
-    //   addNovastar({
-    //     path,
-    //     isBusy: 0,
-    //     connected: true,
-    //   }),
-    // );
   };
 
   const informationListener: NibusSessionEvents['informationReport'] = (
@@ -295,9 +418,10 @@ function openSession() {
 
   session.on('displays', displaysHandler);
   session.on('online', onlineHandler);
-  session.on('add', updatePortsHandler);
-  session.on('remove', updatePortsHandler);
+  session.on('add', addConnectionHandler);
+  session.on('remove', removeConnectionHandler);
   session.on('found', foundHandler);
+  session.on('pureConnection', pureConnectionHandler);
   // session.on('logLevel', logLevelHandler);
   session.on('config', configHandler);
   session.once('host', hostHandler);
@@ -306,25 +430,22 @@ function openSession() {
     session.on('foreign', addForeignDeviceHandler);
   }
   session.on('health', healthHandler);
-  session.devices.on('new', updateDevices);
-  session.devices.on('delete', updateDevices);
+  session.devices.on('new', newDeviceHandler);
+  session.devices.on('delete', deleteDeviceHandler);
   const release = (): void => {
-    // ipcDispatch(releaseNovastars());
-    // Object.values(novastarSessions).forEach(novastarSession => novastarSession.close());
     session.off('displays', displaysHandler);
     session.off('online', onlineHandler);
-    session.off('add', updatePortsHandler);
-    session.off('remove', updatePortsHandler);
+    session.off('add', addConnectionHandler);
+    session.off('remove', removeConnectionHandler);
     session.off('found', foundHandler);
-    // session.off('logLevel', logLevelHandler);
+    session.off('pureConnection', pureConnectionHandler);
     session.off('config', configHandler);
     session.off('host', hostHandler);
     session.off('informationReport', informationListener);
     session.off('foreign', addForeignDeviceHandler);
     session.off('health', healthHandler);
-    session.devices.off('new', updateDevices);
-    session.devices.off('delete', updateDevices);
-    // removeDevicesListener();
+    session.devices.off('new', newDeviceHandler);
+    session.devices.off('delete', deleteDeviceHandler);
     ipcDispatch(releaseSession());
   };
   session.once('close', release);
@@ -337,8 +458,6 @@ function openSession() {
   );
   const start = (): void => {
     if (isConnected) return;
-    // const { status } = selectSession(getState() as RootState);
-    // if (status === 'closed' || status === 'succeeded') return;
     session
       .start()
       .then(ports => {
@@ -375,50 +494,16 @@ function openSession() {
 
 window.onload = openSession;
 
-
-export const createDevice = (
-  parent: DeviceId,
-  address: string,
-  type: number,
-  version?: number,
-): void => {
-  const device = session.devices.create(address, type, version);
-  const parentDevice = session.devices.findById(parent);
-  if (parentDevice) {
-    // console.log({ parentDevice });
-    device.connection = parentDevice.connection;
-    // let timer = 0;
-    // const checkConnection = async (): Promise<void> => {
-    //   window.clearTimeout(timer);
-    //   await session.pingDevice(device);
-    //   timer = window.setTimeout(checkConnection, PING_INTERVAL);
-    // };
-    // timer = window.setTimeout(checkConnection, PING_INTERVAL);
-    // device.once('release', () => window.clearTimeout(timer));
-  }
-  setTimeout(() => ipcDispatch(setParent([device.id, parent])), 0);
-};
-
-export const reloadDevice = async (deviceId: DeviceId): Promise<void> => {
+export const writeToStorage = async (deviceId: DeviceId): Promise<boolean> => {
   const device = findDeviceById(deviceId);
   if (!device) {
     ipcDispatch(removeDevice(deviceId));
-    return;
+    return false;
   }
-  if (!device.connection) return;
-  ipcDispatch(deviceBusy(deviceId));
-  await device.read();
-  ipcDispatch(updateProps([deviceId, getProps(device)]));
-  ipcDispatch(deviceReady(deviceId));
-};
-
-export const releaseDevice = (deviceId: DeviceId): void => {
-  const device = findDeviceById(deviceId);
-  if (!device) {
-    ipcDispatch(removeDevice(deviceId));
-    return;
-  }
-  device.release();
+  const mib: string = Reflect.getMetadata('mib', device);
+  if (mib !== 'minihost4') return false;
+  await device.execute('save_mibs');
+  return true;
 };
 
 const finder = new Finder();
@@ -474,12 +559,13 @@ export const telemetry = memoize((id: DeviceId): NibusTelemetry => {
     case 'minihost3':
       loader = new Minihost3Loader(id);
       break;
+    case 'minihost_v2.06':
     case 'minihost_v2.06b':
       loader = new Minihost2Loader(id);
       break;
     default: {
-      debug(`Invalid mib: ${mib}`);
-      const err = new Error(`Invalid mib: ${mib}`);
+      debug(`Telemetry is not supported, mib: ${mib}`);
+      const err = new Error(`Telemetry is not supported, mib: ${mib}`);
       return { start: () => Promise.reject(err), cancel: () => Promise.reject(err) };
     }
   }
@@ -608,277 +694,3 @@ export const flash = (
       }
     });
   });
-
-/*
-const filterDevicesByAddress = (devices: IDevice[], address: Address): IDevice[] =>
-  devices.filter(device => {
-    if (address.equals(device.address)) return true;
-    if (address.type === AddressType.net) {
-      const mib = Reflect.getMetadata('mib', device) as string;
-      if (mib.startsWith('minihost')) {
-        return (
-          address.domain === device.domain &&
-          address.subnet === device.subnet &&
-          address.device === device.did
-        );
-      }
-      if (device.mib === 'mcdvi') {
-        return (
-          address.domain === 255 &&
-          device.subnet === address.subnet &&
-          address.device === device.did
-        );
-      }
-    }
-    return false;
-  });
-
-const safeNumber = (value: string | undefined): number | undefined =>
-  value !== undefined ? +value : undefined;
-
-type Location = {
-  address: Address;
-  left?: number;
-  top?: number;
-  width?: number;
-  height?: number;
-};
-
-const parseLocation = (location: string): Location | undefined => {
-  const matches = location.match(reAddress);
-  if (!matches) return undefined;
-  const [, address, l, t, w, h] = matches;
-  return {
-    address: new Address(address),
-    left: safeNumber(l),
-    top: safeNumber(t),
-    width: safeNumber(w),
-    height: safeNumber(h),
-  };
-};
-
-const getHostParams =
-  (screen: Screen) =>
-  (expr: string): WithRequiredProp<Location, 'left' | 'top'> | undefined => {
-    const location = parseLocation(expr);
-    if (!location) return undefined;
-    const { left = 0, top = 0, address } = location;
-    const width = location.width ?? (screen.width && Math.max(screen.width - left, 0));
-    const height = location.height ?? (screen.height && Math.max(screen.height - top, 0));
-    return {
-      address,
-      left: screen.left + left,
-      top: screen.top + top,
-      width,
-      height,
-    };
-  };
-
-const updateMinihosts = async (screenId: number) => {
-  debug(`updateMinihosts: ${screenId}`);
-  const screen = (await ipcRenderer.invoke('getScreen', screenId)) as Screen | undefined;
-  if (screen?.addresses) {
-    const { addresses, moduleWidth, moduleHeight, rightToLeft = false, downToTop = false } = screen;
-    const getParams = getHostParams(screen);
-    pMap(
-      addresses.map(getParams).filter(notEmpty),
-      async ({ address, left, top, width, height }) => {
-        debug(`update address: ${address}`);
-        try {
-          const target = new Address(address);
-          const devices = filterDevicesByAddress(session.devices.get(), target);
-          debug(`devices: ${devices.map(device => device.address.toString()).join(', ')}`);
-          await pMap(
-            devices,
-            async device => {
-              let props: Record<string, unknown> = {};
-              const mib = Reflect.getMetadata('mib', device) as string;
-
-              switch (mib) {
-                case 'minihost3':
-                  props = {
-                    hoffs: left,
-                    voffs: top,
-                    ...(width && { hres: width }),
-                    ...(height && { vres: height }),
-                    ...(moduleWidth && { moduleHres: moduleWidth }),
-                    ...(moduleHeight && { moduleVres: moduleHeight }),
-                    indication: 0,
-                    dirh: rightToLeft,
-                    dirv: downToTop,
-                  };
-                  break;
-                case 'minihost_v2.06b':
-                  props = {
-                    hoffs: left,
-                    voffs: top,
-                    ...(width && { hres: width }),
-                    ...(height && { vres: height }),
-                    ...(moduleWidth && { moduleHres: moduleWidth }),
-                    ...(moduleHeight && { moduleVres: moduleHeight }),
-                    indication: 0,
-                    hinvert: rightToLeft,
-                    vinvert: downToTop,
-                  };
-                  break;
-                case 'mcdvi':
-                  props = {
-                    indication: 0,
-                    ...(width && { hres: width }),
-                    ...(height && { vres: height }),
-                    hofs: left,
-                    vofs: top,
-                  };
-                  break;
-                default:
-                  break;
-              }
-              debug(`props: ${JSON.stringify(props)}`);
-              Object.assign(device, props);
-              await device.drain();
-            },
-            { concurrency: 1 },
-          );
-        } catch (err) {
-          debug(`error while update: ${err}`);
-        }
-      },
-      { concurrency: 1 },
-    );
-  }
-};
-
-ipcRenderer.on('screenChanged', (_, screenId) => updateMinihosts(screenId)); */
-
-(function init() {
-  const newDeviceHandler = async (device: IDevice): Promise<void> => {
-    const { id: deviceId, address, connection } = device;
-    // const mib = Reflect.getMetadata('mib', device);
-    const connectedHandler = (): void => {
-      ipcDispatch(setConnected([deviceId, !!device.connection]));
-      // ipcDispatch(reloadDevice(deviceId));
-    };
-    const disconnectedHandler = (): void => {
-      device.release();
-    };
-    const addressHandler = (prev: Address, value: Address): void => {
-      ipcDispatch(changeAddress([deviceId, value.toString()]));
-    };
-    const releaseHandler = (): void => {
-      device.off('connected', connectedHandler);
-      device.off('disconnected', disconnectedHandler);
-      device.off('release', releaseHandler);
-      device.off('addressChanged', addressHandler);
-    };
-    device.on('connected', connectedHandler);
-    device.on('disconnected', disconnectedHandler);
-    device.on('release', releaseHandler);
-    device.on('addressChanged', addressHandler);
-
-    const mib = Reflect.getMetadata('mib', device);
-    const proto = Reflect.getPrototypeOf(device) ?? {};
-    const mibProperties = (Reflect.getMetadata('mibProperties', proto) ?? []) as string[];
-    const properties = Object.fromEntries(
-      mibProperties.map<[string, PropMetaInfo]>(name => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const getPropMeta = (key: string): any => Reflect.getMetadata(key, proto, name);
-        return [
-          name,
-          {
-            id: device.getId(name),
-            displayName: getPropMeta('displayName'),
-            isReadable: getPropMeta('isReadable'),
-            isWritable: getPropMeta('isWritable'),
-            type: getPropMeta('type'),
-            simpleType: getPropMeta('simpleType'),
-            category: getPropMeta('category'),
-            rank: getPropMeta('rank'),
-            unit: getPropMeta('unit'),
-            min: getPropMeta('min'),
-            max: getPropMeta('max'),
-            step: getPropMeta('step'),
-            enumeration: getPropMeta('enum'),
-            convertFrom: getPropMeta('convertFrom'),
-          } as PropMetaInfo,
-        ];
-      }),
-    );
-    const mibInfo: MibInfo = {
-      name: mib,
-      properties,
-      disableBatchReading: Reflect.getMetadata('disableBatchReading', proto),
-    };
-    ipcDispatch(addMib(mibInfo));
-    const entity: DeviceState = {
-      id: deviceId,
-      address: address.toString(),
-      connected: !!connection,
-      path: connection?.path,
-      mib: Reflect.getMetadata('mib', device),
-      isEmptyAddress: address.isEmpty,
-      props: getProps(device),
-      isBusy: 0,
-    };
-    // await device.read();
-    // const entity: DeviceState = {
-    //   id: deviceId,
-    //   address: address.toString(),
-    //   connected: !!connection,
-    //   path: connection?.path,
-    //   mib: Reflect.getMetadata('mib', device),
-    //   isEmptyAddress: address.isEmpty,
-    //   props: getProps(device),
-    //   isBusy: 0,
-    // };
-    if (connection?.owner === device) {
-      entity.isLinkingDevice = connection.description.link;
-      entity.category = connection.description.category;
-      if (entity.isLinkingDevice) {
-        const idleHandler = () => {
-          const [older] = sortBy(getChildren(device), 'lastActivity');
-          if (older) older.ping();
-        };
-        connection.on('idle', idleHandler);
-        connection.once('close', () => {
-          connection.off('idle', idleHandler);
-        });
-      }
-    }
-    ipcDispatch(addDevice(entity));
-    await reloadDevice(deviceId);
-    /*
-        setTimeout(() => {
-          if (!device.connection) return;
-          device.read().finally(() => {
-            ipcDispatch(updateProps([deviceId]));
-            ipcDispatch(deviceReady(deviceId));
-            // debug(`deviceReady ${device.address.toString()}`);
-            // selectCurrentDeviceId(getState()) || ipcDispatch(setCurrentDevice(deviceId));
-            const brightness = selectBrightness(getState());
-            const setValue = setDeviceValue(deviceId);
-            if (mib?.startsWith('minihost') || mib === 'mcdvi') {
-              setValue('brightness', brightness);
-            }
-            ipcDispatch(updateScreen());
-          });
-        }, 3000);
-    */
-  };
-  const deleteDeviceHandler = (device: IDevice): void => {
-    try {
-      ipcDispatch(removeDevice(device.id));
-    } catch (e) {
-      debug(toErrorMessage(e));
-    }
-  };
-  session.devices.on('new', newDeviceHandler);
-  session.devices.on('delete', deleteDeviceHandler);
-  session.on('close', () => {
-    session.devices.off('new', newDeviceHandler);
-    session.devices.off('delete', deleteDeviceHandler);
-  });
-  // session.once('online', async () => {
-  //   const screens = (await ipcRenderer.invoke('getScreens')) as { id: number }[];
-  //   pMap(screens, ({ id }) => updateMinihosts(id), { concurrency: 1 });
-  // });
-})();
