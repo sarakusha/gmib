@@ -1,6 +1,6 @@
 import { app, ipcMain } from 'electron';
 
-import { nanoid } from '@reduxjs/toolkit';
+import { nanoid } from 'nanoid';
 import { createVerifierAndSalt, SRPParameters, SRPRoutines } from '@sarakusha/tssrp6a';
 import debugFactory from 'debug';
 import type { Schema } from 'electron-store';
