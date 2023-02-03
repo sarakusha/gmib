@@ -1,7 +1,7 @@
 import { app } from 'electron';
 import fs from 'fs';
 
-import service from '@nibus/cli';
+import service from '@nibus/service';
 import debugFactory from 'debug';
 import log from 'electron-log';
 import { Tail } from 'tail';
@@ -38,8 +38,7 @@ const closeNibus = (): void => {
     debug('Port already in use');
     return;
   }
-  // const { default: svc } = await import('@nibus/cli/service');
-  // service = svc;
+
   service.server.on('connection', socket => {
     const file = log.transports.file.getFile().path;
     if (fs.existsSync(file)) {
