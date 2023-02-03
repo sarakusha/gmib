@@ -5,7 +5,6 @@ import type { Schema } from 'electron-store';
 import type { Config } from './config';
 import { DEFAULT_OVERHEAD_PROTECTION, SPLINE_COUNT } from './config';
 
-
 export const configSchema: Schema<Config> = {
   location: {
     type: 'object',
