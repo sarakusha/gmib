@@ -339,3 +339,6 @@ export const asyncSerial = <T, R>(
   );
 
 export const reIPv4 = /^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$/;
+
+export const fixDefault = <T extends object>(impl: T): T =>
+  'default' in impl ? (impl.default as T) : impl;

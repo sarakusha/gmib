@@ -21,6 +21,8 @@ import { createMainWindow } from './mainWindow';
 import openHandler from './openHandler';
 import { launchPlayers } from './playerWindow';
 
+import { fixDefault } from '/@common/helpers';
+
 // import {REDUX_DEVTOOLS} from 'electron-devtools-installer';
 // import.meta.env.PROD && Sentry.init({ dsn: 'https://fbd4024789d247fcb5eb2493d1aa28b6@o1412889.ingest.sentry.io/6752393' });
 crashReporter.start({ uploadToServer: false });
@@ -71,10 +73,10 @@ if (import.meta.env.DEV) {
     // eslint-disable-next-line import/no-extraneous-dependencies
     .then(() => import('electron-devtools-installer'))
     .then(({ default: installExtension, REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS }) =>
-      installExtension([REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS], {
+      fixDefault(installExtension)([REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS], {
         loadExtensionOptions: {
           allowFileAccess: true,
-          enableJavascriptSourceMaps: false,
+          enableJavascriptMaps: true,
         },
       }),
     )
