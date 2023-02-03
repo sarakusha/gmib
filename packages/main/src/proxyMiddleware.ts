@@ -86,8 +86,12 @@ const tryCreateMasterBrowser = () => {
       } else {
         // debug(`MBR ${rang}`);
         isMaster = true;
-        master.open();
-        masterProxy = undefined;
+        try {
+          master.open();
+          masterProxy = undefined;
+        } catch (err) {
+          debug(`error while master open: ${err}`);
+        }
       }
       ready.resolve();
     });
