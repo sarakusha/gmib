@@ -2,7 +2,7 @@
 import MinihostLoader from './MinihostLoader';
 
 import type { DeviceId } from '@nibus/core';
-import { findDeviceById } from '@nibus/core/session/NibusSession';
+import { findDeviceById } from '@nibus/core';
 
 import type { Minihost3Info } from '/@common/helpers';
 import { getEnumValues, Minihost3Selector } from '/@common/helpers';
@@ -85,7 +85,7 @@ export default class Minihost3Loader extends MinihostLoader<Minihost3Info> {
 
   constructor(deviceId: DeviceId) {
     const device = findDeviceById(deviceId);
-    if (!device) throw new Error(`Unknown device ${deviceId}`);
+    if (!device) throw new Error(`Unknown device3 ${deviceId}`);
     super(device);
     this.selectorId = device.getId('selector');
     this.moduleSelectId = device.getId('moduleSelect');

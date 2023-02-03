@@ -2,7 +2,7 @@
 import MinihostLoader from './MinihostLoader';
 
 import type { DeviceId } from '@nibus/core';
-import { findDeviceById } from '@nibus/core/session/NibusSession';
+import { findDeviceById } from '@nibus/core';
 
 import type { Minihost2Info } from '/@common/helpers';
 
@@ -25,7 +25,7 @@ export default class Minihost2Loader extends MinihostLoader<Minihost2Info> {
 
   constructor(deviceId: DeviceId) {
     const device = findDeviceById(deviceId);
-    if (!device) throw new Error(`Unknown device ${deviceId}`);
+    if (!device) throw new Error(`Unknown device2 ${deviceId}`);
     super(device);
   }
 

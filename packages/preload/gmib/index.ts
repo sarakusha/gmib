@@ -5,7 +5,7 @@
 import { contextBridge } from 'electron';
 // import '@sentry/electron/preload';
 
-import type { LogLevel } from '@nibus/core/common';
+import type { LogLevel } from '@nibus/core';
 
 import * as identify from '../common/identify';
 import log, { setLogLevel } from '../common/initlog';
@@ -19,7 +19,6 @@ import * as nibus from './nibus';
 import * as output from './output';
 
 import expandTypes from '/@common/expandTypes';
-
 
 /**
  * The "Main World" is the JavaScript context that your main renderer code runs in.
