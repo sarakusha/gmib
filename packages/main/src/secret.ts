@@ -2,7 +2,7 @@ import { randomBytes } from 'crypto';
 import { app, ipcMain } from 'electron';
 
 import debugFactory from 'debug';
-import fetch from 'node-fetch';
+// import fetch from 'node-fetch';
 
 import type { NullableOptional } from '/@common/helpers';
 
