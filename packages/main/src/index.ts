@@ -4,7 +4,7 @@ import { app, crashReporter, powerSaveBlocker } from 'electron';
 import debugFactory from 'debug';
 
 import './security-restrictions';
-import './initlog';
+import log from './initlog';
 import localConfig from './localConfig';
 import './config';
 import './screen';
@@ -111,7 +111,11 @@ if (import.meta.env.PROD) {
   app
     .whenReady()
     .then(() => import('electron-updater'))
-    .then(({ autoUpdater }) => autoUpdater.checkForUpdatesAndNotify())
+    .then(({ autoUpdater }) => {
+      // eslint-disable-next-line no-param-reassign
+      autoUpdater.logger = log;
+      autoUpdater.checkForUpdatesAndNotify();
+    })
     .catch(e => debug(`Failed check updates: ${e.message}`));
 }
 
