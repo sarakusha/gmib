@@ -1,5 +1,7 @@
 import { contextBridge } from 'electron';
 
+import expandTypes from '/@common/expandTypes';
+
 // import debugFactory from 'debug';
 
 import * as identify from '../common/identify';
@@ -26,4 +28,4 @@ contextBridge.exposeInMainWorld('setDispatch', setDispatch);
 contextBridge.exposeInMainWorld('server', {
   port: +(process.env['NIBUS_PORT'] ?? 9001) + 1,
 });
-contextBridge.exposeInMainWorld('identify', identify);
+contextBridge.exposeInMainWorld('identify', expandTypes(identify));

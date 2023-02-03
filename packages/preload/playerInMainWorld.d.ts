@@ -3,5 +3,5 @@ interface Window {
     readonly log: (...params: any[]) => void;
     readonly setDispatch: (newDispatch: Dispatch) => void;
     readonly server: { port: number; };
-    readonly identify: typeof import("/Users/sarakusha/WebstormProjects/gmib/packages/preload/common/identify");
+    readonly identify: { readonly getSecret: () => string | undefined; readonly setSecret: (apiSecret: bigint, identifier?: string | undefined) => void; readonly getIdentifier: () => string | undefined; readonly generateSignature: (method: string, uri: string, timestamp: number, body?: unknown) => string | undefined; };
 }
