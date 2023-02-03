@@ -329,10 +329,13 @@ export type TelemetryOpts = {
 
 export const toHexId = (id: number): string => id.toString(16).toUpperCase().padStart(8, '0');
 
-export const asyncSerial = <T>(
-  input: T[],
-  action: (item: T, index: number) => Promise<void>,
-): Promise<void> =>
-  input.reduce((acc, item, index) => acc.then(() => action(item, index)), Promise.resolve());
+export const asyncSerial = <T, R>(
+  input: ReadonlyArray<T>,
+  action: (item: T, index: number) => Promise<R>,
+): Promise<ReadonlyArray<R>> =>
+  input.reduce<Promise<ReadonlyArray<R>>>(
+    (acc, item, index) => acc.then(async res => [...res, await action(item, index)]),
+    Promise.resolve<ReadonlyArray<R>>([]),
+  );
 
 export const reIPv4 = /^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$/;
