@@ -323,7 +323,7 @@ function createTables(): void {
   });
 }
 
-export function removeNull<T>(value: NullableOptional<T>): T {
+export function removeNull<T = any>(value: NullableOptional<T>): T {
   return Object.fromEntries(Object.entries(value).filter(([, val]) => val != null)) as unknown as T;
 }
 

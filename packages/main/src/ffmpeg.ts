@@ -8,8 +8,8 @@ import readline from 'readline';
 
 import debugFactory from 'debug';
 import type { ExecaChildProcess, ExecaReturnValue } from 'execa';
-import { execa } from 'execa';
-import { fileTypeFromFile } from 'file-type';
+import execa from 'execa';
+import FileType from 'file-type';
 import type { FileTypeResult } from 'file-type/core';
 import type { FRAMERATE } from 'smpte-timecode';
 import Timecode from 'smpte-timecode';
@@ -525,7 +525,7 @@ export async function getSmarterOutFormat(
 
   // ffprobe sometimes returns a list of formats, try to be a bit smarter about it.
   // const bytes = await readChunk(filePath, { startPosition: 0, length: 4100 });
-  const fileTypeResponse = await fileTypeFromFile(filePath);
+  const fileTypeResponse = await FileType.fromFile(filePath);
   debug(`fileType: ${JSON.stringify(fileTypeResponse)}`);
   // debug(`fileType detected format ${JSON.stringify(fileTypeResponse)}`);
   return determineOutputFormat(formats, fileTypeResponse);
