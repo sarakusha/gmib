@@ -25,9 +25,10 @@ const createWindow = (title: string, preload: string, random = true): BrowserWin
       webviewTag: false, // The webview tag is not recommended. Consider alternatives like iframe or Electron's BrowserView. https://www.electronjs.org/docs/latest/api/webview-tag#warning
       preload,
       backgroundThrottling: false,
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: false, // Sandbox disabled because the demo of preload script depend on the Node.js api
       // nodeIntegrationInWorker: true,
-      // sandbox: false,
-      // contextIsolation: false,
     },
   });
 

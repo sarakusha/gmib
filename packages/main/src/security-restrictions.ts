@@ -50,6 +50,7 @@ type Permissions = Set<
   | 'pointerLock'
   | 'fullscreen'
   | 'openExternal'
+  | 'window-placement'
   | 'unknown'
 >;
 
