@@ -26,29 +26,13 @@ import type { Page } from '/@common/config';
 import { selectAllPages, selectCurrentScreenId, selectCurrentTab } from '../store/selectors';
 
 import AccordionList from './AccordionList';
-/*
-const useStyles = makeStyles(theme => ({
-  item: {
-    color: 'red',
-    '&:hover $actions': {
-      visibility: 'visible',
-    },
-    '& $actions': {
-      visibility: 'hidden',
-    },
-  },
-  actions: {},
-}));
-*/
 
 const ListItemButton = styled(MuiListItemButton)({
-  '&.MuiListItemButton-container': {
-    '&:hover.MuiListItemButton-secondaryAction ~ *': {
-      visibility: 'visible',
-    },
-    '&.MuiListItemButton-secondaryAction ~ *': {
-      visibility: 'hidden',
-    },
+  '& .MuiListItemSecondaryAction-root svg': {
+    visibility: 'hidden',
+  },
+  '&:hover .MuiListItemSecondaryAction-root svg': {
+    visibility: 'visible',
   },
 });
 
