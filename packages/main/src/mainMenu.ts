@@ -177,8 +177,8 @@ const template: MenuItemConstructorOptions[] = [
     role: 'help',
     submenu: [
       {
-        label: 'nibus.js',
-        click: () => shell.openExternal('https://github.com/sarakusha/nibus'),
+        label: 'Все версии',
+        click: () => shell.openExternal('https://github.com/sarakusha/gmib/releases/latest'),
       },
     ],
   },
