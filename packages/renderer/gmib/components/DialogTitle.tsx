@@ -40,7 +40,7 @@ const DialogTitle: React.FC<DialogTitleProps> = ({ children, onClose, ...other }
     }}
     {...other}
   >
-    <Typography variant="h6">{children}</Typography>
+    {children}
     {onClose ? (
       <IconButton
         aria-label="close"
