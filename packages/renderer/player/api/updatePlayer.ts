@@ -20,6 +20,8 @@ export const debouncedUpdatePlayer = createDebouncedAsyncThunk<void, Player, App
   { selectId: player => player.id, maxWait: 500 },
 );
 
+const selectPlaylistData = playlistApi.endpoints.getPlaylists.select();
+
 const updatePlayer =
   (id: number, update: SetStateAction<Player>): AppThunk =>
   (dispatch, getState) => {
@@ -28,7 +30,7 @@ const updatePlayer =
         const prev = selectPlayer(draft, id);
         if (!prev) throw new Error(`Unknown player: ${id}`);
         const player: Player = typeof update === 'function' ? update(prev) : update;
-        const playlistsData = playlistApi.endpoints.getPlaylists.select()(getState()).data;
+        const playlistsData = selectPlaylistData(getState()).data;
         if (playlistsData && player.playlistId && player.current) {
           const playlist = selectPlaylistById(playlistsData, player.playlistId);
           const length = playlist?.items.length;
