@@ -69,3 +69,6 @@ tsconfig.tsbuildinfo
 bak/
 *.session.sql
 stats.html
+/gmib.code-workspace
+/scripts/temp.js
+/scripts/build.js

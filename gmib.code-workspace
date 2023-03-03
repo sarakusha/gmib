@@ -30,6 +30,10 @@
       "**/Thumbs.db": true,
       "./.github": false
     },
-    "liveServer.settings.multiRootWorkspaceName": "gmib"
+    "liveServer.settings.multiRootWorkspaceName": "gmib",
+    "jest.disabledWorkspaceFolders": [
+      "gmib",
+      ".github"
+    ]
   }
 }
