@@ -4,7 +4,6 @@ import type {
 import {
   IconButton,
   DialogTitle as MuiDialogTitle,
-  Typography,
 } from '@mui/material';
 import React from 'react';
 // import { Theme } from '@mui/material/styles';

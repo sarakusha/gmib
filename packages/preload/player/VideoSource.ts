@@ -1,8 +1,7 @@
+import type { FadeOptions } from '@sarakusha/ebml/FadeTransform';
 import debugFactory from 'debug';
 
 import DecoderWorker from './decoder?worker&inline';
-
-import type { FadeOptions } from '@sarakusha/ebml/FadeTransform';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:VideoSource`);
 let lastId = 0;
