@@ -97,6 +97,7 @@ export type Config = {
   // screens: Screen[];
   logLevel: LogLevel;
   pages: Page[];
+  fixedPages?: true;
   version?: string;
   overheatProtection: OverheatProtection;
 };

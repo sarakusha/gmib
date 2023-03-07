@@ -76,7 +76,7 @@ const updateTests = (): void => {
   updateTestsImpl().catch(err => debug(`error while update tests ${err.message}`));
 };
 
-updateTests();
+if (!config.get('fixedPages')) updateTests();
 
 config.onDidChange('pages', newValue => {
   if (newValue?.some(({ permanent }) => permanent)) return;

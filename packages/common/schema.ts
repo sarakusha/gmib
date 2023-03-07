@@ -154,6 +154,7 @@ export const configSchema: Schema<Config> = {
     },
     default: [],
   },
+  fixedPages: { type: 'boolean' },
   version: { type: 'string' },
   overheatProtection: {
     type: 'object',

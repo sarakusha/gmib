@@ -23,7 +23,12 @@ import { setCurrentTab } from '../store/currentSlice';
 
 import type { Page } from '/@common/config';
 
-import { selectAllPages, selectCurrentScreenId, selectCurrentTab } from '../store/selectors';
+import {
+  selectAllPages,
+  selectCurrentScreenId,
+  selectCurrentTab,
+  selectIsFixed,
+} from '../store/selectors';
 
 import AccordionList from './AccordionList';
 
@@ -45,6 +50,7 @@ const HttpPages: React.FC = () => {
   const { screen } = useScreen(screenId);
   const pages = useSelector(selectAllPages);
   const tab = useSelector(selectCurrentTab);
+  const isFixed = useSelector(selectIsFixed);
   const [selected, setSelected] = useState<string>();
   const visibleHandler = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>, checked: boolean) => {
@@ -104,7 +110,7 @@ const HttpPages: React.FC = () => {
                 primaryTypographyProps={noWrap}
                 secondaryTypographyProps={noWrap}
               />
-              {!permanent && (
+              {!permanent && !isFixed && (
                 <ListItemSecondaryAction>
                   <IconButton
                     edge="end"
@@ -131,12 +137,14 @@ const HttpPages: React.FC = () => {
             </ListItemButton>
           );
         })}
-        <ListItemButton onClick={addPageHandler}>
-          <ListItemIcon>
-            <AddCircleOutlineIcon style={{ margin: 'auto' }} color="primary" />
-          </ListItemIcon>
-          <ListItemText>Добавить URL</ListItemText>
-        </ListItemButton>
+        {!isFixed && (
+          <ListItemButton onClick={addPageHandler}>
+            <ListItemIcon>
+              <AddCircleOutlineIcon style={{ margin: 'auto' }} color="primary" />
+            </ListItemIcon>
+            <ListItemText>Добавить URL</ListItemText>
+          </ListItemButton>
+        )}
       </AccordionList>
       <HttpPageDialog
         open={open}
