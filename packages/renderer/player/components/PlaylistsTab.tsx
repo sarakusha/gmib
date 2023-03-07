@@ -54,7 +54,9 @@ const PlaylistsTab: React.FC = () => {
   const dispatch = useDispatch();
   const { width, ref } = useResizeDetector();
   const popupState = usePopupState({ variant: 'popover', popupId: 'playlists' });
-  popupState.setAnchorEl(ref.current);
+  React.useEffect(() => {
+    popupState.setAnchorEl(ref.current);
+  }, [popupState, ref]);
   const removeItemHandler = useCallback(
     (id: string) => {
       // console.log({ id });
@@ -129,7 +131,6 @@ const PlaylistsTab: React.FC = () => {
                       endAdornment: (
                         <InputAdornment position="end">
                           <PopupIndicator
-                            open={popupState.isOpen}
                             {...bindTrigger(popupState)}
                             title="Выбрать плейлист"
                           >
