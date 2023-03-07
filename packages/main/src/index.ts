@@ -107,7 +107,7 @@ app
 /**
  * Check new app version in production mode only
  */
-if (import.meta.env.PROD) {
+/* if (import.meta.env.PROD) {
   app
     .whenReady()
     .then(() => import('electron-updater'))
@@ -117,6 +117,10 @@ if (import.meta.env.PROD) {
       autoUpdater.checkForUpdatesAndNotify();
     })
     .catch(e => debug(`Failed check updates: ${e.message}`));
-}
+} */
 
 launchPlayers();
+
+process.nextTick(() => {
+  log.log(`Resources path: ${process.resourcesPath}`);
+});

@@ -11,6 +11,7 @@ import { updateTray } from './tray';
 import { openPlayer } from './playerWindow';
 import { getPlayers, hasPlayers, insertPlayer, uniquePlayerName } from './screen';
 import { dbReady } from './db';
+import checkForUpdates from './updater';
 
 const createNewPlayer = async (name = 'Новый плеер'): Promise<void> => {
   await dbReady;
@@ -179,6 +180,10 @@ const template: MenuItemConstructorOptions[] = [
       {
         label: 'Все версии',
         click: () => shell.openExternal('https://github.com/sarakusha/gmib/releases/latest'),
+      },
+      {
+        label: 'Проверить обновления',
+        click: checkForUpdates,
       },
     ],
   },
