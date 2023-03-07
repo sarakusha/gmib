@@ -278,7 +278,11 @@ const updateTest = (scr: Screen) => {
   const needReload = !win || !prev || !isEqualOptions(scr, prev);
   const params = createSearchParams(scr);
   params.append('port', port.toString());
-  const url = page.permanent ? `${page.url}?${params}` : page.url;
+  const url = (page.permanent ? `${page.url}?${params}` : page.url)?.replaceAll(
+    // eslint-disable-next-line no-template-curly-in-string
+    '${resources}',
+    process.resourcesPath,
+  );
   const testWindow =
     win ??
     createTestWindow(
@@ -820,7 +824,7 @@ api.post('/login/:id', async (req, res) => {
       localConfig.set('verifier', verifier);
     }
     const apiSecret = await handshake.sessionKey(A);
-    setIncomingSecret(id, apiSecret);
+    await setIncomingSecret(id, apiSecret);
     return res.json({ M2: `0x${M2.toString(16)}` });
   } catch (e) {
     return res.status(401).send(JSON.stringify(e));
