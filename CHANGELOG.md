@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.1.0](https://github.com/sarakusha/gmib/compare/v3.6.6...v4.1.0) (2023-03-07)
+
+
+### Features
+
+* access to machineid for renderer ([507f623](https://github.com/sarakusha/gmib/commit/507f623e9e508628cc39e32609dd0c5e18d462bb))
+* added custom and machineid useragent. ([501c0cf](https://github.com/sarakusha/gmib/commit/501c0cfaf61984587a3312acc40eb7049675ecf6))
+* fixed output set ([5772c8c](https://github.com/sarakusha/gmib/commit/5772c8cbc3b965c2d26e62b6f9b8d6753a238ac6))
+* manual update ([20ad441](https://github.com/sarakusha/gmib/commit/20ad4416d19ce90315d43370c7c9328b95ccc12e))
+* option to disable network search for novastar devices ([c1f735a](https://github.com/sarakusha/gmib/commit/c1f735abc362a7b0e74f787dcec7cbaa5e75a19e))
+* set autoUpdate log ([552b1b0](https://github.com/sarakusha/gmib/commit/552b1b0acda98252e50a7b3037caa3516365b274))
+* wildcard parameter "resources" ([19c05e0](https://github.com/sarakusha/gmib/commit/19c05e088a773bdb20d713291fb6cfa2d9cf01ca))
+
+
+### Bug Fixes
+
+* c22 recognition ([626f506](https://github.com/sarakusha/gmib/commit/626f50628e3144a5773476c78c0178b31ea0307f))
+* catch an error ([6c1e94e](https://github.com/sarakusha/gmib/commit/6c1e94e4983e38fce087a27467665f2c658c099a))
+* catch an error ([9a7331b](https://github.com/sarakusha/gmib/commit/9a7331bb4648d1e50e0a0e7e3f457faf88287a0c))
+* catch an error ([061bd56](https://github.com/sarakusha/gmib/commit/061bd56511336344b3cd10b24ed41e160215a16b))
+* disable preload sandbox after upgrade electron ([133e4f1](https://github.com/sarakusha/gmib/commit/133e4f141ffc80603605c548eab9db012ceb1f38))
+* icons visibility ([7082d9a](https://github.com/sarakusha/gmib/commit/7082d9aa96d5ff6db938c26e527719409dc61ffd))
+* nested default ([d8f652b](https://github.com/sarakusha/gmib/commit/d8f652bf00bffdbabeeadb2e93828e76be0bcaaa))
+* popup ([d15cbce](https://github.com/sarakusha/gmib/commit/d15cbce0216836e11aa6c4f3e7c5d1aea9e3c366))
+* relaunch for AppImage ([88a6e4d](https://github.com/sarakusha/gmib/commit/88a6e4d71b11f6df6536dccbd3b893dc48d2da7d))
+
 ### [3.6.6](https://github.com/sarakusha/gmib/compare/v3.6.5...v3.6.6) (2022-10-31)
 
 
