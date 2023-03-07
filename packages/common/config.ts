@@ -100,6 +100,7 @@ export type Config = {
   fixedPages?: true;
   version?: string;
   overheatProtection: OverheatProtection;
+  disableNet?: boolean;
 };
 
 /**

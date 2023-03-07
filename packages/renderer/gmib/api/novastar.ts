@@ -48,6 +48,9 @@ export const {
   selectIds: selectNovastarIds,
 } = adapter.getSelectors();
 
+export const selectSerials = (state: EntityState<Novastar>): Novastar[] =>
+  selectNovastars(state).filter(item => item.isSerial);
+
 const novastarApi = createApi({
   baseQuery,
   reducerPath: 'novastarApi',

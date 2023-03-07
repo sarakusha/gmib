@@ -114,6 +114,9 @@ export const configSlice = createSlice({
     invalidateBrightness(_, __: PayloadAction<number>) {
       // side effect - appListener
     },
+    setDisableNet(state, { payload }: PayloadAction<boolean>) {
+      state.disableNet = payload;
+    },
   },
 });
 
@@ -134,6 +137,7 @@ export const {
   // setScreenProp,
   setProtectionProp,
   invalidateBrightness,
+  setDisableNet,
 } = configSlice.actions;
 
 export default configSlice.reducer;

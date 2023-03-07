@@ -4,7 +4,7 @@ import sortBy from 'lodash/sortBy';
 import SunCalc from 'suncalc';
 
 import createDebouncedAsyncThunk from '../../common/createDebouncedAsyncThunk';
-import novastarApi, { selectNovastarIds } from '../api/novastar';
+import novastarApi, { selectNovastarIds, selectSerials } from '../api/novastar';
 import screenApi, { parseLocation, selectScreen, selectScreens } from '../api/screens';
 import type { Point } from '../util/MonotonicCubicSpline';
 import MonotonicCubicSpline from '../util/MonotonicCubicSpline';
@@ -17,6 +17,7 @@ import {
   removeHttpPage,
   setAutobrightness,
   setBrightness,
+  setDisableNet,
   setLocationProp,
   setLogLevel,
   setProtectionProp,
@@ -33,6 +34,7 @@ import {
   selectCurrentDeviceId,
   selectDeviceIds,
   selectDevicesByAddress,
+  selectDisableNet,
   selectLastAverage,
   selectLocation,
   selectLogLevel,
@@ -50,6 +52,7 @@ const getValue = (value: number, min: number, max: number): number =>
 // const hasBrightnessFactor = hasProps('brightnessFactor');
 
 const selectScreensData = screenApi.endpoints.getScreens.select();
+const selectNovastarData = novastarApi.endpoints.getNovastars.select();
 
 export const updateBrightness = createDebouncedAsyncThunk<void, undefined | number, AppThunkConfig>(
   'config/updateBrightness',
@@ -57,7 +60,12 @@ export const updateBrightness = createDebouncedAsyncThunk<void, undefined | numb
     const state = getState();
     // debouncedUpdateNovastarDevices(state);
     const brightness = selectBrightness(state);
+    const disableNet = selectDisableNet(state);
+    const { data: novastarData } = selectNovastarData(state);
     const { interval } = selectOverheatProtection(state) ?? {};
+    const serials =
+      disableNet && novastarData ? selectSerials(novastarData).map(({ path }) => path) : [];
+
     const { data: screensData } = selectScreensData(state);
     if (!screensData) return;
     const screens = id ? [selectScreen(screensData, id)] : selectScreens(screensData);
@@ -66,15 +74,18 @@ export const updateBrightness = createDebouncedAsyncThunk<void, undefined | numb
     const tasks = flatten(
       screens
         .filter(notEmpty)
-        .map(({ brightnessFactor, brightness: scrBrightness, addresses, id: screenId }) => {
+        .map(({ brightnessFactor, brightness: scrBrightness, addresses = [], id: screenId }) => {
           const desired =
             brightnessFactor && brightnessFactor > 0
               ? Math.round(brightnessFactor * brightness)
               : scrBrightness ?? 60;
           const value = Math.min(desired, isValid ? scr[screenId]?.maxBrightness ?? 100 : 100);
-          return addresses
-            ?.map(address => parseLocation(address)?.address ?? address)
-            .map(address => [address, value] as const);
+          return [
+            ...serials.map(path => [path as string, value] as const),
+            ...addresses
+              .map(address => parseLocation(address)?.address ?? address)
+              .map(address => [address, value] as const),
+          ];
         })
         .filter(notEmpty),
     );
@@ -124,7 +135,7 @@ export const updateBrightness = createDebouncedAsyncThunk<void, undefined | numb
       ),
     );
   },
-  200,
+  500,
   {
     maxWait: 1000,
     leading: true,
@@ -138,7 +149,8 @@ export const updateBrightness = createDebouncedAsyncThunk<void, undefined | numb
 // };
 
 startAppListening({
-  matcher: isAnyOf(setBrightness, updateConfig),
+  actionCreator: setBrightness,
+  // matcher: isAnyOf(setBrightness, updateConfig),
   effect(_, { dispatch }) {
     dispatch(updateBrightness());
   },
@@ -292,6 +304,7 @@ startAppListening({
     // addScreen,
     // removeScreen,
     setProtectionProp,
+    setDisableNet,
   ),
   effect(action, { getState }) {
     const config = selectConfig(getState());
@@ -342,8 +355,6 @@ startAppListening({
 //     dispatch(updateBrightness());
 //   },
 // });
-
-const selectNovastarData = novastarApi.endpoints.getNovastars.select();
 
 startAppListening({
   predicate: (_, currentState) => !selectCurrentDeviceId(currentState),

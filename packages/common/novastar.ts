@@ -25,4 +25,5 @@ export type Novastar = {
   isBusy: boolean;
   connected: boolean;
   error?: string;
+  isSerial?: boolean;
 };

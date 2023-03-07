@@ -184,6 +184,7 @@ export const configSchema: Schema<Config> = {
     default: DEFAULT_OVERHEAD_PROTECTION,
     // required: ['interval', 'bottomBound', 'upperBound'],
   },
+  disableNet: { type: 'boolean' },
 };
 const ajv = new Ajv({ removeAdditional: 'failing' });
 export const validateConfig = ajv.compile<Config>({

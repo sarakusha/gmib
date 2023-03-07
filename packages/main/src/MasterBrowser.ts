@@ -10,6 +10,7 @@ import debugFactory from 'debug';
 
 import { connect } from 'net';
 import dgram, { type Socket } from 'dgram';
+import { networkInterfaces } from 'os';
 
 import Connection from '@novastar/codec/Connection';
 import net, { findNetDevices, MULTICAST_ADDRESS, REQ, UDP_PORT } from '@novastar/net';
@@ -21,6 +22,14 @@ import NovastarLoader from './NovastarLoader';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:master`);
 
+const getLocalAddresses = (): string[] =>
+  Object.values(networkInterfaces())
+    .flat()
+    .filter(notEmpty)
+    .map(info => info.address);
+
+export const isLocalhost = (address: string) =>
+  address === 'localhost' || getLocalAddresses().includes(address);
 interface MasterBrowserEvents {
   add: (device: Novastar) => void;
   remove: (path: string) => void;
@@ -183,6 +192,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
         hasDVISignalIn,
         isBusy: true,
         connected: true,
+        isSerial: controller.isSerial,
       };
     } catch (err) {
       debug(`error while getNovastar: ${err}`);
@@ -223,7 +233,10 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
 
   async setBrightness(screenId: ScreenId, percent: number) {
     const controller = this.novastarControls.get(screenId.path);
-    if (!controller) return;
+    if (!controller) {
+      debug(`Unknown path: ${screenId.path}`);
+      return;
+    }
     if (await controller.WriteBrightness(percent, screenId.screen)) {
       const screens =
         screenId.screen === -1 ? controller.screens.map((_, index) => index) : [screenId.screen];
@@ -325,7 +338,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
    */
   createSerialConnection(path: string, port: number, host = ''): Promise<void> {
     return new Promise((resolve, reject) => {
-      const id = `${host === 'localhost' ? '' : host}${path.startsWith('/') ? '' : '/'}${path}`;
+      const id = `${isLocalhost(host) ? '' : host}${path.startsWith('/') ? '' : '/'}${path}`;
       if (this.novastarControls.has(id)) resolve();
       const socket = connect(port, host, () => {
         socket.write(path);

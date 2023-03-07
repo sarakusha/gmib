@@ -3,6 +3,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import {
   Box,
   Button,
+  Checkbox,
+  FormControlLabel,
   GlobalStyles,
   IconButton,
   InputAdornment,
@@ -18,11 +20,12 @@ import React, { useCallback, useEffect, useState } from 'react';
 
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useDispatch, useSelector } from '../store';
-import { setBrightness, setSpline } from '../store/configSlice';
+import { setBrightness, setDisableNet, setSpline } from '../store/configSlice';
 import {
   selectAutobrightness,
   selectBrightness,
   selectCurrentTab,
+  selectDisableNet,
   selectLastIlluminance,
   selectSpline,
 } from '../store/selectors';
@@ -283,6 +286,7 @@ const Autobrightness: React.FC = () => {
       Array.isArray(value) || dispatch(setBrightness(value)),
     [dispatch],
   );
+  const disableNet = useSelector(selectDisableNet);
   const autobrightness = useSelector(selectAutobrightness);
   return (
     <Box sx={{ pt: 1, mx: 'auto' }}>
@@ -339,18 +343,30 @@ const Autobrightness: React.FC = () => {
               ))}
             </Box>
           </Box>
+          <Button
+            color="primary"
+            startIcon={<CheckIcon />}
+            variant="outlined"
+            size="small"
+            disabled={!changed}
+            onClick={handleSave}
+            sx={{ mb: 1, mr: 1, ml: 'auto', alignSelf: 'center' }}
+          >
+            Применить
+          </Button>
         </Control>
-        <Button
-          color="primary"
-          startIcon={<CheckIcon />}
-          variant="outlined"
-          size="small"
-          disabled={!changed}
-          onClick={handleSave}
-          sx={{ mb: 1, mr: 1, ml: 'auto', alignSelf: 'flex-end' }}
-        >
-          Применить
-        </Button>
+        <Control>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={disableNet}
+                onChange={e => dispatch(setDisableNet(e.target.checked))}
+                name="disableNet"
+              />
+            }
+            label="Не использовать сетевые устройства (перезапуск)"
+          />
+        </Control>
       </Paper>
     </Box>
   );

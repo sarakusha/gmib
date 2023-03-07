@@ -45,6 +45,7 @@ export const {
 
 export const selectConfig = (state: RootState): ConfigState => state.config;
 export const selectLoading = (state: RootState): boolean => selectConfig(state).loading;
+export const selectDisableNet = (state: RootState): boolean => !!selectConfig(state).disableNet;
 export const selectBrightness = (state: RootState): number => selectConfig(state).brightness;
 export const selectAutobrightness = (state: RootState): boolean =>
   selectConfig(state).autobrightness;
@@ -55,6 +56,7 @@ export const selectLocation = (state: RootState): Config['location'] =>
 // export const selectScreenById = (state: RootState, id?: string): Screen | undefined =>
 //   (id && findById(selectConfig(state).screens, id)) || undefined;
 export const selectLogLevel = (state: RootState): LogLevel => selectConfig(state).logLevel;
+export const selectIsFixed = (state: RootState): boolean => !!selectConfig(state).fixedPages;
 export const selectAllPages = (state: RootState): Page[] => selectConfig(state).pages;
 export const selectPageById = (state: RootState, id: string): Page | undefined =>
   findById(selectAllPages(state), id);
