@@ -12,6 +12,7 @@ import { playerWindows } from './windows';
 import localConfig from './localConfig';
 
 import type { Player } from '/@common/video';
+import relaunch from './relaunch';
 
 const preload = path.join(__dirname, '../../preload/dist/player.cjs');
 // const remotePreload = path.join(__dirname, '../../preload/dist/remote.cjs');
@@ -60,8 +61,7 @@ export const openPlayer = async (
       debug(`<<<<CRASH>>>> player process gone: ${details.reason} (${details.exitCode})`);
       if (import.meta.env.PROD && !['clean-exit', 'killed'].includes(details.reason)) {
         debug('relaunch...');
-        app.relaunch();
-        app.quit();
+        relaunch();
       }
     });
     browserWindow.on('close', event => {

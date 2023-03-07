@@ -17,8 +17,7 @@ import { getMainWindow } from './mainWindow';
 
 import generateSignature from '/@common/generateSignature';
 import Deferred from '/@common/Deferred';
-import { notEmpty } from '/@common/helpers';
-
+import relaunch from './relaunch';
 
 type ProxyOptions = {
   readonly host: string;
@@ -52,6 +51,7 @@ const service = responder.createService({
     identifier: localConfig.get('identifier'),
   },
 });
+service.on('name-change', () => {});
 
 let timeout: NodeJS.Timeout | undefined;
 

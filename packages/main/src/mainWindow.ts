@@ -7,6 +7,7 @@ import createWindow from './createWindow';
 import localConfig from './localConfig';
 import { addRemoteFactory, getTitle, setRemoteEditClick, setRemotesFactory } from './mainMenu';
 import { closeScreens, screenWindows } from './windows';
+import relaunch from './relaunch';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:wnd`);
 
@@ -58,8 +59,7 @@ export const createAppWindow = (
     debug(`<<<<CRASH>>>>: renderer process gone: ${details.reason} (${details.exitCode})`);
     if (import.meta.env.PROD && !['clean-exit', 'killed'].includes(details.reason)) {
       debug('relaunch...');
-      app.relaunch();
-      app.quit();
+      relaunch();
     }
   });
   return browserWindow;
