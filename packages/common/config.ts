@@ -9,6 +9,7 @@ export type Page = {
   title: string;
   permanent?: true;
   preload?: string;
+  userAgent?: string;
 };
 export type Location = {
   latitude?: number;

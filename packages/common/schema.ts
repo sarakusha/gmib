@@ -148,6 +148,7 @@ export const configSchema: Schema<Config> = {
         title: { type: 'string' },
         permanent: { type: 'boolean' },
         preload: { type: 'string' },
+        userAgent: { type: 'string' },
       },
       required: ['id', 'title'],
     },

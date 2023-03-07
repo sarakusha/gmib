@@ -12,6 +12,7 @@ import express from 'express';
 import type { File } from 'formidable';
 import formidable from 'formidable';
 import { nanoid } from 'nanoid';
+import { machineId } from 'node-machine-id';
 
 import type { MediaInfo } from '/@common/mediaInfo';
 import { asyncSerial, findById, notEmpty } from '/@common/helpers';
@@ -100,6 +101,11 @@ import { setIncomingSecret } from './secret';
 import { createSearchParams, isEqualOptions, playerWindows, screenWindows } from './windows';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:api`);
+
+let MACHINE_ID: string;
+machineId().then(value => {
+  MACHINE_ID = value;
+});
 
 // const peers = new Map<
 //   number,
@@ -292,6 +298,8 @@ const updateTest = (scr: Screen) => {
   });
   testWindow.setPosition(scr.left + display.bounds.x, scr.top + display.bounds.y);
   testWindow.setSize(scr.width, scr.height);
+  if (page.userAgent && !contents.userAgent.includes(page.userAgent))
+    contents.userAgent = `${contents.userAgent} ${page.userAgent} machineid/${MACHINE_ID}`;
   needReload && url && testWindow.loadURL(url);
   testWindow.show();
   debug(`test: ${url}`);
