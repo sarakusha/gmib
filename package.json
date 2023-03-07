@@ -185,6 +185,7 @@
     "http-proxy-middleware": "^2.0.6",
     "lodash": "^4.17.21",
     "nanoid": "3",
+    "node-machine-id": "^1.1.12",
     "smpte-timecode": "^1.2.3",
     "sqlite3": "^5.0.11",
     "tail": "^2.2.4",
