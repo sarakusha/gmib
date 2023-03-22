@@ -353,8 +353,8 @@ export const promisifyGet = <P extends (...params: any) => any, R>(
     return promisify(statement.get.bind(statement));
   });
   return (...params) =>
-    fn()(encoder(...(params as any))).then(result =>
-      decoder ? result && decoder(result) : result,
+    fn()(encoder(...(params as any))).then(
+      result => (decoder ? result && decoder(result) : result) as R,
     );
 };
 
@@ -368,7 +368,9 @@ export const promisifyAll = <P extends (...args: any) => any, R>(
     return promisify(statement.all.bind(statement));
   });
   return (...params) =>
-    fn()(encoder(params)).then(result => (decoder ? result.map(decoder) : result));
+    fn()(encoder(params)).then(
+      result => (decoder ? (result as NullableOptional).map(decoder) : result) as R[],
+    );
 };
 
 export const promisifyRun = <P extends (...args: any) => any>(
