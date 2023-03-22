@@ -102,7 +102,7 @@ export const usePlayers = () =>
       players: data && selectPlayers(data),
       ...other,
     }),
-    // pollingInterval: 10000,
+    pollingInterval: 5000,
   });
 
 export const usePlayer = (id?: number | null) =>

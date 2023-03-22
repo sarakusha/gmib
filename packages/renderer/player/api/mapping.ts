@@ -73,6 +73,7 @@ export const usePlayerMappings = () =>
       ...other,
       mappings: data && selectMappings(data),
     }),
+    pollingInterval: 5000,
   });
 
 export const usePlayerMapping = (id: number | undefined | null) =>

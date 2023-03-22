@@ -162,6 +162,7 @@ export const useGetPlaylists = () =>
       data: data && selectPlaylists(data),
       ...other,
     }),
+    pollingInterval: 5000,
   });
 
 export const useGetPlaylistById = (id?: number | null) =>
