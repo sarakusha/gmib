@@ -501,24 +501,6 @@ api.patch('/playlist/:id', async (req, res, next) => {
     } else if ('remove' in req.body) {
       const itemId = req.body.remove as string;
       await deletePlaylistItemById(itemId);
-      // const items = await getPlaylistItems(id);
-      // if (items.splice(position, 1).length > 0) {
-      //   transaction = await beginTransaction();
-      //   if (items && items.length > 0) {
-      //     await Promise.all(
-      //       items.map((item, index) =>
-      //         updatePlaylistItem(id, index, item).then(
-      //           ({ changes: count }) =>
-      //             count > 0 || insertPlaylistItem(id, index, item, nanoid()).then(() => true),
-      //         ),
-      //       ),
-      //     );
-      //     await deleteExtraPlaylistItems(id, items.length);
-      //   } else {
-      //     await deleteAllPlaylistItems(id);
-      //   }
-      //   transaction = await commitTransaction();
-      // }
     }
     const items = await getPlaylistItems(id);
     res.json({ ...playlist, items });
@@ -557,7 +539,6 @@ api.post('/screen', async (req, res, next) => {
     const scr = await loadScreen(lastID);
     scr && updateTest(scr);
     res.json(scr);
-    // await updateScreens();
   } catch (e) {
     next(e);
   }
@@ -573,7 +554,6 @@ api.delete('/screen/:id', (req, res, next) => {
   deleteScreen(id)
     .then(({ changes }) => {
       res.sendStatus(changes ? 204 : 404);
-      // return updateScreens();
     })
     .catch(next);
 });
@@ -581,13 +561,11 @@ api.delete('/screen/:id', (req, res, next) => {
 api.put('/screen', async (req, res, next) => {
   try {
     const { addresses, ...props } = req.body as Screen;
-    // debug(`upd0: ${props.brightness}`);
     const { changes } = await updateScreen(await uniqueScreenName(props));
     if (changes === 0) {
       res.sendStatus(404);
       return;
     }
-    // debug(`upd1: ${props.brightness}`);
     if (addresses && addresses.length > 0) {
       await Promise.all(
         addresses.map(async address => {
@@ -597,58 +575,15 @@ api.put('/screen', async (req, res, next) => {
         }),
       );
     }
-    // debug(`upd2: ${props.brightness}`);
     await deleteExtraAddresses(props.id, addresses);
-    // let ids: number[] | undefined;
-    // if (players && players.length > 0) {
-    //   ids = await Promise.all(
-    //     players.map(async player => {
-    //       const { changes: count } = await updatePlayer(screen.id, player);
-    //       if (count === 0) {
-    //         const { lastID } = await insertPlayer(screen.id, player);
-    //         return lastID;
-    //       }
-    //       return player.id;
-    //     }),
-    //   );
-    // }
-    // await deleteExtraPlayers(screen.id, ids);
-    // debug(`upd3: ${props.brightness}`);
     const result = await loadScreen(props.id);
-    // debug(`upd4: ${props.brightness}`);
     result && updateTest(result);
-    // debug(`upd5: ${props.brightness}`);
     res.json(result);
-    // if (result?.addresses?.length) {
-    //   getMainWindow()?.webContents.send('screenChanged', props.id);
-    // }
-    // await updateScreens();
   } catch (e) {
     debug(`error while update screen: ${e}`);
     next(e);
   }
 });
-
-/*
-api.patch('/screen/:id', (req, res, next) => {
-  const id = +req.params.id;
-  insertPlayer({})
-    .then(() => loadScreen(id))
-    .then(result => res.json(result))
-    .catch(next);
-});
-*/
-
-/*
-api.delete('/screen/:screenId/player/:playerId', async (req, res, next) => {
-  const screenId = +req.params.screenId;
-  const playerId = +req.params.playerId;
-  deletePlayer(playerId)
-    .then(() => loadScreen(screenId))
-    .then(screen => res.json(screen))
-    .catch(next);
-});
-*/
 
 api.get('/address', (req, res, next) => {
   getAddresses()
@@ -767,26 +702,6 @@ api.put('/player/:id/stop', (req, res) => {
   if (win) win.webContents.send('stop', +req.params.id);
   res.end();
 });
-
-// api.get('/call', (req, res) => {
-//   const pc = new RTCPeerConnection();
-//   const deferred = new Deferred<RTCIceCandidateInit>();
-//   const timeout = global
-//     .setTimeout(() => {
-//       pc.close();
-//       peers.delete(+timeout);
-//       deferred.reject(new Error('timeout'));
-//     }, 10000)
-//     .unref();
-//   res.json({ id: +timeout });
-//   pc.onicecandidate = e => {
-//     if (e.candidate) {
-//       const { candidate, sdpMid, sdpMLineIndex } = e.candidate;
-//       deferred.resolve({ candidate, sdpMLineIndex, sdpMid });
-//     }
-//   };
-//   peers.set(+timeout, { pc, candidate: deferred.promise });
-// });
 
 api.get('/handshake/:id', async (req, res) => {
   const server = new SRPServerSession(new SRPRoutines(new SRPParameters()));
