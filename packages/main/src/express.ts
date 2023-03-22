@@ -37,6 +37,8 @@ export const wss = new WebSocketServer({ clientTracking: false, noServer: true }
 app.use(
   helmet({
     contentSecurityPolicy: false,
+    hsts: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
   }),
 );
 app.use(cors({ origin: '*', exposedHeaders: ['x-ni-identifier', 'x-from'] }));
