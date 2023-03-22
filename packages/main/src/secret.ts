@@ -70,17 +70,19 @@ export const getOutgoingSecret = async (id: string) =>
 
 const secret = randomBytes(48);
 
+export const getRemoteCredentials = async (url: string): Promise<Credentials | undefined> => {
+  const response = await fetch(url);
+  debug(`${url}, ${response.ok}:${JSON.stringify(response)}`);
+  if (!response.ok) return undefined;
+  const remote = await response.text();
+  return {
+    identifier: localConfig.get('identifier'),
+    apiSecret: await getOutgoingSecret(remote),
+  };
+};
+
 app.whenReady().then(() => {
-  ipcMain.handle('getRemoteCredentials', async (_, url): Promise<Credentials | undefined> => {
-    const response = await fetch(url);
-    debug(`${url}, ${response.ok}:${response}`);
-    if (!response.ok) return undefined;
-    const remote = await response.text();
-    return {
-      identifier: localConfig.get('identifier'),
-      apiSecret: await getOutgoingSecret(remote),
-    };
-  });
+  ipcMain.handle('getRemoteCredentials', (_, url) => getRemoteCredentials(url));
   ipcMain.handle(
     'getLocalCredentials',
     (): Credentials => ({ identifier: localConfig.get('identifier'), apiSecret: secret }),
