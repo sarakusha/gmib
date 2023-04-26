@@ -21,7 +21,7 @@ const insertBrightness = promisifyRun(
 
 const insertTelemetry = promisifyRun(
   `INSERT INTO telemetry (timestamp, address, x, y, temperature)
-   VALUES ($timesamp, $address, $x, $y, $tempterature)`,
+   VALUES ($timestamp, $address, $x, $y, $temperature)`,
   (params: TelemetryOpts) => ({
     $timestamp: params.timestamp,
     $address: params.address,

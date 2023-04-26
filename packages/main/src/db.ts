@@ -87,8 +87,8 @@ function createTables(): void {
       `CREATE TABLE IF NOT EXISTS sensors (
             timestamp INT NOT NULL,
             address TEXT NOT NULL,
-            illuminanse INT (2),
-            tempearure INT (1),
+            illuminance INT (2),
+            temperature INT (1),
             PRIMARY KEY ( timestamp, address )
         )`,
       err => err && debug(`error while create sensors ${err}`),
