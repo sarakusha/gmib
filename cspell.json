@@ -9,10 +9,33 @@
     }
   ],
   "dictionaries": [
-    "project-words"
+    "typescript",
+    "node",
+    "project-words",
+    "css",
+    "html",
+    "fonts",
+    "npm",
+    "filetypes",
+    "softwareTerms"
   ],
   "ignorePaths": [
-    "node_modules",
-    "/project-words.txt"
-  ]
+    "node_modules/",
+    "/project-words.txt",
+    "bak/",
+    "dist/"
+  ],
+  "files": [
+    "packages/**/*.{ts,tsx,js,mjs,cjs,md,mdx}",
+    "docs/**/*.md"
+  ],
+  "overrides": [
+    {
+      "filename": "**/*.{ts,tsx}",
+      "languageId": "typescript"
+    }
+  ],
+  "enabled": true,
+  "language": "en,ru",
+  "useGitignore": true
 }

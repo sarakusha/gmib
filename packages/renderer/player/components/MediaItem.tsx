@@ -28,6 +28,8 @@ import React from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 // import type { ListChildComponentProps } from 'react-window';
 
+import { getUrl } from '/@common/remote';
+
 import { formatTime, ItemTypes } from '../utils';
 
 import Numbered from './Numbered';
@@ -227,7 +229,7 @@ const MediaItem = React.forwardRef<HTMLLIElement, MediaItemProps>((props, ref) =
         <ListItemAvatar>
           <Thumbnail
             variant="rounded"
-            src={thumbnail && `/public/${thumbnail?.replace(/^.*[\\/]/, '')}`}
+            src={thumbnail && getUrl(`/public/${thumbnail?.replace(/^.*[\\/]/, '')}`)}
           />
         </ListItemAvatar>
         <ListItemText

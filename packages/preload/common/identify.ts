@@ -50,9 +50,7 @@ export const generateSignature = (
   uri: string,
   timestamp: number,
   body?: unknown,
-): string | undefined => {
-  console.log({ secret: credentials.apiSecret, method, uri, timestamp, body: JSON.stringify(body) });
-  return credentials.apiSecret && genSignature(credentials.apiSecret, method, uri, timestamp, body);
-};
+): string | undefined =>
+  credentials.apiSecret && genSignature(credentials.apiSecret, method, uri, timestamp, body);
 
 initialize();

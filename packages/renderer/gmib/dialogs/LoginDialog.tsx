@@ -17,6 +17,7 @@ import novastarApi from '../api/novastar';
 import { useDispatch, useSelector } from '../store';
 import { setAuthRequired } from '../store/currentSlice';
 import { selectAuthRequired } from '../store/selectors';
+import { setDisableNet } from '../store/configSlice';
 
 const login = async (password: string, host: string) => {
   const routines = new SRPRoutines(new SRPParameters());
@@ -24,26 +25,22 @@ const login = async (password: string, host: string) => {
   const identifier = window.identify.getIdentifier();
   const [first, { salt, B }] = await Promise.all([
     client.step1('gmib', password),
-    fetchJson<{ salt: string; B: string }>(
-      `http://${host}/api/handshake/${identifier}`,
-      { cache: 'no-cache' },
-    ),
+    fetchJson<{ salt: string; B: string }>(`http://${host}/api/handshake/${identifier}`, {
+      cache: 'no-cache',
+    }),
   ]);
   const second = await first.step2(BigInt(salt), BigInt(B));
   const { A, M1 } = second;
-  const { M2 } = await fetchJson<{ M2: string }>(
-    `http://${host}/api/login/${identifier}`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        A: `0x${A.toString(16)}`,
-        M1: `0x${M1.toString(16)}`,
-      }),
+  const { M2 } = await fetchJson<{ M2: string }>(`http://${host}/api/login/${identifier}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
     },
-  );
+    body: JSON.stringify({
+      A: `0x${A.toString(16)}`,
+      M1: `0x${M1.toString(16)}`,
+    }),
+  });
   await second.step3(BigInt(M2));
   return second.S;
 };
@@ -56,7 +53,10 @@ const LoginDialog: React.FC = () => {
   const loginHandler: React.FormEventHandler = async e => {
     e.preventDefault();
     try {
-      const secret = await login(password, credentials?.host ?? `${remote.host}:${remote.port + 1}`);
+      const secret = await login(
+        password,
+        credentials?.host ?? `${remote.host}:${remote.port + 1}`,
+      );
       window.identify.setSecret(secret, credentials?.identifier);
       dispatch(setAuthRequired(undefined));
       dispatch(novastarApi.endpoints.getNovastars.initiate());
@@ -87,9 +87,19 @@ const LoginDialog: React.FC = () => {
         <Button color="primary" type="submit" variant="contained" form="pass">
           Войти
         </Button>
-        <Button onClick={window.close} color="primary">
-          Закрыть
-        </Button>
+        {remote.isRemoteSession ? (
+          <Button onClick={window.close} color="primary">
+            Закрыть
+          </Button>
+        ) : (
+          <Button
+            color="primary"
+            onClick={() => dispatch(setDisableNet(true))}
+            title="Не использовать сетевые устройства"
+          >
+            Локально
+          </Button>
+        )}
       </DialogActions>
     </Dialog>
   );

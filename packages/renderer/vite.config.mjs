@@ -79,7 +79,7 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: '.',
     // assetsInlineLimit: 12*1024,
-    minify: process.env.MODE !== 'development',
+    minify: false, // process.env.MODE !== 'development',
     rollupOptions: {
       input: {
         gmib: path.join(PACKAGE_ROOT, 'index.html'),

@@ -26,6 +26,7 @@ contextBridge.exposeInMainWorld('mediaStream', { updateSrcObject });
 contextBridge.exposeInMainWorld('log', log.log.bind(log));
 contextBridge.exposeInMainWorld('setDispatch', setDispatch);
 contextBridge.exposeInMainWorld('server', {
+  host: 'localhost',
   port: +(process.env['NIBUS_PORT'] ?? 9001) + 1,
 });
 contextBridge.exposeInMainWorld('identify', expandTypes(identify));

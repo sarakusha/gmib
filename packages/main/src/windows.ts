@@ -31,6 +31,7 @@ export const createSearchParams = <T extends ScreenOptions>(options: T): URLSear
 
 export const screenWindows = new Map<number, [BrowserWindow, ScreenOptions | undefined]>();
 export const playerWindows = new Map<number, BrowserWindow>();
+export const remotePlayers = new Map<string, BrowserWindow>();
 
 export const showAll = (): void =>
   [...windows].forEach(window => {

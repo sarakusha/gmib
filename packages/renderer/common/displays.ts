@@ -37,7 +37,7 @@ export const useDisplays = () =>
       displays: data && selectDisplays(data),
       ...other,
     }),
-    // pollingInterval: 5000,
+    pollingInterval: 3000,
   });
 
 export const useDisplay = (id?: number | null) =>
@@ -47,7 +47,7 @@ export const useDisplay = (id?: number | null) =>
       display: data && id ? selectDisplay(data, id) : undefined,
       ...other,
     }),
-    pollingInterval: 3000,
+    // pollingInterval: 3000,
   });
 
 export const { useGetDisplaysQuery } = displayApi;

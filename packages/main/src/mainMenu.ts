@@ -35,6 +35,7 @@ export const updatePlayerMenu = (): Promise<void> =>
   dbReady.then(() =>
     getPlayers().then(players => {
       playerMenu.submenu = [
+        // { label: '192.168.2.40', click: () => openPlayer(1, '192.168.2.40', 9001) },
         ...players.map<MenuItemConstructorOptions>(({ id, name }) => ({
           label: name ?? `player#${id}`,
           click: () => {
@@ -179,7 +180,7 @@ const template: MenuItemConstructorOptions[] = [
     submenu: [
       {
         label: 'Все версии',
-        click: () => shell.openExternal('https://github.com/sarakusha/gmib/releases/latest'),
+        click: () => shell.openExternal('https://github.com/sarakusha/gmib/releases'),
       },
       {
         label: 'Проверить обновления',
@@ -255,10 +256,16 @@ export const addRemoteFactory =
   (create: CreateWindow) =>
   (port?: number, address?: string, update = true): void => {
     const label = getRemoteLabel(port, address);
+    let needUpdate = false;
     if (remoteMenu.submenu.findIndex(item => item.label === label) === -1) {
       remoteMenu.submenu.push({ label, click: remoteClick(create) });
-      update && updateMenu();
+      needUpdate = true;
     }
+    // if (playerMenu.submenu.findIndex(item => item.label === label) === -1) {
+    //   playerMenu.submenu.push({ label, click: playerClick(create) });
+    //   needUpdate = true;
+    // }
+    if (needUpdate && update) updateMenu();
   };
 
 export const removeRemote = ({ port, address }: RemoteHost): void => {
@@ -275,14 +282,14 @@ export const setRemoteEditClick = (click: () => void): void => {
   updateMenu();
 };
 
-export const setRemotesFactory =
-  (create: CreateWindow) =>
-  (remotes: { port: number; address: string }[]): void => {
-    const addRemote = addRemoteFactory(create);
+export const setRemotesFactory = (create: CreateWindow) => {
+  const addRemote = addRemoteFactory(create);
+  return (remotes: { port: number; address: string }[]): void => {
     remoteMenu.submenu.splice(4, remoteMenu.submenu.length);
     remotes.forEach(({ port, address }) => addRemote(port, address, false));
     updateMenu();
   };
+};
 
 localConfig.onDidChange('autostart', (autostart = false) => {
   // debug(`autostart: ${autostart}`);

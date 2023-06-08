@@ -19,7 +19,7 @@ const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:express`);
 
 const app = express();
 const server = createServer(app);
-export const wss = new WebSocketServer({ clientTracking: false, noServer: true });
+export const wss = new WebSocketServer({ server });
 
 // const isAuthorized = (req: IncomingMessage) =>
 //   import.meta.env.DEV ||
@@ -68,8 +68,6 @@ app.use(
   // },
   express.static(outputRoot),
 );
-
-// app.use('/player', express.static(path.resolve(__dirname, '../../player/dist')));
 
 const errorHandler: ErrorRequestHandler = (error, req, res, next) => {
   if ('errno' in error && 'code' in error && error.code === 'SQLITE_CONSTRAINT') {
