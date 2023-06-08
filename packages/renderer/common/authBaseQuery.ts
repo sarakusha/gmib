@@ -5,7 +5,7 @@ import { host, isRemoteSession, port } from '/@common/remote';
 
 const baseUrl = host && port ? `http://${host}:${+port + 1}/api` : '/api';
 const secret = window.identify.getSecret();
-const identifier = window.identify.getIdentifier();
+let identifier: string | undefined;
 
 const defaultBaseQuery = fetchBaseQuery({
   baseUrl,
@@ -33,6 +33,7 @@ const remoteBaseQuery: ReturnType<typeof fetchBaseQuery> = (arg, api, extra) => 
   const headers = new Headers(originalHeaders as Headers);
   const signature = window.identify.generateSignature(method, url, now, body);
   if (signature) {
+    if (!identifier) identifier = window.identify.getIdentifier();
     identifier && headers.set('x-ni-identifier', identifier);
     headers.set('x-ni-timestamp', now.toString());
     headers.set('x-ni-signature', signature);
