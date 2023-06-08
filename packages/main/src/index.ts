@@ -124,3 +124,7 @@ launchPlayers();
 process.nextTick(() => {
   log.log(`Resources path: ${process.resourcesPath}`);
 });
+
+process.on('uncaughtException', error => {
+  log.error(`uncaughtException: ${error.stack}`);
+});
