@@ -33,11 +33,6 @@ export type ScreenParam<K extends keyof Screen = keyof Screen> = ScreenId & {
   value: Screen[K];
 };
 
-// type ScreenColorBrightness = ScreenId & {
-//   color: keyof BrightnessRGBV;
-//   value: number;
-// };
-
 export type ScreenBrightness = ScreenId & {
   value: number;
 };
@@ -83,29 +78,6 @@ const novastarApi = createApi({
         body: other,
       }),
     }),
-    // setDisplayMode: build.mutation<void, ScreenArg<'mode'>>({
-    //   query: ({ value, screen, path }) => ({
-    //     url: 'novastar/mode',
-    //     method: 'PUT',
-    //     body: JSON.stringify(value),
-    //   }),
-    // }),
-    // setGamma: build.mutation<void, ScreenArg<'gamma'>>({
-    //   query: ({ value, screen, path }) => ({
-    //     url: `novastar/${path}/gamma`,
-    //     method: 'PUT',
-    //     params: { screen },
-    //     body: JSON.stringify(value),
-    //   }),
-    // }),
-    // setRGBVBrightness: build.mutation<void, ScreenArg<'rgbv'>>({
-    //   query: ({ value, screen, path }) => ({
-    //     url: `novastar/${path}/rgbv`,
-    //     method: 'PUT',
-    //     params: { screen },
-    //     body: JSON.stringify(value),
-    //   }),
-    // }),
     setBrightness: build.mutation<void, ScreenBrightness>({
       query: arg => ({
         url: 'novastar/screens/brightness',
@@ -163,26 +135,6 @@ export const updateNovastarScreens = <K extends keyof Screen, S extends number>(
     );
   };
 };
-
-// export const setScreenColorBrightness = createAsyncThunk<
-//   void,
-//   ScreenColorBrightness,
-//   AppThunkConfig
-// >('novastarApi/colorBrightness', ({ path, screen, color, value }, { getState, dispatch }) => {
-//   const novastarData = selectNovastarData(getState()).data;
-//   if (novastarData) {
-//     const rgbv = selectNovastar(novastarData, path)?.screens?.[screen]?.rgbv;
-//     if (rgbv) {
-//       dispatch(
-//         novastarApi.endpoints.setRGBVBrightness.initiate({
-//           path,
-//           screen,
-//           value: { ...rgbv, [color]: minmax(255, value) },
-//         }),
-//       );
-//     }
-//   }
-// });
 
 export const useNovastarIds = () =>
   novastarApi.useGetNovastarsQuery(undefined, {

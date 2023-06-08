@@ -89,39 +89,6 @@ export const updateBrightness = createDebouncedAsyncThunk<void, undefined | numb
         })
         .filter(notEmpty),
     );
-    // const tasks = screens
-    //   .filter(hasBrightnessFactor)
-    //   .filter(({ brightnessFactor }) => brightnessFactor > 0)
-    //   .reduce<[DeviceId, number][]>(
-    //     (res, { brightnessFactor, addresses: original, id: screenId }) => {
-    //       const addresses = original?.filter(address => reAddress.test(address));
-    //       if (!addresses) return res;
-    //       const isValid = timestamp && interval && Date.now() - timestamp < 2 * interval * MINUTE;
-    //       const actualBrightness = Math.min(Math.round(brightnessFactor * brightness), 100);
-    //       return [
-    //         ...res,
-    //         ...addresses
-    //           .map(location => parseLocation(location)?.address ?? location)
-    //           .filter(notEmpty)
-    //           .reduce<DeviceState[]>(
-    //             (devs, address) => [...devs, ...selectDevicesByAddress(state, address)],
-    //             [],
-    //           )
-    //           .map(({ id }) =>
-    //             tuplify(
-    //               id,
-    //               isValid
-    //                 ? Math.min(
-    //                     actualBrightness,
-    //                     scr?.[screenId]?.maxBrightness ?? Number.MAX_SAFE_INTEGER,
-    //                   )
-    //                 : actualBrightness,
-    //             ),
-    //           ),
-    //       ];
-    //     },
-    //     [],
-    //   );
     await Promise.allSettled(
       tasks.map(([address, value]) =>
         typeof address === 'string'

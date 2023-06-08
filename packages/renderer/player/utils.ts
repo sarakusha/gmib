@@ -49,7 +49,6 @@ export const shuffleItems = <T extends { md5: string }>(items: T[]): T[] => {
     chunks.reduce((prev, next /* , index */) => {
       const last = prev.length - 1;
       if (last > 0 && prev[last].md5 === next[0].md5) {
-        // console.log('swap', index, prev[0].mediaid, prev[last].mediaid);
         const temp = prev[0];
         prev[0] = prev[last];
         prev[last] = temp;
