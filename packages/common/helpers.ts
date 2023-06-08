@@ -281,6 +281,7 @@ export type LocalConfig = {
   salt?: string;
   verifier?: string;
   readonly identifier: string;
+  unsafeMode?: boolean;
 };
 
 export type Modules = IModuleInfo<Minihost2Info | Minihost3Info>[];

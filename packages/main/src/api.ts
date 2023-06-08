@@ -131,7 +131,7 @@ fs.mkdir(mediaRoot, { recursive: true }, err => {
   }
 });
 
-const noop = (): void => {};
+const noop = (): void => { };
 
 const getHash = (filepath: string): Promise<string> =>
   new Promise<string>((resolve, reject) => {
@@ -316,16 +316,18 @@ electronApp.whenReady().then(async () => {
 
 const api = express.Router();
 
-api.use(
-  auth.unless({
-    path: [
-      /\/api\/login\/.*/,
-      /\/api\/handshake\/.*/,
-      '/api/identifier',
-      '/api/novastar/subscribe',
-    ],
-  }),
-);
+if (!localConfig.get('unsafeMode')) {
+  api.use(
+    auth.unless({
+      path: [
+        /\/api\/login\/.*/,
+        /\/api\/handshake\/.*/,
+        '/api/identifier',
+        '/api/novastar/subscribe',
+      ],
+    }),
+  );
+}
 
 api.use(proxyMiddleware);
 
