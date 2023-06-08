@@ -34,7 +34,7 @@ const config = {
     target: `node${node}`,
     outDir: 'dist',
     assetsDir: '.',
-    // minify: process.env.MODE !== 'development',
+    minify: process.env.MODE !== 'development',
     lib: {
       entry: path.join(__dirname, 'src/index.ts'),
       formats: ['cjs'],

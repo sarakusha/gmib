@@ -14,7 +14,7 @@ import { styled } from '@mui/material/styles';
 import { hasProps } from '@novastar/screen/common';
 import React, { useEffect, useRef, useState } from 'react';
 import type { MouseEvent } from 'react';
-import { ErrorBoundary, type FallbackRender } from 'react-error-boundary';
+import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
 import IPut from 'iput';
 
 import type { CustomHost } from '/@common/helpers';
@@ -69,7 +69,7 @@ const Header = styled('div')(({ theme }) => ({
 
 const hasAddressPort = hasProps('address', 'port');
 
-const fallbackRender: typeof FallbackRender = ({ error }) => (
+const fallbackRender = ({ error }: FallbackProps) => (
   // Call resetErrorBoundary() to reset the error boundary and retry the render.
 
   <div role="alert">

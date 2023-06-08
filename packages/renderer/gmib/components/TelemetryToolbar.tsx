@@ -73,7 +73,7 @@ const TelemetryToolbar: React.FC<Props> = ({
           icon={<CancelIcon />}
           title="Отменить опрос"
           onClick={cancel}
-          isBusy={isBusy > 0 || loading}
+          isBusy={Boolean(isBusy) || loading}
           disabled={!loading}
         />
       ) : (
