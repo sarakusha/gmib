@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.2.0](https://github.com/sarakusha/gmib/compare/v4.1.0...v4.2.0) (2023-06-08)
+
+
+### Features
+
+* code improvement ([5e076c8](https://github.com/sarakusha/gmib/commit/5e076c87a119aaed9510b5e62c707107f2ed1753))
+* cross-origin enabled ([0b9eb91](https://github.com/sarakusha/gmib/commit/0b9eb9188a5578cfde1e414c0014681073d4a500))
+* get url for the remote session ([5cfd833](https://github.com/sarakusha/gmib/commit/5cfd83301c63a094629ee2f45207a1aac5285ce1))
+* remote credentials ([24455ad](https://github.com/sarakusha/gmib/commit/24455ad83d146d3f9e02233ac12d35d843e7d38c))
+* unsafeMode ([d3bc09b](https://github.com/sarakusha/gmib/commit/d3bc09bf78f72c9d7725e4419892246caad4d4f0))
+* update restrictions ([d81c69f](https://github.com/sarakusha/gmib/commit/d81c69ff3fcfabc157da44a3376e2996b4f1acad))
+
+
+### Bug Fixes
+
+* iput ([05209b2](https://github.com/sarakusha/gmib/commit/05209b2c234bd1fdac70006066a87d8d5056f1f1))
+* remote auth ([8d1b12c](https://github.com/sarakusha/gmib/commit/8d1b12c55dccb1be273f9de8a5d2b7a3f1dab2ea))
+* typo ([d139b4f](https://github.com/sarakusha/gmib/commit/d139b4ff6b1b015ee7eb928a82a4b7114195821f))
+* uncaughtException ([0ea0fa5](https://github.com/sarakusha/gmib/commit/0ea0fa523b46139cdff2d13a72fbbbcda464ef93))
+* WebRTC negotiation ([5d8b933](https://github.com/sarakusha/gmib/commit/5d8b9334d43edd9ca79ed48a0623794c8704b410))
+* WebRTC negotiation ([ebc2d92](https://github.com/sarakusha/gmib/commit/ebc2d92a546a734387c65b389d28782b3ee7981d))
+
+## [4.0.0](https://github.com/sarakusha/gmib/compare/v3.6.6...v4.0.0) (2022-11-02)
+
 ## [4.1.0](https://github.com/sarakusha/gmib/compare/v3.6.6...v4.1.0) (2023-03-07)
 
 
