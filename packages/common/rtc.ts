@@ -16,7 +16,22 @@ export type AnswerMessage = {
   sourceId: number;
 };
 
-export type RtcMessage = CandidateMessage | OfferMessage | AnswerMessage;
+export type RequestMessage = {
+  event: 'request';
+  sourceId: number;
+};
+
+export type DurationMessage = {
+  event: 'duration';
+  value: number;
+};
+
+export type PositionMessage = {
+  event: 'position';
+  value: number;
+};
+
+export type RtcMessage = CandidateMessage | OfferMessage | AnswerMessage | RequestMessage;
 
 export type WithWebSocketKey<T extends RtcMessage> = T & {
   id: string;

@@ -1,16 +1,20 @@
 import { contextBridge } from 'electron';
 
-// import debugFactory from 'debug';
+import debugFactory from 'debug';
 
 import log from '../common/initlog';
 import { setDispatch } from '../common/ipcDispatch';
+import * as identify from '../common/identify';
 
-import type { CandidateMessage, OfferMessage, RtcMessage } from '/@common/rtc';
+import type { AnswerMessage, CandidateMessage, RequestMessage, RtcMessage } from '/@common/rtc';
 import Deferred from '/@common/Deferred';
+import expandTypes from '/@common/expandTypes';
+
+const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:remote`);
 
 const search = new URLSearchParams(window.location.search);
 const host = search.get('host') ?? 'localhost';
-const port = +(search.get('port') ?? 9002);
+const port = +(search.get('port') ?? 9001);
 const sourceId = +(search.get('source_id') ?? 1);
 
 const deferred = new Deferred<MediaStream>();
@@ -27,47 +31,49 @@ contextBridge.exposeInMainWorld('log', log.log.bind(log));
 contextBridge.exposeInMainWorld('setDispatch', setDispatch);
 contextBridge.exposeInMainWorld('mediaStream', { updateSrcObject });
 contextBridge.exposeInMainWorld('server', {
-  port: +(process.env['NIBUS_PORT'] ?? 9001) + 1,
+  host,
+  port,
 });
+contextBridge.exposeInMainWorld('identify', expandTypes(identify));
 
-const ws = new WebSocket(`ws://${host}:${port}`);
+const ws = new WebSocket(`ws://${host}:${port + 1}`);
 ws.onopen = async () => {
   const pc = new RTCPeerConnection();
+  
   pc.onicecandidate = async e => {
-    const candidate: RTCIceCandidateInit = {
-      candidate: e.candidate?.candidate,
-      sdpMLineIndex: e.candidate?.sdpMLineIndex,
-      sdpMid: e.candidate?.sdpMid,
-    };
+    const { candidate } = e;
+    if (!candidate) return;
     if (ws.readyState === ws.OPEN) {
       const msg: CandidateMessage = {
         event: 'candidate',
-        candidate,
+        candidate: candidate.toJSON(),
         sourceId,
       };
       ws.send(JSON.stringify(msg));
     }
   };
-  const offer: OfferMessage = {
-    event: 'offer',
-    desc: await pc.createOffer(),
-    sourceId,
-  };
-  ws.send(JSON.stringify(offer));
+  
   pc.ontrack = e => deferred.resolve(e.streams[0]);
 
-  ws.onmessage = ev => {
+  ws.onmessage = async ev => {
     try {
       const msg = JSON.parse(ev.data.toString()) as RtcMessage;
       switch (msg.event) {
         case 'candidate':
           if (msg.sourceId === sourceId && 'candidate' in msg) {
-            pc.addIceCandidate(msg.candidate ?? undefined);
+            await pc.addIceCandidate(msg.candidate ?? undefined);
           }
           break;
-        case 'answer':
+        case 'offer':
           if (msg.sourceId === sourceId) {
-            pc.setRemoteDescription(msg.desc);
+            await pc.setRemoteDescription(msg.desc);
+            const answer: AnswerMessage = {
+              event: 'answer',
+              desc: await pc.createAnswer(),
+              sourceId,
+            };
+            await pc.setLocalDescription(answer.desc);
+            ws.send(JSON.stringify(answer));
           }
           break;
         default:
@@ -75,7 +81,13 @@ ws.onopen = async () => {
           break;
       }
     } catch (e) {
-      console.error(`error while parse websocket message: ${(e as Error).message}`);
+      debug(`error while parse websocket message: ${(e as Error).message}`);
     }
   };
+  const request: RequestMessage = {
+    event: 'request',
+    sourceId,
+  };
+  
+  ws.send(JSON.stringify(request));
 };
