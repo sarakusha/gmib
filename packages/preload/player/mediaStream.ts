@@ -2,7 +2,7 @@ import { type MergeableStream, mergeStreams } from '@sarakusha/ebml';
 
 import { ipcRenderer } from 'electron';
 
-// import debugFactory from 'debug';
+import debugFactory from 'debug';
 
 import VideoSource from './VideoSource';
 
@@ -13,7 +13,7 @@ import ipcDispatch from '../common/ipcDispatch';
 
 import { setCurrentPlaylistItem, setDuration } from '/@player/store/currentSlice';
 import type { Player } from '/@common/video';
-import type { CandidateMessage, RtcMessage, WithWebSocketKey } from '/@common/rtc';
+import type { CandidateMessage, OfferMessage, RtcMessage, WithWebSocketKey } from '/@common/rtc';
 
 let currentSource: VideoSource | undefined;
 let nextSource: VideoSource | undefined;
@@ -27,7 +27,7 @@ const search = new URLSearchParams(window.location.search);
 const sourceId = +(search.get('source_id') ?? 1);
 
 const stream = new MediaStream();
-// const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:mediastream`);
+const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:mediastream`);
 
 const getMediaUri = (name?: string) =>
   name && new URL(`/public/${name}`, new URL(import.meta.url).origin).href;
@@ -131,80 +131,9 @@ const update = async () => {
   }
 };
 
-/* let pc1: RTCPeerConnection;
-let pc2: RTCPeerConnection;
-
-const supportsInsertableStreams = window.RTCRtpSender && 'transform' in RTCRtpSender.prototype;
-console.log({ supportsInsertableStreams });
-
-const test = async (selector: string) => {
-  console.log(new Date().toLocaleTimeString(), 'START');
-  pc1 = new RTCPeerConnection();
-  pc2 = new RTCPeerConnection();
-  pc1.onicecandidate = e => {
-    // setTimeout(() => {
-    console.log(new Date().toLocaleTimeString(), 'onicecandidate1', JSON.stringify(e.candidate));
-    pc2.addIceCandidate(e.candidate ?? undefined).then(
-      () => console.log(2, 'Ok'),
-      err => console.error(2, err),
-    );
-    // }, 5000);
-  };
-  pc2.onicecandidate = e => {
-    console.log(new Date().toLocaleTimeString(), 'onicecandidate2', JSON.stringify(e.candidate));
-    pc1.addIceCandidate(e.candidate ?? undefined).then(
-      () => console.log(1, 'Ok'),
-      err => console.error(1, err),
-    );
-    // else test(selector);
-  };
-  stream.getTracks().forEach(track => {
-    // track.applyConstraints({ frameRate: { max: 1 }});
-    const sender = pc1.addTrack(track, stream);
-    const updateParams = () => {
-      const params = sender.getParameters();
-      if (!params.encodings || params.encodings.length === 0) setTimeout(updateParams, 10);
-      else {
-        // params.encodings[0].scaleResolutionDownBy = 10;
-        params.encodings[0].maxBitrate = 128000;
-        sender.setParameters(params);
-      }
-    };
-    updateParams();
-  });
-  pc2.ontrack = e => {
-    console.log('ON TRACK');
-    const video = document.querySelector(selector) as HTMLVideoElement;
-    if (video) {
-      // eslint-disable-next-line prefer-destructuring
-      video.srcObject = e.streams[0];
-      console.log('STREAM', e.streams);
-      console.log('transivers1', pc1.getTransceivers());
-      const [sender] = pc1.getSenders();
-      // console.log('senders', sender, sender.getParameters(), sender.getStats());
-      console.log('receivers', pc2.getReceivers()[0]);
-      console.log('config1', pc1.getConfiguration());
-    }
-  };
-  console.log(new Date().toLocaleTimeString(), 'Creating offer...');
-  const offer = await pc1.createOffer({ offerToReceiveVideo: true });
-  console.log(new Date().toLocaleTimeString(), 'Created!');
-  pc1.setLocalDescription(offer);
-  pc2.setRemoteDescription(offer);
-  console.log(new Date().toLocaleTimeString(), 'Creating answer...');
-  const answer = await pc2.createAnswer();
-  console.log(new Date().toLocaleTimeString(), 'Created');
-  pc2.setLocalDescription(answer);
-  pc1.setRemoteDescription(answer);
-};
-let timer = 0;
- */
-// eslint-disable-next-line import/prefer-default-export
 export const updateSrcObject = (selector: string) => {
   const video = document.querySelector(selector) as HTMLVideoElement;
   if (video) video.srcObject = stream;
-  // window.clearTimeout(timer);
-  // timer = window.setTimeout(() => test(selector), 500);
 };
 
 const initialize = async () => {
@@ -255,37 +184,33 @@ ipcRenderer.on('stop', () => {
   ipcDispatch(setDuration(duration));
 });
 
-// ipcRenderer.on('playlist', (_, id: number) => {});
-
 const peers = new Map<string, RTCPeerConnection>();
 
-ipcRenderer.on('socket', (_, { id, ...msg }: WithWebSocketKey<RtcMessage>) => {
+ipcRenderer.on('socket', async (_, { id, ...msg }: WithWebSocketKey<RtcMessage>) => {
   if (msg.sourceId !== sourceId) return;
   switch (msg.event) {
-    case 'candidate':
-      {
-        const pc = peers.get(id);
-        if (!pc) console.warn(`Unknown id: ${id}`);
-        else {
-          pc.addIceCandidate(msg.candidate ?? undefined);
-        }
-      }
-      break;
-    case 'offer':
-      {
+    case 'request':
+      try {
         const pc = new RTCPeerConnection();
+        peers.set(id, pc);
+
+        pc.onconnectionstatechange = () => {
+          if (['closed', 'failed'].includes(pc.connectionState)) peers.delete(id);
+        };
+
         pc.onicecandidate = e => {
-          const candidate: WithWebSocketKey<CandidateMessage> = {
+          const { candidate } = e;
+          if (!candidate) return;
+          const candidateMsg: WithWebSocketKey<CandidateMessage> = {
             id,
             event: 'candidate',
-            candidate: e.candidate,
+            candidate: candidate.toJSON(),
             sourceId,
           };
-          ipcRenderer.invoke('socket', candidate);
+          ipcRenderer.invoke('socket', candidateMsg);
         };
-        peers.set(id, pc);
+        
         stream.getTracks().forEach(track => {
-          // track.applyConstraints({ frameRate: { max: 1 }});
           const sender = pc.addTrack(track, stream);
           const updateParams = () => {
             const params = sender.getParameters();
@@ -298,13 +223,36 @@ ipcRenderer.on('socket', (_, { id, ...msg }: WithWebSocketKey<RtcMessage>) => {
           };
           updateParams();
         });
-        pc.onnegotiationneeded = () => {
-          peers.delete(id);
+        
+        const offer = await pc.createOffer();
+        const offerMsg: WithWebSocketKey<OfferMessage> = {
+          id,
+          event: 'offer',
+          desc: JSON.parse(JSON.stringify(offer)),
+          sourceId,
         };
+        await pc.setLocalDescription(offer);
+        await ipcRenderer.invoke('socket', offerMsg);
+      } catch (e) {
+        debug(`error while create offer: ${(e as Error).message}`);
+      }
+      break;
+    case 'candidate':
+      {
+        const pc = peers.get(id);
+        if (!pc) debug(`Unknown id: ${id} [${[...peers.keys()].join(',')}]`);
+        else if (msg.candidate) await pc.addIceCandidate(msg.candidate);
+      }
+      break;
+    case 'answer':
+      {
+        const pc = peers.get(id);
+        if (!pc) debug(`Unknown id: ${id} [${[...peers.keys()].join(',')}]`);
+        else await pc.setRemoteDescription(msg.desc);
       }
       break;
     default:
-      console.warn(`Unknown event: ${msg.event}`);
+      debug(`Unknown event: ${msg.event}`);
   }
 });
 
