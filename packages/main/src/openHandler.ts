@@ -24,7 +24,7 @@ const openHandler: Handler = ({ url }) => {
   const { searchParams } = new URL(url);
   // if (pathname !== '/output/index.html') return { action: 'deny' };
   const displays = getAllDisplays();
-  debug(`OPEN-HANDLER: ${JSON.stringify({ url, displays })}`);
+  // debug(`OPEN-HANDLER: ${JSON.stringify({ url, displays })}`);
   // console.log({ displays });
   const displayParam = searchParams.get('display');
   const displayId = toNumber(displayParam);
