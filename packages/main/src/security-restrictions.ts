@@ -11,6 +11,7 @@ const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:sec`);
 const localhost = `http://localhost:${port}`;
 
 const fullGrant: Set<
+  // | 'clipboard-sanitized-write'
   | 'clipboard-read'
   | 'media'
   | 'display-capture'
@@ -24,6 +25,7 @@ const fullGrant: Set<
   | 'openExternal'
   | 'unknown'
 > = new Set([
+  // 'clipboard-sanitized-write',
   'clipboard-read',
   'media',
   'display-capture',
@@ -39,6 +41,7 @@ const fullGrant: Set<
 ]);
 
 type Permissions = Set<
+  | 'clipboard-sanitized-write'
   | 'clipboard-read'
   | 'media'
   | 'display-capture'
@@ -51,6 +54,7 @@ type Permissions = Set<
   | 'fullscreen'
   | 'openExternal'
   | 'window-placement'
+  | 'window-management'
   | 'unknown'
 >;
 
