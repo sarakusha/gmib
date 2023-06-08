@@ -11,10 +11,10 @@ import relaunch from './relaunch';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:wnd`);
 
-let isQuiting = false;
+let isQuitting = false;
 
 app.once('quit', () => {
-  isQuiting = true;
+  isQuitting = true;
 });
 
 let mainWindow: BrowserWindow | null = null;
@@ -31,7 +31,10 @@ export const createAppWindow = (
   const browserWindow = createWindow(getTitle(port, host), gmibPreload);
   if (!host) {
     browserWindow.once('ready-to-show', async () => {
-      setRemoteEditClick(() => browserWindow.webContents.send('editRemoteHosts'));
+      setRemoteEditClick(() => {
+        debug('EDIT REMOTE');
+        return browserWindow.webContents.send('editRemoteHosts');
+      });
       if (!localConfig.get('autostart')) {
         browserWindow.show();
         // The window may freeze from time to time at startup on Windows
@@ -73,7 +76,7 @@ export const createMainWindow = (): BrowserWindow => {
     // eslint-disable-next-line no-multi-assign
     const browserWindow = (mainWindow = createAppWindow());
     browserWindow.on('close', event => {
-      if (!isQuiting && localConfig.get('autostart')) {
+      if (!isQuitting && localConfig.get('autostart')) {
         event.preventDefault();
         browserWindow.hide();
       } else {
