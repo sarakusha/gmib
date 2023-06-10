@@ -4,9 +4,8 @@ import { getMediaByMD5 } from './media';
 import { getPlayerMappingsForPlayer } from './playerMapping';
 import { getPlaylist, getPlaylistItems } from './playlist';
 import { getPlayer, getScreens, loadScreen } from './screen';
-import { dbReady } from './db';
 
-app.whenReady().then(() => dbReady).then(() => {
+app.whenReady().then(() => {
   ipcMain.handle('getPlayer', (_, id) => getPlayer(id));
   ipcMain.handle('getPlaylist', async (_, id) => {
     const playlist = await getPlaylist(id);
