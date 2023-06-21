@@ -1,3 +1,4 @@
+APPDATA
 APPIMAGE
 astra
 autobrightness
@@ -15,6 +16,7 @@ epcs
 execa
 fflags
 Ffprobe
+FOLDERID
 formik
 genpts
 gmib
@@ -33,6 +35,7 @@ isecret
 isecrets
 istep
 kbits
+KNOWNFOLDERID
 lanczos
 leavepictureinpicture
 letterboxing
@@ -104,8 +107,12 @@ xpos
 ymax
 ypos
 автозапуск
+автообновление
 автояркости
 автояркость
+видеоконтентом
 Медиатека
+мультиплатформенной
 ната
+одноранговым
 уэит
