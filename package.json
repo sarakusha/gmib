@@ -200,14 +200,14 @@
     "ws": "^8.9.0"
   },
   "overrides": {
-    "node-gyp": "9.1.0",
+    "node-gyp": "9.4.0",
     "nan": "2.16.0",
     "react": "$react",
     "minimatch": "^5.1.0",
     "ws": "$ws"
   },
   "resolutions": {
-    "node-gyp": "9.1.0",
+    "node-gyp": "9.4.0",
     "nan": "2.16.0",
     "react": "^18.2.0",
     "minimatch": "^5.1.0",
