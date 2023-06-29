@@ -2,7 +2,7 @@ import Highcharts from 'highcharts';
 import highchartsMore from 'highcharts/highcharts-more';
 import highchartsSolidGauge from 'highcharts/modules/solid-gauge';
 
-export * from 'highcharts';
+export type * from 'highcharts';
 
 highchartsMore(Highcharts);
 highchartsSolidGauge(Highcharts);
