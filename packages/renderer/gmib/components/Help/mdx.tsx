@@ -54,6 +54,7 @@ const mdx: MDXComponents = {
   code: ({ ref, ...props }) => (
     // <Typography component="div" paragraph>
     <Box
+      component="span"
       fontFamily="Monospace"
       bgcolor="text.primary"
       color="background.paper"

@@ -33,11 +33,15 @@ const Help: React.FC = () => {
         },
         '& p': {
           verticalAlign: 'middle',
+          textAlign: 'justify',
         },
         '& svg': {
           display: 'inline-block',
           // fontSize: '16px',
           mb: -0.8,
+        },
+        '& dt': {
+          marginLeft: '12px',
         },
       }}
       ref={refContent}
