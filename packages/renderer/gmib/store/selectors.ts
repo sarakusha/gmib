@@ -97,20 +97,32 @@ export const selectProps = <P extends string>(
   ...names: P[]
 ): Record<P, ValueState | undefined> =>
   pick(selectAllProps(state, id) as Record<P, ValueState | undefined>, names);
-export const selectLinkIds = (state: RootState): DeviceId[] =>
-  Object.values(state.devices.entities)
-    .filter(notEmpty)
-    .filter(({ isLinkingDevice }) => isLinkingDevice)
-    .map(({ id }) => id);
-export const selectLinks = (state: RootState): DeviceState[] =>
-  selectLinkIds(state)
-    .map(id => selectDeviceById(state, id))
-    .filter(notEmpty);
-export const selectAllDevicesWithParent = (state: RootState): DeviceStateWithParent[] =>
-  selectAllDevices(state).map(({ parent, ...props }) => ({
-    ...props,
-    parent: typeof parent !== 'undefined' ? selectDeviceById(state, parent) : undefined,
-  }));
+export const selectLinks = createSelector(selectAllDevices, devices =>
+  devices.filter(notEmpty).filter(({ isLinkingDevice }) => isLinkingDevice),
+);
+const selectLinkIds = createSelector(selectLinks, devices => devices.map(({ id }) => id));
+// export const selectLinkIds = (state: RootState): DeviceId[] =>
+//   Object.values(state.devices.entities)
+//     .filter(notEmpty)
+//     .filter(({ isLinkingDevice }) => isLinkingDevice)
+//     .map(({ id }) => id);
+// export const selectLinks = createSelector([selectLinkIds, state => state], (ids, state) =>
+//   ids.map(id => selectDeviceById(state, id)).filter(notEmpty),
+// );
+
+// export const selectAllDevicesWithParent = (state: RootState): DeviceStateWithParent[] =>
+//   selectAllDevices(state).map(({ parent, ...props }) => ({
+//     ...props,
+//     parent: typeof parent !== 'undefined' ? selectDeviceById(state, parent) : undefined,
+//   }));
+export const selectAllDevicesWithParent = createSelector(
+  [selectAllDevices, state => state],
+  (devices, state) =>
+    devices.map(({ parent, ...props }) => ({
+      ...props,
+      parent: typeof parent !== 'undefined' ? selectDeviceById(state, parent) : undefined,
+    })),
+);
 export const filterDevicesByAddress = <D extends Pick<DeviceState, 'address' | 'mib' | 'props'>>(
   devices: D[],
   address: Address,
@@ -156,25 +168,14 @@ export const { selectAll: selectAllRemoteHosts } = remoteHostsAdapter.getSelecto
 );
 export const selectSensors = (state: RootState): SensorsState => state.sensors;
 const hasCurrent = hasProps('current');
-const selectLast = (state: RootState, kind: SensorKind): SensorState | undefined => {
-  const sensors = selectSensors(state).sensors[kind];
-  return maxBy(Object.values(sensors).filter(hasCurrent), ({ current }) => current[0]);
-};
-const selectLastValue = (state: RootState, kind: SensorKind): number | undefined => {
-  const [, max] = selectLast(state, kind)?.current ?? [];
-  return max;
-  // const sensors = state.sensors.sensors[kind];
-  // const [, max] =
-  //   maxBy(
-  //     Object.values(sensors)
-  //       .map(({ current }) => current)
-  //       .filter(notEmpty),
-  //     ([timestamp]) => timestamp
-  //   ) ?? [];
-  // return max;
-};
-export const selectLastAverage = (state: RootState, kind: SensorKind): number | undefined =>
-  selectLast(state, kind)?.average;
+
+const selectSpecialSensors = (state: RootState, kind: SensorKind) =>
+  selectSensors(state).sensors[kind];
+const selectLast = createSelector(selectSpecialSensors, sensors =>
+  maxBy(Object.values(sensors).filter(hasCurrent), ({ current }) => current[0]),
+);
+const selectLastValue = createSelector(selectLast, last => last?.current?.[1]);
+export const selectLastAverage = createSelector(selectLast, last => last?.average);
 export const selectIlluminance = (state: RootState): SensorDictionary =>
   selectSensors(state).sensors.illuminance;
 export const selectInterval = (state: RootState): number => selectSensors(state).interval;
