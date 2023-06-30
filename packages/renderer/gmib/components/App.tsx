@@ -46,6 +46,7 @@ import Devices from './Devices';
 import Drawer from './Drawer';
 import GmibTabs from './GmibTabs';
 import HttpPages from './HttpPages';
+import extendStyled from '../util/extendStyled';
 
 const drawerWidth = 240;
 
@@ -94,7 +95,7 @@ const App: React.FC = () => {
         // },
         // eslint-disable-next-line react/no-unstable-nested-components
         action: key => (
-          <IconButton onClick={() => closeSnackbar(key)} size='small' >
+          <IconButton onClick={() => closeSnackbar(key)} size="small">
             <CloseIcon fontSize="inherit" />
           </IconButton>
         ),
