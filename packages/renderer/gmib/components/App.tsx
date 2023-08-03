@@ -39,6 +39,7 @@ import {
   selectLinks,
   selectLoading,
   selectOverheatProtection,
+  selectSessionVersion,
 } from '../store/selectors';
 
 import AppBar from './AppBar';
@@ -85,6 +86,7 @@ const App: React.FC = () => {
   const { closeSnackbar, enqueueSnackbar } = useSnackbar();
   const links = useSelector(selectLinks);
   const hasLink = links.length > 0;
+  const version = useSelector(selectSessionVersion);
   useEffect(() => {
     if (broadcastDetected) {
       enqueueSnackbar(`Обнаружена рассылка с адреса ${broadcastDetected}!`, {
@@ -167,7 +169,7 @@ const App: React.FC = () => {
               </Typography>
               &nbsp;
               <Typography component="h1" variant="subtitle1" color="inherit" display="inline">
-                {import.meta.env.VITE_APP_VERSION}
+                {version}
               </Typography>
             </Box>
             {toolbar}
