@@ -71,7 +71,7 @@ const helpMenu = async (): Promise<AppMenuItem> => {
   try {
     host = await getHostOptions();
   } catch (err) {
-    console.error(`error while grt host: ${(err as Error).message}`);
+    console.error(`error while get host: ${(err as Error).message}`);
   }
   return {
     label: 'Помощь',
