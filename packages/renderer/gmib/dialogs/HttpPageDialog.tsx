@@ -43,7 +43,7 @@ const HttpPageDialog: React.FC<Props> = ({
       <DialogTitle id="http-page-title" onClose={onClose}>
         Параметры HTTP-страницы
       </DialogTitle>
-      <DialogContent>
+      <DialogContent className="tNX9k9byJD58qNs4nxAIi rlXINR-cZo5bnISD5TaUT">
         <TextField
           variant="standard"
           name="url"

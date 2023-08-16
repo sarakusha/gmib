@@ -4,11 +4,14 @@ import cleanup from 'rollup-plugin-cleanup';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
 
 const PACKAGE_ROOT = __dirname;
+const APP_ROOT = path.resolve(PACKAGE_ROOT, '../..');
 
 process.env.VITE_APP_NAME = process.env['npm_package_name'];
 process.env.VITE_APP_VERSION = process.env['npm_package_version'];
 process.env.VITE_DEBUG = `nibus:*,novastar:*,${process.env.VITE_APP_NAME}:*`;
 process.env.VITE_PLAYER = process.env['PLAYER'];
+
+// console.log('CWD', process.cwd(), path.resolve(PACKAGE_ROOT, '../..'));
 
 /**
  * @type {import('vite').UserConfig}
@@ -17,7 +20,7 @@ process.env.VITE_PLAYER = process.env['PLAYER'];
 const config = {
   mode: process.env['MODE'],
   root: PACKAGE_ROOT,
-  envDir: process.cwd(),
+  envDir: APP_ROOT,
   resolve: {
     alias: {
       '/@common/': path.join(PACKAGE_ROOT, '../common') + '/',
@@ -36,7 +39,7 @@ const config = {
     assetsDir: '.',
     minify: process.env.MODE !== 'development',
     lib: {
-      entry: path.join(__dirname, 'src/index.ts'),
+      entry: path.join(PACKAGE_ROOT, 'src/index.ts'),
       formats: ['cjs'],
     },
     rollupOptions: {

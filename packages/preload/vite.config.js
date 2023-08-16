@@ -10,6 +10,7 @@ import external from '../../external';
 // import { dependencies as external } from '../../package.json';
 
 const PACKAGE_ROOT = __dirname;
+const APP_ROOT = join(PACKAGE_ROOT, '../..');
 
 process.env.VITE_APP_NAME = process.env['npm_package_name'];
 process.env.VITE_APP_VERSION = process.env['npm_package_version'];
@@ -32,7 +33,7 @@ if (!currentLib) {
 const config = {
   mode: process.env.MODE,
   root: PACKAGE_ROOT,
-  envDir: process.cwd(),
+  envDir: APP_ROOT,
   resolve: {
     alias: {
       '/@renderer/': join(PACKAGE_ROOT, '../renderer/gmib') + '/',

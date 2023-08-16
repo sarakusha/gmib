@@ -7,11 +7,12 @@ export type BusyButtonProps = {
   onClick?: React.MouseEventHandler<HTMLButtonElement>;
   icon: React.ReactNode;
   disabled?: boolean;
+  className?: string;
 };
 
-const BusyButton: React.FC<BusyButtonProps> = ({ title = '', onClick, disabled, isBusy, icon }) => (
+const BusyButton: React.FC<BusyButtonProps> = ({ title = '', onClick, disabled, isBusy, icon, className }) => (
   <Tooltip title={title} enterDelay={1000}>
-    <Box position="relative">
+    <Box position="relative" className={className}>
       <IconButton color="inherit" onClick={onClick} disabled={disabled ?? isBusy} size="large">
         {icon}
       </IconButton>

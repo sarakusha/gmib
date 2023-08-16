@@ -54,6 +54,8 @@ const getValue = (value: number, min: number, max: number): number =>
 const selectScreensData = screenApi.endpoints.getScreens.select();
 const selectNovastarData = novastarApi.endpoints.getNovastars.select();
 
+// setTimeout(() => window.config.get('announce').then(console.log), 1000);
+
 export const updateBrightness = createDebouncedAsyncThunk<void, undefined | number, AppThunkConfig>(
   'config/updateBrightness',
   async (id, { dispatch, getState }) => {
@@ -93,12 +95,12 @@ export const updateBrightness = createDebouncedAsyncThunk<void, undefined | numb
       tasks.map(([address, value]) =>
         typeof address === 'string'
           ? // ? window.novastar.setBrightness({ path: address, screen: -1, percent: value })
-            dispatch(
-              novastarApi.endpoints.setBrightness.initiate({ path: address, screen: -1, value }),
-            )
+          dispatch(
+            novastarApi.endpoints.setBrightness.initiate({ path: address, screen: -1, value }),
+          )
           : asyncSerial(selectDevicesByAddress(state, address), ({ id: deviceId }) =>
-              window.nibus.setDeviceValue(deviceId)('brightness', value),
-            ),
+            window.nibus.setDeviceValue(deviceId)('brightness', value),
+          ),
       ),
     );
   },
@@ -171,17 +173,17 @@ const calculateBrightness = createAsyncThunk<void, void, AppThunkConfig>(
           const sunSpline =
             now <= solarNoon
               ? new MonotonicCubicSpline([
-                  [getTime(dawn), getBrightness(0)],
-                  [getTime(sunriseEnd), getBrightness(1 / 2)],
-                  [getTime(goldenHourEnd), getBrightness(3 / 4)],
-                  [getTime(solarNoon), getBrightness(1)],
-                ])
+                [getTime(dawn), getBrightness(0)],
+                [getTime(sunriseEnd), getBrightness(1 / 2)],
+                [getTime(goldenHourEnd), getBrightness(3 / 4)],
+                [getTime(solarNoon), getBrightness(1)],
+              ])
               : new MonotonicCubicSpline([
-                  [getTime(solarNoon), getBrightness(1)],
-                  [getTime(goldenHour), getBrightness(3 / 4)],
-                  [getTime(sunsetStart), getBrightness(1 / 2)],
-                  [getTime(dusk), getBrightness(0)],
-                ]);
+                [getTime(solarNoon), getBrightness(1)],
+                [getTime(goldenHour), getBrightness(3 / 4)],
+                [getTime(sunsetStart), getBrightness(1 / 2)],
+                [getTime(dusk), getBrightness(0)],
+              ]);
           brightness = getValue(
             Math.round(sunSpline.interpolate(getTime(now))),
             minBrightness,

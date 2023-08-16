@@ -18,7 +18,8 @@
     "*.ts",
     "../../renderer/gmib/store/*Slice.ts",
     "../../common/*.ts",
-    "../../../types/**/*.d.ts"
+    "../../../types/**/*.d.ts",
+    "../../common/test.js"
   ],
   "exclude": [
     "**/*.spec.ts",

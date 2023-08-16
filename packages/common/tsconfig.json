@@ -35,17 +35,18 @@
     "*.tsx",
     "../../types/**/*.d.ts",
     "../../node_modules/@types/dom-webcodecs/webcodecs.generated.d.ts",
-    "../../node_modules/@types/offscreencanvas/index.d.ts"
-, "../renderer/gmib/util/authBaseQuery.ts",
-    "../renderer/common/authBaseQuery.ts"
+    "../../node_modules/@types/offscreencanvas/index.d.ts",
+    "../renderer/gmib/util/authBaseQuery.ts",
+    "../renderer/common/authBaseQuery.ts",
+    "test.js"
   ],
   "exclude": [
     "**/*.spec.ts",
     "**/*.test.ts"
   ]
-//  "paths": {
-//    "@mdx-js/react": [
-//      "mdx-js__react"
-//    ]
-//  }
+  //  "paths": {
+  //    "@mdx-js/react": [
+  //      "mdx-js__react"
+  //    ]
+  //  }
 }

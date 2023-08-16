@@ -47,7 +47,7 @@ import Devices from './Devices';
 import Drawer from './Drawer';
 import GmibTabs from './GmibTabs';
 import HttpPages from './HttpPages';
-import extendStyled from '../util/extendStyled';
+import ActivateDialog from '../dialogs/ActivateDialog';
 
 const drawerWidth = 240;
 
@@ -127,6 +127,7 @@ const App: React.FC = () => {
         open={isRemoteDialogOpen}
         onClose={() => dispatch(setRemoteDialogOpen(false))}
       />
+      <ActivateDialog />
       <Box
         sx={{
           display: 'flex',
@@ -225,6 +226,7 @@ const App: React.FC = () => {
             <Item
               onClick={() => dispatch(setCurrentTab('autobrightness'))}
               selected={tab === 'autobrightness'}
+              className="YqATOnK8rERXOjt0JEXW0 rlXINR-cZo5bnISD5TaUT"
             >
               <ListItemText id="switch-autobrightness" primary="Автояркость" />
               <ListItemSecondaryAction>
@@ -236,7 +238,11 @@ const App: React.FC = () => {
                 />
               </ListItemSecondaryAction>
             </Item>
-            <Item selected={tab === 'overheat'} onClick={() => dispatch(setCurrentTab('overheat'))}>
+            <Item
+              selected={tab === 'overheat'}
+              onClick={() => dispatch(setCurrentTab('overheat'))}
+              className="kTVgvtztsObADJyScNLdK rlXINR-cZo5bnISD5TaUT"
+            >
               <ListItemText id="switch-overheat-protection" primary="Защита от перегрева" />
               <ListItemSecondaryAction>
                 <Switch

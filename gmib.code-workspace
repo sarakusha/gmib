@@ -31,9 +31,6 @@
       "./.github": false
     },
     "liveServer.settings.multiRootWorkspaceName": "gmib",
-    "jest.disabledWorkspaceFolders": [
-      "gmib",
-      ".github"
-    ]
+    "jest.disabledWorkspaceFolders": ["gmib", ".github"]
   }
 }

@@ -12,7 +12,6 @@ import express from 'express';
 import type { File } from 'formidable';
 import formidable from 'formidable';
 import { nanoid } from 'nanoid';
-import { machineId } from 'node-machine-id';
 
 import type { MediaInfo } from '/@common/mediaInfo';
 import { asyncSerial, findById, notEmpty } from '/@common/helpers';
@@ -38,7 +37,7 @@ import {
   renderThumbnailFromImage,
 } from './ffmpeg';
 import getAllDisplays from './getAllDisplays';
-import localConfig from './localConfig';
+import localConfig, { getAnnounce } from './localConfig';
 import { updateMenu } from './mainMenu';
 import { createTestWindow } from './mainWindow';
 import {
@@ -48,7 +47,6 @@ import {
   getMediaByOriginalMD5,
   insertMedia,
 } from './media';
-import novastarApi from './novastarApi';
 import {
   deletePlayerMapping,
   getPlayerMappingById,
@@ -100,12 +98,9 @@ import { DefaultDisplays } from '/@common/video';
 import { setIncomingSecret } from './secret';
 import { createSearchParams, isEqualOptions, playerWindows, screenWindows } from './windows';
 
-const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:api`);
+import machineId from './machineId';
 
-let MACHINE_ID: string;
-machineId().then(value => {
-  MACHINE_ID = value;
-});
+const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:api`);
 
 // const peers = new Map<
 //   number,
@@ -303,7 +298,9 @@ const updateTest = (scr: Screen) => {
   testWindow.setPosition(scr.left + display.bounds.x, scr.top + display.bounds.y);
   testWindow.setSize(scr.width, scr.height);
   if (page.userAgent && !contents.userAgent.includes(page.userAgent))
-    contents.userAgent = `${contents.userAgent} ${page.userAgent} machineid/${MACHINE_ID}`;
+    machineId.then(mid => {
+      contents.userAgent = `${contents.userAgent} ${page.userAgent} machineid/${mid}`;
+    });
   needReload && url && testWindow.loadURL(url);
   testWindow.show();
   debug(`test: ${url}`);
@@ -329,7 +326,14 @@ if (!localConfig.get('unsafeMode')) {
   );
 }
 
-api.use(proxyMiddleware);
+getAnnounce().then(announce => {
+  if (announce && typeof announce === 'object' && 'useProxy' in announce) {
+    api.use(proxyMiddleware);
+    import(import.meta.env.VITE_ANNOUNCE_PROXY).then(({ default: API }) => {
+      api.use(import.meta.env.VITE_ANNOUNCE_PATH, API);
+    });
+  }
+});
 
 api.get('/media', (req, res, next) => {
   // const { skip, take } = req.query;
@@ -751,7 +755,5 @@ api.post('/login/:id', async (req, res) => {
 api.get('/identifier', (req, res) => {
   res.send(localConfig.get('identifier'));
 });
-
-api.use('/novastar', novastarApi);
 
 export default api;

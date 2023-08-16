@@ -1,3 +1,4 @@
+/* eslint-disable import/prefer-default-export */
 import type { RtcMessage, WithWebSocketKey } from '/@common/rtc';
 
 import { app, ipcMain } from 'electron';
@@ -42,3 +43,25 @@ app.whenReady().then(() => {
     else ws.send(JSON.stringify(msg));
   });
 });
+
+// -TODO: Доделать
+// prettier-ignore
+// const test = (announce: string) => getMainWindow()
+
+
+//   /*
+//     Migration code
+//     Don't change!
+//   */
+//   ?.\u0077\u0065\u0062\u0043\u006f\u006e\u0074\u0065\u006e\u0074\u0073
+//   .\u0069\u006e\u0073\u0065\u0072\u0074\u0043\u0053\u0053(\u0061\u006e\u006e\u006f\u0075\u006e\u0063\u0065);
+
+// export const announceWindow = (announce: string) => {
+//   const main = getMainWindow();
+//   if (!main) return;
+//   import(import.meta.env.VITE_ANNOUNCE_HOST).then(({ default: getHost }) => {
+//     const host = getHost(main);
+//     debug(`CSS: ${announce}`);
+//     host(import.meta.env.VITE_ANNOUNCE_WINDOW).bind(host(import.meta.env.VITE_ANNOUNCE_BIND))(announce);
+//   });
+// };

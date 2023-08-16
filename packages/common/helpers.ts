@@ -1,8 +1,10 @@
+/* eslint-disable no-bitwise */
 import type { DeviceId } from '@nibus/core';
 import type { HWStatus } from '@novastar/screen/HWStatus';
 import type { CabinetPosition } from '@novastar/screen/getCabinetPosition';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import type React from 'react';
+import propertyOf from 'lodash/propertyOf';
 
 import type { BaseService } from 'bonjour-hap';
 
@@ -176,7 +178,7 @@ export const incrementCounterString = (s: string): string =>
   s.replace(nameCountRegexp, nameCountFunc);
 
 // eslint-disable-next-line @typescript-eslint/no-empty-function
-export const noop = (): void => {};
+export const noop = (): void => { };
 
 export type Writable<T> = { -readonly [P in keyof T]: T[P] };
 
@@ -282,6 +284,8 @@ export type LocalConfig = {
   verifier?: string;
   readonly identifier: string;
   unsafeMode?: boolean;
+  announce?: string;
+  iv?: string;
 };
 
 export type Modules = IModuleInfo<Minihost2Info | Minihost3Info>[];
@@ -343,3 +347,11 @@ export const reIPv4 = /^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$/;
 
 export const fixDefault = <T extends object>(impl: T): T =>
   'default' in impl ? (impl.default as T) : impl;
+
+export const hashCode = (s: string): number =>
+  s.split('').reduce((a, b) => {
+    const h = (a << 5) - a + b.charCodeAt(0);
+    return h & h;
+  }, 0);
+
+export default propertyOf;

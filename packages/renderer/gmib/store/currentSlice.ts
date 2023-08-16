@@ -24,6 +24,7 @@ export interface CurrentState {
   isRemoteDialogOpen: boolean;
   authRequired?: Credentials;
   broadcastDetected?: string;
+  isActivateDialogOpen: boolean;
   // playlist: number | undefined;
 }
 
@@ -33,6 +34,7 @@ const initialState: CurrentState = {
   screen: undefined,
   health: undefined,
   isRemoteDialogOpen: false,
+  isActivateDialogOpen: false,
   // isLoggedIn: true, // isRemoteSession ? !!window.identify.getSecret() : true,
   // playlist: undefined,
 };
@@ -55,6 +57,9 @@ const currentSlice = createSlice({
     },
     setRemoteDialogOpen(state, { payload: open }: PayloadAction<boolean>) {
       state.isRemoteDialogOpen = open;
+    },
+    setActivateDialogOpen(state, { payload: open }: PayloadAction<boolean>) {
+      state.isActivateDialogOpen = open;
     },
     // setLoggedIn(state, { payload: isLoggedIn }: PayloadAction<boolean>) {
     //   state.isLoggedIn = isLoggedIn;
@@ -128,6 +133,7 @@ export const {
   setCurrentScreen,
   setCurrentHealth,
   setRemoteDialogOpen,
+  setActivateDialogOpen,
   // setCurrentPlaylist,
   // setLoggedIn,
   setAuthRequired,

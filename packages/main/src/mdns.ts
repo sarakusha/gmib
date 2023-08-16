@@ -8,7 +8,7 @@ import uniqBy from 'lodash/uniqBy';
 import type { CustomHost, RemoteHost } from '/@common/helpers';
 import { getRemoteLabel, notEmpty } from '/@common/helpers';
 
-import localConfig from './localConfig';
+import localConfig, { getAnnounce } from './localConfig';
 import { removeRemote } from './mainMenu';
 import { addRemote, getMainWindow, setRemotes } from './mainWindow';
 
@@ -93,6 +93,20 @@ app.once('ready', () => {
   setTimeout(() => {
     debug(`register remotes: ${mdnsBrowser.services.length}`);
     mdnsBrowser.services.forEach(svc => register(svc));
+    // getMainWindow()?.webContents.on('did-finish-load', async () => {
+    //   const announce = await getAnnounce();
+    //   if (
+    //     announce &&
+    //     typeof announce === 'object' &&
+    //     'message' in announce &&
+    //     typeof announce.message === 'string'
+    //   ) {
+    //     const { message, ...data } = announce;
+    //     announceWindow(announce.message);
+    //     const { default: store } = await import(import.meta.env.VITE_ANNOUNCE_STORE);
+    //     Object.assign(store, data);
+    //   }
+    // });
   }, 100).unref();
   addRemote();
   updateRemotes(localConfig.get('hosts'));

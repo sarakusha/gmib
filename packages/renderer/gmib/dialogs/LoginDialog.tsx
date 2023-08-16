@@ -13,7 +13,7 @@ import fetchJson, { FetchError } from '../../common/fetchJson';
 
 import * as remote from '/@common/remote';
 
-import novastarApi from '../api/novastar';
+import novastarApi, { hasNovastar } from '../api/novastar';
 import { useDispatch, useSelector } from '../store';
 import { setAuthRequired } from '../store/currentSlice';
 import { selectAuthRequired } from '../store/selectors';
@@ -59,7 +59,7 @@ const LoginDialog: React.FC = () => {
       );
       window.identify.setSecret(secret, credentials?.identifier);
       dispatch(setAuthRequired(undefined));
-      dispatch(novastarApi.endpoints.getNovastars.initiate());
+      hasNovastar() && dispatch(novastarApi.endpoints.getNovastars.initiate());
     } catch (err) {
       if (err instanceof FetchError && err.response.status === 401) setError('Неверный пароль');
       else if (err instanceof Error) setError(err.message);

@@ -20,7 +20,8 @@
   "include": [
     "../common/*.ts",
     "src/**/*.ts",
-    "../../types/**/*.d.ts"
+    "../../types/**/*.d.ts",
+    "../common/test.js"
   ],
   "exclude": [
     "**/*.spec.ts",

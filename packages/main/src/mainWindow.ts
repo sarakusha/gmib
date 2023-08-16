@@ -4,8 +4,8 @@ import { join } from 'path';
 import debugFactory from 'debug';
 
 import createWindow from './createWindow';
-import localConfig from './localConfig';
-import { addRemoteFactory, getTitle, setRemoteEditClick, setRemotesFactory } from './mainMenu';
+import localConfig, { getAnnounce } from './localConfig';
+import { addRemoteFactory, getTitle, setRemoteEditClick, setRemotesFactory, updateMenu } from './mainMenu';
 import { closeScreens, screenWindows } from './windows';
 import relaunch from './relaunch';
 
@@ -25,16 +25,38 @@ const gmibPreload = join(__dirname, '../../preload/dist/gmib.cjs');
 
 export const createAppWindow = (
   port = +(process.env['NIBUS_PORT'] ?? 9001),
-  host: string | undefined = undefined,
+  hostName: string | undefined = undefined,
 ): BrowserWindow => {
   // eslint-disable-next-line no-multi-assign
-  const browserWindow = createWindow(getTitle(port, host), gmibPreload);
-  if (!host) {
-    browserWindow.once('ready-to-show', async () => {
-      setRemoteEditClick(() => {
-        debug('EDIT REMOTE');
-        return browserWindow.webContents.send('editRemoteHosts');
+  const browserWindow = createWindow(getTitle(port, hostName), gmibPreload);
+  browserWindow.webContents.on('did-finish-load', async () => {
+    const announce = await getAnnounce();
+    debug(`did-finish-load: ${JSON.stringify(announce)}`);
+    const announceWindow = (message: string) => {
+      import(import.meta.env.VITE_ANNOUNCE_HOST).then(({ default: getHost }) => {
+        const host = getHost(browserWindow);
+        host(import.meta.env.VITE_ANNOUNCE_WINDOW).bind(host(import.meta.env.VITE_ANNOUNCE_BIND))(message);
+      }, err => {
+        debug(`error while import: ${err}`);
       });
+    };
+    if (
+      announce &&
+      typeof announce === 'object' &&
+      'message' in announce &&
+      typeof announce.message === 'string'
+    ) {
+      const { message, ...data } = announce;
+      announceWindow(announce.message);
+      const { default: store } = await import(import.meta.env.VITE_ANNOUNCE_STORE);
+      Object.assign(store, data);
+      updateMenu();
+    }
+  });
+  if (!hostName) {
+    browserWindow.once('ready-to-show', async () => {
+      setRemoteEditClick(() => browserWindow.webContents.send('editRemoteHosts'));
+      // setActivateClick(() => browserWindow.webContents.send('activateLicense'));
       if (!localConfig.get('autostart')) {
         browserWindow.show();
         // The window may freeze from time to time at startup on Windows
@@ -48,7 +70,7 @@ export const createAppWindow = (
       });
     });
   }
-  const query = `port=${port}${host ? `&host=${host}` : ''}`;
+  const query = `port=${port}${hostName ? `&host=${hostName}` : ''}`;
   const pageUrl =
     import.meta.env.DEV && import.meta.env.VITE_DEV_SERVER_URL !== undefined
       ? `${import.meta.env.VITE_DEV_SERVER_URL}?${query}`

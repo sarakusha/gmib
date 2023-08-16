@@ -49,7 +49,7 @@ export const openPlayer = async (
       const now = Date.now();
       const api = `${baseUrl}/api/player/${id}`;
       const sign = generateSignature(credentials.apiSecret, 'GET', api, now);
-      console.log({ api });
+      // console.log({ api });
       const res = await fetch(api, {
         headers: {
           'x-ni-identifier': credentials.identifier,

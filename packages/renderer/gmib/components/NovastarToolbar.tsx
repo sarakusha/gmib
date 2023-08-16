@@ -1,7 +1,7 @@
 import ReloadIcon from '@mui/icons-material/Refresh';
 import React from 'react';
 
-import { useNovastar, useReloadMutation} from '../api/novastar';
+import { useNovastar, useReloadMutation } from '../api/novastar';
 import { useSelector } from '../store';
 import { selectCurrentDeviceId } from '../store/selectors';
 
@@ -13,6 +13,7 @@ const NovastarToolbar: React.FC = () => {
   const [reload] = useReloadMutation();
   return (
     <BusyButton
+      className="novastar rlXINR-cZo5bnISD5TaUT"
       icon={<ReloadIcon />}
       title="Обновить"
       onClick={() => path && reload(path)}

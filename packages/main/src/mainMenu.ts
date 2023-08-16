@@ -1,8 +1,8 @@
 import type { RemoteHost } from '/@common/helpers';
 import { getRemoteLabel } from '/@common/helpers';
 
-import type { BrowserWindow, MenuItemConstructorOptions } from 'electron';
-import { app, Menu, shell } from 'electron';
+import type { MenuItemConstructorOptions } from 'electron';
+import { app, BrowserWindow, Menu, shell } from 'electron';
 
 import windows from './windows';
 import localConfig from './localConfig';
@@ -12,6 +12,9 @@ import { openPlayer } from './playerWindow';
 import { getPlayers, hasPlayers, insertPlayer, uniquePlayerName } from './screen';
 import { dbReady } from './db';
 import checkForUpdates from './updater';
+import license from './license';
+import type { Host } from '@nibus/core/ipc';
+import { getHostOptions } from './ipc';
 
 const createNewPlayer = async (name = 'Новый плеер'): Promise<void> => {
   await dbReady;
@@ -62,7 +65,82 @@ const remoteMenu: AppMenuItem = {
   ],
 };
 
-const template: MenuItemConstructorOptions[] = [
+const helpMenu = async (): Promise<AppMenuItem> => {
+  console.log({ license });
+  let host: Partial<Host> | undefined;
+  try {
+    host = await getHostOptions();
+  } catch (err) {
+    console.error(`error while grt host: ${(err as Error).message}`);
+  }
+  return {
+    label: 'Помощь',
+    role: 'help',
+    submenu: [
+      ...(process.platform === 'darwin'
+        ? [
+          {
+            label: `${host?.name}(${host?.platform}) ${BrowserWindow.getFocusedWindow()?.getTitle()}`,
+            enabled: false,
+          },
+        ]
+        : []),
+
+      ...(license.type ? [{ label: `Лицензия: ${license.type}` }] : []),
+      ...(license.key ? [{ label: `Ключ: ${license.key}` }] : []),
+      {
+        label: 'Все версии',
+        click: () => shell.openExternal('https://github.com/sarakusha/gmib/releases'),
+      },
+      {
+        label: 'Проверить обновления',
+        click: checkForUpdates,
+      },
+      {
+        label: 'Активировать лицензию',
+        click: () => BrowserWindow.getFocusedWindow()?.webContents.send('activateLicense'),
+      },
+    ],
+  };
+};
+
+const template = async (): Promise<MenuItemConstructorOptions[]> => [
+  ...(process.platform === 'darwin'
+    ? [
+      {
+        label: import.meta.env.VITE_APP_NAME,
+        submenu: [
+          {
+            role: 'about',
+          },
+          {
+            type: 'separator',
+          },
+          {
+            role: 'services',
+          },
+          {
+            type: 'separator',
+          },
+          {
+            role: 'hide',
+          },
+          {
+            role: 'hideOthers',
+          },
+          {
+            role: 'unhide',
+          },
+          {
+            type: 'separator',
+          },
+          {
+            role: 'quit',
+          },
+        ],
+      } as MenuItemConstructorOptions,
+    ]
+    : []),
   remoteMenu,
   playerMenu,
   {
@@ -174,66 +252,55 @@ const template: MenuItemConstructorOptions[] = [
   // { role: 'viewMenu' },
   // { role: 'editMenu' },
   // { role: 'windowMenu' },
-  {
-    label: 'Помощь',
-    role: 'help',
-    submenu: [
-      {
-        label: 'Все версии',
-        click: () => shell.openExternal('https://github.com/sarakusha/gmib/releases'),
-      },
-      {
-        label: 'Проверить обновления',
-        click: checkForUpdates,
-      },
-    ],
-  },
+  await helpMenu(),
 ];
 
-if (process.platform === 'darwin') {
-  template.unshift({
-    label: import.meta.env.VITE_APP_NAME,
-    submenu: [
-      {
-        role: 'about',
-      },
-      {
-        type: 'separator',
-      },
-      {
-        role: 'services',
-      },
-      {
-        type: 'separator',
-      },
-      {
-        role: 'hide',
-      },
-      {
-        role: 'hideOthers',
-      },
-      {
-        role: 'unhide',
-      },
-      {
-        type: 'separator',
-      },
-      {
-        role: 'quit',
-      },
-    ],
-  });
-}
+// if (process.platform === 'darwin') {
+//   template.unshift({
+//     label: import.meta.env.VITE_APP_NAME,
+//     submenu: [
+//       {
+//         role: 'about',
+//       },
+//       {
+//         type: 'separator',
+//       },
+//       {
+//         role: 'services',
+//       },
+//       {
+//         type: 'separator',
+//       },
+//       {
+//         role: 'hide',
+//       },
+//       {
+//         role: 'hideOthers',
+//       },
+//       {
+//         role: 'unhide',
+//       },
+//       {
+//         type: 'separator',
+//       },
+//       {
+//         role: 'quit',
+//       },
+//     ],
+//   });
+// }
 
 export const updateMenu = (): void => {
   remoteMenu.submenu[0].checked = localConfig.get('autostart');
-  updatePlayerMenu().then(() => {
-    const mainMenu = Menu.buildFromTemplate(template);
+  updatePlayerMenu().then(async () => {
+    const mainMenu = Menu.buildFromTemplate(await template());
     Menu.setApplicationMenu(mainMenu);
   });
 };
 
-app.whenReady().then(updateMenu);
+app.on('browser-window-focus', updateMenu);
+
+// app.whenReady().then(updateMenu);
 
 export type CreateWindow = (port?: number, host?: string) => BrowserWindow;
 
@@ -242,31 +309,31 @@ export const getTitle = (port: number, host?: string): string =>
 
 const remoteClick =
   (create: CreateWindow): Exclude<MenuItemConstructorOptions['click'], undefined> =>
-  async menuItem => {
-    const [host, port] = menuItem.label.split(':');
-    let window = [...windows.values()].find(w => w.title === getTitle(+port, host));
-    if (!window) {
-      window = await create(+port, host === 'localhost' ? undefined : host);
-    }
-    window.show();
-    window.focus();
-  };
+    async menuItem => {
+      const [host, port] = menuItem.label.split(':');
+      let window = [...windows.values()].find(w => w.title === getTitle(+port, host));
+      if (!window) {
+        window = await create(+port, host === 'localhost' ? undefined : host);
+      }
+      window.show();
+      window.focus();
+    };
 
 export const addRemoteFactory =
   (create: CreateWindow) =>
-  (port?: number, address?: string, update = true): void => {
-    const label = getRemoteLabel(port, address);
-    let needUpdate = false;
-    if (remoteMenu.submenu.findIndex(item => item.label === label) === -1) {
-      remoteMenu.submenu.push({ label, click: remoteClick(create) });
-      needUpdate = true;
-    }
-    // if (playerMenu.submenu.findIndex(item => item.label === label) === -1) {
-    //   playerMenu.submenu.push({ label, click: playerClick(create) });
-    //   needUpdate = true;
-    // }
-    if (needUpdate && update) updateMenu();
-  };
+    (port?: number, address?: string, update = true): void => {
+      const label = getRemoteLabel(port, address);
+      let needUpdate = false;
+      if (remoteMenu.submenu.findIndex(item => item.label === label) === -1) {
+        remoteMenu.submenu.push({ label, click: remoteClick(create) });
+        needUpdate = true;
+      }
+      // if (playerMenu.submenu.findIndex(item => item.label === label) === -1) {
+      //   playerMenu.submenu.push({ label, click: playerClick(create) });
+      //   needUpdate = true;
+      // }
+      if (needUpdate && update) updateMenu();
+    };
 
 export const removeRemote = ({ port, address }: RemoteHost): void => {
   const label = getRemoteLabel(port, address);
@@ -276,6 +343,14 @@ export const removeRemote = ({ port, address }: RemoteHost): void => {
     updateMenu();
   }
 };
+
+// export const setActivateClick = (click: () => void): void => {
+//   const last = helpMenu().submenu.at(-1);
+//   if (last) {
+//     last.click = click;
+//     updateMenu();
+//   }
+// };
 
 export const setRemoteEditClick = (click: () => void): void => {
   remoteMenu.submenu[1].click = click;

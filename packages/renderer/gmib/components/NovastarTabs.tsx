@@ -28,7 +28,7 @@ const NovastarTabs: React.FC<{ device: Novastar | undefined }> = ({ device }) =>
   const [value, setValue] = useState<TabsType>('props');
   return (
     <FixedHeadLayout>
-      <Paper square>
+      <Paper square className="yu6ODejliBoLEEgGBmOEe rlXINR-cZo5bnISD5TaUT">
         <Tabs
           value={value}
           indicatorColor="primary"

@@ -115,15 +115,12 @@ const Devices: React.FC = () => {
   const tab = useSelector(selectCurrentTab);
   const { novastars = [] } = useNovastars(); // useSelector(selectAllNovastars);
   // const [, setAccordion] = useAccordion();
-  const reloadHandler = useCallback<React.MouseEventHandler<HTMLButtonElement>>(
-    e => {
-      window.nibus.reloadDevices();
-      // TODO: force update novastar device list
-      // dispatch(updateNovastarDevices());
-      e.stopPropagation();
-    },
-    [],
-  );
+  const reloadHandler = useCallback<React.MouseEventHandler<HTMLButtonElement>>(e => {
+    window.nibus.reloadDevices();
+    // TODO: force update novastar device list
+    // dispatch(updateNovastarDevices());
+    e.stopPropagation();
+  }, []);
   // if (!current && (devices.length > 0 || novastars.length > 0)) {
   //   dispatch(setCurrentDevice(devices[0]?.id ?? novastars[0]?.path));
   // }
@@ -220,7 +217,7 @@ const Devices: React.FC = () => {
           );
         })}
         {novastars.map(card => (
-          <Collapse key={card.path}>
+          <Collapse key={card.path} className="yu6ODejliBoLEEgGBmOEe rlXINR-cZo5bnISD5TaUT">
             <ListItemButton
               selected={card.path === current}
               data-id={card.path}

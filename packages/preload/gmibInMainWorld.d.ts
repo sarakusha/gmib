@@ -16,4 +16,6 @@ interface Window {
     readonly setLogLevel: (logLevel: 'nibus' | 'none' | 'hex') => void;
     readonly output: { readonly dispatch: (screenId: number, action: import("/Users/sarakusha/WebstormProjects/gmib/node_modules/redux/index").AnyAction) => void; };
     readonly identify: { readonly getSecret: () => string | undefined; readonly setSecret: (apiSecret: bigint, identifier?: string | undefined) => void; readonly getIdentifier: () => string | undefined; readonly generateSignature: (method: string, uri: string, timestamp: number, body?: unknown) => string | undefined; };
+    readonly activateLicense: (key: string, name?: string | undefined) => Promise<string | true>;
+    readonly electronAPI: { handleHost: (listener: (event: Electron.IpcRendererEvent) => void) => Electron.IpcRenderer; };
 }

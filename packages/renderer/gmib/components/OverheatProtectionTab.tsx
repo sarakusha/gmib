@@ -83,6 +83,7 @@ const OverheatProtectionTab: React.FC = () => {
         mx: 'auto',
         '& > div ~ div': { mt: 1 },
       }}
+      className="kTVgvtztsObADJyScNLdK rlXINR-cZo5bnISD5TaUT"
     >
       <Paper sx={{ p: 1 }}>
         <Params sx={{ '& > *': { width: '18ch' } }}>

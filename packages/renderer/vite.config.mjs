@@ -19,6 +19,7 @@ import preventLoadSourceMap from '../common/preventLoadSourceMap';
 const require = createRequire(import.meta.url);
 const { chrome } = require('../../.electron-vendors.cache.json');
 const PACKAGE_ROOT = path.dirname(fileURLToPath(import.meta.url));
+const APP_ROOT = path.resolve(PACKAGE_ROOT, '../..');
 // const PACKAGE_ROOT = __dirname;
 
 process.env.VITE_APP_NAME = process.env['npm_package_name'];
@@ -34,6 +35,7 @@ const isDev = process.env.MODE === 'development';
 export default defineConfig({
   mode: process.env.MODE,
   root: PACKAGE_ROOT,
+  envDir: APP_ROOT,
   resolve: {
     alias: {
       '/@common/': path.join(PACKAGE_ROOT, '../common') + '/',

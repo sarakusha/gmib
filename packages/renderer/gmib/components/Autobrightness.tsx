@@ -289,7 +289,7 @@ const Autobrightness: React.FC = () => {
   const disableNet = useSelector(selectDisableNet);
   const autobrightness = useSelector(selectAutobrightness);
   return (
-    <Box sx={{ pt: 1, mx: 'auto' }}>
+    <Box sx={{ pt: 1, mx: 'auto' }} className="YqATOnK8rERXOjt0JEXW0 rlXINR-cZo5bnISD5TaUT">
       <Paper css={columnStyle}>
         <Control>
           {unitStyles}

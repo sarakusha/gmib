@@ -1,6 +1,6 @@
 /* eslint-disable no-bitwise */
 
-import type { AddressParam, DeviceId, Display, LogLevel } from '@nibus/core';
+import type { AddressParam, Display, LogLevel } from '@nibus/core';
 import Address, { AddressType } from '@nibus/core/Address';
 import { hasProps } from '@novastar/screen/common';
 import { createSelector } from '@reduxjs/toolkit';
@@ -9,14 +9,13 @@ import pick from 'lodash/pick';
 
 import type { ConfigState } from './configSlice';
 import type { CurrentState, TabValues } from './currentSlice';
-import type { DeviceProps, DeviceState, DeviceStateWithParent } from './devicesSlice';
+import type { DeviceState } from './devicesSlice';
 import { devicesAdapter } from './devicesSlice';
 import type { FlasherState } from './flasherSlice';
 import { logAdapter } from './logSlice';
 import { mibsAdapter } from './mibsSlice';
-// import { novastarAdapter } from './novastarSlice';
 import { remoteHostsAdapter } from './remoteHostsSlice';
-import type { SensorDictionary, SensorKind, SensorsState, SensorState } from './sensorsSlice';
+import type { SensorDictionary, SensorKind, SensorsState } from './sensorsSlice';
 import type { FinderState, SessionState } from './sessionSlice';
 import { selectNovastarTelemetryById } from './telemetrySlice';
 
@@ -32,17 +31,6 @@ export const {
   selectIds: selectDeviceIds,
 } = devicesAdapter.getSelectors<RootState>(state => state.devices);
 
-// export const {
-//   selectAll: selectAllNovastars,
-//   selectById: selectNovastarByPath,
-//   selectIds: selectNovastarIds,
-// } = novastarAdapter.getSelectors<RootState>(state => state.novastar);
-
-// export const selectNovastarScreen = createSelector(
-//   [selectNovastarByPath, (_state, _path, screen: number) => screen],
-//   (novastar, screen) => novastar?.screens?.[screen],
-// );
-
 export const selectConfig = (state: RootState): ConfigState => state.config;
 export const selectLoading = (state: RootState): boolean => selectConfig(state).loading;
 export const selectDisableNet = (state: RootState): boolean => !!selectConfig(state).disableNet;
@@ -52,9 +40,6 @@ export const selectAutobrightness = (state: RootState): boolean =>
 export const selectSpline = (state: RootState): Config['spline'] => selectConfig(state).spline;
 export const selectLocation = (state: RootState): Config['location'] =>
   selectConfig(state).location;
-// export const selectScreens = (state: RootState): Screen[] => selectConfig(state).screens;
-// export const selectScreenById = (state: RootState, id?: string): Screen | undefined =>
-//   (id && findById(selectConfig(state).screens, id)) || undefined;
 export const selectLogLevel = (state: RootState): LogLevel => selectConfig(state).logLevel;
 export const selectIsFixed = (state: RootState): boolean => !!selectConfig(state).fixedPages;
 export const selectAllPages = (state: RootState): Page[] => selectConfig(state).pages;
@@ -71,6 +56,8 @@ export const selectCurrentDeviceId = (state: RootState): string | undefined =>
   selectCurrent(state).device;
 export const selectIsRemoteDialogOpen = (state: RootState): boolean =>
   selectCurrent(state).isRemoteDialogOpen;
+export const selectIsActivateDialogOpen = (state: RootState): boolean =>
+  selectCurrent(state).isActivateDialogOpen;
 export const selectCurrentScreenId = (state: RootState): number | undefined =>
   selectCurrent(state).screen;
 export const selectCurrentDevice = (state: RootState): DeviceState | undefined => {
@@ -80,41 +67,28 @@ export const selectCurrentDevice = (state: RootState): DeviceState | undefined =
 export const selectCurrentHealth = (state: RootState): Health | undefined =>
   selectCurrent(state).health;
 export const selectAuthRequired = (state: RootState) => selectCurrent(state).authRequired;
-// export const selectNovastarIsBusy = (state: RootState): boolean => {
-//   const path = selectCurrentDeviceId(state);
-//   const novastar = path !== undefined && selectNovastarByPath(state, path);
-//   return Boolean(novastar && novastar.isBusy > 0);
-// };
-// export const selectCurrentPlaylist = (state: RootState): number | undefined =>
-//   selectCurrent(state).playlist;
 export const selectBroadcastDetected = (state: RootState) => selectCurrent(state).broadcastDetected;
 
-export const selectAllProps = (state: RootState, id: DeviceId): DeviceProps =>
-  selectDeviceById(state, id)?.props ?? {};
-export const selectProps = <P extends string>(
+type PropsSelector = <P extends string>(
   state: RootState,
-  id: DeviceId,
+  id: string,
   ...names: P[]
-): Record<P, ValueState | undefined> =>
-  pick(selectAllProps(state, id) as Record<P, ValueState | undefined>, names);
+) => Record<P, ValueState | undefined>;
+
+export const selectProps: PropsSelector = createSelector(
+  [
+    (state: RootState) => state.devices,
+    (_: RootState, id: string, ...names: string[]) => id,
+    (_: RootState, id: string, ...names: string[]) => names,
+  ],
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (devices, id, names) => pick(devices.entities[id], names) as any,
+);
+
 export const selectLinks = createSelector(selectAllDevices, devices =>
   devices.filter(notEmpty).filter(({ isLinkingDevice }) => isLinkingDevice),
 );
-const selectLinkIds = createSelector(selectLinks, devices => devices.map(({ id }) => id));
-// export const selectLinkIds = (state: RootState): DeviceId[] =>
-//   Object.values(state.devices.entities)
-//     .filter(notEmpty)
-//     .filter(({ isLinkingDevice }) => isLinkingDevice)
-//     .map(({ id }) => id);
-// export const selectLinks = createSelector([selectLinkIds, state => state], (ids, state) =>
-//   ids.map(id => selectDeviceById(state, id)).filter(notEmpty),
-// );
 
-// export const selectAllDevicesWithParent = (state: RootState): DeviceStateWithParent[] =>
-//   selectAllDevices(state).map(({ parent, ...props }) => ({
-//     ...props,
-//     parent: typeof parent !== 'undefined' ? selectDeviceById(state, parent) : undefined,
-//   }));
 export const selectAllDevicesWithParent = createSelector(
   [selectAllDevices, state => state],
   (devices, state) =>
@@ -195,6 +169,8 @@ export const selectIsClosed = (state: RootState): boolean =>
   selectSession(state).status === 'closed';
 export const selectDisplays = (state: RootState): Display[] => selectSession(state).displays;
 export const selectFinder = (state: RootState): FinderState => selectSession(state).finder;
+export const selectHostName = (state: RootState): string | undefined => selectSession(state).name;
+export const selectPlatform = (state: RootState): string | undefined => selectSession(state).platform;
 
 export const { selectAll: selectLogLines } = logAdapter.getSelectors<RootState>(state => state.log);
 
@@ -203,24 +179,6 @@ const selectFlasher = (state: RootState): FlasherState => state.flasher;
 export const selectProgress = (state: RootState): number => selectFlasher(state).progress;
 
 export const selectFlashing = (state: RootState): boolean => selectFlasher(state).flashing;
-
-/*
-export const {
-  selectAll: selectScreens,
-  selectById: selectScreen,
-  selectTotal: selectTotalScreens,
-} = screensAdapter.getSelectors<RootState>(state => state.screens);
-export const selectScreenAddresses = (state: RootState): string[] =>
-  [
-    ...new Set(
-      selectScreens(state).reduce<string[]>(
-        (res, { addresses }) =>
-          addresses ? [...res, ...addresses.map(address => address.replace(/[+-].*$/, ''))] : res,
-        [],
-      ),
-    ),
-  ].sort();
-*/
 
 export const selectTelemetry = (state: RootState) => state.telemetry;
 

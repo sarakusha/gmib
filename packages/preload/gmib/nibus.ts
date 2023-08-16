@@ -97,20 +97,20 @@ type PropEntity = [name: string, state: ValueState];
 
 const getDeviceProp =
   (device: IDevice) =>
-  (idOrName: string | number): PropEntity => {
-    const error = device.getError(idOrName);
-    const name = device.getName(idOrName);
-    return [
-      name,
-      {
-        // eslint-disable-next-line no-nested-ternary
-        status: error ? 'failed' : device.isDirty(idOrName) ? 'pending' : 'succeeded',
-        value: device[name],
-        error: error?.message,
-        raw: device.getRawValue(idOrName),
-      },
-    ];
-  };
+    (idOrName: string | number): PropEntity => {
+      const error = device.getError(idOrName);
+      const name = device.getName(idOrName);
+      return [
+        name,
+        {
+          // eslint-disable-next-line no-nested-ternary
+          status: error ? 'failed' : device.isDirty(idOrName) ? 'pending' : 'succeeded',
+          value: device[name],
+          error: error?.message,
+          raw: device.getRawValue(idOrName),
+        },
+      ];
+    };
 
 const getProps = (device: IDevice, idsOrNames?: (number | string)[]): DeviceProps => {
   const proto = Reflect.getPrototypeOf(device) ?? {};
@@ -151,13 +151,13 @@ export const setDeviceValue = (
   const drainDevice = debounce(
     async (): Promise<void> => {
       const ids = await device.drain();
+      // console.log(`drain: ${ids.join(', ')}`);
       if (ids.length === 0) return;
       const failed = ids.filter(ident => ident < 0).map(ident => -ident);
       failed.length > 0 && (await device.read(...failed));
       ipcDispatch(updateProps([deviceId, getProps(device, ids.map(Math.abs))]));
     },
     400,
-    { leading: true },
   );
   const getProp = getDeviceProp(device);
   const proto = Reflect.getPrototypeOf(device);
@@ -167,6 +167,7 @@ export const setDeviceValue = (
   ).filter(name => proto && Reflect.getMetadata('isWritable', proto, name));
 
   return async (name, value) => {
+    // console.log(`set ${name}=${value}`);
     if (!propNames.includes(name)) {
       debug(`Unknown property ${name}`);
       return;

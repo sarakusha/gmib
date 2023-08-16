@@ -21,6 +21,16 @@ import {
   startNovastarTelemetry,
 } from '../store/telemetrySlice';
 
+let novastarEnabled = false;
+
+export const hasNovastar = () => novastarEnabled;
+
+window.config.get('announce').then(announce => {
+  if (announce && typeof announce === 'object' && import.meta.env.VITE_ANNOUNCE_NOVASTAR in announce) {
+    novastarEnabled = !!announce[import.meta.env.VITE_ANNOUNCE_NOVASTAR];
+  }
+});
+
 const secret = window.identify.getSecret();
 
 const adapter = createEntityAdapter<Novastar>({
@@ -99,10 +109,10 @@ const debouncedUpdateNovastarScreens = createDebouncedAsyncThunk<void, ScreenPar
 
 const updateValue =
   <K extends keyof Screen>(name: K, update: SetStateAction<Screen[K]>) =>
-  (prev: Screen): Screen => ({
-    ...prev,
-    [name]: typeof update !== 'function' ? update : update(prev[name]),
-  });
+    (prev: Screen): Screen => ({
+      ...prev,
+      [name]: typeof update !== 'function' ? update : update(prev[name]),
+    });
 
 export const updateNovastarScreens = <K extends keyof Screen, S extends number>(
   path: string,
@@ -138,6 +148,7 @@ export const updateNovastarScreens = <K extends keyof Screen, S extends number>(
 
 export const useNovastarIds = () =>
   novastarApi.useGetNovastarsQuery(undefined, {
+    skip: !novastarEnabled,
     selectFromResult: ({ data, ...other }) => ({
       ids: data && selectNovastarIds(data),
       ...other,
@@ -146,6 +157,7 @@ export const useNovastarIds = () =>
 
 export const useNovastars = () =>
   novastarApi.useGetNovastarsQuery(undefined, {
+    skip: !novastarEnabled,
     selectFromResult: ({ data, ...other }) => ({
       novastars: data && selectNovastars(data),
       ...other,
@@ -158,7 +170,7 @@ export const useNovastar = (path?: string) =>
       novastar: data && path ? selectNovastar(data, path) : undefined,
       ...other,
     }),
-    skip: !path,
+    skip: !path || !novastarEnabled,
   });
 
 export const { useReloadMutation } = novastarApi;

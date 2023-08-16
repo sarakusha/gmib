@@ -2,7 +2,7 @@ import { ipcRenderer } from 'electron';
 import type { Dialog, SaveDialogSyncOptions } from 'electron';
 import { readFileSync, writeFileSync } from 'fs';
 
-import { setRemoteDialogOpen } from '/@renderer/store/currentSlice';
+import { setActivateDialogOpen, setRemoteDialogOpen } from '/@renderer/store/currentSlice';
 
 import ipcDispatch from '../common/ipcDispatch';
 
@@ -61,3 +61,4 @@ export const loadJSON = (title = 'Загрузить из'): Record<string, unkn
 };
 
 ipcRenderer.on('editRemoteHosts', () => ipcDispatch(setRemoteDialogOpen(true)));
+ipcRenderer.on('activateLicense', () => ipcDispatch(setActivateDialogOpen(true)));

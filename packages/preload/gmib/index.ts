@@ -2,7 +2,7 @@
  * @module preload
  */
 
-import { contextBridge } from 'electron';
+import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 // import '@sentry/electron/preload';
 
 import type { LogLevel } from '@nibus/core';
@@ -20,10 +20,12 @@ import * as nibus from './nibus';
 import * as output from './output';
 
 import expandTypes from '/@common/expandTypes';
+import { hashCode } from '/@common/helpers';
 
 let MACHINE_ID: string;
 machineId().then(value => {
   MACHINE_ID = value;
+  document.body.classList.add(`gmib-${hashCode(value).toString(16)}`);
 });
 /**
  * The "Main World" is the JavaScript context that your main renderer code runs in.
@@ -64,3 +66,11 @@ contextBridge.exposeInMainWorld('setLogLevel', (logLevel: LogLevel) => {
 });
 contextBridge.exposeInMainWorld('output', expandTypes(output));
 contextBridge.exposeInMainWorld('identify', expandTypes(identify));
+
+contextBridge.exposeInMainWorld('activateLicense', (key: string, name?: string): Promise<true | string> =>
+  ipcRenderer.invoke('activateLicense', key, name),
+);
+
+contextBridge.exposeInMainWorld('electronAPI', {
+  handleHost: (listener: (event: IpcRendererEvent) => void) => ipcRenderer.on('get-host-options', listener),
+});

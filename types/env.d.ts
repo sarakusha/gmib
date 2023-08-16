@@ -19,6 +19,14 @@ interface ImportMetaEnv {
   readonly VITE_APP_VERSION: string;
   readonly VITE_DEBUG?: string;
   readonly VITE_PLAYER?: '0' | '1';
+  readonly VITE_ANNOUNCE_PROXY: string;
+  readonly VITE_ANNOUNCE_PATH: string;
+  readonly VITE_ANNOUNCE_WINDOW: string;
+  readonly VITE_ANNOUNCE_BIND: string;
+  readonly VITE_ANNOUNCE_HOST: string;
+  readonly VITE_ANNOUNCE_NOVASTAR: string;
+  readonly VITE_ANNOUNCE_STORE: string;
+  readonly VITE_LICENSE_SERVER: string;
 }
 
 interface ImportMeta {

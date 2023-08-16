@@ -91,7 +91,7 @@ const AutobrightnessToolbar: React.FC = () => {
   const locationId = locationOpen ? 'location-settings' : undefined;
   const helpId = helpOpen ? 'help' : undefined;
   return (
-    <div>
+    <div className="YqATOnK8rERXOjt0JEXW0 rlXINR-cZo5bnISD5TaUT">
       {version && (
         <Tooltip title="История">
           <IconButton color="inherit" onClick={() => setHistoryOpen(true)} size="large">

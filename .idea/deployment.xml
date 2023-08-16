@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" serverName="192.168.2.40" remoteFilesAllowedToDisappearOnAutoupload="false" confirmBeforeUploading="false">
+  <component name="PublishConfigData" serverName="192.168.2.31" remoteFilesAllowedToDisappearOnAutoupload="false" confirmBeforeUploading="false">
     <option name="confirmBeforeUploading" value="false" />
     <serverData>
-      <paths name="192.168.2.40">
+      <paths name="192.168.2.31">
         <serverdata>
           <mappings>
             <mapping deploy="src/gmib" local="$PROJECT_DIR$" web="/" />

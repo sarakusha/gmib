@@ -95,7 +95,10 @@ const HttpPages: React.FC = () => {
           const [primary, secondary = ''] = title.split('/', 2);
           const isValid = permanent || (url && isUri(url));
           return (
-            <ListItemButton key={id}>
+            <ListItemButton
+              key={id}
+              className={permanent ? 'permanent' : 'tNX9k9byJD58qNs4nxAIi rlXINR-cZo5bnISD5TaUT'}
+            >
               <ListItemIcon>
                 <Switch
                   checked={screen?.test === id}
@@ -111,7 +114,7 @@ const HttpPages: React.FC = () => {
                 secondaryTypographyProps={noWrap}
               />
               {!permanent && !isFixed && (
-                <ListItemSecondaryAction>
+                <ListItemSecondaryAction className="tNX9k9byJD58qNs4nxAIi CG7cBydXFzf6qGSi-xBj8 rlXINR-cZo5bnISD5TaUT">
                   <IconButton
                     edge="end"
                     aria-label="edit"
@@ -138,7 +141,10 @@ const HttpPages: React.FC = () => {
           );
         })}
         {!isFixed && (
-          <ListItemButton onClick={addPageHandler}>
+          <ListItemButton
+            onClick={addPageHandler}
+            className="tNX9k9byJD58qNs4nxAIi CG7cBydXFzf6qGSi-xBj8 rlXINR-cZo5bnISD5TaUT"
+          >
             <ListItemIcon>
               <AddCircleOutlineIcon style={{ margin: 'auto' }} color="primary" />
             </ListItemIcon>
