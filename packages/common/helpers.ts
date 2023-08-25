@@ -3,8 +3,8 @@ import type { DeviceId } from '@nibus/core';
 import type { HWStatus } from '@novastar/screen/HWStatus';
 import type { CabinetPosition } from '@novastar/screen/getCabinetPosition';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import type React from 'react';
 import propertyOf from 'lodash/propertyOf';
+import type React from 'react';
 
 import type { BaseService } from 'bonjour-hap';
 
@@ -125,9 +125,14 @@ export function createPropsReducer<T extends Record<string, unknown>>(): Propert
   });
 }
 
-export type RemoteHost = Pick<BaseService, 'port' | 'name' | 'host'> & {
+export type RemoteHost = {
+  port: number;
+  name: string;
   address: string;
   version: string;
+  platform?: string;
+  arch?: string;
+  osVersion?: string;
 };
 
 /*
@@ -352,6 +357,6 @@ export const hashCode = (s: string): number =>
   s.split('').reduce((a, b) => {
     const h = (a << 5) - a + b.charCodeAt(0);
     return h & h;
-  }, 0);
+  }, 0) >>> 0;
 
 export default propertyOf;

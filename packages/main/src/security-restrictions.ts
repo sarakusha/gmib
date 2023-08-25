@@ -10,54 +10,29 @@ const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:sec`);
 
 const localhost = `http://localhost:${port}`;
 
-const fullGrant: Set<
-  // | 'clipboard-sanitized-write'
-  | 'clipboard-read'
-  | 'media'
-  | 'display-capture'
-  | 'mediaKeySystem'
-  | 'geolocation'
-  | 'notifications'
-  | 'midi'
-  | 'midiSysex'
-  | 'pointerLock'
-  | 'fullscreen'
-  | 'openExternal'
-  | 'unknown'
-> = new Set([
-  // 'clipboard-sanitized-write',
+const allPermissions = [
   'clipboard-read',
-  'media',
+  'clipboard-sanitized-write',
   'display-capture',
-  'mediaKeySystem',
+  'fullscreen',
   'geolocation',
-  'notifications',
+  'idle-detection',
+  'media',
+  'mediaKeySystem',
   'midi',
   'midiSysex',
+  'notifications',
   'pointerLock',
-  'fullscreen',
   'openExternal',
+  'window-management',
   'unknown',
-]);
+] as const;
 
-type Permissions = Set<
-  | 'clipboard-sanitized-write'
-  | 'clipboard-read'
-  | 'media'
-  | 'display-capture'
-  | 'mediaKeySystem'
-  | 'geolocation'
-  | 'notifications'
-  | 'midi'
-  | 'midiSysex'
-  | 'pointerLock'
-  | 'fullscreen'
-  | 'openExternal'
-  | 'window-placement'
-  | 'window-management'
-  | 'unknown'
->;
+type AllPermissions = typeof allPermissions[number];
 
+const fullGrant: Set<AllPermissions> = new Set(allPermissions);
+
+type Permissions = Set<AllPermissions>;
 /**
  * List of origins that you allow open INSIDE the application and permissions for each of them.
  *

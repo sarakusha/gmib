@@ -9,15 +9,14 @@ import {
 import { SRPClientSession, SRPParameters, SRPRoutines } from '@sarakusha/tssrp6a';
 import * as React from 'react';
 
-import fetchJson, { FetchError } from '../../common/fetchJson';
-
+import fetchJson, { FetchError } from '/@common/fetchJson';
 import * as remote from '/@common/remote';
 
 import novastarApi, { hasNovastar } from '../api/novastar';
 import { useDispatch, useSelector } from '../store';
+import { setDisableNet } from '../store/configSlice';
 import { setAuthRequired } from '../store/currentSlice';
 import { selectAuthRequired } from '../store/selectors';
-import { setDisableNet } from '../store/configSlice';
 
 const login = async (password: string, host: string) => {
   const routines = new SRPRoutines(new SRPParameters());

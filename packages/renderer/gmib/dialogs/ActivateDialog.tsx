@@ -1,66 +1,41 @@
-import {
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  TextField,
-} from '@mui/material';
-import * as React from 'react';
+import { Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
 import { Field, Form, Formik } from 'formik';
-import { charGenerator, charValidator } from '/@common/keyValidator';
-import fetchJson, { FetchError } from '../../common/fetchJson';
+import * as React from 'react';
 
+import { charValidator } from '/@common/keyValidator';
+
+import FormikTextField from '../../common/FormikTextField';
 import { useDispatch, useSelector } from '../store';
 import { setActivateDialogOpen } from '../store/currentSlice';
-import { selectIsActivateDialogOpen } from '../store/selectors';
-import FormikTextField from '../../common/FormikTextField';
-
-// const login = async (password: string, host: string) => {
-//   const routines = new SRPRoutines(new SRPParameters());
-//   const client = new SRPClientSession(routines);
-//   const identifier = window.identify.getIdentifier();
-//   const [first, { salt, B }] = await Promise.all([
-//     client.step1('gmib', password),
-//     fetchJson<{ salt: string; B: string }>(`http://${host}/api/handshake/${identifier}`, {
-//       cache: 'no-cache',
-//     }),
-//   ]);
-//   const second = await first.step2(BigInt(salt), BigInt(B));
-//   const { A, M1 } = second;
-//   const { M2 } = await fetchJson<{ M2: string }>(`http://${host}/api/login/${identifier}`, {
-//     method: 'POST',
-//     headers: {
-//       'Content-Type': 'application/json',
-//     },
-//     body: JSON.stringify({
-//       A: `0x${A.toString(16)}`,
-//       M1: `0x${M1.toString(16)}`,
-//     }),
-//   });
-//   await second.step3(BigInt(M2));
-//   return second.S;
-// };
+import { selectHostName, selectIsActivateDialogOpen } from '../store/selectors';
+import { useActivateMutation } from '../api/config';
 
 const ActivateDialog: React.FC = () => {
   const open = useSelector(selectIsActivateDialogOpen);
   const dispatch = useDispatch();
   const closeHandler = () => dispatch(setActivateDialogOpen(false));
-  // console.log('CHAR', charGenerator('0AVF-IOKW-MJ9'), charValidator('0AVF-IOKW-MJ9K'));
+  const hostName = useSelector(selectHostName)?.replace(/\.local$/, '');
+  const [activate] = useActivateMutation();
   return (
     <Dialog open={open} maxWidth="xs" fullWidth>
       <DialogTitle>Активация</DialogTitle>
       <DialogContent>
         <Formik
-          initialValues={{ name: '', key: '' }}
+          initialValues={{ name: hostName, key: '' }}
           onSubmit={async ({ key, name }, { setSubmitting, setFieldError }) => {
-            const res = await window.activateLicense(key, name);
-            if (res === true) {
-              setSubmitting(false);
-              dispatch(setActivateDialogOpen(false));
-            } else {
-              setFieldError('key', res);
-            }
+            // const res = await window.activateLicense(key, name);
+            activate({ key, name })
+              .unwrap()
+              .then(
+                () => {
+                  setSubmitting(false);
+                  dispatch(setActivateDialogOpen(false));
+                },
+                err => {
+                  console.error(err);
+                  setFieldError('key', (err as Error).message);
+                },
+              );
           }}
           validate={values => {
             const errs: Partial<Record<keyof typeof values, string>> = {};

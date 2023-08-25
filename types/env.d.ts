@@ -25,7 +25,7 @@ interface ImportMetaEnv {
   readonly VITE_ANNOUNCE_BIND: string;
   readonly VITE_ANNOUNCE_HOST: string;
   readonly VITE_ANNOUNCE_NOVASTAR: string;
-  readonly VITE_ANNOUNCE_STORE: string;
+  readonly VITE_ANNOUNCE_DATE: string;
   readonly VITE_LICENSE_SERVER: string;
 }
 

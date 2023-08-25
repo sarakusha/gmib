@@ -70,14 +70,19 @@ export const getOutgoingSecret = async (id: string) =>
 const secret = randomBytes(48);
 
 export const getRemoteCredentials = async (url: string): Promise<Credentials | undefined> => {
-  const response = await fetch(url);
-  debug(`${url}, ${response.ok}:${JSON.stringify(response)}`);
-  if (!response.ok) return undefined;
-  const remote = await response.text();
-  return {
-    identifier: localConfig.get('identifier'),
-    apiSecret: await getOutgoingSecret(remote),
-  };
+  try {
+    const response = await fetch(url);
+    // debug(`${url}, ${response.ok}:${JSON.stringify(response)}`);
+    if (!response.ok) return undefined;
+    const remote = await response.text();
+    return {
+      identifier: localConfig.get('identifier'),
+      apiSecret: await getOutgoingSecret(remote),
+    };
+  } catch (error) {
+    debug(`error while getRemoteCredentials: ${(error as Error).message}`);
+    return undefined;
+  }
 };
 
 app.whenReady().then(() => {

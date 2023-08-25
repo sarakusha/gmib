@@ -1,5 +1,5 @@
 import { app, ipcMain } from 'electron';
-
+import os from 'node:os';
 import * as ciao from '@homebridge/ciao';
 import debugFactory from 'debug';
 import express from 'express';
@@ -7,23 +7,24 @@ import { createProxyMiddleware } from 'http-proxy-middleware';
 import type { RequestHandler } from 'http-proxy-middleware';
 import sortBy from 'lodash/sortBy';
 
-import bonjourHap from 'bonjour-hap';
-
 import master, { isLocalhost } from './MasterBrowser';
 import config, { port as currentPort } from './config';
 import localConfig from './localConfig';
-import { getOutgoingSecret } from './secret';
-import { getMainWindow } from './mainWindow';
+import { getMainWindow, waitWebContents } from './mainWindow';
 
 import generateSignature from '/@common/generateSignature';
 import Deferred from '/@common/Deferred';
+
 import relaunch from './relaunch';
+import { getOutgoingSecret } from './secret';
+
+import bonjourHap from 'bonjour-hap';
 
 type ProxyOptions = {
   readonly host: string;
   readonly port: number;
   readonly identifier: string;
-  readonly rang: number;
+  readonly rank: number;
 };
 
 type Proxy = RequestHandler &
@@ -40,18 +41,21 @@ const delay100 = () =>
     setTimeout(resolve, 100);
   });
 
-const rang = Math.random();
+const rank = Math.random();
 const responder = ciao.getResponder();
 const service = responder.createService({
-  name: 'Novastar Master Browser',
+  name: `Novastar Master Browser (${os.hostname().replace(/\.local\.?$/, '')})`,
+  hostname: 'gmib.local',
   type: 'novastar',
   port: currentPort,
   txt: {
-    rang: rang.toString(),
+    rang: rank.toString(), // TODO: typo (backward compatibility), should be removed in the future.
+    rank: rank.toString(),
     identifier: localConfig.get('identifier'),
+    version: import.meta.env.VITE_APP_VERSION,
   },
 });
-service.on('name-change', () => {});
+service.on('name-change', name => { debug(`service name changed: ${name}`); });
 
 let timeout: NodeJS.Timeout | undefined;
 
@@ -69,7 +73,7 @@ let ready = new Deferred();
 
 const selectStrongest = (
   remotes: bonjourHap.RemoteService[],
-): bonjourHap.RemoteService | undefined => sortBy(remotes, remote => -Number(remote.txt.rang))[0];
+): bonjourHap.RemoteService | undefined => sortBy(remotes, remote => -Number(remote.txt.rank ?? remote.txt.rang))[0];
 
 const tryCreateMasterBrowser = () => {
   service
@@ -77,15 +81,15 @@ const tryCreateMasterBrowser = () => {
     .then(delay100)
     .then(() => {
       const strongest = selectStrongest(browser.services);
-      if (strongest && Number(strongest.txt.rang) > rang) {
+      if (strongest && Number(strongest.txt.rank ?? strongest.txt.rang) > rank) {
         service.end();
         // eslint-disable-next-line @typescript-eslint/no-use-before-define
         createProxy(strongest);
         isMaster = false;
         master.close();
-        // debug(`close MBR: ${rang}`);
+        // debug(`close MBR: ${rank}`);
       } else {
-        // debug(`MBR ${rang}`);
+        // debug(`MBR ${rank}`);
         isMaster = true;
         try {
           master.open();
@@ -106,7 +110,7 @@ if (!disableNet) {
 }
 
 config.onDidChange('disableNet', async (newValue, oldValue) => {
-  if (oldValue != null) {
+  if (oldValue != null && import.meta.env.PROD) {
     debug('relaunch...');
     responder.shutdown().finally(relaunch);
   }
@@ -165,7 +169,7 @@ const createProxy = (remote: bonjourHap.RemoteService) => {
     host,
     port,
     identifier,
-    rang: Number(remote.txt.rang),
+    rank: Number(remote.txt.rank),
     secret: (value: bigint) => {
       secret = Buffer.from(value.toString(16), 'hex');
     },
@@ -175,16 +179,16 @@ const createProxy = (remote: bonjourHap.RemoteService) => {
 
 browser.on('up', async remote => {
   // debug(`UP ${remote.referer.address}`);
-  setTimeout(() => getMainWindow()?.webContents.send('reloadDevices'), 1000).unref();
+  waitWebContents().then(webContents => setTimeout(() => webContents.send('reloadDevices'), 1000).unref());
   if (isLocalhost(remote.referer.address) || disableNet) return;
-  const remoteRang = Number(remote.txt.rang);
-  if (isMaster && remoteRang > rang) {
+  const remoteRang = Number(remote.txt.rank);
+  if (isMaster && remoteRang > rank) {
     await service.end();
     isMaster = false;
     await master.close();
-    // debug(`close MBR: ${rang}`);
+    // debug(`close MBR: ${rank}`);
   }
-  if (!isMaster && (!masterProxy || masterProxy.rang < remoteRang)) {
+  if (!isMaster && (!masterProxy || masterProxy.rank < remoteRang)) {
     createProxy(remote);
   }
 });
@@ -204,7 +208,7 @@ browser.on('down', remote => {
   }
 });
 
-app.on('before-quit', () => {
+app.on('will-quit', () => {
   try {
     if (isMaster && master) master.close();
     service.destroy();

@@ -23,6 +23,7 @@ import { useSnackbar } from 'notistack';
 import React, { useCallback, useEffect, useState } from 'react';
 
 import nata from '../../assets/nata.svg';
+import ActivateDialog from '../dialogs/ActivateDialog';
 import RemoteHostsDialog from '../dialogs/RemoteHostsDialog';
 import SearchDialog from '../dialogs/SearchDialog';
 import { useToolbar } from '../providers/ToolbarProvider';
@@ -47,7 +48,6 @@ import Devices from './Devices';
 import Drawer from './Drawer';
 import GmibTabs from './GmibTabs';
 import HttpPages from './HttpPages';
-import ActivateDialog from '../dialogs/ActivateDialog';
 
 const drawerWidth = 240;
 

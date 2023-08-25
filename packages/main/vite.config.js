@@ -33,7 +33,7 @@ const config = {
   // },
   build: {
     ssr: true,
-    sourcemap: false,
+    sourcemap: 'inline',
     target: `node${node}`,
     outDir: 'dist',
     assetsDir: '.',

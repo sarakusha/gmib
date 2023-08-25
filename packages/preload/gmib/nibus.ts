@@ -374,6 +374,7 @@ function openSession() {
     ipcDispatch(setDisplays(displays));
   };
 
+  // TODO: REMOTE
   const addForeignDeviceHandler = async ({
     portInfo: { path },
     description,
@@ -527,12 +528,12 @@ export const findDevices = finder.run.bind(finder);
 export const cancelSearch = finder.cancel.bind(finder);
 
 ipcRenderer.on('serviceUp', (event, remoteHost: RemoteHost) => {
-  debug('serviceUp');
+  // debug('serviceUp');
   ipcDispatch(addRemoteHost(remoteHost));
 });
 
 ipcRenderer.on('serviceDown', (event, remoteHost: RemoteHost) => {
-  debug('serviceDown');
+  // debug('serviceDown');
   ipcDispatch(removeRemoteHost(getRemoteId(remoteHost)));
 });
 

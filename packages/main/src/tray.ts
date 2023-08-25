@@ -1,9 +1,13 @@
-import { app, Menu, type MenuItem, Tray } from 'electron';
+import { app, BrowserWindow, Menu, type MenuItem, Tray } from 'electron';
 import os from 'os';
 import path from 'path';
 
+// import { hideAll, showAll } from '../bak/windows';
+
 import localConfig from './localConfig';
-import { hideAll, showAll } from './windows';
+
+const showAll = () => BrowserWindow.getAllWindows().forEach(win => win.show());
+const hideAll = () => BrowserWindow.getAllWindows().forEach(win => win.hide());
 
 const tray: { appIcon: Tray | null } = { appIcon: null };
 
@@ -34,12 +38,12 @@ export const updateTray = (): void => {
     ...(localConfig.get('autostart')
       ? []
       : [
-          { type: 'separator' } as MenuItem,
-          {
-            role: 'quit',
-            label: 'Выход',
-          } as MenuItem,
-        ]),
+        { type: 'separator' } as MenuItem,
+        {
+          role: 'quit',
+          label: 'Выход',
+        } as MenuItem,
+      ]),
   ]);
   tray && tray.appIcon?.setContextMenu(contextMenu);
 };

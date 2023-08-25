@@ -8,7 +8,7 @@ import log from './initlog';
 import localConfig from './localConfig';
 import './config';
 import './screen';
-import './nibus';
+// import './nibus';
 import './mdns';
 import './tray';
 import './linux';
@@ -22,6 +22,10 @@ import openHandler from './openHandler';
 import { launchPlayers } from './playerWindow';
 
 import { fixDefault } from '/@common/helpers';
+
+process.env['npm_package_version'] = import.meta.env.VITE_APP_VERSION;
+
+import('./nibus');
 
 // import {REDUX_DEVTOOLS} from 'electron-devtools-installer';
 // import.meta.env.PROD && Sentry.init({ dsn: 'https://fbd4024789d247fcb5eb2493d1aa28b6@o1412889.ingest.sentry.io/6752393' });

@@ -4,17 +4,20 @@ import path from 'path';
 
 import debugFactory from 'debug';
 
+import authRequest from './authRequest';
 import createWindow from './createWindow';
 import { dbReady } from './db';
-import openHandler from './openHandler';
-import { getPlayer, getPlayers, updateHidePlayer, updateShowPlayer } from './screen';
-import { playerWindows, remotePlayers } from './windows';
 import localConfig from './localConfig';
+import openHandler from './openHandler';
+import relaunch from './relaunch';
+import { getPlayer, getPlayers, updateHidePlayer, updateShowPlayer } from './screen';
+// import { playerWindows, remotePlayers } from './windows';
 
 import generateSignature from '/@common/generateSignature';
 import type { Player } from '/@common/video';
-import relaunch from './relaunch';
+
 import { getRemoteCredentials } from './secret';
+import { findPlayerWindow, registerPlayer } from './windowStore';
 
 const preload = path.join(__dirname, '../../preload/dist/player.cjs');
 const remotePreload = path.join(__dirname, '../../preload/dist/remote.cjs');
@@ -33,49 +36,51 @@ export const getPlayerTitle = (player: Player): string =>
 export const openPlayer = async (
   id: number,
   host = 'localhost',
-  port = +(process.env['NIBUS_PORT'] ?? 9001),
+  nibusPort = +(process.env['NIBUS_PORT'] ?? 9001),
   // token = secret,
 ): Promise<BrowserWindow | undefined> => {
   const isRemote = host !== 'localhost';
   let player: Player | undefined;
-  let browserWindow: BrowserWindow | undefined;
-  const key = `${host}:${port}:${id}`;
+  // let browserWindow: BrowserWindow | undefined;
+  // const key = `${host}:${port}:${id}`;
+  let browserWindow = findPlayerWindow(id, host);
   if (isRemote) {
-    browserWindow = remotePlayers.get(key);
     if (!browserWindow) {
-      const baseUrl = `http://${host}:${port + 1}`;
-      const credentials = await getRemoteCredentials(`${baseUrl}/api/identifier`);
-      if (!credentials?.apiSecret || !credentials?.identifier) return undefined;
-      const now = Date.now();
-      const api = `${baseUrl}/api/player/${id}`;
-      const sign = generateSignature(credentials.apiSecret, 'GET', api, now);
-      // console.log({ api });
-      const res = await fetch(api, {
-        headers: {
-          'x-ni-identifier': credentials.identifier,
-          'x-ni-timestamp': now.toString(),
-          'x-ni-signature': sign,
-        },
-      });
-      if (res.ok) player = await res.json();
+      // const baseUrl = `http://${host}:${port + 1}`;
+      // const credentials = await getRemoteCredentials(`${baseUrl}/api/identifier`);
+      // if (!credentials?.apiSecret || !credentials?.identifier) return undefined;
+      // const now = Date.now();
+      // const api = `${baseUrl}/api/player/${id}`;
+      // const sign = generateSignature(credentials.apiSecret, 'GET', api, now);
+      // // console.log({ api });
+      // const res = await fetch(api, {
+      //   headers: {
+      //     'x-ni-identifier': credentials.identifier,
+      //     'x-ni-timestamp': now.toString(),
+      //     'x-ni-signature': sign,
+      //   },
+      // });
+      const res = await authRequest({ host, port: nibusPort + 1, api: `/player/${id}` });
+      if (res?.ok) player = await res.json();
       debug(JSON.stringify(player));
     }
   } else {
     await dbReady;
     player = await getPlayer(id);
-    browserWindow = playerWindows.get(id);
   }
   if (!browserWindow) {
     if (!player) return undefined;
-    const query = `source_id=${id}&host=${host}&port=${port}`;
+    const query = `source_id=${id}&host=${host}&port=${nibusPort}`;
     const url =
       import.meta.env.DEV && import.meta.env.VITE_DEV_SERVER_URL
         ? `${import.meta.env.VITE_DEV_SERVER_URL}player.html?${query}`
-        : `http://localhost:${+(process.env['NIBUS_PORT'] ?? 9001) + 1}/player.html?${query}`;
+        : `http://localhost:${nibusPort + 1}/player.html?${query}`;
     const title = getPlayerTitle(player);
-    browserWindow = createWindow(isRemote ? `${host}:${title}` : title, isRemote ? remotePreload : preload);
-    if (isRemote) remotePlayers.set(key, browserWindow);
-    else playerWindows.set(id, browserWindow);
+    browserWindow = createWindow(
+      isRemote ? `${host}:${title}` : title,
+      isRemote ? remotePreload : preload,
+    );
+    registerPlayer(browserWindow, { host, port: nibusPort, playerId: id });
     browserWindow.loadURL(url).catch(err => {
       debug(`error while load player ${url}: ${err.message}`);
     });
@@ -99,8 +104,6 @@ export const openPlayer = async (
       if (!isQuitting && localConfig.get('autostart')) {
         event.preventDefault();
         browserWindow?.hide();
-      } else {
-        playerWindows.delete(id);
       }
     });
     browserWindow.on('show', () => {

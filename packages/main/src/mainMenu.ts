@@ -1,10 +1,11 @@
-import type { RemoteHost } from '/@common/helpers';
-import { getRemoteLabel } from '/@common/helpers';
+import { notEmpty } from '/@common/helpers';
 
 import type { MenuItemConstructorOptions } from 'electron';
-import { app, BrowserWindow, Menu, shell } from 'electron';
+import { app, BrowserWindow, dialog, Menu, shell } from 'electron';
+import type { UpdateInfo } from 'electron-updater';
+import uniqBy from 'lodash/uniqBy';
+import semverGt from 'semver/functions/gte';
 
-import windows from './windows';
 import localConfig from './localConfig';
 import { linuxAutostart } from './linux';
 import { updateTray } from './tray';
@@ -12,9 +13,12 @@ import { openPlayer } from './playerWindow';
 import { getPlayers, hasPlayers, insertPlayer, uniquePlayerName } from './screen';
 import { dbReady } from './db';
 import checkForUpdates from './updater';
-import license from './license';
-import type { Host } from '@nibus/core/ipc';
-import { getHostOptions } from './ipc';
+import type { WindowParams } from './windowStore';
+import store, { getGmibParams, isGmib, registerGmib } from './windowStore';
+import authRequest from './authRequest';
+import mdnsBrowser, { pickRemoteService } from './mdns';
+import { createAppWindow, getMainWindow } from './mainWindow';
+import relaunch from './relaunch';
 
 const createNewPlayer = async (name = 'Новый плеер'): Promise<void> => {
   await dbReady;
@@ -49,211 +53,333 @@ export const updatePlayerMenu = (): Promise<void> =>
     }),
   );
 
-const remoteMenu: AppMenuItem = {
-  label: 'GMIB',
-  submenu: [
-    {
-      label: 'Автозапуск',
-      type: 'checkbox',
-      click: mi => {
-        localConfig.set('autostart', mi.checked);
-      },
-      checked: localConfig.get('autostart'),
-    },
-    { label: 'Изменить список ...' },
-    { type: 'separator' },
-  ],
+const remoteMenu = (params?: WindowParams): AppMenuItem | undefined => {
+  const remotes = uniqBy(
+    [...mdnsBrowser.services.map(pickRemoteService).filter(notEmpty), ...localConfig.get('hosts')],
+    'address',
+  );
+  return isGmib(params)
+    ? {
+      label: 'GMIB',
+      submenu: [
+        {
+          label: 'Автозапуск',
+          type: 'checkbox',
+          click: async mi => {
+            const value = !params.autostart;
+            try {
+              const res = await authRequest({
+                api: '/autostart',
+                method: 'POST',
+                host: params.host,
+                port: params.nibusPort + 1,
+                body: { value },
+              });
+              if (res?.ok) {
+                params.update({ autostart: value });
+                // eslint-disable-next-line @typescript-eslint/no-use-before-define
+                updateMenu();
+              }
+            } catch (e) {
+              console.error(`error while fetch: ${e}`);
+            }
+          },
+          checked: params.autostart,
+        },
+        {
+          label: 'Изменить список ...',
+          click: () => {
+            const window = getMainWindow();
+            if (window) {
+              window.show();
+              window.focus();
+              window.webContents.send('editRemoteHosts');
+            }
+          },
+        },
+        { type: 'separator' },
+        ...remotes.map(
+          ({ address, port, name }): MenuItemConstructorOptions => ({
+            label: `${name} (${address})`,
+            click: () => {
+              const gmib = getGmibParams().find(
+                item => item.host === address && item.nibusPort === port,
+              );
+              if (gmib) {
+                const window = BrowserWindow.fromId(gmib.id);
+                if (window) {
+                  window.show();
+                  window.focus();
+                  return;
+                }
+              }
+              const window = createAppWindow(port, address, name);
+              registerGmib(window, { host: address, nibusPort: +port });
+              window.show();
+              window.focus();
+            },
+          }),
+        ),
+      ],
+    }
+    : undefined;
 };
 
-const helpMenu = async (): Promise<AppMenuItem> => {
-  console.log({ license });
-  let host: Partial<Host> | undefined;
-  try {
-    host = await getHostOptions();
-  } catch (err) {
-    console.error(`error while get host: ${(err as Error).message}`);
-  }
+const helpMenu = async (params?: WindowParams): Promise<AppMenuItem> => {
+  const isModernGmib =
+    isGmib(params) && params.info?.version && semverGt(params.info.version, '4.2.1');
   return {
     label: 'Помощь',
     role: 'help',
     submenu: [
-      ...(process.platform === 'darwin'
+      ...(isModernGmib
         ? [
           {
-            label: `${host?.name}(${host?.platform}) ${BrowserWindow.getFocusedWindow()?.getTitle()}`,
-            enabled: false,
+            label: 'Лицензия',
+            submenu: [
+              ...(params.plan ? [{ label: `Тип: ${params.plan}`, enabled: false }] : []),
+              ...(params.key ? [{ label: `Ключ: ${params.key}`, enabled: false }] : []),
+              ...(params.renew
+                ? [
+                  {
+                    label: `Действительна по: ${new Date(params.renew).toLocaleDateString()}`,
+                    enabled: false,
+                  },
+                ]
+                : []),
+              {
+                label: 'Активировать лицензию',
+                click: () =>
+                  BrowserWindow.getFocusedWindow()?.webContents.send('activateLicense'),
+              },
+            ],
           },
         ]
         : []),
-
-      ...(license.type ? [{ label: `Лицензия: ${license.type}` }] : []),
-      ...(license.key ? [{ label: `Ключ: ${license.key}` }] : []),
       {
         label: 'Все версии',
         click: () => shell.openExternal('https://github.com/sarakusha/gmib/releases'),
       },
       {
         label: 'Проверить обновления',
-        click: checkForUpdates,
+        // enabled: import.meta.env.PROD,
+        click: isModernGmib
+          ? async () => {
+            const updateAndRestart = async () => {
+              const resp = await authRequest({
+                api: '/update',
+                method: 'POST',
+                host: params.host,
+                port: params.nibusPort + 1,
+              });
+              if (!resp) return;
+              if (resp.ok) {
+                dialog.showMessageBox({
+                  title: 'Обновление установлено',
+                  message: 'Программа перезапущена',
+                });
+              } else {
+                dialog.showErrorBox('Что-то пошло не так', await resp.text());
+              }
+            };
+            const res = await authRequest({
+              api: '/checkForUpdates',
+              method: 'POST',
+              host: params.host,
+              port: params.nibusPort + 1,
+            });
+            if (!res) return;
+            if (res.ok) {
+              const info = (await res.json()) as undefined | UpdateInfo;
+              if (info) {
+                dialog
+                  .showMessageBox({
+                    type: 'info',
+                    title: 'Найдено обновление',
+                    message: `Найдено обновление ${info.version} для ${params.host}, хотите установить?`,
+                    buttons: ['Установить', 'Не сейчас'],
+                  })
+                  .then(buttonIndex => {
+                    if (buttonIndex.response === 0) updateAndRestart();
+                  });
+              } else {
+                dialog.showMessageBox({
+                  title: 'Обновления не найдены',
+                  message: 'Установлена последняя версия',
+                });
+              }
+            } else {
+              dialog.showErrorBox('Что-то пошло не так', await res.text());
+            }
+          }
+          : checkForUpdates,
       },
-      {
-        label: 'Активировать лицензию',
-        click: () => BrowserWindow.getFocusedWindow()?.webContents.send('activateLicense'),
-      },
+      ...(isModernGmib
+        ? [
+          {
+            label: 'Перезапустить',
+            click: relaunch,
+            enabled: import.meta.env.PROD,
+          },
+        ]
+        : []),
     ],
   };
 };
 
-const template = async (): Promise<MenuItemConstructorOptions[]> => [
-  ...(process.platform === 'darwin'
-    ? [
-      {
-        label: import.meta.env.VITE_APP_NAME,
-        submenu: [
-          {
-            role: 'about',
-          },
-          {
-            type: 'separator',
-          },
-          {
-            role: 'services',
-          },
-          {
-            type: 'separator',
-          },
-          {
-            role: 'hide',
-          },
-          {
-            role: 'hideOthers',
-          },
-          {
-            role: 'unhide',
-          },
-          {
-            type: 'separator',
-          },
-          {
-            role: 'quit',
-          },
-        ],
-      } as MenuItemConstructorOptions,
-    ]
-    : []),
-  remoteMenu,
-  playerMenu,
-  {
-    label: 'Правка',
-    role: 'editMenu',
-    submenu: [
-      {
-        label: 'Отменить',
-        // accelerator: 'CmdOrCtrl+Z',
-        role: 'undo',
-      },
-      {
-        label: 'Повторить',
-        // accelerator: 'Shift+CmdOrCtrl+Z',
-        role: 'redo',
-      },
-      {
-        type: 'separator',
-      },
-      {
-        label: 'Вырезать',
-        // accelerator: 'CmdOrCtrl+X',
-        role: 'cut',
-      },
-      {
-        label: 'Копировать',
-        // accelerator: 'CmdOrCtrl+C',
-        role: 'copy',
-      },
-      {
-        label: 'Вставить',
-        // accelerator: 'CmdOrCtrl+V',
-        role: 'paste',
-      },
-      {
-        label: 'Выделить все',
-        // accelerator: 'CmdOrCtrl+A',
-        role: 'selectAll',
-      },
-    ],
-  },
-  {
-    label: 'Вид',
-    role: 'viewMenu',
-    submenu: [
-      {
-        label: 'Обновить',
-        // accelerator: 'CmdOrCtrl+R',
-        role: 'reload',
-        // click: (item, focusedWindow) => {
-        //   if (focusedWindow) focusedWindow.reload();
-        // },
-      },
-      {
-        label: 'Полноэкранный режим',
-        role: 'togglefullscreen',
-        // accelerator: (function () {
-        //   if (process.platform === 'darwin') return 'Ctrl+Command+F';
-        //   else return 'F11';
-        // })(),
-        // click: function (item, focusedWindow) {
-        //   if (focusedWindow) focusedWindow.setFullScreen(!focusedWindow.isFullScreen());
-        // },
-      },
-      {
-        label: 'Инструменты разработчика',
-        role: 'toggleDevTools',
-        // accelerator: (function () {
-        //   if (process.platform === 'darwin') return 'Alt+Command+I';
-        //   else return 'Ctrl+Shift+I';
-        // })(),
-        // click: function (item, focusedWindow) {
-        //   if (focusedWindow) focusedWindow.toggleDevTools();
-        // },
-      },
-      {
-        type: 'separator',
-      },
-      {
-        label: 'Актуальный размер',
-        role: 'resetZoom',
-      },
-      {
-        label: 'Увеличить',
-        role: 'zoomIn',
-      },
-      {
-        label: 'Уменьшить',
-        role: 'zoomOut',
-      },
-    ],
-  },
-  {
-    label: 'Окно',
-    role: 'windowMenu',
-    submenu: [
-      {
-        label: 'Минимизировать',
-        // accelerator: 'CmdOrCtrl+M',
-        role: 'minimize',
-      },
-      {
-        label: 'Закрыть',
-        // accelerator: 'CmdOrCtrl+W',
-        role: 'close',
-      },
-    ],
-  },
-  // { role: 'viewMenu' },
-  // { role: 'editMenu' },
-  // { role: 'windowMenu' },
-  await helpMenu(),
-];
+const template = async (params?: WindowParams): Promise<MenuItemConstructorOptions[]> => {
+  const remote = remoteMenu(params);
+  return [
+    ...(process.platform === 'darwin'
+      ? [
+        {
+          label: import.meta.env.VITE_APP_NAME,
+          submenu: [
+            {
+              role: 'about',
+            },
+            {
+              type: 'separator',
+            },
+            {
+              role: 'services',
+            },
+            {
+              type: 'separator',
+            },
+            {
+              role: 'hide',
+            },
+            {
+              role: 'hideOthers',
+            },
+            {
+              role: 'unhide',
+            },
+            {
+              type: 'separator',
+            },
+            {
+              role: 'quit',
+            },
+          ],
+        } as MenuItemConstructorOptions,
+      ]
+      : []),
+    ...(remote ? [remote] : []),
+    playerMenu,
+    {
+      label: 'Правка',
+      role: 'editMenu',
+      submenu: [
+        {
+          label: 'Отменить',
+          // accelerator: 'CmdOrCtrl+Z',
+          role: 'undo',
+        },
+        {
+          label: 'Повторить',
+          // accelerator: 'Shift+CmdOrCtrl+Z',
+          role: 'redo',
+        },
+        {
+          type: 'separator',
+        },
+        {
+          label: 'Вырезать',
+          // accelerator: 'CmdOrCtrl+X',
+          role: 'cut',
+        },
+        {
+          label: 'Копировать',
+          // accelerator: 'CmdOrCtrl+C',
+          role: 'copy',
+        },
+        {
+          label: 'Вставить',
+          // accelerator: 'CmdOrCtrl+V',
+          role: 'paste',
+        },
+        {
+          label: 'Выделить все',
+          // accelerator: 'CmdOrCtrl+A',
+          role: 'selectAll',
+        },
+      ],
+    },
+    {
+      label: 'Вид',
+      role: 'viewMenu',
+      submenu: [
+        {
+          label: 'Обновить',
+          // accelerator: 'CmdOrCtrl+R',
+          role: 'reload',
+          // click: (item, focusedWindow) => {
+          //   if (focusedWindow) focusedWindow.reload();
+          // },
+        },
+        {
+          label: 'Полноэкранный режим',
+          role: 'togglefullscreen',
+          // accelerator: (function () {
+          //   if (process.platform === 'darwin') return 'Ctrl+Command+F';
+          //   else return 'F11';
+          // })(),
+          // click: function (item, focusedWindow) {
+          //   if (focusedWindow) focusedWindow.setFullScreen(!focusedWindow.isFullScreen());
+          // },
+        },
+        {
+          label: 'Инструменты разработчика',
+          role: 'toggleDevTools',
+          // accelerator: (function () {
+          //   if (process.platform === 'darwin') return 'Alt+Command+I';
+          //   else return 'Ctrl+Shift+I';
+          // })(),
+          // click: function (item, focusedWindow) {
+          //   if (focusedWindow) focusedWindow.toggleDevTools();
+          // },
+        },
+        {
+          type: 'separator',
+        },
+        {
+          label: 'Актуальный размер',
+          role: 'resetZoom',
+        },
+        {
+          label: 'Увеличить',
+          role: 'zoomIn',
+        },
+        {
+          label: 'Уменьшить',
+          role: 'zoomOut',
+        },
+      ],
+    },
+    {
+      label: 'Окно',
+      role: 'windowMenu',
+      submenu: [
+        {
+          label: 'Минимизировать',
+          // accelerator: 'CmdOrCtrl+M',
+          role: 'minimize',
+        },
+        {
+          label: 'Закрыть',
+          // accelerator: 'CmdOrCtrl+W',
+          role: 'close',
+        },
+      ],
+    },
+    // { role: 'viewMenu' },
+    // { role: 'editMenu' },
+    // { role: 'windowMenu' },
+    await helpMenu(params),
+  ];
+};
 
 // if (process.platform === 'darwin') {
 //   template.unshift({
@@ -290,84 +416,24 @@ const template = async (): Promise<MenuItemConstructorOptions[]> => [
 //   });
 // }
 
-export const updateMenu = (): void => {
-  remoteMenu.submenu[0].checked = localConfig.get('autostart');
-  updatePlayerMenu().then(async () => {
-    const mainMenu = Menu.buildFromTemplate(await template());
-    Menu.setApplicationMenu(mainMenu);
+export const updateMenu = (): Promise<void> =>
+  new Promise(resolve => {
+    const id = BrowserWindow.getFocusedWindow()?.id;
+    if (id && !store.has(id)) {
+      setTimeout(() => resolve(updateMenu()), 50);
+    } else {
+      const params = id !== undefined ? store.get(id) : undefined;
+      updatePlayerMenu().then(async () => {
+        const mainMenu = Menu.buildFromTemplate(await template(params));
+        Menu.setApplicationMenu(mainMenu);
+        resolve();
+      });
+    }
   });
-};
 
 app.on('browser-window-focus', updateMenu);
 
-// app.whenReady().then(updateMenu);
-
-export type CreateWindow = (port?: number, host?: string) => BrowserWindow;
-
-export const getTitle = (port: number, host?: string): string =>
-  `${import.meta.env.VITE_APP_NAME} - ${host || 'localhost'}:${port}`;
-
-const remoteClick =
-  (create: CreateWindow): Exclude<MenuItemConstructorOptions['click'], undefined> =>
-    async menuItem => {
-      const [host, port] = menuItem.label.split(':');
-      let window = [...windows.values()].find(w => w.title === getTitle(+port, host));
-      if (!window) {
-        window = await create(+port, host === 'localhost' ? undefined : host);
-      }
-      window.show();
-      window.focus();
-    };
-
-export const addRemoteFactory =
-  (create: CreateWindow) =>
-    (port?: number, address?: string, update = true): void => {
-      const label = getRemoteLabel(port, address);
-      let needUpdate = false;
-      if (remoteMenu.submenu.findIndex(item => item.label === label) === -1) {
-        remoteMenu.submenu.push({ label, click: remoteClick(create) });
-        needUpdate = true;
-      }
-      // if (playerMenu.submenu.findIndex(item => item.label === label) === -1) {
-      //   playerMenu.submenu.push({ label, click: playerClick(create) });
-      //   needUpdate = true;
-      // }
-      if (needUpdate && update) updateMenu();
-    };
-
-export const removeRemote = ({ port, address }: RemoteHost): void => {
-  const label = getRemoteLabel(port, address);
-  const index = remoteMenu.submenu.findIndex(item => item.label === label);
-  if (index !== -1) {
-    remoteMenu.submenu.splice(index, 1);
-    updateMenu();
-  }
-};
-
-// export const setActivateClick = (click: () => void): void => {
-//   const last = helpMenu().submenu.at(-1);
-//   if (last) {
-//     last.click = click;
-//     updateMenu();
-//   }
-// };
-
-export const setRemoteEditClick = (click: () => void): void => {
-  remoteMenu.submenu[1].click = click;
-  updateMenu();
-};
-
-export const setRemotesFactory = (create: CreateWindow) => {
-  const addRemote = addRemoteFactory(create);
-  return (remotes: { port: number; address: string }[]): void => {
-    remoteMenu.submenu.splice(4, remoteMenu.submenu.length);
-    remotes.forEach(({ port, address }) => addRemote(port, address, false));
-    updateMenu();
-  };
-};
-
 localConfig.onDidChange('autostart', (autostart = false) => {
-  // debug(`autostart: ${autostart}`);
   app.setLoginItemSettings({
     openAtLogin: autostart,
     openAsHidden: true,
@@ -375,6 +441,13 @@ localConfig.onDidChange('autostart', (autostart = false) => {
   linuxAutostart(autostart);
   updateMenu();
   updateTray();
+  getGmibParams()
+    .find(({ host }) => host === 'localhost')
+    ?.update({ autostart });
 });
+
+localConfig.onDidChange('hosts', updateMenu);
+mdnsBrowser.on('up', updateMenu);
+mdnsBrowser.on('down', updateMenu);
 
 dbReady.then(hasPlayers).then(async res => res || (await createNewPlayer('Плеер')));

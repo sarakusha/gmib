@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import crypto from 'crypto';
 import type { Display } from 'electron';
-import { app as electronApp, screen } from 'electron';
+import { BrowserWindow, app as electronApp, screen } from 'electron';
 import fs from 'fs';
 import path from 'path';
+import os from 'node:os';
 
 import type { SRPServerSessionStep1 } from '@sarakusha/tssrp6a';
 import { SRPParameters, SRPRoutines, SRPServerSession } from '@sarakusha/tssrp6a';
@@ -37,7 +38,9 @@ import {
   renderThumbnailFromImage,
 } from './ffmpeg';
 import getAllDisplays from './getAllDisplays';
-import localConfig, { getAnnounce } from './localConfig';
+import getAnnounce from './getAnnounce';
+import localConfig from './localConfig';
+import machineId from './machineId';
 import { updateMenu } from './mainMenu';
 import { createTestWindow } from './mainWindow';
 import {
@@ -96,9 +99,19 @@ import type { Screen } from '/@common/video';
 import { DefaultDisplays } from '/@common/video';
 
 import { setIncomingSecret } from './secret';
-import { createSearchParams, isEqualOptions, playerWindows, screenWindows } from './windows';
-
-import machineId from './machineId';
+import { checkForUpdatesNoInteractive, updateAndRestart } from './updater';
+import {
+  createSearchParams,
+  findPlayerParams,
+  findPlayerWindow,
+  findScreenParams,
+  findScreenWindow,
+  getPlayerParams,
+  isEqualOptions,
+  registerScreen,
+} from './windowStore';
+import './novastarApi';
+import relaunch from './relaunch';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:api`);
 
@@ -242,12 +255,12 @@ const updateTest = (scr: Screen) => {
   // debug(`updateTest: ${scr.display}, ${typeof scr.display} ${typeof primary.id}`);
 
   const { id } = scr;
-  const [win, prev] = screenWindows.get(id) ?? [];
+  const prev = findScreenParams(id);
+  const win = prev && BrowserWindow.fromId(prev.id);
   let display: Display | undefined;
   if (!scr.width || !scr.height) {
     if (win) {
       win.close();
-      screenWindows.delete(id);
     }
     return;
   }
@@ -286,7 +299,8 @@ const updateTest = (scr: Screen) => {
       scr.left + display.bounds.x,
       scr.top + display.bounds.y,
     );
-  screenWindows.set(id, [testWindow, scr]);
+  registerScreen(testWindow, scr);
+  // screenWindows.set(id, [testWindow, scr]);
   const contents = testWindow.webContents;
   contents.on('did-fail-load', (event, errorCode, errorDescription) => {
     debug(
@@ -480,7 +494,10 @@ api.put('/playlist', async (req, res, next) => {
     const playlist = await getPlaylist(id);
     const playlistItems = await getPlaylistItems(id);
     res.json({ ...playlist, items: playlistItems });
-    playerWindows.forEach(win => win.webContents.send('playlist', id));
+    getPlayerParams().forEach(({ id: winId }) =>
+      BrowserWindow.fromId(winId)?.webContents.send('playlist', id),
+    );
+    // playerWindows.forEach(win => win.webContents.send('playlist', id));
   } catch (e) {
     if (transaction) await rollback();
     next(e);
@@ -552,10 +569,9 @@ api.post('/screen', async (req, res, next) => {
 
 api.delete('/screen/:id', (req, res, next) => {
   const id = +req.params.id;
-  const [win] = screenWindows.get(id) ?? [];
+  const win = findScreenWindow(id);
   if (win) {
     win.close();
-    screenWindows.delete(id);
   }
   deleteScreen(id)
     .then(({ changes }) => {
@@ -641,7 +657,8 @@ api.put('/player', async (req, res, next) => {
       if (!player) res.sendStatus(404);
       else {
         res.json(player);
-        const win = playerWindows.get(player.id);
+        const params = findPlayerParams(player.id);
+        const win = params && BrowserWindow.fromId(params.id);
         if (win) {
           win.setTitle(getPlayerTitle(player));
           win.webContents.send('player', player);
@@ -665,7 +682,7 @@ api.post('/mapping', async (req, res, next) => {
     const data = await uniquePlayerMappingName(req.body);
     const { lastID } = await insertPlayerMapping(data);
     const mapping = await getPlayerMappingById(lastID);
-    const win = mapping && playerWindows.get(mapping.player);
+    const win = mapping && findPlayerWindow(mapping.player);
     if (win) win.webContents.send('updateVideoOuts');
     res.json(mapping);
   } catch (e) {
@@ -682,7 +699,7 @@ api.put('/mapping', async (req, res, next) => {
       return;
     }
     const mapping = await getPlayerMappingById(id);
-    const win = mapping && playerWindows.get(mapping.player);
+    const win = mapping && findPlayerWindow(mapping.player);
     if (win) win.webContents.send('updateVideoOuts');
     res.json(mapping);
   } catch (e) {
@@ -697,14 +714,14 @@ api.delete('/mapping/:id', async (req, res) => {
     res.sendStatus(404);
   } else {
     await deletePlayerMapping(id);
-    const win = mapping && playerWindows.get(mapping.player);
+    const win = mapping && findPlayerWindow(mapping.player);
     if (win) win.webContents.send('updateVideoOuts');
     res.sendStatus(204);
   }
 });
 
 api.put('/player/:id/stop', (req, res) => {
-  const win = playerWindows.get(+req.params.id);
+  const win = findPlayerWindow(+req.params.id);
   if (win) win.webContents.send('stop', +req.params.id);
   res.end();
 });
@@ -755,5 +772,83 @@ api.post('/login/:id', async (req, res) => {
 api.get('/identifier', (req, res) => {
   res.send(localConfig.get('identifier'));
 });
+
+api.get('/announce', async (req, res) => {
+  const announce = localConfig.get('announce');
+  const iv = localConfig.get('iv');
+  res.json({
+    announce, iv, key: await machineId, autostart: localConfig.get('autostart'), info: {
+      name: os.hostname().replace(/\.local\.?$/, ''),
+      version: import.meta.env.VITE_APP_VERSION,
+      platform: os.platform(),
+      arch: os.arch(),
+    },
+  });
+});
+
+api.post('/activate', async (req, res) => {
+  const { key, name } = req.body;
+  const data = {
+    key,
+    name,
+    deviceId: await machineId,
+    version: import.meta.env.VITE_APP_VERSION,
+    os: os.version(),
+  };
+  debug(`activate: ${JSON.stringify(data)}`);
+  const result = await fetch(`${import.meta.env.VITE_LICENSE_SERVER}/api/licenses`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+  if (result.ok) {
+    const { announce, iv } = await result.json();
+    localConfig.set('announce', announce);
+    localConfig.set('iv', iv);
+    res.end();
+    if (import.meta.env.PROD) relaunch();
+  } else {
+    debug(`ERROR: ${await result.text()} ${result.statusText}`);
+    res.sendStatus(result.status);
+  }
+});
+
+api.post('/checkForUpdates', (req, res) => {
+  checkForUpdatesNoInteractive().then(
+    info => {
+      debug(`CHECK: ${JSON.stringify(info)}`);
+      res.json(info ?? '');
+    },
+    err => {
+      res.status(500).send((err as Error).message);
+    },
+  );
+});
+
+api.post('/update', (req, res) => {
+  updateAndRestart().then(
+    () => res.end(),
+    err => {
+      res.status(500).send((err as Error).message);
+    },
+  );
+});
+
+api.post('/autostart', (req, res) => {
+  const { value } = req.body;
+  localConfig.set('autostart', !!value);
+  res.end();
+});
+
+api.post('/relaunch', (req, res) => {
+  res.end();
+  relaunch();
+});
+
+// api.get('/health', (req, res) => {
+//   res.json(localConfig)
+// })
 
 export default api;

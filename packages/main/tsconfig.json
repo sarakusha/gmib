@@ -9,23 +9,15 @@
     "types": [],
     "baseUrl": ".",
     "paths": {
-      "bonjour-hap": [
-        "../../types/bonjour-hap"
-      ],
-      "/@common/*": [
-        "../common/*"
-      ]
+      "bonjour-hap": ["../../types/bonjour-hap"],
+      "/@common/*": ["../common/*"]
     }
   },
   "include": [
     "../common/*.ts",
     "src/**/*.ts",
-    "../../types/**/*.d.ts",
-    "../common/test.js"
+    "../../types/**/*.d.ts"
+    // "../common/test.js"
   ],
-  "exclude": [
-    "**/*.spec.ts",
-    "**/*.test.ts",
-    "../common/prepareDrawArgs.ts",
-  ]
+  "exclude": ["**/*.spec.ts", "**/*.test.ts", "../common/prepareDrawArgs.ts", "bak/**"]
 }

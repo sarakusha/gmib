@@ -14,35 +14,19 @@
     "jsxImportSource": "@emotion/react",
     // Don't automatically include anything.
     // Only include `@types` packages that we need to import.
-    "types": [
-      "vite/client"
-    ],
+    "types": ["vite/client"],
     "baseUrl": ".",
     "paths": {
       //      "/@/*": [
       //        "./src/*"
       //      ],
-      "bonjour-hap": [
-        "../../types/bonjour-hap"
-      ],
-      "iput": [
-        "../../types/iput"
-      ],
-      "imask": [
-        "../../types/imask"
-      ],
-      "react-imask": [
-        "../../types/react-imask"
-      ],
-      "/@common/*": [
-        "../common/*"
-      ]
+      "bonjour-hap": ["../../types/bonjour-hap"],
+      "iput": ["../../types/iput"],
+      "imask": ["../../types/imask"],
+      "react-imask": ["../../types/react-imask"],
+      "/@common/*": ["../common/*"]
     },
-    "lib": [
-      "ESNext",
-      "dom",
-      "dom.iterable"
-    ]
+    "lib": ["ESNext", "dom", "dom.iterable"]
   },
   "include": [
     "**/*.ts",
@@ -53,17 +37,11 @@
     "../../node_modules/@types/dom-webcodecs/webcodecs.generated.d.ts",
     "../../node_modules/@types/offscreencanvas/index.d.ts",
     "../../node_modules/@types/dom-mediacapture-transform/index.d.ts",
-    "common/authBaseQuery.ts"
+    "common/authBaseQuery.ts",
+    "../common/fetchJson.ts"
   ],
-  "exclude": [
-    "../preload/gmib/**",
-    "**/*.spec.ts",
-    "**/*.test.ts",
-    "bak/**"
-  ],
+  "exclude": ["../preload/gmib/**", "**/*.spec.ts", "**/*.test.ts", "bak/**"],
   "paths": {
-    "@mdx-js/react": [
-      "mdx-js__react"
-    ]
+    "@mdx-js/react": ["mdx-js__react"]
   }
 }

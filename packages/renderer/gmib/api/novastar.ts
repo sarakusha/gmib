@@ -302,6 +302,7 @@ export const sse: Middleware = api => {
   return next => action => next(action);
 };
 
+// TODO: REMOTE
 export const startTelemetry = async (
   path: string,
   selectors: NovastarSelector[] = [
@@ -323,6 +324,7 @@ export const startTelemetry = async (
   return res.ok;
 };
 
+// TODO: REMOTE
 export const cancelTelemetry = async (path: string): Promise<boolean> => {
   const res = await fetch('/api/novastar/telemetry/cancel', {
     method: 'POST',

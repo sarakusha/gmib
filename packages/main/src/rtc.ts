@@ -7,8 +7,11 @@ import type { WebSocket } from 'ws';
 import debugFactory from 'debug';
 
 import { wss } from './express';
-import { playerWindows } from './windows';
+
+// import { playerWindows } from '../bak/windows';
+
 import { openPlayer } from './playerWindow';
+import { findPlayerWindow } from './windowStore';
 
 const sockets = new Map<string, WebSocket>();
 
@@ -26,7 +29,7 @@ wss.on('connection', (ws, req) => {
     if (!isBinary) {
       const msg = JSON.parse(data.toString()) as RtcMessage;
       if (['candidate', 'answer', 'request'].includes(msg.event)) {
-        const win = playerWindows.get(msg.sourceId) ?? (await openPlayer(msg.sourceId));
+        const win = findPlayerWindow(msg.sourceId) ?? (await openPlayer(msg.sourceId));
         if (win) win.webContents.send('socket', { ...msg, id });
       }
     }
@@ -47,7 +50,6 @@ app.whenReady().then(() => {
 // -TODO: Доделать
 // prettier-ignore
 // const test = (announce: string) => getMainWindow()
-
 
 //   /*
 //     Migration code

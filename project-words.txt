@@ -64,6 +64,7 @@ novastars
 ondemand
 osecret
 osecrets
+osversion
 plusplus
 prores
 qscale
@@ -102,6 +103,7 @@ voffs
 vofs
 vres
 webstorm
+XINR
 xmax
 xpos
 ymax

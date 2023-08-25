@@ -1,15 +1,17 @@
 import type { IpcMainEvent } from 'electron';
 import { app, BrowserWindow, ipcMain } from 'electron';
 import os from 'node:os';
+
 import type { Host } from '@nibus/core/ipc';
 
+import localConfig from './localConfig';
+import machineId from './machineId';
 import { getMediaByMD5 } from './media';
 import { getPlayerMappingsForPlayer } from './playerMapping';
 import { getPlaylist, getPlaylistItems } from './playlist';
-import { getPlayer, getScreens, loadScreen } from './screen';
-import machineId from './machineId';
-import localConfig from './localConfig';
 import relaunch from './relaunch';
+import { getPlayer, getScreens, loadScreen } from './screen';
+import store, { isGmib } from './windowStore';
 
 app.whenReady().then(() => {
   ipcMain.handle('getPlayer', (_, id) => getPlayer(id));
@@ -22,33 +24,39 @@ app.whenReady().then(() => {
   ipcMain.handle('getPlayerMappings', (_, id: number) => getPlayerMappingsForPlayer(id));
   ipcMain.handle('getScreen', (_, id: number) => loadScreen(id));
   ipcMain.handle('getScreens', getScreens); // TODO: Возможно не используется
-  ipcMain.handle(
-    'activateLicense',
-    async (_, key: string, name?: string): Promise<true | string> => {
-      const data = {
-        key,
-        name,
-        machineId: await machineId,
-        version: import.meta.env.VITE_APP_VERSION,
-        os: os.version(),
-      };
-      const res = await fetch(`${import.meta.env.VITE_LICENSE_SERVER}/api/licenses`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-      if (res.ok) {
-        const { announce, iv } = await res.json();
-        localConfig.set('announce', announce);
-        localConfig.set('iv', iv);
-        if (import.meta.env.PROD) relaunch();
-        return true;
-      }
-      return (await res.text()) ?? res.statusText;
-    },
-  );
+  ipcMain.handle('getMachineId', event => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win) return undefined;
+    const params = store.get(win.id);
+    return isGmib(params) ? params.machineId : undefined;
+  });
+  // ipcMain.handle(
+  //   'activateLicense',
+  //   async (_, key: string, name?: string): Promise<true | string> => {
+  //     const data = {
+  //       key,
+  //       name,
+  //       deviceId: await machineId,
+  //       version: import.meta.env.VITE_APP_VERSION,
+  //       os: os.version(),
+  //     };
+  //     const res = await fetch(`${import.meta.env.VITE_LICENSE_SERVER}/api/licenses`, {
+  //       method: 'PUT',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //       },
+  //       body: JSON.stringify(data),
+  //     });
+  //     if (res.ok) {
+  //       const { announce, iv } = await res.json();
+  //       localConfig.set('announce', announce);
+  //       localConfig.set('iv', iv);
+  //       if (import.meta.env.PROD) relaunch();
+  //       return true;
+  //     }
+  //     return (await res.text()) ?? res.statusText;
+  //   },
+  // );
 });
 
 // eslint-disable-next-line import/prefer-default-export
@@ -70,6 +78,6 @@ export const getHostOptions = async (
     timeout = setTimeout(() => {
       ipcMain.off('host-options', handler);
       reject(new Error('timeout'));
-    }, 50);
+    }, 500);
   });
 };

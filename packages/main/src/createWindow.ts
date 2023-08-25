@@ -2,8 +2,6 @@ import { app, BrowserWindow, screen } from 'electron';
 
 // import debugFactory from 'debug';
 
-import windows from './windows';
-
 // const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:createWindow`);
 
 const createWindow = (title: string, preload: string, random = true): BrowserWindow => {
@@ -40,10 +38,10 @@ const createWindow = (title: string, preload: string, random = true): BrowserWin
       browserWindow.setPosition(x, y);
     });
 
-  windows.add(browserWindow);
-  browserWindow.on('closed', () => {
-    windows.delete(browserWindow);
-  });
+  // windows.add(browserWindow);
+  // browserWindow.on('closed', () => {
+  //   windows.delete(browserWindow);
+  // });
 
   browserWindow.on('show', () => {
     browserWindow.setSkipTaskbar(false);

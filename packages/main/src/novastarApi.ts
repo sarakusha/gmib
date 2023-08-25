@@ -47,14 +47,14 @@ data: ${JSON.stringify(args)}
   });
   events.forEach(event => master.on(event, makeHandler(event)));
   const close = () => {
-    app.off('before-quit', close);
+    app.off('will-quit', close);
     res.end();
     events.forEach(event => master.off(event, makeHandler.cache.get(event)));
     // debug(`unsubscribe: ${req.ip}`);
   };
   master.on('close', close);
   req.socket.once('close', close);
-  app.once('before-quit', close);
+  app.once('will-quit', close);
 });
 
 api.get('/', async (req, res) => {
@@ -80,18 +80,18 @@ type Methods = FilterNames<typeof master, (arg: ScreenId, value: any) => Promise
 
 const makeHandler =
   <K extends Methods>(method: K, defaultScreen = 0): RequestHandler =>
-  async (req, res) => {
-    try {
-      const { path, screen = defaultScreen, value } = req.body;
-      // debug(`${method} ${path}[${screen}] = ${value}`);
-      await master[method]({ path, screen }, value);
-      res.end();
-      // debug('Ok');
-    } catch (e) {
-      // debug(`error: ${e}`);
-      res.status(500).send((e as Error).message);
-    }
-  };
+    async (req, res) => {
+      try {
+        const { path, screen = defaultScreen, value } = req.body;
+        // debug(`${method} ${path}[${screen}] = ${value}`);
+        await master[method]({ path, screen }, value);
+        res.end();
+        // debug('Ok');
+      } catch (e) {
+        // debug(`error: ${e}`);
+        res.status(500).send((e as Error).message);
+      }
+    };
 
 api.put('/screens/mode', makeHandler('setDisplayMode'));
 api.put('/screens/gamma', makeHandler('setGamma'));

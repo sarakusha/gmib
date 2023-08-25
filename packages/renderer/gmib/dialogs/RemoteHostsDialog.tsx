@@ -9,13 +9,13 @@ import {
   DialogTitle,
   IconButton,
   TextField,
+  Tooltip,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { hasProps } from '@novastar/screen/common';
 import React, { useEffect, useRef, useState } from 'react';
 import type { MouseEvent } from 'react';
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
-import IPut from 'iput';
 
 import type { CustomHost } from '/@common/helpers';
 
@@ -23,6 +23,9 @@ import FormFieldSet from '../components/FormFieldSet';
 import { useSelector } from '../store';
 import { selectAllRemoteHosts } from '../store/selectors';
 import timeid from '../util/timeid';
+
+import IPut from 'iput';
+import Platform from '../components/Platform';
 
 export type RemoteHostsDialogProps = {
   open?: boolean;
@@ -52,7 +55,7 @@ const FieldSet = styled(FormFieldSet)(({ theme }) => ({
 
 const Remote = styled('div')(({ theme }) => ({
   display: 'grid',
-  gridTemplateColumns: '18ch 8ch 20ch 8ch',
+  gridTemplateColumns: '18ch 8ch 20ch 8ch 24px',
   gap: theme.spacing(1),
   padding: theme.spacing(1),
   fontSize: '1rem',
@@ -83,6 +86,7 @@ const RemoteHostsDialog: React.FC<RemoteHostsDialogProps> = ({
   onClose = () => {},
 }) => {
   const remoteHosts = useSelector(selectAllRemoteHosts);
+  console.log(remoteHosts);
   const [customHosts, setCustomHosts] = useState<CustomHostItem[]>([]);
   const [changed, setChanged] = useState(false);
   const saveHandler = (): void => {
@@ -148,8 +152,9 @@ const RemoteHostsDialog: React.FC<RemoteHostsDialogProps> = ({
             <Header>
               <div>Адрес</div>
               <div>Порт</div>
-              <div>Хост</div>
+              <div>Имя</div>
               <div>Версия</div>
+              <div>ОС</div>
             </Header>
             <Box
               sx={{
@@ -157,12 +162,19 @@ const RemoteHostsDialog: React.FC<RemoteHostsDialogProps> = ({
                 color: 'text.disabled',
               }}
             >
-              {remoteHosts.map(({ name, address, port, version }) => (
+              {remoteHosts.map(({ name, address, port, version, platform, osVersion }) => (
                 <React.Fragment key={name}>
                   <div>{address}</div>
                   <div>{port}</div>
                   <div>{name}</div>
                   <div>{version}</div>
+                  <div>
+                    <Tooltip title={osVersion}>
+                      <div>
+                        <Platform width={24} platform={platform} />
+                      </div>
+                    </Tooltip>
+                  </div>
                 </React.Fragment>
               ))}
             </Box>
