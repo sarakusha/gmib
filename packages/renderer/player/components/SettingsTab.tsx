@@ -21,7 +21,7 @@ import FixedHeadLayout from '../../common/FixedHeadLayout';
 import { useDisplays } from '../../common/displays';
 import { useDeletePlayerMutation, usePlayers } from '../api/player';
 import { PlayerMappingDialogProvider } from '../hooks/usePlayerMappingDialog';
-import useShiftAlert from '../hooks/useShiftAlert';
+import useShiftAlert from '../../common/useShiftAlert';
 import { useDispatch, useSelector } from '../store';
 import { setSettingsNode } from '../store/currentSlice';
 import { selectSettingsNode } from '../store/selectors';

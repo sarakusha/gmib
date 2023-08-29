@@ -13,7 +13,6 @@ import { IconButton, Tooltip } from '@mui/material';
 import findIndex from 'lodash/findIndex';
 import React, { useState } from 'react';
 
-
 import {
   selectPlaylistById,
   selectPlaylists,
@@ -24,7 +23,7 @@ import {
 } from '../api/playlists';
 import updatePlayer from '../api/updatePlayer';
 import AddMediaDialog from '../dialogs/AddMediaDialog';
-import useShiftAlert from '../hooks/useShiftAlert';
+import useShiftAlert from '../../common/useShiftAlert';
 import { useDispatch, useSelector } from '../store';
 import { setCurrentPlaylist } from '../store/currentSlice';
 import { selectCurrentPlaylist } from '../store/selectors';
