@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.4.0](https://github.com/sarakusha/gmib/compare/v4.2.1...v4.4.0) (2023-08-29)
+
+
+### Features
+
+* added licensing ([0b0f6ca](https://github.com/sarakusha/gmib/commit/0b0f6ca79291b46b2494ba05308900a79bc13884))
+* shows the current version for remote sessions ([5387a2f](https://github.com/sarakusha/gmib/commit/5387a2fa12068e18d5d3364a12f3051542f9946d))
+* transferring pages from a configuration file to a database ([5fcd01f](https://github.com/sarakusha/gmib/commit/5fcd01f8c3ffd3be4b1d51288b5a2ab8c4d6bde0))
+
+
+### Bug Fixes
+
+* API call error handling ([ed2c93e](https://github.com/sarakusha/gmib/commit/ed2c93e85ebdcea44dcd087b0b94d103bb9abe73))
+* bug fix ([b03414a](https://github.com/sarakusha/gmib/commit/b03414aa995302a927b3bc2af2d8fadd051c5ebb))
+
 ## [4.2.1](https://github.com/sarakusha/gmib/compare/v4.2.0...v4.2.1) (2023-06-21)
 
 
