@@ -6,33 +6,33 @@ import {
   ListItemIcon,
   ListItemSecondaryAction,
   ListItemText,
-  ListItemButton as MuiListItemButton,
+  ListItemButton as MuiListItem,
   Switch,
 } from '@mui/material';
-import { styled } from '@mui/material/styles';
-import { nanoid } from '@reduxjs/toolkit';
+import clsx from 'clsx';
+import { css, styled } from '@mui/material/styles';
 import React, { useCallback, useState } from 'react';
 import { isUri } from 'valid-url';
 
+import useShiftAlert from '../../common/useShiftAlert';
 import { updateScreen, useScreen } from '../api/screens';
 import HttpPageDialog from '../dialogs/HttpPageDialog';
 import { useDispatch, useSelector } from '../store';
-import { removeHttpPage, upsertHttpPage } from '../store/configSlice';
 import type { TabValues } from '../store/currentSlice';
 import { setCurrentTab } from '../store/currentSlice';
 
 import type { Page } from '/@common/config';
 
 import {
-  selectAllPages,
   selectCurrentScreenId,
   selectCurrentTab,
   selectIsFixed,
 } from '../store/selectors';
 
 import AccordionList from './AccordionList';
+import { updatePage, useCreatePageMutation, useDeletePageMutation, usePages } from '../api/config';
 
-const ListItemButton = styled(MuiListItemButton)({
+const ListItemButton = styled(MuiListItem)({
   '& .MuiListItemSecondaryAction-root svg': {
     visibility: 'hidden',
   },
@@ -46,12 +46,15 @@ const noWrap = { noWrap: true };
 const HttpPages: React.FC = () => {
   const dispatch = useDispatch();
   const screenId = useSelector(selectCurrentScreenId);
+  const showAlert = useShiftAlert();
   /* TODO: ! */
   const { screen } = useScreen(screenId);
-  const pages = useSelector(selectAllPages);
+  const { pages } = usePages();
   const tab = useSelector(selectCurrentTab);
   const isFixed = useSelector(selectIsFixed);
   const [selected, setSelected] = useState<string>();
+  const [createPage] = useCreatePageMutation();
+  const [deletePage] = useDeletePageMutation();
   const visibleHandler = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>, checked: boolean) => {
       screenId &&
@@ -68,17 +71,14 @@ const HttpPages: React.FC = () => {
   const closeDialog = (): void => setOpen(false);
   const changeHandler = (name: keyof Page, value: string): void => {
     if (!selected) return;
-    const props = pages.find(page => page.id === selected);
-    if (!props) return;
-    dispatch(upsertHttpPage({ ...props, [name]: value }));
+    dispatch(updatePage(selected, prev => ({ ...prev, [name]: value })));
   };
-  const editPage = (id: string) => () => {
+  const editPage = (id: string) => {
     setSelected(id);
     setOpen(true);
   };
-  const addPageHandler = (): void => {
-    const id = nanoid();
-    dispatch(upsertHttpPage({ id, title: id }));
+  const addPageHandler = async (): Promise<void> => {
+    const { id } = await createPage('Новая страница').unwrap();
     setSelected(id);
     setOpen(true);
   };
@@ -95,9 +95,15 @@ const HttpPages: React.FC = () => {
           const [primary, secondary = ''] = title.split('/', 2);
           const isValid = permanent || (url && isUri(url));
           return (
+            // <div
+            //   key={id}
+            //   className={clsx({ 'tNX9k9byJD58qNs4nxAIi rlXINR-cZo5bnISD5TaUT': !permanent })}
+            // >
             <ListItemButton
               key={id}
-              className={permanent ? 'permanent' : 'tNX9k9byJD58qNs4nxAIi rlXINR-cZo5bnISD5TaUT'}
+              className={clsx({
+                'tNX9k9byJD58qNs4nxAIi rlXINR-cZo5bnISD5TaUT MeE8KHrK9KuXZe0HnW47V': !permanent,
+              })}
             >
               <ListItemIcon>
                 <Switch
@@ -114,12 +120,13 @@ const HttpPages: React.FC = () => {
                 secondaryTypographyProps={noWrap}
               />
               {!permanent && !isFixed && (
-                <ListItemSecondaryAction className="tNX9k9byJD58qNs4nxAIi CG7cBydXFzf6qGSi-xBj8 rlXINR-cZo5bnISD5TaUT">
+                <ListItemSecondaryAction className="tNX9k9byJD58qNs4nxAIi CG7cBydXFzf6qGSi-xBj8">
+                  {/* <ListItemSecondaryAction> */}
                   <IconButton
                     edge="end"
                     aria-label="edit"
                     size="small"
-                    onClick={editPage(id)}
+                    onClick={() => editPage(id)}
                     color="primary"
                     title="Изменить"
                   >
@@ -129,7 +136,7 @@ const HttpPages: React.FC = () => {
                     edge="end"
                     aria-label="remove"
                     size="small"
-                    onClick={() => dispatch(removeHttpPage(id))}
+                    onClick={e => (e.shiftKey ? deletePage(id) : showAlert())}
                     color="secondary"
                     title="Удалить"
                   >
@@ -138,12 +145,13 @@ const HttpPages: React.FC = () => {
                 </ListItemSecondaryAction>
               )}
             </ListItemButton>
+            // </div>
           );
         })}
         {!isFixed && (
           <ListItemButton
             onClick={addPageHandler}
-            className="tNX9k9byJD58qNs4nxAIi CG7cBydXFzf6qGSi-xBj8 rlXINR-cZo5bnISD5TaUT"
+            className="rlXINR-cZo5bnISD5TaUT CG7cBydXFzf6qGSi-xBj8 MeE8KHrK9KuXZe0HnW47V"
           >
             <ListItemIcon>
               <AddCircleOutlineIcon style={{ margin: 'auto' }} color="primary" />

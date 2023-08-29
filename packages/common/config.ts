@@ -10,6 +10,7 @@ export type Page = {
   permanent?: true;
   preload?: string;
   userAgent?: string;
+  hidden?: boolean;
 };
 export type Location = {
   latitude?: number;
@@ -94,9 +95,7 @@ export type Config = {
   spline?: SplineItem[];
   autobrightness: boolean;
   brightness: number;
-  // screens: Screen[];
   logLevel: LogLevel;
-  pages: Page[];
   fixedPages?: true;
   version?: string;
   overheatProtection: OverheatProtection;

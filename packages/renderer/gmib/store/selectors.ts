@@ -42,9 +42,6 @@ export const selectLocation = (state: RootState): Config['location'] =>
   selectConfig(state).location;
 export const selectLogLevel = (state: RootState): LogLevel => selectConfig(state).logLevel;
 export const selectIsFixed = (state: RootState): boolean => !!selectConfig(state).fixedPages;
-export const selectAllPages = (state: RootState): Page[] => selectConfig(state).pages;
-export const selectPageById = (state: RootState, id: string): Page | undefined =>
-  findById(selectAllPages(state), id);
 export const selectSessionVersion = (state: RootState): string | undefined =>
   selectConfig(state).version;
 export const selectOverheatProtection = (state: RootState): OverheatProtection | undefined =>

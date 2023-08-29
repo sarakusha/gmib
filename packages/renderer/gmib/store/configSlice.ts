@@ -18,9 +18,7 @@ const initialState: ConfigState = {
   brightness: 30,
   autobrightness: false,
   spline: undefined,
-  // screens: [],
   logLevel: 'none',
-  pages: [],
   version: undefined,
   loading: true,
   overheatProtection: DEFAULT_OVERHEAD_PROTECTION,
@@ -66,17 +64,6 @@ export const configSlice = createSlice({
     },
     setLogLevel(state, { payload: logLevel }: PayloadAction<LogLevel>) {
       state.logLevel = logLevel;
-    },
-    upsertHttpPage(state, { payload: page }: PayloadAction<Page>) {
-      const found = findById(state.pages, page.id);
-      if (found) {
-        Object.assign(found, page);
-      } else {
-        state.pages.push(page);
-      }
-    },
-    removeHttpPage(state, { payload: id }: PayloadAction<string>) {
-      state.pages = state.pages.filter(page => page.id !== id);
     },
 
     /*
@@ -128,8 +115,6 @@ export const {
   setSpline,
   setLocationProp,
   setLogLevel,
-  upsertHttpPage,
-  removeHttpPage,
   // addAddress,
   // removeAddress,
   updateConfig,

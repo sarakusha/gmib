@@ -138,22 +138,6 @@ export const configSchema: Schema<Config> = {
     enum: Object.keys(logLevels),
     default: 'none',
   },
-  pages: {
-    type: 'array',
-    items: {
-      type: 'object',
-      properties: {
-        id: { type: 'string' },
-        url: { type: 'string' },
-        title: { type: 'string' },
-        permanent: { type: 'boolean' },
-        preload: { type: 'string' },
-        userAgent: { type: 'string' },
-      },
-      required: ['id', 'title'],
-    },
-    default: [],
-  },
   fixedPages: { type: 'boolean' },
   version: { type: 'string' },
   overheatProtection: {

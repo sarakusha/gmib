@@ -14,7 +14,6 @@ import { isRemoteSession } from '/@common/remote';
 
 import {
   invalidateBrightness,
-  removeHttpPage,
   setAutobrightness,
   setBrightness,
   setDisableNet,
@@ -23,7 +22,6 @@ import {
   setProtectionProp,
   setSpline,
   updateConfig,
-  upsertHttpPage,
 } from './configSlice';
 import { setCurrentDevice } from './currentSlice';
 import { startAppListening } from './listenerMiddleware';
@@ -266,8 +264,6 @@ startAppListening({
     setLocationProp,
     // setScreenProp,
     setLogLevel,
-    upsertHttpPage,
-    removeHttpPage,
     // addAddress,
     // removeAddress,
     // addScreen,

@@ -112,6 +112,15 @@ import {
 } from './windowStore';
 import './novastarApi';
 import relaunch from './relaunch';
+import {
+  deletePage,
+  getPage,
+  getPageByRowID,
+  getPages,
+  insertPage,
+  uniquePageTitle,
+  updatePage,
+} from './page';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:api`);
 
@@ -139,7 +148,7 @@ fs.mkdir(mediaRoot, { recursive: true }, err => {
   }
 });
 
-const noop = (): void => { };
+const noop = (): void => {};
 
 const getHash = (filepath: string): Promise<string> =>
   new Promise<string>((resolve, reject) => {
@@ -249,7 +258,7 @@ const loadMedia = async (file: File, force = false): Promise<MediaInfo> => {
   return mediaInfo;
 };
 
-const updateTest = (scr: Screen) => {
+const updateTest = async (scr: Screen) => {
   const primary = screen.getPrimaryDisplay();
   const displays = screen.getAllDisplays();
   // debug(`updateTest: ${scr.display}, ${typeof scr.display} ${typeof primary.id}`);
@@ -277,7 +286,7 @@ const updateTest = (scr: Screen) => {
       }
       break;
   }
-  const page = scr.test ? findById(config.get('pages'), scr.test) : undefined;
+  const page = scr.test ? await getPage(scr.test) : undefined;
   if (!display || !page) {
     win?.hide();
     return;
@@ -322,7 +331,7 @@ const updateTest = (scr: Screen) => {
 
 electronApp.whenReady().then(async () => {
   const screens = await getScreens();
-  screens.forEach(updateTest);
+  await Promise.all(screens.map(updateTest));
 });
 
 const api = express.Router();
@@ -777,7 +786,11 @@ api.get('/announce', async (req, res) => {
   const announce = localConfig.get('announce');
   const iv = localConfig.get('iv');
   res.json({
-    announce, iv, key: await machineId, autostart: localConfig.get('autostart'), info: {
+    announce,
+    iv,
+    key: await machineId,
+    autostart: localConfig.get('autostart'),
+    info: {
       name: os.hostname().replace(/\.local\.?$/, ''),
       version: import.meta.env.VITE_APP_VERSION,
       platform: os.platform(),
@@ -850,5 +863,40 @@ api.post('/relaunch', (req, res) => {
 // api.get('/health', (req, res) => {
 //   res.json(localConfig)
 // })
+
+api.get('/pages', (req, res, next) => {
+  getPages().then(pages => res.json(pages), next);
+});
+
+api.post('/pages', async (req, res, next) => {
+  try {
+    const { lastID } = await insertPage(await uniquePageTitle(req.body));
+    const page = await getPageByRowID(lastID);
+    res.json(page);
+  } catch (e) {
+    next(e);
+  }
+});
+
+api.put('/pages/:id', async (req, res, next) => {
+  try {
+    const { changes } = await updatePage(await uniquePageTitle({ ...req.body, id: req.params.id }));
+    if (!changes) res.sendStatus(404);
+    else {
+      res.json(await getPage(req.params.id));
+    }
+  } catch (e) {
+    next(e);
+  }
+});
+
+api.delete('/pages/:id', async (req, res, next) => {
+  try {
+    const { changes } = await deletePage(req.params.id);
+    res.sendStatus(changes ? 204 : 404);
+  } catch (err) {
+    next(err);
+  }
+});
 
 export default api;

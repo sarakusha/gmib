@@ -5,11 +5,12 @@ import { config as nibusConfig } from '@nibus/core/config';
 import debugFactory from 'debug';
 import log from 'electron-log';
 import Store from 'electron-store';
-import isEqual from 'lodash/isEqual';
-import uniqBy from 'lodash/uniqBy';
 
 import type { Config, Page } from '/@common/config';
 import { configSchema } from '/@common/schema';
+import { asyncSerial } from '/@common/helpers';
+import { uniquePageTitle, upsertPermanentPage } from './page';
+import { notEmpty } from '@novastar/codec';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:config`);
 // const version = app.getVersion();
@@ -67,9 +68,13 @@ async function updateTestsImpl(): Promise<void> {
   //   preload,
   //   permanent: true,
   // });
-  const prev = config.get('pages');
-  const items = uniqBy(tests.concat(prev), 'id');
-  if (!isEqual(prev, items)) config.set('pages', items);
+  // TODO: Update tests
+  // const prev = config.get('pages');
+  // const items = uniqBy(tests.concat(prev), 'id');
+  // if (!isEqual(prev, items)) config.set('pages', items);
+  await asyncSerial(tests.filter(notEmpty), async test =>
+    upsertPermanentPage(await uniquePageTitle(test)),
+  );
 }
 
 const updateTests = (): void => {
@@ -78,9 +83,9 @@ const updateTests = (): void => {
 
 if (!config.get('fixedPages')) updateTests();
 
-config.onDidChange('pages', newValue => {
-  if (newValue?.some(({ permanent }) => permanent)) return;
-  process.nextTick(() => updateTests());
-});
+// config.onDidChange('pages', newValue => {
+//   if (newValue?.some(({ permanent }) => permanent)) return;
+//   process.nextTick(() => updateTests());
+// });
 
 export default config;

@@ -240,6 +240,17 @@ function createTables(): void {
     );
 
     db.run(
+      `CREATE TABLE IF NOT EXISTS page (
+        id TEXT NOT NULL PRIMARY KEY,
+        url TEXT,
+        title TEXT NOT NULL UNIQUE,
+        flags INTEGER DEFAULT 0,
+        preload TEXT,
+        userAgent TEXT
+      )`,
+      err => err && debug(`error while create pages: ${err}`),
+    );
+    db.run(
       `CREATE TABLE IF NOT EXISTS player (
             id INTEGER PRIMARY KEY,
             "name" TEXT,
@@ -388,11 +399,11 @@ export const promisifyRun = <P extends (...args: any) => any>(
 };
 
 export const uniqueField =
-  <K extends string>(
+  <K extends string, I extends number | string>(
     prop: K,
-    exists: (value: string, id?: number) => Promise<boolean | undefined>,
+    exists: (value: string, id?: I) => Promise<boolean | undefined>,
   ) =>
-  async <T extends Partial<Record<K, string | null>> & { id?: number }>(row: T): Promise<T> => {
+  async <T extends Partial<Record<K, string | null>> & { id?: I }>(row: T): Promise<T> => {
     const { id, [prop]: original, ...other } = row;
     if (original == null) return row;
     let value: string = original;
