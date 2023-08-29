@@ -1,4 +1,5 @@
 import debugFactory from 'debug';
+
 import secret, { getRemoteCredentials } from './secret';
 
 import generateSignature from '/@common/generateSignature';

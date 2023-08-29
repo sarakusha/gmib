@@ -11,9 +11,10 @@ import localConfig from './localConfig';
 // import { removeRemote } from './mainMenu';
 // import { addRemote, getMainWindow, setRemotes } from './mainWindow';
 
+import { getMainWindow, waitWebContents } from './mainWindow';
+
 import bonjourHap from 'bonjour-hap';
 import type { RemoteService } from 'bonjour-hap';
-import { getMainWindow, waitWebContents } from './mainWindow';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:mdns`);
 

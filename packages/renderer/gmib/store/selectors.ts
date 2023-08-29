@@ -167,7 +167,8 @@ export const selectIsClosed = (state: RootState): boolean =>
 export const selectDisplays = (state: RootState): Display[] => selectSession(state).displays;
 export const selectFinder = (state: RootState): FinderState => selectSession(state).finder;
 export const selectHostName = (state: RootState): string | undefined => selectSession(state).name;
-export const selectPlatform = (state: RootState): string | undefined => selectSession(state).platform;
+export const selectPlatform = (state: RootState): string | undefined =>
+  selectSession(state).platform;
 
 export const { selectAll: selectLogLines } = logAdapter.getSelectors<RootState>(state => state.log);
 

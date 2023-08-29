@@ -1,5 +1,6 @@
 import { app, ipcMain } from 'electron';
 import os from 'node:os';
+
 import * as ciao from '@homebridge/ciao';
 import debugFactory from 'debug';
 import express from 'express';
@@ -55,7 +56,9 @@ const service = responder.createService({
     version: import.meta.env.VITE_APP_VERSION,
   },
 });
-service.on('name-change', name => { debug(`service name changed: ${name}`); });
+service.on('name-change', name => {
+  debug(`service name changed: ${name}`);
+});
 
 let timeout: NodeJS.Timeout | undefined;
 
@@ -73,7 +76,8 @@ let ready = new Deferred();
 
 const selectStrongest = (
   remotes: bonjourHap.RemoteService[],
-): bonjourHap.RemoteService | undefined => sortBy(remotes, remote => -Number(remote.txt.rank ?? remote.txt.rang))[0];
+): bonjourHap.RemoteService | undefined =>
+  sortBy(remotes, remote => -Number(remote.txt.rank ?? remote.txt.rang))[0];
 
 const tryCreateMasterBrowser = () => {
   service
@@ -179,7 +183,9 @@ const createProxy = (remote: bonjourHap.RemoteService) => {
 
 browser.on('up', async remote => {
   // debug(`UP ${remote.referer.address}`);
-  waitWebContents().then(webContents => setTimeout(() => webContents.send('reloadDevices'), 1000).unref());
+  waitWebContents().then(webContents =>
+    setTimeout(() => webContents.send('reloadDevices'), 1000).unref(),
+  );
   if (isLocalhost(remote.referer.address) || disableNet) return;
   const remoteRang = Number(remote.txt.rank);
   if (isMaster && remoteRang > rank) {

@@ -4,9 +4,11 @@ import debugFactory from 'debug';
 import type { SetStateAction } from 'react';
 
 import baseQuery from '../../common/authBaseQuery';
+
 import type { Page } from '/@common/config';
-import type { AppThunk, AppThunkConfig } from '../store';
+
 import createDebouncedAsyncThunk from '../../common/createDebouncedAsyncThunk';
+import type { AppThunk, AppThunkConfig } from '../store';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:config`);
 
@@ -123,15 +125,15 @@ const debouncedUpdatePage = createDebouncedAsyncThunk<void, Page, AppThunkConfig
 
 export const updatePage =
   (id: string, update: SetStateAction<Omit<Page, 'id'>>): AppThunk =>
-    dispatch =>
-      dispatch(
-        configApi.util.updateQueryData('getPages', undefined, draft => {
-          const prev = selectPage(draft, id);
-          if (!prev) throw new Error(`Unknown page id: ${id}`);
-          const page = { id, ...(typeof update === 'function' ? update(prev) : prev) };
-          pageAdapter.setOne(draft, page);
-          dispatch(debouncedUpdatePage(page));
-        }),
-      );
+  dispatch =>
+    dispatch(
+      configApi.util.updateQueryData('getPages', undefined, draft => {
+        const prev = selectPage(draft, id);
+        if (!prev) throw new Error(`Unknown page id: ${id}`);
+        const page = { id, ...(typeof update === 'function' ? update(prev) : prev) };
+        pageAdapter.setOne(draft, page);
+        dispatch(debouncedUpdatePage(page));
+      }),
+    );
 
 export default configApi;

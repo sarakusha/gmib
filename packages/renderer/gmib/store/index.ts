@@ -78,7 +78,7 @@ export const useDevice = (id?: DeviceId): DeviceState | undefined =>
 /**
  * Response on 'get-host-options'
  */
-window.electronAPI.handleHost((event) => {
+window.electronAPI.handleHost(event => {
   const state = store.getState();
   const { name, platform, arch, version }: Partial<Host> = state.session;
   event.sender.send('host-options', { name, platform, arch, version });

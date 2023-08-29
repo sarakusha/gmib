@@ -3,8 +3,8 @@ import crypto from 'crypto';
 import type { Display } from 'electron';
 import { BrowserWindow, app as electronApp, screen } from 'electron';
 import fs from 'fs';
-import path from 'path';
 import os from 'node:os';
+import path from 'path';
 
 import type { SRPServerSessionStep1 } from '@sarakusha/tssrp6a';
 import { SRPParameters, SRPRoutines, SRPServerSession } from '@sarakusha/tssrp6a';

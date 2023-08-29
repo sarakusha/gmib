@@ -1,8 +1,11 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
+
 import type { Host } from '@nibus/core/ipc';
+
 import type { Screen } from '/@common/video';
-import pick from 'lodash/pick';
+
 import debugFactory from 'debug';
+import pick from 'lodash/pick';
 
 import getAnnounce from './getAnnounce';
 
@@ -54,7 +57,7 @@ export type GmibWindowParams = CommonWindowParams & {
 };
 
 const gmibVariables = ['autostart'] satisfies Array<keyof GmibWindowParams>;
-type GmibVariables = typeof gmibVariables[number];
+type GmibVariables = (typeof gmibVariables)[number];
 
 type ScreenOptions = Readonly<Pick<Screen, (typeof impScreenProps)[number]>>;
 

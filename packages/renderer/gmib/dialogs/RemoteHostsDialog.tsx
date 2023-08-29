@@ -20,12 +20,12 @@ import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
 import type { CustomHost } from '/@common/helpers';
 
 import FormFieldSet from '../components/FormFieldSet';
+import Platform from '../components/Platform';
 import { useSelector } from '../store';
 import { selectAllRemoteHosts } from '../store/selectors';
 import timeid from '../util/timeid';
 
 import IPut from 'iput';
-import Platform from '../components/Platform';
 
 export type RemoteHostsDialogProps = {
   open?: boolean;

@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 
 import { config as nibusConfig } from '@nibus/core/config';
+import { notEmpty } from '@novastar/codec';
 import debugFactory from 'debug';
 import log from 'electron-log';
 import Store from 'electron-store';
@@ -9,8 +10,8 @@ import Store from 'electron-store';
 import type { Config, Page } from '/@common/config';
 import { configSchema } from '/@common/schema';
 import { asyncSerial } from '/@common/helpers';
+
 import { uniquePageTitle, upsertPermanentPage } from './page';
-import { notEmpty } from '@novastar/codec';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:config`);
 // const version = app.getVersion();

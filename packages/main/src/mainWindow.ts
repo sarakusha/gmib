@@ -8,6 +8,7 @@ import createWindow from './createWindow';
 import localConfig from './localConfig';
 import relaunch from './relaunch';
 import { getScreenParams, registerGmib } from './windowStore';
+
 import Deferred from '/@common/Deferred';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:wnd`);
@@ -39,7 +40,10 @@ export const createAppWindow = (
   name?: string,
 ): BrowserWindow => {
   // eslint-disable-next-line no-multi-assign
-  const browserWindow = createWindow(`${name ?? 'gmib'} (${address})` /* getTitle(port, hostName) */, gmibPreload);
+  const browserWindow = createWindow(
+    `${name ?? 'gmib'} (${address})` /* getTitle(port, hostName) */,
+    gmibPreload,
+  );
   if (!address || address === 'localhost') {
     browserWindow.once('ready-to-show', async () => {
       if (!localConfig.get('autostart')) {

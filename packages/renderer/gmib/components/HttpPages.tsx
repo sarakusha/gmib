@@ -9,12 +9,13 @@ import {
   ListItemButton as MuiListItem,
   Switch,
 } from '@mui/material';
-import clsx from 'clsx';
 import { css, styled } from '@mui/material/styles';
+import clsx from 'clsx';
 import React, { useCallback, useState } from 'react';
 import { isUri } from 'valid-url';
 
 import useShiftAlert from '../../common/useShiftAlert';
+import { updatePage, useCreatePageMutation, useDeletePageMutation, usePages } from '../api/config';
 import { updateScreen, useScreen } from '../api/screens';
 import HttpPageDialog from '../dialogs/HttpPageDialog';
 import { useDispatch, useSelector } from '../store';
@@ -30,7 +31,6 @@ import {
 } from '../store/selectors';
 
 import AccordionList from './AccordionList';
-import { updatePage, useCreatePageMutation, useDeletePageMutation, usePages } from '../api/config';
 
 const ListItemButton = styled(MuiListItem)({
   '& .MuiListItemSecondaryAction-root svg': {

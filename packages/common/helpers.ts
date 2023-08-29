@@ -183,7 +183,7 @@ export const incrementCounterString = (s: string): string =>
   s.replace(nameCountRegexp, nameCountFunc);
 
 // eslint-disable-next-line @typescript-eslint/no-empty-function
-export const noop = (): void => { };
+export const noop = (): void => {};
 
 export type Writable<T> = { -readonly [P in keyof T]: T[P] };
 

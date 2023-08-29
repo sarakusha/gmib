@@ -38,12 +38,12 @@ export const updateTray = (): void => {
     ...(localConfig.get('autostart')
       ? []
       : [
-        { type: 'separator' } as MenuItem,
-        {
-          role: 'quit',
-          label: 'Выход',
-        } as MenuItem,
-      ]),
+          { type: 'separator' } as MenuItem,
+          {
+            role: 'quit',
+            label: 'Выход',
+          } as MenuItem,
+        ]),
   ]);
   tray && tray.appIcon?.setContextMenu(contextMenu);
 };

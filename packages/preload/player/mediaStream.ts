@@ -209,7 +209,7 @@ ipcRenderer.on('socket', async (_, { id, ...msg }: WithWebSocketKey<RtcMessage>)
           };
           ipcRenderer.invoke('socket', candidateMsg);
         };
-        
+
         stream.getTracks().forEach(track => {
           const sender = pc.addTrack(track, stream);
           const updateParams = () => {
@@ -223,7 +223,7 @@ ipcRenderer.on('socket', async (_, { id, ...msg }: WithWebSocketKey<RtcMessage>)
           };
           updateParams();
         });
-        
+
         const offer = await pc.createOffer();
         const offerMsg: WithWebSocketKey<OfferMessage> = {
           id,

@@ -39,7 +39,7 @@ contextBridge.exposeInMainWorld('identify', expandTypes(identify));
 const ws = new WebSocket(`ws://${host}:${port + 1}`);
 ws.onopen = async () => {
   const pc = new RTCPeerConnection();
-  
+
   pc.onicecandidate = async e => {
     const { candidate } = e;
     if (!candidate) return;
@@ -52,7 +52,7 @@ ws.onopen = async () => {
       ws.send(JSON.stringify(msg));
     }
   };
-  
+
   pc.ontrack = e => deferred.resolve(e.streams[0]);
 
   ws.onmessage = async ev => {
@@ -88,6 +88,6 @@ ws.onopen = async () => {
     event: 'request',
     sourceId,
   };
-  
+
   ws.send(JSON.stringify(request));
 };

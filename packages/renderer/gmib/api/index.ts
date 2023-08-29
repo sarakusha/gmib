@@ -1,8 +1,8 @@
 import displayApi from '../../common/displays';
 
+import configApi from './config';
 import novastarApi, { sse } from './novastar';
 import screenApi from './screens';
-import configApi from './config';
 
 export const reducer = {
   [screenApi.reducerPath]: screenApi.reducer,

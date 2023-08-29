@@ -1,12 +1,12 @@
 import { Button, Dialog, DialogActions, DialogContent, TextField } from '@mui/material';
 import React from 'react';
 
+import { usePage } from '../api/config';
 import DialogTitle from '../components/DialogTitle';
 import { useSelector } from '../store';
 
 import type { Page } from '/@common/config';
 import { noop } from '/@common/helpers';
-import { usePage } from '../api/config';
 
 type Props = {
   pageId?: string;

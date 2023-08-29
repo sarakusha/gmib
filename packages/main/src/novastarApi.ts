@@ -80,18 +80,18 @@ type Methods = FilterNames<typeof master, (arg: ScreenId, value: any) => Promise
 
 const makeHandler =
   <K extends Methods>(method: K, defaultScreen = 0): RequestHandler =>
-    async (req, res) => {
-      try {
-        const { path, screen = defaultScreen, value } = req.body;
-        // debug(`${method} ${path}[${screen}] = ${value}`);
-        await master[method]({ path, screen }, value);
-        res.end();
-        // debug('Ok');
-      } catch (e) {
-        // debug(`error: ${e}`);
-        res.status(500).send((e as Error).message);
-      }
-    };
+  async (req, res) => {
+    try {
+      const { path, screen = defaultScreen, value } = req.body;
+      // debug(`${method} ${path}[${screen}] = ${value}`);
+      await master[method]({ path, screen }, value);
+      res.end();
+      // debug('Ok');
+    } catch (e) {
+      // debug(`error: ${e}`);
+      res.status(500).send((e as Error).message);
+    }
+  };
 
 api.put('/screens/mode', makeHandler('setDisplayMode'));
 api.put('/screens/gamma', makeHandler('setGamma'));

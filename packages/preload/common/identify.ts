@@ -17,18 +17,18 @@ const initialize = async () => {
       host === 'localhost'
         ? await ipcRenderer.invoke('getLocalCredentials')
         : await ipcRenderer.invoke(
-          'getRemoteCredentials',
-          `http://${host}:${port + 1}/api/identifier`,
-        );
+            'getRemoteCredentials',
+            `http://${host}:${port + 1}/api/identifier`,
+          );
     if (response) {
       credentials.identifier = response.identifier;
       credentials.apiSecret =
         response.apiSecret instanceof Uint8Array
           ? Buffer.from(
-            response.apiSecret.buffer,
-            response.apiSecret.byteOffset,
-            response.apiSecret.byteLength,
-          )
+              response.apiSecret.buffer,
+              response.apiSecret.byteOffset,
+              response.apiSecret.byteLength,
+            )
           : undefined;
     }
   } catch (e) {

@@ -28,7 +28,7 @@ const allPermissions = [
   'unknown',
 ] as const;
 
-type AllPermissions = typeof allPermissions[number];
+type AllPermissions = (typeof allPermissions)[number];
 
 const fullGrant: Set<AllPermissions> = new Set(allPermissions);
 

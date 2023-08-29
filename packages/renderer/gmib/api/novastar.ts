@@ -113,10 +113,10 @@ const debouncedUpdateNovastarScreens = createDebouncedAsyncThunk<void, ScreenPar
 
 const updateValue =
   <K extends keyof Screen>(name: K, update: SetStateAction<Screen[K]>) =>
-    (prev: Screen): Screen => ({
-      ...prev,
-      [name]: typeof update !== 'function' ? update : update(prev[name]),
-    });
+  (prev: Screen): Screen => ({
+    ...prev,
+    [name]: typeof update !== 'function' ? update : update(prev[name]),
+  });
 
 export const updateNovastarScreens = <K extends keyof Screen, S extends number>(
   path: string,
@@ -182,15 +182,16 @@ export const { useReloadMutation } = novastarApi;
 export const sse: Middleware = api => {
   const { getState, dispatch } = api as MiddlewareAPI<AppDispatch, RootState>;
   const evtSource = new EventSource('/api/novastar/subscribe');
-  const novastarReady = () => new Promise<void>((resolve, reject) => {
-    setTimeout(
-      () =>
-        dispatch(novastarApi.endpoints.getNovastars.initiate())
-          .unwrap()
-          .then(() => resolve(), reject),
-      0,
-    );
-  });
+  const novastarReady = () =>
+    new Promise<void>((resolve, reject) => {
+      setTimeout(
+        () =>
+          dispatch(novastarApi.endpoints.getNovastars.initiate())
+            .unwrap()
+            .then(() => resolve(), reject),
+        0,
+      );
+    });
   evtSource.addEventListener('add', async ({ data }) => {
     try {
       const [device] = JSON.parse(data) as [Novastar];

@@ -5,10 +5,10 @@ import * as React from 'react';
 import { charValidator } from '/@common/keyValidator';
 
 import FormikTextField from '../../common/FormikTextField';
+import { useActivateMutation } from '../api/config';
 import { useDispatch, useSelector } from '../store';
 import { setActivateDialogOpen } from '../store/currentSlice';
 import { selectHostName, selectIsActivateDialogOpen } from '../store/selectors';
-import { useActivateMutation } from '../api/config';
 
 const ActivateDialog: React.FC = () => {
   const open = useSelector(selectIsActivateDialogOpen);
