@@ -11,7 +11,7 @@ import {
   TextField,
   Tooltip,
 } from '@mui/material';
-import { styled } from '@mui/material/styles';
+import { css, styled } from '@mui/material/styles';
 import { hasProps } from '@novastar/screen/common';
 import React, { useEffect, useRef, useState } from 'react';
 import type { MouseEvent } from 'react';
@@ -86,7 +86,6 @@ const RemoteHostsDialog: React.FC<RemoteHostsDialogProps> = ({
   onClose = () => {},
 }) => {
   const remoteHosts = useSelector(selectAllRemoteHosts);
-  console.log(remoteHosts);
   const [customHosts, setCustomHosts] = useState<CustomHostItem[]>([]);
   const [changed, setChanged] = useState(false);
   const saveHandler = (): void => {
@@ -143,92 +142,98 @@ const RemoteHostsDialog: React.FC<RemoteHostsDialogProps> = ({
   return (
     <Dialog open={open} aria-labelledby="remote-hosts-title" maxWidth="md">
       <DialogTitle id="remote-hosts-title">Список удаленных хостов</DialogTitle>
-      <DialogContent
-        sx={{ display: 'flex', flexDirection: 'column' }}
-        className="y6jz5rJ-Brg9PLHpFRQgc rlXINR-cZo5bnISD5TaUT"
-      >
-        <FieldSet legend="Найденные в сети">
-          <Remote>
-            <Header>
-              <div>Адрес</div>
-              <div>Порт</div>
-              <div>Имя</div>
-              <div>Версия</div>
-              <div>ОС</div>
-            </Header>
-            <Box
-              sx={{
-                display: 'contents',
-                color: 'text.disabled',
-              }}
-            >
-              {remoteHosts.map(({ name, address, port, version, platform, osVersion }) => (
-                <React.Fragment key={name}>
-                  <div>{address}</div>
-                  <div>{port}</div>
-                  <div>{name}</div>
-                  <div>{version}</div>
-                  <div>
-                    <Tooltip title={osVersion}>
+      <DialogContent>
+        <div className="y6jz5rJ-Brg9PLHpFRQgc rlXINR-cZo5bnISD5TaUT">
+          <div
+            css={css`
+              display: flex;
+              flex-direction: column;
+            `}
+          >
+            <FieldSet legend="Найденные в сети">
+              <Remote>
+                <Header>
+                  <div>Адрес</div>
+                  <div>Порт</div>
+                  <div>Имя</div>
+                  <div>Версия</div>
+                  <div>ОС</div>
+                </Header>
+                <Box
+                  sx={{
+                    display: 'contents',
+                    color: 'text.disabled',
+                  }}
+                >
+                  {remoteHosts.map(({ name, address, port, version, platform, osVersion }) => (
+                    <React.Fragment key={name}>
+                      <div>{address}</div>
+                      <div>{port}</div>
+                      <div>{name}</div>
+                      <div>{version}</div>
                       <div>
-                        <Platform width={24} platform={platform} />
+                        <Tooltip title={osVersion}>
+                          <div>
+                            <Platform width={24} platform={platform} />
+                          </div>
+                        </Tooltip>
                       </div>
-                    </Tooltip>
-                  </div>
-                </React.Fragment>
-              ))}
-            </Box>
-          </Remote>
-        </FieldSet>
-        <FieldSet legend="Пользовательские">
-          <Remote>
-            <Header>
-              <div>Адрес</div>
-              <div>Порт</div>
-              <div />
-              <div />
-            </Header>
-            {customHosts &&
-              customHosts.map(({ address, port, id }, index) => (
-                <React.Fragment key={id}>
-                  <ErrorBoundary fallbackRender={fallbackRender}>
-                    <IPut
-                      defaultValue={address ?? '...'}
-                      onChange={makeAddressHandler(id)}
-                      css={theme => ({
-                        padding: 0,
-                        border: 'none',
-                        borderRadius: 0,
-                        '& input': {
-                          borderBottom: '1px solid rgba(0, 0, 0, 0.42)',
-                          fontFamily: theme.typography.fontFamily,
-                          fontSize: 16,
-                          padding: '6px 0',
-                          width: '4ch',
-                        },
-                      })}
-                    />
-                  </ErrorBoundary>
-                  <TextField
-                    variant="standard"
-                    value={port ?? ''}
-                    type="number"
-                    onChange={makePortHandler(id)}
-                    InputProps={portProps}
-                  />
-                  <Box
-                    alignSelf="flex-start"
-                    ref={index === customHosts.length - 1 ? refLast : undefined}
-                  >
-                    <IconButton size="small" title="Удалить" onClick={makeCloseHandler(id)}>
-                      <CloseIcon fontSize="inherit" />
-                    </IconButton>
-                  </Box>
+                    </React.Fragment>
+                  ))}
+                </Box>
+              </Remote>
+            </FieldSet>
+            <FieldSet legend="Пользовательские">
+              <Remote>
+                <Header>
+                  <div>Адрес</div>
+                  <div>Порт</div>
                   <div />
-                </React.Fragment>
-              ))}
-          </Remote>
-        </FieldSet>
+                  <div />
+                </Header>
+                {customHosts &&
+                  customHosts.map(({ address, port, id }, index) => (
+                    <React.Fragment key={id}>
+                      <ErrorBoundary fallbackRender={fallbackRender}>
+                        <IPut
+                          defaultValue={address ?? '...'}
+                          onChange={makeAddressHandler(id)}
+                          css={theme => ({
+                            padding: 0,
+                            border: 'none',
+                            borderRadius: 0,
+                            '& input': {
+                              borderBottom: '1px solid rgba(0, 0, 0, 0.42)',
+                              fontFamily: theme.typography.fontFamily,
+                              fontSize: 16,
+                              padding: '6px 0',
+                              width: '4ch',
+                            },
+                          })}
+                        />
+                      </ErrorBoundary>
+                      <TextField
+                        variant="standard"
+                        value={port ?? ''}
+                        type="number"
+                        onChange={makePortHandler(id)}
+                        InputProps={portProps}
+                      />
+                      <Box
+                        alignSelf="flex-start"
+                        ref={index === customHosts.length - 1 ? refLast : undefined}
+                      >
+                        <IconButton size="small" title="Удалить" onClick={makeCloseHandler(id)}>
+                          <CloseIcon fontSize="inherit" />
+                        </IconButton>
+                      </Box>
+                      <div />
+                    </React.Fragment>
+                  ))}
+              </Remote>
+            </FieldSet>
+          </div>
+        </div>
       </DialogContent>
       <DialogActions sx={{ position: 'relative' }}>
         <Button

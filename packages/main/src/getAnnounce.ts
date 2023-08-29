@@ -6,7 +6,7 @@ const getAnnounce = async (host?: string, port?: number) => {
   const res = await authRequest({ host, port, api: 'announce' });
   if (!res?.ok) return undefined;
   const { announce, iv, key, ...data } = await res.json();
-  if (!announce || !iv || !key) return undefined;
+  if (!announce || !iv || !key) return data;
   try {
     const decipher = crypto.createDecipheriv(
       'aes-256-cbc',
