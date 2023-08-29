@@ -26,7 +26,11 @@ let novastarEnabled = false;
 export const hasNovastar = () => novastarEnabled;
 
 window.config.get('announce').then(announce => {
-  if (announce && typeof announce === 'object' && import.meta.env.VITE_ANNOUNCE_NOVASTAR in announce) {
+  if (
+    announce &&
+    typeof announce === 'object' &&
+    import.meta.env.VITE_ANNOUNCE_NOVASTAR in announce
+  ) {
     novastarEnabled = !!announce[import.meta.env.VITE_ANNOUNCE_NOVASTAR];
   }
 });
@@ -64,10 +68,10 @@ const novastarApi = createApi({
       query: () => ({
         url: 'novastar',
         responseHandler: async response => {
-          const result = await response.json();
-          if (response.status === 401) {
-            result.host = response.headers.get('x-from');
-          }
+          const result = response.ok ? await response.json() : [];
+          // if (response.status === 401) {
+          //   result.host = response.headers.get('x-from');
+          // }
           return result;
         },
       }),
@@ -178,7 +182,7 @@ export const { useReloadMutation } = novastarApi;
 export const sse: Middleware = api => {
   const { getState, dispatch } = api as MiddlewareAPI<AppDispatch, RootState>;
   const evtSource = new EventSource('/api/novastar/subscribe');
-  const novastarReady = new Promise<void>((resolve, reject) => {
+  const novastarReady = () => new Promise<void>((resolve, reject) => {
     setTimeout(
       () =>
         dispatch(novastarApi.endpoints.getNovastars.initiate())
@@ -190,7 +194,7 @@ export const sse: Middleware = api => {
   evtSource.addEventListener('add', async ({ data }) => {
     try {
       const [device] = JSON.parse(data) as [Novastar];
-      await novastarReady;
+      await novastarReady();
       dispatch(
         novastarApi.util.updateQueryData('getNovastars', undefined, draft => {
           adapter.addOne(draft, device);
@@ -203,7 +207,7 @@ export const sse: Middleware = api => {
   evtSource.addEventListener('change', async ({ data }) => {
     try {
       const [id, changes] = JSON.parse(data) as [string, Partial<Novastar>];
-      await novastarReady;
+      await novastarReady();
       dispatch(
         novastarApi.util.updateQueryData('getNovastars', undefined, draft => {
           adapter.updateOne(draft, { id, changes });
@@ -224,7 +228,7 @@ export const sse: Middleware = api => {
   evtSource.addEventListener('remove', async ({ data }) => {
     try {
       const [path] = JSON.parse(data) as [string];
-      await novastarReady;
+      await novastarReady();
       dispatch(
         novastarApi.util.updateQueryData('getNovastars', undefined, draft => {
           adapter.removeOne(draft, path);
@@ -240,7 +244,7 @@ export const sse: Middleware = api => {
   evtSource.addEventListener('screen', async ({ data }) => {
     try {
       const [screenId, key, value] = JSON.parse(data) as [ScreenId, keyof Screen, never];
-      await novastarReady;
+      await novastarReady();
       dispatch(
         novastarApi.util.updateQueryData('getNovastars', undefined, draft => {
           // const device = selectNovastar(draft, screenId.path);
@@ -257,7 +261,7 @@ export const sse: Middleware = api => {
   evtSource.addEventListener('update', async ({ data }) => {
     try {
       const [device] = JSON.parse(data) as [Novastar];
-      await novastarReady;
+      await novastarReady();
       dispatch(
         novastarApi.util.updateQueryData('getNovastars', undefined, draft => {
           adapter.setOne(draft, device);
