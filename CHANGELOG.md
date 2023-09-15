@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.5.0](https://github.com/sarakusha/gmib/compare/v4.4.0...v4.5.0) (2023-09-15)
+
+
+### Features
+
+* added pritunl-client support ([81ee78b](https://github.com/sarakusha/gmib/commit/81ee78b5dbd3b00deec54abeb7ed965674fe2fcb))
+* added remote hostname ([92d05f2](https://github.com/sarakusha/gmib/commit/92d05f2d55991eb63fd1e322994449a1bf072619))
+
+
+### Bug Fixes
+
+* announce fixed ([dfa9662](https://github.com/sarakusha/gmib/commit/dfa966223107052870a52468034e7244828e2d20))
+* fixed remote connection to novastar ([6133340](https://github.com/sarakusha/gmib/commit/6133340f9d1e789f70680ec7e0b77fa55eaf2a01))
+
 ## [4.4.0](https://github.com/sarakusha/gmib/compare/v4.2.1...v4.4.0) (2023-08-29)
 
 
