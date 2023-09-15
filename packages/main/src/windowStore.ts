@@ -1,15 +1,17 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
-
-import type { Host } from '@nibus/core/ipc';
-
-import type { Screen } from '/@common/video';
-
 import debugFactory from 'debug';
 import pick from 'lodash/pick';
 
+import type { Screen } from '/@common/video';
 import getAnnounce from './getAnnounce';
-
-export type WindowType = 'gmib' | 'player' | 'screen' | 'video';
+import type {
+  GmibWindowParams,
+  PlayerWindowParams,
+  ScreenOptions,
+  ScreenWindowParams,
+  WindowParams,
+} from '/@common/WindowParams';
+import { gmibVariables, impScreenProps, isGmib, isPlayer, isScreen } from '/@common/WindowParams';
 
 export const licenseNames = ['basic', 'standard', 'plus', 'premium', 'enterprise'] as const;
 
@@ -17,74 +19,9 @@ export type LicenseName = (typeof licenseNames)[number];
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:windowStore`);
 
-const impScreenProps = [
-  'test',
-  'borderTop',
-  'borderBottom',
-  'borderLeft',
-  'borderRight',
-  'width',
-  'height',
-  'moduleWidth',
-  'moduleHeight',
-] as const;
-
-export type WindowParams =
-  | GmibWindowParams
-  | PlayerWindowParams
-  | ScreenWindowParams
-  | VideoWindowParams;
-
-export type CommonWindowParams = {
-  type: WindowType;
-  id: number;
-};
-
-export type GmibWindowParams = CommonWindowParams & {
-  type: 'gmib';
-  host: string;
-  nibusPort: number;
-  plan?: string;
-  renew?: string;
-  key?: string;
-  useProxy?: boolean;
-  info?: Partial<Host>;
-  machineId?: string;
-  autostart?: boolean;
-  update: (update: Partial<Pick<GmibWindowParams, GmibVariables>>) => GmibWindowParams;
-  // localConfig: LocalConfig;
-  // esLocalConfig: EventSource;
-};
-
-const gmibVariables = ['autostart'] satisfies Array<keyof GmibWindowParams>;
-type GmibVariables = (typeof gmibVariables)[number];
-
-type ScreenOptions = Readonly<Pick<Screen, (typeof impScreenProps)[number]>>;
-
-export type PlayerWindowParams = CommonWindowParams & {
-  type: 'player';
-  playerId: number;
-  host: string;
-  port: number;
-};
-
-export type ScreenWindowParams = CommonWindowParams &
-  ScreenOptions & { type: 'screen'; screenId: number };
-
-export type VideoWindowParams = CommonWindowParams & { type: 'video' };
+// const defaultConfig = parse('{}') as LocalConfig;
 
 const store = new Map<number, WindowParams>();
-
-export const isGmib = (params?: WindowParams): params is GmibWindowParams =>
-  params?.type === 'gmib';
-export const isScreen = (params?: WindowParams): params is ScreenWindowParams =>
-  params?.type === 'screen';
-export const isPlayer = (params?: WindowParams): params is PlayerWindowParams =>
-  params?.type === 'player';
-export const isVideo = (params?: WindowParams): params is VideoWindowParams =>
-  params?.type === 'video';
-
-// const defaultConfig = parse('{}') as LocalConfig;
 
 const register = (browserWindow: BrowserWindow): number => {
   const { id } = browserWindow;
@@ -106,7 +43,12 @@ export const registerGmib = async (
     type: 'gmib',
     host,
     nibusPort: port,
-    update: values => Object.assign(params, pick(values, gmibVariables)),
+    update: values => {
+      const result = Object.assign(params, pick(values, gmibVariables));
+      const { update, ...props } = result;
+      browserWindow.webContents.send('gmib-params', props);
+      return result;
+    },
   };
   const announce = await getAnnounce(host, port + 1);
   if (typeof announce === 'object') {
@@ -114,6 +56,8 @@ export const registerGmib = async (
     Object.assign(params, data);
     if (message) {
       const announceWindow = () => {
+        const { update, ...props } = params;
+        browserWindow.webContents.send('gmib-params', props);
         import.meta.env.VITE_ANNOUNCE_HOST &&
           import(import.meta.env.VITE_ANNOUNCE_HOST).then(
             ({ default: getHost }) => {
