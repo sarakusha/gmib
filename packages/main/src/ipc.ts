@@ -1,17 +1,13 @@
 import type { IpcMainEvent } from 'electron';
 import { app, BrowserWindow, ipcMain } from 'electron';
-import os from 'node:os';
-
 import type { Host } from '@nibus/core/ipc';
 
-import localConfig from './localConfig';
-import machineId from './machineId';
 import { getMediaByMD5 } from './media';
 import { getPlayerMappingsForPlayer } from './playerMapping';
 import { getPlaylist, getPlaylistItems } from './playlist';
-import relaunch from './relaunch';
 import { getPlayer, getScreens, loadScreen } from './screen';
-import store, { isGmib } from './windowStore';
+import store from './windowStore';
+import { isGmib } from '/@common/WindowParams';
 
 app.whenReady().then(() => {
   ipcMain.handle('getPlayer', (_, id) => getPlayer(id));
@@ -60,24 +56,24 @@ app.whenReady().then(() => {
 });
 
 // eslint-disable-next-line import/prefer-default-export
-export const getHostOptions = async (
-  wind = BrowserWindow.getFocusedWindow(),
-): Promise<Partial<Host> | undefined> => {
-  if (!wind) return undefined;
-  const { webContents } = wind;
-  return new Promise((resolve, reject) => {
-    let timeout: NodeJS.Timeout;
-    const handler = (event: IpcMainEvent, host: Partial<Host>) => {
-      if (event.sender !== webContents) return;
-      ipcMain.off('host-options', handler);
-      clearTimeout(timeout);
-      resolve(host);
-    };
-    ipcMain.on('host-options', handler);
-    webContents.send('get-host-options');
-    timeout = setTimeout(() => {
-      ipcMain.off('host-options', handler);
-      reject(new Error('timeout'));
-    }, 500);
-  });
-};
+// export const getHostOptions = async (
+//   wind = BrowserWindow.getFocusedWindow(),
+// ): Promise<Partial<Host> | undefined> => {
+//   if (!wind) return undefined;
+//   const { webContents } = wind;
+//   return new Promise((resolve, reject) => {
+//     let timeout: NodeJS.Timeout;
+//     const handler = (event: IpcMainEvent, host: Partial<Host>) => {
+//       if (event.sender !== webContents) return;
+//       ipcMain.off('host-options', handler);
+//       clearTimeout(timeout);
+//       resolve(host);
+//     };
+//     ipcMain.on('host-options', handler);
+//     webContents.send('get-host-options');
+//     timeout = setTimeout(() => {
+//       ipcMain.off('host-options', handler);
+//       reject(new Error('timeout'));
+//     }, 500);
+//   });
+// };
