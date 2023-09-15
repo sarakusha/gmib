@@ -53,6 +53,7 @@ const localConfigSchema: Schema<LocalConfig> = {
   identifier: { type: 'string', default: nanoid(), readOnly: true },
   announce: { type: 'string' },
   iv: { type: 'string' },
+  pritunlUserId: { type: 'string' },
 };
 
 const localConfig = new Store<LocalConfig>({

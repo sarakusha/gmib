@@ -291,6 +291,7 @@ export type LocalConfig = {
   unsafeMode?: boolean;
   announce?: string;
   iv?: string;
+  pritunlUserId?: string;
 };
 
 export type Modules = IModuleInfo<Minihost2Info | Minihost3Info>[];
