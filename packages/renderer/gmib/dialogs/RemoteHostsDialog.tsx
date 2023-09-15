@@ -36,6 +36,7 @@ type CustomHostItem = {
   address?: string;
   port?: string;
   id: string;
+  name?: string;
 };
 
 const portProps = {
@@ -89,9 +90,10 @@ const RemoteHostsDialog: React.FC<RemoteHostsDialogProps> = ({
   const [customHosts, setCustomHosts] = useState<CustomHostItem[]>([]);
   const [changed, setChanged] = useState(false);
   const saveHandler = (): void => {
-    const valid = customHosts.filter(hasAddressPort).map(({ address, port }) => ({
+    const valid = customHosts.filter(hasAddressPort).map(({ address, port, name }) => ({
       address,
       port: +port,
+      name,
     }));
     window.config.set('hosts', valid);
     onClose();
@@ -101,10 +103,11 @@ const RemoteHostsDialog: React.FC<RemoteHostsDialogProps> = ({
   useEffect(() => {
     const updateHosts = (hosts: CustomHost[] = []): void => {
       setCustomHosts(
-        hosts.map<CustomHostItem>(({ address, port }) => ({
+        hosts.map<CustomHostItem>(({ address, port, name }) => ({
           address,
           port: port.toString(),
           id: timeid(),
+          name,
         })),
       );
       setChanged(false);
@@ -135,6 +138,10 @@ const RemoteHostsDialog: React.FC<RemoteHostsDialogProps> = ({
   const makePortHandler = makeHandler((e: React.ChangeEvent<HTMLInputElement>, index, customs) => {
     const host = customs[index];
     host.port = e.target.value;
+  });
+  const makeNameHandler = makeHandler((e: React.ChangeEvent<HTMLInputElement>, index, customs) => {
+    const host = customs[index];
+    host.name = e.target.value;
   });
   const makeCloseHandler = makeHandler((e: MouseEvent, index, customs) => {
     customs.splice(index, 1);
@@ -190,9 +197,10 @@ const RemoteHostsDialog: React.FC<RemoteHostsDialogProps> = ({
                   <div>Порт</div>
                   <div />
                   <div />
+                  <div />
                 </Header>
                 {customHosts &&
-                  customHosts.map(({ address, port, id }, index) => (
+                  customHosts.map(({ address, port, id, name }, index) => (
                     <React.Fragment key={id}>
                       <ErrorBoundary fallbackRender={fallbackRender}>
                         <IPut
@@ -217,6 +225,12 @@ const RemoteHostsDialog: React.FC<RemoteHostsDialogProps> = ({
                         value={port ?? ''}
                         type="number"
                         onChange={makePortHandler(id)}
+                        InputProps={portProps}
+                      />
+                      <TextField
+                        variant="standard"
+                        value={name ?? ''}
+                        onChange={makeNameHandler(id)}
                         InputProps={portProps}
                       />
                       <Box
