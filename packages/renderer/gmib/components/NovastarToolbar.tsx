@@ -13,7 +13,7 @@ const NovastarToolbar: React.FC = () => {
   const [reload] = useReloadMutation();
   return (
     <BusyButton
-      className="novastar rlXINR-cZo5bnISD5TaUT"
+      className="yu6ODejliBoLEEgGBmOEe rlXINR-cZo5bnISD5TaUT"
       icon={<ReloadIcon />}
       title="Обновить"
       onClick={() => path && reload(path)}

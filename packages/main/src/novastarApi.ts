@@ -3,7 +3,7 @@ import { app } from 'electron';
 import express from 'express';
 import type { RequestHandler } from 'express-serve-static-core';
 import memoize from 'lodash/memoize';
-// import debugFactory from 'debug';
+import debugFactory from 'debug';
 
 import type { ScreenId } from '/@common/novastar';
 import type { FilterNames } from '/@common/helpers';
@@ -24,21 +24,23 @@ const events = [
   'broadcastDetected',
 ] as const;
 
-// const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:novastarApi`);
+const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:novastarApi`);
 
 // api.use((req, res, next) => {
 //   debug(`${req.method} ${req.url}`);
 //   next();
 // });
 api.use('/subscribe', (req, res) => {
-  res.set({
+  res.writeHead(200, {
     Connection: 'keep-alive',
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
+    'access-control-allow-origin': '*',
   });
+  res.flushHeaders();
   const makeHandler = memoize((event: string) => (...args: unknown[]) => {
     if (res.writable) {
-      // debug(`EVENT: ${event}: ${JSON.stringify(args)}`);
+      // debug(`EVENT: ${event}: ${JSON.stringify(args)} ${req.hostname}`);
       res.write(`event: ${event}
 data: ${JSON.stringify(args)}
 
@@ -80,18 +82,18 @@ type Methods = FilterNames<typeof master, (arg: ScreenId, value: any) => Promise
 
 const makeHandler =
   <K extends Methods>(method: K, defaultScreen = 0): RequestHandler =>
-  async (req, res) => {
-    try {
-      const { path, screen = defaultScreen, value } = req.body;
-      // debug(`${method} ${path}[${screen}] = ${value}`);
-      await master[method]({ path, screen }, value);
-      res.end();
-      // debug('Ok');
-    } catch (e) {
-      // debug(`error: ${e}`);
-      res.status(500).send((e as Error).message);
-    }
-  };
+    async (req, res) => {
+      try {
+        const { path, screen = defaultScreen, value } = req.body;
+        // debug(`${method} ${path}[${screen}] = ${value}`);
+        await master[method]({ path, screen }, value);
+        res.end();
+        // debug('Ok');
+      } catch (e) {
+        // debug(`error: ${e}`);
+        res.status(500).send((e as Error).message);
+      }
+    };
 
 api.put('/screens/mode', makeHandler('setDisplayMode'));
 api.put('/screens/gamma', makeHandler('setGamma'));

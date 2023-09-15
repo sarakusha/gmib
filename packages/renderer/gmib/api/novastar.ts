@@ -6,7 +6,7 @@ import { createApi } from '@reduxjs/toolkit/query/react';
 import type { Novastar, Screen, ScreenId } from '/@common/novastar';
 import type { CabinetInfo } from '/@common/helpers';
 import { NovastarSelector } from '/@common/helpers';
-
+import { host, isRemoteSession, port } from '/@common/remote';
 import type { SetStateAction } from 'react';
 
 import baseQuery from '../../common/authBaseQuery';
@@ -25,15 +25,22 @@ let novastarEnabled = false;
 
 export const hasNovastar = () => novastarEnabled;
 
-window.config.get('announce').then(announce => {
-  if (
-    announce &&
-    typeof announce === 'object' &&
-    import.meta.env.VITE_ANNOUNCE_NOVASTAR in announce
-  ) {
-    novastarEnabled = !!announce[import.meta.env.VITE_ANNOUNCE_NOVASTAR];
+window.initializeNovastar().then(value => {
+  if (value !== novastarEnabled) {
+    novastarEnabled = value;
   }
 });
+
+// window.config.get('announce').then(announce => {
+//   console.log('ANNOUNCE', announce);
+//   if (
+//     announce &&
+//     typeof announce === 'object' &&
+//     import.meta.env.VITE_ANNOUNCE_NOVASTAR in announce
+//   ) {
+//     novastarEnabled = !!announce[import.meta.env.VITE_ANNOUNCE_NOVASTAR];
+//   }
+// });
 
 const secret = window.identify.getSecret();
 
@@ -113,10 +120,10 @@ const debouncedUpdateNovastarScreens = createDebouncedAsyncThunk<void, ScreenPar
 
 const updateValue =
   <K extends keyof Screen>(name: K, update: SetStateAction<Screen[K]>) =>
-  (prev: Screen): Screen => ({
-    ...prev,
-    [name]: typeof update !== 'function' ? update : update(prev[name]),
-  });
+    (prev: Screen): Screen => ({
+      ...prev,
+      [name]: typeof update !== 'function' ? update : update(prev[name]),
+    });
 
 export const updateNovastarScreens = <K extends keyof Screen, S extends number>(
   path: string,
@@ -181,7 +188,11 @@ export const { useReloadMutation } = novastarApi;
 
 export const sse: Middleware = api => {
   const { getState, dispatch } = api as MiddlewareAPI<AppDispatch, RootState>;
-  const evtSource = new EventSource('/api/novastar/subscribe');
+  const evtSource = new EventSource(
+    isRemoteSession
+      ? `http://${host}:${+port + 1}/api/novastar/subscribe`
+      : '/api/novastar/subscribe',
+  );
   const novastarReady = () =>
     new Promise<void>((resolve, reject) => {
       setTimeout(

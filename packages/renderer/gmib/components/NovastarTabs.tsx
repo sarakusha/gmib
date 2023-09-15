@@ -27,8 +27,8 @@ type TabsType = 'props' | 'telemetry';
 const NovastarTabs: React.FC<{ device: Novastar | undefined }> = ({ device }) => {
   const [value, setValue] = useState<TabsType>('props');
   return (
-    <FixedHeadLayout>
-      <Paper square className="yu6ODejliBoLEEgGBmOEe rlXINR-cZo5bnISD5TaUT">
+    <FixedHeadLayout className="yu6ODejliBoLEEgGBmOEe rlXINR-cZo5bnISD5TaUT">
+      <Paper square>
         <Tabs
           value={value}
           indicatorColor="primary"

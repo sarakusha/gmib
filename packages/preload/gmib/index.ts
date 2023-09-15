@@ -18,6 +18,7 @@ import * as output from './output';
 
 import expandTypes from '/@common/expandTypes';
 import { hashCode } from '/@common/helpers';
+import type { GmibWindowParams } from '/@common/WindowParams';
 
 /**
  * The "Main World" is the JavaScript context that your main renderer code runs in.
@@ -62,10 +63,11 @@ contextBridge.exposeInMainWorld('identify', expandTypes(identify));
 //   ipcRenderer.invoke('activateLicense', key, name),
 // );
 
-contextBridge.exposeInMainWorld('electronAPI', {
-  handleHost: (listener: (event: IpcRendererEvent) => void) =>
-    ipcRenderer.on('get-host-options', listener),
-});
+// TODO: Возможно убрать?
+// contextBridge.exposeInMainWorld('electronAPI', {
+//   handleHost: (listener: (event: IpcRendererEvent) => void) =>
+//     ipcRenderer.on('get-host-options', listener),
+// });
 
 const onReady = async () => {
   const machineId = await ipcRenderer.invoke('getMachineId');
@@ -83,3 +85,13 @@ if (document.readyState === 'loading') {
   // DOM готов!
   onReady();
 }
+
+contextBridge.exposeInMainWorld(
+  'initializeNovastar',
+  () =>
+    new Promise<boolean>(resolve => {
+      ipcRenderer.once('gmib-params', (_, params: GmibWindowParams) => {
+        resolve(Boolean(params.useProxy));
+      });
+    }),
+);
