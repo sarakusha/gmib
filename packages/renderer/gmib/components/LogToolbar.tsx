@@ -18,7 +18,6 @@ import { selectLogLevel } from '../store/selectors';
 
 import FormFieldSet from './FormFieldSet';
 
-
 // const useStyles = makeStyles(theme => ({
 //   content: {
 //     margin: theme.spacing(1),

@@ -24,11 +24,7 @@ import { setCurrentTab } from '../store/currentSlice';
 
 import type { Page } from '/@common/config';
 
-import {
-  selectCurrentScreenId,
-  selectCurrentTab,
-  selectIsFixed,
-} from '../store/selectors';
+import { selectCurrentScreenId, selectCurrentTab, selectIsFixed } from '../store/selectors';
 
 import AccordionList from './AccordionList';
 

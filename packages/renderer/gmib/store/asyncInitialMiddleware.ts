@@ -1,6 +1,6 @@
 import type { Middleware } from '@reduxjs/toolkit';
 
-import type { AppDispatch, RootState } from './index';
+import type { AppDispatch, RootState } from '.';
 
 export type AsyncInitializer = (dispatch: AppDispatch, getState: () => RootState) => void;
 

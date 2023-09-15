@@ -29,7 +29,7 @@ import {
 } from './selectors';
 import { setOnline } from './sessionSlice';
 
-import type { AppThunk, AppThunkConfig } from './index';
+import type { AppThunk, AppThunkConfig } from '.';
 
 import { isRemoteSession } from '/@common/remote';
 import { asyncSerial, delay } from '/@common/helpers';

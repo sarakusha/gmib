@@ -40,10 +40,7 @@ export const createAppWindow = (
   name?: string,
 ): BrowserWindow => {
   // eslint-disable-next-line no-multi-assign
-  const browserWindow = createWindow(
-    `${name ?? 'gmib'} (${address})` /* getTitle(port, hostName) */,
-    gmibPreload,
-  );
+  const browserWindow = createWindow(`${name ?? 'gmib'} (${address})` /* getTitle(port, hostName) */, gmibPreload);
   if (!address || address === 'localhost') {
     browserWindow.once('ready-to-show', async () => {
       if (!localConfig.get('autostart')) {

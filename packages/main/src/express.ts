@@ -89,7 +89,7 @@ app.use(
 app.use(errorHandler);
 
 server.listen(port, () => {
-  debug(`Playback server running on port ${port}...`);
+  // debug(`Playback server running on port ${port}...`);
 });
 
 // server.on('upgrade', (req, socket, head) => {

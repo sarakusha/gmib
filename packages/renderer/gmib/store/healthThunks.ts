@@ -26,7 +26,7 @@ import {
   selectOverheatProtection,
 } from './selectors';
 
-import type { AppThunk, RootState } from './index';
+import type { AppThunk, RootState } from '.';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:health`);
 
@@ -57,36 +57,36 @@ const calcMedian = (sorted: number[]): number => {
 
 const updateMaxBrightness =
   (id: number, aggregations: Aggregations, desiredBrightness: number): AppThunk =>
-  async (dispatch, getState) => {
-    const health = (await window.config.get('health')) ?? {};
-    if (!health.screens) {
-      health.screens = {};
-    }
-    const state = getState();
-    const overheatProtection = selectOverheatProtection(state);
-    if (!overheatProtection) return;
-    const {
-      aggregations: prevAggregations = aggregations,
-      maxBrightness: prevBrightness = desiredBrightness,
-    } =
-      !health.timestamp || Date.now() - health.timestamp >= overheatProtection.interval * 2 * MINUTE
-        ? {}
-        : health.screens[id] ?? {};
-    let brightness = Math.min(prevBrightness, desiredBrightness);
-    const max = aggregations[overheatProtection.aggregation];
-    const prevMax = prevAggregations[overheatProtection.aggregation];
-    if (
-      max >= overheatProtection.upperBound ||
-      (max >= overheatProtection.bottomBound && prevMax < max)
-    ) {
-      brightness -= overheatProtection.step;
-    }
-    health.screens[id] = {
-      aggregations,
-      maxBrightness: max < overheatProtection.bottomBound ? undefined : Math.max(brightness, 0),
+    async (dispatch, getState) => {
+      const health = (await window.config.get('health')) ?? {};
+      if (!health.screens) {
+        health.screens = {};
+      }
+      const state = getState();
+      const overheatProtection = selectOverheatProtection(state);
+      if (!overheatProtection) return;
+      const {
+        aggregations: prevAggregations = aggregations,
+        maxBrightness: prevBrightness = desiredBrightness,
+      } =
+        !health.timestamp || Date.now() - health.timestamp >= overheatProtection.interval * 2 * MINUTE
+          ? {}
+          : health.screens[id] ?? {};
+      let brightness = Math.min(prevBrightness, desiredBrightness);
+      const max = aggregations[overheatProtection.aggregation];
+      const prevMax = prevAggregations[overheatProtection.aggregation];
+      if (
+        max >= overheatProtection.upperBound ||
+        (max >= overheatProtection.bottomBound && prevMax < max)
+      ) {
+        brightness -= overheatProtection.step;
+      }
+      health.screens[id] = {
+        aggregations,
+        maxBrightness: max < overheatProtection.bottomBound ? undefined : Math.max(brightness, 0),
+      };
+      window.config.set('health', health);
     };
-    window.config.set('health', health);
-  };
 
 type GroupedByScreens = {
   screens: number[];
@@ -159,86 +159,86 @@ const checkDevice = async ({ id }: DeviceState): Promise<number[]> => {
 
 const checkTemperature =
   (): AppThunk<Promise<void>> =>
-  async (dispatch, getState): Promise<void> => {
-    if (isRemoteSession) throw new Error('Only local session');
-    const state = getState();
-    const { data: screensData } = screenApi.endpoints.getScreens.select()(state);
-    const overheatProtection = selectOverheatProtection(state);
-    if (!overheatProtection) return;
-    const desiredBrightness = selectBrightness(state);
-    setImmediate(() => {
-      const next = new Date();
-      next.setMinutes(next.getMinutes() + overheatProtection.interval);
-      debug(`the next overheating check is scheduled for ${next.toLocaleString()}`);
-    });
-    if (running) {
-      debug('screens overheating check skipped');
-      return;
-    }
-    running = true;
-
-    debug('screens overheating check started...');
-    const groups = groupDevicesByScreens(state);
-    const all = await Promise.all(
-      groups.map(
-        async ({ screens, devices }): Promise<{ screens: number[]; temperatures: number[] }> => {
-          const results = await Promise.all(
-            groupDevicesByConnection(
-              devices
-                .map(deviceId => selectDeviceById(state, deviceId))
-                .filter(notEmpty)
-                .filter(({ connected }) => connected),
-            ).map(groupedByConnection =>
-              pMap(groupedByConnection, async device => {
-                dispatch(deviceBusy(device.id));
-                const temperatures = await checkDevice(device);
-                dispatch(deviceReady(device.id));
-                return temperatures;
-              }),
-            ),
-          );
-          return {
-            screens,
-            temperatures: flatten(flatten(results)),
-          };
-        },
-      ),
-    );
-    const health = await window.config.get('health');
-    all.forEach(({ screens, temperatures }) => {
-      if (temperatures.length === 0) {
-        if (health) {
-          screens.forEach(name => delete health.screens[name]);
-        }
+    async (dispatch, getState): Promise<void> => {
+      if (isRemoteSession) throw new Error('Only local session');
+      const state = getState();
+      const { data: screensData } = screenApi.endpoints.getScreens.select()(state);
+      const overheatProtection = selectOverheatProtection(state);
+      if (!overheatProtection) return;
+      const desiredBrightness = selectBrightness(state);
+      setImmediate(() => {
+        const next = new Date();
+        next.setMinutes(next.getMinutes() + overheatProtection.interval);
+        debug(`the next overheating check is scheduled for ${next.toLocaleString()}`);
+      });
+      if (running) {
+        debug('screens overheating check skipped');
         return;
       }
-      const sorted = temperatures.sort();
-      const maximum = sorted[sorted.length - 1];
-      const average = calcAverage(sorted);
-      const median = calcMedian(sorted);
-      const { brightnessFactor = 1 } = (screensData && selectScreen(screensData, screens[0])) ?? {};
-      screens.forEach(id => {
-        dispatch(
-          updateMaxBrightness(
-            id,
-            [maximum, average, median],
-            minmax(100, desiredBrightness * brightnessFactor),
-          ),
-        );
-      });
-    });
-    const existingScreens = flatten(groups.map(({ screens }) => screens));
-    // const health = window.config.get('health');
-    Object.keys(health.screens).forEach(id => {
-      existingScreens.includes(Number(id)) || delete health.screens[id];
-    });
-    health.timestamp = Date.now();
-    await window.config.set('health', health);
-    dispatch(updateBrightness());
+      running = true;
 
-    running = false;
-    debug('screens overheating check completed');
-  };
+      debug('screens overheating check started...');
+      const groups = groupDevicesByScreens(state);
+      const all = await Promise.all(
+        groups.map(
+          async ({ screens, devices }): Promise<{ screens: number[]; temperatures: number[] }> => {
+            const results = await Promise.all(
+              groupDevicesByConnection(
+                devices
+                  .map(deviceId => selectDeviceById(state, deviceId))
+                  .filter(notEmpty)
+                  .filter(({ connected }) => connected),
+              ).map(groupedByConnection =>
+                pMap(groupedByConnection, async device => {
+                  dispatch(deviceBusy(device.id));
+                  const temperatures = await checkDevice(device);
+                  dispatch(deviceReady(device.id));
+                  return temperatures;
+                }),
+              ),
+            );
+            return {
+              screens,
+              temperatures: flatten(flatten(results)),
+            };
+          },
+        ),
+      );
+      const health = await window.config.get('health');
+      all.forEach(({ screens, temperatures }) => {
+        if (temperatures.length === 0) {
+          if (health) {
+            screens.forEach(name => delete health.screens[name]);
+          }
+          return;
+        }
+        const sorted = temperatures.sort();
+        const maximum = sorted[sorted.length - 1];
+        const average = calcAverage(sorted);
+        const median = calcMedian(sorted);
+        const { brightnessFactor = 1 } = (screensData && selectScreen(screensData, screens[0])) ?? {};
+        screens.forEach(id => {
+          dispatch(
+            updateMaxBrightness(
+              id,
+              [maximum, average, median],
+              minmax(100, desiredBrightness * brightnessFactor),
+            ),
+          );
+        });
+      });
+      const existingScreens = flatten(groups.map(({ screens }) => screens));
+      // const health = window.config.get('health');
+      Object.keys(health.screens).forEach(id => {
+        existingScreens.includes(Number(id)) || delete health.screens[id];
+      });
+      health.timestamp = Date.now();
+      await window.config.set('health', health);
+      dispatch(updateBrightness());
+
+      running = false;
+      debug('screens overheating check completed');
+    };
 
 const updateOverheatProtection = (): AppThunk => (dispatch, getState) => {
   const { enabled = false, interval = 0 } = selectOverheatProtection(getState()) ?? {};

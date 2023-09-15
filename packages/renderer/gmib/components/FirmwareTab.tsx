@@ -28,7 +28,6 @@ import FlashUpgrade, { displayName } from './FlashUpgrade';
 import FormFieldSet from './FormFieldSet';
 import type { MinihostTabProps } from './TabContainer';
 
-
 const KindFormFieldSet = styled(FormFieldSet)(({ theme }) => ({
   padding: theme.spacing(1),
   borderRadius: theme.shape.borderRadius,

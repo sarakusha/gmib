@@ -46,7 +46,7 @@ const authRequest = async ({
     headers.set('authorization', `Bearer ${secret.toString('base64')}`);
   }
 
-  debug(`${url} ${JSON.stringify([...headers])}`);
+  // debug(`${url} ${JSON.stringify([...headers])}`);
 
   return fetch(url, { headers, body, method });
 };

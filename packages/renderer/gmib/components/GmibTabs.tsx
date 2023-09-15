@@ -23,7 +23,6 @@ import Screens from './Screens';
 import type { Props as ChildProps } from './TabContainer';
 import TabContainer from './TabContainer';
 
-
 const Tabs: React.FC = () => {
   const [devChildren, setDevChildren] = useState<
     React.ReactElement<ChildProps, typeof TabContainer>[]

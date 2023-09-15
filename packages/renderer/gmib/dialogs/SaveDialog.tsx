@@ -1,4 +1,3 @@
-
 import {
   Button,
   Checkbox,
@@ -19,7 +18,7 @@ import FormFieldSet from '../components/FormFieldSet';
 import { useDevice, useSelector } from '../store';
 import { selectMibByName } from '../store/selectors';
 
-import type {ValueState, ValueType} from '/@common/helpers';
+import type { ValueState, ValueType } from '/@common/helpers';
 
 // const useStyles = makeStyles(theme => ({
 //   root: {

@@ -6,7 +6,6 @@ import { createSlice } from '@reduxjs/toolkit';
 import type { Config, Location, OverheatProtection, Page } from '/@common/config';
 import { DEFAULT_OVERHEAD_PROTECTION } from '/@common/config';
 import type { PropPayloadAction } from '/@common/helpers';
-import { findById } from '/@common/helpers';
 
 // const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:configSlice`);
 

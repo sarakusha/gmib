@@ -149,9 +149,7 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
               <MenuItem value="0">Все</MenuItem>
               {links.map(device => (
                 <MenuItem key={device.id} value={device.id}>
-                  {device.isEmptyAddress
-                    ? `${device.path}`
-                    : device.address}
+                  {device.isEmptyAddress ? `${device.path}` : device.address}
                 </MenuItem>
               ))}
             </Select>

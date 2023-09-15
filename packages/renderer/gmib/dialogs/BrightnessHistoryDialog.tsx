@@ -19,7 +19,6 @@ import { noop } from '/@common/helpers';
 
 import { selectBrightness, selectLocation } from '../store/selectors';
 
-
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:brightness`);
 
 type Props = {

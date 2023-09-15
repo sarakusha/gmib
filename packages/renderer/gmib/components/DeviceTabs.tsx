@@ -10,7 +10,6 @@ import FirmwareTab from './FirmwareTab';
 import PropertyGridTab from './PropertyGridTab';
 import TelemetryTab from './TelemetryTab';
 
-
 type Props = {
   id: DeviceId;
 };

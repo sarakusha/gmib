@@ -1,4 +1,4 @@
-import type { DeviceId, Host } from '@nibus/core';
+import type { DeviceId } from '@nibus/core';
 import type { Action, ThunkAction } from '@reduxjs/toolkit';
 import { configureStore } from '@reduxjs/toolkit';
 import type { TypedUseSelectorHook } from 'react-redux';
@@ -78,8 +78,8 @@ export const useDevice = (id?: DeviceId): DeviceState | undefined =>
 /**
  * Response on 'get-host-options'
  */
-window.electronAPI.handleHost(event => {
-  const state = store.getState();
-  const { name, platform, arch, version }: Partial<Host> = state.session;
-  event.sender.send('host-options', { name, platform, arch, version });
-});
+// window.electronAPI.handleHost(event => {
+//   const state = store.getState();
+//   const { name, platform, arch, version }: Partial<Host> = state.session;
+//   event.sender.send('host-options', { name, platform, arch, version });
+// });

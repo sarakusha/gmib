@@ -1,14 +1,17 @@
-
 /* eslint-disable no-bitwise */
 import FolderIcon from '@mui/icons-material/FolderOpen';
 import SaveAltIcon from '@mui/icons-material/SaveAlt';
 import { Box, Button, FormControl, FormHelperText, IconButton } from '@mui/material';
-import type { Kind} from '@nibus/core/flash';
+import type { Kind } from '@nibus/core/flash';
 import { KindMap } from '@nibus/core/flash/FlashKinds';
 import React, { memo, useCallback, useState } from 'react';
 
 import { useSelector } from '../store';
-import {selectAutobrightness, selectCurrentDevice, selectOverheatProtection} from '../store/selectors';
+import {
+  selectAutobrightness,
+  selectCurrentDevice,
+  selectOverheatProtection,
+} from '../store/selectors';
 import extendStyled from '../util/extendStyled';
 
 import { getStatesAsync } from '/@common/helpers';
@@ -16,7 +19,6 @@ import { getStatesAsync } from '/@common/helpers';
 import FilenameEllipsis from './FilenameEllipsis';
 import FormFieldSet from './FormFieldSet';
 import Selector from './Selector';
-
 
 const StyledSelector = extendStyled(Selector, { hidden: false })(({ hidden }) => ({
   flex: '0 1 12ch',
@@ -34,7 +36,7 @@ export type Props = {
     filename: string | undefined,
     moduleSelect?: number,
     column?: number,
-    row?: number
+    row?: number,
   ) => void;
   hidden?: boolean;
 };
@@ -58,34 +60,28 @@ const FlashUpgrade: React.FC<Props> = ({ kind, onFlash, hidden = false }) => {
   const { enabled = false } = useSelector(selectOverheatProtection) ?? {};
   const autobrightness = useSelector(selectAutobrightness);
   const { isBusy = 0 } = useSelector(selectCurrentDevice) ?? {};
-  const selectFileHandler = useCallback<React.MouseEventHandler<HTMLButtonElement>>(
-    () => {
-      const fileNames: string[] | undefined = window.dialogs.showOpenDialogSync({
-        title: 'Выбор файла прошивки',
-        filters: [
-          {
-            extensions: [ext],
-            name: kind,
-          },
-        ],
-        properties: ['openFile'],
-      });
-      const firmware = fileNames?.[0];
-      if (firmware) {
-        setFile(firmware);
-      }
-    },
-    [ext, kind, setFile],
-  );
-  const flashHandler = useCallback<React.MouseEventHandler>(
-    async () => {
-      const [, needModuleSelect] = KindMap[kind];
-      const [x, y, filename] = await getStatesAsync(setColumn, setRow, setFile);
-      const moduleArgs = needModuleSelect ? [(x << 8) | (y & 0xff), x, y] : [];
-      onFlash(kind, filename, ...moduleArgs);
-    },
-    [kind, onFlash, setColumn, setRow, setFile],
-  );
+  const selectFileHandler = useCallback<React.MouseEventHandler<HTMLButtonElement>>(() => {
+    const fileNames: string[] | undefined = window.dialogs.showOpenDialogSync({
+      title: 'Выбор файла прошивки',
+      filters: [
+        {
+          extensions: [ext],
+          name: kind,
+        },
+      ],
+      properties: ['openFile'],
+    });
+    const firmware = fileNames?.[0];
+    if (firmware) {
+      setFile(firmware);
+    }
+  }, [ext, kind, setFile]);
+  const flashHandler = useCallback<React.MouseEventHandler>(async () => {
+    const [, needModuleSelect] = KindMap[kind];
+    const [x, y, filename] = await getStatesAsync(setColumn, setRow, setFile);
+    const moduleArgs = needModuleSelect ? [(x << 8) | (y & 0xff), x, y] : [];
+    onFlash(kind, filename, ...moduleArgs);
+  }, [kind, onFlash, setColumn, setRow, setFile]);
   const resetHandler = (): void => {
     onFlash(false, undefined, (column << 8) | (row & 0xff), column, row);
   };

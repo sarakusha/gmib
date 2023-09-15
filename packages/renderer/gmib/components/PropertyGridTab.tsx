@@ -5,11 +5,11 @@ import React, { useEffect, useMemo, useState } from 'react';
 
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useDevice, useDispatch, useSelector } from '../store';
-import {reloadDevice} from '../store/deviceThunks';
+import { reloadDevice } from '../store/deviceThunks';
 
 import { noop } from '/@common/helpers';
 
-import {selectCurrentTab, selectMibByName} from '../store/selectors';
+import { selectCurrentTab, selectMibByName } from '../store/selectors';
 
 import AccordionList from './AccordionList';
 import ErrorCard from './ErrorCard';

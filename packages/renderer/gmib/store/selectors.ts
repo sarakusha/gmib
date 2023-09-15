@@ -19,7 +19,7 @@ import type { SensorDictionary, SensorKind, SensorsState } from './sensorsSlice'
 import type { FinderState, SessionState } from './sessionSlice';
 import { selectNovastarTelemetryById } from './telemetrySlice';
 
-import type { RootState } from './index';
+import type { RootState } from '.';
 
 import type { Config, OverheatProtection, Page } from '/@common/config';
 import type { Health, ValueState } from '/@common/helpers';

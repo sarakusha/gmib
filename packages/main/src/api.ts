@@ -19,7 +19,7 @@ import { asyncSerial, findById, notEmpty } from '/@common/helpers';
 import type { CreatePlaylist, Playlist } from '/@common/playlist';
 
 import auth from './auth';
-import config, { port } from './config';
+import { port } from './config';
 import { beginTransaction, commitTransaction, incrementCounterString, rollback } from './db';
 import {
   convertCopy,
@@ -148,7 +148,7 @@ fs.mkdir(mediaRoot, { recursive: true }, err => {
   }
 });
 
-const noop = (): void => {};
+const noop = (): void => { };
 
 const getHash = (filepath: string): Promise<string> =>
   new Promise<string>((resolve, reject) => {
@@ -326,7 +326,7 @@ const updateTest = async (scr: Screen) => {
     });
   needReload && url && testWindow.loadURL(url);
   testWindow.show();
-  debug(`test: ${url}`);
+  // debug(`test: ${url}`);
 };
 
 electronApp.whenReady().then(async () => {
@@ -808,7 +808,7 @@ api.post('/activate', async (req, res) => {
     version: import.meta.env.VITE_APP_VERSION,
     os: os.version(),
   };
-  debug(`activate: ${JSON.stringify(data)}`);
+  // debug(`activate: ${JSON.stringify(data)}`);
   const result = await fetch(`${import.meta.env.VITE_LICENSE_SERVER}/api/licenses`, {
     method: 'PUT',
     headers: {
