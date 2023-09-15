@@ -1,9 +1,12 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
+
 import debugFactory from 'debug';
 import pick from 'lodash/pick';
 
 import type { Screen } from '/@common/video';
+
 import getAnnounce from './getAnnounce';
+
 import type {
   GmibWindowParams,
   PlayerWindowParams,

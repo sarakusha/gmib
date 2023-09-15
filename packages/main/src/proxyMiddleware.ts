@@ -11,7 +11,7 @@ import sortBy from 'lodash/sortBy';
 import master, { isLocalhost } from './MasterBrowser';
 import config, { port as currentPort } from './config';
 import localConfig from './localConfig';
-import { getMainWindow, waitWebContents } from './mainWindow';
+import { waitWebContents } from './mainWindow';
 
 import generateSignature from '/@common/generateSignature';
 import Deferred from '/@common/Deferred';

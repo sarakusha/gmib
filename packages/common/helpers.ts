@@ -6,8 +6,6 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 import propertyOf from 'lodash/propertyOf';
 import type React from 'react';
 
-import type { BaseService } from 'bonjour-hap';
-
 export const MINUTE = 60 * 1000;
 export const HOUR = 60 * MINUTE;
 

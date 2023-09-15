@@ -1,7 +1,7 @@
 /* eslint-disable no-bitwise */
 import { nanoid } from 'nanoid';
 
-import db, { flag, promisifyAll, promisifyGet, promisifyRun, removeNull, uniqueField } from './db';
+import { flag, promisifyAll, promisifyGet, promisifyRun, removeNull, uniqueField } from './db';
 
 import type { Page } from '/@common/config';
 import type { NullableOptional } from '/@common/helpers';

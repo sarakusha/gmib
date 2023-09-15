@@ -1,7 +1,7 @@
 import { createServer } from 'http';
 import path from 'path';
 
-import debugFactory from 'debug';
+// import debugFactory from 'debug';
 import express from 'express';
 import { WebSocketServer } from 'ws';
 import type { ErrorRequestHandler } from 'express-serve-static-core';
@@ -15,7 +15,7 @@ import { dbReady } from './db';
 
 import preventLoadSourceMap from '/@common/preventLoadSourceMap';
 
-const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:express`);
+// const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:express`);
 
 const app = express();
 const server = createServer(app);

@@ -11,13 +11,9 @@ import localConfig from './localConfig';
 import openHandler from './openHandler';
 import relaunch from './relaunch';
 import { getPlayer, getPlayers, updateHidePlayer, updateShowPlayer } from './screen';
-// import { playerWindows, remotePlayers } from './windows';
-
-import generateSignature from '/@common/generateSignature';
-import type { Player } from '/@common/video';
-
-import { getRemoteCredentials } from './secret';
 import { findPlayerWindow, registerPlayer } from './windowStore';
+
+import type { Player } from '/@common/video';
 
 const preload = path.join(__dirname, '../../preload/dist/player.cjs');
 const remotePreload = path.join(__dirname, '../../preload/dist/remote.cjs');

@@ -3,7 +3,7 @@ import { notEmpty } from '/@common/helpers';
 import type { MenuItemConstructorOptions } from 'electron';
 import { app, BrowserWindow, dialog, Menu, shell } from 'electron';
 
-import debugFactory from 'debug';
+// import debugFactory from 'debug';
 import type { UpdateInfo } from 'electron-updater';
 import uniqBy from 'lodash/uniqBy';
 import semverGt from 'semver/functions/gte';
@@ -21,10 +21,11 @@ import authRequest from './authRequest';
 import mdnsBrowser, { pickRemoteService } from './mdns';
 import { createAppWindow, getMainWindow } from './mainWindow';
 import relaunch from './relaunch';
+
 import type { WindowParams } from '/@common/WindowParams';
 import { isGmib } from '/@common/WindowParams';
 
-const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:menu`);
+// const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:menu`);
 
 const createNewPlayer = async (name = 'Новый плеер'): Promise<void> => {
   await dbReady;
@@ -66,68 +67,68 @@ const remoteMenu = (params?: WindowParams): AppMenuItem | undefined => {
   );
   return isGmib(params)
     ? {
-      label: 'GMIB',
-      submenu: [
-        {
-          label: 'Автозапуск',
-          type: 'checkbox',
-          click: async mi => {
-            const value = !params.autostart;
-            try {
-              const res = await authRequest({
-                api: '/autostart',
-                method: 'POST',
-                host: params.host,
-                port: params.nibusPort + 1,
-                body: { value },
-              });
-              if (res?.ok) {
-                params.update({ autostart: value });
-                // eslint-disable-next-line @typescript-eslint/no-use-before-define
-                updateMenu();
-              }
-            } catch (e) {
-              console.error(`error while fetch: ${e}`);
-            }
-          },
-          checked: params.autostart,
-        },
-        {
-          label: 'Изменить список ...',
-          click: () => {
-            const window = getMainWindow();
-            if (window) {
-              window.show();
-              window.focus();
-              window.webContents.send('editRemoteHosts');
-            }
-          },
-        },
-        { type: 'separator' },
-        ...remotes.map(
-          ({ address, port, name }): MenuItemConstructorOptions => ({
-            label: name ? `${name} (${address})` : address,
-            click: () => {
-              const gmib = getGmibParams().find(
-                item => item.host === address && item.nibusPort === port,
-              );
-              if (gmib) {
-                const window = BrowserWindow.fromId(gmib.id);
-                if (window) {
-                  window.show();
-                  window.focus();
-                  return;
+        label: 'GMIB',
+        submenu: [
+          {
+            label: 'Автозапуск',
+            type: 'checkbox',
+            click: async () => {
+              const value = !params.autostart;
+              try {
+                const res = await authRequest({
+                  api: '/autostart',
+                  method: 'POST',
+                  host: params.host,
+                  port: params.nibusPort + 1,
+                  body: { value },
+                });
+                if (res?.ok) {
+                  params.update({ autostart: value });
+                  // eslint-disable-next-line @typescript-eslint/no-use-before-define
+                  updateMenu();
                 }
+              } catch (e) {
+                console.error(`error while fetch: ${e}`);
               }
-              const window = createAppWindow(port, address, name);
-              registerGmib(window, { host: address, nibusPort: +port });
-              window.show();
-              window.focus();
             },
-          }),
-        ),
-      ],
-    }
+            checked: params.autostart,
+          },
+          {
+            label: 'Изменить список ...',
+            click: () => {
+              const window = getMainWindow();
+              if (window) {
+                window.show();
+                window.focus();
+                window.webContents.send('editRemoteHosts');
+              }
+            },
+          },
+          { type: 'separator' },
+          ...remotes.map(
+            ({ address, port, name }): MenuItemConstructorOptions => ({
+              label: name ? `${name} (${address})` : address,
+              click: () => {
+                const gmib = getGmibParams().find(
+                  item => item.host === address && item.nibusPort === port,
+                );
+                if (gmib) {
+                  const window = BrowserWindow.fromId(gmib.id);
+                  if (window) {
+                    window.show();
+                    window.focus();
+                    return;
+                  }
+                }
+                const window = createAppWindow(port, address, name);
+                registerGmib(window, { host: address, nibusPort: +port });
+                window.show();
+                window.focus();
+              },
+            }),
+          ),
+        ],
+      }
     : undefined;
 };
 
@@ -141,27 +142,27 @@ const helpMenu = async (params?: WindowParams): Promise<AppMenuItem> => {
     submenu: [
       ...(isModernGmib
         ? [
-          {
-            label: 'Лицензия',
-            submenu: [
-              ...(params.plan ? [{ label: `Тип: ${params.plan}`, enabled: false }] : []),
-              ...(params.key ? [{ label: `Ключ: ${params.key}`, enabled: false }] : []),
-              ...(params.renew
-                ? [
-                  {
-                    label: `Действительна по: ${new Date(params.renew).toLocaleDateString()}`,
-                    enabled: false,
-                  },
-                ]
-                : []),
-              {
-                label: 'Активировать лицензию',
-                click: () =>
-                  BrowserWindow.getFocusedWindow()?.webContents.send('activateLicense'),
-              },
-            ],
-          },
-        ]
+            {
+              label: 'Лицензия',
+              submenu: [
+                ...(params.plan ? [{ label: `Тип: ${params.plan}`, enabled: false }] : []),
+                ...(params.key ? [{ label: `Ключ: ${params.key}`, enabled: false }] : []),
+                ...(params.renew
+                  ? [
+                      {
+                        label: `Действительна по: ${new Date(params.renew).toLocaleDateString()}`,
+                        enabled: false,
+                      },
+                    ]
+                  : []),
+                {
+                  label: 'Активировать лицензию',
+                  click: () =>
+                    BrowserWindow.getFocusedWindow()?.webContents.send('activateLicense'),
+                },
+              ],
+            },
+          ]
         : []),
       {
         label: 'Все версии',
@@ -172,63 +173,63 @@ const helpMenu = async (params?: WindowParams): Promise<AppMenuItem> => {
         // enabled: import.meta.env.PROD,
         click: isModernGmib
           ? async () => {
-            const updateAndRestart = async () => {
-              const resp = await authRequest({
-                api: '/update',
+              const updateAndRestart = async () => {
+                const resp = await authRequest({
+                  api: '/update',
+                  method: 'POST',
+                  host: params.host,
+                  port: params.nibusPort + 1,
+                });
+                if (!resp) return;
+                if (resp.ok) {
+                  dialog.showMessageBox({
+                    title: 'Обновление установлено',
+                    message: 'Программа перезапущена',
+                  });
+                } else {
+                  dialog.showErrorBox('Что-то пошло не так', await resp.text());
+                }
+              };
+              const res = await authRequest({
+                api: '/checkForUpdates',
                 method: 'POST',
                 host: params.host,
                 port: params.nibusPort + 1,
               });
-              if (!resp) return;
-              if (resp.ok) {
-                dialog.showMessageBox({
-                  title: 'Обновление установлено',
-                  message: 'Программа перезапущена',
-                });
-              } else {
-                dialog.showErrorBox('Что-то пошло не так', await resp.text());
-              }
-            };
-            const res = await authRequest({
-              api: '/checkForUpdates',
-              method: 'POST',
-              host: params.host,
-              port: params.nibusPort + 1,
-            });
-            if (!res) return;
-            if (res.ok) {
-              const info = (await res.json()) as undefined | UpdateInfo;
-              if (info) {
-                dialog
-                  .showMessageBox({
-                    type: 'info',
-                    title: 'Найдено обновление',
-                    message: `Найдено обновление ${info.version} для ${params.host}, хотите установить?`,
-                    buttons: ['Установить', 'Не сейчас'],
-                  })
-                  .then(buttonIndex => {
-                    if (buttonIndex.response === 0) updateAndRestart();
+              if (!res) return;
+              if (res.ok) {
+                const info = (await res.json()) as undefined | UpdateInfo;
+                if (info) {
+                  dialog
+                    .showMessageBox({
+                      type: 'info',
+                      title: 'Найдено обновление',
+                      message: `Найдено обновление ${info.version} для ${params.host}, хотите установить?`,
+                      buttons: ['Установить', 'Не сейчас'],
+                    })
+                    .then(buttonIndex => {
+                      if (buttonIndex.response === 0) updateAndRestart();
+                    });
+                } else {
+                  dialog.showMessageBox({
+                    title: 'Обновления не найдены',
+                    message: 'Установлена последняя версия',
                   });
+                }
               } else {
-                dialog.showMessageBox({
-                  title: 'Обновления не найдены',
-                  message: 'Установлена последняя версия',
-                });
+                dialog.showErrorBox('Что-то пошло не так', await res.text());
               }
-            } else {
-              dialog.showErrorBox('Что-то пошло не так', await res.text());
             }
-          }
           : checkForUpdates,
       },
       ...(isModernGmib
         ? [
-          {
-            label: 'Перезапустить',
-            click: relaunch,
-            enabled: import.meta.env.PROD,
-          },
-        ]
+            {
+              label: 'Перезапустить',
+              click: relaunch,
+              enabled: import.meta.env.PROD,
+            },
+          ]
         : []),
     ],
   };
@@ -239,39 +240,39 @@ const template = async (params?: WindowParams): Promise<MenuItemConstructorOptio
   return [
     ...(process.platform === 'darwin'
       ? [
-        {
-          label: import.meta.env.VITE_APP_NAME,
-          submenu: [
-            {
-              role: 'about',
-            },
-            {
-              type: 'separator',
-            },
-            {
-              role: 'services',
-            },
-            {
-              type: 'separator',
-            },
-            {
-              role: 'hide',
-            },
-            {
-              role: 'hideOthers',
-            },
-            {
-              role: 'unhide',
-            },
-            {
-              type: 'separator',
-            },
-            {
-              role: 'quit',
-            },
-          ],
-        } as MenuItemConstructorOptions,
-      ]
+          {
+            label: import.meta.env.VITE_APP_NAME,
+            submenu: [
+              {
+                role: 'about',
+              },
+              {
+                type: 'separator',
+              },
+              {
+                role: 'services',
+              },
+              {
+                type: 'separator',
+              },
+              {
+                role: 'hide',
+              },
+              {
+                role: 'hideOthers',
+              },
+              {
+                role: 'unhide',
+              },
+              {
+                type: 'separator',
+              },
+              {
+                role: 'quit',
+              },
+            ],
+          } as MenuItemConstructorOptions,
+        ]
       : []),
     ...(remote ? [remote] : []),
     playerMenu,

@@ -1,12 +1,11 @@
-import type { IpcMainEvent } from 'electron';
 import { app, BrowserWindow, ipcMain } from 'electron';
-import type { Host } from '@nibus/core/ipc';
 
 import { getMediaByMD5 } from './media';
 import { getPlayerMappingsForPlayer } from './playerMapping';
 import { getPlaylist, getPlaylistItems } from './playlist';
 import { getPlayer, getScreens, loadScreen } from './screen';
 import store from './windowStore';
+
 import { isGmib } from '/@common/WindowParams';
 
 app.whenReady().then(() => {

@@ -7,9 +7,6 @@ import type { WebSocket } from 'ws';
 import debugFactory from 'debug';
 
 import { wss } from './express';
-
-// import { playerWindows } from '../bak/windows';
-
 import { openPlayer } from './playerWindow';
 import { findPlayerWindow } from './windowStore';
 

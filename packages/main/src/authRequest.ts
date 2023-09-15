@@ -1,10 +1,10 @@
-import debugFactory from 'debug';
+// import debugFactory from 'debug';
 
 import secret, { getRemoteCredentials } from './secret';
 
 import generateSignature from '/@common/generateSignature';
 
-const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:authRequest`);
+// const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:authRequest`);
 
 type Props = {
   api: string;

@@ -2,7 +2,7 @@
  * @module preload
  */
 
-import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
+import { contextBridge, ipcRenderer } from 'electron';
 
 import type { LogLevel } from '@nibus/core';
 

@@ -1,14 +1,16 @@
 import { app } from 'electron';
+import { exec } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { exec } from 'node:child_process';
-import { config } from 'dotenv';
+
 import debugFactory from 'debug';
+import { config } from 'dotenv';
 import { nanoid } from 'nanoid';
 
 import { asyncSerial, delay } from '/@common/helpers';
-import pritunlFetch from './pritunlFetch';
+
 import localConfig from './localConfig';
+import pritunlFetch from './pritunlFetch';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:linux`);
 

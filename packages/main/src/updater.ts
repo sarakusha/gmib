@@ -17,7 +17,7 @@ autoUpdater.on('error', error => {
     dialog.showErrorBox('Error: ', error == null ? 'unknown' : (error.stack || error).toString());
 });
 
-autoUpdater.on('update-available', args => {
+autoUpdater.on('update-available', () => {
   interactive &&
     dialog
       .showMessageBox({

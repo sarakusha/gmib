@@ -8,9 +8,6 @@ import type { RemoteHost } from '/@common/helpers';
 import { notEmpty } from '/@common/helpers';
 
 import localConfig from './localConfig';
-// import { removeRemote } from './mainMenu';
-// import { addRemote, getMainWindow, setRemotes } from './mainWindow';
-
 import { getMainWindow, waitWebContents } from './mainWindow';
 
 import bonjourHap from 'bonjour-hap';
@@ -48,37 +45,9 @@ export const pickRemoteService = (svc: RemoteService): RemoteHost | undefined =>
   };
 };
 
-// const register = (svc: RemoteService): void => {
-//   const remote = pickRemoteService(svc);
-//   if (remote) {
-//     debug(`serviceUp ${JSON.stringify(remote)}}`);
-//     getMainWindow()?.webContents.send('serviceUp', remote);
-//     // eslint-disable-next-line @typescript-eslint/no-use-before-define
-//     // addRemote(remote.port, remote.address);
-//   }
-// };
-
-// const updateRemotes = (hosts: CustomHost[] | undefined): void => {
-//   // debug(`hosts: ${JSON.stringify(hosts)}`);
-//   const remotes: CustomHost[] = uniqBy(
-//     [...mdnsBrowser.services.map(pickRemoteService).filter(notEmpty), ...(hosts ?? [])],
-//     ({ port, address }) => getRemoteLabel(port, address),
-//   );
-//   // debug(`remotes: ${JSON.stringify(remotes)}`);
-//   setRemotes(remotes);
-// };
-
-localConfig.onDidChange('hosts', hosts => {
-  // updateRemotes(hosts);
+localConfig.onDidChange('hosts', () => {
   mdnsBrowser.update();
 });
-
-// const isCustomHost = (remote: RemoteHost): boolean => {
-//   const label = getRemoteLabel(remote.port, remote.address);
-//   const customHosts = localConfig.get('hosts');
-//   const custom = customHosts.find(({ port, address }) => getRemoteLabel(port, address) === label);
-//   return Boolean(custom);
-// };
 
 const serviceUp = (svc: RemoteService): void => {
   const remote = pickRemoteService(svc);

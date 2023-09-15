@@ -51,6 +51,15 @@ import {
   insertMedia,
 } from './media';
 import {
+  deletePage,
+  getPage,
+  getPageByRowID,
+  getPages,
+  insertPage,
+  uniquePageTitle,
+  updatePage,
+} from './page';
+import {
   deletePlayerMapping,
   getPlayerMappingById,
   getPlayerMappings,
@@ -75,6 +84,7 @@ import {
   updatePlaylistItem,
 } from './playlist';
 import proxyMiddleware from './proxyMiddleware';
+import relaunch from './relaunch';
 import {
   deleteExtraAddresses,
   deletePlayer,
@@ -111,16 +121,6 @@ import {
   registerScreen,
 } from './windowStore';
 import './novastarApi';
-import relaunch from './relaunch';
-import {
-  deletePage,
-  getPage,
-  getPageByRowID,
-  getPages,
-  insertPage,
-  uniquePageTitle,
-  updatePage,
-} from './page';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:api`);
 
@@ -148,7 +148,7 @@ fs.mkdir(mediaRoot, { recursive: true }, err => {
   }
 });
 
-const noop = (): void => { };
+const noop = (): void => {};
 
 const getHash = (filepath: string): Promise<string> =>
   new Promise<string>((resolve, reject) => {

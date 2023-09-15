@@ -14,7 +14,6 @@ export const impScreenProps = [
   'moduleHeight',
 ] as const;
 
-
 export type WindowType = 'gmib' | 'player' | 'screen' | 'video';
 
 export type ScreenOptions = Readonly<Pick<Screen, (typeof impScreenProps)[number]>>;

@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
-import { nanoid } from 'nanoid';
+
 import debugFactory from 'debug';
+import { nanoid } from 'nanoid';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:pritunl`);
 
