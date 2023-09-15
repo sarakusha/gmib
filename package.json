@@ -79,7 +79,7 @@
     "@sarakusha/ebml": "file:.yalc/@sarakusha/ebml",
     "@sarakusha/material-ui-chip-input": "^2.0.1",
     "@types/color-hash": "^1.0.2",
-    "@types/cors": "^2.8.12",
+    "@types/cors": "^2.8.13",
     "@types/dom-mediacapture-transform": "^0.1.4",
     "@types/dom-webcodecs": "^0.1.4",
     "@types/ebml": "^3.0.2",
