@@ -72,6 +72,7 @@
     "@mui/icons-material": "^5.10.3",
     "@mui/lab": "^5.0.0-alpha.97",
     "@mui/material": "^5.10.3",
+    "@mui/x-tree-view": "^6.0.0-alpha.3",
     "@reduxjs/toolkit": "^1.8.5",
     "@rollup/plugin-commonjs": "^25.0.0",
     "@rollup/plugin-node-resolve": "^15.0.1",

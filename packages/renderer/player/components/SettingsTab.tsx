@@ -1,7 +1,7 @@
 import CloseIcon from '@mui/icons-material/Close';
 import TabContext from '@mui/lab/TabContext';
-import MuiTreeItem, { type TreeItemProps } from '@mui/lab/TreeItem';
-import MuiTreeView, { type TreeViewProps } from '@mui/lab/TreeView';
+import type { TreeItemProps, TreeViewProps } from '@mui/x-tree-view';
+import { TreeItem as MuiTreeItem, TreeView as MuiTreeView } from '@mui/x-tree-view';
 import {
   Box,
   Collapse,
@@ -57,26 +57,24 @@ const CloseSquare: React.FC<SvgIconProps> = props => (
   </SvgIcon>
 );
 
-const TreeView = React.forwardRef<TreeViewProps['ref'], React.PropsWithoutRef<TreeViewProps>>(
-  (props, ref) => (
-    <MuiTreeView
-      defaultCollapseIcon={<MinusSquare />}
-      defaultExpandIcon={<PlusSquare />}
-      defaultEndIcon={<CloseSquare />}
-      // defaultCollapseIcon={<ExpandMoreIcon />}
-      // defaultExpandIcon={<ChevronRightIcon />}
-      {...props}
-      ref={ref}
-    />
-  ),
-);
+const TreeView = React.forwardRef<HTMLUListElement, TreeViewProps>((props, ref) => (
+  <MuiTreeView
+    defaultCollapseIcon={<MinusSquare />}
+    defaultExpandIcon={<PlusSquare />}
+    defaultEndIcon={<CloseSquare />}
+    // defaultCollapseIcon={<ExpandMoreIcon />}
+    // defaultExpandIcon={<ChevronRightIcon />}
+    {...props}
+    ref={ref}
+  />
+));
 
 type StyledTreeItemProps = TreeItemProps & {
   onDelete?: React.MouseEventHandler<HTMLButtonElement>;
   bold?: boolean;
 };
 
-const TreeItem = React.forwardRef<TreeItemProps['ref'], React.PropsWithoutRef<StyledTreeItemProps>>(
+const TreeItem = React.forwardRef<HTMLLIElement, StyledTreeItemProps>(
   ({ onDelete, bold, ...props }, ref) => (
     <MuiTreeItem
       {...props}
