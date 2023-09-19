@@ -78,8 +78,21 @@ async function updateTestsImpl(): Promise<void> {
   );
 }
 
+const migratePages = async (): Promise<void> => {
+  const pages = config.get('pages');
+  if (Array.isArray(pages)) {
+    await asyncSerial(
+      pages.filter(({ permanent }) => !permanent),
+      async page => upsertPermanentPage(await uniquePageTitle(page)),
+    );
+    config.set('pages', undefined);
+  }
+};
+
 const updateTests = (): void => {
-  updateTestsImpl().catch(err => debug(`error while update tests ${err.message}`));
+  updateTestsImpl()
+    .catch(err => debug(`error while update tests ${err.message}`))
+    .then(migratePages);
 };
 
 if (!config.get('fixedPages')) updateTests();

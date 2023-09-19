@@ -96,6 +96,10 @@ export type Config = {
   autobrightness: boolean;
   brightness: number;
   logLevel: LogLevel;
+  /**
+   * @deprecated Left for compatibility with version 4.2
+   */
+  pages?: Page[];
   fixedPages?: true;
   version?: string;
   overheatProtection: OverheatProtection;
