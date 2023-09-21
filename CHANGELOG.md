@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.6.0](https://github.com/sarakusha/gmib/compare/v4.5.1...v4.6.0) (2023-09-21)
+
+
+### Features
+
+* migration from previous configuration ([e07a117](https://github.com/sarakusha/gmib/commit/e07a11700c3fbb8df2e9b46956dc56c4d095f392))
+
+
+### Bug Fixes
+
+* remove depricated page ([0e9bf60](https://github.com/sarakusha/gmib/commit/0e9bf60794792e0ddafd659bbc8844448b2bb227))
+
 ## [4.5.1](https://github.com/sarakusha/gmib/compare/v4.5.0...v4.5.1) (2023-09-18)
 
 ## [4.5.0](https://github.com/sarakusha/gmib/compare/v4.4.0...v4.5.0) (2023-09-15)
