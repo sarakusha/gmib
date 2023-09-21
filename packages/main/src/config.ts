@@ -85,7 +85,7 @@ const migratePages = async (): Promise<void> => {
       pages.filter(({ permanent }) => !permanent),
       async page => upsertPermanentPage(await uniquePageTitle(page)),
     );
-    config.set('pages', undefined);
+    config.delete('pages');
   }
 };
 
@@ -95,7 +95,7 @@ const updateTests = (): void => {
     .then(migratePages);
 };
 
-if (!config.get('fixedPages')) updateTests();
+updateTests();
 
 // config.onDidChange('pages', newValue => {
 //   if (newValue?.some(({ permanent }) => permanent)) return;
