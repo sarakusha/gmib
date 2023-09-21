@@ -53,6 +53,7 @@ const HttpPageDialog: React.FC<Props> = ({
             required
             fullWidth
             margin="normal"
+            type="url"
           />
           <TextField
             variant="standard"

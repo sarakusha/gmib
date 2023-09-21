@@ -12,7 +12,7 @@ import {
 import { css, styled } from '@mui/material/styles';
 import clsx from 'clsx';
 import React, { useCallback, useState } from 'react';
-import { isUri } from 'valid-url';
+// import { isUri } from 'valid-url';
 
 import useShiftAlert from '../../common/useShiftAlert';
 import { updatePage, useCreatePageMutation, useDeletePageMutation, usePages } from '../api/config';
@@ -27,6 +27,14 @@ import type { Page } from '/@common/config';
 import { selectCurrentScreenId, selectCurrentTab, selectIsFixed } from '../store/selectors';
 
 import AccordionList from './AccordionList';
+
+const isValidUrl = (urlString: string): boolean => {
+  try {
+    return Boolean(new URL(urlString));
+  } catch (e) {
+    return false;
+  }
+};
 
 const ListItemButton = styled(MuiListItem)({
   '& .MuiListItemSecondaryAction-root svg': {
@@ -89,7 +97,7 @@ const HttpPages: React.FC = () => {
       >
         {pages.map(({ title = '', id, permanent, url }) => {
           const [primary, secondary = ''] = title.split('/', 2);
-          const isValid = permanent || (url && isUri(url));
+          const isValid = permanent || (url && isValidUrl(url));
           return (
             // <div
             //   key={id}
