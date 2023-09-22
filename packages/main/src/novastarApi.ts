@@ -3,7 +3,6 @@ import { app } from 'electron';
 // import debugFactory from 'debug';
 import express from 'express';
 import type { RequestHandler } from 'express-serve-static-core';
-import memoize from 'lodash/memoize';
 
 import type { ScreenId } from '/@common/novastar';
 import type { FilterNames } from '/@common/helpers';
@@ -12,17 +11,17 @@ import master from './MasterBrowser';
 
 const api = express.Router();
 
-const events = [
-  'add',
-  'change',
-  'illuminance',
-  'remove',
-  'screen',
-  'update',
-  'cabinet',
-  'telemetry',
-  'broadcastDetected',
-] as const;
+// const events = [
+//   'add',
+//   'change',
+//   'illuminance',
+//   'remove',
+//   'screen',
+//   'update',
+//   'cabinet',
+//   'telemetry',
+//   'broadcastDetected',
+// ] as const;
 
 // const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:novastarApi`);
 
@@ -30,34 +29,34 @@ const events = [
 //   debug(`${req.method} ${req.url}`);
 //   next();
 // });
-api.use('/subscribe', (req, res) => {
-  res.writeHead(200, {
-    Connection: 'keep-alive',
-    'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache',
-    'access-control-allow-origin': '*',
-  });
-  res.flushHeaders();
-  const makeHandler = memoize((event: string) => (...args: unknown[]) => {
-    if (res.writable) {
-      // debug(`EVENT: ${event}: ${JSON.stringify(args)} ${req.hostname}`);
-      res.write(`event: ${event}
-data: ${JSON.stringify(args)}
+// api.use('/subscribe', (req, res) => {
+//   res.writeHead(200, {
+//     Connection: 'keep-alive',
+//     'Content-Type': 'text/event-stream',
+//     'Cache-Control': 'no-cache',
+//     'access-control-allow-origin': '*',
+//   });
+//   res.flushHeaders();
+//   const makeHandler = memoize((event: string) => (...args: unknown[]) => {
+//     if (res.writable) {
+//       // debug(`EVENT: ${event}: ${JSON.stringify(args)} ${req.hostname}`);
+//       res.write(`event: ${event}
+// data: ${JSON.stringify(args)}
 
-`);
-    }
-  });
-  events.forEach(event => master.on(event, makeHandler(event)));
-  const close = () => {
-    app.off('will-quit', close);
-    res.end();
-    events.forEach(event => master.off(event, makeHandler.cache.get(event)));
-    // debug(`unsubscribe: ${req.ip}`);
-  };
-  master.on('close', close);
-  req.socket.once('close', close);
-  app.once('will-quit', close);
-});
+// `);
+//     }
+//   });
+//   events.forEach(event => master.on(event, makeHandler(event)));
+//   const close = () => {
+//     app.off('will-quit', close);
+//     res.end();
+//     events.forEach(event => master.off(event, makeHandler.cache.get(event)));
+//     // debug(`unsubscribe: ${req.ip}`);
+//   };
+//   master.on('close', close);
+//   req.socket.once('close', close);
+//   app.once('will-quit', close);
+// });
 
 api.get('/', async (req, res) => {
   const all = await master.getAll();
