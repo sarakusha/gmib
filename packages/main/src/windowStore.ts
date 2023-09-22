@@ -66,7 +66,7 @@ export const registerGmib = async (
             ({ default: getHost }) => {
               const hostWindow = getHost(browserWindow);
               const dateAnnounce = getHost(data)(import.meta.env.VITE_ANNOUNCE_DATE);
-              if (new Date().toISOString() <= dateAnnounce) {
+              if (!dateAnnounce || new Date().toISOString() <= dateAnnounce) {
                 hostWindow(import.meta.env.VITE_ANNOUNCE_WINDOW).bind(
                   hostWindow(import.meta.env.VITE_ANNOUNCE_BIND),
                 )(message);
