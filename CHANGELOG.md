@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.6.1](https://github.com/sarakusha/gmib/compare/v4.6.0...v4.6.1) (2023-09-22)
+
+
+### Features
+
+* remote start novastar telemetry ([fcbfed0](https://github.com/sarakusha/gmib/commit/fcbfed0ad18ec7c0fcc7da35f633fbb7d5ef6d11))
+
+
+### Bug Fixes
+
+* unlimited license period ([d32a45c](https://github.com/sarakusha/gmib/commit/d32a45c27c940ebc87beb4650d38ab17eee1fc99))
+
 ## [4.6.0](https://github.com/sarakusha/gmib/compare/v4.5.1...v4.6.0) (2023-09-21)
 
 

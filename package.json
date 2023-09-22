@@ -1,6 +1,6 @@
 {
   "name": "gmib",
-  "version": "4.6.0",
+  "version": "4.6.1",
   "description": "Nata-Info gmib tool",
   "private": true,
   "engines": {
@@ -17,8 +17,8 @@
   "main": "packages/main/dist/index.cjs",
   "repository": "https://github.com/sarakusha/gmib.git",
   "scripts": {
-    "rsync:ubuntu": "rsync -avz --delete --exclude=.git --exclude=packages/preload/*.d.ts --include=.gitignore --filter=':- .gitignore' . user@192.168.2.40:~/src/gmib",
-    "rsync:windows": "rsync --port 8730 -avz --delete --exclude=.git --include=.gitignore --filter=':- .gitignore' . sarakusha@192.168.2.40:/mnt/c/Users/sarakusha/src/gmib",
+    "rsync:ubuntu": "rsync -avz --delete --exclude=.git --exclude=packages/preload/*.d.ts --include=.gitignore --include=electron-builder.env --filter=':- .gitignore' . user@192.168.2.40:~/src/gmib",
+    "rsync:windows": "rsync --port 8730 -avz --delete --exclude=.git --include=.gitignore --include=electron-builder.env --filter=':- .gitignore' . sarakusha@192.168.2.40:/mnt/c/Users/sarakusha/src/gmib",
     "build": "cross-env MODE=production NODE_ENV=production npm run build:types && cross-env MODE=production NODE_ENV=production run-p build:main build:preload build:renderer",
     "build:main": "cd ./packages/main && vite build",
     "build:preload": "run-p build:preload:*",
@@ -61,6 +61,7 @@
     "vite:clean": "rimraf node_modules/.vite && rimraf packages/{main,preload,renderer,playerPreload}/dist/*",
     "postinstall": "electron-builder install-app-deps && cross-env ELECTRON_RUN_AS_NODE=1 npx --no-install electron ./scripts/update-electron-vendors.js",
     "version": "commit-and-tag-version",
+    "version:patch": "commit-and-tag-version -r patch",
     "external": "echo 'module.exports = [\"electron\", \"debug\"' > external.js && npm list --omit=dev --depth=3 -p| grep node_modules | sed 's#^.*node_modules/\\(.*\\)$#, \"\\1\"#' | sort | uniq -u >> external.js && echo '];' >> external.js"
   },
   "devDependencies": {
