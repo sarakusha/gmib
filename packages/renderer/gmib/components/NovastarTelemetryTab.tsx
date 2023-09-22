@@ -3,7 +3,6 @@ import getScreenLocation from '@novastar/screen/getScreenLocation';
 import groupBy from 'lodash/groupBy';
 import React, { useEffect, useMemo, useState } from 'react';
 
-import { cancelTelemetry, startTelemetry } from '../api/novastar';
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useSelector } from '../store';
 import { selectCurrentTab, selectNovastarTelemetry } from '../store/selectors';
@@ -14,10 +13,11 @@ import ModuleInfo from './ModuleInfo';
 import TelemetryToolbar from './TelemetryToolbar';
 
 import type { Novastar } from '/@common/novastar';
+import { useCancelTelemetryMutation, useStartTelemetryMutation } from '../api/novastar';
 
 // const useStyles = makeStyles(theme => ({
 //   grid: {
-//     display: 'grid',
+//     display: 'grid',˝˝
 //     gap: 2,
 //     // alignItems: 'stretch',
 //   },
@@ -37,6 +37,8 @@ const NovastarTelemetryTab: React.FC<{ device: Novastar | undefined; selected?: 
   const [selectors, setSelectors] = useState(
     new Set([NovastarSelector.Temperature, NovastarSelector.Voltage]),
   );
+  const [startTelemetry] = useStartTelemetryMutation();
+  const [cancelTelemetry] = useCancelTelemetryMutation();
   // const [loading, setLoading] = useState(false);
   const isBusy = !device || device.isBusy;
   const { path, screens = [] } = device ?? {};
@@ -52,11 +54,11 @@ const NovastarTelemetryTab: React.FC<{ device: Novastar | undefined; selected?: 
         onSelectorChanged={setSelectors}
         loading={isLoading}
         isBusy={isBusy}
-        start={path ? () => startTelemetry(path, [...selectors]) : undefined}
+        start={path ? () => startTelemetry({ path, selectors: [...selectors] }) : undefined}
         cancel={path ? () => cancelTelemetry(path) : undefined}
       />
     ),
-    [selectors, isLoading, isBusy, path],
+    [selectors, isLoading, isBusy, path, startTelemetry, cancelTelemetry],
   );
   useEffect(() => {
     if (active) {

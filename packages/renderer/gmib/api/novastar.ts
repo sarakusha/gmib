@@ -93,6 +93,25 @@ const novastarApi = createApi({
         body: { path },
       }),
     }),
+    startTelemetry: build.mutation<void, { path: string; selectors?: NovastarSelector[] }>({
+      query: ({ path, selectors = [
+        NovastarSelector.Temperature,
+        NovastarSelector.Voltage,
+        NovastarSelector.FPGA_Version,
+        NovastarSelector.MCU_Version,
+      ] }) => ({
+        url: 'novastar/telemetry/start',
+        method: 'POST',
+        body: { path, selectors },
+      }),
+    }),
+    cancelTelemetry: build.mutation<void, string>({
+      query: path => ({
+        url: 'novastar/telemetry/cancel',
+        method: 'POST',
+        body: { path },
+      }),
+    }),
     updateScreens: build.mutation<void, ScreenParam>({
       query: ({ name, ...other }) => ({
         url: `novastar/screens/${name}`,
@@ -185,7 +204,7 @@ export const useNovastar = (path?: string) =>
     skip: !path || !novastarEnabled,
   });
 
-export const { useReloadMutation } = novastarApi;
+export const { useReloadMutation, useStartTelemetryMutation, useCancelTelemetryMutation } = novastarApi;
 
 export const sse: Middleware = api => {
   const { getState, dispatch } = api as MiddlewareAPI<AppDispatch, RootState>;
@@ -319,40 +338,40 @@ export const sse: Middleware = api => {
   return next => action => next(action);
 };
 
-// TODO: REMOTE
-export const startTelemetry = async (
-  path: string,
-  selectors: NovastarSelector[] = [
-    NovastarSelector.Temperature,
-    NovastarSelector.Voltage,
-    NovastarSelector.FPGA_Version,
-    NovastarSelector.MCU_Version,
-  ],
-): Promise<boolean> => {
-  const res = await fetch('/api/novastar/telemetry/start', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      authorization: `Bearer ${secret}`,
-    },
-    cache: 'no-cache',
-    body: JSON.stringify({ path, selectors }),
-  });
-  return res.ok;
-};
+// // TODO: REMOTE
+// export const startTelemetry = async (
+//   path: string,
+//   selectors: NovastarSelector[] = [
+//     NovastarSelector.Temperature,
+//     NovastarSelector.Voltage,
+//     NovastarSelector.FPGA_Version,
+//     NovastarSelector.MCU_Version,
+//   ],
+// ): Promise<boolean> => {
+//   const res = await fetch('/api/novastar/telemetry/start', {
+//     method: 'POST',
+//     headers: {
+//       'Content-Type': 'application/json',
+//       authorization: `Bearer ${secret}`,
+//     },
+//     cache: 'no-cache',
+//     body: JSON.stringify({ path, selectors }),
+//   });
+//   return res.ok;
+// };
 
-// TODO: REMOTE
-export const cancelTelemetry = async (path: string): Promise<boolean> => {
-  const res = await fetch('/api/novastar/telemetry/cancel', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      authorization: `Bearer ${secret}`,
-    },
-    cache: 'no-cache',
-    body: JSON.stringify({ path }),
-  });
-  return res.ok;
-};
+// // TODO: REMOTE
+// export const cancelTelemetry = async (path: string): Promise<boolean> => {
+//   const res = await fetch('/api/novastar/telemetry/cancel', {
+//     method: 'POST',
+//     headers: {
+//       'Content-Type': 'application/json',
+//       authorization: `Bearer ${secret}`,
+//     },
+//     cache: 'no-cache',
+//     body: JSON.stringify({ path }),
+//   });
+//   return res.ok;
+// };
 
 export default novastarApi;
