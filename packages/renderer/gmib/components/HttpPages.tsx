@@ -24,7 +24,7 @@ import { setCurrentTab } from '../store/currentSlice';
 
 import type { Page } from '/@common/config';
 
-import { selectCurrentScreenId, selectCurrentTab, selectIsFixed } from '../store/selectors';
+import { selectCurrentScreenId, selectCurrentTab } from '../store/selectors';
 
 import AccordionList from './AccordionList';
 
@@ -55,7 +55,6 @@ const HttpPages: React.FC = () => {
   const { screen } = useScreen(screenId);
   const { pages } = usePages();
   const tab = useSelector(selectCurrentTab);
-  const isFixed = useSelector(selectIsFixed);
   const [selected, setSelected] = useState<string>();
   const [createPage] = useCreatePageMutation();
   const [deletePage] = useDeletePageMutation();
@@ -123,7 +122,7 @@ const HttpPages: React.FC = () => {
                 primaryTypographyProps={noWrap}
                 secondaryTypographyProps={noWrap}
               />
-              {!permanent && !isFixed && (
+              {!permanent && (
                 <ListItemSecondaryAction className="tNX9k9byJD58qNs4nxAIi CG7cBydXFzf6qGSi-xBj8">
                   {/* <ListItemSecondaryAction> */}
                   <IconButton
@@ -152,17 +151,15 @@ const HttpPages: React.FC = () => {
             // </div>
           );
         })}
-        {!isFixed && (
-          <ListItemButton
-            onClick={addPageHandler}
-            className="rlXINR-cZo5bnISD5TaUT CG7cBydXFzf6qGSi-xBj8 MeE8KHrK9KuXZe0HnW47V"
-          >
-            <ListItemIcon>
-              <AddCircleOutlineIcon style={{ margin: 'auto' }} color="primary" />
-            </ListItemIcon>
-            <ListItemText>Добавить URL</ListItemText>
-          </ListItemButton>
-        )}
+        <ListItemButton
+          onClick={addPageHandler}
+          className="rlXINR-cZo5bnISD5TaUT CG7cBydXFzf6qGSi-xBj8 MeE8KHrK9KuXZe0HnW47V"
+        >
+          <ListItemIcon>
+            <AddCircleOutlineIcon style={{ margin: 'auto' }} color="primary" />
+          </ListItemIcon>
+          <ListItemText>Добавить URL</ListItemText>
+        </ListItemButton>
       </AccordionList>
       <HttpPageDialog
         open={open}

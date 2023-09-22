@@ -41,7 +41,6 @@ export const selectSpline = (state: RootState): Config['spline'] => selectConfig
 export const selectLocation = (state: RootState): Config['location'] =>
   selectConfig(state).location;
 export const selectLogLevel = (state: RootState): LogLevel => selectConfig(state).logLevel;
-export const selectIsFixed = (state: RootState): boolean => !!selectConfig(state).fixedPages;
 export const selectSessionVersion = (state: RootState): string | undefined =>
   selectConfig(state).version;
 export const selectOverheatProtection = (state: RootState): OverheatProtection | undefined =>

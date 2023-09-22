@@ -65,7 +65,6 @@ export const configSchema: Schema<Config> = {
       required: ['id', 'title'],
     },
   },
-  fixedPages: { type: 'boolean' },
   version: { type: 'string' },
   overheatProtection: {
     type: 'object',

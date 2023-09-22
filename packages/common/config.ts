@@ -100,7 +100,6 @@ export type Config = {
    * @deprecated Left for compatibility with version 4.2
    */
   pages?: Page[];
-  fixedPages?: true;
   version?: string;
   overheatProtection: OverheatProtection;
   disableNet?: boolean;
