@@ -2,6 +2,8 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.6.2](https://github.com/sarakusha/gmib/compare/v4.6.1...v4.6.2) (2023-09-22)
+
 ## [4.6.1](https://github.com/sarakusha/gmib/compare/v4.6.0...v4.6.1) (2023-09-22)
 
 
