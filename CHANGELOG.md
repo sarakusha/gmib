@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.6.4](https://github.com/sarakusha/gmib/compare/v4.6.3...v4.6.4) (2023-10-05)
+
+
+### Features
+
+* added knocking ([404434e](https://github.com/sarakusha/gmib/commit/404434ea389c66e0f145049855320a859f941f74))
+
 ## [4.6.3](https://github.com/sarakusha/gmib/compare/v4.6.2...v4.6.3) (2023-09-22)
 
 
