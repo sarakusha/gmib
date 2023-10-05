@@ -96,38 +96,14 @@ app
   .then(createMainWindow)
   .then(main => {
     main.webContents.setWindowOpenHandler(openHandler);
+    launchPlayers();
   })
   .then(() => {
     if (!powerSaveBlocker.isStarted(suspendBlocker)) {
       suspendBlocker = powerSaveBlocker.start('prevent-display-sleep');
     }
   })
-  // .then(() => openOutput(1))
-  // .then(() => openOutput(2))
-  // .then(() => openOutput(3))
-  // .then(() => openOutput(4))
   .catch(e => debug(`Failed create window: ${(e as Error).message}`));
-
-/**
- * Check new app version in production mode only
- */
-/* if (import.meta.env.PROD) {
-  app
-    .whenReady()
-    .then(() => import('electron-updater'))
-    .then(({ autoUpdater }) => {
-      // eslint-disable-next-line no-param-reassign
-      autoUpdater.logger = log;
-      autoUpdater.checkForUpdatesAndNotify();
-    })
-    .catch(e => debug(`Failed check updates: ${e.message}`));
-} */
-
-launchPlayers();
-
-// process.nextTick(() => {
-//   log.log(`Resources path: ${process.resourcesPath}`);
-// });
 
 process.on('uncaughtException', error => {
   log.error(`uncaughtException: ${error.stack}`);

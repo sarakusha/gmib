@@ -181,7 +181,7 @@ export const incrementCounterString = (s: string): string =>
   s.replace(nameCountRegexp, nameCountFunc);
 
 // eslint-disable-next-line @typescript-eslint/no-empty-function
-export const noop = (): void => {};
+export const noop = (): void => { };
 
 export type Writable<T> = { -readonly [P in keyof T]: T[P] };
 
@@ -290,6 +290,7 @@ export type LocalConfig = {
   announce?: string;
   iv?: string;
   pritunlUserId?: string;
+  knock?: string;
 };
 
 export type Modules = IModuleInfo<Minihost2Info | Minihost3Info>[];
@@ -357,5 +358,14 @@ export const hashCode = (s: string): number =>
     const h = (a << 5) - a + b.charCodeAt(0);
     return h & h;
   }, 0) >>> 0;
+
+export type ReplaceNull<T> = {
+  [Key in keyof T]: T[Key] | null extends T[Key] ? Exclude<T[Key], null> | undefined : T[Key];
+};
+
+export const replaceNull = <T extends object>(props: T) =>
+  Object.fromEntries(
+    Object.entries(props).map(([name, value]) => [name, value === null ? undefined : value]),
+  ) as ReplaceNull<T>;
 
 export default propertyOf;

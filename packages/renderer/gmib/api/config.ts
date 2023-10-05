@@ -31,6 +31,7 @@ const configApi = createApi({
         method: 'POST',
         body: { key, name },
       }),
+      transformErrorResponse: (response) => response.data,
     }),
     getPages: build.query<EntityState<Page>, void>({
       query: () => 'pages',
@@ -125,15 +126,15 @@ const debouncedUpdatePage = createDebouncedAsyncThunk<void, Page, AppThunkConfig
 
 export const updatePage =
   (id: string, update: SetStateAction<Omit<Page, 'id'>>): AppThunk =>
-  dispatch =>
-    dispatch(
-      configApi.util.updateQueryData('getPages', undefined, draft => {
-        const prev = selectPage(draft, id);
-        if (!prev) throw new Error(`Unknown page id: ${id}`);
-        const page = { id, ...(typeof update === 'function' ? update(prev) : prev) };
-        pageAdapter.setOne(draft, page);
-        dispatch(debouncedUpdatePage(page));
-      }),
-    );
+    dispatch =>
+      dispatch(
+        configApi.util.updateQueryData('getPages', undefined, draft => {
+          const prev = selectPage(draft, id);
+          if (!prev) throw new Error(`Unknown page id: ${id}`);
+          const page = { id, ...(typeof update === 'function' ? update(prev) : prev) };
+          pageAdapter.setOne(draft, page);
+          dispatch(debouncedUpdatePage(page));
+        }),
+      );
 
 export default configApi;

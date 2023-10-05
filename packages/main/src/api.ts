@@ -15,7 +15,7 @@ import formidable from 'formidable';
 import { nanoid } from 'nanoid';
 
 import type { MediaInfo } from '/@common/mediaInfo';
-import { asyncSerial, findById, notEmpty } from '/@common/helpers';
+import { asyncSerial, findById, notEmpty, replaceNull } from '/@common/helpers';
 import type { CreatePlaylist, Playlist } from '/@common/playlist';
 
 import auth from './auth';
@@ -41,7 +41,7 @@ import getAllDisplays from './getAllDisplays';
 import getAnnounce from './getAnnounce';
 import localConfig from './localConfig';
 import machineId from './machineId';
-import { updateMenu } from './mainMenu';
+import updateMenu from './mainMenu';
 import { createTestWindow } from './mainWindow';
 import {
   deleteMedia,
@@ -148,7 +148,7 @@ fs.mkdir(mediaRoot, { recursive: true }, err => {
   }
 });
 
-const noop = (): void => {};
+const noop = (): void => { };
 
 const getHash = (filepath: string): Promise<string> =>
   new Promise<string>((resolve, reject) => {
@@ -809,22 +809,30 @@ api.post('/activate', async (req, res) => {
     os: os.version(),
   };
   // debug(`activate: ${JSON.stringify(data)}`);
-  const result = await fetch(`${import.meta.env.VITE_LICENSE_SERVER}/api/licenses`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(data),
-  });
-  if (result.ok) {
-    const { announce, iv } = await result.json();
-    localConfig.set('announce', announce);
-    localConfig.set('iv', iv);
-    res.end();
-    if (import.meta.env.PROD) relaunch();
-  } else {
-    debug(`ERROR: ${await result.text()} ${result.statusText}`);
-    res.sendStatus(result.status);
+  try {
+    const result = await fetch(`${import.meta.env.VITE_LICENSE_SERVER}/api/licenses`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    if (result.ok) {
+      localConfig.store = {
+        ...localConfig.store,
+        ...replaceNull(await result.json()),
+      };
+      res.end();
+      relaunch();
+    } else {
+      const message = await result.text();
+      debug(`ERROR: ${result.statusText} - ${message} `);
+      res.status(result.status).send(message);
+    }
+  } catch (error) {
+    const { message } = error as Error;
+    res.status(500).send(message);
+    debug(`ERROR: ${message}`);
   }
 });
 

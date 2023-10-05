@@ -54,6 +54,7 @@ const localConfigSchema: Schema<LocalConfig> = {
   announce: { type: 'string' },
   iv: { type: 'string' },
   pritunlUserId: { type: 'string' },
+  knock: { type: 'string' },
 };
 
 const localConfig = new Store<LocalConfig>({

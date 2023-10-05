@@ -79,6 +79,7 @@ import ipcDispatch from '../common/ipcDispatch';
 
 import { validateConfig } from '/@common/schema';
 import { enqueueSnackbar, setFlashing, setProgress } from '/@renderer/store/flasherSlice';
+import type { GmibWindowParams } from '/@common/WindowParams';
 
 export type { Address };
 
@@ -93,24 +94,30 @@ session.on('log', line => {
   ipcDispatch(addLog(line));
 });
 
+const addForeign = new Promise<boolean>(resolve => {
+  ipcRenderer.once('gmib-params', (_, params: GmibWindowParams) => {
+    resolve(Boolean(params.useProxy));
+  });
+});
+
 type PropEntity = [name: string, state: ValueState];
 
 const getDeviceProp =
   (device: IDevice) =>
-  (idOrName: string | number): PropEntity => {
-    const error = device.getError(idOrName);
-    const name = device.getName(idOrName);
-    return [
-      name,
-      {
-        // eslint-disable-next-line no-nested-ternary
-        status: error ? 'failed' : device.isDirty(idOrName) ? 'pending' : 'succeeded',
-        value: device[name],
-        error: error?.message,
-        raw: device.getRawValue(idOrName),
-      },
-    ];
-  };
+    (idOrName: string | number): PropEntity => {
+      const error = device.getError(idOrName);
+      const name = device.getName(idOrName);
+      return [
+        name,
+        {
+          // eslint-disable-next-line no-nested-ternary
+          status: error ? 'failed' : device.isDirty(idOrName) ? 'pending' : 'succeeded',
+          value: device[name],
+          error: error?.message,
+          raw: device.getRawValue(idOrName),
+        },
+      ];
+    };
 
 const getProps = (device: IDevice, idsOrNames?: (number | string)[]): DeviceProps => {
   const proto = Reflect.getPrototypeOf(device) ?? {};
@@ -426,7 +433,7 @@ function openSession() {
   session.once('host', hostHandler);
   session.on('informationReport', informationListener);
   if (!isRemoteSession) {
-    session.on('foreign', addForeignDeviceHandler);
+    addForeign.then(val => val && session.on('foreign', addForeignDeviceHandler));
   }
   session.on('health', healthHandler);
   session.devices.on('new', newDeviceHandler);

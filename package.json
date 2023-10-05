@@ -167,7 +167,7 @@
     "@nibus/core": "^4.0.1",
     "@nibus/detection": "^4.0.1",
     "@nibus/mibs": "^4.0.0",
-    "@nibus/service": "file:.yalc/@nibus/service",
+    "@nibus/service": "^4.0.2",
     "@novastar/codec": "^2.0.0-alpha.9",
     "@novastar/native": "^2.0.0-alpha.10",
     "@novastar/net": "^2.0.0-alpha.9",

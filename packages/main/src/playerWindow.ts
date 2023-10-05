@@ -11,8 +11,8 @@ import localConfig from './localConfig';
 import openHandler from './openHandler';
 import relaunch from './relaunch';
 import { getPlayer, getPlayers, updateHidePlayer, updateShowPlayer } from './screen';
-import { findPlayerWindow, registerPlayer } from './windowStore';
-
+import { findPlayerWindow, getGmibParams, registerPlayer } from './windowStore';
+import main from './mainWindow';
 import type { Player } from '/@common/video';
 
 const preload = path.join(__dirname, '../../preload/dist/player.cjs');
@@ -28,41 +28,24 @@ app.once('quit', () => {
 export const getPlayerTitle = (player: Player): string =>
   `\u25b6 ${player.name ?? `player#${player.id}`}`;
 
-// eslint-disable-next-line import/prefer-default-export
 export const openPlayer = async (
   id: number,
   host = 'localhost',
   nibusPort = +(process.env['NIBUS_PORT'] ?? 9001),
-  // token = secret,
 ): Promise<BrowserWindow | undefined> => {
   const isRemote = host !== 'localhost';
   let player: Player | undefined;
-  // let browserWindow: BrowserWindow | undefined;
-  // const key = `${host}:${port}:${id}`;
   let browserWindow = findPlayerWindow(id, host);
   if (isRemote) {
     if (!browserWindow) {
-      // const baseUrl = `http://${host}:${port + 1}`;
-      // const credentials = await getRemoteCredentials(`${baseUrl}/api/identifier`);
-      // if (!credentials?.apiSecret || !credentials?.identifier) return undefined;
-      // const now = Date.now();
-      // const api = `${baseUrl}/api/player/${id}`;
-      // const sign = generateSignature(credentials.apiSecret, 'GET', api, now);
-      // // console.log({ api });
-      // const res = await fetch(api, {
-      //   headers: {
-      //     'x-ni-identifier': credentials.identifier,
-      //     'x-ni-timestamp': now.toString(),
-      //     'x-ni-signature': sign,
-      //   },
-      // });
       const res = await authRequest({ host, port: nibusPort + 1, api: `/player/${id}` });
       if (res?.ok) player = await res.json();
       debug(JSON.stringify(player));
     }
   } else {
-    await dbReady;
-    player = await getPlayer(id);
+    await Promise.all([dbReady, main]);
+    const [gmib] = getGmibParams();
+    if (gmib?.plan && ['premium', 'enterprise'].includes(gmib.plan)) player = await getPlayer(id);
   }
   if (!browserWindow) {
     if (!player) return undefined;
@@ -119,7 +102,6 @@ export const openPlayer = async (
 
 export const launchPlayers = async () => {
   await dbReady;
-  await app.whenReady;
   const players = await getPlayers();
   players.forEach(player => {
     if (player.playlistId && player.autoPlay) openPlayer(player.id);

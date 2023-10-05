@@ -44,7 +44,7 @@ if (import.meta.env.DEV) {
   if (import.meta.env.VITE_DEV_SERVER_URL) {
     ALLOWED_ORIGINS_AND_PERMISSIONS.set(
       import.meta.env.VITE_DEV_SERVER_URL.replace(/\/$/, ''),
-      new Set(),
+      fullGrant,
     );
   }
 }

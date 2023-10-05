@@ -1,5 +1,5 @@
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
-import { Field, Form, Formik } from 'formik';
+import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
+import { Field, Form, Formik, useFormikContext } from 'formik';
 import * as React from 'react';
 
 import { charValidator } from '/@common/keyValidator';
@@ -10,12 +10,23 @@ import { useDispatch, useSelector } from '../store';
 import { setActivateDialogOpen } from '../store/currentSlice';
 import { selectHostName, selectIsActivateDialogOpen } from '../store/selectors';
 
+const AutoFillKey = ({ field = 'key' }: { field?: string }) => {
+  const { setFieldValue } = useFormikContext();
+  React.useEffect(() => {
+    navigator.clipboard.readText().then(key => {
+      if (charValidator(key)) setFieldValue(field, key);
+      // else window.license().then(lic => setFieldValue(field, lic.key));
+    });
+  }, [field, setFieldValue]);
+  return null;
+};
+
 const ActivateDialog: React.FC = () => {
   const open = useSelector(selectIsActivateDialogOpen);
   const dispatch = useDispatch();
   const closeHandler = () => dispatch(setActivateDialogOpen(false));
   const hostName = useSelector(selectHostName)?.replace(/\.local$/, '');
-  const [activate] = useActivateMutation();
+  const [activate, { error }] = useActivateMutation();
   return (
     <Dialog open={open} maxWidth="xs" fullWidth>
       <DialogTitle>Активация</DialogTitle>
@@ -53,6 +64,7 @@ const ActivateDialog: React.FC = () => {
               component={FormikTextField}
               fullWidth
               margin="normal"
+              autoFocus
             />
             <Field
               label="Имя устройства"
@@ -62,8 +74,10 @@ const ActivateDialog: React.FC = () => {
               fullWidth
               margin="normal"
             />
+            <AutoFillKey />
           </Form>
         </Formik>
+        {error && <Alert severity="error">{error as string}</Alert>}
       </DialogContent>
       <DialogActions>
         <Button color="primary" type="submit" form="license">

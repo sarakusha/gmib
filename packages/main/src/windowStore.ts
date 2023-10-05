@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
+import os from 'node:os';
 
 import debugFactory from 'debug';
 import pick from 'lodash/pick';
@@ -15,12 +16,17 @@ import type {
   WindowParams,
 } from '/@common/WindowParams';
 import { gmibVariables, impScreenProps, isGmib, isPlayer, isScreen } from '/@common/WindowParams';
+import localConfig from './localConfig';
+import { replaceNull } from '/@common/helpers';
 
 export const licenseNames = ['basic', 'standard', 'plus', 'premium', 'enterprise'] as const;
 
 export type LicenseName = (typeof licenseNames)[number];
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:windowStore`);
+
+const MINUTE = 60 * 1000;
+const DAY = 24 * 60 * MINUTE;
 
 // const defaultConfig = parse('{}') as LocalConfig;
 
@@ -32,6 +38,42 @@ const register = (browserWindow: BrowserWindow): number => {
     browserWindow.once('closed', () => store.delete(id));
   }
   return id;
+};
+
+const knockKnock = async (params: GmibWindowParams): Promise<void> => {
+  const { key, machineId, host } = params;
+  const data = {
+    key,
+    name: os.hostname().replace(/\.local$/, ''),
+    deviceId: machineId,
+    version: import.meta.env.VITE_APP_VERSION,
+    os: os.version(),
+    knock: localConfig.get('knock'),
+  };
+
+  try {
+    const result = await fetch(`${import.meta.env.VITE_LICENSE_SERVER}/api/knock`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    if (result.ok) {
+      const update = await result.json();
+      localConfig.store = {
+        ...localConfig.store,
+        ...replaceNull(update),
+      };
+      setTimeout(() => knockKnock(params), DAY).unref();
+    } else {
+      setTimeout(() => knockKnock(params), 10 * MINUTE).unref();
+      debug(`error while knocking: ${await result.text()}`);
+    }
+  } catch (error) {
+    debug(`error while knocking: ${(error as Error).message}`);
+    setTimeout(() => knockKnock(params), 10 * MINUTE).unref();
+  }
 };
 
 export const registerGmib = async (
@@ -57,7 +99,9 @@ export const registerGmib = async (
   if (typeof announce === 'object') {
     const { message, ...data } = announce;
     Object.assign(params, data);
+    // if (params.plan && ['premium', 'enterprise'].includes(params.plan)) launchPlayers();
     if (message) {
+      knockKnock(params);
       const announceWindow = () => {
         const { update, ...props } = params;
         browserWindow.webContents.send('gmib-params', props);

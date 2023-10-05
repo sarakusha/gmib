@@ -7,13 +7,14 @@ const options: RelaunchOptions = {
 };
 
 export default () => {
-  // Fix for .AppImage
-  const AppImage = process.env.APPIMAGE;
-  if (app.isPackaged && AppImage) {
-    execFile(AppImage, options.args);
-    app.quit();
-    return;
+  if (import.meta.env.PROD) {
+    // Fix for .AppImage
+    const AppImage = process.env.APPIMAGE;
+    if (app.isPackaged && AppImage) {
+      execFile(AppImage, options.args);
+    } else {
+      app.relaunch(options);
+    }
   }
-  app.relaunch(options);
   app.quit();
 };

@@ -57,7 +57,7 @@ const CloseSquare: React.FC<SvgIconProps> = props => (
   </SvgIcon>
 );
 
-const TreeView = React.forwardRef<HTMLUListElement, TreeViewProps>((props, ref) => (
+const TreeView = React.forwardRef<HTMLUListElement, TreeViewProps<false>>((props, ref) => (
   <MuiTreeView
     defaultCollapseIcon={<MinusSquare />}
     defaultExpandIcon={<PlusSquare />}

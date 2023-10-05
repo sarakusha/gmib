@@ -86,12 +86,17 @@ if (document.readyState === 'loading') {
   onReady();
 }
 
+const gmibParams = new Promise<GmibWindowParams>(resolve => {
+  ipcRenderer.once('gmib-params', (_, params: GmibWindowParams) => {
+    resolve(params);
+  });
+});
+
+contextBridge.exposeInMainWorld('license', () =>
+  gmibParams.then(({ plan, renew, key }) => ({ plan, renew, key })),
+);
+
 contextBridge.exposeInMainWorld(
   'initializeNovastar',
-  () =>
-    new Promise<boolean>(resolve => {
-      ipcRenderer.once('gmib-params', (_, params: GmibWindowParams) => {
-        resolve(Boolean(params.useProxy));
-      });
-    }),
+  (): Promise<boolean> => gmibParams.then(({ useProxy }) => Boolean(useProxy)),
 );

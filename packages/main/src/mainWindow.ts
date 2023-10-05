@@ -21,6 +21,7 @@ app.once('quit', () => {
 
 let mainWindow: BrowserWindow | null = null;
 const mainWindowDeferred = new Deferred<BrowserWindow>();
+export default mainWindowDeferred.promise;
 
 export const waitWebContents = (): Promise<WebContents> =>
   mainWindowDeferred.promise.then(
