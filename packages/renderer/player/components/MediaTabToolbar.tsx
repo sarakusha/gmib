@@ -12,12 +12,13 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import type { IconButtonProps } from '@mui/material';
 import { Box, Divider, IconButton } from '@mui/material';
 import Check from '@mui/icons-material/Check';
+import CachedIcon from '@mui/icons-material/Cached';
 
 import UploadButton from './UploadButton';
 import Search from './Search';
 import Toolbar from './StyledToolbar';
 
-import { useUploadMediaMutation } from '../api/media';
+import { useGetMedia, useUploadMediaMutation } from '../api/media';
 import { useDispatch, useSelector } from '../store';
 import { selectDescending, selectSearch, selectSortOrder } from '../store/selectors';
 import { setDescending, setSearch, setSortOrder } from '../store/currentSlice';
@@ -49,6 +50,7 @@ const MediaTabToolbar: React.FC<Props> = ({ size }) => {
   const handleChangeSearch: React.ChangeEventHandler<HTMLInputElement> = e => {
     dispatch(setSearch(e.target.value.toLocaleLowerCase()));
   };
+  const { refetch } = useGetMedia();
   return (
     <Toolbar>
       <Tooltip title="Загрузить медиа">
@@ -62,6 +64,11 @@ const MediaTabToolbar: React.FC<Props> = ({ size }) => {
       <Tooltip title="Сортировка">
         <IconButton size={size} color="inherit" onClick={handleMenu}>
           <SortIcon fontSize="inherit" />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title="Обновить">
+        <IconButton size={size} color="inherit" onClick={refetch}>
+          <CachedIcon fontSize="inherit" />
         </IconButton>
       </Tooltip>
       <Box flex="1" />

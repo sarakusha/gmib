@@ -95,7 +95,7 @@ export const useGetMedia = () =>
       data: data && selectMediaAll(data),
       ...other,
     }),
-    pollingInterval: 5000,
+    // pollingInterval: 5000,
   });
 
 export const useGetMediaById = (id?: string | null) =>
