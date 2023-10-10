@@ -13,6 +13,7 @@ import FileType from 'file-type';
 import type { FileTypeResult } from 'file-type/core';
 import type { FRAMERATE } from 'smpte-timecode';
 import Timecode from 'smpte-timecode';
+import { inspect } from "util";
 
 export const platform = os.platform();
 export const arch = os.arch();
@@ -493,18 +494,31 @@ export const getAudioStreams = (streams: FfprobeStream[]): FfprobeStream[] =>
 export const getRealVideoStreams = (streams: FfprobeStream[]): FfprobeStream[] =>
   streams.filter(stream => stream.codec_type === 'video' && !isStreamThumbnail(stream));
 
+const html5Formats = [
+  'av1',
+  'h264',
+  'h263',
+  'mpeg4',
+  'mpeg1video',
+  'mpeg2video',
+  'vp8',
+  'vp9',
+];
+
 // With these codecs, the player will not give a playback error, but instead only play audio
 export const doesPlayerSupportFile = (streams: FfprobeStream[]): boolean => {
   const realVideoStreams = getRealVideoStreams(streams);
   // Don't check audio formats, assume all is OK
+  console.log('1', inspect(realVideoStreams, false, null));
   if (realVideoStreams.length === 0) return true;
   // If we have at least one video that is NOT of the unsupported formats, assume the player will
   // be able to play it natively https://github.com/mifi/lossless-cut/issues/595
   // https://github.com/mifi/lossless-cut/issues/975 But cover art / thumbnail streams don't count
   // e.g. hevc with a png stream (disposition.attached_pic=1)
-  return realVideoStreams.some(
-    s => s.codec_name && !['hevc', 'prores', 'mpeg4', 'tscc2'].includes(s.codec_name),
-  );
+  // return realVideoStreams.some(
+  //   s => s.codec_name && !['hevc', 'prores', 'mpeg4', 'tscc2'].includes(s.codec_name),
+  // );
+  return realVideoStreams.some(s => s.codec_name && html5Formats.includes(s.codec_name));
 };
 
 const determineOutputFormat = (
