@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.6.5](https://github.com/sarakusha/gmib/compare/v4.6.4...v4.6.5) (2023-10-10)
+
+
+### Features
+
+* hide the player menu for remote sessions ([ddd7244](https://github.com/sarakusha/gmib/commit/ddd72441850d91a20ab9bcff7db0b3b7edbac164))
+* manually revalidate media ([f417e07](https://github.com/sarakusha/gmib/commit/f417e07f3785c3cb299301ad947c13f054b8b987))
+* speed up transcoding at the expense of quality ([7caf77b](https://github.com/sarakusha/gmib/commit/7caf77b3ab6dc36f1cb3a78536fa3dcd17b3eaa4))
+
+
+### Bug Fixes
+
+* convert video to a supported codec format ([2b42abb](https://github.com/sarakusha/gmib/commit/2b42abbb24073f499ae5a381c7793559c5cd81e8))
+
 ## [4.6.4](https://github.com/sarakusha/gmib/compare/v4.6.3...v4.6.4) (2023-10-05)
 
 
