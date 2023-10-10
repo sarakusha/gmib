@@ -271,7 +271,7 @@ const template = async (params?: WindowParams): Promise<MenuItemConstructorOptio
       ]
       : []),
     ...(remote ? [remote] : []),
-    ...(isGmib(params) && params.plan && ['premium', 'enterprise'].includes(params.plan)
+    ...(isGmib(params) && params.plan && ['premium', 'enterprise'].includes(params.plan) && params.host === 'localhost'
       ? [{ label: 'Плеер', submenu: await playerSubmenu() }]
       : []),
     {
