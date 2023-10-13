@@ -12,6 +12,7 @@ import { configSchema } from '/@common/schema';
 import { asyncSerial } from '/@common/helpers';
 
 import { uniquePageTitle, upsertPermanentPage } from './page';
+import relaunch from './relaunch';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:config`);
 // const version = app.getVersion();
@@ -86,6 +87,7 @@ const migratePages = async (): Promise<void> => {
       async page => upsertPermanentPage(await uniquePageTitle(page)),
     );
     config.delete('pages');
+    relaunch();
   }
 };
 
