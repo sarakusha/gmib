@@ -42,6 +42,7 @@ const register = (browserWindow: BrowserWindow): number => {
 
 const knockKnock = async (params: GmibWindowParams): Promise<void> => {
   const { key, machineId, host } = params;
+  if (host !== 'localhost') return;
   const data = {
     key,
     name: os.hostname().replace(/\.local$/, ''),
@@ -61,6 +62,7 @@ const knockKnock = async (params: GmibWindowParams): Promise<void> => {
     });
     if (result.ok) {
       const update = await result.json();
+      console.log({ update });
       localConfig.store = {
         ...localConfig.store,
         ...replaceNull(update),
