@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.6.6](https://github.com/sarakusha/gmib/compare/v4.6.5...v4.6.6) (2023-10-13)
+
+
+### Bug Fixes
+
+* disable remote knocking ([db416fb](https://github.com/sarakusha/gmib/commit/db416fb2478db723d74dafa7750ca5c0ce06e0f1))
+* relaunch after upgrade pages ([ed41e88](https://github.com/sarakusha/gmib/commit/ed41e88dece0f8460b514ab52f3557054ac2800a))
+
 ## [4.6.5](https://github.com/sarakusha/gmib/compare/v4.6.4...v4.6.5) (2023-10-10)
 
 

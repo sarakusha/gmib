@@ -62,7 +62,6 @@ const knockKnock = async (params: GmibWindowParams): Promise<void> => {
     });
     if (result.ok) {
       const update = await result.json();
-      console.log({ update });
       localConfig.store = {
         ...localConfig.store,
         ...replaceNull(update),
