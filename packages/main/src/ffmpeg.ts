@@ -13,7 +13,6 @@ import FileType from 'file-type';
 import type { FileTypeResult } from 'file-type/core';
 import type { FRAMERATE } from 'smpte-timecode';
 import Timecode from 'smpte-timecode';
-import { inspect } from "util";
 
 export const platform = os.platform();
 export const arch = os.arch();
@@ -509,7 +508,7 @@ const html5Formats = [
 export const doesPlayerSupportFile = (streams: FfprobeStream[]): boolean => {
   const realVideoStreams = getRealVideoStreams(streams);
   // Don't check audio formats, assume all is OK
-  console.log('1', inspect(realVideoStreams, false, null));
+  // console.log('1', inspect(realVideoStreams, false, null));
   if (realVideoStreams.length === 0) return true;
   // If we have at least one video that is NOT of the unsupported formats, assume the player will
   // be able to play it natively https://github.com/mifi/lossless-cut/issues/595
