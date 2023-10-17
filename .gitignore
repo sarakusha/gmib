@@ -60,6 +60,7 @@ tsconfig.tsbuildinfo
 /packages/preload/dist/
 /packages/playerPreload/dist/
 /dist/
+/dist-light/
 /packages/main/dist/
 /packages/player/dist/
 /ffmpeg/
