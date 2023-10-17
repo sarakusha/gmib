@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.6.7](https://github.com/sarakusha/gmib/compare/v4.6.5...v4.6.7) (2023-10-17)
+
+
+### Features
+
+* added configuration without ffmpeg ([986c6fd](https://github.com/sarakusha/gmib/commit/986c6fd177e2df43f3201245b4489fec0bbc26c9))
+* run system ffmpeg if not available ([b009451](https://github.com/sarakusha/gmib/commit/b009451ccabaa6ce49bd310b28b79bea44ac1f8f))
+
+
+### Bug Fixes
+
+* disable remote knocking ([db416fb](https://github.com/sarakusha/gmib/commit/db416fb2478db723d74dafa7750ca5c0ce06e0f1))
+* enable relaunch on clean-exit ([f4dc86b](https://github.com/sarakusha/gmib/commit/f4dc86bdc123a8190aa9e22731fec1c2bce93697))
+* relaunch after upgrade pages ([ed41e88](https://github.com/sarakusha/gmib/commit/ed41e88dece0f8460b514ab52f3557054ac2800a))
+
 ## [4.6.6](https://github.com/sarakusha/gmib/compare/v4.6.5...v4.6.6) (2023-10-13)
 
 
