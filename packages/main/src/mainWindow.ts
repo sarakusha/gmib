@@ -72,7 +72,7 @@ export const createAppWindow = (
   });
   browserWindow.webContents.on('render-process-gone', (event, details) => {
     debug(`<<<<CRASH>>>>: renderer process gone: ${details.reason} (${details.exitCode})`);
-    if (import.meta.env.PROD && !['clean-exit', 'killed'].includes(details.reason)) {
+    if (import.meta.env.PROD && ![/* 'clean-exit', */ 'killed'].includes(details.reason)) {
       debug('relaunch...');
       relaunch();
     }
