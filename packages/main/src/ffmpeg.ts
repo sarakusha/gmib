@@ -2,9 +2,10 @@
 /**
  * https://github.com/mifi/lossless-cut/blob/master/src/ffmpeg.js
  */
-import os from 'os';
-import path from 'path';
-import readline from 'readline';
+import os from 'node:os';
+import path from 'node:path';
+import readline from 'node:readline';
+import fs from 'node:fs';
 
 import debugFactory from 'debug';
 import type { ExecaChildProcess, ExecaReturnValue } from 'execa';
@@ -156,7 +157,8 @@ function getFfPath(cmd: string): string {
   const exeName = isWindows ? `${cmd}.exe` : cmd;
 
   if (import.meta.env.DEV) return path.join('ffmpeg', `${platform}-${arch}`, exeName);
-  return path.join(process.resourcesPath, exeName);
+  const ffPath = path.join(process.resourcesPath, exeName);
+  return fs.existsSync(ffPath) ? ffPath : exeName;
 }
 
 export const getFfmpegPath = (): string => getFfPath('ffmpeg');
@@ -167,8 +169,12 @@ export async function runFfprobe(
   timeout: number = import.meta.env.DEV ? 10000 : 30000,
 ): Promise<ExecaReturnValue> {
   const ffprobePath = getFfprobePath();
-  // debug(getFfCommandLine('ffprobe', args));
-  const ps = execa(ffprobePath, args);
+  // debug(JSON.stringify(process.env));
+  // debug(getFfCommandLine(ffprobePath, args));
+  const { PATH } = process.env;
+  const ps = execa(ffprobePath, args, {
+    env: { ...process.env, ...(isMac && { PATH: `${PATH}:/usr/local/bin` }) },
+  });
   const timer = setTimeout(() => {
     debug('WARN: killing timed out ffprobe');
     ps.kill();
@@ -183,7 +189,11 @@ export async function runFfprobe(
 export function runFfmpeg(args: string[]): ExecaChildProcess {
   const ffmpegPath = getFfmpegPath();
   debug(getFfCommandLine('ffmpeg', args));
-  return execa(ffmpegPath, args);
+  const { PATH } = process.env;
+  return execa(ffmpegPath, args, {
+    env: { ...process.env, ...(isMac && { PATH: `${PATH}:/usr/local/bin` }) },
+  });
+  // return execa(ffmpegPath, args);
 }
 
 export async function renderThumbnailFromImage(
@@ -493,16 +503,7 @@ export const getAudioStreams = (streams: FfprobeStream[]): FfprobeStream[] =>
 export const getRealVideoStreams = (streams: FfprobeStream[]): FfprobeStream[] =>
   streams.filter(stream => stream.codec_type === 'video' && !isStreamThumbnail(stream));
 
-const html5Formats = [
-  'av1',
-  'h264',
-  'h263',
-  'mpeg4',
-  'mpeg1video',
-  'mpeg2video',
-  'vp8',
-  'vp9',
-];
+const html5Formats = ['av1', 'h264', 'h263', 'mpeg4', 'mpeg1video', 'mpeg2video', 'vp8', 'vp9'];
 
 // With these codecs, the player will not give a playback error, but instead only play audio
 export const doesPlayerSupportFile = (streams: FfprobeStream[]): boolean => {
