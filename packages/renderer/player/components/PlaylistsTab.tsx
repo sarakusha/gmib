@@ -12,7 +12,7 @@ import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import { Form, Formik } from 'formik';
 import { bindMenu, bindTrigger, usePopupState } from 'material-ui-popup-state/hooks';
-import React, { useCallback } from 'react';
+import React, { useCallback, useRef } from 'react';
 import { useResizeDetector } from 'react-resize-detector';
 import { TransitionGroup } from 'react-transition-group';
 
@@ -54,12 +54,12 @@ const PlaylistsTab: React.FC = () => {
   const dispatch = useDispatch();
   const { width, ref } = useResizeDetector();
   const popupState = usePopupState({ variant: 'popover', popupId: 'playlists' });
+  const { setAnchorEl } = popupState;
   React.useEffect(() => {
-    popupState.setAnchorEl(ref.current);
-  }, [popupState, ref]);
+    setAnchorEl(ref.current);
+  }, [ref, setAnchorEl]);
   const removeItemHandler = useCallback(
     (id: string) => {
-      // console.log({ id });
       current && removeMedia({ id: current, itemId: id });
     },
     [current, removeMedia],
@@ -130,10 +130,7 @@ const PlaylistsTab: React.FC = () => {
                     InputProps={{
                       endAdornment: (
                         <InputAdornment position="end">
-                          <PopupIndicator
-                            {...bindTrigger(popupState)}
-                            title="Выбрать плейлист"
-                          >
+                          <PopupIndicator {...bindTrigger(popupState)} title="Выбрать плейлист">
                             <ArrowDropDownIcon />
                           </PopupIndicator>
                         </InputAdornment>
