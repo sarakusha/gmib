@@ -32,6 +32,7 @@ export const openPlayer = async (
   id: number,
   host = 'localhost',
   nibusPort = +(process.env['NIBUS_PORT'] ?? 9001),
+  name?: string,
 ): Promise<BrowserWindow | undefined> => {
   const isRemote = host !== 'localhost';
   let player: Player | undefined;
@@ -45,7 +46,7 @@ export const openPlayer = async (
   } else {
     await Promise.all([dbReady, main]);
     const [gmib] = getGmibParams();
-    if (gmib?.plan && ['premium', 'enterprise'].includes(gmib.plan)) player = await getPlayer(id);
+    if (gmib?.plan && ['plus', 'premium', 'enterprise'].includes(gmib.plan)) player = await getPlayer(id);
   }
   if (!browserWindow) {
     if (!player) return undefined;
@@ -56,7 +57,7 @@ export const openPlayer = async (
         : `http://localhost:${nibusPort + 1}/player.html?${query}`;
     const title = getPlayerTitle(player);
     browserWindow = createWindow(
-      isRemote ? `${host}:${title}` : title,
+      isRemote ? `${name ?? host}:${title}` : title,
       isRemote ? remotePreload : preload,
     );
     registerPlayer(browserWindow, { host, port: nibusPort, playerId: id });

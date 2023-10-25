@@ -209,15 +209,14 @@ ipcRenderer.on('socket', async (_, { id, ...msg }: WithWebSocketKey<RtcMessage>)
           };
           ipcRenderer.invoke('socket', candidateMsg);
         };
-
-        stream.getTracks().forEach(track => {
+        stream.getVideoTracks().forEach(track => {
           const sender = pc.addTrack(track, stream);
           const updateParams = () => {
             const params = sender.getParameters();
             if (!params.encodings || params.encodings.length === 0) setTimeout(updateParams, 10);
             else {
-              // params.encodings[0].scaleResolutionDownBy = 10;
               params.encodings[0].maxBitrate = 128000;
+              // params.encodings[0].maxFramerate = 1;
               sender.setParameters(params);
             }
           };
