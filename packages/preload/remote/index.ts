@@ -18,8 +18,10 @@ const port = +(search.get('port') ?? 9001);
 const sourceId = +(search.get('source_id') ?? 1);
 
 const deferred = new Deferred<MediaStream>();
+let videoSelector: string;
 
 const updateSrcObject = (selector: string) => {
+  videoSelector = selector;
   const video = document.querySelector(selector) as HTMLVideoElement;
   if (video)
     deferred.promise.then(stream => {
@@ -30,31 +32,53 @@ const updateSrcObject = (selector: string) => {
 contextBridge.exposeInMainWorld('log', log.log.bind(log));
 contextBridge.exposeInMainWorld('setDispatch', setDispatch);
 contextBridge.exposeInMainWorld('mediaStream', { updateSrcObject });
-contextBridge.exposeInMainWorld('server', {
-  host,
-  port,
-});
+// contextBridge.exposeInMainWorld('server', {
+//   host,
+//   port,
+// });
 contextBridge.exposeInMainWorld('identify', expandTypes(identify));
 
 const ws = new WebSocket(`ws://${host}:${port + 1}`);
 ws.onopen = async () => {
-  const pc = new RTCPeerConnection();
-
-  pc.onicecandidate = async e => {
-    const { candidate } = e;
-    if (!candidate) return;
-    if (ws.readyState === ws.OPEN) {
-      const msg: CandidateMessage = {
-        event: 'candidate',
-        candidate: candidate.toJSON(),
-        sourceId,
-      };
-      ws.send(JSON.stringify(msg));
-    }
+  const request: RequestMessage = {
+    event: 'request',
+    sourceId,
   };
+  let pc = new RTCPeerConnection();
 
-  pc.ontrack = e => deferred.resolve(e.streams[0]);
+  const connect = () => {
+    pc.onicecandidate = async e => {
+      const { candidate } = e;
+      if (!candidate) return;
+      if (ws.readyState === ws.OPEN) {
+        const msg: CandidateMessage = {
+          event: 'candidate',
+          candidate: candidate.toJSON(),
+          sourceId,
+        };
+        ws.send(JSON.stringify(msg));
+      }
+    };
 
+    pc.ontrack = e => {
+      if (videoSelector) {
+        const video = document.querySelector(videoSelector) as HTMLVideoElement;
+        [video.srcObject] = e.streams;
+      } else deferred.resolve(e.streams[0]);
+    };
+    pc.onconnectionstatechange = () => {
+      debug(`RTC connection: ${pc.connectionState}`);
+      if (['disconnected', 'failed'].includes(pc.connectionState)) {
+        debug('try reconnect');
+
+        pc.close();
+        pc = new RTCPeerConnection();
+        setTimeout(connect, 3000);
+      }
+    };
+
+    ws.send(JSON.stringify(request));
+  };
   ws.onmessage = async ev => {
     try {
       const msg = JSON.parse(ev.data.toString()) as RtcMessage;
@@ -77,17 +101,12 @@ ws.onopen = async () => {
           }
           break;
         default:
-          console.warn(`Unknown msg: ${msg}`);
+          // console.warn(`Unknown msg: ${msg}`);
           break;
       }
     } catch (e) {
       debug(`error while parse websocket message: ${(e as Error).message}`);
     }
   };
-  const request: RequestMessage = {
-    event: 'request',
-    sourceId,
-  };
-
-  ws.send(JSON.stringify(request));
+  connect();
 };
