@@ -7,7 +7,7 @@ import debugFactory from 'debug';
 import createWindow from './createWindow';
 import localConfig from './localConfig';
 import relaunch from './relaunch';
-import { getScreenParams, registerGmib } from './windowStore';
+import { getAllScreenParams, registerGmib } from './windowStore';
 
 import Deferred from '/@common/Deferred';
 
@@ -90,7 +90,7 @@ export const createMainWindow = (): BrowserWindow => {
         event.preventDefault();
         browserWindow.hide();
       } else {
-        getScreenParams().forEach(({ id }) => BrowserWindow.fromId(id)?.close());
+        getAllScreenParams().forEach(({ id }) => BrowserWindow.fromId(id)?.close());
         mainWindow = null;
       }
       return false;

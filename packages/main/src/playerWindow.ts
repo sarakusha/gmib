@@ -11,7 +11,7 @@ import localConfig from './localConfig';
 import openHandler from './openHandler';
 import relaunch from './relaunch';
 import { getPlayer, getPlayers, updateHidePlayer, updateShowPlayer } from './screen';
-import { findPlayerWindow, getGmibParams, registerPlayer } from './windowStore';
+import { findPlayerWindow, getAllGmibParams, registerPlayer } from './windowStore';
 import main from './mainWindow';
 import type { Player } from '/@common/video';
 
@@ -30,10 +30,9 @@ export const getPlayerTitle = (player: Player): string =>
 
 export const openPlayer = async (
   id: number,
-  host = 'localhost',
-  nibusPort = +(process.env['NIBUS_PORT'] ?? 9001),
-  name?: string,
+  gmibParams = getAllGmibParams()[0],
 ): Promise<BrowserWindow | undefined> => {
+  const { host, nibusPort, info } = gmibParams;
   const isRemote = host !== 'localhost';
   let player: Player | undefined;
   let browserWindow = findPlayerWindow(id, host);
@@ -41,11 +40,10 @@ export const openPlayer = async (
     if (!browserWindow) {
       const res = await authRequest({ host, port: nibusPort + 1, api: `/player/${id}` });
       if (res?.ok) player = await res.json();
-      debug(JSON.stringify(player));
     }
   } else {
     await Promise.all([dbReady, main]);
-    const [gmib] = getGmibParams();
+    const [gmib] = getAllGmibParams();
     if (gmib?.plan && ['plus', 'premium', 'enterprise'].includes(gmib.plan)) player = await getPlayer(id);
   }
   if (!browserWindow) {
@@ -57,10 +55,10 @@ export const openPlayer = async (
         : `http://localhost:${nibusPort + 1}/player.html?${query}`;
     const title = getPlayerTitle(player);
     browserWindow = createWindow(
-      isRemote ? `${name ?? host}:${title}` : title,
+      isRemote ? `${info?.name ?? host}:${title}` : title,
       isRemote ? remotePreload : preload,
     );
-    registerPlayer(browserWindow, { host, port: nibusPort, playerId: id });
+    registerPlayer(browserWindow, { host, port: nibusPort, playerId: id }, gmibParams);
     browserWindow.loadURL(url).catch(err => {
       debug(`error while load player ${url}: ${err.message}`);
     });
