@@ -195,7 +195,7 @@ const loadMedia = async (file: File, force = false): Promise<MediaInfo> => {
     if (isImage) {
       await generateFromImage({ outPath, filePath: file.filepath });
     } else if (!isPlayerSupport) {
-      await html5ify({ outPath, filePath: file.filepath, speed: 'slow', onProgress: noop });
+      await html5ify({ outPath, filePath: file.filepath, speed: 'slowest', onProgress: noop });
     } else {
       await convertCopy(file.filepath, outPath);
     }
