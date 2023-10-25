@@ -1,17 +1,17 @@
 import { Box } from '@mui/material';
-// import Backdrop from '@mui/material/Backdrop';
-// import CircularProgress from '@mui/material/CircularProgress';
 import React from 'react';
 
 import { selectMediaById, useGetMediaQuery } from '../api/media';
 import { usePlayer } from '../api/player';
 import { useGetPlaylistById } from '../api/playlists';
-import { useSelector } from '../store';
-import { selectCurrent } from '../store/selectors';
+import { useDispatch, useSelector } from '../store';
+import { selectCurrent, selectPosition } from '../store/selectors';
 
 import type { MediaInfo } from '/@common/mediaInfo';
 
 import ControlBar from './ControlBar';
+import { setPosition } from '../store/currentSlice';
+import { isRemoteSession } from '/@common/remote';
 
 type Props = {
   className?: string;
@@ -23,7 +23,8 @@ const Player: React.FC<Props> = ({ className, playerId = 0 }) => {
   const { data: playlist } = useGetPlaylistById(player?.playlistId);
   const { data: mediaData } = useGetMediaQuery();
   const { duration, playbackState } = useSelector(selectCurrent);
-  const [position, setPosition] = React.useState(0);
+  const position = useSelector(selectPosition);
+  const dispatch = useDispatch();
   const { width = 320, height = 240 } = player ?? {};
   let current: MediaInfo | undefined;
   if (player && playlist?.items && mediaData) {
@@ -40,9 +41,9 @@ const Player: React.FC<Props> = ({ className, playerId = 0 }) => {
   const onTimeUpdate = React.useCallback<React.ReactEventHandler<HTMLVideoElement>>(
     e => {
       const { currentTime } = e.target as HTMLVideoElement;
-      setPosition(stopped ? 0 : currentTime);
+      dispatch(setPosition(stopped ? 0 : currentTime));
     },
-    [stopped],
+    [dispatch, stopped],
   );
   return (
     <Box sx={{ width: 1, position: 'relative' }}>
@@ -68,7 +69,7 @@ const Player: React.FC<Props> = ({ className, playerId = 0 }) => {
             objectFit: 'cover',
             backgroundColor: 'black',
           }}
-          onTimeUpdate={onTimeUpdate}
+          onTimeUpdate={isRemoteSession ? undefined : onTimeUpdate}
         >
           {current?.filename}
         </video>

@@ -15,6 +15,7 @@ import {
 } from './currentSlice';
 import { startAppListening } from './listenerMiddleware';
 import { selectCurrent, selectPlaybackState } from './selectors';
+import { isRemoteSession } from '/@common/remote';
 
 const selectPlayersData = playerApi.endpoints.getPlayers.select();
 // const selectPlaylistsData = playlistApi.endpoints.getPlaylists.select();
@@ -31,6 +32,33 @@ startAppListening({
     });
   },
 });
+
+if (!isRemoteSession) {
+  startAppListening({
+    actionCreator: setPosition,
+    effect: action => {
+      window.socket.broadcast('setPosition', action.payload);
+    },
+  });
+  startAppListening({
+    actionCreator: setDuration,
+    effect: action => {
+      window.socket.broadcast('setDuration', action.payload);
+    },
+  });
+  startAppListening({
+    actionCreator: setCurrentPlaylistItem,
+    effect: action => {
+      window.socket.broadcast('setCurrentPlaylistItem', action.payload);
+    },
+  });
+  startAppListening({
+    actionCreator: setPlaybackState,
+    effect: action => {
+      window.socket.broadcast('setPlaybackState', action.payload);
+    },
+  });
+}
 
 startAppListening({
   matcher: isAnyOf(setPlaybackState, togglePlaybackState),
