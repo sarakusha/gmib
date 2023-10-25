@@ -1,15 +1,24 @@
 import type { SetStateAction } from 'react';
+import type { Middleware, MiddlewareAPI } from '@reduxjs/toolkit';
+import debugFactory from 'debug';
+import { host, port } from '/@common/remote';
+import type { Player } from '/@common/video';
 
 import createDebouncedAsyncThunk from '../../common/createDebouncedAsyncThunk';
 
-import type { Player } from '/@common/video';
-
-import type { AppThunk, AppThunkConfig } from '../store';
-import { setDuration, setPlaybackState, setPosition } from '../store/currentSlice';
+import type { AppDispatch, AppThunk, AppThunkConfig, RootState } from '../store';
+import {
+  setCurrentPlaylistItem,
+  setDuration,
+  setPlaybackState,
+  setPosition,
+} from '../store/currentSlice';
 import { sourceId } from '../utils';
 
 import playerApi, { playerAdapter, selectPlayer } from './player';
 import playlistApi, { selectPlaylistById } from './playlists';
+
+const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:updatePlayer`);
 
 export const debouncedUpdatePlayer = createDebouncedAsyncThunk<void, Player, AppThunkConfig>(
   'playerApi/pendingUpdate',
@@ -68,6 +77,44 @@ export const clearPlayer = (): AppThunk => dispatch => {
   dispatch(setPlaybackState('none'));
   dispatch(setPosition(0));
   dispatch(setDuration(0));
+};
+
+export const socketMiddleware: Middleware = api => {
+  const { dispatch } = api as MiddlewareAPI<AppDispatch, RootState>;
+  const socket = new WebSocket(`ws://${host}:${+port + 1}`);
+  socket.onmessage = (e: MessageEvent<string>) => {
+    try {
+      const msg = JSON.parse(e.data);
+      if (
+        typeof msg === 'object' &&
+        'event' in msg &&
+        typeof msg.event === 'string' &&
+        'data' in msg &&
+        Array.isArray(msg.data) &&
+        sourceId === msg.data[0]
+      ) {
+        switch (msg.event) {
+          case 'setDuration':
+            dispatch(setDuration(msg.data[1]));
+            break;
+          case 'setCurrentPlaylistItem':
+            dispatch(setCurrentPlaylistItem(msg.data[1]));
+            break;
+          case 'setPosition':
+            dispatch(setPosition(msg.data[1]));
+            break;
+          case 'setPlaybackState':
+            dispatch(setPlaybackState(msg.data[1]));
+            break;
+          default:
+            break;
+        }
+      }
+    } catch (err) {
+      debug(`unknown event: ${e.data}`);
+    }
+  };
+  return next => action => next(action);
 };
 
 export default updatePlayer;

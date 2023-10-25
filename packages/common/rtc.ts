@@ -21,15 +21,6 @@ export type RequestMessage = {
   sourceId: number;
 };
 
-export type DurationMessage = {
-  event: 'duration';
-  value: number;
-};
-
-export type PositionMessage = {
-  event: 'position';
-  value: number;
-};
 
 export type RtcMessage = CandidateMessage | OfferMessage | AnswerMessage | RequestMessage;
 

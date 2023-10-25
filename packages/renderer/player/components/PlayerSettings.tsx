@@ -30,7 +30,6 @@ import { toHexId } from '../utils';
 
 import { DefaultDisplays, getDisplayLabel } from '/@common/video';
 
-
 const keys = ['width', 'height'] as const;
 const stopPropagation: React.MouseEventHandler = e => e.stopPropagation();
 const noWrap = { noWrap: true };

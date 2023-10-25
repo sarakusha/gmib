@@ -4,7 +4,7 @@ import type { RtcMessage, WithWebSocketKey } from '/@common/rtc';
 
 import { app, ipcMain } from 'electron';
 
-import type { WebSocket } from 'ws';
+import { WebSocket } from 'ws';
 import debugFactory from 'debug';
 import memoize from 'lodash/memoize';
 
@@ -74,8 +74,11 @@ const events = [
 ] as const;
 
 const makeHandler = memoize((event: string) => (...args: unknown[]) => {
+  const msg = JSON.stringify({ event, data: args });
   wss.clients.forEach(ws => {
-    ws.send(JSON.stringify({ event, data: args }));
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(msg);
+    }
   });
 });
 

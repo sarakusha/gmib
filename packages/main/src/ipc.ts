@@ -1,5 +1,5 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
-
+import { WebSocket } from 'ws';
 import { getMediaByMD5 } from './media';
 import { getPlayerMappingsForPlayer } from './playerMapping';
 import { getPlaylist, getPlaylistItems } from './playlist';
@@ -7,6 +7,7 @@ import { getPlayer, getScreens, loadScreen } from './screen';
 import store from './windowStore';
 
 import { isGmib } from '/@common/WindowParams';
+import { wss } from './express';
 
 app.whenReady().then(() => {
   ipcMain.handle('getPlayer', (_, id) => getPlayer(id));
@@ -25,33 +26,13 @@ app.whenReady().then(() => {
     const params = store.get(win.id);
     return isGmib(params) ? params.machineId : undefined;
   });
-  // ipcMain.handle(
-  //   'activateLicense',
-  //   async (_, key: string, name?: string): Promise<true | string> => {
-  //     const data = {
-  //       key,
-  //       name,
-  //       deviceId: await machineId,
-  //       version: import.meta.env.VITE_APP_VERSION,
-  //       os: os.version(),
-  //     };
-  //     const res = await fetch(`${import.meta.env.VITE_LICENSE_SERVER}/api/licenses`, {
-  //       method: 'PUT',
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //       },
-  //       body: JSON.stringify(data),
-  //     });
-  //     if (res.ok) {
-  //       const { announce, iv } = await res.json();
-  //       localConfig.set('announce', announce);
-  //       localConfig.set('iv', iv);
-  //       if (import.meta.env.PROD) relaunch();
-  //       return true;
-  //     }
-  //     return (await res.text()) ?? res.statusText;
-  //   },
-  // );
+  ipcMain.on('broadcast', (_, msg: string) => {
+    wss.clients.forEach(ws => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(msg);
+      }
+    });
+  });
 });
 
 // eslint-disable-next-line import/prefer-default-export

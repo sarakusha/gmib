@@ -12,19 +12,26 @@ import localConfig from './localConfig';
 import { linuxAutostart } from './linux';
 import { updateTray } from './tray';
 import { openPlayer } from './playerWindow';
-import { getPlayers, hasPlayers, insertPlayer, uniquePlayerName } from './screen';
+import { hasPlayers, insertPlayer, uniquePlayerName } from './screen';
 import { dbReady } from './db';
 import checkForUpdates from './updater';
 // import type { WindowParams } from './windowStore';
-import store, { getGmibParams, registerGmib } from './windowStore';
+import store, { getAllGmibParams, registerGmib } from './windowStore';
 import authRequest from './authRequest';
 import mdnsBrowser, { pickRemoteService } from './mdns';
 import { createAppWindow, getMainWindow } from './mainWindow';
 
-import type { WindowParams } from '/@common/WindowParams';
-import { isGmib } from '/@common/WindowParams';
+import type { GmibWindowParams, WindowParams } from '/@common/WindowParams';
+import { isGmib, isPlayer } from '/@common/WindowParams';
+import type { Player } from '/@common/video';
 
 // const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:menu`);
+
+const getGmibParams = (params?: WindowParams): GmibWindowParams | undefined => {
+  if (isGmib(params)) return params;
+  if (isPlayer(params)) return params.parent;
+  return undefined;
+};
 
 const createNewPlayer = async (name = 'Новый плеер'): Promise<void> => {
   await dbReady;
@@ -44,120 +51,148 @@ const playerMenu: AppMenuItem = {
   submenu: [],
 };
 
-const playerSubmenu = async (): Promise<MenuItemConstructorOptions[]> => {
-  await dbReady;
-  const players = await getPlayers();
+const playerSubmenu = async (params: GmibWindowParams): Promise<MenuItemConstructorOptions[]> => {
+  const res = await authRequest({
+    api: '/player',
+    host: params.host,
+    port: params.nibusPort + 1,
+  });
+  if (!res?.ok) return [];
+  const players = (await res.json()) as Player[];
   return players.map<MenuItemConstructorOptions>(({ id, name }) => ({
     label: name ?? `player#${id}`,
     click: () => {
-      openPlayer(id);
+      openPlayer(id, params);
     },
   }));
 };
 
+const findGmib = (host: string): GmibWindowParams | undefined =>
+  getAllGmibParams().find(item => item.host === host);
+
+const paramsToRemote = (params: GmibWindowParams) => ({
+  address: params.host,
+  port: params.nibusPort,
+  name: params.info?.name,
+});
+
 const remoteMenu = (params?: WindowParams): AppMenuItem | undefined => {
-  const remotes = uniqBy(
-    [...mdnsBrowser.services.map(pickRemoteService).filter(notEmpty), ...localConfig.get('hosts')],
-    'address',
+  const gmibParams = getGmibParams(params);
+  if (!gmibParams) return undefined;
+  const self = paramsToRemote(gmibParams);
+  const local = findGmib('localhost');
+  const remotes = isGmib(params)
+    ? uniqBy(
+      [
+        ...(local ? [paramsToRemote(local)] : []),
+        ...mdnsBrowser.services.map(pickRemoteService).filter(notEmpty),
+        ...localConfig.get('hosts'),
+      ],
+      'address',
+    )
+    : [self];
+  const links = remotes.map(
+    ({ address, port, name }): MenuItemConstructorOptions => ({
+      label: name ? `${name} (${address})` : address,
+      type: 'checkbox',
+      checked: findGmib(address)?.id === BrowserWindow.getFocusedWindow()?.id,
+      click: () => {
+        const gmib = findGmib(address);
+        if (gmib) {
+          const window = BrowserWindow.fromId(gmib.id);
+          if (window) {
+            window.show();
+            window.focus();
+            return;
+          }
+        }
+        const window = createAppWindow(port, address, name);
+        registerGmib(window, { host: address, nibusPort: +port });
+        window.show();
+        window.focus();
+      },
+    }),
   );
-  return isGmib(params)
-    ? {
-        label: 'GMIB',
-        submenu: [
-          {
-            label: 'Автозапуск',
-            type: 'checkbox',
-            click: async () => {
-              const value = !params.autostart;
-              try {
-                const res = await authRequest({
-                  api: '/autostart',
-                  method: 'POST',
-                  host: params.host,
-                  port: params.nibusPort + 1,
-                  body: { value },
-                });
-                if (res?.ok) {
-                  params.update({ autostart: value });
-                  // eslint-disable-next-line @typescript-eslint/no-use-before-define
-                  updateMenu();
-                }
-              } catch (e) {
-                console.error(`error while fetch: ${e}`);
+  return {
+    label: 'GMIB',
+    submenu: isGmib(params)
+      ? [
+        {
+          label: 'Автозапуск',
+          type: 'checkbox',
+          click: async () => {
+            const value = !params.autostart;
+            try {
+              const res = await authRequest({
+                api: '/autostart',
+                method: 'POST',
+                host: params.host,
+                port: params.nibusPort + 1,
+                body: { value },
+              });
+              if (res?.ok) {
+                params.update({ autostart: value });
+                // eslint-disable-next-line @typescript-eslint/no-use-before-define
+                updateMenu();
               }
-            },
-            checked: params.autostart,
+            } catch (e) {
+              console.error(`error while fetch: ${e}`);
+            }
           },
-          {
-            label: 'Изменить список ...',
-            click: () => {
-              const window = getMainWindow();
-              if (window) {
-                window.show();
-                window.focus();
-                window.webContents.send('editRemoteHosts');
-              }
-            },
+          checked: params.autostart,
+        },
+        {
+          label: 'Изменить список ...',
+          click: () => {
+            const window = getMainWindow();
+            if (window) {
+              window.show();
+              window.focus();
+              window.webContents.send('editRemoteHosts');
+            }
           },
-          { type: 'separator' },
-          ...remotes.map(
-            ({ address, port, name }): MenuItemConstructorOptions => ({
-              label: name ? `${name} (${address})` : address,
-              click: () => {
-                const gmib = getGmibParams().find(
-                  item => item.host === address && item.nibusPort === port,
-                );
-                if (gmib) {
-                  const window = BrowserWindow.fromId(gmib.id);
-                  if (window) {
-                    window.show();
-                    window.focus();
-                    return;
-                  }
-                }
-                const window = createAppWindow(port, address, name);
-                registerGmib(window, { host: address, nibusPort: +port });
-                window.show();
-                window.focus();
-              },
-            }),
-          ),
-        ],
-      }
-    : undefined;
+        },
+        { type: 'separator' },
+        ...links,
+      ]
+      : links,
+  };
 };
 
 const helpMenu = async (params?: WindowParams): Promise<AppMenuItem> => {
   // console.log(`MENU: ${JSON.stringify(params)}`);
-  const isModernGmib =
-    isGmib(params) && params.info?.version && semverGt(params.info.version, '4.2.1');
+
+  const gmibParams = getGmibParams(params);
+  const isModernGmib = gmibParams?.info?.version && semverGt(gmibParams.info.version, '4.2.1');
   return {
     label: 'Помощь',
     role: 'help',
     submenu: [
       ...(isModernGmib
         ? [
-            {
-              label: 'Лицензия',
-              submenu: [
-                ...(params.plan ? [{ label: `Тип: ${params.plan}`, enabled: false }] : []),
-                ...(params.key ? [{ label: `Ключ: ${params.key}`, enabled: false }] : []),
-                ...(params.renew
-                  ? [
-                      {
-                        label: `Действительна по: ${new Date(params.renew).toLocaleDateString()}`,
-                        enabled: false,
-                      },
-                    ]
-                  : []),
-                {
-                  label: 'Активировать лицензию',
-                  click: () =>
-                    BrowserWindow.getFocusedWindow()?.webContents.send('activateLicense'),
-                },
-              ],
-            },
-          ]
+          {
+            label: 'Лицензия',
+            submenu: [
+              ...(gmibParams.plan ? [{ label: `Тип: ${gmibParams.plan}`, enabled: false }] : []),
+              ...(gmibParams.key ? [{ label: `Ключ: ${gmibParams.key}`, enabled: false }] : []),
+              ...(gmibParams.renew
+                ? [
+                  {
+                    label: `Действительна по: ${new Date(
+                      gmibParams.renew,
+                    ).toLocaleDateString()}`,
+                    enabled: false,
+                  },
+                ]
+                : []),
+              {
+                label: 'Активировать лицензию',
+                click: () =>
+                  BrowserWindow.getFocusedWindow()?.webContents.send('activateLicense'),
+              },
+            ],
+          },
+        ]
         : []),
       {
         label: 'Все версии',
@@ -168,68 +203,68 @@ const helpMenu = async (params?: WindowParams): Promise<AppMenuItem> => {
         // enabled: import.meta.env.PROD,
         click: isModernGmib
           ? async () => {
-              const updateAndRestart = async () => {
-                const resp = await authRequest({
-                  api: '/update',
-                  method: 'POST',
-                  host: params.host,
-                  port: params.nibusPort + 1,
-                });
-                if (!resp) return;
-                if (resp.ok) {
-                  dialog.showMessageBox({
-                    title: 'Обновление установлено',
-                    message: 'Программа перезапущена',
-                  });
-                } else {
-                  dialog.showErrorBox('Что-то пошло не так', await resp.text());
-                }
-              };
-              const res = await authRequest({
-                api: '/checkForUpdates',
+            const updateAndRestart = async () => {
+              const resp = await authRequest({
+                api: '/update',
                 method: 'POST',
-                host: params.host,
-                port: params.nibusPort + 1,
+                host: gmibParams.host,
+                port: gmibParams.nibusPort + 1,
               });
-              if (!res) return;
-              if (res.ok) {
-                const info = (await res.json()) as undefined | UpdateInfo;
-                if (info) {
-                  dialog
-                    .showMessageBox({
-                      type: 'info',
-                      title: 'Найдено обновление',
-                      message: `Найдено обновление ${info.version} для ${params.host}, хотите установить?`,
-                      buttons: ['Установить', 'Не сейчас'],
-                    })
-                    .then(buttonIndex => {
-                      if (buttonIndex.response === 0) updateAndRestart();
-                    });
-                } else {
-                  dialog.showMessageBox({
-                    title: 'Обновления не найдены',
-                    message: 'Установлена последняя версия',
-                  });
-                }
+              if (!resp) return;
+              if (resp.ok) {
+                dialog.showMessageBox({
+                  title: 'Обновление установлено',
+                  message: 'Программа перезапущена',
+                });
               } else {
-                dialog.showErrorBox('Что-то пошло не так', await res.text());
+                dialog.showErrorBox('Что-то пошло не так', await resp.text());
               }
+            };
+            const res = await authRequest({
+              api: '/checkForUpdates',
+              method: 'POST',
+              host: gmibParams.host,
+              port: gmibParams.nibusPort + 1,
+            });
+            if (!res) return;
+            if (res.ok) {
+              const info = (await res.json()) as undefined | UpdateInfo;
+              if (info) {
+                dialog
+                  .showMessageBox({
+                    type: 'info',
+                    title: 'Найдено обновление',
+                    message: `Найдено обновление ${info.version} для ${gmibParams.host}, хотите установить?`,
+                    buttons: ['Установить', 'Не сейчас'],
+                  })
+                  .then(buttonIndex => {
+                    if (buttonIndex.response === 0) updateAndRestart();
+                  });
+              } else {
+                dialog.showMessageBox({
+                  title: 'Обновления не найдены',
+                  message: 'Установлена последняя версия',
+                });
+              }
+            } else {
+              dialog.showErrorBox('Что-то пошло не так', await res.text());
             }
+          }
           : checkForUpdates,
       },
       ...(isModernGmib
         ? [
-            {
-              label: 'Перезапустить',
-              click: () =>
-                authRequest({
-                  api: '/relaunch',
-                  method: 'POST',
-                  host: params.host,
-                  port: params.nibusPort + 1,
-                }),
-            },
-          ]
+          {
+            label: 'Перезапустить',
+            click: () =>
+              authRequest({
+                api: '/relaunch',
+                method: 'POST',
+                host: gmibParams.host,
+                port: gmibParams.nibusPort + 1,
+              }),
+          },
+        ]
         : []),
     ],
   };
@@ -240,46 +275,47 @@ const template = async (params?: WindowParams): Promise<MenuItemConstructorOptio
   return [
     ...(process.platform === 'darwin'
       ? [
-          {
-            label: import.meta.env.VITE_APP_NAME,
-            submenu: [
-              {
-                role: 'about',
-              },
-              {
-                type: 'separator',
-              },
-              {
-                role: 'services',
-              },
-              {
-                type: 'separator',
-              },
-              {
-                role: 'hide',
-              },
-              {
-                role: 'hideOthers',
-              },
-              {
-                role: 'unhide',
-              },
-              {
-                type: 'separator',
-              },
-              {
-                role: 'quit',
-              },
-            ],
-          } as MenuItemConstructorOptions,
-        ]
+        {
+          label: import.meta.env.VITE_APP_NAME,
+          submenu: [
+            {
+              role: 'about',
+            },
+            {
+              type: 'separator',
+            },
+            {
+              role: 'services',
+            },
+            {
+              type: 'separator',
+            },
+            {
+              role: 'hide',
+            },
+            {
+              role: 'hideOthers',
+            },
+            {
+              role: 'unhide',
+            },
+            {
+              type: 'separator',
+            },
+            {
+              role: 'quit',
+            },
+          ],
+        } as MenuItemConstructorOptions,
+      ]
       : []),
     ...(remote ? [remote] : []),
-    ...(isGmib(params) &&
-    params.plan &&
-    ['premium', 'enterprise'].includes(params.plan) &&
-    params.host === 'localhost'
-      ? [{ label: 'Плеер', submenu: await playerSubmenu() }]
+    ...((isGmib(params) &&
+      params.plan &&
+      ['plus', 'premium', 'enterprise'].includes(params.plan)) ||
+      isPlayer(params)
+      ? // params.host === 'localhost'
+      [{ label: 'Плеер', submenu: await playerSubmenu(isGmib(params) ? params : params.parent) }]
       : []),
     {
       label: 'Правка',
@@ -431,14 +467,16 @@ const template = async (params?: WindowParams): Promise<MenuItemConstructorOptio
 
 const updateMenu = (): Promise<void> =>
   new Promise(resolve => {
-    const id = BrowserWindow.getFocusedWindow()?.id;
+    const win = BrowserWindow.getFocusedWindow();
+    const id = win?.id;
     if (id && !store.has(id)) {
       setTimeout(() => resolve(updateMenu()), 50);
     } else {
       const params = id !== undefined ? store.get(id) : undefined;
       template(params).then(tmpl => {
         const mainMenu = Menu.buildFromTemplate(tmpl);
-        Menu.setApplicationMenu(mainMenu);
+        if (['win32', 'linux'].includes(process.platform) && win) win.setMenu(mainMenu);
+        else Menu.setApplicationMenu(mainMenu);
         resolve();
       });
     }
@@ -454,12 +492,13 @@ localConfig.onDidChange('autostart', (autostart = false) => {
   linuxAutostart(autostart);
   updateMenu();
   updateTray();
-  getGmibParams()
+  getAllGmibParams()
     .find(({ host }) => host === 'localhost')
     ?.update({ autostart });
 });
 
 localConfig.onDidChange('hosts', updateMenu);
+localConfig.onDidChange('autostart', updateMenu);
 mdnsBrowser.on('up', updateMenu);
 mdnsBrowser.on('down', updateMenu);
 

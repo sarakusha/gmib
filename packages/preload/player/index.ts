@@ -1,4 +1,4 @@
-import { contextBridge } from 'electron';
+import { contextBridge, ipcRenderer } from 'electron';
 
 import expandTypes from '/@common/expandTypes';
 
@@ -14,8 +14,9 @@ import { updateSrcObject } from './mediaStream';
 // import * as nodeCrypto from './nodeCrypto';
 
 import './videoOuts';
-// const search = new URLSearchParams(window.location.search);
-// const sourceId = +(search.get('source_id') ?? 1);
+
+const search = new URLSearchParams(window.location.search);
+const sourceId = +(search.get('source_id') ?? 1);
 
 // const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:player-preload-${sourceId}`);
 
@@ -25,8 +26,8 @@ import './videoOuts';
 contextBridge.exposeInMainWorld('mediaStream', { updateSrcObject });
 contextBridge.exposeInMainWorld('log', log.log.bind(log));
 contextBridge.exposeInMainWorld('setDispatch', setDispatch);
-contextBridge.exposeInMainWorld('server', {
-  host: 'localhost',
-  port: +(process.env['NIBUS_PORT'] ?? 9001) + 1,
-});
 contextBridge.exposeInMainWorld('identify', expandTypes(identify));
+contextBridge.exposeInMainWorld('socket', {
+  broadcast: (event: string, ...args: unknown[]) =>
+    ipcRenderer.send('broadcast', JSON.stringify({ event, data: [sourceId, ...args] })),
+});

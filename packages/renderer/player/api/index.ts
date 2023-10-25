@@ -1,9 +1,11 @@
+import { isRemoteSession } from '/@common/remote';
 import displayApi from '../../common/displays';
 
 import mappingApi from './mapping';
 import mediaApi from './media';
 import playerApi from './player';
 import playlistApi from './playlists';
+import { socketMiddleware } from './updatePlayer';
 
 export const reducer = {
   [mediaApi.reducerPath]: mediaApi.reducer,
@@ -19,4 +21,5 @@ export const middleware = [
   playerApi.middleware,
   displayApi.middleware,
   mappingApi.middleware,
+  ...(isRemoteSession ? [socketMiddleware] : []),
 ];

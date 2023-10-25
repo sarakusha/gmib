@@ -53,6 +53,7 @@ export type PlayerWindowParams = CommonWindowParams & {
   playerId: number;
   host: string;
   port: number;
+  parent: GmibWindowParams;
 };
 
 export type ScreenWindowParams = CommonWindowParams &

@@ -163,15 +163,16 @@ export const registerScreen = (browserWindow: BrowserWindow, scr: Screen) => {
 export const registerPlayer = (
   browserWindow: BrowserWindow,
   { playerId, host, port }: Pick<PlayerWindowParams, 'playerId' | 'host' | 'port'>,
+  parent: GmibWindowParams,
 ): number => {
   const id = register(browserWindow);
-  store.set(id, { id, type: 'player', playerId, host, port });
+  store.set(id, { id, type: 'player', playerId, host, port, parent });
   return id;
 };
 
-export const getGmibParams = () => [...store.values()].filter(isGmib);
+export const getAllGmibParams = () => [...store.values()].filter(isGmib);
 
-export const getScreenParams = () => [...store.values()].filter(isScreen);
+export const getAllScreenParams = () => [...store.values()].filter(isScreen);
 
 export const isEqualOptions = (a: ScreenOptions, b: ScreenOptions): boolean =>
   impScreenProps.reduce((res, key) => res && a[key] === b[key], true);
@@ -185,7 +186,7 @@ export const createSearchParams = <T extends ScreenOptions>(options: T): URLSear
   );
 
 export const findScreenParams = (screenId: number): ScreenWindowParams | undefined =>
-  getScreenParams().find(item => item.screenId === screenId);
+  getAllScreenParams().find(item => item.screenId === screenId);
 export const findScreenWindow = (screenId: number): BrowserWindow | undefined => {
   const params = findScreenParams(screenId);
   return params && (BrowserWindow.fromId(params.id) ?? undefined);
