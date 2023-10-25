@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.6.8](https://github.com/sarakusha/gmib/compare/v4.6.7...v4.6.8) (2023-10-25)
+
+
+### Features
+
+* remote player state ([ef57b45](https://github.com/sarakusha/gmib/commit/ef57b45866155b632c10797d740913ee5c801cf4))
+* remote relaunch ([781a637](https://github.com/sarakusha/gmib/commit/781a637ccbe5eafc05af96ef0f40cd18bfb5429d))
+* restoring connection with a remote player ([f6c675b](https://github.com/sarakusha/gmib/commit/f6c675b39319b37dc1b412df0151ffefdcb57e48))
+* upgrade menu ([ed62376](https://github.com/sarakusha/gmib/commit/ed6237659144438c5030169668bfa5a0dced7902))
+
+
+### Bug Fixes
+
+* the list of allowed codecs has been reduced ([bcb532c](https://github.com/sarakusha/gmib/commit/bcb532c7d0df0cf21fd6a91f4a2cada8861d43b8))
+
 ## [4.6.7](https://github.com/sarakusha/gmib/compare/v4.6.5...v4.6.7) (2023-10-17)
 
 
