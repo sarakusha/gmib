@@ -102,6 +102,11 @@ export const createMainWindow = (): BrowserWindow => {
 
 export const getMainWindow = (): BrowserWindow | null => mainWindow;
 
+const hideCursorCSS = `html, body {
+  cursor: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=), none;
+  user-select: none;
+}`;
+
 export function createTestWindow(
   width: number,
   height: number,
@@ -139,12 +144,13 @@ export function createTestWindow(
       window.webContents.openDevTools();
     });
   }
+  window.webContents.once('did-frame-finish-load', () => {
+    window.webContents.insertCSS(hideCursorCSS);
+  });
+
   window.once('ready-to-show', () => {
     window.show();
-    window.setIgnoreMouseEvents(true);
   });
-  /* process.platform === 'win32' || */
-  //  window.setIgnoreMouseEvents(true);
   let saveBlocker = 0;
   window.on('show', () => {
     if (!powerSaveBlocker.isStarted(saveBlocker)) {
