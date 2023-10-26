@@ -109,6 +109,7 @@ export function createTestWindow(
   y: number,
   preload?: string,
 ): BrowserWindow {
+  // Все переопределяется в openHandler.ts
   const window = new BrowserWindow({
     width,
     height,
