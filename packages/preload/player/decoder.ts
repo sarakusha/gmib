@@ -4,11 +4,12 @@ import FadeTransform from '@sarakusha/ebml/FadeTransform';
 import ReducingValve from '@sarakusha/ebml/ReducingValve';
 import VideoChunkGenerator from '@sarakusha/ebml/VideoChunkGenerator';
 import VideoFrameGenerator from '@sarakusha/ebml/VideoFrameGenerator';
+import RangeFetcher from '@sarakusha/ebml/RangeFetcher';
 // import VideoFrameTransformer from '@sarakusha/ebml/VideoFrameTransformer';
 
 let controller: AbortController | undefined;
 let readable: ReadableStream<VideoFrame> | undefined;
-const noop = () => {};
+const noop = () => { };
 let play = noop;
 let pause = noop;
 let cancel = false;
@@ -25,16 +26,15 @@ onmessage = async ({ data }) => {
     pause = valve.close;
     if (controller) controller.abort();
     controller = new AbortController();
+    const fetcher = new RangeFetcher(data.uri, { abortController: controller, chunkSize: 1024 * 1024 });
 
     try {
-      readable = await fetch(data.uri, { signal: controller?.signal }).then(res =>
-        res.body
-          ?.pipeThrough(ebml)
-          .pipeThrough(chunkGenerator)
-          .pipeThrough(frameGenerator)
-          .pipeThrough(fade)
-          .pipeThrough(valve),
-      );
+      readable = fetcher
+        .pipeThrough(ebml)
+        .pipeThrough(chunkGenerator)
+        .pipeThrough(frameGenerator)
+        .pipeThrough(fade)
+        .pipeThrough(valve);
       if (!readable) return;
       const reader = readable.getReader();
       const transfer = async () => {
