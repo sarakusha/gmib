@@ -7,7 +7,7 @@ import debugFactory from 'debug';
 import createWindow from './createWindow';
 import localConfig from './localConfig';
 import relaunch from './relaunch';
-import { getAllScreenParams, registerGmib } from './windowStore';
+import { getAllScreenParams, getPlayerParams, registerGmib } from './windowStore';
 
 import Deferred from '/@common/Deferred';
 
@@ -86,7 +86,11 @@ export const createMainWindow = (): BrowserWindow => {
     // eslint-disable-next-line no-multi-assign
     const browserWindow = (mainWindow = createAppWindow());
     browserWindow.on('close', event => {
-      if (!isQuitting && localConfig.get('autostart')) {
+      if (
+        !isQuitting &&
+        (localConfig.get('autostart') ||
+          getPlayerParams().some(params => params.parent.id === browserWindow.id))
+      ) {
         event.preventDefault();
         browserWindow.hide();
       } else {
