@@ -68,7 +68,7 @@ const update = async () => {
           currentSource.close();
           currentSource = undefined;
         }
-      }, 10); // Need a delay to render a black screen
+      }, 100); // Need a delay to render a black screen
   }
   if (!playlist || playlist.items.length === 0) {
     currentSource?.close();
