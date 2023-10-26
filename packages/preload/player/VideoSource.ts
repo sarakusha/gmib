@@ -104,7 +104,10 @@ export default class VideoSource {
         close(true);
       }
       if ('duration' in data) this.#duration = data.duration;
-      if ('err' in data) debug(`error: ${data.err.message}`);
+      if ('err' in data) {
+        debug(`error: ${data.err.message}`);
+        close();
+      }
       onMessage(ev);
     };
 
