@@ -10,7 +10,11 @@ import log from './initlog';
 autoUpdater.autoDownload = false;
 autoUpdater.logger = log;
 
+let restart = false;
+
 let interactive = true;
+
+export const needRestart = () => restart;
 
 autoUpdater.on('error', error => {
   interactive &&
@@ -22,9 +26,9 @@ autoUpdater.on('update-available', () => {
     dialog
       .showMessageBox({
         type: 'info',
-        title: 'Found Updates',
-        message: 'Found updates, do you want update now?',
-        buttons: ['Sure', 'No'],
+        title: 'Найдено обновление',
+        message: 'Найдено обновление, хотите установить его сейчас?',
+        buttons: ['Да', 'Нет'],
       })
       .then(buttonIndex => (buttonIndex.response === 0 ? autoUpdater.downloadUpdate() : []));
 });
@@ -32,8 +36,8 @@ autoUpdater.on('update-available', () => {
 autoUpdater.on('update-not-available', () => {
   interactive &&
     dialog.showMessageBox({
-      title: 'No Updates',
-      message: 'Current version is up-to-date.',
+      title: 'Обновления нет',
+      message: 'У Вас последняя версия.',
     });
 });
 
@@ -41,10 +45,11 @@ autoUpdater.on('update-downloaded', () => {
   interactive &&
     dialog
       .showMessageBox({
-        title: 'Install Updates',
-        message: 'Updates downloaded, application will be quit for update...',
+        title: 'Установка обновления',
+        message: 'Обновления загружаются, приложение закроется для обновления...',
       })
       .then(() => {
+        restart = true;
         setImmediate(() => autoUpdater.quitAndInstall());
       });
 });
@@ -96,6 +101,7 @@ export const updateAndRestart = () =>
     };
     const downloaded = () => {
       resolve();
+      restart = true;
       setImmediate(() => autoUpdater.quitAndInstall());
       release();
     };

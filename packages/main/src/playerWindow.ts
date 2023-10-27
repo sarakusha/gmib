@@ -14,6 +14,7 @@ import { getPlayer, getPlayers, updateHidePlayer, updateShowPlayer } from './scr
 import { findPlayerWindow, getAllGmibParams, registerPlayer } from './windowStore';
 import main from './mainWindow';
 import type { Player } from '/@common/video';
+import { needRestart } from './updater';
 
 const preload = path.join(__dirname, '../../preload/dist/player.cjs');
 const remotePreload = path.join(__dirname, '../../preload/dist/remote.cjs');
@@ -44,7 +45,8 @@ export const openPlayer = async (
   } else {
     await Promise.all([dbReady, main]);
     const [gmib] = getAllGmibParams();
-    if (gmib?.plan && ['plus', 'premium', 'enterprise'].includes(gmib.plan)) player = await getPlayer(id);
+    if (gmib?.plan && ['plus', 'premium', 'enterprise'].includes(gmib.plan))
+      player = await getPlayer(id);
   }
   if (!browserWindow) {
     if (!player) return undefined;
@@ -72,14 +74,14 @@ export const openPlayer = async (
     // browserWindow.show();
     browserWindow.webContents.on('render-process-gone', (event, details) => {
       debug(`<<<<CRASH>>>> player process gone: ${details.reason} (${details.exitCode})`);
-      if (import.meta.env.PROD && !['clean-exit', 'killed'].includes(details.reason)) {
+      if (import.meta.env.PROD && ![/* 'clean-exit', */ 'killed'].includes(details.reason)) {
         debug('relaunch...');
         relaunch();
       }
     });
     browserWindow.on('close', event => {
       isQuitting || updateHidePlayer(id);
-      if (!isQuitting && localConfig.get('autostart')) {
+      if (!needRestart() && !isQuitting && localConfig.get('autostart')) {
         event.preventDefault();
         browserWindow?.hide();
       }

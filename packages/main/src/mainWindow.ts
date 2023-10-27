@@ -10,6 +10,7 @@ import relaunch from './relaunch';
 import { getAllScreenParams, getPlayerParams, registerGmib } from './windowStore';
 
 import Deferred from '/@common/Deferred';
+import { needRestart } from './updater';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:wnd`);
 
@@ -87,6 +88,7 @@ export const createMainWindow = (): BrowserWindow => {
     const browserWindow = (mainWindow = createAppWindow());
     browserWindow.on('close', event => {
       if (
+        !needRestart() &&
         !isQuitting &&
         (localConfig.get('autostart') ||
           getPlayerParams().some(params => params.parent.id === browserWindow.id))
