@@ -14,13 +14,14 @@ import { selectDuration, selectPlaybackState } from '../../store/selectors';
 import Numbered from '../Numbered';
 
 type Props = {
-  value: number;
+  index: number;
+  value: string;
   media: MediaInfo;
 };
 
-const PlaylistItem: React.FC<Props> = ({ value, media }) => {
+const PlaylistItem: React.FC<Props> = ({ value, media, index }) => {
   const radioGroup = useRadioGroup();
-  const current: number = radioGroup?.value ?? 0;
+  const current = radioGroup?.value;
   const paused = useSelector(selectPlaybackState) !== 'playing';
   const duration = useSelector(selectDuration);
   const pausedIcon = duration ? <PauseCircleIcon /> : <StopCircleIcon />;
@@ -36,7 +37,7 @@ const PlaylistItem: React.FC<Props> = ({ value, media }) => {
         sx={{ width: 1 }}
         disableTypography
         value={value}
-        label={<Numbered index={value + 1} text={media.filename} />}
+        label={<Numbered index={index} text={media.filename} />}
         onClick={e => {
           if (!e.shiftKey && !e.altKey && !e.ctrlKey) dispatch(playerPlay());
         }}

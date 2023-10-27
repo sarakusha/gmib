@@ -34,7 +34,7 @@ const CurrentPlaylist: React.FC<Props> = ({ playerId, className }) => {
   const dispatch = useDispatch();
   const updateCurrentHandler = React.useCallback<React.ChangeEventHandler<HTMLInputElement>>(
     e => {
-      dispatch(updatePlayer(playerId, prev => ({ ...prev, current: Number(e.target.value) })));
+      dispatch(updatePlayer(playerId, prev => ({ ...prev, current: e.target.value })));
       dispatch(setPlaybackState('playing'));
     },
     [playerId, dispatch],
@@ -71,7 +71,7 @@ const CurrentPlaylist: React.FC<Props> = ({ playerId, className }) => {
                 ([id, media], index) =>
                   media && (
                     <Collapse key={id}>
-                      <PlaylistItem value={index} media={media} />
+                      <PlaylistItem value={id} index={index + 1} media={media} />
                     </Collapse>
                   ),
               )}

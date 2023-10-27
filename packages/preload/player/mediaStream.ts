@@ -35,14 +35,14 @@ const getMediaUri = (name?: string) =>
 const playNextSource = () => {
   const source = nextSource;
   if (source) {
-    const { index = 0 } = source.options;
+    const { itemId } = source.options;
     source.play();
     currentSource = source;
     nextSource = undefined;
     ipcDispatch(setDuration(source.duration));
     videoStream.add(source.readable).then(playNextSource);
-    if (player.current !== index) {
-      ipcDispatch(setCurrentPlaylistItem(index));
+    if (player.current !== itemId) {
+      ipcDispatch(setCurrentPlaylistItem(itemId));
     } else {
       // eslint-disable-next-line @typescript-eslint/no-use-before-define
       update();
@@ -53,7 +53,7 @@ const playNextSource = () => {
 const update = async () => {
   const enabled = Boolean(playlist && playlist.items.length > 0 && playbackState !== 'none');
   let delay = 0;
-  let { current } = player;
+  const { current } = player;
   if (prevEnabled !== enabled) {
     prevEnabled = enabled;
     stream.getTracks().forEach(track => {
@@ -77,19 +77,20 @@ const update = async () => {
     nextSource = undefined;
     return;
   }
-  if (!currentSource?.closed && current !== currentSource?.options.index) {
-    if (nextSource && nextSource.options.index === current) {
+  if (!currentSource?.closed && current !== currentSource?.options.itemId) {
+    if (nextSource && nextSource.options.itemId === current) {
       currentSource?.close();
     } else {
       nextSource?.close();
       nextSource = undefined;
-      if (current >= playlist.items.length) current = 0;
-      const currentItem = playlist.items[current];
+      // if (current >= playlist.items.length) current = 0;
+
+      const currentItem = playlist.items.find(item => item.id === current) ?? playlist.items[0];
       const media: MediaInfo = await ipcRenderer.invoke('getMedia', currentItem.md5);
       const uri = getMediaUri(media?.filename);
       if (uri) {
         const videoSource = new VideoSource(uri, {
-          index: current,
+          itemId: current,
           autoplay: playbackState === 'playing',
           fade: { disableIn: player.disableFadeIn, disableOut: player.disableFadeOut },
           onMessage: ({ data }) => {
@@ -110,15 +111,14 @@ const update = async () => {
     }
   }
   if (!nextSource || nextSource.closed) {
-    let nextIndex = current + 1;
-    if (nextIndex >= playlist.items.length) nextIndex = 0;
+    const nextIndex = (playlist.items.findIndex(item => item.id === current) + 1) % playlist.items.length;
     nextSource?.close();
     const nextItem = playlist.items[nextIndex];
     const media: MediaInfo = await ipcRenderer.invoke('getMedia', nextItem.md5);
     const uri = getMediaUri(media?.filename);
     if (uri) {
       nextSource = new VideoSource(uri, {
-        index: nextIndex,
+        itemId: nextItem.id,
         delay,
         fade: { disableIn: player.disableFadeIn, disableOut: player.disableFadeOut },
         // onMessage: messageHandler,
@@ -164,6 +164,7 @@ const initialize = async () => {
 initialize();
 
 ipcRenderer.on('player', async (_, value: Player) => {
+  console.log('UPDATE PLAYER');
   player = value;
   playlist = player.playlistId
     ? await ipcRenderer.invoke('getPlaylist', player.playlistId)

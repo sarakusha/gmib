@@ -27,7 +27,7 @@ export type Player = {
   name?: string;
   // screenId: string;
   playlistId?: number | null;
-  current: number;
+  current?: string;
   width?: number;
   height?: number;
   autoPlay?: boolean;

@@ -12,7 +12,7 @@ export type VideoSourceOptions = {
   delay?: number;
   autoplay?: boolean;
   fade?: FadeOptions;
-  index?: number;
+  itemId?: string;
   onMessage?: VideoSourceMessageHandler;
 };
 
@@ -85,7 +85,7 @@ export default class VideoSource {
     } else {
       start(!options.autoplay);
     }
-    const onMessage = options.onMessage ? options.onMessage.bind(this) : () => {};
+    const onMessage = options.onMessage ? options.onMessage.bind(this) : () => { };
     decoder.onmessage = ev => {
       const { data } = ev;
       if (typeof data !== 'object') return;

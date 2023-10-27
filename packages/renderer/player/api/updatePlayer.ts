@@ -31,6 +31,39 @@ export const debouncedUpdatePlayer = createDebouncedAsyncThunk<void, Player, App
 
 const selectPlaylistData = playlistApi.endpoints.getPlaylists.select();
 
+const getFirstItemFactory =
+  (getState: () => RootState) =>
+  (playlistId?: number | null): string | undefined => {
+    const playlistsData = selectPlaylistData(getState()).data;
+    return playlistId && playlistsData
+      ? selectPlaylistById(playlistsData, playlistId)?.items[0]?.id
+      : undefined;
+  };
+
+const getNextItemFactory =
+  (getState: () => RootState) =>
+  (playlistId?: number | null, current?: string): string | undefined => {
+    const playlistsData = selectPlaylistData(getState()).data;
+    if (!playlistId || !playlistsData) return undefined;
+    const playlist = selectPlaylistById(playlistsData, playlistId);
+    if (!playlist || playlist.items.length === 0) return undefined;
+    if (!current) return playlist.items[0].id;
+    const index = playlist.items.findIndex(item => item.id === current);
+    const next = (index + 1) % playlist.items.length;
+    return playlist.items[next].id;
+  };
+
+const isValidItemFactory =
+  (getState: () => RootState) =>
+  (playlistId?: number | null, current?: string): boolean | undefined => {
+    const playlistsData = selectPlaylistData(getState()).data;
+    if (!playlistId || !playlistsData) return undefined;
+    const playlist = selectPlaylistById(playlistsData, playlistId);
+    if (!playlist || playlist.items.length === 0) return undefined;
+    if (!current) return false;
+    const index = playlist.items.findIndex(item => item.id === current);
+    return index !== -1;
+  };
 const updatePlayer =
   (id: number, update: SetStateAction<Player>): AppThunk =>
   (dispatch, getState) => {
@@ -39,24 +72,9 @@ const updatePlayer =
         const prev = selectPlayer(draft, id);
         if (!prev) throw new Error(`Unknown player: ${id}`);
         const player: Player = typeof update === 'function' ? update(prev) : update;
-        const playlistsData = selectPlaylistData(getState()).data;
-        if (playlistsData && player.playlistId && player.current) {
-          const playlist = selectPlaylistById(playlistsData, player.playlistId);
-          const length = playlist?.items.length;
-          if (length && player.current >= length) {
-            player.current = 0;
-          }
-          // if (player.playlistId !== prev.playlistId) {
-          //   window.mediaStream.setPlaylist(playlist);
-          // }
+        if (isValidItemFactory(getState)(player.playlistId, player.current) === false) {
+          player.current = getFirstItemFactory(getState)(player.playlistId);
         }
-        // if (prev.current !== player.current) {
-        //   window.mediaStream.setCurrent(player.current);
-        // }
-        // window.mediaStream.setFadeOptions({
-        //   disableIn: player.disableFadeIn,
-        //   disableOut: player.disableFadeOut,
-        // });
         dispatch(debouncedUpdatePlayer(player));
         playerAdapter.setOne(draft, player);
       }),
@@ -65,15 +83,32 @@ const updatePlayer =
 
 export const playerPlay = () => updatePlayer(sourceId, props => ({ ...props, autoPlay: true }));
 export const playerPause = () => updatePlayer(sourceId, props => ({ ...props, autoPlay: false }));
-export const playerNext = () =>
-  updatePlayer(sourceId, props => ({ ...props, current: props.current + 1 }));
+export const playerNext = (): AppThunk => (dispatch, getState) => {
+  dispatch(
+    updatePlayer(sourceId, props => ({
+      ...props,
+      current: getNextItemFactory(getState)(props.playlistId, props.current),
+    })),
+  );
+};
 export const playerStop = (): AppThunk => dispatch => {
-  dispatch(updatePlayer(sourceId, props => ({ ...props, current: 0, autoPlay: false })));
+  dispatch(
+    updatePlayer(sourceId, props => ({
+      ...props,
+      current: undefined,
+      autoPlay: false,
+    })),
+  );
   dispatch(setPosition(0));
   // dispatch(setDuration(0));
 };
 export const clearPlayer = (): AppThunk => dispatch => {
-  updatePlayer(sourceId, props => ({ ...props, autoPlay: false, current: 0, playlistId: null }));
+  updatePlayer(sourceId, props => ({
+    ...props,
+    autoPlay: false,
+    current: undefined,
+    playlistId: null,
+  }));
   dispatch(setPlaybackState('none'));
   dispatch(setPosition(0));
   dispatch(setDuration(0));

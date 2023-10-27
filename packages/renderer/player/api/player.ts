@@ -14,7 +14,7 @@ const defaultPlayer: Omit<Player, 'id'> = {
   name: 'Новый плеер',
   width: 320,
   height: 240,
-  current: 0,
+  // current: 0,
 };
 
 const playerApi = createApi({

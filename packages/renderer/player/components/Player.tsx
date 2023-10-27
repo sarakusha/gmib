@@ -28,7 +28,7 @@ const Player: React.FC<Props> = ({ className, playerId = 0 }) => {
   const { width = 320, height = 240 } = player ?? {};
   let current: MediaInfo | undefined;
   if (player && playlist?.items && mediaData) {
-    const item = playlist.items[player.current % playlist.items.length];
+    const item = playlist.items.find(({ id }) => id === player.current) ?? playlist.items[0];
     current = item && selectMediaById(mediaData, item.md5);
   }
   const pip = document.pictureInPictureElement; // useSelector(selectPiP);
