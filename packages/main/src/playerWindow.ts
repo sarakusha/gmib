@@ -84,6 +84,12 @@ export const openPlayer = async (
       if (!needRestart() && !isQuitting && localConfig.get('autostart')) {
         event.preventDefault();
         browserWindow?.hide();
+      } else if (!isRemote && !gmibParams.autostart) {
+        const parent = BrowserWindow.fromId(gmibParams.id);
+        console.log({ parent: parent?.isVisible() });
+        if (parent && !parent.isVisible()) {
+          setTimeout(() => parent.close(), 100);
+        }
       }
     });
     browserWindow.on('show', () => {
