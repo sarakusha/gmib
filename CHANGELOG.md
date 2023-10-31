@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.7.0](https://github.com/sarakusha/gmib/compare/v4.6.8...v4.7.0) (2023-10-31)
+
+
+### Features
+
+* cursor hidden ([3383ee3](https://github.com/sarakusha/gmib/commit/3383ee30567ff5f36d9f2af24de6143abfeecab7))
+* high quality for video conversion ([3047c00](https://github.com/sarakusha/gmib/commit/3047c0057b12fa70bed53efb15bcd44143df15c8))
+* prevent main window from closing when player is active ([9dbf0c3](https://github.com/sarakusha/gmib/commit/9dbf0c3eb86056c0f9813c833d78ebf034daca8b))
+
+
+### Bug Fixes
+
+* allow reboots when updating ([8d0cda5](https://github.com/sarakusha/gmib/commit/8d0cda5518239c893887c23720f97634761f603c))
+* black screen ([351615a](https://github.com/sarakusha/gmib/commit/351615a2daf845d7a65f12b6d7f218dbc89c1c6e))
+* close on error ([fe5ddcc](https://github.com/sarakusha/gmib/commit/fe5ddcc46cd843a3fbbbdb6b822a9bba8674bf11))
+* debounced update ([5f5819c](https://github.com/sarakusha/gmib/commit/5f5819cdbbad62a6f7cda4d81f81d85d0f58d6b3))
+* empty ip ([5e0dddd](https://github.com/sarakusha/gmib/commit/5e0dddd41844f3ed756e566b821398260b65ab62))
+* exit app ([6f90475](https://github.com/sarakusha/gmib/commit/6f904759efd25727df9294df240400ad8f401994))
+* gradual loading of content ([e06d489](https://github.com/sarakusha/gmib/commit/e06d4892c8bfa0aef5f651d6ac28036fe90de800))
+* invisible cursor for HTML pages ([9cf710f](https://github.com/sarakusha/gmib/commit/9cf710f1d0bf94b9ba8b9c90396c706fe462e8bd))
+* missed await ([2234420](https://github.com/sarakusha/gmib/commit/22344208f9c93cb0b37b2229ad0afa5ed7c63697))
+* modified an invariant object ([ebcbdaf](https://github.com/sarakusha/gmib/commit/ebcbdafc9f9d4fb35e863a09ee85f003455a4f53))
+* update current playlist ([d7eea36](https://github.com/sarakusha/gmib/commit/d7eea36a36c85851a2e0d9f1e15cbd094596042c))
+* update player ([789400c](https://github.com/sarakusha/gmib/commit/789400c25aa9dd83a1c0b7e56153fc6f5b4a80d5))
+
 ## [4.6.8](https://github.com/sarakusha/gmib/compare/v4.6.7...v4.6.8) (2023-10-25)
 
 
