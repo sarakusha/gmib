@@ -15,9 +15,9 @@ import { TransitionGroup } from 'react-transition-group';
 import { selectMediaById, useGetMediaQuery } from '../../api/media';
 import { usePlayer } from '../../api/player';
 import { useGetPlaylistById } from '../../api/playlists';
-import updatePlayer, { clearPlayer } from '../../api/updatePlayer';
+import { clearPlayer } from '../../api/updatePlayer';
 import { useDispatch } from '../../store';
-import { setPlaybackState } from '../../store/currentSlice';
+import { setCurrentPlaylistItem, setPlaybackState } from '../../store/currentSlice';
 
 import PlaylistItem from './PlaylistItem';
 
@@ -34,10 +34,10 @@ const CurrentPlaylist: React.FC<Props> = ({ playerId, className }) => {
   const dispatch = useDispatch();
   const updateCurrentHandler = React.useCallback<React.ChangeEventHandler<HTMLInputElement>>(
     e => {
-      dispatch(updatePlayer(playerId, prev => ({ ...prev, current: e.target.value })));
+      dispatch(setCurrentPlaylistItem(e.target.value));
       dispatch(setPlaybackState('playing'));
     },
-    [playerId, dispatch],
+    [dispatch],
   );
   if (!currentPlaylist || !mediaData) return null;
   return (
@@ -60,7 +60,7 @@ const CurrentPlaylist: React.FC<Props> = ({ playerId, className }) => {
       <RadioGroup
         aria-labelledby="current-playlist-name"
         name="current-playlist"
-        value={current}
+        value={current ?? null}
         onChange={updateCurrentHandler}
       >
         <List sx={{ width: 1 }}>
