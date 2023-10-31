@@ -1,9 +1,12 @@
+// import type { SetStateAction } from 'react';
 import { createEntityAdapter, type EntityState } from '@reduxjs/toolkit';
 import { createApi } from '@reduxjs/toolkit/query/react';
 
+// import type { AppThunk, AppThunkConfig } from '../store';
 import baseQuery from '../../common/authBaseQuery';
 
 import type { PlayerMapping } from '/@common/video';
+// import createDebouncedAsyncThunk from '../../common/createDebouncedAsyncThunk';
 
 export const mappingAdapter = createEntityAdapter<PlayerMapping>();
 
@@ -91,5 +94,28 @@ export const {
   useDeleteMappingMutation,
   useUpdateMappingMutation,
 } = mappingApi;
+
+/* const debouncedUpdateMapping = createDebouncedAsyncThunk<void, PlayerMapping, AppThunkConfig>(
+  'mappingApi/pendingUpdate',
+  (mapping, { dispatch }) => {
+    dispatch(mappingApi.endpoints.updateMapping.initiate(mapping));
+  },
+  200,
+  { selectId: mapping => mapping.id, maxWait: 500 },
+);
+
+export const updateMapping =
+  (id: number, update: SetStateAction<PlayerMapping>): AppThunk =>
+  dispatch => {
+    dispatch(
+      mappingApi.util.updateQueryData('getMappings', undefined, draft => {
+        const prev = selectMappingById(draft, id);
+        if (!prev) throw new Error(`Unknown player mapping: ${id}`);
+        const mapping = typeof update === 'function' ? update(prev) : prev;
+        mappingAdapter.setOne(draft, { ...mapping, id });
+        dispatch(debouncedUpdateMapping(mapping));
+      }),
+    );
+  }; */
 
 export default mappingApi;
