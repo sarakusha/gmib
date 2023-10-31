@@ -31,3 +31,6 @@ contextBridge.exposeInMainWorld('socket', {
   broadcast: (event: string, ...args: unknown[]) =>
     ipcRenderer.send('broadcast', JSON.stringify({ event, data: [sourceId, ...args] })),
 });
+contextBridge.exposeInMainWorld('onUpdatePlaylist', (callback: () => void) =>
+  ipcRenderer.on('updatePlaylist', callback),
+);

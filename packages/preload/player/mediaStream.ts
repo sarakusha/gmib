@@ -164,7 +164,6 @@ const initialize = async () => {
 initialize();
 
 ipcRenderer.on('player', async (_, value: Player) => {
-  console.log('UPDATE PLAYER');
   player = value;
   playlist = player.playlistId
     ? await ipcRenderer.invoke('getPlaylist', player.playlistId)

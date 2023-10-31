@@ -1,8 +1,8 @@
-import type { BrowserWindow } from 'electron';
-import { app } from 'electron';
+import { app, BrowserWindow } from 'electron';
 import path from 'path';
 
 import debugFactory from 'debug';
+import type { Player } from '/@common/video';
 
 import authRequest from './authRequest';
 import createWindow from './createWindow';
@@ -13,7 +13,6 @@ import relaunch from './relaunch';
 import { getPlayer, getPlayers, updateHidePlayer, updateShowPlayer } from './screen';
 import { findPlayerWindow, getAllGmibParams, registerPlayer } from './windowStore';
 import main from './mainWindow';
-import type { Player } from '/@common/video';
 import { needRestart } from './updater';
 
 const preload = path.join(__dirname, '../../preload/dist/player.cjs');
@@ -86,7 +85,6 @@ export const openPlayer = async (
         browserWindow?.hide();
       } else if (!isRemote && !gmibParams.autostart) {
         const parent = BrowserWindow.fromId(gmibParams.id);
-        console.log({ parent: parent?.isVisible() });
         if (parent && !parent.isVisible()) {
           setTimeout(() => parent.close(), 100);
         }

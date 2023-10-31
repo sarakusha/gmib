@@ -69,7 +69,6 @@ import {
 } from './playerMapping';
 import { getPlayerTitle } from './playerWindow';
 import {
-  deleteAllPlaylistItems,
   deleteExtraPlaylistItems,
   deletePlaylist,
   deletePlaylistItemById,
@@ -94,6 +93,7 @@ import {
   getAddressesForScreen,
   getPlayer,
   getPlayers,
+  getPlaylistPlayers,
   getScreens,
   insertAddress,
   insertPlayer,
@@ -116,7 +116,6 @@ import {
   findPlayerWindow,
   findScreenParams,
   findScreenWindow,
-  getPlayerParams,
   isEqualOptions,
   registerScreen,
 } from './windowStore';
@@ -475,6 +474,17 @@ api.post('/playlist', async (req, res, next) => {
   }
 });
 
+const revalidatePlaylist = async (id: number): Promise<void> => {
+  const players = await getPlaylistPlayers(id);
+  players.forEach(player => {
+    const params = findPlayerParams(player.id);
+    const win = params && BrowserWindow.fromId(params.id);
+    if (win) {
+      win.webContents.send('updatePlaylist', player);
+    }
+  });
+};
+
 api.put('/playlist', async (req, res, next) => {
   let transaction = false;
   try {
@@ -487,26 +497,18 @@ api.put('/playlist', async (req, res, next) => {
     }
     const { id } = props;
     if (items && items.length > 0) {
-      await Promise.all(
-        items.map((item, index) =>
-          updatePlaylistItem(id, index, item).then(
-            ({ changes: count }) =>
-              count > 0 || insertPlaylistItem(id, index, item, nanoid()).then(() => true),
-          ),
-        ),
+      await asyncSerial(items, ({ id: itemId, ...item }, index) =>
+        updatePlaylistItem(id, index, { ...item, id: itemId ?? nanoid() }),
       );
-      await deleteExtraPlaylistItems(id, items.length);
-    } else {
-      await deleteAllPlaylistItems(id);
     }
+    await deleteExtraPlaylistItems(id, items.length);
     transaction = await commitTransaction();
     const playlist = await getPlaylist(id);
     const playlistItems = await getPlaylistItems(id);
     res.json({ ...playlist, items: playlistItems });
-    getPlayerParams().forEach(({ id: winId }) =>
-      BrowserWindow.fromId(winId)?.webContents.send('playlist', id),
+    revalidatePlaylist(id).catch(err =>
+      debug(`error while revalidate playlist ${id}: ${(err as Error).message}`),
     );
-    // playerWindows.forEach(win => win.webContents.send('playlist', id));
   } catch (e) {
     if (transaction) await rollback();
     next(e);
@@ -522,20 +524,24 @@ api.patch('/playlist/:id', async (req, res, next) => {
       res.sendStatus(404);
       return;
     }
+    let removeId: string | undefined;
     if ('insert' in req.body) {
       const ids = req.body.insert as string[];
       transaction = await beginTransaction();
       const offset = ((await getLastPlaylistItemPos(id)) ?? -1) + 1;
       await Promise.all(
-        ids.map((md5, index) => insertPlaylistItem(id, offset + index, { md5 }, nanoid())),
+        ids.map((md5, index) => insertPlaylistItem(id, offset + index, { md5, id: nanoid() })),
       );
       transaction = await commitTransaction();
     } else if ('remove' in req.body) {
-      const itemId = req.body.remove as string;
-      await deletePlaylistItemById(itemId);
+      removeId = req.body.remove as string;
+      await deletePlaylistItemById(removeId);
     }
     const items = await getPlaylistItems(id);
     res.json({ ...playlist, items });
+    revalidatePlaylist(id).catch(err =>
+      debug(`error while revalidate playlist ${id}: ${(err as Error).message}`),
+    );
   } catch (err) {
     if (transaction) await rollback();
     next(err);

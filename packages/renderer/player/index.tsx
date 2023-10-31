@@ -17,6 +17,8 @@ import theme from '../common/theme';
 
 import App from './components/App';
 import store from './store';
+import updatePlayer from './api/updatePlayer';
+import { sourceId } from './utils';
 
 debugFactory.log = window.log;
 import.meta.env.VITE_DEBUG && debugFactory.enable(import.meta.env.VITE_DEBUG);
@@ -29,6 +31,9 @@ const root = createRoot(container);
 // Sentry.init({ dsn: 'https://fbd4024789d247fcb5eb2493d1aa28b6@o1412889.ingest.sentry.io/6752393' });
 
 window.setDispatch(store.dispatch.bind(store));
+window.onUpdatePlaylist(() => {
+  store.dispatch(updatePlayer(sourceId, player => player));
+});
 
 // const Html5DndProvider = React.lazy(() => import('/@common/Html5DndProvider'));
 

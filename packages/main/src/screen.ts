@@ -170,6 +170,12 @@ export const deleteExtraAddresses = (screenId: number, validAddresses?: string[]
 
 export const getPlayers = promisifyAll('SELECT * FROM player', () => {}, toPlayer);
 
+export const getPlaylistPlayers = promisifyAll(
+  'SELECT * FROM player WHERE playlistId = ?',
+  (playlistId: number) => playlistId,
+  toPlayer,
+);
+
 export const getPlayer = promisifyGet(
   'SELECT * FROM player WHERE id = ? LIMIT 1',
   (id: number) => id,
