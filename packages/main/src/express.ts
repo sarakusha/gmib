@@ -1,25 +1,20 @@
-import { createServer } from 'http';
 import path from 'path';
 
 // import debugFactory from 'debug';
 import express from 'express';
-import { WebSocketServer } from 'ws';
 import type { ErrorRequestHandler } from 'express-serve-static-core';
 import helmet from 'helmet';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 
 import api, { mediaRoot } from './api';
-import { port } from './config';
 import { dbReady } from './db';
+import { app } from './server';
 
 import preventLoadSourceMap from '/@common/preventLoadSourceMap';
 
 // const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:express`);
 
-const app = express();
-const server = createServer(app);
-export const wss = new WebSocketServer({ server });
 
 // const isAuthorized = (req: IncomingMessage) =>
 //   import.meta.env.DEV ||
@@ -88,19 +83,3 @@ app.use(
 );
 app.use(errorHandler);
 
-server.listen(port, () => {
-  // debug(`Playback server running on port ${port}...`);
-});
-
-// server.on('upgrade', (req, socket, head) => {
-//   if (!isAuthorized(req)) {
-//     socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
-//     socket.destroy();
-//     return;
-//   }
-//   wss.handleUpgrade(req, socket, head, ws => {
-//     wss.emit('connection', ws, req);
-//   });
-// });
-
-export default server;

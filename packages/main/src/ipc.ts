@@ -1,5 +1,4 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
-import { WebSocket } from 'ws';
 import { getMediaByMD5 } from './media';
 import { getPlayerMappingsForPlayer } from './playerMapping';
 import { getPlaylist, getPlaylistItems } from './playlist';
@@ -7,7 +6,7 @@ import { getPlayer, getScreens, loadScreen } from './screen';
 import store from './windowStore';
 
 import { isGmib } from '/@common/WindowParams';
-import { wss } from './express';
+import { broadcast } from './server';
 
 app.whenReady().then(() => {
   ipcMain.handle('getPlayer', (_, id) => getPlayer(id));
@@ -27,11 +26,7 @@ app.whenReady().then(() => {
     return isGmib(params) ? params.machineId : undefined;
   });
   ipcMain.on('broadcast', (_, msg: string) => {
-    wss.clients.forEach(ws => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(msg);
-      }
-    });
+    broadcast(msg);
   });
 });
 

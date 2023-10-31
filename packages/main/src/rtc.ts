@@ -8,7 +8,7 @@ import { WebSocket } from 'ws';
 import debugFactory from 'debug';
 import memoize from 'lodash/memoize';
 
-import { wss } from './express';
+import { wss } from './server';
 import { openPlayer } from './playerWindow';
 import { findPlayerWindow } from './windowStore';
 import master from './MasterBrowser';
