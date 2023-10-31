@@ -141,21 +141,21 @@ function createTables(): void {
     );
 
     db.run(
-      `CREATE TABLE IF NOT EXISTS playlistToMedia (
-            id STRING(21) PRIMARY KEY NOT NULL,
+      `CREATE TABLE IF NOT EXISTS playlistMedia (
+            id STRING(21) NOT NULL,
             playlist_id INTEGER NOT NULL,
             media_md5 TEXT NOT NULL,
             flags INTEGER DEFAULT 0,
             start REAL,
             duration REAL,
             pos INTEGER NOT NULL,
---             PRIMARY KEY (playlist_id, pos),
+            PRIMARY KEY (playlist_id, pos),
             FOREIGN KEY (playlist_id)
                 REFERENCES playlist (id) ON DELETE CASCADE,
             FOREIGN KEY (media_md5)
                 REFERENCES media (md5) ON DELETE RESTRICT
         )`,
-      err => err && debug(`error while create playlistToMedia ${err}`),
+      err => err && debug(`error while create playlistMedia ${err}`),
     );
 
     db.run(

@@ -30,7 +30,7 @@ export const getPlaylist = promisifyGet(
 export const getPlaylists = promisifyAll('SELECT * FROM playlist', () => [], toPlaylist);
 
 export const getPlaylistItems = promisifyAll(
-  'SELECT rowid, * from playlistToMedia WHERE playlist_id = ? ORDER BY pos',
+  'SELECT rowid, * from playlistMedia WHERE playlist_id = ? ORDER BY pos',
   (id: number) => id,
   toPlaylistItem,
 );
@@ -59,10 +59,9 @@ export const updatePlaylist = promisifyRun(
 const playlistItemEncoder = (
   playlistId: number,
   pos: number,
-  item: Omit<PlaylistItem, 'id'>,
-  id?: string,
+  item: PlaylistItem,
 ) => ({
-  $id: id,
+  $id: item.id,
   $playlistID: playlistId,
   $pos: pos,
   $md5: item.md5,
@@ -72,34 +71,35 @@ const playlistItemEncoder = (
 });
 
 export const updatePlaylistItem = promisifyRun(
-  `UPDATE playlistToMedia
+  `UPDATE playlistMedia
    SET flags=$flags,
        start=$start,
        duration=$duration,
        media_md5=$md5
+       id=$id
    WHERE playlist_id = $playlistID
      AND pos = $pos`,
   playlistItemEncoder,
 );
 
 export const insertPlaylistItem = promisifyRun(
-  `INSERT INTO playlistToMedia (id, playlist_id, media_md5, flags, start, duration, pos)
+  `INSERT INTO playlistMedia (id, playlist_id, media_md5, flags, start, duration, pos)
    VALUES ($id, $playlistID, $md5, $flags, $start, $duration, $pos)`,
   playlistItemEncoder,
 );
 
 export const deletePlaylistItemById = promisifyRun(
-  'DELETE FROM playlistToMedia WHERE id = ?',
+  'DELETE FROM playlistMedia WHERE id = ?',
   (itemId: string) => itemId,
 );
 
 export const deleteAllPlaylistItems = promisifyRun(
-  'DELETE FROM playlistToMedia WHERE playlist_id = ?',
+  'DELETE FROM playlistMedia WHERE playlist_id = ?',
   (id: number) => id,
 );
 
 export const deleteExtraPlaylistItems = promisifyRun(
-  'DELETE FROM playlistToMedia WHERE playlist_id = ? AND pos >= ?',
+  'DELETE FROM playlistMedia WHERE playlist_id = ? AND pos >= ?',
   (id: number, from: number) => [id, from],
 );
 
@@ -110,13 +110,13 @@ export const existsPlaylistName = promisifyGet(
 );
 
 export const getLastPlaylistItemPos = promisifyGet(
-  'SELECT MAX(pos) AS max FROM playlistToMedia WHERE playlist_id = ?',
+  'SELECT MAX(pos) AS max FROM playlistMedia WHERE playlist_id = ?',
   (id: number) => id,
   result => result?.max as number,
 );
 
 export const uniquePlaylistName = uniqueField('name', existsPlaylistName);
 
-export const removeItemFromPlaylist = promisifyRun(
-  'DELETE FROM playlistToMedia WHERE playlist_id = ? AND  = (SELECT ID FROM (SELECT ID FROM PROTOTYPE_1 ORDER BY ID LIMIT 1,1) AS T)',
-);
+// export const removeItemFromPlaylist = promisifyRun(
+//   'DELETE FROM playlistMedia WHERE playlist_id = ? AND  = (SELECT ID FROM (SELECT ID FROM PROTOTYPE_1 ORDER BY ID LIMIT 1,1) AS T)',
+// );
