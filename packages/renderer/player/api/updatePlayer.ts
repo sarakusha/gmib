@@ -4,7 +4,6 @@ import debugFactory from 'debug';
 import { host, port } from '/@common/remote';
 import type { Player } from '/@common/video';
 
-
 import type { AppDispatch, AppThunk, RootState } from '../store';
 import {
   setCurrentPlaylistItem,
@@ -14,7 +13,7 @@ import {
 } from '../store/currentSlice';
 import { sourceId } from '../utils';
 
-import playerApi, { debouncedUpdatePlayer, selectPlayer } from './player';
+import playerApi, { debouncedUpdatePlayer, playerAdapter, selectPlayer } from './player';
 import playlistApi, { selectPlaylistById } from './playlists';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:updatePlayer`);
@@ -61,12 +60,12 @@ const updatePlayer =
       playerApi.util.updateQueryData('getPlayers', undefined, draft => {
         const prev = selectPlayer(draft, id);
         if (!prev) throw new Error(`Unknown player: ${id}`);
-        const player: Player = typeof update === 'function' ? update(prev) : update;
+        let player: Player = typeof update === 'function' ? update(prev) : update;
         if (isValidItemFactory(getState)(player.playlistId, player.current) === false) {
-          player.current = getFirstItemFactory(getState)(player.playlistId);
+          player = { ...player, current: getFirstItemFactory(getState)(player.playlistId) };
         }
         dispatch(debouncedUpdatePlayer(player));
-        // playerAdapter.setOne(draft, player);
+        playerAdapter.setOne(draft, player);
       }),
     );
   };
