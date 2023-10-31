@@ -67,11 +67,14 @@ const playlistApi = createApi({
       async onQueryStarted(playlist, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          dispatch(
-            playlistApi.util.updateQueryData('getPlaylists', undefined, draft => {
-              adapter.setOne(draft, data);
-            }),
-          );
+          // eslint-disable-next-line @typescript-eslint/no-use-before-define
+          if (!debouncedUpdatePlaylist.pending) {
+            dispatch(
+              playlistApi.util.updateQueryData('getPlaylists', undefined, draft => {
+                adapter.setOne(draft, data);
+              }),
+            );
+          }
         } catch {
           dispatch(playlistApi.endpoints.getPlaylists.initiate());
         }
@@ -151,7 +154,7 @@ export const {
   useGetPlaylistsQuery,
   useCreatePlaylistMutation,
   useDeletePlaylistMutation,
-  useUpdatePlaylistMutation,
+  // useUpdatePlaylistMutation,
   useInsertMediaMutation,
   useRemoveMediaMutation,
 } = playlistApi;
