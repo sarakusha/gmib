@@ -4,9 +4,8 @@ import debugFactory from 'debug';
 import { host, port } from '/@common/remote';
 import type { Player } from '/@common/video';
 
-import createDebouncedAsyncThunk from '../../common/createDebouncedAsyncThunk';
 
-import type { AppDispatch, AppThunk, AppThunkConfig, RootState } from '../store';
+import type { AppDispatch, AppThunk, RootState } from '../store';
 import {
   setCurrentPlaylistItem,
   setDuration,
@@ -15,19 +14,10 @@ import {
 } from '../store/currentSlice';
 import { sourceId } from '../utils';
 
-import playerApi, { playerAdapter, selectPlayer } from './player';
+import playerApi, { debouncedUpdatePlayer, selectPlayer } from './player';
 import playlistApi, { selectPlaylistById } from './playlists';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:updatePlayer`);
-
-export const debouncedUpdatePlayer = createDebouncedAsyncThunk<void, Player, AppThunkConfig>(
-  'playerApi/pendingUpdate',
-  (player, { dispatch }) => {
-    dispatch(playerApi.endpoints.updatePlayer.initiate(player));
-  },
-  200,
-  { selectId: player => player.id, maxWait: 500 },
-);
 
 const selectPlaylistData = playlistApi.endpoints.getPlaylists.select();
 
@@ -76,7 +66,7 @@ const updatePlayer =
           player.current = getFirstItemFactory(getState)(player.playlistId);
         }
         dispatch(debouncedUpdatePlayer(player));
-        playerAdapter.setOne(draft, player);
+        // playerAdapter.setOne(draft, player);
       }),
     );
   };

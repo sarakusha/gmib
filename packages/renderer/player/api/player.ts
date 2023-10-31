@@ -5,6 +5,8 @@ import { sourceId } from '../utils';
 import baseQuery from '../../common/authBaseQuery';
 
 import type { Player } from '/@common/video';
+import createDebouncedAsyncThunk from '../../common/createDebouncedAsyncThunk';
+import type { AppThunkConfig } from '../store';
 
 export const playerAdapter = createEntityAdapter<Player>();
 
@@ -37,24 +39,27 @@ const playerApi = createApi({
         body: player,
       }),
       async onQueryStarted(player, { dispatch, queryFulfilled }) {
-        const patchResult = dispatch(
-          playerApi.util.updateQueryData('getPlayers', undefined, draft => {
-            playerAdapter.setOne(draft, player);
-          }),
-        );
-        queryFulfilled.catch(patchResult.undo);
+        // const patchResult = dispatch(
+        //   playerApi.util.updateQueryData('getPlayers', undefined, draft => {
+        //     playerAdapter.setOne(draft, player);
+        //   }),
+        // );
+        // queryFulfilled.catch(patchResult.undo);
 
-        // try {
-        //   const { data } = await queryFulfilled;
-        //   dispatch(
-        //     playerApi.util.updateQueryData('getPlayers', undefined, draft => {
-        //       playerAdapter.setOne(draft, data);
-        //     }),
-        //   );
-        // } catch (e) {
-        //   // console.error('error while updatePlayer', e);
-        //   dispatch(playerApi.endpoints.getPlayers.initiate());
-        // }
+        try {
+          const { data } = await queryFulfilled;
+          // eslint-disable-next-line @typescript-eslint/no-use-before-define
+          if (!debouncedUpdatePlayer.pending) {
+            dispatch(
+              playerApi.util.updateQueryData('getPlayers', undefined, draft => {
+                playerAdapter.setOne(draft, data);
+              }),
+            );
+          }
+        } catch (e) {
+          // console.error('error while updatePlayer', e);
+          dispatch(playerApi.endpoints.getPlayers.initiate());
+        }
       },
     }),
     createPlayer: build.mutation<Player, Partial<Player>>({
@@ -120,5 +125,14 @@ export const {
   useCreatePlayerMutation,
   useDeletePlayerMutation,
 } = playerApi;
+
+export const debouncedUpdatePlayer = createDebouncedAsyncThunk<void, Player, AppThunkConfig>(
+  'playerApi/pendingUpdate',
+  (player, { dispatch }) => {
+    dispatch(playerApi.endpoints.updatePlayer.initiate(player));
+  },
+  200,
+  { selectId: player => player.id, maxWait: 500 },
+);
 
 export default playerApi;
