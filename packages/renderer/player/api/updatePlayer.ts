@@ -119,7 +119,11 @@ export const socketMiddleware: Middleware = api => {
       ) {
         switch (msg.event) {
           case 'setDuration':
-            dispatch(setDuration(msg.data[1]));
+            {
+              const [, position, duration] = msg.data;
+              dispatch(setDuration(position));
+              if (duration != null) dispatch(setDuration(duration));
+            }
             break;
           case 'setCurrentPlaylistItem':
             dispatch(setCurrentPlaylistItem(msg.data[1]));

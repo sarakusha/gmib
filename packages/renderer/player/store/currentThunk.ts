@@ -14,7 +14,7 @@ import {
   togglePlaybackState,
 } from './currentSlice';
 import { startAppListening } from './listenerMiddleware';
-import { selectCurrent, selectPlaybackState } from './selectors';
+import { selectCurrent, selectDuration, selectPlaybackState } from './selectors';
 import { isRemoteSession } from '/@common/remote';
 
 const selectPlayersData = playerApi.endpoints.getPlayers.select();
@@ -36,8 +36,9 @@ startAppListening({
 if (!isRemoteSession) {
   startAppListening({
     actionCreator: setPosition,
-    effect: action => {
-      window.socket.broadcast('setPosition', action.payload);
+    effect: (action, { getState }) => {
+      const duration = selectDuration(getState());
+      window.socket.broadcast('setPosition', action.payload, duration);
     },
   });
   startAppListening({
