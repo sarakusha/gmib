@@ -492,6 +492,7 @@ api.put('/playlist', async (req, res, next) => {
     const { items, ...props } = await uniquePlaylistName(req.body as Playlist);
     const { changes } = await updatePlaylist(props);
     if (changes === 0) {
+      transaction = await commitTransaction();
       res.sendStatus(404);
       return;
     }
