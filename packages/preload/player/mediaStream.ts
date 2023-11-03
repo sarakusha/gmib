@@ -110,10 +110,10 @@ const update = async () => {
       }
     }
   }
-  if (!nextSource || nextSource.closed) {
-    const nextIndex = (playlist.items.findIndex(item => item.id === current) + 1) % playlist.items.length;
+  const nextIndex = (playlist.items.findIndex(item => item.id === current) + 1) % playlist.items.length;
+  const nextItem = playlist.items[nextIndex];
+  if (!nextSource || nextSource.closed || nextSource.options.itemId !== nextItem.id) {
     nextSource?.close();
-    const nextItem = playlist.items[nextIndex];
     const media: MediaInfo = await ipcRenderer.invoke('getMedia', nextItem.md5);
     const uri = getMediaUri(media?.filename);
     if (uri) {
@@ -172,6 +172,11 @@ ipcRenderer.on('player', async (_, value: Player) => {
   if (player.autoPlay !== (playbackState === 'playing')) {
     playbackState = player.autoPlay ? 'playing' : state;
   }
+  update();
+});
+
+ipcRenderer.on('updatePlaylist', (_, updatedPlaylist) => {
+  playlist = updatedPlaylist;
   update();
 });
 

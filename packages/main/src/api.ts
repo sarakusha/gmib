@@ -474,13 +474,13 @@ api.post('/playlist', async (req, res, next) => {
   }
 });
 
-const revalidatePlaylist = async (id: number): Promise<void> => {
-  const players = await getPlaylistPlayers(id);
+const revalidatePlaylist = async (playlist: Playlist): Promise<void> => {
+  const players = await getPlaylistPlayers(playlist.id);
   players.forEach(player => {
     const params = findPlayerParams(player.id);
     const win = params && BrowserWindow.fromId(params.id);
     if (win) {
-      win.webContents.send('updatePlaylist', player);
+      win.webContents.send('updatePlaylist', playlist);
     }
   });
 };
@@ -506,10 +506,13 @@ api.put('/playlist', async (req, res, next) => {
     transaction = await commitTransaction();
     const playlist = await getPlaylist(id);
     const playlistItems = await getPlaylistItems(id);
-    res.json({ ...playlist, items: playlistItems });
-    revalidatePlaylist(id).catch(err =>
-      debug(`error while revalidate playlist ${id}: ${(err as Error).message}`),
-    );
+    const fullPlaylist = { ...playlist, items: playlistItems };
+    res.json(fullPlaylist);
+    if (playlist) {
+      revalidatePlaylist(fullPlaylist as Playlist).catch(err =>
+        debug(`error while revalidate playlist ${id}: ${(err as Error).message}`),
+      );
+    }
   } catch (e) {
     if (transaction) await rollback();
     next(e);
@@ -539,8 +542,9 @@ api.patch('/playlist/:id', async (req, res, next) => {
       await deletePlaylistItemById(removeId);
     }
     const items = await getPlaylistItems(id);
-    res.json({ ...playlist, items });
-    revalidatePlaylist(id).catch(err =>
+    const fullPlaylist = { ...playlist, items };
+    res.json(fullPlaylist);
+    revalidatePlaylist(fullPlaylist).catch(err =>
       debug(`error while revalidate playlist ${id}: ${(err as Error).message}`),
     );
   } catch (err) {
