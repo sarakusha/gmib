@@ -196,7 +196,7 @@ const helpMenu = async (params?: WindowParams): Promise<AppMenuItem> => {
         : []),
       {
         label: 'Все версии',
-        click: () => shell.openExternal('https://github.com/sarakusha/gmib/releases'),
+        click: () => shell.openExternal('https://app.nata-info.ru/gmib/releases'),
       },
       {
         label: 'Проверить обновления',
