@@ -65,9 +65,9 @@ const playlistItemEncoder = (
   $playlistID: playlistId,
   $pos: pos,
   $md5: item.md5,
-  $flags: item.flags,
-  $start: item.start,
-  $duration: item.duration,
+  $flags: item.flags ?? 0,
+  $start: item.start ?? null,
+  $duration: item.duration ?? null,
 });
 
 export const updatePlaylistItem = promisifyRun(
@@ -75,7 +75,7 @@ export const updatePlaylistItem = promisifyRun(
    SET flags=$flags,
        start=$start,
        duration=$duration,
-       media_md5=$md5
+       media_md5=$md5,
        id=$id
    WHERE playlist_id = $playlistID
      AND pos = $pos`,
