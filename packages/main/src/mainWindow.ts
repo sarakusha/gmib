@@ -6,11 +6,10 @@ import debugFactory from 'debug';
 
 import createWindow from './createWindow';
 import localConfig from './localConfig';
-import relaunch from './relaunch';
+import relaunch, { needRestart } from './relaunch';
 import { getAllScreenParams, getPlayerParams, registerGmib } from './windowStore';
 
 import Deferred from '/@common/Deferred';
-import { needRestart } from './updater';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:wnd`);
 

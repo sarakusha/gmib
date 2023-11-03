@@ -6,8 +6,16 @@ const options: RelaunchOptions = {
   execPath: process.execPath,
 };
 
+let restart = false;
+
+export const needRestart = (val?: true) => {
+  if (val) restart = val;
+  return restart;
+};
+
 export default () => {
   if (import.meta.env.PROD) {
+    needRestart(true);
     // Fix for .AppImage
     const AppImage = process.env.APPIMAGE;
     if (app.isPackaged && AppImage) {

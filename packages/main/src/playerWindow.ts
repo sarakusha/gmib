@@ -9,11 +9,10 @@ import createWindow from './createWindow';
 import { dbReady } from './db';
 import localConfig from './localConfig';
 import openHandler from './openHandler';
-import relaunch from './relaunch';
+import relaunch, { needRestart } from './relaunch';
 import { getPlayer, getPlayers, updateHidePlayer, updateShowPlayer } from './screen';
 import { findPlayerWindow, getAllGmibParams, registerPlayer } from './windowStore';
 import main from './mainWindow';
-import { needRestart } from './updater';
 
 const preload = path.join(__dirname, '../../preload/dist/player.cjs');
 const remotePreload = path.join(__dirname, '../../preload/dist/remote.cjs');

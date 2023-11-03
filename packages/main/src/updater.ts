@@ -5,16 +5,13 @@ import type { UpdateInfo } from 'electron-updater';
 import { autoUpdater } from 'electron-updater';
 
 import log from './initlog';
+import { needRestart } from './relaunch';
 
 // let updater: MenuItem | null = null;
 autoUpdater.autoDownload = false;
 autoUpdater.logger = log;
 
-let restart = false;
-
 let interactive = true;
-
-export const needRestart = () => restart;
 
 autoUpdater.on('error', error => {
   interactive &&
@@ -49,7 +46,7 @@ autoUpdater.on('update-downloaded', () => {
         message: 'Обновления загружаются, приложение закроется для обновления...',
       })
       .then(() => {
-        restart = true;
+        needRestart(true);
         setImmediate(() => autoUpdater.quitAndInstall());
       });
 });
@@ -101,7 +98,7 @@ export const updateAndRestart = () =>
     };
     const downloaded = () => {
       resolve();
-      restart = true;
+      needRestart(true);
       setImmediate(() => autoUpdater.quitAndInstall());
       release();
     };
