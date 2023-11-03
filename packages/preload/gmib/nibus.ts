@@ -63,6 +63,7 @@ import type {
   Modules,
   NibusTelemetry,
   RemoteHost,
+  TelemetryOpts,
   ValueState,
   ValueType,
 } from '/@common/helpers';
@@ -548,7 +549,7 @@ type SaveTelemetry = (x: number, y: number, temperature: number) => void;
 const startTelemetry = (address: string): SaveTelemetry => {
   const timestamp = Date.now();
   return (x, y, temperature) => {
-    ipcRenderer.send('addTelemetry', timestamp, address, x, y, temperature);
+    ipcRenderer.send('addTelemetry', { timestamp, address, x, y, temperature } as TelemetryOpts);
   };
 };
 
@@ -577,7 +578,7 @@ export const telemetry = memoize((id: DeviceId): NibusTelemetry => {
   }
   return {
     start(options, cb) {
-      const saver = startTelemetry(device.address.toString());
+      const saver = isRemoteSession ? () => { } : startTelemetry(device.address.toString());
       const columnHandler = (column: Modules): void => {
         cb?.(prev => [...prev, ...column]);
         column.forEach(({ x, y, info }) => {
