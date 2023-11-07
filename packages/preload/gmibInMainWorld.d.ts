@@ -14,7 +14,7 @@ interface Window {
     readonly log: (...params: any[]) => void;
     readonly setLogLevel: (logLevel: 'nibus' | 'none' | 'hex') => void;
     readonly output: { readonly dispatch: (screenId: number, action: import("/Users/sarakusha/WebstormProjects/gmib/node_modules/redux/index").AnyAction) => void; };
-    readonly identify: { readonly getSecret: () => string | undefined; readonly setSecret: (apiSecret: bigint, identifier?: string | undefined) => void; readonly getIdentifier: () => string | undefined; readonly generateSignature: (method: string, uri: string, timestamp: number, body?: unknown) => string | undefined; };
+    readonly identify: { readonly getSecret: () => string | undefined; readonly setSecret: (apiSecret: bigint | null, identifier?: string | undefined) => void; readonly getIdentifier: () => string | undefined; readonly generateSignature: (method: string, uri: string, timestamp: number, body?: unknown) => string | undefined; };
     readonly license: () => Promise<{ plan: string | undefined; renew: string | undefined; key: string | undefined; }>;
     readonly initializeNovastar: () => Promise<boolean>;
 }

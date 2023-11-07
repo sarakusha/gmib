@@ -223,8 +223,8 @@ app.on('will-quit', () => {
   }
 });
 
-ipcMain.on('setRemoteSecret', (_, identifier: string, secret: bigint) => {
-  if (masterProxy && masterProxy.identifier === identifier) masterProxy.secret(secret);
+ipcMain.on('setRemoteSecret', (_, identifier: string, secret: bigint | null) => {
+  if (masterProxy && masterProxy.identifier === identifier && secret) masterProxy.secret(secret);
 });
 
 const middleware = express.Router();

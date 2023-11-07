@@ -17,18 +17,18 @@ const initialize = async () => {
       host === 'localhost'
         ? await ipcRenderer.invoke('getLocalCredentials')
         : await ipcRenderer.invoke(
-            'getRemoteCredentials',
-            `http://${host}:${port + 1}/api/identifier`,
-          );
+          'getRemoteCredentials',
+          `http://${host}:${port + 1}/api/identifier`,
+        );
     if (response) {
       credentials.identifier = response.identifier;
       credentials.apiSecret =
         response.apiSecret instanceof Uint8Array
           ? Buffer.from(
-              response.apiSecret.buffer,
-              response.apiSecret.byteOffset,
-              response.apiSecret.byteLength,
-            )
+            response.apiSecret.buffer,
+            response.apiSecret.byteOffset,
+            response.apiSecret.byteLength,
+          )
           : undefined;
     }
   } catch (e) {
@@ -38,9 +38,9 @@ const initialize = async () => {
 
 export const getSecret = () => credentials.apiSecret?.toString('base64');
 
-export const setSecret = (apiSecret: bigint, identifier = credentials.identifier) => {
+export const setSecret = (apiSecret: bigint | null, identifier = credentials.identifier) => {
   ipcRenderer.send('setRemoteSecret', identifier, apiSecret);
-  credentials.apiSecret = Buffer.from(apiSecret.toString(16), 'hex');
+  if (apiSecret) credentials.apiSecret = Buffer.from(apiSecret.toString(16), 'hex');
 };
 
 export const getIdentifier = () => credentials.identifier;

@@ -5,7 +5,7 @@ import debugFactory from 'debug';
 
 import type { NullableOptional } from '/@common/helpers';
 
-import type { Credentials } from '../../common/Credentials';
+import type { Credentials } from '/@common/Credentials';
 
 import { promisifyGet, promisifyRun, removeNull } from './db';
 import localConfig from './localConfig';
@@ -91,8 +91,8 @@ app.whenReady().then(() => {
     'getLocalCredentials',
     (): Credentials => ({ identifier: localConfig.get('identifier'), apiSecret: secret }),
   );
-  ipcMain.on('setRemoteSecret', (_, id: string, apiSecret: bigint) => {
-    setOutgoingSecret(id, apiSecret);
+  ipcMain.on('setRemoteSecret', (_, id: string, apiSecret: bigint | null) => {
+    apiSecret && setOutgoingSecret(id, apiSecret);
   });
 });
 
