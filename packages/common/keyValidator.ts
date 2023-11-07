@@ -9,15 +9,12 @@ const calcRemainder = (
   input: string,
   validate: boolean,
 ): number => {
-  const sum = input
-    .split('')
-    .reverse()
-    .map(codeFromCharacter)
-    .filter(Number.isInteger)
-    .reduce((acc, code, i) => {
-      const addend = code * (validate ? 1 + (i % 2) : 2 - (i % 2));
-      return acc + Math.floor(addend / N) + (addend % N);
-    }, 0);
+  const validChars = input.split('').reverse().map(codeFromCharacter).filter(Number.isInteger);
+  if (validChars.length === 0) return Number.MAX_SAFE_INTEGER;
+  const sum = validChars.reduce((acc, code, i) => {
+    const addend = code * (validate ? 1 + (i % 2) : 2 - (i % 2));
+    return acc + Math.floor(addend / N) + (addend % N);
+  }, 0);
   return sum % N;
 };
 
