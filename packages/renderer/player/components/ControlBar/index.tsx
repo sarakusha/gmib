@@ -14,11 +14,12 @@ type Props = {
   duration?: number;
   position?: number;
   sx?: SxProps<Theme>;
+  className?: string;
 };
 
 const ControlBar = React.forwardRef<HTMLDivElement, Props>(
-  ({ duration, position = 0, sx }, ref) => (
-    <Stack direction="row" spacing={1} alignItems="center" sx={sx} ref={ref}>
+  ({ duration, position = 0, sx, className }, ref) => (
+    <Stack direction="row" spacing={1} alignItems="center" sx={sx} ref={ref} className={className}>
       <PlayToggle />
       <NextTrack />
       <Stop />
@@ -30,7 +31,10 @@ const ControlBar = React.forwardRef<HTMLDivElement, Props>(
 */}
       </div>
       <ProgressControl duration={duration} position={position} />
-      <TimeDisplay prefix={duration ? '-' : ''} seconds={duration ? Math.ceil(duration - position) : NaN} />
+      <TimeDisplay
+        prefix={duration ? '-' : ''}
+        seconds={duration ? Math.ceil(duration - position) : NaN}
+      />
       <PictureInPicture />
     </Stack>
   ),

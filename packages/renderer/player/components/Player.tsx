@@ -35,8 +35,6 @@ const Player: React.FC<Props> = ({ className, playerId = 0 }) => {
   React.useEffect(() => {
     window.mediaStream.updateSrcObject('video#player');
   }, []);
-  const [show, setShow] = React.useState(false);
-
   const stopped = playbackState === 'none';
   const onTimeUpdate = React.useCallback<React.ReactEventHandler<HTMLVideoElement>>(
     e => {
@@ -55,9 +53,12 @@ const Player: React.FC<Props> = ({ className, playerId = 0 }) => {
           overflow: 'hidden',
           maxHeight: '50vh',
           mx: 'auto',
+          '&:hover': {
+            '& .control-bar': {
+              opacity: 1,
+            },
+          },
         }}
-        onMouseEnter={() => setShow(true)}
-        onMouseLeave={() => setShow(false)}
         className={className}
       >
         <video
@@ -74,6 +75,7 @@ const Player: React.FC<Props> = ({ className, playerId = 0 }) => {
           {current?.filename}
         </video>
         <ControlBar
+          className="control-bar"
           duration={duration}
           position={position}
           sx={{
@@ -83,7 +85,7 @@ const Player: React.FC<Props> = ({ className, playerId = 0 }) => {
             width: 1,
             bottom: 0,
             left: 0,
-            opacity: show || playbackState !== 'playing' || pip ? 1 : 0,
+            opacity: playbackState !== 'playing' || pip ? 1 : 0,
             transition: 'opacity 0.4s',
           }}
         />
