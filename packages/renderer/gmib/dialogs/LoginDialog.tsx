@@ -12,10 +12,8 @@ import * as React from 'react';
 import fetchJson, { FetchError } from '/@common/fetchJson';
 import * as remote from '/@common/remote';
 
-import novastarApi, { hasNovastar } from '../api/novastar';
 import { useDispatch, useSelector } from '../store';
 import { setDisableNet } from '../store/configSlice';
-import { setAuthRequired } from '../store/currentSlice';
 import { selectAuthRequired } from '../store/selectors';
 
 const login = async (password: string, host: string) => {
@@ -57,8 +55,7 @@ const LoginDialog: React.FC = () => {
         credentials?.host ?? `${remote.host}:${remote.port + 1}`,
       );
       window.identify.setSecret(secret, credentials?.identifier);
-      dispatch(setAuthRequired(undefined));
-      hasNovastar() && dispatch(novastarApi.endpoints.getNovastars.initiate());
+      setTimeout(() => window.location.reload(), 200);
     } catch (err) {
       if (err instanceof FetchError && err.response.status === 401) setError('Неверный пароль');
       else if (err instanceof Error) setError(err.message);
@@ -87,7 +84,13 @@ const LoginDialog: React.FC = () => {
           Войти
         </Button>
         {remote.isRemoteSession ? (
-          <Button onClick={window.close} color="primary">
+          <Button
+            onClick={() => {
+              window.identify.setSecret(null);
+              window.close();
+            }}
+            color="primary"
+          >
             Закрыть
           </Button>
         ) : (
