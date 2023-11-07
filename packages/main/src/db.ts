@@ -255,7 +255,7 @@ function createTables(): void {
             id INTEGER PRIMARY KEY,
             "name" TEXT,
             playlistId INTEGER,
-            "current" INTEGER DEFAULT 0,
+            "current" TEXT,
             width INTEGER,
             height INTEGER,
             flags INTEGER DEFAULT 0,
@@ -270,34 +270,16 @@ function createTables(): void {
           }, 100);
       },
     );
-    // db.run(
-    //   `CREATE TABLE IF NOT EXISTS tile (
-    //     id INTEGER PRIMARY KEY,
-    //     name TEXT,
-    //     player INTEGER NOT NULL,
-    //     sWidth INTEGER NOT NULL,
-    //     sHeight INTEGER NOT NULL,
-    //     sx INTEGER NOT NULL,
-    //     sy INTEGER NOT NULL,
-    //     output INTEGER NOT NULL,
-    //     dWidth INTEGER NOT NULL,
-    //     dHeight INTEGER NOT NULL,
-    //     dx INTEGER NOT NULL,
-    //     dy INTEGER NOT NULL,
-    //     FOREIGN KEY (player)
-    //         REFERENCES player (id) ON DELETE CASCADE,
-    //     FOREIGN KEY (output)
-    //         REFERENCES videoOutput (id) ON DELETE CASCADE
-    // )`,
-    //   err => {
-    //     if (err) debug(`error while create tile ${err}`);
-    //     else
-    //       setTimeout(() => {
-    //         dbDeferred.resolve();
-    //         debug('DB READY');
-    //       }, 100);
-    //   },
-    // );
+    db.all('SELECT typeof(current) as current_type FROM player LIMIT 1', (_, rows) => {
+      const [first] = rows;
+      if (first && typeof first === 'object' && 'current_type' in first && first.current_type === 'integer') {
+        db.run('ALTER TABLE player DROP current', (err) => {
+          if (!err) {
+            db.run('ALTER TABLE player ADD current TEXT');
+          }
+        });
+      }
+    });
 
     const date = new Date();
     date.setDate(date.getDate() - 7);
