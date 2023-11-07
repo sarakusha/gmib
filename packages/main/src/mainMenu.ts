@@ -107,7 +107,7 @@ const remoteMenu = (params?: WindowParams): AppMenuItem | undefined => {
           }
         }
         const window = createAppWindow(port, address, name);
-        registerGmib(window, { host: address, nibusPort: +port });
+        // registerGmib(window, { host: address, nibusPort: +port });
         window.show();
         window.focus();
       },
