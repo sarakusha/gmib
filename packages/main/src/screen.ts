@@ -168,7 +168,27 @@ export const deleteExtraAddresses = (screenId: number, validAddresses?: string[]
       );
   });
 
-export const getPlayers = promisifyAll('SELECT * FROM player', () => {}, toPlayer);
+// export const getPlayers = promisifyAll('SELECT * FROM player', () => {}, toPlayer);
+
+export const getPlayers = promisifyAll(
+  `
+  SELECT
+    id,
+    name,
+    playlistId,
+    width,
+    height,
+    flags,
+    COALESCE(
+      (SELECT id FROM playlistMedia WHERE playlistMedia.playlist_id = player.playlistId AND player.current = playlistMedia.id),
+      (SELECT id FROM playlistMedia WHERE playlistMedia.playlist_id = player.playlistId AND playlistMedia.pos =
+        (SELECT MIN(pos) FROM playlistMedia WHERE playlistMedia.playlist_id = player.playlistId)
+      )
+    ) as current FROM player
+`,
+  () => {},
+  toPlayer,
+);
 
 export const getPlaylistPlayers = promisifyAll(
   'SELECT * FROM player WHERE playlistId = ?',
@@ -177,7 +197,22 @@ export const getPlaylistPlayers = promisifyAll(
 );
 
 export const getPlayer = promisifyGet(
-  'SELECT * FROM player WHERE id = ? LIMIT 1',
+  `
+  SELECT
+    id,
+    name,
+    playlistId,
+    width,
+    height,
+    flags,
+    COALESCE(
+      (SELECT id FROM playlistMedia WHERE playlistMedia.playlist_id = player.playlistId AND player.current = playlistMedia.id),
+      (SELECT id FROM playlistMedia WHERE playlistMedia.playlist_id = player.playlistId AND playlistMedia.pos =
+        (SELECT MIN(pos) FROM playlistMedia WHERE playlistMedia.playlist_id = player.playlistId)
+      )
+    ) as current FROM player
+    WHERE id = ?
+`,
   (id: number) => id,
   toPlayer,
 );
