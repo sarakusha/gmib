@@ -5,6 +5,7 @@ import ReducingValve from '@sarakusha/ebml/ReducingValve';
 import VideoChunkGenerator from '@sarakusha/ebml/VideoChunkGenerator';
 import VideoFrameGenerator from '@sarakusha/ebml/VideoFrameGenerator';
 import RangeFetcher from '@sarakusha/ebml/RangeFetcher';
+import CancelError from '@sarakusha/ebml/CancelError';
 // import VideoFrameTransformer from '@sarakusha/ebml/VideoFrameTransformer';
 
 let controller: AbortController | undefined;
@@ -24,9 +25,9 @@ onmessage = async ({ data }) => {
     const valve = new ReducingValve(data.closed);
     play = valve.open;
     pause = valve.close;
-    if (controller) controller.abort();
+    if (controller) controller.abort(new CancelError());
     controller = new AbortController();
-    const fetcher = new RangeFetcher(data.uri, { abortController: controller, chunkSize: 1024 * 1024 });
+    const fetcher = new RangeFetcher(data.uri, { abortController: controller, chunkSize: 5 * 1024 * 1024 });
 
     try {
       readable = fetcher
@@ -67,7 +68,7 @@ onmessage = async ({ data }) => {
   } else if ('pause' in data && data.pause) {
     pause();
   } else if ('close' in data && data.close) {
-    controller?.abort();
+    controller?.abort(new CancelError());
     cancel = true;
   }
 };
