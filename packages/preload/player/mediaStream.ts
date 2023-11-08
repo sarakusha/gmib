@@ -80,48 +80,48 @@ const update = async () => {
   if (!currentSource?.closed && current !== currentSource?.options.itemId) {
     if (nextSource && nextSource.options.itemId === current) {
       currentSource?.close();
-    } else {
-      nextSource?.close();
-      nextSource = undefined;
-      // if (current >= playlist.items.length) current = 0;
+      return;
+    }
+    if (nextSource && !nextSource.hasStarted) nextSource.close();
+    nextSource = undefined;
 
-      const currentItem = playlist.items.find(item => item.id === current) ?? playlist.items[0];
-      const media: MediaInfo = await ipcRenderer.invoke('getMedia', currentItem.md5);
-      const uri = getMediaUri(media?.filename);
-      if (uri) {
-        const videoSource = new VideoSource(uri, {
-          itemId: current,
-          autoplay: playbackState === 'playing',
-          fade: { disableIn: player.disableFadeIn, disableOut: player.disableFadeOut },
-          onMessage: ({ data }) => {
-            if (typeof data === 'object' && 'duration' in data) {
-              ipcDispatch(setDuration(data.duration));
-            }
-          },
-        });
-        if (currentSource && !currentSource.closed) {
-          nextSource = videoSource;
-          currentSource.close();
-        } else {
-          currentSource = videoSource;
-          videoStream.add(videoSource.readable).then(playNextSource);
-          delay = 1000;
-        }
+    const currentItem = playlist.items.find(item => item.id === current) ?? playlist.items[0];
+    const media: MediaInfo = await ipcRenderer.invoke('getMedia', currentItem.md5);
+    const uri = getMediaUri(media?.filename);
+    if (uri) {
+      const videoSource = new VideoSource(uri, {
+        itemId: current,
+        autoplay: playbackState === 'playing',
+        fade: { disableIn: player.disableFadeIn, disableOut: player.disableFadeOut },
+        onMessage: ({ data }) => {
+          if (typeof data === 'object' && 'duration' in data) {
+            ipcDispatch(setDuration(data.duration));
+          }
+        },
+      });
+      if (currentSource && !currentSource.closed) {
+        nextSource = videoSource;
+        currentSource.close();
+      } else {
+        currentSource = videoSource;
+        videoStream.add(videoSource.readable).then(playNextSource);
+        delay = 1000;
       }
     }
   }
-  const nextIndex = (playlist.items.findIndex(item => item.id === current) + 1) % playlist.items.length;
+  const nextIndex =
+    (playlist.items.findIndex(item => item.id === current) + 1) % playlist.items.length;
   const nextItem = playlist.items[nextIndex];
+  const media: MediaInfo = await ipcRenderer.invoke('getMedia', nextItem.md5);
+
   if (!nextSource || nextSource.closed || nextSource.options.itemId !== nextItem.id) {
-    nextSource?.close();
-    const media: MediaInfo = await ipcRenderer.invoke('getMedia', nextItem.md5);
+    if (nextSource && !nextSource.hasStarted) nextSource.close();
     const uri = getMediaUri(media?.filename);
     if (uri) {
       nextSource = new VideoSource(uri, {
         itemId: nextItem.id,
         delay,
         fade: { disableIn: player.disableFadeIn, disableOut: player.disableFadeOut },
-        // onMessage: messageHandler,
       });
     }
   }
