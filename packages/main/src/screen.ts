@@ -180,9 +180,9 @@ export const getPlayers = promisifyAll(
     height,
     flags,
     COALESCE(
-      (SELECT id FROM playlistMedia WHERE playlistMedia.playlist_id = player.playlistId AND player.current = playlistMedia.id),
-      (SELECT id FROM playlistMedia WHERE playlistMedia.playlist_id = player.playlistId AND playlistMedia.pos =
-        (SELECT MIN(pos) FROM playlistMedia WHERE playlistMedia.playlist_id = player.playlistId)
+      (SELECT id FROM playlistToMedia WHERE playlistToMedia.playlist_id = player.playlistId AND player.current = playlistToMedia.id),
+      (SELECT id FROM playlistToMedia WHERE playlistToMedia.playlist_id = player.playlistId AND playlistToMedia.pos =
+        (SELECT MIN(pos) FROM playlistToMedia WHERE playlistToMedia.playlist_id = player.playlistId)
       )
     ) as current FROM player
 `,
@@ -206,9 +206,9 @@ export const getPlayer = promisifyGet(
     height,
     flags,
     COALESCE(
-      (SELECT id FROM playlistMedia WHERE playlistMedia.playlist_id = player.playlistId AND player.current = playlistMedia.id),
-      (SELECT id FROM playlistMedia WHERE playlistMedia.playlist_id = player.playlistId AND playlistMedia.pos =
-        (SELECT MIN(pos) FROM playlistMedia WHERE playlistMedia.playlist_id = player.playlistId)
+      (SELECT id FROM playlistToMedia WHERE playlistToMedia.playlist_id = player.playlistId AND player.current = playlistToMedia.id),
+      (SELECT id FROM playlistToMedia WHERE playlistToMedia.playlist_id = player.playlistId AND playlistToMedia.pos =
+        (SELECT MIN(pos) FROM playlistToMedia WHERE playlistToMedia.playlist_id = player.playlistId)
       )
     ) as current FROM player
     WHERE id = ?
