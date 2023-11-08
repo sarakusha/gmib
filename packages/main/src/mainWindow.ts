@@ -87,6 +87,7 @@ export const createMainWindow = (): BrowserWindow => {
     const browserWindow = (mainWindow = createAppWindow());
     browserWindow.on('close', event => {
       if (
+        import.meta.env.PROD &&
         !needRestart() &&
         !isQuitting &&
         (localConfig.get('autostart') ||
