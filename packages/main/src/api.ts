@@ -69,7 +69,7 @@ import {
 } from './playerMapping';
 import { getPlayerTitle } from './playerWindow';
 import {
-  deleteExtraPlaylistItems,
+  deleteAllPlaylistItems,
   deletePlaylist,
   deletePlaylistItemById,
   getLastPlaylistItemPos,
@@ -80,7 +80,6 @@ import {
   insertPlaylistItem,
   uniquePlaylistName,
   updatePlaylist,
-  updatePlaylistItem,
 } from './playlist';
 import proxyMiddleware from './proxyMiddleware';
 import relaunch from './relaunch';
@@ -497,12 +496,8 @@ api.put('/playlist', async (req, res, next) => {
       return;
     }
     const { id } = props;
-    if (items && items.length > 0) {
-      await asyncSerial(items, ({ id: itemId, ...item }, index) =>
-        updatePlaylistItem(id, index, { ...item, id: itemId ?? nanoid() }),
-      );
-    }
-    await deleteExtraPlaylistItems(id, items.length);
+    await deleteAllPlaylistItems(id);
+    await asyncSerial(items, (item, index) => insertPlaylistItem(id, index, item));
     transaction = await commitTransaction();
     const playlist = await getPlaylist(id);
     const playlistItems = await getPlaylistItems(id);
