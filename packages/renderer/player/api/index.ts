@@ -1,4 +1,3 @@
-import { isRemoteSession } from '/@common/remote';
 import displayApi from '../../common/displays';
 
 import mappingApi from './mapping';
@@ -21,5 +20,5 @@ export const middleware = [
   playerApi.middleware,
   displayApi.middleware,
   mappingApi.middleware,
-  ...(isRemoteSession ? [socketMiddleware] : []),
+  socketMiddleware,
 ];

@@ -58,7 +58,12 @@ const playerApi = createApi({
           }
         } catch (e) {
           // console.error('error while updatePlayer', e);
-          dispatch(playerApi.endpoints.getPlayers.initiate());
+          dispatch(
+            playerApi.endpoints.getPlayers.initiate(undefined, {
+              subscribe: false,
+              forceRefetch: true,
+            }),
+          );
         }
       },
     }),
@@ -107,7 +112,7 @@ export const usePlayers = () =>
       players: data && selectPlayers(data),
       ...other,
     }),
-    pollingInterval: 5000,
+    // pollingInterval: 5000,
   });
 
 export const usePlayer = (id?: number | null) =>

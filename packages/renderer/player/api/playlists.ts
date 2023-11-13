@@ -76,7 +76,12 @@ const playlistApi = createApi({
             );
           }
         } catch {
-          dispatch(playlistApi.endpoints.getPlaylists.initiate());
+          dispatch(
+            playlistApi.endpoints.getPlaylists.initiate(undefined, {
+              subscribe: false,
+              forceRefetch: true,
+            }),
+          );
         }
       },
     }),
@@ -165,7 +170,7 @@ export const useGetPlaylists = () =>
       data: data && selectPlaylists(data),
       ...other,
     }),
-    pollingInterval: 5000,
+    // pollingInterval: 5000,
   });
 
 export const useGetPlaylistById = (id?: number | null) =>

@@ -25,8 +25,8 @@ app.whenReady().then(() => {
     const params = store.get(win.id);
     return isGmib(params) ? params.machineId : undefined;
   });
-  ipcMain.on('broadcast', (_, eventName: string, data: unknown) => {
-    broadcast(eventName, data);
+  ipcMain.on('broadcast', (_, eventName: string, data: unknown[]) => {
+    broadcast({ event: eventName, data });
   });
 });
 

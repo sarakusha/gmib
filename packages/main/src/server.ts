@@ -1,15 +1,36 @@
-import { createServer } from 'http';
+import type { Socket } from 'node:net';
+import { createServer } from 'node:http';
 import express from 'express';
 import { WebSocket, WebSocketServer } from 'ws';
 
 import { port } from './config';
 
+interface WebSocketEx extends WebSocket {
+  _socket?: Socket;
+}
+
 export const app = express();
 const server = createServer(app);
 export const wss = new WebSocketServer({ server });
-export const broadcast = (event: string, data?: unknown) => {
-  wss.clients.forEach(ws => {
-    if (ws.readyState === WebSocket.OPEN) {
+
+type BroadcastOptions = {
+  event: string;
+  data?: unknown[];
+  remote?: string;
+};
+
+const local = ['::1', '127.0.0.1', 'localhost'];
+
+const ipEqual = (ip1 = '::1', ip2 = '::1'): boolean => {
+  if (ip1 !== ip2 && local.includes(ip1) && local.includes(ip2)) return true;
+  return ip1 === ip2;
+};
+
+export const broadcast = ({ event, data = [0], remote }: BroadcastOptions) => {
+  wss.clients.forEach((ws: WebSocketEx) => {
+    // eslint-disable-next-line no-underscore-dangle
+    const remoteAddress = ws._socket?.remoteAddress;
+    if (ws.readyState === WebSocket.OPEN && !ipEqual(remoteAddress, remote)) {
       ws.send(JSON.stringify({ event, data }));
     }
   });

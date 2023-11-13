@@ -119,6 +119,7 @@ import {
   registerScreen,
 } from './windowStore';
 import './novastarApi';
+import { broadcast } from './server';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:api`);
 
@@ -404,6 +405,7 @@ api.post('/media', (req, res, next) => {
       ).filter(notEmpty);
       debug(`files uploaded: ${JSON.stringify(loaded)}`);
       getAllMedia().then(result => res.json(result), next);
+      broadcast({ event: 'media', remote: req.ip });
     }
   });
 });
@@ -428,6 +430,7 @@ api.delete('/media/:md5', async (req, res, next) => {
       debug(`error while deleting file ${filename}: ${e.message}`);
     }
     getAllMedia().then(result => res.json(result), next);
+    broadcast({ event: 'media', remote: req.ip });
   }, next);
 });
 
@@ -457,8 +460,10 @@ api.get('/playlist/:id', async (req, res, next) => {
 });
 
 api.delete('/playlist/:id', (req, res, next) => {
-  deletePlaylist(+req.params.id).then(result => {
+  const id = +req.params.id;
+  deletePlaylist(id).then(result => {
     res.sendStatus(result.changes ? 204 : 404);
+    broadcast({ event: 'playlist', remote: req.ip });
   }, next);
 });
 
@@ -468,6 +473,7 @@ api.post('/playlist', async (req, res, next) => {
     const { lastID } = await insertPlaylist(data);
     const playlist = await getPlaylist(lastID);
     res.json({ ...playlist, items: [] });
+    broadcast({ event: 'playlist', remote: req.ip });
   } catch (e) {
     next(e);
   }
@@ -508,6 +514,7 @@ api.put('/playlist', async (req, res, next) => {
         debug(`error while revalidate playlist ${id}: ${(err as Error).message}`),
       );
     }
+    broadcast({ event: 'playlist', remote: req.ip });
   } catch (e) {
     if (transaction) await rollback();
     next(e);
@@ -542,6 +549,8 @@ api.patch('/playlist/:id', async (req, res, next) => {
     revalidatePlaylist(fullPlaylist).catch(err =>
       debug(`error while revalidate playlist ${id}: ${(err as Error).message}`),
     );
+    broadcast({ event: 'playlist', remote: req.ip });
+    console.log('IP:', req.ip, req.ips, req.socket.address);
   } catch (err) {
     if (transaction) await rollback();
     next(err);
@@ -577,6 +586,7 @@ api.post('/screen', async (req, res, next) => {
     const scr = await loadScreen(lastID);
     scr && updateTest(scr);
     res.json(scr);
+    broadcast({ event: 'screen', remote: req.ip });
   } catch (e) {
     next(e);
   }
@@ -591,6 +601,7 @@ api.delete('/screen/:id', (req, res, next) => {
   deleteScreen(id)
     .then(({ changes }) => {
       res.sendStatus(changes ? 204 : 404);
+      broadcast({ event: 'screen', remote: req.ip });
     })
     .catch(next);
 });
@@ -616,6 +627,7 @@ api.put('/screen', async (req, res, next) => {
     const result = await loadScreen(props.id);
     result && updateTest(result);
     res.json(result);
+    broadcast({ event: 'screen', remote: req.ip });
   } catch (e) {
     debug(`error while update screen: ${e}`);
     next(e);
@@ -649,6 +661,7 @@ api.delete('/player/:id', (req, res, next) => {
   deletePlayer(id)
     .then(({ changes }) => {
       res.sendStatus(changes ? 204 : 404);
+      broadcast({ event: 'player', remote: req.ip });
     })
     .catch(next);
 });
@@ -658,6 +671,7 @@ api.post('/player', async (req, res, next) => {
     const { lastID } = await insertPlayer(await uniquePlayerName(req.body));
     const player = await getPlayer(lastID);
     res.json(player);
+    broadcast({ event: 'player', remote: req.ip });
   } catch (e) {
     next(e);
   }
@@ -668,10 +682,16 @@ api.put('/player', async (req, res, next) => {
     const { changes } = await updatePlayer(await uniquePlayerName(req.body));
     if (!changes) res.sendStatus(404);
     else {
-      const player = await getPlayer(req.body.id);
+      const { id } = req.body;
+      if (!id || typeof id !== 'number') {
+        res.sendStatus(400);
+        return;
+      }
+      const player = await getPlayer(id);
       if (!player) res.sendStatus(404);
       else {
         res.json(player);
+        broadcast({ event: 'player', remote: req.ip });
         const params = findPlayerParams(player.id);
         const win = params && BrowserWindow.fromId(params.id);
         if (win) {
@@ -700,6 +720,7 @@ api.post('/mapping', async (req, res, next) => {
     const win = mapping && findPlayerWindow(mapping.player);
     if (win) win.webContents.send('updateVideoOuts');
     res.json(mapping);
+    broadcast({ event: 'mapping', remote: req.ip });
   } catch (e) {
     next(e);
   }
@@ -717,6 +738,7 @@ api.put('/mapping', async (req, res, next) => {
     const win = mapping && findPlayerWindow(mapping.player);
     if (win) win.webContents.send('updateVideoOuts');
     res.json(mapping);
+    broadcast({ event: 'mapping', remote: req.ip });
   } catch (e) {
     next(e);
   }
@@ -729,6 +751,7 @@ api.delete('/mapping/:id', async (req, res) => {
     res.sendStatus(404);
   } else {
     await deletePlayerMapping(id);
+    broadcast({ event: 'mapping', remote: req.ip });
     const win = mapping && findPlayerWindow(mapping.player);
     if (win) win.webContents.send('updateVideoOuts');
     res.sendStatus(204);
@@ -887,6 +910,7 @@ api.post('/pages', async (req, res, next) => {
     const { lastID } = await insertPage(await uniquePageTitle(req.body));
     const page = await getPageByRowID(lastID);
     res.json(page);
+    broadcast({ event: 'page', remote: req.ip });
   } catch (e) {
     next(e);
   }
@@ -898,6 +922,7 @@ api.put('/pages/:id', async (req, res, next) => {
     if (!changes) res.sendStatus(404);
     else {
       res.json(await getPage(req.params.id));
+      broadcast({ event: 'page', remote: req.ip });
     }
   } catch (e) {
     next(e);
@@ -908,6 +933,7 @@ api.delete('/pages/:id', async (req, res, next) => {
   try {
     const { changes } = await deletePage(req.params.id);
     res.sendStatus(changes ? 204 : 404);
+    broadcast({ event: 'page', remote: req.ip });
   } catch (err) {
     next(err);
   }
