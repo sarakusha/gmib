@@ -10,7 +10,14 @@ export type BusyButtonProps = {
   className?: string;
 };
 
-const BusyButton: React.FC<BusyButtonProps> = ({ title = '', onClick, disabled, isBusy, icon, className }) => (
+const BusyButton: React.FC<BusyButtonProps> = ({
+  title = '',
+  onClick,
+  disabled,
+  isBusy,
+  icon,
+  className,
+}) => (
   <Tooltip title={title} enterDelay={1000}>
     <Box position="relative" className={className}>
       <IconButton color="inherit" onClick={onClick} disabled={disabled ?? isBusy} size="large">

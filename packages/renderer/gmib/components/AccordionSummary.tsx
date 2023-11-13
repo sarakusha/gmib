@@ -1,4 +1,3 @@
-
 import { AccordionSummary as MuiAccordionSummary } from '@mui/material';
 
 import extendStyled from '../util/extendStyled';

@@ -1,5 +1,3 @@
-import { app } from 'electron';
-
 // import debugFactory from 'debug';
 import express from 'express';
 import type { RequestHandler } from 'express-serve-static-core';

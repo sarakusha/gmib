@@ -3,6 +3,7 @@ import getScreenLocation from '@novastar/screen/getScreenLocation';
 import groupBy from 'lodash/groupBy';
 import React, { useEffect, useMemo, useState } from 'react';
 
+import { useCancelTelemetryMutation, useStartTelemetryMutation } from '../api/novastar';
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useSelector } from '../store';
 import { selectCurrentTab, selectNovastarTelemetry } from '../store/selectors';
@@ -13,7 +14,6 @@ import ModuleInfo from './ModuleInfo';
 import TelemetryToolbar from './TelemetryToolbar';
 
 import type { Novastar } from '/@common/novastar';
-import { useCancelTelemetryMutation, useStartTelemetryMutation } from '../api/novastar';
 
 // const useStyles = makeStyles(theme => ({
 //   grid: {

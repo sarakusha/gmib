@@ -108,6 +108,7 @@ import type { Screen } from '/@common/video';
 import { DefaultDisplays } from '/@common/video';
 
 import { setIncomingSecret } from './secret';
+import { broadcast } from './server';
 import { checkForUpdatesNoInteractive, updateAndRestart } from './updater';
 import {
   createSearchParams,
@@ -119,7 +120,6 @@ import {
   registerScreen,
 } from './windowStore';
 import './novastarApi';
-import { broadcast } from './server';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:api`);
 
@@ -147,7 +147,7 @@ fs.mkdir(mediaRoot, { recursive: true }, err => {
   }
 });
 
-const noop = (): void => { };
+const noop = (): void => {};
 
 const getHash = (filepath: string): Promise<string> =>
   new Promise<string>((resolve, reject) => {
@@ -550,7 +550,6 @@ api.patch('/playlist/:id', async (req, res, next) => {
       debug(`error while revalidate playlist ${id}: ${(err as Error).message}`),
     );
     broadcast({ event: 'playlist', remote: req.ip });
-    console.log('IP:', req.ip, req.ips, req.socket.address);
   } catch (err) {
     if (transaction) await rollback();
     next(err);

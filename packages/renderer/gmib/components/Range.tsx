@@ -2,8 +2,10 @@ import type { SliderProps } from '@mui/material';
 import { Slider } from '@mui/material';
 import React from 'react';
 
-const makeConverter = (reverse = false) => (values: [number, number]): [number, number] =>
-  reverse ? [-values[1], -values[0]] : values;
+const makeConverter =
+  (reverse = false) =>
+  (values: [number, number]): [number, number] =>
+    reverse ? [-values[1], -values[0]] : values;
 
 const Range: React.FC<SliderProps & { reverse?: boolean }> = ({
   reverse = false,

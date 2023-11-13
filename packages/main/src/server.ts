@@ -1,5 +1,6 @@
-import type { Socket } from 'node:net';
 import { createServer } from 'node:http';
+import type { Socket } from 'node:net';
+
 import express from 'express';
 import { WebSocket, WebSocketServer } from 'ws';
 

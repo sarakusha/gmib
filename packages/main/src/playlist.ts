@@ -56,11 +56,7 @@ export const updatePlaylist = promisifyRun(
   }),
 );
 
-const playlistItemEncoder = (
-  playlistId: number,
-  pos: number,
-  item: PlaylistItem,
-) => ({
+const playlistItemEncoder = (playlistId: number, pos: number, item: PlaylistItem) => ({
   $id: item.id,
   $playlistID: playlistId,
   $pos: pos,
@@ -99,8 +95,8 @@ export const deleteAllPlaylistItems = promisifyRun(
 );
 
 // export const deleteExtraPlaylistItems = promisifyRun(`
-//   DELETE FROM playlistToMedia WHERE pos = 
-//   (SELECT pos FROM 
+//   DELETE FROM playlistToMedia WHERE pos =
+//   (SELECT pos FROM
 //     (SELECT ROW_NUMBER() OVER (ORDER BY pos ASC) AS rowNumber, pos FROM playlistToMedia)
 //     WHERE rowNumber > ?)`,
 //   (id: number, from: number) => [id, from],

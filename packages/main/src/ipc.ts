@@ -1,12 +1,13 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
+
 import { getMediaByMD5 } from './media';
 import { getPlayerMappingsForPlayer } from './playerMapping';
 import { getPlaylist, getPlaylistItems } from './playlist';
 import { getPlayer, getScreens, loadScreen } from './screen';
+import { broadcast } from './server';
 import store from './windowStore';
 
 import { isGmib } from '/@common/WindowParams';
-import { broadcast } from './server';
 
 app.whenReady().then(() => {
   ipcMain.handle('getPlayer', (_, id) => getPlayer(id));

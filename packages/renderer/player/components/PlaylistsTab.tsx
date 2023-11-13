@@ -12,7 +12,7 @@ import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import { Form, Formik } from 'formik';
 import { bindMenu, bindTrigger, usePopupState } from 'material-ui-popup-state/hooks';
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback } from 'react';
 import { useResizeDetector } from 'react-resize-detector';
 import { TransitionGroup } from 'react-transition-group';
 

@@ -16,7 +16,9 @@ import type {
   WindowParams,
 } from '/@common/WindowParams';
 import { gmibVariables, impScreenProps, isGmib, isPlayer, isScreen } from '/@common/WindowParams';
+
 import localConfig from './localConfig';
+
 import { replaceNull } from '/@common/helpers';
 
 export const licenseNames = ['basic', 'standard', 'plus', 'premium', 'enterprise'] as const;

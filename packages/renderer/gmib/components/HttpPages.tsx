@@ -9,7 +9,7 @@ import {
   ListItemButton as MuiListItem,
   Switch,
 } from '@mui/material';
-import { css, styled } from '@mui/material/styles';
+import { styled } from '@mui/material/styles';
 import clsx from 'clsx';
 import React, { useCallback, useState } from 'react';
 // import { isUri } from 'valid-url';

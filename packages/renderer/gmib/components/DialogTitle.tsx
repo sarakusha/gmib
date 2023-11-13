@@ -1,10 +1,6 @@
 import CloseIcon from '@mui/icons-material/Close';
-import type {
-  DialogTitleProps as MuiDialogTitleProps} from '@mui/material';
-import {
-  IconButton,
-  DialogTitle as MuiDialogTitle,
-} from '@mui/material';
+import type { DialogTitleProps as MuiDialogTitleProps } from '@mui/material';
+import { IconButton, DialogTitle as MuiDialogTitle } from '@mui/material';
 import React from 'react';
 // import { Theme } from '@mui/material/styles';
 // import { WithStyles } from '@mui/styles';

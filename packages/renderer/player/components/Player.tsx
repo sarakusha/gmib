@@ -10,7 +10,9 @@ import { selectCurrent, selectPosition } from '../store/selectors';
 import type { MediaInfo } from '/@common/mediaInfo';
 
 import ControlBar from './ControlBar';
+
 import { setPosition } from '../store/currentSlice';
+
 import { isRemoteSession } from '/@common/remote';
 
 type Props = {

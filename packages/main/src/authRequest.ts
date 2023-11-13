@@ -1,6 +1,7 @@
 // import debugFactory from 'debug';
 
 import { ipcMain } from 'electron';
+
 import secret, { getRemoteCredentials } from './secret';
 
 import generateSignature from '/@common/generateSignature';
@@ -11,7 +12,6 @@ import type { Credentials } from '/@common/Credentials';
 const waitAuth = () =>
   new Promise<boolean>(resolve => {
     ipcMain.once('setRemoteSecret', (_e, remoteSecret) => {
-      console.log({ resolve: !!remoteSecret });
       resolve(!!remoteSecret);
     });
   });
@@ -48,7 +48,6 @@ const authRequest = async ({
     if (credentials && !credentials.apiSecret) {
       if (!(await waitAuth())) return undefined;
       credentials = await getRemoteCredentials(`${baseUrl}/identifier`);
-      console.log({ credentials });
     }
     if (!credentials?.apiSecret || !credentials?.identifier) return undefined;
     const now = Date.now();

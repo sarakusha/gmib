@@ -1,4 +1,3 @@
-
 import type { TableCellProps } from '@mui/material';
 import { TableCell as MuiTableCell } from '@mui/material';
 import { styled } from '@mui/material/styles';

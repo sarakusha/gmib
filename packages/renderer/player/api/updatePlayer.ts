@@ -1,6 +1,7 @@
-import type { SetStateAction } from 'react';
 import type { Middleware, MiddlewareAPI } from '@reduxjs/toolkit';
 import debugFactory from 'debug';
+import type { SetStateAction } from 'react';
+
 import { host, port } from '/@common/remote';
 import type { Player } from '/@common/video';
 
@@ -13,10 +14,10 @@ import {
 } from '../store/currentSlice';
 import { sourceId } from '../utils';
 
+import mappingApi from './mapping';
+import mediaApi from './media';
 import playerApi, { debouncedUpdatePlayer, playerAdapter, selectPlayer } from './player';
 import playlistApi, { selectPlaylistById } from './playlists';
-import mediaApi from './media';
-import mappingApi from './mapping';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:updatePlayer`);
 

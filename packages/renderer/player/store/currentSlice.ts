@@ -76,7 +76,7 @@ const currentSlice = createSlice({
     setSettingsNode(state, { payload: settingsNode }: PayloadAction<string>) {
       state.settingsNode = settingsNode;
     },
-    setCurrentPlaylistItem(_, __: PayloadAction<string|undefined>) {
+    setCurrentPlaylistItem(_, __: PayloadAction<string | undefined>) {
       /**
        * see startAppListening
        */

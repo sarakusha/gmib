@@ -10,15 +10,8 @@ export interface FormikTextFieldProps
 
 export function fieldToTextField({
   disabled,
-  field: {
-    onBlur: fieldOnBlur,
-    ...field
-  },
-  form: {
-    isSubmitting,
-    touched,
-    errors,
-  },
+  field: { onBlur: fieldOnBlur, ...field },
+  form: { isSubmitting, touched, errors },
   onBlur = e => fieldOnBlur(e ?? field.name),
   helperText,
   inputProps,
@@ -42,10 +35,7 @@ export function fieldToTextField({
   };
 }
 
-const FormikTextField: React.FC<FormikTextFieldProps> = ({
-  children,
-  ...props
-}) => (
+const FormikTextField: React.FC<FormikTextFieldProps> = ({ children, ...props }) => (
   <MuiTextField {...fieldToTextField(props)}>{children}</MuiTextField>
 );
 

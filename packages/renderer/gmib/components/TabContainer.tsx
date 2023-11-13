@@ -2,7 +2,6 @@ import { Box } from '@mui/material';
 import type { DeviceId } from '@nibus/core';
 import React from 'react';
 
-
 // const useStyles = makeStyles({
 //   root: {
 //     width: '100%',

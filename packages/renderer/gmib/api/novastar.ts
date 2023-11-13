@@ -1,8 +1,8 @@
 import { createEntityAdapter } from '@reduxjs/toolkit';
 import type { EntityState, Middleware, MiddlewareAPI } from '@reduxjs/toolkit';
 import { createApi } from '@reduxjs/toolkit/query/react';
-
 import debugFactory from 'debug';
+
 import type { Novastar, Screen, ScreenId } from '/@common/novastar';
 import type { CabinetInfo } from '/@common/helpers';
 import { NovastarSelector } from '/@common/helpers';
@@ -45,7 +45,7 @@ window.initializeNovastar().then(value => {
 //   }
 // });
 
-const secret = window.identify.getSecret();
+// const secret = window.identify.getSecret();
 
 const adapter = createEntityAdapter<Novastar>({
   selectId: ({ path }) => path,
@@ -145,10 +145,10 @@ const debouncedUpdateNovastarScreens = createDebouncedAsyncThunk<void, ScreenPar
 
 const updateValue =
   <K extends keyof Screen>(name: K, update: SetStateAction<Screen[K]>) =>
-    (prev: Screen): Screen => ({
-      ...prev,
-      [name]: typeof update !== 'function' ? update : update(prev[name]),
-    });
+  (prev: Screen): Screen => ({
+    ...prev,
+    [name]: typeof update !== 'function' ? update : update(prev[name]),
+  });
 
 export const updateNovastarScreens = <K extends keyof Screen, S extends number>(
   path: string,

@@ -4,7 +4,6 @@ import { app, ipcMain } from 'electron';
 import debugFactory from 'debug';
 
 import type { NullableOptional } from '/@common/helpers';
-
 import type { Credentials } from '/@common/Credentials';
 
 import { promisifyGet, promisifyRun, removeNull } from './db';

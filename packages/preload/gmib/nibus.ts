@@ -105,20 +105,20 @@ type PropEntity = [name: string, state: ValueState];
 
 const getDeviceProp =
   (device: IDevice) =>
-    (idOrName: string | number): PropEntity => {
-      const error = device.getError(idOrName);
-      const name = device.getName(idOrName);
-      return [
-        name,
-        {
-          // eslint-disable-next-line no-nested-ternary
-          status: error ? 'failed' : device.isDirty(idOrName) ? 'pending' : 'succeeded',
-          value: device[name],
-          error: error?.message,
-          raw: device.getRawValue(idOrName),
-        },
-      ];
-    };
+  (idOrName: string | number): PropEntity => {
+    const error = device.getError(idOrName);
+    const name = device.getName(idOrName);
+    return [
+      name,
+      {
+        // eslint-disable-next-line no-nested-ternary
+        status: error ? 'failed' : device.isDirty(idOrName) ? 'pending' : 'succeeded',
+        value: device[name],
+        error: error?.message,
+        raw: device.getRawValue(idOrName),
+      },
+    ];
+  };
 
 const getProps = (device: IDevice, idsOrNames?: (number | string)[]): DeviceProps => {
   const proto = Reflect.getPrototypeOf(device) ?? {};
@@ -578,7 +578,7 @@ export const telemetry = memoize((id: DeviceId): NibusTelemetry => {
   }
   return {
     start(options, cb) {
-      const saver = isRemoteSession ? () => { } : startTelemetry(device.address.toString());
+      const saver = isRemoteSession ? () => {} : startTelemetry(device.address.toString());
       const columnHandler = (column: Modules): void => {
         cb?.(prev => [...prev, ...column]);
         column.forEach(({ x, y, info }) => {

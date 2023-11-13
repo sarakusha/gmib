@@ -1,16 +1,16 @@
 /// <reference lib="webworker" />
 import EbmlDecoder from '@sarakusha/ebml';
+import CancelError from '@sarakusha/ebml/CancelError';
 import FadeTransform from '@sarakusha/ebml/FadeTransform';
+import RangeFetcher from '@sarakusha/ebml/RangeFetcher';
 import ReducingValve from '@sarakusha/ebml/ReducingValve';
 import VideoChunkGenerator from '@sarakusha/ebml/VideoChunkGenerator';
 import VideoFrameGenerator from '@sarakusha/ebml/VideoFrameGenerator';
-import RangeFetcher from '@sarakusha/ebml/RangeFetcher';
-import CancelError from '@sarakusha/ebml/CancelError';
 // import VideoFrameTransformer from '@sarakusha/ebml/VideoFrameTransformer';
 
 let controller: AbortController | undefined;
 let readable: ReadableStream<VideoFrame> | undefined;
-const noop = () => { };
+const noop = () => {};
 let play = noop;
 let pause = noop;
 let cancel = false;
@@ -27,7 +27,10 @@ onmessage = async ({ data }) => {
     pause = valve.close;
     if (controller) controller.abort(new CancelError());
     controller = new AbortController();
-    const fetcher = new RangeFetcher(data.uri, { abortController: controller, chunkSize: 5 * 1024 * 1024 });
+    const fetcher = new RangeFetcher(data.uri, {
+      abortController: controller,
+      chunkSize: 5 * 1024 * 1024,
+    });
 
     try {
       readable = fetcher

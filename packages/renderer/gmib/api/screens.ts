@@ -45,20 +45,20 @@ export const parseLocation = (location: string): Location | undefined => {
 
 const getHostParams =
   (screen: Screen) =>
-    (expr: string): WithRequiredProp<Location, 'left' | 'top'> | undefined => {
-      const location = parseLocation(expr);
-      if (!location) return undefined;
-      const { left = 0, top = 0, address } = location;
-      const width = location.width ?? (screen.width && Math.max(screen.width - left, 0));
-      const height = location.height ?? (screen.height && Math.max(screen.height - top, 0));
-      return {
-        address,
-        left: screen.left + left,
-        top: screen.top + top,
-        width,
-        height,
-      };
+  (expr: string): WithRequiredProp<Location, 'left' | 'top'> | undefined => {
+    const location = parseLocation(expr);
+    if (!location) return undefined;
+    const { left = 0, top = 0, address } = location;
+    const width = location.width ?? (screen.width && Math.max(screen.width - left, 0));
+    const height = location.height ?? (screen.height && Math.max(screen.height - top, 0));
+    return {
+      address,
+      left: screen.left + left,
+      top: screen.top + top,
+      width,
+      height,
     };
+  };
 
 const adapter = createEntityAdapter<Screen>({
   selectId: ({ id }) => id,
@@ -170,23 +170,23 @@ const debouncedUpdateScreen = createDebouncedAsyncThunk<void, Screen, AppThunkCo
 
 export const updateScreen =
   (id: number, update: SetStateAction<Omit<Screen, 'id'>>): AppThunk =>
-    dispatch => {
-      dispatch(
-        screenApi.util.updateQueryData('getScreens', undefined, state => {
-          const prev = selectScreen(state, id);
-          if (!prev) throw new Error(`Unknown screen id: ${id}`);
-          const screen = { id, ...(typeof update === 'function' ? update(prev) : update) };
-          adapter.setOne(state, screen);
-          if (
-            (prev.brightness !== screen.brightness && !screen.brightnessFactor) ||
-            Boolean(prev.brightnessFactor) !== Boolean(screen.brightnessFactor)
-          ) {
-            setTimeout(() => dispatch(invalidateBrightness(id)), 0);
-          }
-          dispatch(debouncedUpdateScreen(screen));
-        }),
-      );
-    };
+  dispatch => {
+    dispatch(
+      screenApi.util.updateQueryData('getScreens', undefined, state => {
+        const prev = selectScreen(state, id);
+        if (!prev) throw new Error(`Unknown screen id: ${id}`);
+        const screen = { id, ...(typeof update === 'function' ? update(prev) : update) };
+        adapter.setOne(state, screen);
+        if (
+          (prev.brightness !== screen.brightness && !screen.brightnessFactor) ||
+          Boolean(prev.brightnessFactor) !== Boolean(screen.brightnessFactor)
+        ) {
+          setTimeout(() => dispatch(invalidateBrightness(id)), 0);
+        }
+        dispatch(debouncedUpdateScreen(screen));
+      }),
+    );
+  };
 
 export const useScreens = () =>
   screenApi.useGetScreensQuery(undefined, {

@@ -271,8 +271,13 @@ function createTables(): void {
     );
     db.all('SELECT typeof(current) as current_type FROM player LIMIT 1', (_, rows) => {
       const [first] = rows;
-      if (first && typeof first === 'object' && 'current_type' in first && first.current_type === 'integer') {
-        db.run('ALTER TABLE player DROP current', (err) => {
+      if (
+        first &&
+        typeof first === 'object' &&
+        'current_type' in first &&
+        first.current_type === 'integer'
+      ) {
+        db.run('ALTER TABLE player DROP current', err => {
           if (!err) {
             db.run('ALTER TABLE player ADD current TEXT');
           }
@@ -384,16 +389,16 @@ export const uniqueField =
     prop: K,
     exists: (value: string, id?: I) => Promise<boolean | undefined>,
   ) =>
-    async <T extends Partial<Record<K, string | null>> & { id?: I }>(row: T): Promise<T> => {
-      const { id, [prop]: original, ...other } = row;
-      if (original == null) return row;
-      let value: string = original;
-      // eslint-disable-next-line no-await-in-loop
-      while (await exists(value, id)) {
-        value = incrementCounterString(value);
-      }
-      return { ...other, id, [prop]: value } as unknown as T;
-    };
+  async <T extends Partial<Record<K, string | null>> & { id?: I }>(row: T): Promise<T> => {
+    const { id, [prop]: original, ...other } = row;
+    if (original == null) return row;
+    let value: string = original;
+    // eslint-disable-next-line no-await-in-loop
+    while (await exists(value, id)) {
+      value = incrementCounterString(value);
+    }
+    return { ...other, id, [prop]: value } as unknown as T;
+  };
 
 process.nextTick(() => log.log(`DB: ${dbPath}`));
 

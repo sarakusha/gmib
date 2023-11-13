@@ -15,7 +15,6 @@ import preventLoadSourceMap from '/@common/preventLoadSourceMap';
 
 // const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:express`);
 
-
 // const isAuthorized = (req: IncomingMessage) =>
 //   import.meta.env.DEV ||
 //   (req.url && url.parse(req.url, true).query.access_token === secret) ||
@@ -82,4 +81,3 @@ app.use(
   api,
 );
 app.use(errorHandler);
-

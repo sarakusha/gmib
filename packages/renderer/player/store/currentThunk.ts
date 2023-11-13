@@ -15,6 +15,7 @@ import {
 } from './currentSlice';
 import { startAppListening } from './listenerMiddleware';
 import { selectCurrent, selectDuration, selectPlaybackState } from './selectors';
+
 import { isRemoteSession } from '/@common/remote';
 
 const selectPlayersData = playerApi.endpoints.getPlayers.select();

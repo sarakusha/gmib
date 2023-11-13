@@ -53,7 +53,10 @@ export default class VideoSource {
     return this.#duration;
   }
 
-  constructor(readonly uri: string, readonly options: VideoSourceOptions = {}) {
+  constructor(
+    readonly uri: string,
+    readonly options: VideoSourceOptions = {},
+  ) {
     lastId += 1;
     this.id = lastId;
     this.#hasStarted = !!options.autoplay;
@@ -85,7 +88,7 @@ export default class VideoSource {
     } else {
       start(!options.autoplay);
     }
-    const onMessage = options.onMessage ? options.onMessage.bind(this) : () => { };
+    const onMessage = options.onMessage ? options.onMessage.bind(this) : () => {};
     decoder.onmessage = ev => {
       const { data } = ev;
       if (typeof data !== 'object') return;

@@ -1,12 +1,13 @@
 import { createEntityAdapter, type EntityState } from '@reduxjs/toolkit';
 import { createApi } from '@reduxjs/toolkit/query/react';
 
-import { sourceId } from '../utils';
 import baseQuery from '../../common/authBaseQuery';
 
 import type { Player } from '/@common/video';
+
 import createDebouncedAsyncThunk from '../../common/createDebouncedAsyncThunk';
 import type { AppThunkConfig } from '../store';
+import { sourceId } from '../utils';
 
 export const playerAdapter = createEntityAdapter<Player>();
 

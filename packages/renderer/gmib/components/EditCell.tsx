@@ -1,8 +1,7 @@
-
 import type { InputBaseProps } from '@mui/material';
 import { InputAdornment } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import type { ChangeEvent} from 'react';
+import type { ChangeEvent } from 'react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import StyledInput from './StyledInput';

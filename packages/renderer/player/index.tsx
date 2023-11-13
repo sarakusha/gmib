@@ -19,6 +19,7 @@ import App from './components/App';
 import store from './store';
 import updatePlayer from './api/updatePlayer';
 import { sourceId } from './utils';
+
 import { isRemoteSession } from '/@common/remote';
 
 debugFactory.log = window.log;

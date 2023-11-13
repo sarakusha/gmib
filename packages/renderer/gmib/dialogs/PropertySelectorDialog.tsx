@@ -9,11 +9,11 @@ import {
   FormControlLabel,
   FormGroup,
 } from '@mui/material';
-import React, {useCallback, useEffect, useRef, useState} from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import FormFieldSet from '../components/FormFieldSet';
 
-import {getEnumEntries} from '/@common/helpers';
+import { getEnumEntries } from '/@common/helpers';
 // import { initialSelectors, Minihost3Selector } from '../util/Minihost3Loader';
 
 type Props = {

@@ -1,7 +1,5 @@
 import CloseIcon from '@mui/icons-material/Close';
 import TabContext from '@mui/lab/TabContext';
-import type { TreeItemProps, TreeViewProps } from '@mui/x-tree-view';
-import { TreeItem as MuiTreeItem, TreeView as MuiTreeView } from '@mui/x-tree-view';
 import {
   Box,
   Collapse,
@@ -12,6 +10,8 @@ import {
   type SvgIconProps,
   Typography,
 } from '@mui/material';
+import type { TreeItemProps, TreeViewProps } from '@mui/x-tree-view';
+import { TreeItem as MuiTreeItem, TreeView as MuiTreeView } from '@mui/x-tree-view';
 import * as React from 'react';
 import { TransitionGroup } from 'react-transition-group';
 

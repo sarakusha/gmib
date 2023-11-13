@@ -21,7 +21,6 @@ export type RequestMessage = {
   sourceId: number;
 };
 
-
 export type RtcMessage = CandidateMessage | OfferMessage | AnswerMessage | RequestMessage;
 
 export type WithWebSocketKey<T extends RtcMessage> = T & {

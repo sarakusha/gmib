@@ -3,7 +3,7 @@ import type { LogLevel } from '@nibus/core';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { createSlice } from '@reduxjs/toolkit';
 
-import type { Config, Location, OverheatProtection, Page } from '/@common/config';
+import type { Config, Location, OverheatProtection } from '/@common/config';
 import { DEFAULT_OVERHEAD_PROTECTION } from '/@common/config';
 import type { PropPayloadAction } from '/@common/helpers';
 

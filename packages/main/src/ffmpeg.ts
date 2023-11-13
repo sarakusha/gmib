@@ -2,10 +2,10 @@
 /**
  * https://github.com/mifi/lossless-cut/blob/master/src/ffmpeg.js
  */
+import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import readline from 'node:readline';
-import fs from 'node:fs';
 
 import debugFactory from 'debug';
 import type { ExecaChildProcess, ExecaReturnValue } from 'execa';
@@ -346,7 +346,12 @@ export async function convertCopy(filePath: string, outPath: string): Promise<vo
   debug(stdout);
 }
 
-export async function html5ify({ outPath, filePath, speed = 'slow', onProgress }: Opts): Promise<void> {
+export async function html5ify({
+  outPath,
+  filePath,
+  speed = 'slow',
+  onProgress,
+}: Opts): Promise<void> {
   // let audio;
   // if (hasAudio) {
   //   if (speed === 'slowest') audio = 'hq';
@@ -503,7 +508,11 @@ export const getAudioStreams = (streams: FfprobeStream[]): FfprobeStream[] =>
 export const getRealVideoStreams = (streams: FfprobeStream[]): FfprobeStream[] =>
   streams.filter(stream => stream.codec_type === 'video' && !isStreamThumbnail(stream));
 
-const html5Formats = [/* 'av1', */ 'h264', /* 'h263', */ /* 'mpeg1video', 'mpeg2video', */ 'vp8', 'vp9'];
+const html5Formats = [
+  /* 'av1', */ 'h264',
+  /* 'h263', */ /* 'mpeg1video', 'mpeg2video', */ 'vp8',
+  'vp9',
+];
 
 // With these codecs, the player will not give a playback error, but instead only play audio
 export const doesPlayerSupportFile = (streams: FfprobeStream[]): boolean => {

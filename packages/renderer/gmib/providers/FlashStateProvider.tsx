@@ -1,17 +1,9 @@
 import type { Kind } from '@nibus/core';
 import { FlashKinds } from '@nibus/core/flash/FlashKinds';
-import type {
-  Dispatch,
-  Reducer,
-  ReducerAction,
-  SetStateAction} from 'react';
-import React, {
-  useCallback,
-  useContext,
-  useReducer,
-} from 'react';
+import type { Dispatch, Reducer, ReducerAction, SetStateAction } from 'react';
+import React, { useCallback, useContext, useReducer } from 'react';
 
-import type { AtLeastOne} from '/@common/helpers';
+import type { AtLeastOne } from '/@common/helpers';
 import { noop } from '/@common/helpers';
 
 type Setter<S> = Dispatch<SetStateAction<S>>;

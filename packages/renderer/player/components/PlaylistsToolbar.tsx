@@ -91,7 +91,11 @@ const PlaylistsToolbar: React.FC<Props> = ({ size }) => {
             size={size}
             onClick={() =>
               dispatch(
-                updatePlayer(sourceId, prev => ({ ...prev, playlistId: current, current: undefined })),
+                updatePlayer(sourceId, prev => ({
+                  ...prev,
+                  playlistId: current,
+                  current: undefined,
+                })),
               )
             }
           >

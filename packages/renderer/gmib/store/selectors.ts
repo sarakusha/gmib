@@ -21,9 +21,9 @@ import { selectNovastarTelemetryById } from './telemetrySlice';
 
 import type { RootState } from '.';
 
-import type { Config, OverheatProtection, Page } from '/@common/config';
+import type { Config, OverheatProtection } from '/@common/config';
 import type { Health, ValueState } from '/@common/helpers';
-import { findById, notEmpty } from '/@common/helpers';
+import { notEmpty } from '/@common/helpers';
 
 export const {
   selectAll: selectAllDevices,
@@ -74,7 +74,7 @@ type PropsSelector = <P extends string>(
 export const selectProps: PropsSelector = createSelector(
   [
     (state: RootState) => state.devices,
-    (_: RootState, id: string, ...names: string[]) => id,
+    (_: RootState, id: string) => id,
     (_: RootState, id: string, ...names: string[]) => names,
   ],
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
