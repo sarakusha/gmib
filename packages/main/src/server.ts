@@ -7,10 +7,10 @@ import { port } from './config';
 export const app = express();
 const server = createServer(app);
 export const wss = new WebSocketServer({ server });
-export const broadcast = (msg: string) => {
+export const broadcast = (event: string, data?: unknown) => {
   wss.clients.forEach(ws => {
     if (ws.readyState === WebSocket.OPEN) {
-      ws.send(msg);
+      ws.send(JSON.stringify({ event, data }));
     }
   });
 };
