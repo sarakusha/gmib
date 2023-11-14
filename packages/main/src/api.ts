@@ -147,7 +147,7 @@ fs.mkdir(mediaRoot, { recursive: true }, err => {
   }
 });
 
-const noop = (): void => {};
+const noop = (): void => { };
 
 const getHash = (filepath: string): Promise<string> =>
   new Promise<string>((resolve, reject) => {
@@ -314,8 +314,7 @@ const updateTest = async (scr: Screen) => {
     debug(
       `Loading error. url: ${url}, errorCode: ${errorCode}, errorDescription: ${errorDescription}`,
     );
-    /* ERR_FILE_NOT_FOUND */
-    if (errorCode !== -6) setTimeout(() => contents.reload(), 5000).unref();
+    setTimeout(() => contents.reload(), 5000).unref();
   });
   testWindow.setPosition(scr.left + display.bounds.x, scr.top + display.bounds.y);
   testWindow.setSize(scr.width, scr.height);
