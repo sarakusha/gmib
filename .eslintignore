@@ -3,6 +3,7 @@ scripts/
 *.js
 *.mjs
 *.mdx
+*.md
 packages/preload/gmibInMainWorld.d.ts
 packages/preload/playerInMainWorld.d.ts
 .github/
