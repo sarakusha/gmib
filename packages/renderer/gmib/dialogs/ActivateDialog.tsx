@@ -24,9 +24,12 @@ const AutoFillKey = ({ field = 'key' }: { field?: string }) => {
 const ActivateDialog: React.FC = () => {
   const open = useSelector(selectIsActivateDialogOpen);
   const dispatch = useDispatch();
-  const closeHandler = () => dispatch(setActivateDialogOpen(false));
   const hostName = useSelector(selectHostName)?.replace(/\.local$/, '');
-  const [activate, { error }] = useActivateMutation();
+  const [activate, { error, reset }] = useActivateMutation();
+  const closeHandler = () => {
+    dispatch(setActivateDialogOpen(false));
+    reset();
+  };
   return (
     <Dialog open={open} maxWidth="xs" fullWidth>
       <DialogTitle>Активация</DialogTitle>
