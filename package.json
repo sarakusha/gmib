@@ -192,7 +192,7 @@
     "express-unless": "^2.1.2",
     "file-type": "16",
     "formidable": "^2.0.1",
-    "helmet": "^6.0.0",
+    "helmet": "^7.0.0",
     "http-proxy-middleware": "^2.0.6",
     "lodash": "^4.17.21",
     "nanoid": "3",
