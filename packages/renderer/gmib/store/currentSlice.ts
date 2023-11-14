@@ -25,6 +25,7 @@ export interface CurrentState {
   authRequired?: Credentials;
   broadcastDetected?: string;
   isActivateDialogOpen: boolean;
+  invalidState: boolean;
   // playlist: number | undefined;
 }
 
@@ -35,6 +36,7 @@ const initialState: CurrentState = {
   health: undefined,
   isRemoteDialogOpen: false,
   isActivateDialogOpen: false,
+  invalidState: false,
   // isLoggedIn: true, // isRemoteSession ? !!window.identify.getSecret() : true,
   // playlist: undefined,
 };
@@ -79,6 +81,9 @@ const currentSlice = createSlice({
       } else {
         state.broadcastDetected = address;
       }
+    },
+    setInvalidState(state, { payload: invalid }: PayloadAction<boolean>) {
+      state.invalidState = invalid;
     },
   },
   extraReducers: builder => {
@@ -138,6 +143,7 @@ export const {
   // setLoggedIn,
   setAuthRequired,
   setBroadcastDetected,
+  setInvalidState,
 } = currentSlice.actions;
 
 export default currentSlice.reducer;

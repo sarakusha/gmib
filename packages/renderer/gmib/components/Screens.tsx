@@ -15,7 +15,12 @@ import { setCurrentScreen } from '../store/currentSlice';
 
 import { noop } from '/@common/helpers';
 
-import { selectCurrentScreenId, selectCurrentTab, selectSessionVersion } from '../store/selectors';
+import {
+  selectCurrentScreenId,
+  selectCurrentTab,
+  selectInvalidState,
+  selectSessionVersion,
+} from '../store/selectors';
 
 import Screen from './Screen';
 import ScreensToolbar from './ScreensToolbar';
@@ -44,6 +49,7 @@ const Screens: React.FC = () => {
   const [readonly, setReadonly] = useState(true);
   const [createScreen] = useCreateScreenMutation();
   const [removeScreen] = useDeleteScreenMutation();
+  const invalidState = useSelector(selectInvalidState);
   useEffect(() => {
     if (tab === 'screens') {
       const toolbar = (
@@ -102,17 +108,18 @@ const Screens: React.FC = () => {
               value={id}
               key={id}
               onClick={() => dispatch(setCurrentScreen(id))}
+              disabled={invalidState}
             />
           ))}
           {sessionVersion && !readonly && (
             <Tab
-              icon={<AddToQueue color={readonly ? 'inherit' : 'secondary'} />}
+              icon={<AddToQueue color={readonly || invalidState ? 'inherit' : 'secondary'} />}
               sx={{ flexGrow: 0, minWidth: 48 }}
               // textColor="secondary"
               onClick={() => createScreen()}
               title="Добавить экран"
               value={-1}
-              disabled={readonly}
+              disabled={readonly || invalidState}
             />
           )}
         </Tabs>

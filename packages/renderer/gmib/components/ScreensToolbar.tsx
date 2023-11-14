@@ -8,7 +8,7 @@ import { noop } from '/@common/helpers';
 
 import { updateScreen, useScreen } from '../api/screens';
 import { useDispatch, useSelector } from '../store';
-import { selectBrightness, selectCurrentScreenId } from '../store/selectors';
+import { selectBrightness, selectCurrentScreenId, selectInvalidState } from '../store/selectors';
 
 import Brightness from './HBrightness';
 
@@ -47,6 +47,7 @@ const ScreensToolbar: React.FC<{ readonly?: boolean; toggle?: () => void }> = ({
       dispatch(updateScreen(screenId, prev => ({ ...prev, brightness: value }))),
     [dispatch, screenId],
   );
+  const invalidState = useSelector(selectInvalidState);
   const disabled = !screen || screen.brightnessFactor !== 0;
   return (
     <>
@@ -72,7 +73,7 @@ const ScreensToolbar: React.FC<{ readonly?: boolean; toggle?: () => void }> = ({
         disabled={disabled}
       />
       <Tooltip title={readonly ? 'Разблокировать' : 'Заблокировать'}>
-        <IconButton onClick={toggle} color="inherit" size="large">
+        <IconButton onClick={toggle} color="inherit" size="large" disabled={invalidState}>
           {readonly ? <LockIcon /> : <LockOpenIcon />}
         </IconButton>
       </Tooltip>

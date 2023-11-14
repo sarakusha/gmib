@@ -64,6 +64,7 @@ export const selectCurrentHealth = (state: RootState): Health | undefined =>
   selectCurrent(state).health;
 export const selectAuthRequired = (state: RootState) => selectCurrent(state).authRequired;
 export const selectBroadcastDetected = (state: RootState) => selectCurrent(state).broadcastDetected;
+export const selectInvalidState = (state: RootState) => selectCurrent(state).invalidState;
 
 type PropsSelector = <P extends string>(
   state: RootState,
