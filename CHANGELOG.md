@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.7.1](https://github.com/sarakusha/gmib/compare/v4.7.0...v4.7.1) (2023-11-14)
+
+
+### Features
+
+* корректный рестарт в режиме отладки ([c6def60](https://github.com/sarakusha/gmib/commit/c6def60e37ab20b05c683cdf196dd890e0ed1abb))
+* синхронизация по сокету ([d0b7d66](https://github.com/sarakusha/gmib/commit/d0b7d663f52dbd6061c9d795d5650d293ad57bd9))
+* ссылка на все версии ([fd1b7f6](https://github.com/sarakusha/gmib/commit/fd1b7f63669c1d39cb98f0ef9e50d1971b0fe9ec))
+* playlist.current всегда валидный ([a938c6a](https://github.com/sarakusha/gmib/commit/a938c6a53645f4e88432d5e6dbc14d060c26d23c))
+* transmitting duration along with position ([3e698f6](https://github.com/sarakusha/gmib/commit/3e698f6faea7b8c47d416c5bb0ab62733a8a684b))
+
+
+### Bug Fixes
+
+* валидация пустых строк ([0ecc8ef](https://github.com/sarakusha/gmib/commit/0ecc8ef8d3d5123555127cdce238ebc30037de5e))
+* изменение плейлиста ([2216efa](https://github.com/sarakusha/gmib/commit/2216efa48a0eae44701b02ddd362006a04441fb9))
+* исправлен режим перезапуска ([4544e32](https://github.com/sarakusha/gmib/commit/4544e327d8ca68b7adeea9c472253f8ab22266bd))
+* не сохранялась телеметрия ([b741920](https://github.com/sarakusha/gmib/commit/b741920647f1b6304348517a1b09b964452acdc5))
+* некорректная очередность проигрывания ([cfdd8e5](https://github.com/sarakusha/gmib/commit/cfdd8e56464d7d0a6d4de0688d2816dc261371b7))
+* первое подключение ([9647353](https://github.com/sarakusha/gmib/commit/9647353aafe88d5be98c7a487079f01e3103b9be))
+* пропущен коммит транзакции ([8bc63a0](https://github.com/sarakusha/gmib/commit/8bc63a084c8d1d09ce095173714a210701017359))
+* пропущена запятая ([d954e8f](https://github.com/sarakusha/gmib/commit/d954e8f4497f386901ba6ff47af81082611fff14))
+* синхронизация плейлиста ([abb3b85](https://github.com/sarakusha/gmib/commit/abb3b851cc1df6b21e68ee3952ae89cd81d90e4c))
+* only remote ([6965f64](https://github.com/sarakusha/gmib/commit/6965f64f6233c9896e447d68c674f7fc755d02c6))
+
 ## [4.7.0](https://github.com/sarakusha/gmib/compare/v4.6.8...v4.7.0) (2023-10-31)
 
 
