@@ -340,7 +340,7 @@ const lazy = <F extends () => any>(creator: F): (() => ReturnType<F>) => {
   };
 };
 
-export const promisifyGet = <P extends (...params: any) => any, R>(
+export const promisifyGet = <P extends (...params: any[]) => any, R>(
   sql: string,
   encoder: P,
   decoder: Decoder<R>,
@@ -350,12 +350,12 @@ export const promisifyGet = <P extends (...params: any) => any, R>(
     return promisify(statement.get.bind(statement));
   });
   return (...params) =>
-    fn()(encoder(...(params as any))).then(
+    fn()(encoder(...params)).then(
       result => (decoder ? result && decoder(result) : result) as R,
     );
 };
 
-export const promisifyAll = <P extends (...args: any) => any, R>(
+export const promisifyAll = <P extends (...args: any[]) => any, R>(
   sql: string,
   encoder: P,
   decoder?: Decoder<R>,
@@ -365,19 +365,19 @@ export const promisifyAll = <P extends (...args: any) => any, R>(
     return promisify(statement.all.bind(statement));
   });
   return (...params) =>
-    fn()(encoder(params)).then(
+    fn()(encoder(...params)).then(
       result => (decoder ? (result as NullableOptional).map(decoder) : result) as R[],
     );
 };
 
-export const promisifyRun = <P extends (...args: any) => any>(
+export const promisifyRun = <P extends (...args: any[]) => any>(
   sql: string,
   encoder?: P,
 ): ((...params: Parameters<P>) => Promise<{ changes: number; lastID: number }>) => {
   const statement = lazy(() => db.prepare(sql));
   return (...params) =>
     new Promise((resolve, reject) => {
-      statement().run(encoder ? encoder(...(params as any)) : params, function callback(err) {
+      statement().run(encoder ? encoder(...params) : params, function callback(err) {
         if (err) reject(err);
         else resolve({ lastID: this.lastID, changes: this.changes });
       });
@@ -389,16 +389,16 @@ export const uniqueField =
     prop: K,
     exists: (value: string, id?: I) => Promise<boolean | undefined>,
   ) =>
-  async <T extends Partial<Record<K, string | null>> & { id?: I }>(row: T): Promise<T> => {
-    const { id, [prop]: original, ...other } = row;
-    if (original == null) return row;
-    let value: string = original;
-    // eslint-disable-next-line no-await-in-loop
-    while (await exists(value, id)) {
-      value = incrementCounterString(value);
-    }
-    return { ...other, id, [prop]: value } as unknown as T;
-  };
+    async <T extends Partial<Record<K, string | null>> & { id?: I }>(row: T): Promise<T> => {
+      const { id, [prop]: original, ...other } = row;
+      if (original == null) return row;
+      let value: string = original;
+      // eslint-disable-next-line no-await-in-loop
+      while (await exists(value, id)) {
+        value = incrementCounterString(value);
+      }
+      return { ...other, id, [prop]: value } as unknown as T;
+    };
 
 process.nextTick(() => log.log(`DB: ${dbPath}`));
 
