@@ -15,8 +15,8 @@ const toBrightnessHistory = (result: NullableOptional): BrightnessHistory => {
 
 const insertBrightness = promisifyRun(
   `INSERT INTO brightness (timestamp, brightness)
-   VALUES (strftime('%s', 'now'), ?)`,
-  (brightness: number) => brightness,
+   VALUES ($now, $brightness)`,
+  (brightness: number) => ({ $brightness: brightness, $now: Date.now() }),
 );
 
 const insertTelemetry = promisifyRun(
