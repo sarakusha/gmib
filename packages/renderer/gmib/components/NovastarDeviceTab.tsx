@@ -1,134 +1,79 @@
-/* eslint-disable react/no-array-index-key */
 import type { FunctionInterpolation } from '@emotion/react';
-import { useTheme } from '@emotion/react';
-import type { InputProps, SelectProps, TextFieldProps } from '@mui/material';
-import { Box, Paper, TextField, Typography } from '@mui/material';
+import type { SelectProps } from '@mui/material';
+import { Box, Paper, Table, TableBody, TableRow } from '@mui/material';
 import type { Theme } from '@mui/material/styles';
 import { css, styled } from '@mui/material/styles';
 import { ChipTypeEnum } from '@novastar/native/ChipType';
 import { DviSelectModeEnum } from '@novastar/native/DviSelectMode';
 import type { BrightnessRGBV } from '@novastar/screen/ScreenConfigurator';
 import getScreenLocation from '@novastar/screen/getScreenLocation';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect } from 'react';
 
+import { updateNovastarScreens } from '../api/novastar';
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useDispatch, useSelector } from '../store';
-import { updateNovastarScreens } from '../api/novastar';
 
 import { minmax, noop } from '/@common/helpers';
 
 import { selectCurrentTab } from '../store/selectors';
 
 import DisplayModeSelector from './DisplayModeSelector';
+import EditCell from './EditCell';
 import NovastarToolbar from './NovastarToolbar';
 
 import type { Novastar } from '/@common/novastar';
 
-type RGBVItemProps = { kind: keyof BrightnessRGBV } & Omit<
-  TextFieldProps,
-  'inputProps' | 'type' | 'onBlur'
->;
+import StyledAccordionList from './StyledAccordionList';
+import TableCell from './TableCell';
 
-const brightnessInputProps: Readonly<InputProps['inputProps']> = {
-  min: 0,
-  max: 255,
+const brightProps: Readonly<Record<keyof BrightnessRGBV, string>> = {
+  overall: 'Яркость',
+  red: 'Уровень красного',
+  green: 'Уровень зеленого',
+  blue: 'Уровень синего',
+  vRed: 'Уровень вирт. красного',
 };
 
-const gammaInputProps: Readonly<InputProps['inputProps']> = {
-  min: 1,
-  max: 4,
-  step: 0.1,
-};
+const isBrightnessProps = (name: string): name is keyof BrightnessRGBV => name in brightProps;
 
-const brightProps = ['overall', 'red', 'green', 'blue', 'vRed'] as const;
-
-const isBrightnessProps = (name: string): name is keyof BrightnessRGBV =>
-  (brightProps as ReadonlyArray<string>).includes(name);
-
-const RGBVItem: React.FC<RGBVItemProps> = ({ kind, className, value, onChange, ...props }) => {
-  const [state, setState] = useState(value);
-  useEffect(() => setState(value), [value]);
-  const changeHandler = useCallback<React.ChangeEventHandler<HTMLInputElement>>(
-    e => {
-      const { value: val } = e.target;
-      if (val !== '' && onChange) onChange(e);
-      else setState(val);
-    },
-    [onChange],
-  );
-  return kind === 'overall' ? (
-    <Typography className={className}>
-      {typeof value === 'number' ? `${value} (${Math.round((value * 100) / 2.55) / 100}%)` : '-'}
-    </Typography>
-  ) : (
-    <TextField
-      {...props}
-      className={className}
-      value={state}
-      inputProps={brightnessInputProps}
-      onChange={changeHandler}
-      onBlur={() => setState(value)}
-      type="number"
-      variant="standard"
-    />
-  );
-};
-
-const Name = styled(Typography)(({ theme }) => ({
-  gridColumnStart: 'span 2',
-  fontWeight: 500,
-  backgroundColor: theme.palette.action.selected,
-  padding: 4,
-}));
-
-const Value = styled(Typography)({
-  gridColumnStart: 3,
-  padding: 4,
-});
-
-const Screens = styled('div')({
-  display: 'flex',
-  alignItems: 'center',
-  gap: 2,
-});
-
-const itemStyle = css`
-  width: 130px;
-  padding-left: 4px;
-  padding-right: 4px;
+const itemStyle: FunctionInterpolation<Theme> = theme => css`
+  padding-left: ${theme.spacing(0.5)};
+  padding-right: ${theme.spacing(2)};
 `;
 
-const boldStyle: FunctionInterpolation<Theme> = theme => css`
-  font-weight: 500;
-  background-color: ${theme.palette.action.selected};
-  padding: ${theme.spacing(0.5)};
-`;
+const ValueCell = styled(TableCell)(
+  ({ theme }) => `
+  padding-left: ${theme.spacing(0.5)};
+  padding-right: ${theme.spacing(2)};
+`,
+);
 
-const Item = styled(Typography)(itemStyle);
+const NameCell = styled(TableCell)(
+  ({ theme }) => `
+  padding-left: ${theme.spacing(4)};
+`,
+);
+
+const screenName = (index = 0) => `${index}`;
 
 const NovastarDeviceTab: React.FC<{ device: Novastar | undefined; selected?: boolean }> = ({
   device,
   selected = false,
 }) => {
-  const theme = useTheme();
   const [, setToolbar] = useToolbar();
   const tab = useSelector(selectCurrentTab);
   const active = selected && tab === 'devices' && device !== undefined;
   const path = device?.path;
-  // const [setGamma] = useSetGammaMutation();
-  // const [setDisplayMode] = useSetDisplayModeMutation();
   useEffect(() => {
     if (active) {
-      // path && dispatch(reloadNovastar(path));
       setToolbar(<NovastarToolbar />);
       return () => setToolbar(null);
     }
     return noop;
   }, [active, setToolbar, path]);
   const dispatch = useDispatch();
-  const rgbvChanged = useCallback<React.ChangeEventHandler<HTMLInputElement>>(
-    e => {
-      const { name, value } = e.target;
+  const rgbvChanged = useCallback(
+    (name: string, value: unknown) => {
       const [index, color] = name.split(':', 2);
       const screen = Number(index) as 0;
       path &&
@@ -146,9 +91,8 @@ const NovastarDeviceTab: React.FC<{ device: Novastar | undefined; selected?: boo
     },
     [dispatch, path],
   );
-  const gammaHandler = useCallback<React.ChangeEventHandler<HTMLInputElement>>(
-    e => {
-      const { name, value } = e.target;
+  const gammaHandler = useCallback(
+    (name: string, value: unknown) => {
       path && dispatch(updateNovastarScreens(path, Number(name), 'gamma', Number(value)));
     },
     [path, dispatch],
@@ -160,19 +104,10 @@ const NovastarDeviceTab: React.FC<{ device: Novastar | undefined; selected?: boo
     },
     [path, dispatch],
   );
+  const [currentScreen, setCurrentScreen] = React.useState<string | undefined>(screenName());
 
   if (!device || !device.info) return null;
   const { screens = [], info } = device;
-  // const screens = [
-  //   original[0],
-  //   original[0],
-  //   original[0],
-  //   original[0],
-  //   original[0],
-  //   original[0],
-  //   original[0],
-  //   original[0],
-  // ];
   const locations = screens
     .map(({ info: screenInfo }) => screenInfo && getScreenLocation(screenInfo))
     .map(location => ({
@@ -181,133 +116,122 @@ const NovastarDeviceTab: React.FC<{ device: Novastar | undefined; selected?: boo
       x: location?.leftTop.x ?? '-',
       y: location?.leftTop.y ?? '-',
     }));
-  // const screens = original?.[0] && [original[0], original[0], original[0], original[0]];
   return (
-    <Box width={1} display={active ? 'flex' : 'none'}>
-      <Paper
-        sx={{
-          p: 1,
-          minWidth: '100%',
-          overflowY: 'auto',
-        }}
-      >
+    <Box p={1} width={1} fontSize="body1.fontSize" display={active ? 'block' : 'none'}>
+      <Paper>
         {info && (
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: '30px auto 1fr',
-              gap: '2px',
-            }}
-          >
-            <Name>Модель</Name>
-            <Value>{info.name}</Value>
-            <Name>S/N</Name>
-            <Value>{info.mac}</Value>
-            <Name>Вход</Name>
-            <Value>{info.dviSelect ? DviSelectModeEnum[info.dviSelect] || 'DVI' : '-'}</Value>
-            <Name>Сигнал</Name>
-            <Value>{device.hasDVISignalIn ? 'Да' : 'Нет'}</Value>
-            <Name>Выходы</Name>
-            <Value>{info.portCount}</Value>
-            <Name>Экраны</Name>
-            <Screens>
-              {screens.map((_, index) => (
-                // eslint-disable-next-line react/no-array-index-key
-                <Item key={index} css={boldStyle}>
-                  #{index + 1}
-                </Item>
-              ))}
-            </Screens>
-            <Name>Чип</Name>
-            <Screens>
-              {screens.map(({ chipType }, index) => (
-                <Item key={index}>
-                  {typeof chipType === 'number'
-                    ? ChipTypeEnum[chipType].replace('Chip_', '')
-                    : 'N/A'}
-                </Item>
-              ))}
-            </Screens>
-            <Name>Размер</Name>
-            <Screens>
-              {locations?.map(({ width, height }, index) => (
-                <Item key={index}>
-                  {width}x{height}
-                </Item>
-              ))}
-            </Screens>
-            <Name>Отступ</Name>
-            <Screens>
-              {locations?.map(({ x, y }, index) => (
-                <Item key={index}>
-                  {x},{y}
-                </Item>
-              ))}
-            </Screens>
-            <Typography
-              css={boldStyle(theme)}
-              sx={{
-                gridRowStart: 'span 5',
-                writingMode: 'vertical-lr',
-                transform: 'rotate(180deg)',
-                textAlign: 'center',
-              }}
-            >
-              Яркость
-            </Typography>
-            {brightProps.map(name => (
-              <React.Fragment key={name}>
-                <Typography css={boldStyle(theme)} sx={{ gridColumnStart: 2 }}>
-                  {name}
-                </Typography>
-                <Screens>
-                  {screens.map(({ rgbv }, index) => (
-                    <RGBVItem
-                      key={index}
-                      kind={name}
-                      value={rgbv?.[name] ?? ''}
-                      css={itemStyle}
-                      name={`${index}:${name}`}
-                      onChange={rgbvChanged}
-                      disabled={rgbv == null || !device.connected}
-                    />
-                  ))}
-                </Screens>
-              </React.Fragment>
-            ))}
-            <Name>Гамма</Name>
-            <Screens>
-              {screens.map(({ gamma }, index) => (
-                <TextField
-                  key={index}
-                  name={`${index}`}
-                  css={itemStyle}
-                  type="number"
-                  inputProps={gammaInputProps}
-                  value={gamma ?? ''}
-                  onChange={gammaHandler}
-                  disabled={gamma == null || !device.connected}
-                  variant="standard"
-                />
-              ))}
-            </Screens>
-            <Name>Режим</Name>
-            <Screens>
-              {screens.map(({ mode }, screen) => (
-                <Box css={itemStyle} key={screen}>
-                  <DisplayModeSelector
-                    variant="standard"
-                    fullWidth
-                    value={mode ?? ''}
-                    name={`${screen}`}
-                    onChange={modeHandler}
-                    disabled={mode == null || !device.connected}
-                  />
-                </Box>
-              ))}
-            </Screens>
-          </Box>
+          <StyledAccordionList name="common" title={info.name} component={Table} expanded>
+            <TableBody>
+              <TableRow>
+                <NameCell>Серийный номер</NameCell>
+                <ValueCell align="right">{info.mac}</ValueCell>
+              </TableRow>
+              <TableRow>
+                <NameCell>Вход</NameCell>
+                <ValueCell align="right">
+                  {info.dviSelect ? DviSelectModeEnum[info.dviSelect] || 'DVI' : '-'}
+                </ValueCell>
+              </TableRow>
+              <TableRow>
+                <NameCell>Сигнал</NameCell>
+                <ValueCell align="right">{device.hasDVISignalIn ? 'Да' : 'Нет'}</ValueCell>
+              </TableRow>
+              <TableRow>
+                <NameCell>Выходы</NameCell>
+                <ValueCell align="right">{info.portCount}</ValueCell>
+              </TableRow>
+            </TableBody>
+          </StyledAccordionList>
         )}
+        {screens.map((screen, index) => {
+          const name = screenName(index);
+          const loc = locations[index];
+          return (
+            <StyledAccordionList
+              key={name}
+              name={name}
+              title={`Экран #${index + 1}`}
+              component={Table}
+              expanded={currentScreen === name}
+              onChange={setCurrentScreen}
+            >
+              <TableBody>
+                <TableRow>
+                  <NameCell>Чип</NameCell>
+                  <ValueCell align="right">
+                    {typeof screen.chipType === 'number'
+                      ? ChipTypeEnum[screen.chipType].replace('Chip_', '')
+                      : 'N/A'}
+                  </ValueCell>
+                </TableRow>
+                <TableRow>
+                  <NameCell>Размер</NameCell>
+                  {loc && (
+                    <ValueCell align="right">
+                      {loc.width}x{loc.height}
+                    </ValueCell>
+                  )}
+                </TableRow>
+                <TableRow>
+                  <NameCell>Отступ</NameCell>
+                  {loc && (
+                    <ValueCell align="right">
+                      {loc.x},{loc.y}
+                    </ValueCell>
+                  )}
+                </TableRow>
+                {Object.entries(brightProps).map(([prop, desc]) => (
+                  <TableRow key={prop}>
+                    <NameCell>
+                      {prop === 'overall' && screen.rgbv != null
+                        ? `${desc} (${Math.round((screen.rgbv.overall * 100) / 2.55) / 100}%)`
+                        : desc}
+                    </NameCell>
+                    <EditCell
+                      name={`${name}:${prop}`}
+                      css={itemStyle}
+                      type="number"
+                      min={0}
+                      max={255}
+                      align="right"
+                      value={screen.rgbv?.[prop as keyof BrightnessRGBV] ?? ''}
+                      onChangeProperty={rgbvChanged}
+                      disabled={screen.rgbv == null || !device.connected}
+                    />
+                  </TableRow>
+                ))}
+                <TableRow>
+                  <NameCell>Гамма</NameCell>
+                  <EditCell
+                    name={name}
+                    css={itemStyle}
+                    type="number"
+                    min={1}
+                    max={4}
+                    step={0.1}
+                    align="right"
+                    value={screen.gamma ?? ''}
+                    onChangeProperty={gammaHandler}
+                    disabled={screen.gamma == null || !device.connected}
+                  />
+                </TableRow>
+                <TableRow>
+                  <NameCell>Режим</NameCell>
+                  <ValueCell>
+                    <DisplayModeSelector
+                      variant="standard"
+                      fullWidth
+                      value={screen.mode ?? ''}
+                      name={name}
+                      onChange={modeHandler}
+                      disabled={screen.mode == null || !device.connected}
+                    />
+                  </ValueCell>
+                </TableRow>
+              </TableBody>
+            </StyledAccordionList>
+          );
+        })}
       </Paper>
     </Box>
   );
