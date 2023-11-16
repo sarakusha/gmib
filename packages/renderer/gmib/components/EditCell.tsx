@@ -10,26 +10,6 @@ import TableCell from './TableCell';
 
 const safeParseNumber = (value: unknown): number => parseFloat(value as string);
 
-// const useStyles = makeStyles(theme => ({
-//   inputRoot: {
-//     width: '100%',
-//     fontSize: 'inherit',
-//   },
-//   inputRight: {
-//     textAlign: 'right',
-//   },
-//   inputCenter: {
-//     textAlign: 'center',
-//   },
-//   positionEnd: {
-//     marginLeft: 0,
-//     marginRight: -20,
-//   },
-//   inputDirty: {
-//     fontWeight: 'bold',
-//   },
-// }));
-
 type Props = {
   name: string;
   value?: InputBaseProps['value'] | Error;
@@ -39,6 +19,7 @@ type Props = {
   max?: number;
   step?: number;
   dirty?: boolean;
+  disabled?: boolean;
   onChangeProperty?: (name: string, value: unknown) => void;
 } & TableCellProps;
 
@@ -48,23 +29,6 @@ const EndAdornment = styled(InputAdornment)({
     marginRight: -20,
   },
 });
-
-// type InputExProps = InputBaseProps &
-//   Pick<TableCellProps, 'align'> & {
-//     dirty?: boolean;
-//     controlled?: boolean;
-//   };
-//
-// const InputEx = extendStyled(Input, {
-//   align: 'left',
-//   dirty: false,
-//   controlled: false,
-// })(({ align, dirty, controlled }: InputExProps) => ({
-//   textAlign: align && ['right', 'center'].includes(align) ? align : 'inherit',
-//   fontWeight: dirty || !controlled ? 'bold' : 'normal',
-//   fontSize: 'inherit',
-//   width: '100%',
-// }));
 
 const EditCell: React.FC<Props> = ({
   value,
@@ -78,25 +42,17 @@ const EditCell: React.FC<Props> = ({
   name,
   onChangeProperty,
   dirty,
+  disabled,
   ...props
 }) => {
-  // const classes = useStyles();
   const [controlled, setControlled] = useState(value !== undefined);
-  // const inputClasses = {
-  //   input: classNames({
-  //     [classes.inputRight]: align === 'right',
-  //     [classes.inputCenter]: align === 'center',
-  //     [classes.inputDirty]: dirty || !controlled,
-  //   }),
-  // };
   const endAdornment = useMemo(
     () => (unit ? <EndAdornment position="end">{unit}</EndAdornment> : null),
     [unit],
   );
-  // let controlled = value !== undefined;
   const [val, setVal] = useState<unknown>();
   useEffect(() => {
-    setVal(value === undefined || value instanceof Error ? '' : value);
+    setVal((v: unknown) => (value === undefined || value instanceof Error ? v : value));
   }, [value]);
   const changeHandler = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
@@ -109,16 +65,12 @@ const EditCell: React.FC<Props> = ({
     },
     [max, min, name, onChangeProperty],
   );
-  const blurHandler = useCallback(() => {
+  const blurHandler = () => {
     setControlled(true);
-    setVal((v: unknown) => {
-      onChangeProperty && onChangeProperty(name, v);
-      return v;
-    });
-  }, [name, onChangeProperty]);
+    if (val !== value) onChangeProperty?.(name, val !== '' ? val : value);
+  };
   const hasError = value instanceof Error ? value.message : undefined;
-  // eslint-disable-next-line no-nested-ternary
-  const current = hasError || value === undefined ? '' : controlled ? value : val;
+  const current = controlled && !hasError ? value : val;
   return (
     <TableCell className={className} sx={{ px: 1 }} {...props}>
       <StyledInput
@@ -137,6 +89,7 @@ const EditCell: React.FC<Props> = ({
           step,
           onBlur: blurHandler,
         }}
+        disabled={disabled}
         onChange={changeHandler}
       />
     </TableCell>
