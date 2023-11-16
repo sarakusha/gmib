@@ -1,5 +1,4 @@
 import { Box, Paper, Table, TableBody, TableRow } from '@mui/material';
-import { styled } from '@mui/material/styles';
 import groupBy from 'lodash/groupBy';
 import React, { useEffect, useMemo, useState } from 'react';
 
@@ -11,28 +10,12 @@ import { noop } from '/@common/helpers';
 
 import { selectCurrentTab, selectMibByName } from '../store/selectors';
 
-import AccordionList from './AccordionList';
 import ErrorCard from './ErrorCard';
 import PropertyGridToolbar from './PropertyGridToolbar';
 import PropertyValueCell from './PropertyValueCell';
+import StyledAccordionList from './StyledAccordionList';
 import type { MinihostTabProps } from './TabContainer';
 import TableCell from './TableCell';
-
-const StyledAccordionList = styled(AccordionList)(({ theme, title }) => ({
-  '&.MuiAccordionSummary-root': {
-    display: title ? 'flex' : 'none',
-    opacity: 0.6,
-    '& > *': {
-      backgroundColor: 'transparent',
-    },
-    '&.Mui-expanded': {
-      backgroundColor: theme.palette.action.selected,
-    },
-  },
-  '&.MuiAccordion-root.Mui-expanded': {
-    borderBottom: 0,
-  },
-}));
 
 const PropertyGridTab: React.FC<MinihostTabProps> = ({ id, selected = false }) => {
   const { mib, error, props } = useDevice(id) ?? {};
