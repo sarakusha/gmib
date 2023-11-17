@@ -284,39 +284,6 @@ function createTables(): void {
         });
       }
     });
-
-    const date = new Date();
-    date.setDate(date.getDate() - 7);
-    const dt = date.getTime();
-    db.run(
-      `DELETE
-             FROM telemetry
-             WHERE timestamp < ?`,
-      dt,
-      err => {
-        err && debug(`error while clear telemetry history, ${err.message}`);
-      },
-    );
-
-    db.run(
-      `DELETE
-             FROM sensors
-             WHERE timestamp < ?`,
-      dt,
-      err => {
-        err && debug(`error while clear sensors history, ${err.message}`);
-      },
-    );
-
-    db.run(
-      `DELETE
-             FROM brightness
-             WHERE timestamp < ?`,
-      dt,
-      err => {
-        err && debug(`error while clear brightness history, ${err.message}`);
-      },
-    );
   });
 }
 

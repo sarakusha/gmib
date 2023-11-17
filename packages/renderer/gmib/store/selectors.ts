@@ -15,7 +15,7 @@ import type { FlasherState } from './flasherSlice';
 import { logAdapter } from './logSlice';
 import { mibsAdapter } from './mibsSlice';
 import { remoteHostsAdapter } from './remoteHostsSlice';
-import type { SensorDictionary, SensorKind, SensorsState } from './sensorsSlice';
+import type { SensorDictionary, SensorKind, SensorRecord, SensorsState } from './sensorsSlice';
 import type { FinderState, SessionState } from './sessionSlice';
 import { selectNovastarTelemetryById } from './telemetrySlice';
 
@@ -145,6 +145,17 @@ const selectSpecialSensors = (state: RootState, kind: SensorKind) =>
 const selectLast = createSelector(selectSpecialSensors, sensors =>
   maxBy(Object.values(sensors).filter(hasCurrent), ({ current }) => current[0]),
 );
+export const selectLastWithAddress = createSelector(selectSpecialSensors, sensors => {
+  const item = maxBy(
+    Object.entries(sensors)
+      .map(([address, state]) => [address, state?.current])
+      .filter(([, current]) => current != null),
+    ([, current]) => current?.[0],
+  ) as [string, SensorRecord] | undefined;
+  if (!item) return undefined;
+  const [address, [timestamp, value]] = item;
+  return `${address}:${timestamp}:${value}`;
+});
 const selectLastValue = createSelector(selectLast, last => last?.current?.[1]);
 export const selectLastAverage = createSelector(selectLast, last => last?.average);
 export const selectIlluminance = (state: RootState): SensorDictionary =>

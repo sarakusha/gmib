@@ -63,6 +63,7 @@ import type {
   Modules,
   NibusTelemetry,
   RemoteHost,
+  SensorsData,
   TelemetryOpts,
   ValueState,
   ValueType,
@@ -395,28 +396,49 @@ function openSession() {
     });
   };
 
+  const sensorsState = new Map<string, Omit<SensorsData, 'address'>>();
+
+  const saveImpl = memoize((address: string) =>
+    debounce(() => {
+      const data = sensorsState.get(address);
+      if (data) {
+        ipcRenderer.send('sensors', { address, ...data } as SensorsData);
+        sensorsState.delete(address);
+      }
+    }, 1000),
+  );
+
+  const saveSensor = ({ address, ...props }: SensorsData) => {
+    const state = sensorsState.get(address) ?? {};
+    sensorsState.set(address, { ...state, ...props });
+    saveImpl(address)();
+  };
+
   const informationListener: NibusSessionEvents['informationReport'] = (
     connection,
     { id, value, source },
   ) => {
+    const address = source.toString();
     switch (id) {
       case ILLUMINATION:
         ipcDispatch(
           pushSensorValue({
             kind: 'illuminance',
-            address: source.toString(),
+            address,
             value,
           }),
         );
+        if (!isRemoteSession) saveSensor({ address, illuminance: value });
         break;
       case TEMPERATURE:
         ipcDispatch(
           pushSensorValue({
             kind: 'temperature',
-            address: source.toString(),
+            address,
             value,
           }),
         );
+        if (!isRemoteSession) saveSensor({ address, temperature: value });
         break;
       default:
         break;
@@ -578,7 +600,7 @@ export const telemetry = memoize((id: DeviceId): NibusTelemetry => {
   }
   return {
     start(options, cb) {
-      const saver = isRemoteSession ? () => {} : startTelemetry(device.address.toString());
+      const saver = isRemoteSession ? () => { } : startTelemetry(device.address.toString());
       const columnHandler = (column: Modules): void => {
         cb?.(prev => [...prev, ...column]);
         column.forEach(({ x, y, info }) => {

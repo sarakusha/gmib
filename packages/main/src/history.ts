@@ -1,12 +1,15 @@
 import { ipcMain } from 'electron';
+import debugFactory from 'debug';
 
 import type { BrightnessHistory } from '@nibus/core/ipc/events';
 
 import config from './config';
 import { promisifyAll, promisifyGet, promisifyRun, removeNull } from './db';
 
-import type { NullableOptional, TelemetryOpts } from '/@common/helpers';
+import type { NullableOptional, SensorsData, TelemetryOpts } from '/@common/helpers';
 import { HOUR, notEmpty } from '/@common/helpers';
+
+const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:history`);
 
 const toBrightnessHistory = (result: NullableOptional): BrightnessHistory => {
   const { timestamp, brightness, actual } = removeNull(result);
@@ -29,6 +32,13 @@ const insertTelemetry = promisifyRun(
     $y: params.y,
     $temperature: params.temperature,
   }),
+);
+
+const deleteTelemetry = promisifyRun(
+  `DELETE
+    FROM telemetry
+    WHERE timestamp < ?`,
+  (before: number) => before,
 );
 
 const getBrightnessHistoryFirst = promisifyGet(
@@ -73,8 +83,65 @@ export const getBrightnessHistoryOn = async (dt: number): Promise<BrightnessHist
   return [first, ...history, last].filter(notEmpty);
 };
 
+const deleteBrightness = promisifyRun(
+  'DELETE FROM brightness WHERE timestamp < ?',
+  (before: number) => before,
+);
+
+const insertSensor = promisifyRun(
+  `INSERT INTO sensors (timestamp, address, illuminance, temperature)
+  VALUES ($timestamp, $address, $illuminance, $temperature)`,
+  ({ address, temperature, illuminance }: SensorsData) => ({
+    $timestamp: Date.now(),
+    $address: address,
+    $temperature: temperature,
+    $illuminance: illuminance,
+  }),
+);
+
+const deleteSensors = promisifyRun(
+  'DELETE FROM sensors WHERE timestamp < ?',
+  (before: number) => before,
+);
+
+export const getSensors = promisifyAll(
+  `SELECT
+    address,
+    round(AVG(temperature)) as temperature,
+    round(AVG(illuminance)) as illuminance,
+    round(timestamp/$scale)*$scale as time
+  FROM sensors
+  WHERE timestamp >= $after
+  GROUP BY address, time`,
+  (after: number, scale = 1000 * 60 * 5) => ({ $after: after, $scale: scale }),
+);
+
+ipcMain.on('sensors', (_, data: SensorsData) => {
+  insertSensor(data).catch(err => {
+    debug(`error while save sensor: ${(err as Error).message}`);
+  });
+});
+
 config.onDidChange('brightness', brightness => {
   if (brightness !== undefined) insertBrightness(brightness);
 });
 
-ipcMain.on('addTelemetry', (event, params: TelemetryOpts) => insertTelemetry(params));
+ipcMain.on('addTelemetry', (_, params: TelemetryOpts) => insertTelemetry(params));
+
+const removeOutdated = () => {
+  const date = new Date();
+  date.setDate(date.getDate() - 7);
+  const before = date.getTime();
+  deleteBrightness(before).catch(err =>
+    debug(`error while clear brightness history: ${(err as Error).message}`),
+  );
+  deleteTelemetry(before).catch(err =>
+    debug(`error while clear telemetry history: ${(err as Error).message}`),
+  );
+  deleteSensors(before).catch(err =>
+    debug(`error while clear sensors history: ${(err as Error).message}`),
+  );
+  setTimeout(removeOutdated, 1000 * 60 * 60 * 24);
+};
+
+removeOutdated();

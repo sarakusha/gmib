@@ -120,6 +120,7 @@ import {
   registerScreen,
 } from './windowStore';
 import './novastarApi';
+import { getSensors } from './history';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:api`);
 
@@ -935,6 +936,12 @@ api.delete('/pages/:id', async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+});
+
+api.get('/sensors', (req, res, next) => {
+  const { after } = req.query;
+  const arg = typeof after === 'string' && parseInt(after, 10);
+  getSensors(arg || Date.now() - 1000 * 60 * 60 * 24).then(data => res.json(data), next);
 });
 
 export default api;

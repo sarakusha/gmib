@@ -337,6 +337,12 @@ export type TelemetryOpts = {
   temperature: number;
 };
 
+export type SensorsData = {
+  address: string;
+  illuminance?: number;
+  temperature?: number;
+};
+
 export const toHexId = (id: number): string => id.toString(16).toUpperCase().padStart(8, '0');
 
 export const asyncSerial = <T, R>(

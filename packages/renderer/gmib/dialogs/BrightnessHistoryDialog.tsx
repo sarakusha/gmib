@@ -1,6 +1,5 @@
 import { Box, Button, Dialog, DialogActions, DialogContent, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import type { BrightnessHistory } from '@nibus/core';
 import debugFactory from 'debug';
 import type {
   SeriesLineOptions,
@@ -11,19 +10,47 @@ import type {
 import HighchartsReact from 'highcharts-react-official';
 import React, { useEffect, useState } from 'react';
 import SunCalc from 'suncalc';
+import groupBy from 'lodash/groupBy';
 
 import Highcharts from '../components/Highcharts';
 import { useSelector } from '../store';
 
+import type { SensorsData } from '/@common/helpers';
 import { noop } from '/@common/helpers';
+import { host, isRemoteSession, port } from '/@common/remote';
 
-import { selectBrightness, selectLocation } from '../store/selectors';
+import { selectBrightness, selectLastWithAddress, selectLocation } from '../store/selectors';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:brightness`);
 
 type Props = {
   open?: boolean;
   onClose?: () => void;
+};
+
+type Sensors = SensorsData & { time: number };
+
+const apiUrl = host && port ? `http://${host}:${+port + 1}/api` : '/api';
+const sensorsUrl = `${apiUrl}/sensors`;
+
+const getSensors = async (): Promise<Sensors[]> => {
+  const headers = new Headers();
+  if (isRemoteSession) {
+    const now = Date.now();
+    const signature = window.identify.generateSignature('GET', sensorsUrl, now);
+    if (signature) {
+      const identifier = window.identify.getIdentifier();
+      identifier && headers.set('x-ni-identifier', identifier);
+      headers.set('x-ni-timestamp', now.toString());
+      headers.set('x-ni-signature', signature);
+    }
+  } else {
+    const secret = window.identify.getSecret();
+    headers.set('authorization', `Bearer ${secret}`);
+  }
+  const res = await fetch(sensorsUrl, { headers });
+  if (!res.ok) return [];
+  return res.json();
 };
 
 const highchartsOptions: Highcharts.Options = {
@@ -83,7 +110,6 @@ const highchartsOptions: Highcharts.Options = {
   plotOptions: {
     series: {
       stickyTracking: false,
-      step: 'left',
       animation: false,
     },
     spline: {
@@ -92,6 +118,12 @@ const highchartsOptions: Highcharts.Options = {
       },
     },
   },
+  series: [
+    {
+      type: 'line',
+      step: 'left',
+    },
+  ],
 };
 
 const getBands = (
@@ -112,7 +144,6 @@ const getBands = (
   const dusk = suntimes.dusk && new Date(suntimes.dusk).getTime();
   const solarNoon = suntimes.solarNoon && new Date(suntimes.solarNoon).getTime();
   const nadir = suntimes.nadir && new Date(suntimes.nadir).getTime();
-  // console.log('dusk', new Date(dusk), new Date(dawn), new Date(end));
   const plotBands: XAxisPlotBandsOptions[] = [];
   const plotLines: XAxisPlotLinesOptions[] = [];
   dawn &&
@@ -199,20 +230,6 @@ const getBands = (
   return [plotBands, plotLines];
 };
 
-// const useStyles = makeStyles({
-//   table: {
-//     display: 'grid',
-//     gridTemplateColumns: '10ch 10ch',
-//   },
-//   suntimes: {
-//     display: 'flex',
-//     justifyContent: 'space-evenly',
-//     // '& div ~ div': {
-//     //   marginLeft: theme.spacing(4),
-//     // },
-//   },
-// });
-
 const Grid = styled('div')`
   display: grid;
   grid-template-columns: 10ch 10ch;
@@ -223,50 +240,80 @@ const BrightnessHistoryDialog: React.FC<Props> = ({ open = false, onClose = noop
   const { latitude, longitude } = useSelector(selectLocation) ?? {};
   const isValidLocation = latitude !== undefined && longitude !== undefined;
   const currentBrightness = useSelector(selectBrightness);
+  const lastIlluminance = useSelector(state => selectLastWithAddress(state, 'illuminance'));
   useEffect(() => {
     if (!open) return;
-    let history: BrightnessHistory[] = [];
-    const ts = Math.floor(Date.now() / 1000) * 1000;
-    window.nibus
-      .getBrightnessHistory()
-      .then(
-        value => {
-          history = value;
-        },
-        err => debug(`error while get brightness history ${err.message}`),
-      )
-      .finally(() => {
-        setOptions(opts => {
-          const series = opts.series?.filter(({ yAxis }) => yAxis !== 1) ?? [];
-          const data = history.map(({ timestamp, brightness }) => [
-            timestamp - (timestamp % 1000),
-            brightness,
-          ]);
-          data.push([ts, currentBrightness]);
-          const brightSeries: SeriesLineOptions = {
-            name: 'Яркость',
-            type: 'line',
-            yAxis: 1,
-            tooltip: { valueSuffix: '%' },
-            data,
-          };
-          if (isValidLocation) {
-            const now = new Date();
-            const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
-            const xAxis = opts.xAxis as XAxisOptions;
-            const [yPlotBands, yPlotLines] = getBands(latitude, longitude, yesterday);
-            const [plotBands, plotLines] = getBands(latitude, longitude, now);
-            xAxis.plotBands = [...yPlotBands, ...plotBands];
-            xAxis.plotLines = [...yPlotLines, ...plotLines];
-          }
-          return {
-            ...opts,
-            series: series.concat(brightSeries),
-          };
-        });
+    Promise.all([window.nibus.getBrightnessHistory(), getSensors()]).then(([history, sensors]) => {
+      setOptions(opts => {
+        const series = Object.entries(
+          groupBy(
+            sensors.filter(({ illuminance }) => illuminance != null),
+            'address',
+          ),
+        ).map(
+          ([address, values]) =>
+            ({
+              id: `illuminance:${address}`,
+              name: `Освещенность ${address}`,
+              yAxis: 0,
+              type: 'line',
+              tooltip: { valueSuffix: ' lux' },
+              color: '#FF8000',
+              shadow: true,
+              data: values.map(({ time, illuminance }) => [time, illuminance]),
+            } as SeriesLineOptions),
+        );
+        const data = history.map(({ timestamp, brightness }) => [
+          timestamp - (timestamp % 1000),
+          brightness,
+        ]);
+        const brightSeries: SeriesLineOptions = {
+          id: 'brightness',
+          name: 'Яркость',
+          type: 'line',
+          yAxis: 1,
+          tooltip: { valueSuffix: '%' },
+          data,
+        };
+        if (isValidLocation) {
+          const now = new Date();
+          const yesterday = new Date();
+          yesterday.setDate(yesterday.getDate() - 1);
+          const xAxis = opts.xAxis as XAxisOptions;
+          const [yPlotBands, yPlotLines] = getBands(latitude, longitude, yesterday);
+          const [plotBands, plotLines] = getBands(latitude, longitude, now);
+          xAxis.plotBands = [...yPlotBands, ...plotBands];
+          xAxis.plotLines = [...yPlotLines, ...plotLines];
+        }
+        return {
+          ...opts,
+          series: [brightSeries, ...series],
+        };
       });
-  }, [open, latitude, longitude, isValidLocation, currentBrightness]);
+    });
+  }, [open, latitude, longitude, isValidLocation]);
+  React.useEffect(() => {
+    if (!open) return;
+    setOptions(opts => {
+      const ts = Math.floor(Date.now() / 1000) * 1000;
+      const brightnessSeries = opts.series?.find(({ id }) => id === 'brightness');
+      if (brightnessSeries && brightnessSeries.type === 'line')
+        brightnessSeries.data?.push([ts, currentBrightness]);
+      return { ...opts };
+    });
+  }, [currentBrightness, open, lastIlluminance]);
+  React.useEffect(() => {
+    if (!open || !lastIlluminance) return;
+    const [address, timestamp, value] = lastIlluminance.split(':');
+    const id = `illuminance:${address}`;
+    setOptions(opts => {
+      const series = opts.series?.find(item => item.id === id);
+      if (series && series.type === 'line') {
+        series.data?.push([Number(timestamp), Number(value)]);
+      }
+      return { ...opts };
+    });
+  }, [lastIlluminance, open]);
   const suntimes = isValidLocation ? SunCalc.getTimes(new Date(), latitude, longitude) : undefined;
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullScreen>
