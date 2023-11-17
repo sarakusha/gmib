@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.7.2](https://github.com/sarakusha/gmib/compare/v4.7.1...v4.7.2) (2023-11-17)
+
+
+### Features
+
+* валидность параметров экрана ([8edec12](https://github.com/sarakusha/gmib/commit/8edec1231bc24a60767c707d691729480ded5775))
+* история яркости и освещенности ([85e538f](https://github.com/sarakusha/gmib/commit/85e538f4cdf2d121eeba065f80c17fa5ec16a4bd))
+* один стиль вкладки свойства ([db11674](https://github.com/sarakusha/gmib/commit/db116746e5fa4068eaaab14a7558fbb17424d1be))
+
+
+### Bug Fixes
+
+* безусловная перезагрузка теста ([90a5064](https://github.com/sarakusha/gmib/commit/90a5064f54118d69726331063c6c991b09dccb26))
+* единицы времени в таблице яркости ([d9fd204](https://github.com/sarakusha/gmib/commit/d9fd20486f14a2adae632ce659fb3bcf2d72c31a))
+* ошибка в параметрах promsifyAll ([fa3760d](https://github.com/sarakusha/gmib/commit/fa3760d0d5a03519107d6f467804c1366a5c8f13))
+* ошибка при отрисовке react ([816e1f9](https://github.com/sarakusha/gmib/commit/816e1f98c09ef3d1dfde85ca6954740d44dc3fdc))
+* сброс состояния после закрытия ([8dd7c6a](https://github.com/sarakusha/gmib/commit/8dd7c6a74341d3d2e9bf20ededb9e0917a94d270))
+
 ## [4.7.1](https://github.com/sarakusha/gmib/compare/v4.7.0...v4.7.1) (2023-11-14)
 
 
