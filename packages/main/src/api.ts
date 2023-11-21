@@ -854,8 +854,9 @@ api.post('/activate', async (req, res) => {
       relaunch();
     } else {
       const message = await result.text();
-      debug(`ERROR: ${result.statusText} - ${message} `);
-      res.status(result.status).send(message);
+      const errMsg = `${result.statusText} - ${message} (${import.meta.env.VITE_LICENSE_SERVER})`;
+      debug(`ERROR: ${errMsg}`);
+      res.status(result.status).send(errMsg);
     }
   } catch (error) {
     const { message } = error as Error;
