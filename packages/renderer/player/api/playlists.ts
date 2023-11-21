@@ -3,14 +3,16 @@ import { createApi } from '@reduxjs/toolkit/query/react';
 import type { SetStateAction } from 'react';
 
 import type { CreatePlaylist, InsertMedia, Playlist, RemoveMedia } from '/@common/playlist';
+import type { Player } from '/@common/video';
 
 import baseQuery from '../../common/authBaseQuery';
 import createDebouncedAsyncThunk from '../../common/createDebouncedAsyncThunk';
 import type { AppThunk, AppThunkConfig, RootState } from '../store';
 import { setCurrentPlaylist } from '../store/currentSlice';
 import { selectCurrentPlaylist } from '../store/selectors';
+import { sourceId } from '../utils';
 
-import playerApi, { selectPlayers } from './player';
+import playerApi, { selectPlayer, selectPlayers } from './player';
 
 const adapter = createEntityAdapter<Playlist>({
   selectId: ({ id }) => id,
@@ -22,6 +24,8 @@ const adapter = createEntityAdapter<Playlist>({
 
 export const { selectAll: selectPlaylists, selectById: selectPlaylistById } =
   adapter.getSelectors();
+
+const selectPlayerData = playerApi.endpoints.getPlayers.select();
 
 const playlistApi = createApi({
   baseQuery,
@@ -35,10 +39,16 @@ const playlistApi = createApi({
       async onQueryStarted(_, { queryFulfilled, getState, dispatch }) {
         const { data: playlistData } = await queryFulfilled;
         if (playlistData.ids.length > 0) {
-          const currentPlaylist = selectCurrentPlaylist(getState() as RootState);
+          const state = getState() as RootState;
+          const currentPlaylist = selectCurrentPlaylist(state);
+          const playerData = selectPlayerData(state).data;
+          let currentPlayer: Player | undefined;
+          if (playerData) {
+            currentPlayer = selectPlayer(playerData, sourceId);
+          }
           if (currentPlaylist == null) {
             const [first] = playlistData.ids as number[];
-            dispatch(setCurrentPlaylist(first));
+            dispatch(setCurrentPlaylist(currentPlayer?.playlistId ?? first));
           }
         }
       },

@@ -19,6 +19,7 @@ import { TransitionGroup } from 'react-transition-group';
 import FixedHeadLayout from '../../common/FixedHeadLayout';
 import SubmitListener from '../../common/SubmitListener';
 import { selectMediaById, useGetMediaQuery } from '../api/media';
+import { usePlayer } from '../api/player';
 import {
   moveItem,
   updatePlaylist,
@@ -46,9 +47,10 @@ const PopupIndicator = extendStyled(IconButton, { open: false })(({ open }) => (
 }));
 
 const PlaylistsTab: React.FC = () => {
+  const { player } = usePlayer(sourceId);
   const current = useSelector(selectCurrentPlaylist);
   const { data: playlists = [] } = useGetPlaylists();
-  const { data: currentPlaylist } = useGetPlaylistById(current);
+  const { data: currentPlaylist } = useGetPlaylistById(current ?? player?.playlistId);
   const [removeMedia] = useRemoveMediaMutation();
   const { data: mediaData } = useGetMediaQuery();
   const dispatch = useDispatch();
