@@ -305,19 +305,32 @@ export async function generateFromImage({
   duration = 5,
 }: ImgOpts): Promise<void> {
   debug(`Generate video from image. filePath: ${filePath}, outPath: ${outPath}`);
-  const fps = 1 / duration;
+  // const fps = 1 / duration;
+  // const videoArgs = [
+  //   '-r',
+  //   fps.toFixed(3),
+  //   '-loop',
+  //   '1',
+  //   '-vcodec',
+  //   'libx264',
+  //   '-t',
+  //   duration.toFixed(),
+  //   '-pix_fmt',
+  //   'yuv420p',
+  // ];
   const videoArgs = [
     '-r',
-    fps.toFixed(3),
-    '-loop',
-    '1',
+    '25',
     '-vcodec',
     'libx264',
     '-t',
     duration.toFixed(),
     '-pix_fmt',
     'yuv420p',
+    '-vf',
+    'loop=-1:1',
   ];
+
   const ffmpegArgs = ['-hide_banner', '-i', filePath, ...videoArgs, '-an', '-sn', '-y', outPath];
 
   const process = runFfmpeg(ffmpegArgs);
