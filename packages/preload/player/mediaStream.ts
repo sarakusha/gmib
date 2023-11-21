@@ -35,6 +35,11 @@ const getMediaUri = (name?: string) =>
 const playNextSource = () => {
   const source = nextSource;
   if (source) {
+    const same = currentSource?.options.mediaId === source.options.mediaId;
+    if (same && !source.options.fade?.disableIn) {
+      source.options.fade = { disableIn: true, ...source.options.fade };
+    }
+
     const { itemId } = source.options;
     source.play();
     currentSource = source;
@@ -77,22 +82,47 @@ const update = async () => {
     nextSource = undefined;
     return;
   }
+
+  const currentItem = playlist.items.find(item => item.id === current) ?? playlist.items[0];
+  const media: MediaInfo = await ipcRenderer.invoke('getMedia', currentItem.md5);
+
+  const nextIndex =
+    (playlist.items.findIndex(item => item.id === current) + 1) % playlist.items.length;
+  const nextItem = playlist.items[nextIndex];
+  const nextMedia: MediaInfo = await ipcRenderer.invoke('getMedia', nextItem.md5);
+
+  const same = currentItem.md5 === nextItem.md5;
+
+  if (!nextSource || nextSource.closed || nextSource.options.itemId !== nextItem.id) {
+    if (nextSource && !nextSource.hasStarted) nextSource.close();
+    const uri = getMediaUri(nextMedia?.filename);
+    if (uri) {
+      nextSource = new VideoSource(uri, {
+        itemId: nextItem.id,
+        delay,
+        fade: { disableIn: same || player.disableFadeIn, disableOut: player.disableFadeOut, duration: 500 },
+        mediaId: nextItem.md5,
+      });
+    }
+  }
+  // if (same && nextSource && !nextSource.options.fade?.disableIn) {
+  //   nextSource.options.fade = {...nextSource.options.fade,  disableIn: true };
+  // }
   if (!currentSource?.closed && current !== currentSource?.options.itemId) {
     if (nextSource && nextSource.options.itemId === current) {
       currentSource?.close();
       return;
     }
-    if (nextSource && !nextSource.hasStarted) nextSource.close();
-    nextSource = undefined;
+    // if (nextSource && !nextSource.hasStarted) nextSource.close();
+    // nextSource = undefined;
 
-    const currentItem = playlist.items.find(item => item.id === current) ?? playlist.items[0];
-    const media: MediaInfo = await ipcRenderer.invoke('getMedia', currentItem.md5);
     const uri = getMediaUri(media?.filename);
     if (uri) {
       const videoSource = new VideoSource(uri, {
         itemId: current,
         autoplay: playbackState === 'playing',
-        fade: { disableIn: player.disableFadeIn, disableOut: player.disableFadeOut },
+        fade: { disableIn: player.disableFadeIn, disableOut: same || player.disableFadeOut, duration: 500 },
+        mediaId: currentItem.md5,
         onMessage: ({ data }) => {
           if (typeof data === 'object' && 'duration' in data) {
             ipcDispatch(setDuration(data.duration));
@@ -104,31 +134,17 @@ const update = async () => {
         currentSource.close();
       } else {
         currentSource = videoSource;
+        // videoSource.options.fade?.disableOut = true;
         videoStream.add(videoSource.readable).then(playNextSource);
         delay = 1000;
       }
-    }
-  }
-  const nextIndex =
-    (playlist.items.findIndex(item => item.id === current) + 1) % playlist.items.length;
-  const nextItem = playlist.items[nextIndex];
-  const media: MediaInfo = await ipcRenderer.invoke('getMedia', nextItem.md5);
-
-  if (!nextSource || nextSource.closed || nextSource.options.itemId !== nextItem.id) {
-    if (nextSource && !nextSource.hasStarted) nextSource.close();
-    const uri = getMediaUri(media?.filename);
-    if (uri) {
-      nextSource = new VideoSource(uri, {
-        itemId: nextItem.id,
-        delay,
-        fade: { disableIn: player.disableFadeIn, disableOut: player.disableFadeOut },
-      });
     }
   }
   if (currentSource && (playbackState !== 'playing') !== currentSource.paused) {
     if (playbackState === 'playing') currentSource.play();
     else currentSource.pause();
   }
+  currentSource?.setDisableFadeOut(player.disableFadeOut || same);
 };
 
 export const updateSrcObject = (selector: string) => {

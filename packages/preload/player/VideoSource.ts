@@ -14,6 +14,7 @@ export type VideoSourceOptions = {
   fade?: FadeOptions;
   itemId?: string;
   onMessage?: VideoSourceMessageHandler;
+  mediaId?: string;
 };
 
 export default class VideoSource {
@@ -53,6 +54,11 @@ export default class VideoSource {
     return this.#duration;
   }
 
+  setDisableFadeOut(value = true) {
+    this.options.fade = { ...this.options.fade, disableOut: value };
+    this.decoder.postMessage({ disableFadeOut: value });
+  }
+
   constructor(
     readonly uri: string,
     readonly options: VideoSourceOptions = {},
@@ -88,7 +94,7 @@ export default class VideoSource {
     } else {
       start(!options.autoplay);
     }
-    const onMessage = options.onMessage ? options.onMessage.bind(this) : () => {};
+    const onMessage = options.onMessage ? options.onMessage.bind(this) : () => { };
     decoder.onmessage = ev => {
       const { data } = ev;
       if (typeof data !== 'object') return;

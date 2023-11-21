@@ -10,10 +10,11 @@ import VideoFrameGenerator from '@sarakusha/ebml/VideoFrameGenerator';
 
 let controller: AbortController | undefined;
 let readable: ReadableStream<VideoFrame> | undefined;
-const noop = () => {};
+const noop = () => { };
 let play = noop;
 let pause = noop;
 let cancel = false;
+let fade: FadeTransform | undefined;
 
 onmessage = async ({ data }) => {
   if (typeof data !== 'object') return;
@@ -21,7 +22,7 @@ onmessage = async ({ data }) => {
     const ebml = new EbmlDecoder();
     const chunkGenerator = new VideoChunkGenerator();
     const frameGenerator = new VideoFrameGenerator(chunkGenerator.config, 20);
-    const fade = new FadeTransform(data.fade);
+    fade = new FadeTransform(data.fade);
     const valve = new ReducingValve(data.closed);
     play = valve.open;
     pause = valve.close;
@@ -73,5 +74,7 @@ onmessage = async ({ data }) => {
   } else if ('close' in data && data.close) {
     controller?.abort(new CancelError());
     cancel = true;
+  } else if ('disableFadeOut' in data) {
+    fade?.setDisableFadeOut(Boolean(data.disableFadeOut));
   }
 };
