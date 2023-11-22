@@ -49,7 +49,7 @@
     "release": "run-script-os",
     "release:darwin": "electron-builder --config .electron-builder.config.js -p always -m --x64",
     "release:win32": "electron-builder --config .electron-builder.config.js -p always -w --x64",
-    "release:linux": "electron-builder --config .electron-builder.config.js -p always -l --x64",
+    "release:linux": "electron-builder --config .electron-builder-light.config.js -p always -l --x64",
     "dist": "run-script-os",
     "dist:darwin": "cross-env NODE_ENV=production electron-builder --config .electron-builder.config.js -m --x64",
     "dist:win32": "cross-env NODE_ENV=production electron-builder --config .electron-builder.config.js -w --x64",
