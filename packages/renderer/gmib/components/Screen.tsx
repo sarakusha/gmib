@@ -17,13 +17,13 @@ import SubmitListener from '../../common/SubmitListener';
 import { useDisplays } from '../../common/displays';
 import { updateScreen, useScreen } from '../api/screens';
 import { useDispatch } from '../store';
+import { setInvalidState } from '../store/currentSlice';
 
 import { DefaultDisplays } from '/@common/video';
 import { reAddress } from '/@common/config';
 import { reIPv4, toHexId } from '/@common/helpers';
 
 import FormFieldSet from './FormFieldSet';
-import { setInvalidState } from '../store/currentSlice';
 
 // import type { Screen } from '/@common/video';
 

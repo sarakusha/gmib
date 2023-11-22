@@ -1,6 +1,6 @@
 import { ipcMain } from 'electron';
-import debugFactory from 'debug';
 
+import debugFactory from 'debug';
 import type { BrightnessHistory } from '@nibus/core/ipc/events';
 
 import config from './config';

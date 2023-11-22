@@ -136,20 +136,21 @@ const FirmwareTab: React.FC<MinihostTabProps> = ({ id, selected = false }) => {
     const createAction =
       (currentKind: Kind, filename: string): SnackbarAction =>
       // eslint-disable-next-line react/no-unstable-nested-components
-      key => (
-        <>
-          <Button title="Повторить">
-            <ReplayIcon
-              onClick={() => {
-                flashHandler(currentKind, filename, key as number);
-              }}
-            />
-          </Button>
-          <Button title="Закрыть">
-            <CloseIcon onClick={() => closeSnackbar(key)} />
-          </Button>
-        </>
-      );
+      key =>
+        (
+          <>
+            <Button title="Повторить">
+              <ReplayIcon
+                onClick={() => {
+                  flashHandler(currentKind, filename, key as number);
+                }}
+              />
+            </Button>
+            <Button title="Закрыть">
+              <CloseIcon onClick={() => closeSnackbar(key)} />
+            </Button>
+          </>
+        );
     return startAppListening({
       actionCreator: enqueueSnackbarAction,
       effect({ payload: { message, options, kind: currentKind, filename } }) {

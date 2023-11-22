@@ -100,7 +100,11 @@ const update = async () => {
       nextSource = new VideoSource(uri, {
         itemId: nextItem.id,
         delay,
-        fade: { disableIn: same || player.disableFadeIn, disableOut: player.disableFadeOut, duration: 500 },
+        fade: {
+          disableIn: same || player.disableFadeIn,
+          disableOut: player.disableFadeOut,
+          duration: 500,
+        },
         mediaId: nextItem.md5,
       });
     }
@@ -121,7 +125,11 @@ const update = async () => {
       const videoSource = new VideoSource(uri, {
         itemId: current,
         autoplay: playbackState === 'playing',
-        fade: { disableIn: player.disableFadeIn, disableOut: same || player.disableFadeOut, duration: 500 },
+        fade: {
+          disableIn: player.disableFadeIn,
+          disableOut: same || player.disableFadeOut,
+          duration: 500,
+        },
         mediaId: currentItem.md5,
         onMessage: ({ data }) => {
           if (typeof data === 'object' && 'duration' in data) {

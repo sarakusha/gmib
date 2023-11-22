@@ -39,6 +39,7 @@ import {
 } from './ffmpeg';
 import getAllDisplays from './getAllDisplays';
 import getAnnounce from './getAnnounce';
+import { getSensors } from './history';
 import localConfig from './localConfig';
 import machineId from './machineId';
 import updateMenu from './mainMenu';
@@ -120,7 +121,6 @@ import {
   registerScreen,
 } from './windowStore';
 import './novastarApi';
-import { getSensors } from './history';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:api`);
 

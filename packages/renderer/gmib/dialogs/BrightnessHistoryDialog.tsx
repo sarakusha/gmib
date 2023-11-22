@@ -1,6 +1,6 @@
 import { Box, Button, Dialog, DialogActions, DialogContent, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import debugFactory from 'debug';
+// import debugFactory from 'debug';
 import type {
   SeriesLineOptions,
   XAxisOptions,
@@ -8,9 +8,9 @@ import type {
   XAxisPlotLinesOptions,
 } from 'highcharts';
 import HighchartsReact from 'highcharts-react-official';
+import groupBy from 'lodash/groupBy';
 import React, { useEffect, useState } from 'react';
 import SunCalc from 'suncalc';
-import groupBy from 'lodash/groupBy';
 
 import Highcharts from '../components/Highcharts';
 import { useSelector } from '../store';
@@ -21,7 +21,7 @@ import { host, isRemoteSession, port } from '/@common/remote';
 
 import { selectBrightness, selectLastWithAddress, selectLocation } from '../store/selectors';
 
-const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:brightness`);
+// const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:brightness`);
 
 type Props = {
   open?: boolean;

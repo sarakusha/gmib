@@ -320,9 +320,7 @@ export const promisifyGet = <P extends (...params: any[]) => any, R>(
     return promisify(statement.get.bind(statement));
   });
   return (...params) =>
-    fn()(encoder(...params)).then(
-      result => (decoder ? result && decoder(result) : result) as R,
-    );
+    fn()(encoder(...params)).then(result => (decoder ? result && decoder(result) : result) as R);
 };
 
 export const promisifyAll = <P extends (...args: any[]) => any, R>(

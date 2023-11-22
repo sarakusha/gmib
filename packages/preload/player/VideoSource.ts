@@ -59,10 +59,7 @@ export default class VideoSource {
     this.decoder.postMessage({ disableFadeOut: value });
   }
 
-  constructor(
-    readonly uri: string,
-    readonly options: VideoSourceOptions = {},
-  ) {
+  constructor(readonly uri: string, readonly options: VideoSourceOptions = {}) {
     lastId += 1;
     this.id = lastId;
     this.#hasStarted = !!options.autoplay;

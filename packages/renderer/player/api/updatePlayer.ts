@@ -64,12 +64,10 @@ const updatePlayer =
           const prev = selectPlayer(draft, id);
           if (!prev) throw new Error(`Unknown player: ${id}`);
           let player: Player = typeof update === 'function' ? update(prev) : update;
-          console.log(1, { player });
           if (isValidItemFactory(getState)(player.playlistId, player.current) === false) {
             player = { ...player, current: getFirstItemFactory(getState)(player.playlistId) };
           }
           dispatch(debouncedUpdatePlayer(player));
-          console.log(2, { player });
           playerAdapter.setOne(draft, player);
         }),
       );
@@ -97,12 +95,14 @@ export const playerStop = (): AppThunk => dispatch => {
   // dispatch(setDuration(0));
 };
 export const clearPlayer = (): AppThunk => dispatch => {
-  dispatch(updatePlayer(sourceId, props => ({
-    ...props,
-    autoPlay: false,
-    current: undefined,
-    playlistId: null,
-  })));
+  dispatch(
+    updatePlayer(sourceId, props => ({
+      ...props,
+      autoPlay: false,
+      current: undefined,
+      playlistId: null,
+    })),
+  );
   dispatch(setPlaybackState('none'));
   dispatch(setPosition(0));
   dispatch(setDuration(0));
