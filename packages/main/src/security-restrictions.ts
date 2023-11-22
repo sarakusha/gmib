@@ -17,6 +17,7 @@ const allPermissions = [
   'fullscreen',
   'geolocation',
   'idle-detection',
+  'keyboardLock',
   'media',
   'mediaKeySystem',
   'midi',
@@ -27,6 +28,7 @@ const allPermissions = [
   'window-management',
   'unknown',
 ] as const;
+// type AllPermissions = Parameters<Exclude<Parameters<WebContents['session']['setPermissionRequestHandler']>[0], null | undefined>>[1];
 
 type AllPermissions = (typeof allPermissions)[number];
 
