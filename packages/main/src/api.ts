@@ -667,6 +667,7 @@ api.delete('/player/:id', (req, res, next) => {
     .then(({ changes }) => {
       res.sendStatus(changes ? 204 : 404);
       broadcast({ event: 'player', remote: req.ip });
+      updateMenu();
     })
     .catch(next);
 });
@@ -677,6 +678,7 @@ api.post('/player', async (req, res, next) => {
     const player = await getPlayer(lastID);
     res.json(player);
     broadcast({ event: 'player', remote: req.ip });
+    updateMenu();
   } catch (e) {
     next(e);
   }
