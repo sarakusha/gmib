@@ -3,21 +3,26 @@ import type { Socket } from 'node:net';
 
 import express from 'express';
 import { WebSocket, WebSocketServer } from 'ws';
+import debugFactory from 'debug';
 
 import { port } from './config';
 
 interface WebSocketEx extends WebSocket {
   _socket?: Socket;
+  sourceId?: number;
 }
 
 export const app = express();
 const server = createServer(app);
 export const wss = new WebSocketServer({ server });
 
+const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:server`);
+
 type BroadcastOptions = {
   event: string;
   data?: unknown[];
   remote?: string;
+  sourceId?: number;
 };
 
 const local = ['::1', '127.0.0.1', 'localhost'];
@@ -27,11 +32,28 @@ const ipEqual = (ip1 = '::1', ip2 = '::1'): boolean => {
   return ip1 === ip2;
 };
 
-export const broadcast = ({ event, data = [0], remote }: BroadcastOptions) => {
+wss.on('connection', (ws: WebSocketEx) => {
+  ws.once('message', raw => {
+    try {
+      const data = JSON.parse(raw.toString());
+      if (typeof data === 'object' && 'sourceId' in data && typeof data.sourceId === 'number') {
+        // eslint-disable-next-line no-param-reassign
+        ws.sourceId = data.sourceId;
+      }
+    } catch (error) {
+      debug(`error while parse ws-message: ${(error as Error).message}`);
+    }
+  });
+});
+
+export const broadcast = ({ event, data = [0], remote, sourceId }: BroadcastOptions) => {
   wss.clients.forEach((ws: WebSocketEx) => {
     // eslint-disable-next-line no-underscore-dangle
     const remoteAddress = ws._socket?.remoteAddress;
-    if (ws.readyState === WebSocket.OPEN && !ipEqual(remoteAddress, remote)) {
+    if (
+      ws.readyState === WebSocket.OPEN &&
+      (!ipEqual(remoteAddress, remote) || (sourceId != null && sourceId !== ws.sourceId))
+    ) {
       ws.send(JSON.stringify({ event, data }));
     }
   });

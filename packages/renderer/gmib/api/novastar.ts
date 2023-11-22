@@ -145,10 +145,10 @@ const debouncedUpdateNovastarScreens = createDebouncedAsyncThunk<void, ScreenPar
 
 const updateValue =
   <K extends keyof Screen>(name: K, update: SetStateAction<Screen[K]>) =>
-  (prev: Screen): Screen => ({
-    ...prev,
-    [name]: typeof update !== 'function' ? update : update(prev[name]),
-  });
+    (prev: Screen): Screen => ({
+      ...prev,
+      [name]: typeof update !== 'function' ? update : update(prev[name]),
+    });
 
 export const updateNovastarScreens = <K extends keyof Screen, S extends number>(
   path: string,
@@ -215,6 +215,7 @@ export const { useReloadMutation, useStartTelemetryMutation, useCancelTelemetryM
 export const sse: Middleware = api => {
   const { getState, dispatch } = api as MiddlewareAPI<AppDispatch, RootState>;
   const socket = new WebSocket(`ws://${host}:${+port + 1}`);
+  socket.onopen = () => socket.send(JSON.stringify({ sourceId: 0 }));
   const evtSource = new EventTarget();
   socket.onmessage = (e: MessageEvent<string>) => {
     try {

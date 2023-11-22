@@ -405,7 +405,8 @@ api.post('/media', (req, res, next) => {
       ).filter(notEmpty);
       debug(`files uploaded: ${JSON.stringify(loaded)}`);
       getAllMedia().then(result => res.json(result), next);
-      broadcast({ event: 'media', remote: req.ip });
+      const sourceId = req.headers['x-ni-source-id'];
+      broadcast({ event: 'media', remote: req.ip, ...(sourceId && { sourceId: +sourceId }) });
     }
   });
 });
@@ -430,7 +431,8 @@ api.delete('/media/:md5', async (req, res, next) => {
       debug(`error while deleting file ${filename}: ${e.message}`);
     }
     getAllMedia().then(result => res.json(result), next);
-    broadcast({ event: 'media', remote: req.ip });
+    const sourceId = req.headers['x-ni-source-id'];
+    broadcast({ event: 'media', remote: req.ip, ...(sourceId && { sourceId: +sourceId }) });
   }, next);
 });
 
@@ -463,7 +465,8 @@ api.delete('/playlist/:id', (req, res, next) => {
   const id = +req.params.id;
   deletePlaylist(id).then(result => {
     res.sendStatus(result.changes ? 204 : 404);
-    broadcast({ event: 'playlist', remote: req.ip });
+    const sourceId = req.headers['x-ni-source-id'];
+    broadcast({ event: 'playlist', remote: req.ip, ...(sourceId && { sourceId: +sourceId }) });
   }, next);
 });
 
@@ -473,7 +476,8 @@ api.post('/playlist', async (req, res, next) => {
     const { lastID } = await insertPlaylist(data);
     const playlist = await getPlaylist(lastID);
     res.json({ ...playlist, items: [] });
-    broadcast({ event: 'playlist', remote: req.ip });
+    const sourceId = req.headers['x-ni-source-id'];
+    broadcast({ event: 'playlist', remote: req.ip, ...(sourceId && { sourceId: +sourceId }) });
   } catch (e) {
     next(e);
   }
@@ -514,7 +518,8 @@ api.put('/playlist', async (req, res, next) => {
         debug(`error while revalidate playlist ${id}: ${(err as Error).message}`),
       );
     }
-    broadcast({ event: 'playlist', remote: req.ip });
+    const sourceId = req.headers['x-ni-source-id'];
+    broadcast({ event: 'playlist', remote: req.ip, ...(sourceId && { sourceId: +sourceId }) });
   } catch (e) {
     if (transaction) await rollback();
     next(e);
@@ -549,7 +554,8 @@ api.patch('/playlist/:id', async (req, res, next) => {
     revalidatePlaylist(fullPlaylist).catch(err =>
       debug(`error while revalidate playlist ${id}: ${(err as Error).message}`),
     );
-    broadcast({ event: 'playlist', remote: req.ip });
+    const sourceId = req.headers['x-ni-source-id'];
+    broadcast({ event: 'playlist', remote: req.ip, ...(sourceId && { sourceId: +sourceId }) });
   } catch (err) {
     if (transaction) await rollback();
     next(err);

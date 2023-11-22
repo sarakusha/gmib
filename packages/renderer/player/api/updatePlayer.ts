@@ -111,6 +111,7 @@ export const clearPlayer = (): AppThunk => dispatch => {
 export const socketMiddleware: Middleware = api => {
   const { dispatch } = api as MiddlewareAPI<AppDispatch, RootState>;
   const socket = new WebSocket(`ws://${host}:${+port + 1}`);
+  socket.onopen = () => socket.send(JSON.stringify({ sourceId }));
   socket.onmessage = (e: MessageEvent<string>) => {
     try {
       const msg = JSON.parse(e.data);

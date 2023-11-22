@@ -1,7 +1,7 @@
 /// <reference lib="dom" />
 import { fetchBaseQuery } from '@reduxjs/toolkit/query';
 
-import { host, isRemoteSession, port } from '/@common/remote';
+import { host, isRemoteSession, port, sourceId } from '/@common/remote';
 
 const baseUrl = host && port ? `http://${host}:${+port + 1}/api` : '/api';
 const secret = window.identify.getSecret();
@@ -12,6 +12,7 @@ const defaultBaseQuery = fetchBaseQuery({
   ...(!isRemoteSession && {
     prepareHeaders: headers => {
       headers.set('authorization', `Bearer ${secret}`);
+      headers.set('x-ni-source-id', `${sourceId}`);
       return headers;
     },
   }),
@@ -37,6 +38,7 @@ const remoteBaseQuery: ReturnType<typeof fetchBaseQuery> = (arg, api, extra) => 
     identifier && headers.set('x-ni-identifier', identifier);
     headers.set('x-ni-timestamp', now.toString());
     headers.set('x-ni-signature', signature);
+    headers.set('x-ni-source-id', `${sourceId}`);
   }
   return defaultBaseQuery({ url, method, headers, body, ...rest }, api, extra);
 };
