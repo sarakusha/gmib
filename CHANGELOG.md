@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.7.3](https://github.com/sarakusha/gmib/compare/v4.7.2...v4.7.3) (2023-11-22)
+
+
+### Features
+
+* 25fps ([a2d2c99](https://github.com/sarakusha/gmib/commit/a2d2c992acc696638a22c9a0481a0435ed931657))
+* затухание между одинаковыми ([ab9dfb5](https://github.com/sarakusha/gmib/commit/ab9dfb5613ec1ecca2d260c1b57090994146b9aa))
+* обновление меню плеер ([3fbec0b](https://github.com/sarakusha/gmib/commit/3fbec0bae32dff62acfacc84cb7b048e8bc2340b))
+* обновление плееров ([fdacc43](https://github.com/sarakusha/gmib/commit/fdacc4320201058f41d30b7ce6158a476bad2b29))
+* Подробное сообщение об ошибке ([d32491c](https://github.com/sarakusha/gmib/commit/d32491c7371b924d682190b48f046f40c459c5bd))
+* текущий плейлист ([ab403b7](https://github.com/sarakusha/gmib/commit/ab403b786d3f41f3c25ea56c8b6ea46d174202c6))
+
+
+### Bug Fixes
+
+* очистить плеер ([c2dced8](https://github.com/sarakusha/gmib/commit/c2dced8d43ee229504ec31e8a2b50db0e62f2255))
+* поля в таблице sensors ([2d8ec32](https://github.com/sarakusha/gmib/commit/2d8ec32bde576848e51dd10c240bd2e9f5860d6f))
+
 ## [4.7.2](https://github.com/sarakusha/gmib/compare/v4.7.1...v4.7.2) (2023-11-17)
 
 
