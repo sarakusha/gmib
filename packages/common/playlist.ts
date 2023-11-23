@@ -20,7 +20,9 @@ export type Playlist = {
   items: PlaylistItem[];
 };
 
-export type CreatePlaylist = Pick<Playlist, 'name' | 'flags'>;
+export type CreatePlaylist = Pick<Playlist, 'name' | 'flags'> & {
+  items?: Omit<PlaylistItem, 'id'>[];
+};
 // & {
 //   items?: PlaylistItem[];
 // };

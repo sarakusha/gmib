@@ -16,7 +16,7 @@ import { nanoid } from 'nanoid';
 
 import type { MediaInfo } from '/@common/mediaInfo';
 import { asyncSerial, findById, notEmpty, replaceNull } from '/@common/helpers';
-import type { CreatePlaylist, Playlist } from '/@common/playlist';
+import type { CreatePlaylist, Playlist, PlaylistItem } from '/@common/playlist';
 
 import auth from './auth';
 import { port } from './config';
@@ -472,10 +472,17 @@ api.delete('/playlist/:id', (req, res, next) => {
 
 api.post('/playlist', async (req, res, next) => {
   try {
-    const data = await uniquePlaylistName(req.body as CreatePlaylist);
+    const { items: newItems, ...data } = await uniquePlaylistName(req.body as CreatePlaylist);
     const { lastID } = await insertPlaylist(data);
     const playlist = await getPlaylist(lastID);
-    res.json({ ...playlist, items: [] });
+    let items: PlaylistItem[] = [];
+    if (newItems && newItems.length > 0) {
+      await asyncSerial(newItems, (item, index) =>
+        insertPlaylistItem(lastID, index, { ...item, id: nanoid() }),
+      );
+      items = await getPlaylistItems(lastID);
+    }
+    res.json({ ...playlist, items });
     const sourceId = req.headers['x-ni-source-id'];
     broadcast({ event: 'playlist', remote: req.ip, ...(sourceId && { sourceId: +sourceId }) });
   } catch (e) {
