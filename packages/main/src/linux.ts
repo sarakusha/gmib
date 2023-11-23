@@ -24,7 +24,6 @@ const envPath = path.join(appDir, 'vpn.env');
 const pritunlClient = '/usr/bin/pritunl-client';
 
 if (process.platform === 'linux') {
-  debug(`env: ${envPath}`);
   config({ path: envPath });
 }
 
@@ -183,11 +182,17 @@ const initializePritunlClient = async () => {
       debug(`create pritunl user: ${name}`);
       userId = await createPritunlUser(orgId, name);
       localConfig.set('pritunlUserId', userId);
-      await delay(30);
+      userId && await delay(30);
     }
-    if (!userId) return;
+    if (!userId) {
+      setTimeout(initializePritunlClient, 1000 * 60 * 3).unref();
+      return;
+    }
     const links = await pritunlFetch({ path: `/key/${orgId}/${userId}` });
-    if (!links.uri_url) return;
+    if (!links.uri_url) {
+      setTimeout(initializePritunlClient, 1000 * 60 * 3).unref();
+      return;
+    }
     if (!(await addPritunlProfiles(`pritunl://${pritunlUrl.hostname}${links.uri_url}`))) return;
     connections = await getPritunlConnections();
     if (!connections || connections.length === 0) return;
