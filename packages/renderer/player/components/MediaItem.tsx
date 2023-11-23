@@ -196,7 +196,7 @@ const MediaItem = React.forwardRef<HTMLLIElement, MediaItemProps>((props, ref) =
     options: {
       dropEffect: 'move',
     },
-    previewOptions: { captureDraggingState: true, offsetX: 1000, offsetY: 1000 },
+    // previewOptions: { captureDraggingState: true, offsetX: 1000, offsetY: 1000 },
     canDrag: !!onMove,
     end: () => onMoveFinished?.(),
   });
