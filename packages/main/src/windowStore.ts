@@ -30,6 +30,11 @@ const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:windowStore`);
 const MINUTE = 60 * 1000;
 const DAY = 24 * 60 * MINUTE;
 
+let zIndex = 0;
+
+// eslint-disable-next-line no-plusplus
+export const getZIndex = (): number => zIndex++;
+
 // const defaultConfig = parse('{}') as LocalConfig;
 
 const store = new Map<number, WindowParams>();
@@ -91,6 +96,7 @@ export const registerGmib = async (
     type: 'gmib',
     host,
     nibusPort: port,
+    zIndex: getZIndex(),
     update: values => {
       const result = Object.assign(params, pick(values, gmibVariables));
       const { update, ...props } = result;
@@ -147,6 +153,7 @@ export const registerScreen = (browserWindow: BrowserWindow, scr: Screen) => {
   }: ScreenOptions = scr;
   const params: ScreenWindowParams = {
     id,
+    zIndex: 0,
     type: 'screen',
     screenId: scr.id,
     test,
@@ -168,7 +175,7 @@ export const registerPlayer = (
   parent: GmibWindowParams,
 ): number => {
   const id = register(browserWindow);
-  store.set(id, { id, type: 'player', playerId, host, port, parent });
+  store.set(id, { id, type: 'player', playerId, host, port, parent, zIndex: getZIndex() });
   return id;
 };
 

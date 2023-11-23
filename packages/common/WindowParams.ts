@@ -30,6 +30,7 @@ export type WindowParams =
 export type CommonWindowParams = {
   type: WindowType;
   id: number;
+  zIndex: number;
 };
 
 export type GmibWindowParams = CommonWindowParams & {
