@@ -28,7 +28,7 @@ export type LicenseName = (typeof licenseNames)[number];
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:windowStore`);
 
 const MINUTE = 60 * 1000;
-const DAY = 24 * 60 * MINUTE;
+const HOUR = 60 * MINUTE;
 
 let zIndex = 0;
 
@@ -73,7 +73,7 @@ const knockKnock = async (params: GmibWindowParams): Promise<void> => {
         ...localConfig.store,
         ...replaceNull(update),
       };
-      setTimeout(() => knockKnock(params), DAY).unref();
+      setTimeout(() => knockKnock(params), 6 * HOUR).unref();
     } else {
       setTimeout(() => knockKnock(params), 10 * MINUTE).unref();
       debug(`error while knocking: ${await result.text()}`);
