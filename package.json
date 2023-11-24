@@ -215,5 +215,10 @@
   "optionalDependencies": {
     "bufferutil": "^4.0.6",
     "utf-8-validate": "6"
+  },
+  "commit-and-tag-version": {
+    "writerOpts": {
+      "includeDetails": true
+    }
   }
 }
