@@ -164,6 +164,7 @@ const helpMenu = async (params?: WindowParams): Promise<AppMenuItem> => {
 
   const gmibParams = getGmibParams(params);
   const isModernGmib = gmibParams?.info?.version && semverGt(gmibParams.info.version, '4.2.1');
+  
   return {
     label: 'Помощь',
     role: 'help',
@@ -174,7 +175,7 @@ const helpMenu = async (params?: WindowParams): Promise<AppMenuItem> => {
               label: 'Лицензия',
               submenu: [
                 ...(gmibParams.plan ? [{ label: `Тип: ${gmibParams.plan}`, enabled: false }] : []),
-                ...(gmibParams.key ? [{ label: `Ключ: ${gmibParams.key}`, enabled: false }] : []),
+                ...(gmibParams.key ? [{ label: `Ключ: ${gmibParams.key.split('-').map(str => str.replace(/.$/, '?')).join('-')}`, enabled: false }] : []),
                 ...(gmibParams.renew
                   ? [
                       {
