@@ -1,8 +1,12 @@
 import CheckIcon from '@mui/icons-material/Check';
 import LocationOnIconMui from '@mui/icons-material/LocationOn';
+import AddCircleOutlinedIcon from '@mui/icons-material/AddCircleOutlined';
+import FeaturedVideoOutlinedIcon from '@mui/icons-material/FeaturedVideoOutlined';
+import SmartDisplayOutlinedIcon from '@mui/icons-material/SmartDisplayOutlined';
 import { Button } from '@mui/material';
-import { alpha, styled } from '@mui/material/styles';
+import { alpha, css, styled } from '@mui/material/styles';
 import React from 'react';
+import { inherits } from 'util';
 
 export const LocationOnIcon = styled(LocationOnIconMui)(({ theme }) => ({
   '&.MuiSvgIcon-root': {
@@ -21,4 +25,33 @@ export const ApplyButton: React.FC = () => (
   <Button color="primary" startIcon={<CheckIcon />} variant="outlined" size="small">
     Применить
   </Button>
+);
+
+const AddOverlappedIcon = styled(AddCircleOutlinedIcon)(({ theme }) => ({
+  position: 'absolute',
+  left: '55%',
+  top: '50%',
+  fontSize: '60%',
+  backgroundColor: 'white',
+  borderRadius: '50%',
+}));
+
+const inline = css`
+  position: relative;
+  display: inline-block;
+  font-size: 32px;
+`;
+
+export const PlayerMappingIcon = () => (
+  <div css={inline}>
+    <FeaturedVideoOutlinedIcon fontSize="inherit" />
+    <AddOverlappedIcon />
+  </div>
+);
+
+export const AddPlayerIcon = () => (
+  <div css={inline}>
+    <SmartDisplayOutlinedIcon fontSize="inherit" />
+    <AddOverlappedIcon />
+  </div>
 );
