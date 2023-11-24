@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.7.4](https://github.com/sarakusha/gmib/compare/v4.7.3...v4.7.4) (2023-11-24)
+
+
+### Features
+
+* обновлена справка ([3167b5f](https://github.com/sarakusha/gmib/commit/3167b5fb383bcb3a987b298679fcbd48f39f0b31))
+* повторная попытка подключения pritunl ([deee54f](https://github.com/sarakusha/gmib/commit/deee54f2d387cd558ebcf0a5dceb69d9dc58bd25))
+* скрыты несколько символов ключа ([e3ac7c2](https://github.com/sarakusha/gmib/commit/e3ac7c24cd9dfc899c8700cfff38a1a98c7c8415))
+* сохраняет z-order при показе всех окон ([f4f3257](https://github.com/sarakusha/gmib/commit/f4f32575d2d725e13c78f1e80fad1f85362e5f7d))
+
+
+### Bug Fixes
+
+* не создавалась копия плейлиста ([3d75a16](https://github.com/sarakusha/gmib/commit/3d75a164883ddf6222f95a2412f7477f562764c9))
+* невидимый элемент при перетаскивании ([5f3688e](https://github.com/sarakusha/gmib/commit/5f3688e0d8f9a3c773c4483188099658bdf9117e))
+
 ## [4.7.3](https://github.com/sarakusha/gmib/compare/v4.7.2...v4.7.3) (2023-11-22)
 
 
