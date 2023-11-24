@@ -315,7 +315,7 @@ const template = async (params?: WindowParams): Promise<MenuItemConstructorOptio
       ['plus', 'premium', 'enterprise'].includes(params.plan)) ||
     isPlayer(params)
       ? // params.host === 'localhost'
-        [{ label: 'Плеер', submenu: await playerSubmenu(isGmib(params) ? params : params.parent) }]
+        [{ label: 'Плееры', submenu: await playerSubmenu(isGmib(params) ? params : params.parent) }]
       : []),
     {
       label: 'Правка',
