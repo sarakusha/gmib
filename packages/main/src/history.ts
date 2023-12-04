@@ -113,7 +113,7 @@ export const getSensors = promisifyAll(
   FROM sensors
   WHERE timestamp >= $after
   GROUP BY address, time`,
-  (after: number, scale = 1000 * 60 * 5) => ({ $after: after, $scale: scale }),
+  (after: number, scale = 1000 * 60 * 3) => ({ $after: after, $scale: scale }),
 );
 
 ipcMain.on('sensors', (_, data: SensorsData) => {
