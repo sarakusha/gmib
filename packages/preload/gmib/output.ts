@@ -1,3 +1,6 @@
+/**
+ * Не используется
+ */
 import { ipcRenderer } from 'electron';
 
 import type { AnyAction } from '@reduxjs/toolkit';

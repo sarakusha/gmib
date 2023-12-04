@@ -1,3 +1,7 @@
+/**
+ * Не используется!
+ */
+
 import { app, ipcMain, MessageChannelMain, type WebFrameMain } from 'electron';
 
 import debugFactory from 'debug';
