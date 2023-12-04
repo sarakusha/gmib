@@ -11,6 +11,7 @@ import { MCDVI_TYPE, MINIHOST_TYPE } from '@nibus/core/common';
 
 import { setCurrentDevice, setCurrentTab } from './currentSlice';
 import {
+  addDevice,
   connectionClosed,
   removeDevice,
   setConnected,
@@ -21,18 +22,22 @@ import { startAppListening } from './listenerMiddleware';
 import {
   filterDevicesByAddress,
   selectAllDevices,
+  selectAutobrightness,
   selectCurrentDeviceId,
   selectDeviceById,
   selectDeviceIds,
   selectDevicesByAddress,
+  selectLinks,
   // selectScreenAddresses,
 } from './selectors';
-import { setOnline } from './sessionSlice';
+import { addDetected, setOnline } from './sessionSlice';
 
 import type { AppThunk, AppThunkConfig } from '.';
 
 import { isRemoteSession } from '/@common/remote';
+import type { FinderOptions } from '/@common/helpers';
 import { asyncSerial, delay } from '/@common/helpers';
+import { setAutobrightness } from './configSlice';
 
 // const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:config`);
 const PING_INTERVAL = 10000;
@@ -167,3 +172,64 @@ startAppListening({
     }
   },
 });
+
+if (!isRemoteSession) {
+  const TILUX_TYPE = 0x0043;
+  const waitTilux = new Set<DeviceId>();
+  startAppListening({
+    actionCreator: addDevice,
+    effect: ({ payload: { mib, id } }, { getState }) => {
+      if (mib.startsWith('siolynx')) {
+        const autoBrightness = selectAutobrightness(getState());
+        if (autoBrightness) {
+          const options: FinderOptions = {
+            owners: [id],
+            type: TILUX_TYPE,
+          };
+          setTimeout(() => {
+            waitTilux.add(id);
+            window.nibus.findDevices(options).then(() => {
+              waitTilux.delete(id);
+            });
+          }, 10000);
+        }
+      }
+    },
+  });
+
+  startAppListening({
+    actionCreator: setAutobrightness,
+    effect: ({ payload: autoBrightness }, { getState }) => {
+      if (autoBrightness) {
+        const owners = selectLinks(getState())
+          .filter(({ mib }) => mib.startsWith('siolynx'))
+          .map(({ id }) => id);
+        owners.forEach(id => waitTilux.add(id));
+        const options: FinderOptions = {
+          owners,
+          type: TILUX_TYPE,
+        };
+        window.nibus.findDevices(options).then(() => {
+          owners.forEach(id => waitTilux.delete(id));
+        });
+      }
+    },
+  });
+
+  startAppListening({
+    actionCreator: addDetected,
+    effect: ({ payload }, { getState }) => {
+      if (
+        waitTilux &&
+        payload.owner &&
+        payload.type === TILUX_TYPE &&
+        waitTilux.has(payload.owner)
+      ) {
+        const devices = selectDevicesByAddress(getState(), payload.address);
+        if (devices.length === 0) {
+          window.nibus.createDevice(payload.owner, payload.address, payload.type, payload.version);
+        }
+      }
+    },
+  });
+}
