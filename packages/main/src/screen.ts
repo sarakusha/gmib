@@ -111,7 +111,7 @@ export const getScreen = promisifyGet(
   toScreen,
 );
 
-export const getScreens = promisifyAll('SELECT * FROM screen', () => {}, toScreen);
+export const getScreens = promisifyAll('SELECT * FROM screen', () => { }, toScreen);
 
 export const getAddressesForScreen = promisifyAll(
   'SELECT address FROM address WHERE screenId = ?',
@@ -131,7 +131,7 @@ export const loadScreen = async (id: number): Promise<Screen | undefined> => {
 export const getAddresses = promisifyAll(
   `SELECT address
    FROM address`,
-  () => {},
+  () => { },
   ({ address }) => address as string,
 );
 
@@ -186,7 +186,7 @@ export const getPlayers = promisifyAll(
       )
     ) as current FROM player
 `,
-  () => {},
+  () => { },
   toPlayer,
 );
 
@@ -341,4 +341,10 @@ export const hasPlayers = promisifyGet(
   'SELECT 1 FROM player LIMIT 1',
   () => [],
   result => !!result,
+);
+
+export const isPlayerActive = promisifyGet(
+  'SELECT flags FROM player WHERE id = ?',
+  (id: number) => id,
+  result => Boolean(result?.flags & PlayerFlags.AutoPlay),
 );
