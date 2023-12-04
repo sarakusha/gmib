@@ -235,6 +235,7 @@ ipcRenderer.on('socket', async (_, { id, ...msg }: WithWebSocketKey<RtcMessage>)
             event: 'candidate',
             candidate: candidate.toJSON(),
             sourceId,
+            sourceType: 'player',
           };
           ipcRenderer.invoke('socket', candidateMsg);
         };
@@ -258,6 +259,7 @@ ipcRenderer.on('socket', async (_, { id, ...msg }: WithWebSocketKey<RtcMessage>)
           event: 'offer',
           desc: JSON.parse(JSON.stringify(offer)),
           sourceId,
+          sourceType: 'player',
         };
         await pc.setLocalDescription(offer);
         await ipcRenderer.invoke('socket', offerMsg);

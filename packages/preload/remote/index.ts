@@ -9,13 +9,9 @@ import * as identify from '../common/identify';
 import type { AnswerMessage, CandidateMessage, RequestMessage, RtcMessage } from '/@common/rtc';
 import Deferred from '/@common/Deferred';
 import expandTypes from '/@common/expandTypes';
+import { host, port, sourceId } from '/@common/remote';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:remote`);
-
-const search = new URLSearchParams(window.location.search);
-const host = search.get('host') ?? 'localhost';
-const port = +(search.get('port') ?? 9001);
-const sourceId = +(search.get('source_id') ?? 1);
 
 const deferred = new Deferred<MediaStream>();
 let videoSelector: string;
@@ -43,6 +39,7 @@ ws.onopen = async () => {
   const request: RequestMessage = {
     event: 'request',
     sourceId,
+    sourceType: 'player',
   };
   let pc = new RTCPeerConnection();
 
@@ -55,6 +52,7 @@ ws.onopen = async () => {
           event: 'candidate',
           candidate: candidate.toJSON(),
           sourceId,
+          sourceType: 'player',
         };
         ws.send(JSON.stringify(msg));
       }
@@ -95,6 +93,7 @@ ws.onopen = async () => {
               event: 'answer',
               desc: await pc.createAnswer(),
               sourceId,
+              sourceType: 'player',
             };
             await pc.setLocalDescription(answer.desc);
             ws.send(JSON.stringify(answer));

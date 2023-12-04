@@ -16,8 +16,6 @@ import type { AppThunk, AppThunkConfig, RootState } from '../store';
 import { invalidateBrightness } from '../store/configSlice';
 import { setCurrentScreen } from '../store/currentSlice';
 import { selectCurrentScreenId, selectDevicesByAddress } from '../store/selectors';
-import { url } from 'inspector';
-import { method } from 'lodash';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:screen`);
 

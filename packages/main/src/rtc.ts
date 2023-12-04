@@ -12,6 +12,7 @@ import { wss } from './server';
 import { openPlayer } from './playerWindow';
 import { findPlayerWindow } from './windowStore';
 import master from './MasterBrowser';
+import { getMainWindow } from './mainWindow';
 
 const sockets = new Map<string, WebSocket>();
 
@@ -50,8 +51,13 @@ wss.on('connection', (ws: AliveWebSocket, req) => {
   ws.on('message', async (data, isBinary) => {
     if (!isBinary) {
       const msg = JSON.parse(data.toString()) as RtcMessage;
+      // console.log({ message: msg });
       if (['candidate', 'answer', 'request'].includes(msg.event)) {
-        const win = findPlayerWindow(msg.sourceId) ?? (await openPlayer(msg.sourceId));
+        const win =
+          msg.sourceType === 'player'
+            ? findPlayerWindow(msg.sourceId) ?? (await openPlayer(msg.sourceId))
+            : getMainWindow();
+        // console.log('FOUND', win);
         if (win) win.webContents.send('socket', { ...msg, id });
       }
     }

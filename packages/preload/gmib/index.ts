@@ -11,10 +11,11 @@ import log, { setLogLevel } from '../common/initlog';
 import { setDispatch } from '../common/ipcDispatch';
 
 import * as config from './config';
-import * as db from './db';
+// import * as db from './db';
 import * as dialogs from './dialogs';
 import * as nibus from './nibus';
-import * as output from './output';
+// import * as output from './output';
+import * as mediaSource from './mediaSource';
 
 import expandTypes from '/@common/expandTypes';
 import { hashCode } from '/@common/helpers';
@@ -50,13 +51,13 @@ contextBridge.exposeInMainWorld('setDispatch', setDispatch);
 contextBridge.exposeInMainWorld('nibus', expandTypes(nibus));
 contextBridge.exposeInMainWorld('config', expandTypes(config));
 contextBridge.exposeInMainWorld('dialogs', expandTypes(dialogs));
-contextBridge.exposeInMainWorld('db', expandTypes(db));
+// contextBridge.exposeInMainWorld('db', expandTypes(db));
 contextBridge.exposeInMainWorld('log', log.log.bind(log));
 contextBridge.exposeInMainWorld('setLogLevel', (logLevel: LogLevel) => {
   setLogLevel(logLevel);
   nibus.setLogLevel(logLevel);
 });
-contextBridge.exposeInMainWorld('output', expandTypes(output));
+// contextBridge.exposeInMainWorld('output', expandTypes(output));
 contextBridge.exposeInMainWorld('identify', expandTypes(identify));
 
 // contextBridge.exposeInMainWorld('activateLicense', (key: string, name?: string): Promise<true | string> =>
@@ -92,11 +93,13 @@ const gmibParams = new Promise<GmibWindowParams>(resolve => {
   });
 });
 
-contextBridge.exposeInMainWorld('license', () =>
-  gmibParams.then(({ plan, renew, key }) => ({ plan, renew, key })),
-);
+// contextBridge.exposeInMainWorld('license', () =>
+//   gmibParams.then(({ plan, renew, key }) => ({ plan, renew, key })),
+// );
 
 contextBridge.exposeInMainWorld(
   'initializeNovastar',
   (): Promise<boolean> => gmibParams.then(({ useProxy }) => Boolean(useProxy)),
 );
+
+contextBridge.exposeInMainWorld('mediaSource', expandTypes(mediaSource));
