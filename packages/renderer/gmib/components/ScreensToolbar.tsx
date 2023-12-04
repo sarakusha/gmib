@@ -1,12 +1,13 @@
 import BrightnessAutoIcon from '@mui/icons-material/BrightnessAuto';
 import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
+import Refresh from '@mui/icons-material/Refresh';
 import { IconButton, Tooltip } from '@mui/material';
 import React from 'react';
 
 import { noop } from '/@common/helpers';
 
-import { updateScreen, useScreen } from '../api/screens';
+import { updateScreen, useReloadScreenMutation, useScreen } from '../api/screens';
 import { useDispatch, useSelector } from '../store';
 import { selectBrightness, selectCurrentScreenId, selectInvalidState } from '../store/selectors';
 
@@ -48,9 +49,19 @@ const ScreensToolbar: React.FC<{ readonly?: boolean; toggle?: () => void }> = ({
     [dispatch, screenId],
   );
   const invalidState = useSelector(selectInvalidState);
+  const [reload] = useReloadScreenMutation();
   const disabled = !screen || screen.brightnessFactor !== 0;
   return (
     <>
+      <IconButton
+        title="Обновить"
+        size="large"
+        disabled={!screen?.test}
+        color="inherit"
+        onClick={() => screenId && reload(screenId)}
+      >
+        <Refresh />
+      </IconButton>
       <IconButton
         color={disabled ? 'inherit' : 'default'}
         onClick={() =>

@@ -646,6 +646,18 @@ api.put('/screen', async (req, res, next) => {
   }
 });
 
+api.put('/screen/:id/reload', (req, res) => {
+  const params = findScreenParams(+req.params.id);
+  if (params) {
+    const win = BrowserWindow.fromId(params.id);
+    if (win) {
+      win.reload();
+      return res.end();
+    }
+  }
+  return res.sendStatus(404);
+});
+
 api.get('/address', (req, res, next) => {
   getAddresses()
     .then(addresses => res.json([...new Set(addresses)]))
