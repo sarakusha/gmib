@@ -1,73 +1,107 @@
-import { Button, Dialog, DialogActions, DialogContent, TextField } from '@mui/material';
+import { Button, Dialog, DialogActions, DialogContent, InputAdornment } from '@mui/material';
 import React from 'react';
+import { Field, Form, Formik } from 'formik';
 
-import { usePage } from '../api/config';
+import { updatePage, usePage } from '../api/config';
 import DialogTitle from '../components/DialogTitle';
+import FormikTextField from '../../common/FormikTextField';
 
-import type { Page } from '/@common/config';
 import { noop } from '/@common/helpers';
+import { useDispatch } from '../store';
+import CopyToClipboard from '../components/CopyToClipboard';
 
 type Props = {
   pageId?: string;
   open?: boolean;
   onClose?: () => void;
-  onChange?: (name: keyof Page, value: string) => void;
 };
 
-// const useStyles = makeStyles(theme => ({
-//   root: {},
-// }));
+const isValidParam = (param: string): boolean => {
+  try {
+    JSON.parse(param);
+    return true;
+  } catch {
+    return false;
+  }
+};
 
-const HttpPageDialog: React.FC<Props> = ({
-  pageId,
-  open = false,
-  onClose = noop,
-  onChange = noop,
-}) => {
-  // const classes = useStyles();
-  const changeHandler: React.ChangeEventHandler<HTMLInputElement> = event => {
-    const { name, value } = event.target;
-    onChange(name as keyof Page, value);
-  };
-  const { page } = usePage(pageId); // useSelector(state => selectPageById(state, pageId ?? ''));
+export const isValidUrl = (urlString: string): boolean => {
+  try {
+    const url = new URL(decodeURI(urlString));
+    return [...url.searchParams.values()].reduce((res, value) => res && isValidParam(value), true);
+  } catch (e) {
+    return false;
+  }
+};
+
+const HttpPageDialog: React.FC<Props> = ({ pageId, open = false, onClose = noop }) => {
+  const { page } = usePage(pageId);
   const { url, title } = page ?? {};
+  const dispatch = useDispatch();
+
   return (
     <Dialog
       open={open && page !== undefined}
       aria-labelledby="http-page-title"
       onClose={onClose}
-      onKeyDown={({ key }) => (key === 'Enter' || key === 'Escape') && onClose()}
+      maxWidth="md"
+      fullWidth
     >
       <DialogTitle id="http-page-title" onClose={onClose}>
         Параметры HTTP-страницы
       </DialogTitle>
       <DialogContent>
         <div className="tNX9k9byJD58qNs4nxAIi rlXINR-cZo5bnISD5TaUT LqiknX4bnpOZyEn5DYsUT">
-          <TextField
-            variant="standard"
-            name="url"
-            value={url ?? ''}
-            onChange={changeHandler}
-            label="URL"
-            required
-            fullWidth
-            margin="normal"
-            type="url"
-          />
-          <TextField
-            variant="standard"
-            name="title"
-            value={title ?? ''}
-            onChange={changeHandler}
-            label="Заголовок"
-            required
-            fullWidth
-            margin="normal"
-          />
+          <Formik
+            initialValues={{ url: url ? decodeURI(url) : '', title: title ?? '' }}
+            onSubmit={props => {
+              pageId && dispatch(updatePage(pageId, prev => ({ ...prev, ...props })));
+              onClose?.();
+            }}
+            validate={props => {
+              const errs: Partial<Record<keyof typeof props, string>> = {};
+              if (!props.title) errs.title = 'Требуется';
+              if (!props.url) errs.title = 'Требуется';
+              else if (!isValidUrl(props.url)) errs.url = 'Неверный адрес';
+              return errs;
+            }}
+          >
+            <Form id="http-widget">
+              <Field
+                component={FormikTextField}
+                variant="standard"
+                name="url"
+                label="URL"
+                required
+                fullWidth
+                margin="normal"
+                type="url"
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <CopyToClipboard name="url" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+              <Field
+                component={FormikTextField}
+                variant="standard"
+                name="title"
+                label="Заголовок"
+                required
+                fullWidth
+                margin="normal"
+              />
+            </Form>
+          </Formik>
         </div>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Ok</Button>
+        <Button type="submit" form="http-widget" disabled={!page}>
+          Ok
+        </Button>
+        <Button onClick={onClose}>Отмена</Button>
       </DialogActions>
     </Dialog>
   );

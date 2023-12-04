@@ -12,29 +12,18 @@ import {
 import { styled } from '@mui/material/styles';
 import clsx from 'clsx';
 import React, { useCallback, useState } from 'react';
-// import { isUri } from 'valid-url';
 
 import useShiftAlert from '../../common/useShiftAlert';
-import { updatePage, useCreatePageMutation, useDeletePageMutation, usePages } from '../api/config';
+import { useCreatePageMutation, useDeletePageMutation, usePages } from '../api/config';
 import { updateScreen, useScreen } from '../api/screens';
-import HttpPageDialog from '../dialogs/HttpPageDialog';
+import HttpPageDialog, { isValidUrl } from '../dialogs/HttpPageDialog';
 import { useDispatch, useSelector } from '../store';
 import type { TabValues } from '../store/currentSlice';
 import { setCurrentTab } from '../store/currentSlice';
 
-import type { Page } from '/@common/config';
-
 import { selectCurrentScreenId, selectCurrentTab } from '../store/selectors';
 
 import AccordionList from './AccordionList';
-
-const isValidUrl = (urlString: string): boolean => {
-  try {
-    return Boolean(new URL(urlString));
-  } catch (e) {
-    return false;
-  }
-};
 
 const ListItemButton = styled(MuiListItem)({
   '& .MuiListItemSecondaryAction-root svg': {
@@ -72,10 +61,6 @@ const HttpPages: React.FC = () => {
   );
   const [open, setOpen] = useState(false);
   const closeDialog = (): void => setOpen(false);
-  const changeHandler = (name: keyof Page, value: string): void => {
-    if (!selected) return;
-    dispatch(updatePage(selected, prev => ({ ...prev, [name]: value })));
-  };
   const editPage = (id: string) => {
     setSelected(id);
     setOpen(true);
@@ -98,10 +83,6 @@ const HttpPages: React.FC = () => {
           const [primary, secondary = ''] = title.split('/', 2);
           const isValid = permanent || (url && isValidUrl(url));
           return (
-            // <div
-            //   key={id}
-            //   className={clsx({ 'tNX9k9byJD58qNs4nxAIi rlXINR-cZo5bnISD5TaUT': !permanent })}
-            // >
             <ListItemButton
               key={id}
               className={clsx({
@@ -161,12 +142,7 @@ const HttpPages: React.FC = () => {
           <ListItemText>Добавить URL</ListItemText>
         </ListItemButton>
       </AccordionList>
-      <HttpPageDialog
-        open={open}
-        onClose={closeDialog}
-        onChange={changeHandler}
-        pageId={selected}
-      />
+      <HttpPageDialog open={open} onClose={closeDialog} pageId={selected} />
     </>
   );
 };
