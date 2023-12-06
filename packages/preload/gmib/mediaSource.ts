@@ -106,7 +106,7 @@ const openSocket = async (): Promise<void> => {
 };
 
 const playRemote = debounce(async (screenId: number) => {
-  console.log('PLAY REMOTE');
+  // console.log('PLAY REMOTE');
   if (!ws || ws.readyState === ws.CLOSED) ws = new WebSocket(`ws://${host}:${port + 1}`);
   let pc = new RTCPeerConnection();
   const request: RequestMessage = {
@@ -116,7 +116,7 @@ const playRemote = debounce(async (screenId: number) => {
   };
 
   const connect = async () => {
-    console.log('CONNECT');
+    // console.log('CONNECT');
     pc.onicecandidate = async e => {
       const { candidate } = e;
       if (!candidate) return;
@@ -133,7 +133,7 @@ const playRemote = debounce(async (screenId: number) => {
 
     pc.ontrack = e => {
       const video = getVideo(screenId);
-      console.log('VIDEO', video);
+      // console.log('VIDEO', video);
       if (video) {
         [video.srcObject] = e.streams;
         video.onloadedmetadata = () => video.play();
@@ -150,16 +150,16 @@ const playRemote = debounce(async (screenId: number) => {
         setTimeout(connect, 3000);
       }
     };
-    console.log('WAIT CONNECT');
+    // console.log('WAIT CONNECT');
     await openSocket();
-    console.log('SEND REQUEST');
+    // console.log('SEND REQUEST');
     ws.send(JSON.stringify(request));
   };
 
   ws.onmessage = async ev => {
     try {
       const msg = JSON.parse(ev.data.toString()) as RtcMessage;
-      console.log({ msg, screenId });
+      // console.log({ msg, screenId });
       switch (msg.event) {
         case 'candidate':
           if (msg.sourceId === screenId && 'candidate' in msg) {
@@ -176,7 +176,7 @@ const playRemote = debounce(async (screenId: number) => {
               sourceType: 'screen',
             };
             await pc.setLocalDescription(answer.desc);
-            console.log('ANSWER');
+            // console.log('ANSWER');
             ws.send(JSON.stringify(answer));
           }
           break;
@@ -193,9 +193,9 @@ const playRemote = debounce(async (screenId: number) => {
 
 if (!isRemoteSession) {
   const peers = new Map<string, RTCPeerConnection>();
-  console.log('LISTEN SOCKET');
+  // console.log('LISTEN SOCKET');
   ipcRenderer.on('socket', async (_, { id, ...msg }: WithWebSocketKey<RtcMessage>) => {
-    console.log({ socket: msg });
+    // console.log({ socket: msg });
     // if (msg.sourceId !== sourceId) return;
     const stream = await createStream(await getMediaSourceId(msg.sourceId));
     if (!stream) return;
