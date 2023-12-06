@@ -3,7 +3,7 @@
     "module": "esnext",
     "target": "esnext",
     "sourceMap": false,
-    "moduleResolution": "Node",
+    "moduleResolution": "node",
     "skipLibCheck": true,
     "strict": true,
     "allowSyntheticDefaultImports": true,
@@ -26,7 +26,9 @@
       "react-imask": ["../../types/react-imask"],
       "/@common/*": ["../common/*"]
     },
-    "lib": ["ESNext", "dom", "dom.iterable"]
+    "lib": ["ESNext", "dom", "dom.iterable"],
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true
   },
   "include": [
     "**/*.ts",

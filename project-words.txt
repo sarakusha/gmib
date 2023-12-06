@@ -84,6 +84,7 @@ strtok
 suncalc
 suntimes
 Theora
+tilux
 timecode
 timeid
 timelapse
