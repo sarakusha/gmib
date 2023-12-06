@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.8.0](https://github.com/sarakusha/gmib/compare/v4.7.4...v4.8.0) (2023-12-06)
+
+
+### Features
+
+* автопоиск датчиков ([89f4f7f](https://github.com/sarakusha/gmib/commit/89f4f7f6cbc858712f90a0e71e974c8f5b0e476c))
+* обновлена справка ([ae72ba3](https://github.com/sarakusha/gmib/commit/ae72ba356e29748017c9e15bc47ea91ed4f1c4c9))
+* обновление http-экрана ([65147df](https://github.com/sarakusha/gmib/commit/65147dfd77278ace0de4e949e505afce8d15aa14))
+* перегружена функция createDevice ([b04b81a](https://github.com/sarakusha/gmib/commit/b04b81a81ab35b9017dbc8aeb18062840d0db853))
+* подтверждение закрытия плеера ([6641c3c](https://github.com/sarakusha/gmib/commit/6641c3c282eaef0e0366b27d1de1c0925a65a537))
+* предпросмотр http-виджета ([f1a2156](https://github.com/sarakusha/gmib/commit/f1a2156bc527bd72eca4c41c9b7ee9fae48c8bf5))
+* улучшен диалог http-виджета ([fe4c1b8](https://github.com/sarakusha/gmib/commit/fe4c1b8e0d9ac3351f05b7ad4dd5e5718b25bfa9))
+
 ## [4.7.4](https://github.com/sarakusha/gmib/compare/v4.7.3...v4.7.4) (2023-11-24)
 
 
