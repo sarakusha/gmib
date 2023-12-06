@@ -23,7 +23,7 @@ const displayApi = createApi({
   reducerPath: 'displayApi',
   tagTypes: ['display'],
   endpoints: build => ({
-    getDisplays: build.query<EntityState<DisplayType>, void>({
+    getDisplays: build.query<EntityState<DisplayType, number>, void>({
       query: () => 'display',
       transformResponse: (response: DisplayType[]) =>
         displayAdapter.addMany(displayAdapter.getInitialState(), response),
@@ -37,7 +37,7 @@ export const useDisplays = () =>
       displays: data && selectDisplays(data),
       ...other,
     }),
-    pollingInterval: 5000,
+    pollingInterval: 15000,
   });
 
 export const useDisplay = (id?: number | null) =>
