@@ -9,7 +9,7 @@ type NovastarTelemetryResult = {
   isLoading: boolean;
 };
 
-const novastarTelemetryAdapter = createEntityAdapter<NovastarTelemetryResult>({
+const novastarTelemetryAdapter = createEntityAdapter<NovastarTelemetryResult, string>({
   selectId: ({ path }) => path,
 });
 
@@ -44,4 +44,4 @@ const telemetrySlice = createSlice({
 export const { startNovastarTelemetry, addCabinetInfo, finishNovastarTelemetry } =
   telemetrySlice.actions;
 
-export default telemetrySlice.reducer;
+export default telemetrySlice;

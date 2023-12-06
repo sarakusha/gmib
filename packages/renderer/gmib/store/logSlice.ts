@@ -19,7 +19,7 @@ export type LogItem = {
 
 const colorHash = new ColorHash();
 
-export const logAdapter = createEntityAdapter<LogItem>({
+export const logAdapter = createEntityAdapter<LogItem, number>({
   selectId: ({ id }) => id,
   sortComparer: (a, b) => b.id - a.id,
 });
@@ -99,4 +99,4 @@ const logSlice = createSlice({
 
 export const { addLog } = logSlice.actions;
 
-export default logSlice.reducer;
+export default logSlice;

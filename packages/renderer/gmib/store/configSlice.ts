@@ -23,7 +23,7 @@ const initialState: ConfigState = {
   overheatProtection: DEFAULT_OVERHEAD_PROTECTION,
 };
 
-export const configSlice = createSlice({
+const configSlice = createSlice({
   name: 'config',
   initialState,
   reducers: {
@@ -124,4 +124,4 @@ export const {
   setDisableNet,
 } = configSlice.actions;
 
-export default configSlice.reducer;
+export default configSlice;

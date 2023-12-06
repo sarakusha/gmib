@@ -76,7 +76,7 @@ const calculateSensors = (sensors: Draft<SensorDictionary>, interval: number): v
 };
 
 const sensorsSlice = createSlice({
-  name: 'sensor',
+  name: 'sensors',
   initialState,
   reducers: {
     changeInterval(state, { payload: interval }: PayloadAction<number>) {
@@ -107,4 +107,4 @@ const sensorsSlice = createSlice({
 
 export const { changeInterval, pushSensorValue, calculate } = sensorsSlice.actions;
 
-export default sensorsSlice.reducer;
+export default sensorsSlice;

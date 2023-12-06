@@ -17,7 +17,7 @@ const mappingApi = createApi({
   baseQuery,
   reducerPath: 'mappingApi',
   endpoints: build => ({
-    getMappings: build.query<EntityState<PlayerMapping>, void>({
+    getMappings: build.query<EntityState<PlayerMapping, number>, void>({
       query: () => '/mapping',
       transformResponse: (response: PlayerMapping[]) =>
         mappingAdapter.addMany(mappingAdapter.getInitialState(), response),

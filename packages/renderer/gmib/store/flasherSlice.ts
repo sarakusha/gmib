@@ -37,4 +37,4 @@ const flasherSlice = createSlice({
 
 export const { enqueueSnackbar, setFlashing, setProgress } = flasherSlice.actions;
 
-export default flasherSlice.reducer;
+export default flasherSlice;

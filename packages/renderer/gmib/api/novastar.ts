@@ -47,7 +47,7 @@ window.initializeNovastar().then(value => {
 
 // const secret = window.identify.getSecret();
 
-const adapter = createEntityAdapter<Novastar>({
+const adapter = createEntityAdapter<Novastar, string>({
   selectId: ({ path }) => path,
   sortComparer: (a, b) => a.path.localeCompare(b.path),
 });
@@ -67,14 +67,14 @@ export const {
   selectIds: selectNovastarIds,
 } = adapter.getSelectors();
 
-export const selectSerials = (state: EntityState<Novastar>): Novastar[] =>
+export const selectSerials = (state: EntityState<Novastar, string>): Novastar[] =>
   selectNovastars(state).filter(item => item.isSerial);
 
 const novastarApi = createApi({
   baseQuery,
   reducerPath: 'novastarApi',
   endpoints: build => ({
-    getNovastars: build.query<EntityState<Novastar>, void>({
+    getNovastars: build.query<EntityState<Novastar, string>, void>({
       query: () => ({
         url: 'novastar',
         responseHandler: async response => {

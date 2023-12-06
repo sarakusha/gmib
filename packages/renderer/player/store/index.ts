@@ -38,7 +38,7 @@ export type AppThunk<ReturnType = void> = ThunkAction<
 >;
 export type AppThunkConfig = OriginalAppThunkConfig<RootState, AppDispatch>;
 
-export const useDispatch = (): AppDispatch => origUseDispatch<AppDispatch>();
+export const useDispatch: () => AppDispatch = origUseDispatch;
 export const useSelector: TypedUseSelectorHook<RootState> = origUseSelector;
 
 /*

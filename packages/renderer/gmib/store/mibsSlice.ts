@@ -26,7 +26,7 @@ export interface MibInfo {
   disableBatchReading?: boolean;
 }
 
-export const mibsAdapter = createEntityAdapter<MibInfo>({ selectId: mib => mib.name });
+export const mibsAdapter = createEntityAdapter<MibInfo, string>({ selectId: mib => mib.name });
 
 const mibsSlice = createSlice({
   name: 'mibs',
@@ -43,4 +43,4 @@ const mibsSlice = createSlice({
 
 export const { addMib, removeMib } = mibsSlice.actions;
 
-export default mibsSlice.reducer;
+export default mibsSlice;

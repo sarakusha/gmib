@@ -60,7 +60,7 @@ const getHostParams =
       };
     };
 
-const adapter = createEntityAdapter<Screen>({
+const adapter = createEntityAdapter<Screen, number>({
   selectId: ({ id }) => id,
 });
 
@@ -75,7 +75,7 @@ const screenApi = createApi({
   reducerPath: 'screenApi',
   tagTypes: ['screen', 'address'],
   endpoints: build => ({
-    getScreens: build.query<EntityState<Screen>, void>({
+    getScreens: build.query<EntityState<Screen, number>, void>({
       query: () => 'screen',
       transformResponse: (response: Screen[]) =>
         adapter.addMany(adapter.getInitialState(), response),

@@ -15,7 +15,6 @@ import { sourceId } from '../utils';
 import playerApi, { selectPlayer, selectPlayers } from './player';
 
 const adapter = createEntityAdapter<Playlist>({
-  selectId: ({ id }) => id,
   sortComparer: (a, b) =>
     a.creationTime && b.creationTime
       ? new Date(b.creationTime).getTime() - new Date(a.creationTime).getTime()
@@ -32,7 +31,7 @@ const playlistApi = createApi({
   reducerPath: 'playlistApi',
   tagTypes: ['playlist'],
   endpoints: build => ({
-    getPlaylists: build.query<EntityState<Playlist>, void>({
+    getPlaylists: build.query<EntityState<Playlist, number>, void>({
       query: () => 'playlist',
       transformResponse: (response: Playlist[]) =>
         adapter.addMany(adapter.getInitialState(), response),

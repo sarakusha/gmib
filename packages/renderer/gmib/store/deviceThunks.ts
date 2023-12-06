@@ -127,11 +127,13 @@ const nibusNetAddressProps = ['domain', 'subnet', 'did'];
 
 startAppListening({
   matcher: isAnyOf(updateProps, updateProperty),
-  async effect({ payload: [deviceId, props] }, { dispatch, getState }) {
+  async effect(action, { dispatch, getState }) {
+    const [deviceId, propsOrName] = updateProps.match(action) || updateProperty.match(action) ? action.payload : [];
+    if (!deviceId || !propsOrName) return;
     const addressChanged =
-      typeof props === 'string'
-        ? nibusNetAddressProps.includes(props)
-        : nibusNetAddressProps.some(name => props[name] !== undefined);
+      typeof propsOrName === 'string'
+        ? nibusNetAddressProps.includes(propsOrName)
+        : nibusNetAddressProps.some(name => propsOrName[name] !== undefined);
     if (!addressChanged) return;
     const state = getState();
     const device = selectDeviceById(state, deviceId);
@@ -227,7 +229,7 @@ if (!isRemoteSession) {
       ) {
         const devices = selectDevicesByAddress(getState(), payload.address);
         if (devices.length === 0) {
-          window.nibus.createDevice(payload.owner, payload.address, payload.type, payload.version);
+          window.nibus.createDevice(payload.owner, payload.address, 'ti_lux_2_3');
         }
       }
     },

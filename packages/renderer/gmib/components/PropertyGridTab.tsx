@@ -19,7 +19,7 @@ import TableCell from './TableCell';
 
 const PropertyGridTab: React.FC<MinihostTabProps> = ({ id, selected = false }) => {
   const { mib, error, props } = useDevice(id) ?? {};
-  const meta = useSelector(state => selectMibByName(state, mib ?? 0));
+  const meta = useSelector(state => selectMibByName(state, mib ?? ''));
   const tab = useSelector(selectCurrentTab);
   const active: boolean = selected && tab === 'devices';
   const dispatch = useDispatch();

@@ -1,6 +1,6 @@
 import type { DeviceId } from '@nibus/core';
 import type { Action, ThunkAction } from '@reduxjs/toolkit';
-import { configureStore } from '@reduxjs/toolkit';
+import { combineSlices, configureStore } from '@reduxjs/toolkit';
 import type { TypedUseSelectorHook } from 'react-redux';
 import { useDispatch as origUseDispatch, useSelector as origUseSelector } from 'react-redux';
 
@@ -8,46 +8,45 @@ import type { AppThunkConfig as OriginalAppThunkConfig } from '../../common/crea
 import * as api from '../api';
 
 import authMiddleware from './authMiddleware';
-import configReducer from './configSlice';
-import currentReducer from './currentSlice';
-import devicesReducer from './devicesSlice';
+import configSlice from './configSlice';
+import currentSlice from './currentSlice';
+import devicesSlice from './devicesSlice';
 import type { DeviceState } from './devicesSlice';
-import flasherReducer from './flasherSlice';
+import flasherSlice from './flasherSlice';
 import listenerMiddleware from './listenerMiddleware';
-import logReducer from './logSlice';
-import mibsReducer from './mibsSlice';
+import logSlice from './logSlice';
+import mibsSlice from './mibsSlice';
 // import novastarReducer from './novastarSlice';
-import remoteHostsReducer from './remoteHostsSlice';
+import remoteHostsSlice from './remoteHostsSlice';
 // import screensReducer from './screensSlice';
 import { selectAllDevices, selectDeviceById } from './selectors';
-import sensorsReducer from './sensorsSlice';
-import sessionReducer from './sessionSlice';
-import telemetryReducer from './telemetrySlice';
+import sensorsSlice from './sensorsSlice';
+import sessionSlice from './sessionSlice';
+import telemetrySlice from './telemetrySlice';
 
 import './configThunks';
 import './deviceThunks';
 import './healthThunks';
 import './sensorThunks';
 import './currentThunks';
+import { setupListeners } from '@reduxjs/toolkit/query';
 
 export const store = configureStore({
-  reducer: {
-    current: currentReducer,
-    config: configReducer,
-    session: sessionReducer,
-    devices: devicesReducer,
-    mibs: mibsReducer,
-    sensors: sensorsReducer,
-    remoteHosts: remoteHostsReducer,
-    // novastar: novastarReducer,
-    log: logReducer,
-    flasher: flasherReducer,
-    telemetry: telemetryReducer,
-    // screens: screensReducer,
-    ...api.reducer,
-  },
-  middleware: getDefaultMiddleware =>
-    getDefaultMiddleware({
+  reducer: combineSlices(
+    currentSlice,
+    configSlice,
+    sessionSlice,
+    devicesSlice,
+    mibsSlice,
+    sensorsSlice,
+    remoteHostsSlice,
+    logSlice,
+    flasherSlice,
+    telemetrySlice,
+    api.reducer,
+  ),
+  middleware: gDM =>
+    gDM({
       serializableCheck: {
         // `convertFrom` is a function
         ignoredPaths: ['mibs.entities'],
@@ -57,6 +56,8 @@ export const store = configureStore({
       .prepend(listenerMiddleware.middleware)
       .concat(...api.middleware, authMiddleware),
 });
+
+setupListeners(store.dispatch);
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppThunk<ReturnType = void> = ThunkAction<
@@ -68,7 +69,7 @@ export type AppThunk<ReturnType = void> = ThunkAction<
 export type AppDispatch = typeof store.dispatch;
 export type AppThunkConfig = OriginalAppThunkConfig<RootState, AppDispatch>;
 
-export const useDispatch = (): AppDispatch => origUseDispatch<AppDispatch>();
+export const useDispatch: () => AppDispatch = origUseDispatch;
 export const useSelector: TypedUseSelectorHook<RootState> = origUseSelector;
 
 export const useDevices = (): DeviceState[] => useSelector(selectAllDevices);

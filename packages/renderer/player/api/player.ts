@@ -25,7 +25,7 @@ const playerApi = createApi({
   reducerPath: 'playerApi',
   tagTypes: ['player'],
   endpoints: build => ({
-    getPlayers: build.query<EntityState<Player>, void>({
+    getPlayers: build.query<EntityState<Player, number>, void>({
       query: () => 'player',
       transformResponse: (response: Player[]) =>
         playerAdapter.addMany(playerAdapter.getInitialState(), response),

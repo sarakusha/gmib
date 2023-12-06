@@ -103,4 +103,4 @@ export const {
   addDetected,
 } = sessionSlice.actions;
 
-export default sessionSlice.reducer;
+export default sessionSlice;

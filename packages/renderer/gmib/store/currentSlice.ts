@@ -146,4 +146,4 @@ export const {
   setInvalidState,
 } = currentSlice.actions;
 
-export default currentSlice.reducer;
+export default currentSlice;

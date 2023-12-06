@@ -29,7 +29,7 @@ export type DeviceState = {
 
 export type DeviceStateWithParent = Omit<DeviceState, 'parent'> & { parent?: DeviceState };
 
-export const devicesAdapter = createEntityAdapter<DeviceState>({
+export const devicesAdapter = createEntityAdapter<DeviceState, string>({
   selectId: device => device.id,
 });
 
@@ -221,4 +221,4 @@ export const {
   connectionClosed,
 } = devicesSlice.actions;
 
-export default devicesSlice.reducer;
+export default devicesSlice;

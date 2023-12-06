@@ -5,7 +5,7 @@ import type { MediaInfo } from '/@common/mediaInfo';
 
 import baseQuery from '../../common/authBaseQuery';
 
-const mediaAdapter = createEntityAdapter<MediaInfo>({
+const mediaAdapter = createEntityAdapter<MediaInfo, string>({
   selectId: ({ md5 }) => md5,
   sortComparer: (a, b) =>
     a.uploadTime && b.uploadTime
@@ -21,7 +21,7 @@ const mediaApi = createApi({
   reducerPath: 'mediaApi',
   tagTypes: ['media'],
   endpoints: build => ({
-    getMedia: build.query<EntityState<MediaInfo>, void>({
+    getMedia: build.query<EntityState<MediaInfo, string>, void>({
       query: () => 'media',
       transformResponse: (response: MediaInfo[]) =>
         mediaAdapter.addMany(mediaAdapter.getInitialState(), response),

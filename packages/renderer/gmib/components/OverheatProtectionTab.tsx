@@ -161,7 +161,7 @@ const OverheatProtectionTab: React.FC = () => {
           <Params>
             {Object.entries(health.screens).map(([id, screenHealth]) => {
               const [maximum, average, median] = screenHealth.aggregations;
-              const screen = screensData && selectScreen(screensData, id);
+              const screen = screensData && selectScreen(screensData, +id);
               return (
                 screen && (
                   <Screen key={id} legend={screen.name ?? id}>

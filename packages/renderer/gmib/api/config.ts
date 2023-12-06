@@ -12,7 +12,7 @@ import type { AppThunk, AppThunkConfig } from '../store';
 
 // const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:config`);
 
-const pageAdapter = createEntityAdapter<Page>({
+const pageAdapter = createEntityAdapter<Page, string>({
   selectId: ({ id }) => id,
 });
 
@@ -33,7 +33,7 @@ const configApi = createApi({
       }),
       transformErrorResponse: response => response.data,
     }),
-    getPages: build.query<EntityState<Page>, void>({
+    getPages: build.query<EntityState<Page, string>, void>({
       query: () => 'pages',
       transformResponse: (response: Page[]) =>
         pageAdapter.addMany(pageAdapter.getInitialState(), response),

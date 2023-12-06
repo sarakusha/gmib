@@ -10,7 +10,7 @@ type Remote = Pick<RemoteHost, 'address' | 'port'> & Omit<Partial<RemoteHost>, '
 
 export const getRemoteId = ({ address, port }: Remote): string => `${address}:${port}`;
 
-export const remoteHostsAdapter = createEntityAdapter<Remote>({ selectId: getRemoteId });
+export const remoteHostsAdapter = createEntityAdapter<Remote, string>({ selectId: getRemoteId });
 
 const remoteSlice = createSlice({
   name: 'remoteHosts',
@@ -23,4 +23,4 @@ const remoteSlice = createSlice({
 
 export const { addRemoteHost, removeRemoteHost } = remoteSlice.actions;
 
-export default remoteSlice.reducer;
+export default remoteSlice;

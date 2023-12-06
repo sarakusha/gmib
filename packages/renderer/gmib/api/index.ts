@@ -9,7 +9,7 @@ export const reducer = {
   [displayApi.reducerPath]: displayApi.reducer,
   [novastarApi.reducerPath]: novastarApi.reducer,
   [configApi.reducerPath]: configApi.reducer,
-};
+} as const;
 
 export const middleware = [
   screenApi.middleware,
@@ -17,4 +17,4 @@ export const middleware = [
   novastarApi.middleware,
   configApi.middleware,
   sse,
-];
+] as const;
