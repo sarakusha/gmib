@@ -106,20 +106,20 @@ type PropEntity = [name: string, state: ValueState];
 
 const getDeviceProp =
   (device: IDevice) =>
-    (idOrName: string | number): PropEntity => {
-      const error = device.getError(idOrName);
-      const name = device.getName(idOrName);
-      return [
-        name,
-        {
-          // eslint-disable-next-line no-nested-ternary
-          status: error ? 'failed' : device.isDirty(idOrName) ? 'pending' : 'succeeded',
-          value: device[name],
-          error: error?.message,
-          raw: device.getRawValue(idOrName),
-        },
-      ];
-    };
+  (idOrName: string | number): PropEntity => {
+    const error = device.getError(idOrName);
+    const name = device.getName(idOrName);
+    return [
+      name,
+      {
+        // eslint-disable-next-line no-nested-ternary
+        status: error ? 'failed' : device.isDirty(idOrName) ? 'pending' : 'succeeded',
+        value: device[name],
+        error: error?.message,
+        raw: device.getRawValue(idOrName),
+      },
+    ];
+  };
 
 const getProps = (device: IDevice, idsOrNames?: (number | string)[]): DeviceProps => {
   const proto = Reflect.getPrototypeOf(device) ?? {};
@@ -193,19 +193,29 @@ export const sendConfig = debounce((state: Record<string, unknown>): void => {
 const getChildren = (parent: IDevice): IDevice[] =>
   session.devices.get().filter(device => device.connection?.owner === parent && device !== parent);
 
-export const createDevice = (
+export function createDevice(parent: DeviceId, address: string, mib: string): void;
+export function createDevice(
   parent: DeviceId,
   address: string,
   type: number,
   version?: number,
-): void => {
-  const device = session.devices.create(address, type, version);
+): void;
+export function createDevice(
+  parent: DeviceId,
+  address: string,
+  typeOrMib: string | number,
+  version?: number,
+): void {
+  const device =
+    typeof typeOrMib === 'number'
+      ? session.devices.create(address, typeOrMib, version)
+      : session.devices.create(address, typeOrMib);
   const parentDevice = session.devices.findById(parent);
   if (parentDevice) {
     device.connection = parentDevice.connection;
   }
   setTimeout(() => ipcDispatch(setParent([device.id, parent])), 0);
-};
+}
 
 export const reloadDevice = async (deviceId: DeviceId): Promise<void> => {
   const device = findDeviceById(deviceId);
@@ -600,7 +610,7 @@ export const telemetry = memoize((id: DeviceId): NibusTelemetry => {
   }
   return {
     start(options, cb) {
-      const saver = isRemoteSession ? () => { } : startTelemetry(device.address.toString());
+      const saver = isRemoteSession ? () => {} : startTelemetry(device.address.toString());
       const columnHandler = (column: Modules): void => {
         cb?.(prev => [...prev, ...column]);
         column.forEach(({ x, y, info }) => {
