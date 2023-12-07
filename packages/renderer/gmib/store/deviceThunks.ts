@@ -175,7 +175,7 @@ startAppListening({
   },
 });
 
-if (!isRemoteSession) {
+// if (!isRemoteSession) {
   const TILUX_TYPE = 0x0043;
   const waitTilux = new Set<DeviceId>();
   startAppListening({
@@ -234,4 +234,4 @@ if (!isRemoteSession) {
       }
     },
   });
-}
+// }
