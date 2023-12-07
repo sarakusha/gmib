@@ -18,7 +18,7 @@ type Props = {
 
 const isValidParam = (param: string): boolean => {
   try {
-    JSON.parse(param);
+    if (param.trim().startsWith('{')) JSON.parse(param);
     return true;
   } catch {
     return false;
