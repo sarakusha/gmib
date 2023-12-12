@@ -1,15 +1,16 @@
-import { contextBridge } from 'electron';
+import { contextBridge, ipcRenderer } from 'electron';
 
 import debugFactory from 'debug';
 
 import log from '../common/initlog';
-import { setDispatch } from '../common/ipcDispatch';
+import ipcDispatch, { setDispatch } from '../common/ipcDispatch';
 import * as identify from '../common/identify';
 
 import type { AnswerMessage, CandidateMessage, RequestMessage, RtcMessage } from '/@common/rtc';
 import Deferred from '/@common/Deferred';
 import expandTypes from '/@common/expandTypes';
 import { host, port, sourceId } from '/@common/remote';
+import { setFocused } from '/@player/store/currentSlice';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:remote`);
 
@@ -109,3 +110,7 @@ ws.onopen = async () => {
   };
   connect();
 };
+
+ipcRenderer.on('focus', (_, focused: boolean) => {
+  ipcDispatch(setFocused(focused));
+});

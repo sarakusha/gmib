@@ -65,6 +65,7 @@ export const selectCurrentHealth = (state: RootState): Health | undefined =>
 export const selectAuthRequired = (state: RootState) => selectCurrent(state).authRequired;
 export const selectBroadcastDetected = (state: RootState) => selectCurrent(state).broadcastDetected;
 export const selectInvalidState = (state: RootState) => selectCurrent(state).invalidState;
+export const selectFocused = (state: RootState) => selectCurrent(state).focused;
 
 type PropsSelector = <P extends string>(
   state: RootState,
@@ -76,10 +77,10 @@ export const selectProps: PropsSelector = createSelector(
   [
     (state: RootState) => state.devices,
     (_: RootState, id: string) => id,
-    (_: RootState, id: string, ...names: string[]) => names,
+    (_: RootState, id: string, names: string) => names,
   ],
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (devices, id, names) => pick(devices.entities[id], names) as any,
+  (devices, id, names) => pick(devices.entities[id], names.split(',')) as any,
 );
 
 export const selectLinks = createSelector(selectAllDevices, devices =>

@@ -26,6 +26,7 @@ export interface CurrentState {
   broadcastDetected?: string;
   isActivateDialogOpen: boolean;
   invalidState: boolean;
+  focused: boolean;
   // playlist: number | undefined;
 }
 
@@ -37,6 +38,7 @@ const initialState: CurrentState = {
   isRemoteDialogOpen: false,
   isActivateDialogOpen: false,
   invalidState: false,
+  focused: true,
   // isLoggedIn: true, // isRemoteSession ? !!window.identify.getSecret() : true,
   // playlist: undefined,
 };
@@ -84,6 +86,9 @@ const currentSlice = createSlice({
     },
     setInvalidState(state, { payload: invalid }: PayloadAction<boolean>) {
       state.invalidState = invalid;
+    },
+    setFocused(state, { payload: focused }: PayloadAction<boolean>) {
+      state.focused = focused;
     },
   },
   extraReducers: builder => {
@@ -144,6 +149,7 @@ export const {
   setAuthRequired,
   setBroadcastDetected,
   setInvalidState,
+  setFocused,
 } = currentSlice.actions;
 
 export default currentSlice;

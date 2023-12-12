@@ -8,7 +8,7 @@ import type { LogLevel } from '@nibus/core';
 
 import * as identify from '../common/identify';
 import log, { setLogLevel } from '../common/initlog';
-import { setDispatch } from '../common/ipcDispatch';
+import ipcDispatch, { setDispatch } from '../common/ipcDispatch';
 
 import * as config from './config';
 // import * as db from './db';
@@ -20,6 +20,7 @@ import * as mediaSource from './mediaSource';
 import expandTypes from '/@common/expandTypes';
 import { hashCode } from '/@common/helpers';
 import type { GmibWindowParams } from '/@common/WindowParams';
+import { setFocused } from '/@renderer/store/currentSlice';
 
 /**
  * The "Main World" is the JavaScript context that your main renderer code runs in.
@@ -91,6 +92,10 @@ const gmibParams = new Promise<GmibWindowParams>(resolve => {
   ipcRenderer.once('gmib-params', (_, params: GmibWindowParams) => {
     resolve(params);
   });
+});
+
+ipcRenderer.on('focus', (_, focused: boolean) => {
+  ipcDispatch(setFocused(focused));
 });
 
 // contextBridge.exposeInMainWorld('license', () =>

@@ -144,7 +144,7 @@ export function createTestWindow(
     },
   });
 
-  if (import.meta.env.DEV) {
+  if (import.meta.env.DEV && preload) {
     window.webContents.once('did-frame-finish-load', () => {
       window.webContents.openDevTools();
     });

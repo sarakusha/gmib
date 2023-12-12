@@ -9,9 +9,8 @@
       "ESNext"
     ],
     "paths": {
-      "/@common/*": [
-        "../common/*"
-      ]
+      "/@common/*": ["../common/*"],
+      "/@player/store/*": ["../renderer/player/store/*"]
     }
   },
   "include": [

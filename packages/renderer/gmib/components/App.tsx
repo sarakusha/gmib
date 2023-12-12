@@ -34,6 +34,7 @@ import {
   selectAutobrightness,
   selectBroadcastDetected,
   selectCurrentTab,
+  selectFocused,
   selectIsClosed,
   selectIsOnline,
   selectIsRemoteDialogOpen,
@@ -104,7 +105,7 @@ const App: React.FC = () => {
       });
     }
   }, [broadcastDetected, closeSnackbar, dispatch, enqueueSnackbar]);
-
+  const focused = useSelector(selectFocused);
   return (
     <>
       <Backdrop
@@ -112,15 +113,17 @@ const App: React.FC = () => {
           zIndex: theme => theme.zIndex.drawer + 10,
           color: '#fff',
         }}
-        open={!online || loading}
+        open={!online || loading || !focused}
       >
         {sessionClosed ? (
           <HighlightOffIcon fontSize="large" />
         ) : (
-          <SettingsEthernetIcon
-            sx={{ animation: `${blink} normal 1.5s infinite ease-in-out` }}
-            fontSize="large"
-          />
+          loading && (
+            <SettingsEthernetIcon
+              sx={{ animation: `${blink} normal 1.5s infinite ease-in-out` }}
+              fontSize="large"
+            />
+          )
         )}
       </Backdrop>
       <RemoteHostsDialog

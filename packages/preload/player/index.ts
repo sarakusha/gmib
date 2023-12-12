@@ -7,13 +7,14 @@ import expandTypes from '/@common/expandTypes';
 import * as identify from '../common/identify';
 import log from '../common/initlog';
 // import expandTypes from '/@common/expandTypes';
-import { setDispatch } from '../common/ipcDispatch';
+import ipcDispatch, { setDispatch } from '../common/ipcDispatch';
 // import '@sentry/electron/preload';
 
 import { updateSrcObject } from './mediaStream';
 // import * as nodeCrypto from './nodeCrypto';
 
 import './videoOuts';
+import { setFocused } from '/@player/store/currentSlice';
 
 const search = new URLSearchParams(window.location.search);
 const sourceId = +(search.get('source_id') ?? 1);
@@ -34,3 +35,7 @@ contextBridge.exposeInMainWorld('socket', {
 contextBridge.exposeInMainWorld('onUpdatePlaylist', (callback: () => void) =>
   ipcRenderer.on('updatePlaylist', callback),
 );
+
+ipcRenderer.on('focus', (_, focused: boolean) => {
+  ipcDispatch(setFocused(focused));
+});

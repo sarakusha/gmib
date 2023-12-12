@@ -34,3 +34,5 @@ export const selectSortOrder = (state: RootState): SortOrder => selectCurrent(st
 export const selectDescending = (state: RootState): boolean => selectCurrent(state).descending;
 export const selectSearch = (state: RootState): string => selectCurrent(state).search;
 export const selectSettingsNode = (state: RootState): string => selectCurrent(state).settingsNode;
+
+export const selectFocused = (state: RootState) => selectCurrent(state).focused;

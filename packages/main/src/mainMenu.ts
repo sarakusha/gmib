@@ -7,6 +7,7 @@ import { app, BrowserWindow, dialog, Menu, shell } from 'electron';
 import type { UpdateInfo } from 'electron-updater';
 import uniqBy from 'lodash/uniqBy';
 import semverGt from 'semver/functions/gte';
+import debounce from 'lodash/debounce';
 
 import localConfig from './localConfig';
 import { linuxAutostart } from './linux';
@@ -86,6 +87,7 @@ const remoteMenu = (params?: WindowParams): AppMenuItem | undefined => {
   if (!gmibParams) return undefined;
   const self = paramsToRemote(gmibParams);
   const local = findGmib('localhost');
+  const focused = BrowserWindow.getFocusedWindow()?.id;
   const remotes = isGmib(params)
     ? uniqBy(
         [
@@ -100,7 +102,7 @@ const remoteMenu = (params?: WindowParams): AppMenuItem | undefined => {
     ({ address, port, name }): MenuItemConstructorOptions => ({
       label: name ? `${name} (${address})` : address,
       type: 'checkbox',
-      checked: findGmib(address)?.id === BrowserWindow.getFocusedWindow()?.id,
+      checked: focused ? findGmib(address)?.id === focused : false,
       click: () => {
         const gmib = findGmib(address);
         if (gmib) {
@@ -481,24 +483,29 @@ const template = async (params?: WindowParams): Promise<MenuItemConstructorOptio
 //   });
 // }
 
-const updateMenu = (): Promise<void> =>
-  new Promise(resolve => {
-    const win = BrowserWindow.getFocusedWindow();
-    const id = win?.id;
-    if (id && !store.has(id)) {
-      setTimeout(() => resolve(updateMenu()), 50);
-    } else {
-      const params = id !== undefined ? store.get(id) : undefined;
-      template(params).then(tmpl => {
-        const mainMenu = Menu.buildFromTemplate(tmpl);
-        if (['win32', 'linux'].includes(process.platform) && win) win.setMenu(mainMenu);
-        else Menu.setApplicationMenu(mainMenu);
-        resolve();
-      });
-    }
-  });
+let menuReady = Promise.resolve();
+const update = async () => {
+  const win = BrowserWindow.getFocusedWindow();
+  const id = win?.id;
+  const params = id ? store.get(id) : undefined;
+  const tmpl = await template(params);
+  const mainMenu = Menu.buildFromTemplate(tmpl);
+  if (['win32', 'linux'].includes(process.platform)) win?.setMenu(mainMenu);
+  else Menu.setApplicationMenu(mainMenu);
+};
 
-app.on('browser-window-focus', updateMenu);
+const updateMenu = debounce((): void => {
+  menuReady = menuReady.finally().then(update);
+}, 250);
+
+app.on('browser-window-focus', (_, win) => {
+  win.webContents.send('focus', true);
+  updateMenu();
+});
+
+app.on('browser-window-blur', (_, win) => {
+  win.webContents.send('focus', false);
+});
 
 localConfig.onDidChange('autostart', (autostart = false) => {
   app.setLoginItemSettings({
