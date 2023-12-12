@@ -6,10 +6,15 @@ import { autoUpdater } from 'electron-updater';
 
 import log from './initlog';
 import { needRestart } from './relaunch';
+import localConfig from './localConfig';
 
 // let updater: MenuItem | null = null;
-autoUpdater.autoDownload = false;
+autoUpdater.autoDownload = localConfig.get('autoUpdate');
 autoUpdater.logger = log;
+
+localConfig.onDidChange('autoUpdate', value => {
+  autoUpdater.autoDownload = !!value;
+});
 
 let interactive = true;
 
@@ -38,17 +43,22 @@ autoUpdater.on('update-not-available', () => {
     });
 });
 
+const quitAndRestart = () => {
+  needRestart(true);
+  setImmediate(() => autoUpdater.quitAndInstall());
+};
+
 autoUpdater.on('update-downloaded', () => {
-  interactive &&
-    dialog
-      .showMessageBox({
-        title: 'Установка обновления',
-        message: 'Обновления загружаются, приложение закроется для обновления...',
-      })
-      .then(() => {
-        needRestart(true);
-        setImmediate(() => autoUpdater.quitAndInstall());
-      });
+  if (interactive) {
+    if (localConfig.get('autoUpdate')) quitAndRestart();
+    else
+      dialog
+        .showMessageBox({
+          title: 'Установка обновления',
+          message: 'Обновления загружаются, приложение закроется для обновления...',
+        })
+        .then(quitAndRestart);
+  }
 });
 
 // export this to MenuItem click callback
@@ -78,7 +88,6 @@ export const checkForUpdatesNoInteractive = () =>
       release();
     };
     release = () => {
-      interactive = true;
       autoUpdater.off('error', onError);
       autoUpdater.off('update-available', available);
       autoUpdater.off('update-not-available', notAvailable);
@@ -87,10 +96,14 @@ export const checkForUpdatesNoInteractive = () =>
     autoUpdater.once('update-available', available);
     autoUpdater.once('update-not-available', notAvailable);
     autoUpdater.checkForUpdates();
+  }).finally(() => {
+    interactive = true;
   });
 
 export const updateAndRestart = () =>
   new Promise<void>((resolve, reject) => {
+    if (!interactive) return;
+    interactive = false;
     let release: () => void;
     const onError = (err: Error) => {
       reject(err);
@@ -98,8 +111,7 @@ export const updateAndRestart = () =>
     };
     const downloaded = () => {
       resolve();
-      needRestart(true);
-      setImmediate(() => autoUpdater.quitAndInstall());
+      quitAndRestart();
       release();
     };
     release = () => {
@@ -109,6 +121,8 @@ export const updateAndRestart = () =>
     autoUpdater.once('error', onError);
     autoUpdater.once('update-downloaded', downloaded);
     autoUpdater.downloadUpdate();
+  }).finally(() => {
+    interactive = true;
   });
 
 export default checkForUpdates;

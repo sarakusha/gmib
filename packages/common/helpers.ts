@@ -291,6 +291,7 @@ export type LocalConfig = {
   iv?: string;
   pritunlUserId?: string;
   knock?: string;
+  autoUpdate: boolean;
 };
 
 export type Modules = IModuleInfo<Minihost2Info | Minihost3Info>[];

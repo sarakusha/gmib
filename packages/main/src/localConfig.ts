@@ -55,6 +55,7 @@ const localConfigSchema: Schema<LocalConfig> = {
   iv: { type: 'string' },
   pritunlUserId: { type: 'string' },
   knock: { type: 'string' },
+  autoUpdate: { type: 'boolean', default: false },
 };
 
 const localConfig = new Store<LocalConfig>({
