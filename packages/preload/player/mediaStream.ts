@@ -245,7 +245,7 @@ ipcRenderer.on('socket', async (_, { id, ...msg }: WithWebSocketKey<RtcMessage>)
             const params = sender.getParameters();
             if (!params.encodings || params.encodings.length === 0) setTimeout(updateParams, 10);
             else {
-              params.encodings[0].maxBitrate = 128000;
+              // params.encodings[0].maxBitrate = 128000;
               // params.encodings[0].maxFramerate = 1;
               sender.setParameters(params);
             }
