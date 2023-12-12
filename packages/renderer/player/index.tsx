@@ -57,7 +57,7 @@ root.render(
         >
           <Html5DndProvider>
             <App />
-            <Box id="videoContainer" sx={{ display: 'none' }} />
+            {/* <Box id="videoContainer" sx={{ display: 'none' }} /> */}
           </Html5DndProvider>
         </SnackbarProvider>
       </Provider>
