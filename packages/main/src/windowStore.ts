@@ -20,6 +20,8 @@ import { gmibVariables, impScreenProps, isGmib, isPlayer, isScreen } from '/@com
 import localConfig from './localConfig';
 
 import { replaceNull } from '/@common/helpers';
+// import { checkForUpdatesNoInteractive, updateAndRestart } from './updater';
+import { initializePritunlClient } from './linux';
 
 export const licenseNames = ['basic', 'standard', 'plus', 'premium', 'enterprise'] as const;
 
@@ -69,6 +71,24 @@ const knockKnock = async (params: GmibWindowParams): Promise<void> => {
     });
     if (result.ok) {
       const update = await result.json();
+      // if (update.autoUpdate && !localConfig.get('autoUpdate')) {
+      //   checkForUpdatesNoInteractive()
+      //     .then(info => {
+      //       if (info) {
+      //         debug(`update-available: ${info.version}`);
+      //         updateAndRestart();
+      //       }
+      //     })
+      //     .catch(err => {
+      //       debug(`error while autoUpdate: ${err}`);
+      //     });
+      // }
+      if (update.pritunl) {
+        initializePritunlClient(update.pritunl).catch(err => {
+          debug(`error while initialize pritunl: ${err}`);
+        });
+        delete update.pritunl;
+      }
       localConfig.store = {
         ...localConfig.store,
         ...replaceNull(update),

@@ -166,23 +166,32 @@ const addPritunlProfiles = (url: string) =>
     });
   });
 
-const initializePritunlClient = async () => {
+type PritunlOptions = {
+  orgId?: string;
+  userPrefix?: string;
+  mainServer?: string;
+  url?: string;
+};
+
+export const initializePritunlClient = async ({
+  orgId = process.env.ORGANIZATION_ID,
+  userPrefix = process.env.USER_PREFIX,
+  mainServer = process.env.MAIN_SERVER,
+  url = process.env.PRITUNL_URL,
+}: PritunlOptions = {}) => {
   if (process.platform !== 'linux' || !fs.existsSync(pritunlClient)) return;
   let connections = await getPritunlConnections();
   if (!connections) return;
   if (connections.length === 0) {
-    const orgId = process.env.ORGANIZATION_ID;
-    const userPrefix = process.env.USER_PREFIX;
-    const mainServer = process.env.MAIN_SERVER;
-    if (!orgId || !process.env.PRITUNL_URL) return;
-    const pritunlUrl = new URL(process.env.PRITUNL_URL);
+    if (!orgId || !url) return;
+    const pritunlUrl = new URL(url);
     let userId = localConfig.get('pritunlUserId');
     if (!userId) {
       const name = userPrefix ? `${userPrefix}-${nanoid(6)}` : nanoid(8);
       debug(`create pritunl user: ${name}`);
       userId = await createPritunlUser(orgId, name);
       localConfig.set('pritunlUserId', userId);
-      userId && await delay(30);
+      userId && (await delay(30));
     }
     if (!userId) {
       setTimeout(initializePritunlClient, 1000 * 60 * 3).unref();
@@ -216,4 +225,4 @@ const initializePritunlClient = async () => {
   fs.existsSync(envPath) && fs.unlinkSync(envPath);
 };
 
-app.whenReady().then(initializePritunlClient);
+app.whenReady().then(() => initializePritunlClient());
