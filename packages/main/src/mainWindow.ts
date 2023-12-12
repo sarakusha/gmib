@@ -108,11 +108,6 @@ export const createMainWindow = (): BrowserWindow => {
 
 export const getMainWindow = (): BrowserWindow | null => mainWindow;
 
-const hideCursorCSS = `html, body {
-  cursor: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=), none;
-  user-select: none;
-}`;
-
 export function createTestWindow(
   width: number,
   height: number,
@@ -138,6 +133,10 @@ export function createTestWindow(
     hasShadow: false,
     transparent: true,
     roundedCorners: false,
+    resizable: false,
+    movable: false,
+    minimizable: false,
+    maximizable: false,
     webPreferences: {
       // nativeWindowOpen: true,
       webviewTag: false, // The webview tag is not recommended. Consider alternatives like iframe or Electron's BrowserView. https://www.electronjs.org/docs/latest/api/webview-tag#warning
@@ -145,14 +144,11 @@ export function createTestWindow(
     },
   });
 
-  if (import.meta.env.DEV && preload) {
+  if (import.meta.env.DEV) {
     window.webContents.once('did-frame-finish-load', () => {
       window.webContents.openDevTools();
     });
   }
-  window.webContents.once('did-frame-finish-load', () => {
-    window.webContents.insertCSS(hideCursorCSS);
-  });
 
   window.once('ready-to-show', () => {
     window.show();

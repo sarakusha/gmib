@@ -258,6 +258,11 @@ const loadMedia = async (file: File, force = false): Promise<MediaInfo> => {
   return mediaInfo;
 };
 
+const hideCursorCSS = `html, body {
+  cursor: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=), none;
+  user-select: none;
+}`;
+
 const updateTest = async (scr: Screen) => {
   const primary = screen.getPrimaryDisplay();
   const displays = screen.getAllDisplays();
@@ -323,7 +328,9 @@ const updateTest = async (scr: Screen) => {
     machineId.then(mid => {
       contents.userAgent = `${contents.userAgent} ${page.userAgent} machineid/${mid}`;
     });
-  needReload && url && testWindow.loadURL(url);
+  needReload &&
+    url &&
+    testWindow.loadURL(url).then(() => testWindow.webContents.insertCSS(hideCursorCSS));
   testWindow.show();
   // debug(`test: ${url}`);
 };
