@@ -128,31 +128,33 @@ export const registerGmib = async (
   if (typeof announce === 'object') {
     const { message, ...data } = announce;
     Object.assign(params, data);
-    // if (params.plan && ['premium', 'enterprise'].includes(params.plan)) launchPlayers();
-    if (message) {
-      knockKnock(params);
-      const announceWindow = () => {
-        const { update, ...props } = params;
-        browserWindow.webContents.send('gmib-params', props);
-        import.meta.env.VITE_ANNOUNCE_HOST &&
-          import(import.meta.env.VITE_ANNOUNCE_HOST).then(
-            ({ default: getHost }) => {
-              const hostWindow = getHost(browserWindow);
-              const dateAnnounce = getHost(data)(import.meta.env.VITE_ANNOUNCE_DATE);
-              if (!dateAnnounce || new Date().toISOString() <= dateAnnounce) {
-                hostWindow(import.meta.env.VITE_ANNOUNCE_WINDOW).bind(
-                  hostWindow(import.meta.env.VITE_ANNOUNCE_BIND),
-                )(message);
-              }
-            },
-            err => {
-              debug(`error while import: ${err}`);
-            },
-          );
-      };
-      browserWindow.webContents.on('did-finish-load', announceWindow);
-      if (!browserWindow.webContents.isLoading()) announceWindow();
-    }
+    const { update, ...props } = params;
+    browserWindow.webContents.send('gmib-params', props);
+
+    // if (message) {
+    //   knockKnock(params);
+    //   const announceWindow = () => {
+    //     const { update, ...props } = params;
+    //     browserWindow.webContents.send('gmib-params', props);
+    //     import.meta.env.VITE_ANNOUNCE_HOST &&
+    //       import(import.meta.env.VITE_ANNOUNCE_HOST).then(
+    //         ({ default: getHost }) => {
+    //           const hostWindow = getHost(browserWindow);
+    //           const dateAnnounce = getHost(data)(import.meta.env.VITE_ANNOUNCE_DATE);
+    //           if (!dateAnnounce || new Date().toISOString() <= dateAnnounce) {
+    //             hostWindow(import.meta.env.VITE_ANNOUNCE_WINDOW).bind(
+    //               hostWindow(import.meta.env.VITE_ANNOUNCE_BIND),
+    //             )(message);
+    //           }
+    //         },
+    //         err => {
+    //           debug(`error while import: ${err}`);
+    //         },
+    //       );
+    //   };
+    //   browserWindow.webContents.on('did-finish-load', announceWindow);
+    //   if (!browserWindow.webContents.isLoading()) announceWindow();
+    // }
   }
   store.set(id, params);
   return params;

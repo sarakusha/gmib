@@ -13,7 +13,8 @@ import ipcDispatch, { setDispatch } from '../common/ipcDispatch';
 import * as config from './config';
 // import * as db from './db';
 import * as dialogs from './dialogs';
-import * as nibus from './nibus';
+// import * as nibus from './nibus';
+import * as nibus from './fakeNibus';
 // import * as output from './output';
 import * as mediaSource from './mediaSource';
 
@@ -102,9 +103,9 @@ ipcRenderer.on('focus', (_, focused: boolean) => {
 //   gmibParams.then(({ plan, renew, key }) => ({ plan, renew, key })),
 // );
 
-contextBridge.exposeInMainWorld(
-  'initializeNovastar',
-  (): Promise<boolean> => gmibParams.then(({ useProxy }) => Boolean(useProxy)),
-);
+// contextBridge.exposeInMainWorld(
+//   'initializeNovastar',
+//   (): Promise<boolean> => gmibParams.then(({ useProxy }) => Boolean(useProxy)),
+// );
 
 contextBridge.exposeInMainWorld('mediaSource', expandTypes(mediaSource));

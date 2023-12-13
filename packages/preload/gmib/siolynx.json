@@ -1,0 +1,19 @@
+{
+  "version": 459264,
+  "uptime": 4,
+  "postResult": 1792,
+  "rs485Collisions": 0,
+  "rs485BytesReceived": 0,
+  "rs485TxDatagrams": 0,
+  "rs485TxFailed": 0,
+  "nibusTakeoverMarkers": 0,
+  "nibusFreeMarkers": 0,
+  "nibusFreeTimeouts": 0,
+  "rs485FramingErrors": 0,
+  "rs485FalseStartbits": 0,
+  "rs232FramingErrors": 0,
+  "rs232Errors": 0,
+  "rs232RxDatagrams": 2,
+  "fifoOverruns": 0,
+  "logSize": 0
+}

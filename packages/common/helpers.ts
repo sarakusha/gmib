@@ -375,4 +375,8 @@ export const replaceNull = <T extends object>(props: T) =>
     Object.entries(props).map(([name, value]) => [name, value === null ? undefined : value]),
   ) as ReplaceNull<T>;
 
+export function assertNever(x: never): never {
+  throw new Error(`Unexpected object: ${x}`);
+}
+
 export default propertyOf;

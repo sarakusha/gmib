@@ -166,6 +166,30 @@ const remoteMenu = (params?: WindowParams): AppMenuItem | undefined => {
   };
 };
 
+const demoMenu = (params?: WindowParams) => {
+  const gmibParams = getGmibParams(params);
+  const win = gmibParams && BrowserWindow.fromId(gmibParams.id);
+  const createFakeDevice = (mib: string): void => {
+    win?.webContents.send('createFakeDevice', mib);
+  };
+  return {
+    label: 'Демо',
+    submenu: [
+      {
+        label: 'Подключить устройство',
+        submenu: [
+          { label: 'Мини-хост 3', click: () => createFakeDevice('minihost3') },
+          { label: 'siolynx', click: () => createFakeDevice('siolynx') },
+          { label: 'Хоккей 1970', click: () => createFakeDevice('m1970') },
+          { label: 'Универсальный хоккейный пульт', click: () => createFakeDevice('uconsole') },
+          { label: 'Датчик освещения', click: () => createFakeDevice('ti_lux_2_3') },
+          { label: 'MCTRL-300' },
+        ],
+      },
+    ],
+  } as AppMenuItem;
+};
+
 const helpMenu = async (params?: WindowParams): Promise<AppMenuItem> => {
   // console.log(`MENU: ${JSON.stringify(params)}`);
 
@@ -176,99 +200,9 @@ const helpMenu = async (params?: WindowParams): Promise<AppMenuItem> => {
     label: 'Помощь',
     role: 'help',
     submenu: [
-      ...(isModernGmib
-        ? [
-            {
-              label: 'Лицензия',
-              submenu: [
-                ...(gmibParams.plan ? [{ label: `Тип: ${gmibParams.plan}`, enabled: false }] : []),
-                ...(gmibParams.key
-                  ? [
-                      {
-                        label: `Ключ: ${gmibParams.key
-                          .split('-')
-                          .map(str => str.replace(/.$/, '?'))
-                          .join('-')}`,
-                        enabled: false,
-                      },
-                    ]
-                  : []),
-                ...(gmibParams.renew
-                  ? [
-                      {
-                        label: `Действительна по: ${new Date(
-                          gmibParams.renew,
-                        ).toLocaleDateString()}`,
-                        enabled: false,
-                      },
-                    ]
-                  : []),
-                {
-                  label: 'Активировать лицензию',
-                  click: () =>
-                    BrowserWindow.getFocusedWindow()?.webContents.send('activateLicense'),
-                },
-              ],
-            },
-          ]
-        : []),
       {
         label: 'Все версии',
         click: () => shell.openExternal('https://app.nata-info.ru/gmib/releases'),
-      },
-      {
-        label: 'Проверить обновления',
-        // enabled: import.meta.env.PROD,
-        click: isModernGmib
-          ? async () => {
-              const updateAndRestart = async () => {
-                const resp = await authRequest({
-                  api: '/update',
-                  method: 'POST',
-                  host: gmibParams.host,
-                  port: gmibParams.nibusPort + 1,
-                });
-                if (!resp) return;
-                if (resp.ok) {
-                  dialog.showMessageBox({
-                    title: 'Обновление установлено',
-                    message: 'Программа перезапущена',
-                  });
-                } else {
-                  dialog.showErrorBox('Что-то пошло не так', await resp.text());
-                }
-              };
-              const res = await authRequest({
-                api: '/checkForUpdates',
-                method: 'POST',
-                host: gmibParams.host,
-                port: gmibParams.nibusPort + 1,
-              });
-              if (!res) return;
-              if (res.ok) {
-                const info = (await res.json()) as undefined | UpdateInfo;
-                if (info) {
-                  dialog
-                    .showMessageBox({
-                      type: 'info',
-                      title: 'Найдено обновление',
-                      message: `Найдено обновление ${info.version} для ${gmibParams.host}, хотите установить?`,
-                      buttons: ['Установить', 'Не сейчас'],
-                    })
-                    .then(buttonIndex => {
-                      if (buttonIndex.response === 0) updateAndRestart();
-                    });
-                } else {
-                  dialog.showMessageBox({
-                    title: 'Обновления не найдены',
-                    message: 'Установлена последняя версия',
-                  });
-                }
-              } else {
-                dialog.showErrorBox('Что-то пошло не так', await res.text());
-              }
-            }
-          : checkForUpdates,
       },
       ...(isModernGmib
         ? [
@@ -328,9 +262,9 @@ const template = async (params?: WindowParams): Promise<MenuItemConstructorOptio
         ]
       : []),
     ...(remote ? [remote] : []),
-    ...((isGmib(params) &&
+    ...(isGmib(params) /* &&
       params.plan &&
-      ['plus', 'premium', 'enterprise'].includes(params.plan)) ||
+      ['plus', 'premium', 'enterprise'].includes(params.plan)) */ ||
     isPlayer(params)
       ? // params.host === 'localhost'
         [{ label: 'Плееры', submenu: await playerSubmenu(isGmib(params) ? params : params.parent) }]
@@ -444,6 +378,7 @@ const template = async (params?: WindowParams): Promise<MenuItemConstructorOptio
     // { role: 'viewMenu' },
     // { role: 'editMenu' },
     // { role: 'windowMenu' },
+    demoMenu(params),
     await helpMenu(params),
   ];
 };
@@ -498,13 +433,18 @@ const updateMenu = debounce((): void => {
   menuReady = menuReady.finally().then(update);
 }, 250);
 
+const blurWindows: BrowserWindow[] = [];
+
 app.on('browser-window-focus', (_, win) => {
   win.webContents.send('focus', true);
+  const wins = blurWindows.splice(0, blurWindows.length);
+  wins.forEach(item => win !== item && item.webContents.send('focus', false));
   updateMenu();
 });
 
 app.on('browser-window-blur', (_, win) => {
-  win.webContents.send('focus', false);
+  // win.webContents.send('focus', false);
+  blurWindows.push(win);
 });
 
 localConfig.onDidChange('autostart', (autostart = false) => {

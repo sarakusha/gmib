@@ -117,6 +117,7 @@ const SaveDialog: React.FC<Props> = ({ deviceId, open, close }) => {
       const data = extractValues(pick(props, properties));
       data.$mib = mib;
       window.dialogs.saveJSON({ data, defaultPath: mib });
+      // deviceId  && window.nibus.saveRawData(deviceId);
       close();
     },
     [close, mib, names, state, props],

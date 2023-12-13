@@ -38,7 +38,6 @@ import {
   renderThumbnailFromImage,
 } from './ffmpeg';
 import getAllDisplays from './getAllDisplays';
-import getAnnounce from './getAnnounce';
 import { getSensors } from './history';
 import localConfig from './localConfig';
 import machineId from './machineId';
@@ -104,6 +103,7 @@ import {
   updatePlayer,
   updateScreen,
 } from './screen';
+import novastarApi from './novastarApi';
 
 import type { Screen } from '/@common/video';
 import { DefaultDisplays } from '/@common/video';
@@ -120,7 +120,6 @@ import {
   isEqualOptions,
   registerScreen,
 } from './windowStore';
-import './novastarApi';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:api`);
 
@@ -148,7 +147,7 @@ fs.mkdir(mediaRoot, { recursive: true }, err => {
   }
 });
 
-const noop = (): void => { };
+const noop = (): void => {};
 
 const getHash = (filepath: string): Promise<string> =>
   new Promise<string>((resolve, reject) => {
@@ -355,14 +354,8 @@ if (!localConfig.get('unsafeMode')) {
   );
 }
 
-getAnnounce().then(announce => {
-  if (announce && typeof announce === 'object' && 'useProxy' in announce) {
-    api.use(proxyMiddleware);
-    import(import.meta.env.VITE_ANNOUNCE_PROXY).then(({ default: API }) => {
-      api.use(import.meta.env.VITE_ANNOUNCE_PATH, API);
-    });
-  }
-});
+api.use(proxyMiddleware);
+api.use('/novastar', novastarApi);
 
 api.get('/media', (req, res, next) => {
   // const { skip, take } = req.query;

@@ -94,6 +94,7 @@ tscc
 tssrp
 tuplify
 typecheck
+uconsole
 ultrafast
 unplugin
 upsert

@@ -3,11 +3,10 @@ import os from 'os';
 import path from 'path';
 
 import sortBy from 'lodash/sortBy';
-import maxBy from 'lodash/maxBy';
 
 import localConfig from './localConfig';
 import store, { getZIndex } from './windowStore';
-import type { WindowParams } from '/@common/WindowParams';
+import { isGmib, isPlayer, type WindowParams } from '/@common/WindowParams';
 
 let disableZIndex = false;
 
@@ -34,14 +33,16 @@ const serial = (items: WindowParams[], show = false) => {
   setTimeout(() => serial(tail), 100);
 };
 
+const getAllWindowParams = () => sortBy([...store.values()].filter(param => isPlayer(param) || isGmib(param)), 'zIndex');
+
 const showAll = (show = false) => {
-  const params = sortBy([...store.values()], 'zIndex');
+  const params = getAllWindowParams();
   disableZIndex = true;
   serial(params, show);
 };
 
 const showLast = () => {
-  const last = maxBy([...store.values()], 'zIndex');
+  const last = getAllWindowParams().at(-1);
   last && BrowserWindow.fromId(last.id)?.show();
 };
 

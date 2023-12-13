@@ -82,6 +82,7 @@ import ipcDispatch from '../common/ipcDispatch';
 import { validateConfig } from '/@common/schema';
 import { enqueueSnackbar, setFlashing, setProgress } from '/@renderer/store/flasherSlice';
 import type { GmibWindowParams } from '/@common/WindowParams';
+import { saveJSON } from "./dialogs";
 
 export type { Address };
 
@@ -94,12 +95,6 @@ const session = getNibusSession(port, host);
 
 session.on('log', line => {
   ipcDispatch(addLog(line));
-});
-
-const addForeign = new Promise<boolean>(resolve => {
-  ipcRenderer.once('gmib-params', (_, params: GmibWindowParams) => {
-    resolve(Boolean(params.useProxy));
-  });
 });
 
 type PropEntity = [name: string, state: ValueState];
@@ -466,7 +461,7 @@ function openSession() {
   session.once('host', hostHandler);
   session.on('informationReport', informationListener);
   if (!isRemoteSession) {
-    addForeign.then(val => val && session.on('foreign', addForeignDeviceHandler));
+    session.on('foreign', addForeignDeviceHandler);
   }
   session.on('health', healthHandler);
   session.devices.on('new', newDeviceHandler);
@@ -733,3 +728,15 @@ export const flash = (
       }
     });
   });
+
+export const saveRawData = (id: DeviceId): void => {
+  const device = findDeviceById(id);
+  if (!device) return;
+  const properties = Reflect.getMetadata('mibProperties', device) as string[];
+  const mib = Reflect.getMetadata('mib', device) as string;
+  const data = properties.reduce(
+    (res, name) => ({ ...res, [name]: device.getRawValue(name) }),
+    {},
+  );
+  saveJSON({ data, defaultPath: mib });
+};

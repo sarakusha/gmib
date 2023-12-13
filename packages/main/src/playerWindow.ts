@@ -68,7 +68,7 @@ export const openPlayer = async (
   } else {
     await Promise.all([dbReady, main]);
     const [gmib] = getAllGmibParams();
-    if (gmib?.plan && ['plus', 'premium', 'enterprise'].includes(gmib.plan))
+    // if (gmib?.plan && ['plus', 'premium', 'enterprise'].includes(gmib.plan))
       player = await getPlayer(id);
   }
   if (!browserWindow) {

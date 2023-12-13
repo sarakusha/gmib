@@ -24,15 +24,15 @@ import {
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:nova`);
 
-let novastarEnabled = false;
+const novastarEnabled = true;
 
 export const hasNovastar = () => novastarEnabled;
 
-window.initializeNovastar().then(value => {
-  if (value !== novastarEnabled) {
-    novastarEnabled = value;
-  }
-});
+// window.initializeNovastar().then(value => {
+//   if (value !== novastarEnabled) {
+//     novastarEnabled = value;
+//   }
+// });
 
 // window.config.get('announce').then(announce => {
 //   console.log('ANNOUNCE', announce);
