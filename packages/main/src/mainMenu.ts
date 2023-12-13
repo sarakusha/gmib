@@ -498,13 +498,18 @@ const updateMenu = debounce((): void => {
   menuReady = menuReady.finally().then(update);
 }, 250);
 
+const blurWindows: BrowserWindow[] = [];
+
 app.on('browser-window-focus', (_, win) => {
   win.webContents.send('focus', true);
+  const wins = blurWindows.splice(0, blurWindows.length);
+  wins.forEach(item => win !== item && item.webContents.send('focus', false));
   updateMenu();
 });
 
 app.on('browser-window-blur', (_, win) => {
-  win.webContents.send('focus', false);
+  // win.webContents.send('focus', false);
+  blurWindows.push(win);
 });
 
 localConfig.onDidChange('autostart', (autostart = false) => {
