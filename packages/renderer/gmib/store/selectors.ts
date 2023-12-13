@@ -97,9 +97,10 @@ export const selectAllDevicesWithParent = createSelector(
 );
 export const filterDevicesByAddress = <D extends Pick<DeviceState, 'address' | 'mib' | 'props'>>(
   devices: D[],
-  address: Address,
-): D[] =>
-  devices.filter(device => {
+  addressParam: AddressParam,
+): D[] => {
+  const address = new Address(addressParam);
+  return devices.filter(device => {
     if (address.equals(device.address)) return true;
     if (address.type === AddressType.net) {
       if (device.mib.startsWith('minihost')) {
@@ -124,10 +125,11 @@ export const filterDevicesByAddress = <D extends Pick<DeviceState, 'address' | '
       address.equals(device.props.serno.value)
     );
   });
+};
 
 export const selectDevicesByAddress: (state: RootState, address: AddressParam) => DeviceState[] =
   createSelector(
-    [selectAllDevices, (state, address: AddressParam) => new Address(address)],
+    [selectAllDevices, (state, address: AddressParam) => address],
     filterDevicesByAddress,
   );
 

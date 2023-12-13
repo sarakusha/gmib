@@ -64,7 +64,7 @@ const discoverScreenDevices = (): AppThunk => async (dispatch, getState) => {
     const screens = screenData && selectScreens(screenData);
     const { data: addresses = [] } = selectAddresses(state);
     const deviceAddressExists = (address: string): boolean =>
-      selectDevicesByAddress(getState(), address).length > 0;
+      selectDevicesByAddress(state, address).length > 0;
     const needUpdate = new Set<number>();
     await asyncSerial(addresses, async address => {
       if (reAddress.test(address) && !deviceAddressExists(address)) {
