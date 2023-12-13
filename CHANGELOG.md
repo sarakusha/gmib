@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.8.2](https://github.com/sarakusha/gmib/compare/v4.8.1...v4.8.2) (2023-12-13)
+
+
+### Features
+
+* автопоиск датчиков на удаленных системах ([7fbd87c](https://github.com/sarakusha/gmib/commit/7fbd87c3b5cb09ff3620cee79cb38123a2089350))
+* затемнение окон без фокуса ([2f2cef6](https://github.com/sarakusha/gmib/commit/2f2cef675c58df26e4be50d972b55eb61d28fe58))
+* изменена логика закрытия/скрытия окон ([40cc97c](https://github.com/sarakusha/gmib/commit/40cc97c62dbed092537f6893874cd77dda735778))
+* не затемняет последнее активное окно ([f57bda7](https://github.com/sarakusha/gmib/commit/f57bda7b9ad10eaba57cc4248adf55b41fc55006))
+* убрано ограничение битрейта WebRTC ([0f56aed](https://github.com/sarakusha/gmib/commit/0f56aed3f3ea7d38aecb8e0d1af1be9dffdfc862))
+* удаленная настройка pritunl конфига ([1d8a35a](https://github.com/sarakusha/gmib/commit/1d8a35afbc4a6708b8c368c3c5e294695b1831d7))
+* удаленное включение автообновления ([0923072](https://github.com/sarakusha/gmib/commit/0923072d7aa89e820f272baaf43dcd1ada6ecd09))
+
+
+### Bug Fixes
+
+* валидация URL ([dabca6b](https://github.com/sarakusha/gmib/commit/dabca6b8259a00240ef336eb7226d69cd163ac77))
+* вывод ошибки в ячейке ([227adc9](https://github.com/sarakusha/gmib/commit/227adc997b0b17679f53c97301a6d35b47ada6b2))
+* инвариант в селекторе ([5fee3e1](https://github.com/sarakusha/gmib/commit/5fee3e10a988e023ac2194688ee7bb1cab46d8ae))
+* исправлена логика скрыть/показать все ([9bc56a2](https://github.com/sarakusha/gmib/commit/9bc56a20ced5fe1bb76b9092bc041267d6af7cb7))
+* исправлена отмена телеметрии ([9dc0f8c](https://github.com/sarakusha/gmib/commit/9dc0f8c47ab5362a41e5fab2a4f1cd6abf20ed92))
+* показать все открывало закрытый тест ([5f6815b](https://github.com/sarakusha/gmib/commit/5f6815b8220344ace14cc2e8f2cbf2aff7e2a593))
+* скрытие курсора после смены теста ([e47b42c](https://github.com/sarakusha/gmib/commit/e47b42c422740b93bf8a838f94e1adc62446c352))
+
 ## [4.8.1](https://github.com/sarakusha/gmib/compare/v4.8.0...v4.8.1) (2023-12-06)
 
 ## [4.8.0](https://github.com/sarakusha/gmib/compare/v4.7.4...v4.8.0) (2023-12-06)
