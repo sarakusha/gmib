@@ -7,46 +7,83 @@ import sortBy from 'lodash/sortBy';
 import localConfig from './localConfig';
 import store, { getZIndex } from './windowStore';
 import { isGmib, isPlayer, type WindowParams } from '/@common/WindowParams';
+import { getMainWindow } from './mainWindow';
 
 let disableZIndex = false;
 
 app.on('browser-window-focus', (_, window) => {
   if (!disableZIndex) {
     const params = store.get(window.id);
-    if (params) params.zIndex = getZIndex();
+    if (params && (isGmib(params) || isPlayer(params))) params.zIndex = getZIndex();
   }
 });
 
-const serial = (items: WindowParams[], show = false) => {
-  const [first, ...tail] = items;
-  if (!first) {
-    disableZIndex = false;
-    return;
-  }
-  const win = BrowserWindow.fromId(first.id);
-  if (!win) return;
-  if (show) win.show();
-  else win.moveTop();
-  if (tail.length === 0) {
-    win.focus();
-  }
-  setTimeout(() => serial(tail), 100);
-};
+// const serial = (items: WindowParams[], show = false) => {
+//   const [first, ...tail] = items;
+//   if (!first) {
+//     disableZIndex = false;
+//     return;
+//   }
+//   const win = BrowserWindow.fromId(first.id);
+//   if (!win) return;
+//   if (show) win.show();
+//   else win.moveTop();
+//   if (tail.length === 0) {
+//     win.focus();
+//   }
+//   setTimeout(() => serial(tail), 100);
+// };
+//
 
-const getAllWindowParams = () => sortBy([...store.values()].filter(param => isPlayer(param) || isGmib(param)), 'zIndex');
+// let topWindow = 1;
 
-const showAll = (show = false) => {
-  const params = getAllWindowParams();
-  disableZIndex = true;
-  serial(params, show);
-};
+// app.on('browser-window-focus', (_, win) => {
+//   topWindow = win.id;
+//   console.log('TOP', topWindow);
+// });
+
+const getAllWindowParams = () =>
+  sortBy(
+    [...store.values()].filter(param => isPlayer(param) || isGmib(param)),
+    'zIndex',
+  );
 
 const showLast = () => {
-  const last = getAllWindowParams().at(-1);
-  last && BrowserWindow.fromId(last.id)?.show();
+  const top = getAllWindowParams().at(-1);
+  top && BrowserWindow.fromId(top.id)?.show();
 };
 
-const hideAll = () => BrowserWindow.getAllWindows().forEach(win => win.hide());
+const showAll = () => {
+  disableZIndex = true;
+  const params = getAllWindowParams();
+  const [top] = params.splice(-1, 1);
+  params.forEach(({ id }) => {
+    const win = BrowserWindow.fromId(id);
+    console.log({ id, win: !!win, min: win?.isMinimized() });
+    if (win) {
+      if (win.isMinimized()) win.show();
+      else win.showInactive();
+      setTimeout(() => win.webContents.send('focus', false), 100);
+    }
+  });
+  setTimeout(() => {
+    disableZIndex = false;
+    const win = top && BrowserWindow.fromId(top.id);
+    if (win) {
+      if (win.isMinimized()) win.restore();
+      else win.show();
+      win.focus();
+    }
+  }, 100);
+};
+
+const hideAll = () => {
+  // const top = BrowserWindow.getFocusedWindow();
+  // console.log({ topWindow, top: top?.id });
+  getAllWindowParams().forEach(({ id }) => BrowserWindow.fromId(id)?.hide());
+  // BrowserWindow.fromId(topWindow)?.hide();
+  // setTimeout(() => { topWindow = top?.id ?? 1;}, 100);
+};
 
 const tray: { appIcon: Tray | null } = { appIcon: null };
 
@@ -56,7 +93,7 @@ export const updateTray = (): void => {
       label: 'Показать все',
       click: () => {
         // log.info(`Windows: ${[...windows].map(w => w.title).join(', ')}`);
-        showAll(true);
+        showAll();
       },
     },
     {
@@ -77,12 +114,12 @@ export const updateTray = (): void => {
     ...(localConfig.get('autostart')
       ? []
       : [
-        { type: 'separator' } as MenuItem,
-        {
-          role: 'quit',
-          label: 'Выход',
-        } as MenuItem,
-      ]),
+          { type: 'separator' } as MenuItem,
+          {
+            role: 'quit',
+            label: 'Выход',
+          } as MenuItem,
+        ]),
   ]);
   tray && tray.appIcon?.setContextMenu(contextMenu);
 };
@@ -96,7 +133,7 @@ app.whenReady().then(() => {
     icon = path.join(assets, '32x32.png');
   tray.appIcon = new Tray(icon);
   tray.appIcon.on('click', showLast);
-  tray.appIcon.on('double-click', () => showAll(true));
+  tray.appIcon.on('double-click', () => showAll());
   tray.appIcon.setToolTip(import.meta.env.VITE_APP_NAME);
   updateTray();
 });
