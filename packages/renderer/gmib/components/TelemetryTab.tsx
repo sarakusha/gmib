@@ -93,7 +93,7 @@ const TelemetryTab: React.FC<MinihostTabProps> = ({ id, selected = false }) => {
         loading={loading}
         isBusy={isBusy > 0}
         start={start}
-        cancel={telemetry.cancel}
+        cancel={() => telemetry.cancel()}
       />
     ),
     [mib, selectors, loading, isBusy, start, telemetry],
