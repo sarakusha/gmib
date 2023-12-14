@@ -1,6 +1,14 @@
 import type { Address, DeviceId, IDevice, INibusSession, Kind, VersionInfo } from '@nibus/core';
 import { Devices, findMibByType, getMibTypes as getMibTypesOrig } from '@nibus/core';
-import type { FinderOptions, NibusTelemetry, ValueState, ValueType } from '/@common/helpers';
+import type {
+  FinderOptions,
+  IModuleInfo,
+  LoaderOptions,
+  Minihost3Info,
+  NibusTelemetry,
+  ValueState,
+  ValueType,
+} from '/@common/helpers';
 import sortBy from 'lodash/sortBy';
 import { ipcRenderer } from 'electron';
 import debugFactory from 'debug';
@@ -36,10 +44,19 @@ import {
 import ipcDispatch from '../common/ipcDispatch';
 import { updateConfig } from '/@renderer/store/configSlice';
 import { DEFAULT_OVERHEAD_PROTECTION } from '/@common/config';
-import { assertNever } from '/@common/helpers';
+import {
+  assertNever,
+  calcMaxValue,
+  delay,
+  isPositiveNumber,
+  Minihost3Selector,
+  XMAX,
+  YMAX,
+} from '/@common/helpers';
 
 import minihost3 from './minihost3.json';
 import siolynx from './siolynx.json';
+import { validateConfig } from '/@common/schema';
 
 type DEMO = 'minihost3' | 'siolynx';
 
@@ -111,7 +128,6 @@ export const setDeviceValue = (
   ).filter(name => proto);
 
   return async (name, value) => {
-    console.log(`set ${name}=${value}`);
     if (!propNames.includes(name)) {
       debug(`Unknown property ${name}`);
       return;
@@ -120,6 +136,10 @@ export const setDeviceValue = (
     ipcDispatch(updateProperty([deviceId, ...getProp(name)]));
   };
 };
+
+let sensorTimer = 0;
+
+const random = (max = 1, min = 0): number => Math.random() * (max - min) + min;
 
 const createFakeDevice = (mib: DEMO) => {
   const b1 = randomHex();
@@ -139,6 +159,19 @@ const createFakeDevice = (mib: DEMO) => {
       break;
     case 'siolynx':
       load(siolynx);
+      if (!sensorTimer) {
+        sensorTimer = window.setInterval(
+          () =>
+            ipcDispatch(
+              pushSensorValue({
+                kind: 'illuminance',
+                value: Math.round(random(1500, 30000)),
+                address: '0.0.1',
+              }),
+            ),
+          5000,
+        );
+      }
       break;
     default:
       assertNever(mib);
@@ -252,7 +285,12 @@ export const ping = async (address: string): Promise<[-1, undefined] | [number, 
   -1,
   undefined,
 ];
-export const sendConfig = (state: Record<string, unknown>): void => {};
+export const sendConfig = (state: Record<string, unknown>): void => {
+  const { loading, ...config } = state;
+  if (!validateConfig(config)) debug('error while validate config');
+
+  ipcRenderer.send('saveConfig', config);
+};
 
 export function createDevice(parent: DeviceId, address: string, mib: string): void;
 export function createDevice(
@@ -278,9 +316,70 @@ export const findDevices = async (options: FinderOptions) => {};
 
 export const cancelSearch = async () => {};
 
+const fakeReadColumn = (selectors: number[]): Minihost3Info => {
+  const info: Minihost3Info = {};
+  if (selectors.includes(Minihost3Selector.Temperature)) {
+    info.t = Math.round(random(60, 50));
+  }
+  if (selectors.includes(Minihost3Selector.Version)) {
+    info.PLD = '6.8';
+    info.MCU = '2.11';
+  }
+  if (selectors.includes(Minihost3Selector.Voltage1)) {
+    info.v1 = Math.round(random(3800, 3600));
+  }
+  if (selectors.includes(Minihost3Selector.Voltage2)) {
+    info.v2 = Math.round(random(5800, 5600));
+  }
+  return info;
+};
+
+let cancelled = false;
+
 export const telemetry = (id: DeviceId): NibusTelemetry => ({
-  start: async () => [],
-  cancel: async () => {},
+  start: async (options, cb) => {
+    const device = devices.findById(id);
+    if (!device) return [];
+    const { hres, vres, moduleHres, moduleVres, maxModulesH, maxModulesV } = device;
+    const {
+      xMin = 0,
+      xMax = calcMaxValue(
+        hres,
+        moduleHres,
+        isPositiveNumber(maxModulesH) ? maxModulesH.value : XMAX,
+      ) - 1,
+      yMin = 0,
+      yMax = calcMaxValue(
+        vres,
+        moduleVres,
+        isPositiveNumber(maxModulesV) ? maxModulesV.value : YMAX,
+      ) - 1,
+      selectors = [],
+    } = options;
+
+    ipcDispatch(deviceBusy(id));
+    cb?.([]);
+    const modules: IModuleInfo<Minihost3Info>[] = [];
+    cancelled = false;
+    for (let x = xMin; x <= xMax && !cancelled; x += 1) {
+      for (let y = yMin; y <= yMax && !cancelled; y += 1) {
+        const module: IModuleInfo<Minihost3Info> = {
+          x,
+          y,
+          info: fakeReadColumn(selectors),
+        };
+        // eslint-disable-next-line no-await-in-loop
+        await delay(1);
+        cb?.(prev => [...prev, module]);
+        modules.push(module);
+      }
+    }
+    ipcDispatch(deviceReady(id));
+    return modules;
+  },
+  cancel: async () => {
+    cancelled = true;
+  },
 });
 
 export const getBrightnessHistory: INibusSession['getBrightnessHistory'] = async () => [];
@@ -306,12 +405,11 @@ export const flash = async (
 
 setTimeout(() => {
   ipcDispatch(setOnline(true));
-  ipcDispatch(
-    updateConfig({
-      autobrightness: true,
-      brightness: 80,
-      overheatProtection: DEFAULT_OVERHEAD_PROTECTION,
-      logLevel: 'none',
-    }),
-  );
-}, 3000);
+}, 2000);
+
+window.onload = async () => {
+  const config = await ipcRenderer.invoke('getConfig');
+  if (validateConfig(config)) {
+    ipcDispatch(updateConfig(config));
+  }
+};

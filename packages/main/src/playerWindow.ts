@@ -104,12 +104,12 @@ export const openPlayer = async (
       }
     });
     browserWindow.on('close', event => {
-      if (!needRestart() && !isQuitting) {
+      if (!isRemote && !needRestart() && !isQuitting) {
         event.preventDefault();
         browserWindow?.hide();
         if (!localConfig.get('autostart')) {
           isPlayerActive(id).then(async isActive => {
-            if (isActive) {
+            if (isActive && import.meta.env.PROD) {
               const { response } = await confirmClose();
               if (response === 1) return;
             }
@@ -117,7 +117,7 @@ export const openPlayer = async (
             browserWindow?.close();
           });
         }
-      } else if (!isRemote && !gmibParams.autostart) {
+      } else if (isRemote || !gmibParams.autostart) {
         const parent = BrowserWindow.fromId(gmibParams.id);
         if (parent && !parent.isVisible()) {
           setTimeout(() => parent.close(), 100);

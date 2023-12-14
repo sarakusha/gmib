@@ -180,7 +180,7 @@ export const setDeviceValue = (
 };
 
 export const sendConfig = debounce((state: Record<string, unknown>): void => {
-  const { loading, ...config } = state;
+  const { loading, ...config} = state;
   if (!validateConfig(config)) debug('error while validate config');
   session.saveConfig({ ...config });
 }, 500);

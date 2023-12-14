@@ -180,10 +180,6 @@ const demoMenu = (params?: WindowParams) => {
         submenu: [
           { label: 'Мини-хост 3', click: () => createFakeDevice('minihost3') },
           { label: 'siolynx', click: () => createFakeDevice('siolynx') },
-          { label: 'Хоккей 1970', click: () => createFakeDevice('m1970') },
-          { label: 'Универсальный хоккейный пульт', click: () => createFakeDevice('uconsole') },
-          { label: 'Датчик освещения', click: () => createFakeDevice('ti_lux_2_3') },
-          { label: 'MCTRL-300' },
         ],
       },
     ],

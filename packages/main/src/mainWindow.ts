@@ -7,7 +7,7 @@ import debugFactory from 'debug';
 import createWindow from './createWindow';
 import localConfig from './localConfig';
 import relaunch, { needRestart } from './relaunch';
-import { getAllScreenParams, getPlayerParams, registerGmib } from './windowStore';
+import { getAllGmibParams, getAllScreenParams, getPlayerParams, registerGmib } from './windowStore';
 
 import Deferred from '/@common/Deferred';
 
@@ -41,11 +41,12 @@ export const createAppWindow = (
   name?: string,
 ): BrowserWindow => {
   // eslint-disable-next-line no-multi-assign
+  const isLocal = !address || address === 'localhost';
   const browserWindow = createWindow(
     `${name ?? 'gmib'} (${address})` /* getTitle(port, hostName) */,
     gmibPreload,
   );
-  if (!address || address === 'localhost') {
+  if (isLocal) {
     browserWindow.once('ready-to-show', async () => {
       if (!localConfig.get('autostart')) {
         browserWindow.show();
@@ -78,6 +79,26 @@ export const createAppWindow = (
     }
   });
   registerGmib(browserWindow, { host: address, nibusPort });
+  browserWindow.on('close', event => {
+    const gmibParams = getAllGmibParams();
+    if (
+      import.meta.env.PROD &&
+      isLocal &&
+      !needRestart() &&
+      !isQuitting &&
+      (localConfig.get('autostart') ||
+        getPlayerParams().length > 0 || // .some(params => params.parent.id === browserWindow.id) ||
+        gmibParams.length > 1)
+    ) {
+      event.preventDefault();
+      browserWindow.hide();
+    } else if (isLocal) {
+      getAllScreenParams().forEach(({ id }) => BrowserWindow.fromId(id)?.close());
+      mainWindow = null;
+    } else if (gmibParams.length - 1 === 1 && mainWindow && !mainWindow.isVisible()) {
+      setTimeout(() => mainWindow?.close(), 100);
+    }
+  });
   return browserWindow;
 };
 
@@ -85,22 +106,23 @@ export const createMainWindow = (): BrowserWindow => {
   if (!mainWindow) {
     // eslint-disable-next-line no-multi-assign
     const browserWindow = (mainWindow = createAppWindow());
-    browserWindow.on('close', event => {
-      if (
-        import.meta.env.PROD &&
-        !needRestart() &&
-        !isQuitting &&
-        (localConfig.get('autostart') ||
-          getPlayerParams().some(params => params.parent.id === browserWindow.id))
-      ) {
-        event.preventDefault();
-        browserWindow.hide();
-      } else {
-        getAllScreenParams().forEach(({ id }) => BrowserWindow.fromId(id)?.close());
-        mainWindow = null;
-      }
-      return false;
-    });
+    // browserWindow.on('close', event => {
+    //   if (
+    //     import.meta.env.PROD &&
+    //     !needRestart() &&
+    //     !isQuitting &&
+    //     (localConfig.get('autostart') ||
+    //       getPlayerParams().some(params => params.parent.id === browserWindow.id) ||
+    //       getAllGmibParams().length > 1)
+    //   ) {
+    //     event.preventDefault();
+    //     browserWindow.hide();
+    //   } else {
+    //     getAllScreenParams().forEach(({ id }) => BrowserWindow.fromId(id)?.close());
+    //     mainWindow = null;
+    //   }
+    //   return false;
+    // });
     mainWindowDeferred.resolve(browserWindow);
   }
   return mainWindow;

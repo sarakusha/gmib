@@ -13,6 +13,7 @@ import { asyncSerial } from '/@common/helpers';
 
 import { uniquePageTitle, upsertPermanentPage } from './page';
 import relaunch from './relaunch';
+import { ipcMain } from 'electron';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:config`);
 // const version = app.getVersion();
@@ -103,5 +104,10 @@ updateTests();
 //   if (newValue?.some(({ permanent }) => permanent)) return;
 //   process.nextTick(() => updateTests());
 // });
+
+ipcMain.handle('getConfig', () => config.store);
+ipcMain.on('saveConfig', (e, store) => {
+  config.store = store;
+});
 
 export default config;

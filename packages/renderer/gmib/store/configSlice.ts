@@ -18,9 +18,13 @@ const initialState: ConfigState = {
   autobrightness: false,
   spline: undefined,
   logLevel: 'none',
-  version: undefined,
+  version: import.meta.env.VITE_APP_VERSION,
   loading: true,
   overheatProtection: DEFAULT_OVERHEAD_PROTECTION,
+  location: {
+    latitude: 55.7522,
+    longitude: 37.6156,
+  },
 };
 
 const configSlice = createSlice({

@@ -32,7 +32,7 @@ const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:windowStore`);
 const MINUTE = 60 * 1000;
 const HOUR = 60 * MINUTE;
 
-let zIndex = 0;
+let zIndex = Number.MIN_SAFE_INTEGER;
 
 // eslint-disable-next-line no-plusplus
 export const getZIndex = (): number => zIndex++;

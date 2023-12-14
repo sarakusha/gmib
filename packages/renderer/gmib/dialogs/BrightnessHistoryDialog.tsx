@@ -9,6 +9,7 @@ import type {
 } from 'highcharts';
 import HighchartsReact from 'highcharts-react-official';
 import groupBy from 'lodash/groupBy';
+import sortBy from 'lodash/sortBy';
 import React, { useEffect, useState } from 'react';
 import SunCalc from 'suncalc';
 
@@ -16,10 +17,21 @@ import Highcharts from '../components/Highcharts';
 import { useSelector } from '../store';
 
 import type { SensorsData } from '/@common/helpers';
-import { noop } from '/@common/helpers';
+import { noop, notEmpty } from '/@common/helpers';
 import { host, isRemoteSession, port } from '/@common/remote';
 
-import { selectBrightness, selectLastWithAddress, selectLocation } from '../store/selectors';
+import {
+  selectBrightness,
+  selectIlluminance,
+  selectLastWithAddress,
+  selectLocation,
+  selectSpline,
+} from '../store/selectors';
+import type { Point } from '../util/MonotonicCubicSpline';
+import MonotonicCubicSpline from '../util/MonotonicCubicSpline';
+import { createSelector } from '@reduxjs/toolkit';
+import type { Config, SplineItem } from '/@common/config';
+import { series } from '@novastar/codec';
 
 // const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:brightness`);
 
@@ -52,6 +64,109 @@ const getSensors = async (): Promise<Sensors[]> => {
   if (!res.ok) return [];
   return res.json();
 };
+
+const DAY = 1000 * 60 * 60 * 24;
+
+const deviation = (value: number, max = 0.1): number => (2 * Math.random() - 1) * max * value;
+
+const MOSCOW_LAT = 55.7522;
+const MOSCOW_LON = 37.6156;
+
+const getFakeSensors = ({
+  latitude = MOSCOW_LAT,
+  longitude = MOSCOW_LON,
+}: Config['location'] = {}): SeriesLineOptions => {
+  const now = new Date();
+  const midnight = new Date();
+  midnight.setHours(0, 0, 0, 0);
+  const { dawn, sunriseEnd, goldenHourEnd, solarNoon, goldenHour, sunsetStart, dusk } =
+    SunCalc.getTimes(now, latitude, longitude);
+
+  const getTime = (date: Date): number => Math.abs(date.getTime() - midnight.getTime()) % DAY;
+  const before = new MonotonicCubicSpline([
+    [getTime(dawn), 4],
+    [getTime(sunriseEnd), 750],
+    [getTime(goldenHourEnd), 8000],
+    [getTime(solarNoon), 15000],
+  ]);
+  const after = new MonotonicCubicSpline([
+    [getTime(solarNoon), 15000],
+    [getTime(goldenHour), 8000],
+    [getTime(sunsetStart), 750],
+    [getTime(dusk), 4],
+  ]);
+
+  const solarNoonTime = getTime(solarNoon);
+  const dawnTime = getTime(dawn);
+  const duskTime = getTime(dusk);
+
+  let r = 0;
+
+  const getFakeIlluminance = (date: Date): number => {
+    const dateTime = getTime(date);
+    if (dateTime < dawnTime || dateTime > duskTime) return 4;
+    const result =
+      dateTime < solarNoonTime ? before.interpolate(dateTime) : after.interpolate(dateTime);
+    if (date.getMinutes() % 30 === 0) {
+      r = deviation(result, 0.2);
+    }
+    return Math.round(r + deviation(result, 0.1) + result);
+  };
+  const data: SeriesLineOptions['data'] = [];
+  const from = new Date();
+  from.setDate(from.getDate() - 1);
+  from.setMinutes(0);
+  from.setSeconds(0);
+  from.setMilliseconds(0);
+  for (let date = from; date <= now; date.setMinutes(date.getMinutes() + 3)) {
+    data.push([date.getTime(), getFakeIlluminance(date)]);
+  }
+  const address = '0.0.1';
+  return {
+    id: `illuminance:${address}`,
+    name: `Освещенность ${address}`,
+    yAxis: 0,
+    type: 'line',
+    tooltip: { valueSuffix: ' lux' },
+    color: '#FF8000',
+    shadow: true,
+    data,
+  };
+};
+
+const selectFakeSensors = createSelector(selectLocation, getFakeSensors);
+const minSpline: SplineItem = [10, 20];
+const maxSpline: SplineItem = [10000, 100];
+
+const selectFakeBrightness = createSelector(
+  [selectFakeSensors, selectSpline],
+  (illuminanceSeries, spline = [minSpline, maxSpline]) => {
+    const safeData = sortBy(spline.filter(notEmpty), ([lux]) => lux);
+    const [min] = safeData;
+    const max = safeData.length > 1 ? safeData[safeData.length - 1] : maxSpline;
+    const [minLux, minBrightness] = min;
+    const [maxLux, maxBrightness] = max;
+    const illuminanceSpline = new MonotonicCubicSpline(
+      safeData.map(([lux, bright]) => [Math.log(1 + lux), bright]),
+    );
+    const calcBrightness = (illuminance: number): number => {
+      if (illuminance <= minLux) return minBrightness;
+      if (illuminance >= maxLux) return maxBrightness;
+      return Math.round(illuminanceSpline.interpolate(Math.log(1 + illuminance)));
+    };
+    const toBrightness = ([time, illuminance]: Point): Point => [time, calcBrightness(illuminance)];
+    const brightSeries: SeriesLineOptions = {
+      id: 'brightness',
+      name: 'Яркость',
+      type: 'line',
+      step: 'left',
+      yAxis: 1,
+      tooltip: { valueSuffix: '%' },
+      data: (illuminanceSeries?.data as Point[])?.map(toBrightness),
+    };
+    return brightSeries;
+  },
+);
 
 const highchartsOptions: Highcharts.Options = {
   title: { text: 'История' },
@@ -230,95 +345,48 @@ const getBands = (
   return [plotBands, plotLines];
 };
 
+const selectXAxis = createSelector(
+  [selectLocation, selectFakeSensors],
+  (location, illuminanceSeries) => {
+    const { latitude = MOSCOW_LAT, longitude = MOSCOW_LON } = location ?? {};
+    const xAxis: XAxisOptions = {type: 'datetime'};
+    const data = (illuminanceSeries?.data as Point[]) ?? [];
+    const [from] = data;
+    const to = data.at(-1);
+    const [yPlotBands, yPlotLines] = getBands(latitude, longitude, new Date(from[0]));
+    const [plotBands, plotLines] = getBands(latitude, longitude, to ? new Date(to[0]) : new Date());
+    xAxis.plotBands = [...yPlotBands, ...plotBands];
+    xAxis.plotLines = [...yPlotLines, ...plotLines];
+    return xAxis;
+  },
+);
+
+const selectOptions = createSelector(
+  [selectFakeSensors, selectFakeBrightness, selectXAxis],
+  (illuminanceSeries, brightnessSeries, xAxis): Highcharts.Options => ({
+    ...highchartsOptions,
+    series: [brightnessSeries, illuminanceSeries],
+    xAxis,
+  }),
+);
+
 const Grid = styled('div')`
   display: grid;
   grid-template-columns: 10ch 10ch;
 `;
 
 const BrightnessHistoryDialog: React.FC<Props> = ({ open = false, onClose = noop }) => {
-  const [options, setOptions] = useState<Highcharts.Options>(highchartsOptions);
-  const { latitude, longitude } = useSelector(selectLocation) ?? {};
+  const { latitude = MOSCOW_LAT, longitude = MOSCOW_LON } = useSelector(selectLocation) ?? {};
   const isValidLocation = latitude !== undefined && longitude !== undefined;
-  const currentBrightness = useSelector(selectBrightness);
-  const lastIlluminance = useSelector(state => selectLastWithAddress(state, 'illuminance'));
-  useEffect(() => {
-    if (!open) return;
-    Promise.all([window.nibus.getBrightnessHistory(), getSensors()]).then(([history, sensors]) => {
-      setOptions(opts => {
-        const series = Object.entries(
-          groupBy(
-            sensors.filter(({ illuminance }) => illuminance != null),
-            'address',
-          ),
-        ).map(
-          ([address, values]) =>
-            ({
-              id: `illuminance:${address}`,
-              name: `Освещенность ${address}`,
-              yAxis: 0,
-              type: 'line',
-              tooltip: { valueSuffix: ' lux' },
-              color: '#FF8000',
-              shadow: true,
-              data: values.map(({ time, illuminance }) => [time, illuminance]),
-            } as SeriesLineOptions),
-        );
-        const data = history.map(({ timestamp, brightness }) => [
-          timestamp - (timestamp % 1000),
-          brightness,
-        ]);
-        const brightSeries: SeriesLineOptions = {
-          id: 'brightness',
-          name: 'Яркость',
-          type: 'line',
-          yAxis: 1,
-          tooltip: { valueSuffix: '%' },
-          data,
-        };
-        if (isValidLocation) {
-          const now = new Date();
-          const yesterday = new Date();
-          yesterday.setDate(yesterday.getDate() - 1);
-          const xAxis = opts.xAxis as XAxisOptions;
-          const [yPlotBands, yPlotLines] = getBands(latitude, longitude, yesterday);
-          const [plotBands, plotLines] = getBands(latitude, longitude, now);
-          xAxis.plotBands = [...yPlotBands, ...plotBands];
-          xAxis.plotLines = [...yPlotLines, ...plotLines];
-        }
-        return {
-          ...opts,
-          series: [brightSeries, ...series],
-        };
-      });
-    });
-  }, [open, latitude, longitude, isValidLocation]);
-  React.useEffect(() => {
-    if (!open) return;
-    setOptions(opts => {
-      const ts = Math.floor(Date.now() / 1000) * 1000;
-      const brightnessSeries = opts.series?.find(({ id }) => id === 'brightness');
-      if (brightnessSeries && brightnessSeries.type === 'line')
-        brightnessSeries.data?.push([ts, currentBrightness]);
-      return { ...opts };
-    });
-  }, [currentBrightness, open, lastIlluminance]);
-  React.useEffect(() => {
-    if (!open || !lastIlluminance) return;
-    const [address, timestamp, value] = lastIlluminance.split(':');
-    const id = `illuminance:${address}`;
-    setOptions(opts => {
-      const series = opts.series?.find(item => item.id === id);
-      if (series && series.type === 'line') {
-        series.data?.push([Number(timestamp), Number(value)]);
-      }
-      return { ...opts };
-    });
-  }, [lastIlluminance, open]);
+  const options = useSelector(selectOptions);
   const suntimes = isValidLocation ? SunCalc.getTimes(new Date(), latitude, longitude) : undefined;
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullScreen>
       <DialogContent>
-        <HighchartsReact highcharts={Highcharts} options={options} />
+        <HighchartsReact
+          highcharts={Highcharts}
+          options={options}
+        />
         {suntimes && (
           <Box sx={{ display: 'flex', justifyContent: 'space-evenly' }}>
             <Grid>

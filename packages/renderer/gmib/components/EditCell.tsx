@@ -69,29 +69,34 @@ const EditCell: React.FC<Props> = ({
     setControlled(true);
     if (val !== value) onChangeProperty?.(name, val !== '' ? val : value);
   };
-  const hasError = value instanceof Error ? value.message : undefined;
-  const current = controlled && !hasError ? value : val;
+  const errMsg = value instanceof Error ? value.message : undefined;
+  const current = controlled && !errMsg ? value : val;
   return (
-    <TableCell className={className} sx={{ px: 1 }} {...props}>
-      <StyledInput
-        align={align}
-        dirty={dirty || !controlled}
-        error={!!hasError}
-        name={name}
-        fullWidth
-        value={current}
-        type={type || 'text'}
-        disableUnderline
-        endAdornment={endAdornment}
-        inputProps={{
-          min,
-          max,
-          step,
-          onBlur: blurHandler,
-        }}
-        disabled={disabled}
-        onChange={changeHandler}
-      />
+    <TableCell
+      className={className}
+      sx={{ px: 1, color: errMsg ? 'rgba(255,0,0,0.875) !important' : 'inherit' }}
+      {...props}
+    >
+      {errMsg || (
+        <StyledInput
+          align={align}
+          dirty={dirty || !controlled}
+          name={name}
+          fullWidth
+          value={current}
+          type={type || 'text'}
+          disableUnderline
+          endAdornment={endAdornment}
+          inputProps={{
+            min,
+            max,
+            step,
+            onBlur: blurHandler,
+          }}
+          disabled={disabled}
+          onChange={changeHandler}
+        />
+      )}
     </TableCell>
   );
 };

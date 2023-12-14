@@ -13,6 +13,5 @@ interface Window {
     readonly log: (...params: any[]) => void;
     readonly setLogLevel: (logLevel: 'nibus' | 'none' | 'hex') => void;
     readonly identify: { readonly getSecret: () => string | undefined; readonly setSecret: (apiSecret: bigint | null, identifier?: string | undefined) => void; readonly getIdentifier: () => string | undefined; readonly generateSignature: (method: string, uri: string, timestamp: number, body?: unknown) => string | undefined; };
-    readonly initializeNovastar: () => Promise<boolean>;
     readonly mediaSource: { readonly close: (screenId: number) => void; readonly play: _.DebouncedFunc<(screenId: number) => Promise<void>>; };
 }
