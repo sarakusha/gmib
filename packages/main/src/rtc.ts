@@ -4,14 +4,14 @@ import type { RtcMessage, WithWebSocketKey } from '/@common/rtc';
 
 import { app, ipcMain } from 'electron';
 
-import { WebSocket } from 'ws';
+import type { WebSocket } from 'ws';
 import debugFactory from 'debug';
 import memoize from 'lodash/memoize';
 
 import { wss } from './server';
 import { openPlayer } from './playerWindow';
 import { findPlayerWindow } from './windowStore';
-import master from './MasterBrowser';
+// import master from './MasterBrowser';
 import { getMainWindow } from './mainWindow';
 
 const sockets = new Map<string, WebSocket>();
@@ -67,39 +67,39 @@ wss.on('connection', (ws: AliveWebSocket, req) => {
   });
 });
 
-const events = [
-  'add',
-  'change',
-  'illuminance',
-  'remove',
-  'screen',
-  'update',
-  'cabinet',
-  'telemetry',
-  'broadcastDetected',
-] as const;
+// const events = [
+//   'add',
+//   'change',
+//   'illuminance',
+//   'remove',
+//   'screen',
+//   'update',
+//   'cabinet',
+//   'telemetry',
+//   'broadcastDetected',
+// ] as const;
 
-const makeHandler = memoize((event: string) => (...args: unknown[]) => {
-  const msg = JSON.stringify({ event, data: args });
-  wss.clients.forEach(ws => {
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.send(msg);
-    }
-  });
-});
+// const makeHandler = memoize((event: string) => (...args: unknown[]) => {
+//   const msg = JSON.stringify({ event, data: args });
+//   wss.clients.forEach(ws => {
+//     if (ws.readyState === WebSocket.OPEN) {
+//       ws.send(msg);
+//     }
+//   });
+// });
 
-events.forEach(event => master.on(event, makeHandler(event)));
-const close = () => {
-  app.off('will-quit', close);
-  events.forEach(event => master.off(event, makeHandler.cache.get(event)));
-};
+// events.forEach(event => master.on(event, makeHandler(event)));
+// const close = () => {
+//   app.off('will-quit', close);
+//   events.forEach(event => master.off(event, makeHandler.cache.get(event)));
+// };
 
-master.on('close', close);
-app.once('will-quit', close);
+// master.on('close', close);
+// app.once('will-quit', close);
 
 wss.once('close', () => {
   clearInterval(interval);
-  close();
+  // close();
 });
 
 app.whenReady().then(() => {

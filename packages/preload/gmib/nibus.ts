@@ -81,8 +81,7 @@ import ipcDispatch from '../common/ipcDispatch';
 
 import { validateConfig } from '/@common/schema';
 import { enqueueSnackbar, setFlashing, setProgress } from '/@renderer/store/flasherSlice';
-import type { GmibWindowParams } from '/@common/WindowParams';
-import { saveJSON } from "./dialogs";
+import { saveJSON } from './dialogs';
 
 export type { Address };
 
@@ -180,7 +179,7 @@ export const setDeviceValue = (
 };
 
 export const sendConfig = debounce((state: Record<string, unknown>): void => {
-  const { loading, ...config} = state;
+  const { loading, ...config } = state;
   if (!validateConfig(config)) debug('error while validate config');
   session.saveConfig({ ...config });
 }, 500);
@@ -734,9 +733,6 @@ export const saveRawData = (id: DeviceId): void => {
   if (!device) return;
   const properties = Reflect.getMetadata('mibProperties', device) as string[];
   const mib = Reflect.getMetadata('mib', device) as string;
-  const data = properties.reduce(
-    (res, name) => ({ ...res, [name]: device.getRawValue(name) }),
-    {},
-  );
+  const data = properties.reduce((res, name) => ({ ...res, [name]: device.getRawValue(name) }), {});
   saveJSON({ data, defaultPath: mib });
 };

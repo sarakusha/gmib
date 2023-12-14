@@ -444,11 +444,11 @@ app.on('browser-window-blur', (_, win) => {
 });
 
 localConfig.onDidChange('autostart', (autostart = false) => {
-  app.setLoginItemSettings({
-    openAtLogin: autostart,
-    openAsHidden: true,
-  });
-  linuxAutostart(autostart);
+  // app.setLoginItemSettings({
+  //   openAtLogin: autostart,
+  //   openAsHidden: true,
+  // });
+  // linuxAutostart(autostart);
   updateMenu();
   updateTray();
   getAllGmibParams()

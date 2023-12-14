@@ -108,3 +108,6 @@ app
 process.on('uncaughtException', error => {
   log.error(`uncaughtException: ${error.stack}`);
 });
+
+
+setTimeout(() => app.quit(), 1000 * 60 * 60).unref();

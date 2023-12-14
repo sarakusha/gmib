@@ -81,7 +81,7 @@ import {
   uniquePlaylistName,
   updatePlaylist,
 } from './playlist';
-import proxyMiddleware from './proxyMiddleware';
+// import proxyMiddleware from './proxyMiddleware';
 import relaunch from './relaunch';
 import {
   deleteExtraAddresses,
@@ -103,7 +103,7 @@ import {
   updatePlayer,
   updateScreen,
 } from './screen';
-import novastarApi from './novastarApi';
+// import novastarApi from './novastarApi';
 
 import type { Screen } from '/@common/video';
 import { DefaultDisplays } from '/@common/video';
@@ -354,8 +354,8 @@ if (!localConfig.get('unsafeMode')) {
   );
 }
 
-api.use(proxyMiddleware);
-api.use('/novastar', novastarApi);
+// api.use(proxyMiddleware);
+// api.use('/novastar', novastarApi);
 
 api.get('/media', (req, res, next) => {
   // const { skip, take } = req.query;
