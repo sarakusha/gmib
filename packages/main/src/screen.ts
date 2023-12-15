@@ -4,7 +4,15 @@
 import type { NullableOptional } from '/@common/helpers';
 import type { Player, Screen } from '/@common/video';
 
-import db, { flag, promisifyAll, promisifyGet, promisifyRun, removeNull, uniqueField } from './db';
+import db, {
+  dbReady,
+  flag,
+  promisifyAll,
+  promisifyGet,
+  promisifyRun,
+  removeNull,
+  uniqueField,
+} from './db';
 
 // const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:main`);
 
@@ -111,7 +119,7 @@ export const getScreen = promisifyGet(
   toScreen,
 );
 
-export const getScreens = promisifyAll('SELECT * FROM screen', () => { }, toScreen);
+export const getScreens = promisifyAll('SELECT * FROM screen', () => {}, toScreen);
 
 export const getAddressesForScreen = promisifyAll(
   'SELECT address FROM address WHERE screenId = ?',
@@ -131,7 +139,7 @@ export const loadScreen = async (id: number): Promise<Screen | undefined> => {
 export const getAddresses = promisifyAll(
   `SELECT address
    FROM address`,
-  () => { },
+  () => {},
   ({ address }) => address as string,
 );
 
@@ -186,7 +194,7 @@ export const getPlayers = promisifyAll(
       )
     ) as current FROM player
 `,
-  () => { },
+  () => {},
   toPlayer,
 );
 
@@ -343,8 +351,33 @@ export const hasPlayers = promisifyGet(
   result => !!result,
 );
 
+const hasScreens = promisifyGet(
+  'SELECT 1 FROM screen LIMIT 1',
+  () => [],
+  result => !!result,
+);
+
 export const isPlayerActive = promisifyGet(
   'SELECT flags FROM player WHERE id = ?',
   (id: number) => id,
   result => Boolean(result?.flags & PlayerFlags.AutoPlay),
 );
+
+dbReady
+  .then(hasScreens)
+  .then(
+    async res =>
+      res ||
+      insertScreen(
+        await uniqueScreenName({
+          name: 'Экран',
+          left: 0,
+          top: 0,
+          width: 320,
+          height: 240,
+          moduleWidth: 40,
+          moduleHeight: 40,
+          display: -1,
+        }),
+      ),
+  );
