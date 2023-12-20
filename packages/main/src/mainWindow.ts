@@ -81,7 +81,6 @@ export const createAppWindow = (
   registerGmib(browserWindow, { host: address, nibusPort });
   browserWindow.on('close', event => {
     const gmibParams = getAllGmibParams();
-    console.log({ length: gmibParams.length, mainWindow: mainWindow?.isVisible() })
     if (
       import.meta.env.PROD &&
       isLocal &&

@@ -6,8 +6,7 @@ import sortBy from 'lodash/sortBy';
 
 import localConfig from './localConfig';
 import store, { getZIndex } from './windowStore';
-import { isGmib, isPlayer, type WindowParams } from '/@common/WindowParams';
-import { getMainWindow } from './mainWindow';
+import { isGmib, isPlayer } from '/@common/WindowParams';
 
 let disableZIndex = false;
 
@@ -17,30 +16,6 @@ app.on('browser-window-focus', (_, window) => {
     if (params && (isGmib(params) || isPlayer(params))) params.zIndex = getZIndex();
   }
 });
-
-// const serial = (items: WindowParams[], show = false) => {
-//   const [first, ...tail] = items;
-//   if (!first) {
-//     disableZIndex = false;
-//     return;
-//   }
-//   const win = BrowserWindow.fromId(first.id);
-//   if (!win) return;
-//   if (show) win.show();
-//   else win.moveTop();
-//   if (tail.length === 0) {
-//     win.focus();
-//   }
-//   setTimeout(() => serial(tail), 100);
-// };
-//
-
-// let topWindow = 1;
-
-// app.on('browser-window-focus', (_, win) => {
-//   topWindow = win.id;
-//   console.log('TOP', topWindow);
-// });
 
 const getAllWindowParams = () =>
   sortBy(
@@ -59,7 +34,6 @@ const showAll = () => {
   const [top] = params.splice(-1, 1);
   params.forEach(({ id }) => {
     const win = BrowserWindow.fromId(id);
-    console.log({ id, win: !!win, min: win?.isMinimized() });
     if (win) {
       if (win.isMinimized()) win.show();
       else win.showInactive();
@@ -78,11 +52,7 @@ const showAll = () => {
 };
 
 const hideAll = () => {
-  // const top = BrowserWindow.getFocusedWindow();
-  // console.log({ topWindow, top: top?.id });
   getAllWindowParams().forEach(({ id }) => BrowserWindow.fromId(id)?.hide());
-  // BrowserWindow.fromId(topWindow)?.hide();
-  // setTimeout(() => { topWindow = top?.id ?? 1;}, 100);
 };
 
 const tray: { appIcon: Tray | null } = { appIcon: null };
