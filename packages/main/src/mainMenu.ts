@@ -34,13 +34,14 @@ const getGmibParams = (params?: WindowParams): GmibWindowParams | undefined => {
   return undefined;
 };
 
-const createNewPlayer = async (name = 'Новый плеер'): Promise<void> => {
+const createNewPlayer = async (name = 'Новый плеер'): Promise<number> => {
   await dbReady;
   const player = await uniquePlayerName({ name });
-  /* const { lastID } = */ await insertPlayer(player);
+  const { lastID } = await insertPlayer(player);
   // await openPlayer(lastID);
   // eslint-disable-next-line @typescript-eslint/no-use-before-define
   updateMenu();
+  return lastID;
 };
 
 type AppMenuItem = Omit<MenuItemConstructorOptions, 'submenu'> & {
