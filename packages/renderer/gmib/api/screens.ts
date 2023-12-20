@@ -201,7 +201,7 @@ export const useScreens = () =>
       screens: data && selectScreens(data),
       ...other,
     }),
-    // pollingInterval: 5000,
+    pollingInterval: 15000,
   });
 
 export const useScreen = (id?: number) =>

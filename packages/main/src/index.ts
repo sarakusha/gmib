@@ -22,6 +22,7 @@ import openHandler from './openHandler';
 import { launchPlayers } from './playerWindow';
 
 import { fixDefault } from '/@common/helpers';
+import { needRestart } from "./relaunch";
 
 process.env['npm_package_version'] = import.meta.env.VITE_APP_VERSION;
 
@@ -110,4 +111,7 @@ process.on('uncaughtException', error => {
 });
 
 
-setTimeout(() => app.quit(), 1000 * 60 * 60).unref();
+setTimeout(() => {
+  needRestart(true);
+  app.quit();
+}, 1000 * 60 * 60 * 2).unref();

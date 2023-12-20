@@ -13,7 +13,7 @@ import localConfig from './localConfig';
 import { linuxAutostart } from './linux';
 import { updateTray } from './tray';
 import { openPlayer } from './playerWindow';
-import { hasPlayers, insertPlayer, uniquePlayerName } from './screen';
+import { getPlayer, hasPlayers, insertPlayer, uniquePlayerName } from './screen';
 import { dbReady } from './db';
 import checkForUpdates from './updater';
 // import type { WindowParams } from './windowStore';
@@ -25,6 +25,7 @@ import { createAppWindow, getMainWindow } from './mainWindow';
 import type { GmibWindowParams, WindowParams } from '/@common/WindowParams';
 import { isGmib, isPlayer } from '/@common/WindowParams';
 import type { Player } from '/@common/video';
+import { insertPlayerMapping } from "./playerMapping";
 
 // const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:menu`);
 
@@ -34,13 +35,14 @@ const getGmibParams = (params?: WindowParams): GmibWindowParams | undefined => {
   return undefined;
 };
 
-const createNewPlayer = async (name = 'Новый плеер'): Promise<void> => {
+const createNewPlayer = async (name = 'Новый плеер'): Promise<number> => {
   await dbReady;
   const player = await uniquePlayerName({ name });
-  /* const { lastID } = */ await insertPlayer(player);
+  const { lastID } = await insertPlayer(player);
   // await openPlayer(lastID);
   // eslint-disable-next-line @typescript-eslint/no-use-before-define
   updateMenu();
+  return lastID;
 };
 
 type AppMenuItem = Omit<MenuItemConstructorOptions, 'submenu'> & {
@@ -461,6 +463,20 @@ localConfig.onDidChange('autostart', updateMenu);
 mdnsBrowser.on('up', updateMenu);
 mdnsBrowser.on('down', updateMenu);
 
-dbReady.then(hasPlayers).then(async res => res || (await createNewPlayer('Плеер')));
+dbReady.then(hasPlayers).then(async res => {
+  if (!res) {
+    const id = await createNewPlayer('Плеер');
+    const player = await getPlayer(id);
+    insertPlayerMapping({
+      name: `${player?.name} - Вывод`,
+      player: id,
+      left: 0,
+      top: 0,
+      width: player?.width ?? 320,
+      height: player?.height ?? 240,
+      display: -1,
+    });
+  }
+});
 
 export default updateMenu;
