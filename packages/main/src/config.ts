@@ -15,6 +15,7 @@ import Deferred from '/@common/Deferred';
 
 import { uniquePageTitle, upsertPermanentPage } from './page';
 import relaunch from './relaunch';
+import { dbReady } from './db';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:config`);
 // const version = app.getVersion();
@@ -103,7 +104,7 @@ const updateTests = (): void => {
     .then(migratePages);
 };
 
-updateTests();
+dbReady.then(updateTests);
 
 // config.onDidChange('pages', newValue => {
 //   if (newValue?.some(({ permanent }) => permanent)) return;

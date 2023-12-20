@@ -20,7 +20,7 @@ import type { CreatePlaylist, Playlist, PlaylistItem } from '/@common/playlist';
 
 import auth from './auth';
 import { port, testsDeferred } from './config';
-import { beginTransaction, commitTransaction, incrementCounterString, rollback } from './db';
+import { beginTransaction, commitTransaction, dbReady, incrementCounterString, rollback } from './db';
 import {
   convertCopy,
   doesPlayerSupportFile,
@@ -334,7 +334,7 @@ const updateTest = async (scr: Screen) => {
   // debug(`test: ${url}`);
 };
 
-electronApp.whenReady().then(async () => {
+dbReady.then(async () => {
   const screens = await getScreens();
   await Promise.all(screens.map(updateTest));
 });
