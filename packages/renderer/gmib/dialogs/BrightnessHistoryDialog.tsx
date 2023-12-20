@@ -271,6 +271,7 @@ const BrightnessHistoryDialog: React.FC<Props> = ({ open = false, onClose = noop
           id: 'brightness',
           name: 'Яркость',
           type: 'line',
+          step: 'left',
           yAxis: 1,
           tooltip: { valueSuffix: '%' },
           data,
@@ -301,7 +302,7 @@ const BrightnessHistoryDialog: React.FC<Props> = ({ open = false, onClose = noop
         brightnessSeries.data?.push([ts, currentBrightness]);
       return { ...opts };
     });
-  }, [currentBrightness, open, lastIlluminance]);
+  }, [currentBrightness, open]);
   React.useEffect(() => {
     if (!open || !lastIlluminance) return;
     const [address, timestamp, value] = lastIlluminance.split(':');
