@@ -25,7 +25,7 @@ import { createAppWindow, getMainWindow } from './mainWindow';
 import type { GmibWindowParams, WindowParams } from '/@common/WindowParams';
 import { isGmib, isPlayer } from '/@common/WindowParams';
 import type { Player } from '/@common/video';
-import { insertPlayerMapping } from "./playerMapping";
+import { insertPlayerMapping } from './playerMapping';
 
 // const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:menu`);
 
@@ -262,8 +262,7 @@ const template = async (params?: WindowParams): Promise<MenuItemConstructorOptio
     ...(remote ? [remote] : []),
     ...(isGmib(params) /* &&
       params.plan &&
-      ['plus', 'premium', 'enterprise'].includes(params.plan)) */ ||
-    isPlayer(params)
+      ['plus', 'premium', 'enterprise'].includes(params.plan)) */ || isPlayer(params)
       ? // params.host === 'localhost'
         [{ label: 'Плееры', submenu: await playerSubmenu(isGmib(params) ? params : params.parent) }]
       : []),

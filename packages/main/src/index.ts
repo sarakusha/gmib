@@ -22,7 +22,7 @@ import openHandler from './openHandler';
 import { launchPlayers } from './playerWindow';
 
 import { fixDefault } from '/@common/helpers';
-import { needRestart } from "./relaunch";
+import { needRestart } from './relaunch';
 
 process.env['npm_package_version'] = import.meta.env.VITE_APP_VERSION;
 
@@ -109,7 +109,6 @@ app
 process.on('uncaughtException', error => {
   log.error(`uncaughtException: ${error.stack}`);
 });
-
 
 setTimeout(() => {
   needRestart(true);

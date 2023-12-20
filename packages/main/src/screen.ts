@@ -363,21 +363,17 @@ export const isPlayerActive = promisifyGet(
   result => Boolean(result?.flags & PlayerFlags.AutoPlay),
 );
 
-dbReady
-  .then(hasScreens)
-  .then(
-    async res =>
-      res ||
-      insertScreen(
-        await uniqueScreenName({
-          name: 'Экран',
-          left: 0,
-          top: 0,
-          width: 320,
-          height: 240,
-          moduleWidth: 40,
-          moduleHeight: 40,
-          display: -1,
-        }),
-      ),
-  );
+dbReady.then(hasScreens).then(
+  async res =>
+    res ||
+    insertScreen({
+      name: 'Экран',
+      left: 0,
+      top: 0,
+      width: 320,
+      height: 240,
+      moduleWidth: 40,
+      moduleHeight: 40,
+      display: -1,
+    }),
+);
