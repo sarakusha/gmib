@@ -109,6 +109,7 @@ export const usePages = () =>
       pages: data ? selectPages(data) : [],
       ...other,
     }),
+    pollingInterval: 15000,
   });
 
 export const usePage = (id?: string) =>

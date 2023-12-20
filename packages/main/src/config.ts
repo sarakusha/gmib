@@ -13,6 +13,7 @@ import { asyncSerial } from '/@common/helpers';
 
 import { uniquePageTitle, upsertPermanentPage } from './page';
 import relaunch from './relaunch';
+import Deferred from "/@common/Deferred";
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:config`);
 // const version = app.getVersion();
@@ -39,6 +40,8 @@ nibusConfig().set('logLevel', config.get('logLevel'));
 
 const reTitle = /<\s*title[^>]*>(.+)<\s*\/\s*title>/i;
 const reId = /<\s*meta\s*data-id=['"](.+?)['"]>/i;
+
+export const testsDeferred = new Deferred();
 
 async function updateTestsImpl(): Promise<void> {
   const testDir = path.resolve(__dirname, '../../renderer/assets/tests');
@@ -76,7 +79,9 @@ async function updateTestsImpl(): Promise<void> {
   // if (!isEqual(prev, items)) config.set('pages', items);
   await asyncSerial(tests.filter(notEmpty), async test =>
     upsertPermanentPage(await uniquePageTitle(test)),
-  );
+  ).finally(() => {
+    testsDeferred.resolve();
+  });
 }
 
 const migratePages = async (): Promise<void> => {

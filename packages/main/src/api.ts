@@ -19,7 +19,7 @@ import { asyncSerial, findById, notEmpty, replaceNull } from '/@common/helpers';
 import type { CreatePlaylist, Playlist, PlaylistItem } from '/@common/playlist';
 
 import auth from './auth';
-import { port } from './config';
+import { port, testsDeferred } from './config';
 import { beginTransaction, commitTransaction, incrementCounterString, rollback } from './db';
 import {
   convertCopy,
@@ -148,7 +148,7 @@ fs.mkdir(mediaRoot, { recursive: true }, err => {
   }
 });
 
-const noop = (): void => { };
+const noop = (): void => {};
 
 const getHash = (filepath: string): Promise<string> =>
   new Promise<string>((resolve, reject) => {
@@ -936,7 +936,9 @@ api.post('/relaunch', (req, res) => {
 // })
 
 api.get('/pages', (req, res, next) => {
-  getPages().then(pages => res.json(pages), next);
+  testsDeferred.promise.finally(() => {
+    getPages().then(pages => res.json(pages), next);
+  });
 });
 
 api.post('/pages', async (req, res, next) => {
