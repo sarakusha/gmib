@@ -44,6 +44,7 @@ ws.onopen = async () => {
   };
   let pc = new RTCPeerConnection();
 
+  let timeout = 0;
   const connect = () => {
     pc.onicecandidate = async e => {
       const { candidate } = e;
@@ -75,8 +76,11 @@ ws.onopen = async () => {
         setTimeout(connect, 3000);
       }
     };
-
-    ws.send(JSON.stringify(request));
+    const sendRequest = () => {
+      ws.send(JSON.stringify(request));
+      timeout = window.setTimeout(sendRequest, 3000);
+    };
+    sendRequest();
   };
   ws.onmessage = async ev => {
     try {
@@ -89,6 +93,7 @@ ws.onopen = async () => {
           break;
         case 'offer':
           if (msg.sourceId === sourceId) {
+            window.clearTimeout(timeout);
             await pc.setRemoteDescription(msg.desc);
             const answer: AnswerMessage = {
               event: 'answer',
