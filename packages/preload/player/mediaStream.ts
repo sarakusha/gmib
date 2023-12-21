@@ -114,7 +114,7 @@ const update = async () => {
   //   nextSource.options.fade = {...nextSource.options.fade,  disableIn: true };
   // }
   if (!currentSource?.closed && current !== currentSource?.options.itemId) {
-    if (nextSource && nextSource.options.itemId === current) {
+    if (nextSource && nextSource.options.itemId === current && playlist.items.length > 1) {
       currentSource?.close();
       return;
     }
