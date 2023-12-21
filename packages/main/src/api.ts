@@ -18,7 +18,7 @@ import type { MediaInfo } from '/@common/mediaInfo';
 import { asyncSerial, findById, notEmpty, replaceNull } from '/@common/helpers';
 import type { CreatePlaylist, Playlist, PlaylistItem } from '/@common/playlist';
 
-import auth from './auth';
+// import auth from './auth';
 import { port, testsDeferred } from './config';
 import { beginTransaction, commitTransaction, dbReady, incrementCounterString, rollback } from './db';
 import {
@@ -341,18 +341,18 @@ dbReady.then(async () => {
 
 const api = express.Router();
 
-if (!localConfig.get('unsafeMode')) {
-  api.use(
-    auth.unless({
-      path: [
-        /\/api\/login\/.*/,
-        /\/api\/handshake\/.*/,
-        '/api/identifier',
-        '/api/novastar/subscribe',
-      ],
-    }),
-  );
-}
+// if (!localConfig.get('unsafeMode')) {
+//   api.use(
+//     auth.unless({
+//       path: [
+//         /\/api\/login\/.*/,
+//         /\/api\/handshake\/.*/,
+//         '/api/identifier',
+//         '/api/novastar/subscribe',
+//       ],
+//     }),
+//   );
+// }
 
 // api.use(proxyMiddleware);
 // api.use('/novastar', novastarApi);

@@ -363,10 +363,9 @@ export const isPlayerActive = promisifyGet(
   result => Boolean(result?.flags & PlayerFlags.AutoPlay),
 );
 
-dbReady.then(hasScreens).then(
-  async res =>
-    res ||
-    insertScreen({
+dbReady.then(hasScreens).then(async res => {
+  if (!res) {
+    const { lastID } = await insertScreen({
       name: 'Экран',
       left: 0,
       top: 0,
@@ -375,5 +374,10 @@ dbReady.then(hasScreens).then(
       moduleWidth: 40,
       moduleHeight: 40,
       display: -1,
-    }),
-);
+    });
+    await insertAddress(lastID, '255.255.1');
+    await insertAddress(lastID, '255.255.2');
+    await insertAddress(lastID, '255.255.3');
+    await insertAddress(lastID, '255.255.4');
+  }
+});
