@@ -375,7 +375,7 @@ const template = async (params?: WindowParams): Promise<MenuItemConstructorOptio
     // { role: 'viewMenu' },
     // { role: 'editMenu' },
     // { role: 'windowMenu' },
-    demoMenu(params),
+    ...(isGmib(params) && params.host === 'localhost' ? [demoMenu(params)]: []),
     await helpMenu(params),
   ];
 };
