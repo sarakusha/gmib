@@ -8,6 +8,7 @@ import type { UpdateInfo } from 'electron-updater';
 import uniqBy from 'lodash/uniqBy';
 import semverGt from 'semver/functions/gte';
 import debounce from 'lodash/debounce';
+import sortBy from 'lodash/sortBy';
 
 import localConfig from './localConfig';
 import { linuxAutostart } from './linux';
@@ -94,7 +95,7 @@ const remoteMenu = (params?: WindowParams): AppMenuItem | undefined => {
         [
           ...(local ? [paramsToRemote(local)] : []),
           ...mdnsBrowser.services.map(pickRemoteService).filter(notEmpty),
-          ...localConfig.get('hosts'),
+          ...sortBy(localConfig.get('hosts'), ['name', 'address']),
         ],
         'address',
       )
