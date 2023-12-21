@@ -505,7 +505,7 @@ const blurWindows: BrowserWindow[] = [];
 app.on('browser-window-focus', (_, win) => {
   win.webContents.send('focus', true);
   const wins = blurWindows.splice(0, blurWindows.length);
-  wins.forEach(item => win !== item && item.webContents.send('focus', false));
+  wins.filter(item => win !== item && !item.isDestroyed()).forEach(item => item.webContents.send('focus', false));
   updateMenu();
 });
 
