@@ -24,7 +24,7 @@ import {
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:nova`);
 
-const novastarEnabled = true;
+const novastarEnabled = false;
 
 export const hasNovastar = () => novastarEnabled;
 
