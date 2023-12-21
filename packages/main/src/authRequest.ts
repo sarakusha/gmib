@@ -42,24 +42,24 @@ const authRequest = async ({
       headers.set('Content-Type', 'application/json');
     } else body = originalBody;
   }
-  if (host && host !== 'localhost') {
-    let credentials: Credentials | undefined;
-    credentials = await getRemoteCredentials(`${baseUrl}/identifier`);
-    if (credentials && !credentials.apiSecret) {
-      if (!(await waitAuth())) return undefined;
-      credentials = await getRemoteCredentials(`${baseUrl}/identifier`);
-    }
-    if (!credentials?.apiSecret || !credentials?.identifier) return undefined;
-    const now = Date.now();
-    const signature = generateSignature(credentials.apiSecret, method, url, now, body);
-    if (signature) {
-      headers.set('x-ni-identifier', credentials.identifier);
-      headers.set('x-ni-timestamp', now.toString());
-      headers.set('x-ni-signature', signature);
-    }
-  } else {
-    headers.set('authorization', `Bearer ${secret.toString('base64')}`);
-  }
+  // if (host && host !== 'localhost') {
+  //   let credentials: Credentials | undefined;
+  //   credentials = await getRemoteCredentials(`${baseUrl}/identifier`);
+  //   if (credentials && !credentials.apiSecret) {
+  //     if (!(await waitAuth())) return undefined;
+  //     credentials = await getRemoteCredentials(`${baseUrl}/identifier`);
+  //   }
+  //   if (!credentials?.apiSecret || !credentials?.identifier) return undefined;
+  //   const now = Date.now();
+  //   const signature = generateSignature(credentials.apiSecret, method, url, now, body);
+  //   if (signature) {
+  //     headers.set('x-ni-identifier', credentials.identifier);
+  //     headers.set('x-ni-timestamp', now.toString());
+  //     headers.set('x-ni-signature', signature);
+  //   }
+  // } else {
+  //   headers.set('authorization', `Bearer ${secret.toString('base64')}`);
+  // }
 
   // debug(`${url} ${JSON.stringify([...headers])}`);
 
