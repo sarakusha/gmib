@@ -55,7 +55,7 @@ wss.on('connection', (ws: AliveWebSocket, req) => {
       if (['candidate', 'answer', 'request'].includes(msg.event)) {
         const win =
           msg.sourceType === 'player'
-            ? findPlayerWindow(msg.sourceId) ?? (await openPlayer(msg.sourceId))
+            ? findPlayerWindow(msg.sourceId) ?? (await openPlayer(msg.sourceId, { hidden: true }))
             : getMainWindow();
         // console.log('FOUND', win);
         if (win) win.webContents.send('socket', { ...msg, id });
