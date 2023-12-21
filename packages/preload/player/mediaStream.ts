@@ -14,6 +14,7 @@ import ipcDispatch from '../common/ipcDispatch';
 import { setCurrentPlaylistItem, setDuration } from '/@player/store/currentSlice';
 import type { Player } from '/@common/video';
 import type { CandidateMessage, OfferMessage, RtcMessage, WithWebSocketKey } from '/@common/rtc';
+import Deferred from '/@common/Deferred';
 
 let currentSource: VideoSource | undefined;
 let nextSource: VideoSource | undefined;
@@ -160,6 +161,8 @@ export const updateSrcObject = (selector: string) => {
   if (video) video.srcObject = stream;
 };
 
+const streamReady = new Deferred();
+
 const initialize = async () => {
   if (currentSource) {
     currentSource.close();
@@ -177,6 +180,7 @@ const initialize = async () => {
   const trackGenerator = new MediaStreamTrackGenerator({ kind: 'video' });
   videoStream.pipeTo(trackGenerator.writable);
   stream.addTrack(trackGenerator);
+  streamReady.resolve();
   player = await ipcRenderer.invoke('getPlayer', sourceId);
   if (player?.playlistId) {
     playlist = await ipcRenderer.invoke('getPlaylist', player.playlistId);
@@ -239,6 +243,7 @@ ipcRenderer.on('socket', async (_, { id, ...msg }: WithWebSocketKey<RtcMessage>)
           };
           ipcRenderer.invoke('socket', candidateMsg);
         };
+        await streamReady.promise;
         stream.getVideoTracks().forEach(track => {
           const sender = pc.addTrack(track, stream);
           const updateParams = () => {
