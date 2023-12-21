@@ -319,6 +319,8 @@ export const ping = async (address: string): Promise<[-1, undefined] | [number, 
   undefined,
 ];
 
+export const reloadDevice = async (deviceId: DeviceId): Promise<void> => {};
+
 export const releaseDevice = (deviceId: DeviceId): void => {};
 
 function openSession() {
