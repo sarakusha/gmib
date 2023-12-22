@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.8.3](https://github.com/sarakusha/gmib/compare/v4.8.3-demo...v4.8.3) (2023-12-22)
+
+
+### Features
+
+* автообновление screens, pages ([d2127bf](https://github.com/sarakusha/gmib/commit/d2127bfcb82d3dced57c6f12f3d71825db3a9938))
+* скрытый плеер при удаленном подключении ([db197e9](https://github.com/sarakusha/gmib/commit/db197e9de52defd5c5c2a61bbe16b0d5502fefb5))
+* сортировка хостов по имени ([d2eae44](https://github.com/sarakusha/gmib/commit/d2eae44895b2f17cfa2bfab2e991d75052d428d5))
+
+
+### Bug Fixes
+
+* обращение к не готовой БД ([7bc9b82](https://github.com/sarakusha/gmib/commit/7bc9b82aeda48edf4e44dcad5d72b9f87a2e75c6))
+* плейлист из одного ролика ([d58d7d6](https://github.com/sarakusha/gmib/commit/d58d7d69c72aa096e84dd312f244a1b61f8982c2))
+* повторный запрос WebRTC ([3b85243](https://github.com/sarakusha/gmib/commit/3b852433bcee62d35bc4cbe971986d2c8add9fa3))
+* сообщение отправлялось закрытому окну ([83c934d](https://github.com/sarakusha/gmib/commit/83c934d1412f1ea4ff6fd99a9fb84d04116f6f87))
+
 ## [4.8.2](https://github.com/sarakusha/gmib/compare/v4.8.1...v4.8.2) (2023-12-13)
 
 
