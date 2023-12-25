@@ -1,4 +1,5 @@
-import { app, BrowserWindow, Menu, type MenuItem, Tray } from 'electron';
+import type { MenuItem, MenuItemConstructorOptions } from 'electron';
+import { app, BrowserWindow, Menu, Tray } from 'electron';
 import os from 'os';
 import path from 'path';
 
@@ -7,6 +8,7 @@ import sortBy from 'lodash/sortBy';
 import localConfig from './localConfig';
 import store, { getZIndex } from './windowStore';
 import { isGmib, isPlayer } from '/@common/WindowParams';
+import { needRestart } from './relaunch';
 
 let disableZIndex = false;
 
@@ -86,9 +88,13 @@ export const updateTray = (): void => {
       : [
           { type: 'separator' } as MenuItem,
           {
-            role: 'quit',
+            // role: 'quit',
+            click: () => {
+              needRestart();
+              app.quit();
+            },
             label: 'Выход',
-          } as MenuItem,
+          } as MenuItemConstructorOptions,
         ]),
   ]);
   tray && tray.appIcon?.setContextMenu(contextMenu);
