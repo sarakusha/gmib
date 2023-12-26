@@ -107,7 +107,7 @@ const knockKnock = async (params: GmibWindowParams): Promise<void> => {
 export const registerGmib = async (
   browserWindow: BrowserWindow,
   { host, nibusPort: port }: Pick<GmibWindowParams, 'host' | 'nibusPort'>,
-): Promise<GmibWindowParams> => {
+): Promise<GmibWindowParams|undefined> => {
   const id = register(browserWindow);
   // console.log('REGISTER', browserWindow.id);
   // debug(`register gmib: ${id}`);
@@ -125,7 +125,7 @@ export const registerGmib = async (
     },
   };
   const announce = await getAnnounce(host, port + 1);
-  if (typeof announce === 'object') {
+  if (typeof announce === 'object' && !browserWindow.isDestroyed()) {
     const { message, ...data } = announce;
     Object.assign(params, data);
     // if (params.plan && ['premium', 'enterprise'].includes(params.plan)) launchPlayers();
@@ -154,6 +154,7 @@ export const registerGmib = async (
       if (!browserWindow.webContents.isLoading()) announceWindow();
     }
   }
+  if (browserWindow.isDestroyed()) return undefined;
   store.set(id, params);
   return params;
 };
