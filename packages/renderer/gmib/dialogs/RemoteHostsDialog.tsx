@@ -126,7 +126,7 @@ const RemoteHostsDialog: React.FC<RemoteHostsDialogProps> = ({
         const index = customs.findIndex(item => item.id === id);
         if (index !== -1) {
           upd(arg, index, customs);
-          setCustomHosts(sortBy(customs, ['name', 'address']));
+          setCustomHosts(customs);
           setChanged(true);
         }
       };
