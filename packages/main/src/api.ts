@@ -335,7 +335,7 @@ const updateTest = async (scr: Screen) => {
   // debug(`test: ${url}`);
 };
 
-dbReady.then(async () => {
+dbReady.then(() => testsDeferred.promise).then(async () => {
   const screens = await getScreens();
   await Promise.all(screens.map(updateTest));
 });
@@ -958,6 +958,7 @@ api.put('/pages/:id', async (req, res, next) => {
     if (!changes) res.sendStatus(404);
     else {
       res.json(await getPage(req.params.id));
+
       broadcast({ event: 'page', remote: req.ip });
     }
   } catch (e) {
