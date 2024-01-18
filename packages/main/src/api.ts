@@ -20,7 +20,13 @@ import type { CreatePlaylist, Playlist, PlaylistItem } from '/@common/playlist';
 
 import auth from './auth';
 import { port, testsDeferred } from './config';
-import { beginTransaction, commitTransaction, dbReady, incrementCounterString, rollback } from './db';
+import {
+  beginTransaction,
+  commitTransaction,
+  dbReady,
+  incrementCounterString,
+  rollback,
+} from './db';
 import {
   convertCopy,
   doesPlayerSupportFile,
