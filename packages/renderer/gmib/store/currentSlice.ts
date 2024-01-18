@@ -12,7 +12,7 @@ export type TabValues = 'devices' | 'screens' | 'autobrightness' | 'overheat' | 
 // | 'playlist'
 // | 'scheduler';
 
-type Credentials = {
+export type Credentials = {
   identifier: string;
   host?: string;
 };
