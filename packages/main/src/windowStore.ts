@@ -41,6 +41,10 @@ export const getZIndex = (): number => zIndex++;
 
 const store = new Map<number, WindowParams>();
 
+let knockInterval: NodeJS.Timeout;
+let attempts = 0;
+const MAX_KNOCK_ATTEMPTS = 10;
+
 const register = (browserWindow: BrowserWindow): number => {
   const { id } = browserWindow;
   if (!store.has(id)) {
@@ -93,14 +97,17 @@ const knockKnock = async (params: GmibWindowParams): Promise<void> => {
         ...localConfig.store,
         ...replaceNull(update),
       };
-      setTimeout(() => knockKnock(params), 6 * HOUR).unref();
+      // setTimeout(() => knockKnock(params), 6 * HOUR).unref();
+      attempts = 0;
     } else {
-      setTimeout(() => knockKnock(params), 10 * MINUTE).unref();
+      attempts += 1;
+      if (attempts < MAX_KNOCK_ATTEMPTS) setTimeout(() => knockKnock(params), 10 * MINUTE).unref();
       debug(`error while knocking: ${await result.text()}`);
     }
   } catch (error) {
     debug(`error while knocking: ${(error as Error).message}`);
-    setTimeout(() => knockKnock(params), 10 * MINUTE).unref();
+    attempts += 1;
+    if (attempts < MAX_KNOCK_ATTEMPTS)  setTimeout(() => knockKnock(params), 10 * MINUTE).unref();
   }
 };
 
@@ -131,6 +138,10 @@ export const registerGmib = async (
     // if (params.plan && ['premium', 'enterprise'].includes(params.plan)) launchPlayers();
     if (message) {
       knockKnock(params);
+      if (host === 'localhost') {
+        clearInterval(knockInterval);
+        knockInterval = setInterval(() => knockKnock(params), 6 * HOUR).unref();
+      }
       const announceWindow = () => {
         const { update, ...props } = params;
         browserWindow.webContents.send('gmib-params', props);
