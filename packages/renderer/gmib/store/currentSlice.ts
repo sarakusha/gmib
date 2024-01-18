@@ -27,6 +27,7 @@ export interface CurrentState {
   isActivateDialogOpen: boolean;
   invalidState: boolean;
   focused: boolean;
+  tabChangedTimestamp?: number;
   // playlist: number | undefined;
 }
 
@@ -48,7 +49,10 @@ const currentSlice = createSlice({
   initialState,
   reducers: {
     setCurrentTab(state, { payload: tab }: PayloadAction<TabValues | undefined>) {
-      state.tab = tab;
+      if (state.tab !== tab) {
+        state.tab = tab;
+        state.tabChangedTimestamp = Date.now();
+      }
     },
     setCurrentDevice(state, { payload: id }: PayloadAction<string | undefined>) {
       state.device = id;
