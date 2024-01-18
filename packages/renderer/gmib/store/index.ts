@@ -31,20 +31,22 @@ import './sensorThunks';
 import './currentThunks';
 import { setupListeners } from '@reduxjs/toolkit/query';
 
+const rootReducer = combineSlices(
+  currentSlice,
+  configSlice,
+  sessionSlice,
+  devicesSlice,
+  mibsSlice,
+  sensorsSlice,
+  remoteHostsSlice,
+  logSlice,
+  flasherSlice,
+  telemetrySlice,
+  api.reducer,
+);
+
 export const store = configureStore({
-  reducer: combineSlices(
-    currentSlice,
-    configSlice,
-    sessionSlice,
-    devicesSlice,
-    mibsSlice,
-    sensorsSlice,
-    remoteHostsSlice,
-    logSlice,
-    flasherSlice,
-    telemetrySlice,
-    api.reducer,
-  ),
+  reducer: rootReducer,
   middleware: gDM =>
     gDM({
       serializableCheck: {
@@ -59,7 +61,7 @@ export const store = configureStore({
 
 setupListeners(store.dispatch);
 
-export type RootState = ReturnType<typeof store.getState>;
+export type RootState = ReturnType<typeof rootReducer>;
 export type AppThunk<ReturnType = void> = ThunkAction<
   ReturnType,
   RootState,
