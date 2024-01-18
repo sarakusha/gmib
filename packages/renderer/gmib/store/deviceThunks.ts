@@ -119,7 +119,7 @@ const AUTO_CHANGE_TAB_DEBOUNCE = 5 * 1000;
 startAppListening({
   predicate(_, currentState, previousState) {
     const current = selectCurrentDeviceId(currentState);
-    const timestamp = selectTabChangedTimestamp(current);
+    const timestamp = selectTabChangedTimestamp(currentState);
     return (
       current !== undefined &&
       current !== selectCurrentDeviceId(previousState) &&
