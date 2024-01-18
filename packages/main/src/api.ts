@@ -117,6 +117,7 @@ import {
   findPlayerWindow,
   findScreenParams,
   findScreenWindow,
+  getAllScreenParams,
   isEqualOptions,
   registerScreen,
 } from './windowStore';
@@ -335,10 +336,12 @@ const updateTest = async (scr: Screen) => {
   // debug(`test: ${url}`);
 };
 
-dbReady.then(() => testsDeferred.promise).then(async () => {
-  const screens = await getScreens();
-  await Promise.all(screens.map(updateTest));
-});
+dbReady
+  .then(() => testsDeferred.promise)
+  .then(async () => {
+    const screens = await getScreens();
+    await Promise.all(screens.map(updateTest));
+  });
 
 const api = express.Router();
 
@@ -958,7 +961,12 @@ api.put('/pages/:id', async (req, res, next) => {
     if (!changes) res.sendStatus(404);
     else {
       res.json(await getPage(req.params.id));
-
+      const params = getAllScreenParams();
+      const screens = await asyncSerial(
+        params.filter(({ test }) => test === req.params.id).map(({ screenId }) => screenId),
+        loadScreen,
+      );
+      await Promise.all(screens.filter(notEmpty).map(updateTest));
       broadcast({ event: 'page', remote: req.ip });
     }
   } catch (e) {
