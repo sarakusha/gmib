@@ -34,6 +34,8 @@ const Label = styled('span')`
   }
 `;
 
+const readonly = false;
+
 const Screens: React.FC = () => {
   const { screens = [], isSuccess } = useScreens();
   const value = useSelector(selectCurrentScreenId);
@@ -46,20 +48,20 @@ const Screens: React.FC = () => {
   const sessionVersion = useSelector(selectSessionVersion);
   const tab = useSelector(selectCurrentTab);
   const [, setToolbar] = useToolbar();
-  const [readonly, setReadonly] = useState(true);
+  // const [readonly, setReadonly] = useState(true);
   const [createScreen] = useCreateScreenMutation();
   const [removeScreen] = useDeleteScreenMutation();
   const invalidState = useSelector(selectInvalidState);
   useEffect(() => {
     if (tab === 'screens') {
       const toolbar = (
-        <ScreensToolbar readonly={readonly} toggle={() => setReadonly(val => !val)} />
+        <ScreensToolbar readonly={readonly} /* toggle={() => setReadonly(val => !val)} */ />
       );
       setToolbar(toolbar);
       return () => setToolbar(null);
     }
     return noop;
-  }, [tab, setToolbar, readonly]);
+  }, [tab, setToolbar]);
   const removeHandler =
     (id: number): React.MouseEventHandler<HTMLButtonElement> =>
     e => {

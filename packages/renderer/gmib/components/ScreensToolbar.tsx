@@ -83,11 +83,11 @@ const ScreensToolbar: React.FC<{ readonly?: boolean; toggle?: () => void }> = ({
         onChange={handleBrightness}
         disabled={disabled}
       />
-      <Tooltip title={readonly ? 'Разблокировать' : 'Заблокировать'}>
+{/*       <Tooltip title={readonly ? 'Разблокировать' : 'Заблокировать'}>
         <IconButton onClick={toggle} color="inherit" size="large" disabled={invalidState}>
           {readonly ? <LockIcon /> : <LockOpenIcon />}
         </IconButton>
-      </Tooltip>
+      </Tooltip> */}
     </>
   );
 };
