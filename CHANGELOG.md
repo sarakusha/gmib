@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.8.4](https://github.com/sarakusha/gmib/compare/v4.8.3...v4.8.4) (2024-01-19)
+
+
+### Features
+
+* запрет автопереключения таба ([eebc3cb](https://github.com/sarakusha/gmib/commit/eebc3cbde9448609f34001473f759424c5b93631))
+* свернутые параметры экрана ([d6fa684](https://github.com/sarakusha/gmib/commit/d6fa68444edf5638c9714f0af2159517edaab67d))
+* force quit ([0dc167e](https://github.com/sarakusha/gmib/commit/0dc167e1ba590b2ba6c175fcfdfd492c37c75496))
+
+
+### Bug Fixes
+
+* запрос пароля ([8dadd2e](https://github.com/sarakusha/gmib/commit/8dadd2e07b692c4c16f1ecd9727fe09a3daf3993))
+* не обновлялся активный тест ([e097884](https://github.com/sarakusha/gmib/commit/e097884ac0cc24c90d4f0b678bf0c27dd69cc54e))
+* опечатка ([b41a8ec](https://github.com/sarakusha/gmib/commit/b41a8ec1963eebb89c8782ebc15155c11a8bfc63))
+* отключена сортировка при вводе хоста ([aaa0ef8](https://github.com/sarakusha/gmib/commit/aaa0ef88624205b731f7fac9771d1b7ece380e58))
+* перестает стучаться ([7ae0672](https://github.com/sarakusha/gmib/commit/7ae0672aec03fec3802931b1584e1ec89318a455))
+* пустой тест при старте ([0c77351](https://github.com/sarakusha/gmib/commit/0c77351afc8891565ed97efc8042cece4b44bb75))
+* сохранялось уже удаленное окно ([c2b6b2c](https://github.com/sarakusha/gmib/commit/c2b6b2c749edc0f4b34b256020eefe897be4e245))
+
 ## [4.8.3](https://github.com/sarakusha/gmib/compare/v4.8.3-demo...v4.8.3) (2023-12-22)
 
 
