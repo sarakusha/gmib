@@ -44,7 +44,10 @@ const config = {
   appId: 'ru.nata-info.gmib',
   copyright: 'Copyright © Nata-Info, 2022',
   productName: 'gmib',
-  publish: 'github',
+  publish: {
+    provider: 'github',
+    // releaseType: 'prerelease',
+  },
   mac: {
     // executableName: 'gmiby',
     category: 'public.app-category.utilities',

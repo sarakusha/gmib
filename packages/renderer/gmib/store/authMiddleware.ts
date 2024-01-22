@@ -1,5 +1,7 @@
 import type { Middleware } from '@reduxjs/toolkit';
+import { isRejectedWithValue } from '@reduxjs/toolkit';
 
+import type { Credentials } from './currentSlice';
 import { setAuthRequired } from './currentSlice';
 import type { FetchBaseQueryError } from '@reduxjs/toolkit/query';
 
@@ -7,17 +9,22 @@ export function isFetchBaseQueryError(error: unknown): error is FetchBaseQueryEr
   return typeof error === 'object' && error != null && 'status' in error;
 }
 
-export function hasError(action: unknown): action is { error: unknown } {
-  return typeof action === 'object' && action != null && 'error' in action;
-}
-
+const isAuthError = (payload: unknown): payload is { data: Credentials } =>
+  isFetchBaseQueryError(payload) &&
+  payload.status === 401 &&
+  typeof payload.data === 'object' &&
+  payload.data != null &&
+  'identifier' in payload.data;
 
 const authMiddleware: Middleware =
   ({ dispatch }) =>
   next =>
   action => {
-    if ( hasError(action) && isFetchBaseQueryError(action.error) && action.error.status === 401) {
-      setTimeout(() => dispatch(setAuthRequired(undefined)), 0);
+    if (isRejectedWithValue(action)) {
+      const { payload } = action;
+      if (isAuthError(payload)) {
+        setTimeout(() => dispatch(setAuthRequired(payload.data)), 0);
+      }
     }
     next(action);
   };

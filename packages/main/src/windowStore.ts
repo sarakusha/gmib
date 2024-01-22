@@ -41,6 +41,10 @@ export const getZIndex = (): number => zIndex++;
 
 const store = new Map<number, WindowParams>();
 
+let knockInterval: NodeJS.Timeout;
+let attempts = 0;
+const MAX_KNOCK_ATTEMPTS = 10;
+
 const register = (browserWindow: BrowserWindow): number => {
   const { id } = browserWindow;
   if (!store.has(id)) {
@@ -93,21 +97,24 @@ const knockKnock = async (params: GmibWindowParams): Promise<void> => {
         ...localConfig.store,
         ...replaceNull(update),
       };
-      setTimeout(() => knockKnock(params), 6 * HOUR).unref();
+      // setTimeout(() => knockKnock(params), 6 * HOUR).unref();
+      attempts = 0;
     } else {
-      setTimeout(() => knockKnock(params), 10 * MINUTE).unref();
+      attempts += 1;
+      if (attempts < MAX_KNOCK_ATTEMPTS) setTimeout(() => knockKnock(params), 10 * MINUTE).unref();
       debug(`error while knocking: ${await result.text()}`);
     }
   } catch (error) {
     debug(`error while knocking: ${(error as Error).message}`);
-    setTimeout(() => knockKnock(params), 10 * MINUTE).unref();
+    attempts += 1;
+    if (attempts < MAX_KNOCK_ATTEMPTS)  setTimeout(() => knockKnock(params), 10 * MINUTE).unref();
   }
 };
 
 export const registerGmib = async (
   browserWindow: BrowserWindow,
   { host, nibusPort: port }: Pick<GmibWindowParams, 'host' | 'nibusPort'>,
-): Promise<GmibWindowParams> => {
+): Promise<GmibWindowParams|undefined> => {
   const id = register(browserWindow);
   // console.log('REGISTER', browserWindow.id);
   // debug(`register gmib: ${id}`);
@@ -125,7 +132,7 @@ export const registerGmib = async (
     },
   };
   const announce = await getAnnounce(host, port + 1);
-  if (typeof announce === 'object') {
+  if (typeof announce === 'object' && !browserWindow.isDestroyed()) {
     const { message, ...data } = announce;
     Object.assign(params, data);
     const { update, ...props } = params;
@@ -156,6 +163,7 @@ export const registerGmib = async (
     //   if (!browserWindow.webContents.isLoading()) announceWindow();
     // }
   }
+  if (browserWindow.isDestroyed()) return undefined;
   store.set(id, params);
   return params;
 };

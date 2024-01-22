@@ -28,6 +28,7 @@ import {
   selectDeviceIds,
   selectDevicesByAddress,
   selectLinks,
+  selectTabChangedTimestamp,
   // selectScreenAddresses,
 } from './selectors';
 import { addDetected, setOnline } from './sessionSlice';
@@ -113,10 +114,17 @@ startAppListening({
 });
 // }
 
+const AUTO_CHANGE_TAB_DEBOUNCE = 5 * 1000;
+
 startAppListening({
   predicate(_, currentState, previousState) {
     const current = selectCurrentDeviceId(currentState);
-    return current !== undefined && current !== selectCurrentDeviceId(previousState);
+    const timestamp = selectTabChangedTimestamp(currentState);
+    return (
+      current !== undefined &&
+      current !== selectCurrentDeviceId(previousState) &&
+      (!timestamp || Date.now() - timestamp > AUTO_CHANGE_TAB_DEBOUNCE)
+    );
   },
   effect(_, { dispatch }) {
     dispatch(setCurrentTab('devices'));
@@ -128,7 +136,8 @@ const nibusNetAddressProps = ['domain', 'subnet', 'did'];
 startAppListening({
   matcher: isAnyOf(updateProps, updateProperty),
   async effect(action, { dispatch, getState }) {
-    const [deviceId, propsOrName] = updateProps.match(action) || updateProperty.match(action) ? action.payload : [];
+    const [deviceId, propsOrName] =
+      updateProps.match(action) || updateProperty.match(action) ? action.payload : [];
     if (!deviceId || !propsOrName) return;
     const addressChanged =
       typeof propsOrName === 'string'
@@ -176,62 +185,57 @@ startAppListening({
 });
 
 // if (!isRemoteSession) {
-  const TILUX_TYPE = 0x0043;
-  const waitTilux = new Set<DeviceId>();
-  startAppListening({
-    actionCreator: addDevice,
-    effect: ({ payload: { mib, id } }, { getState }) => {
-      if (mib.startsWith('siolynx')) {
-        const autoBrightness = selectAutobrightness(getState());
-        if (autoBrightness) {
-          const options: FinderOptions = {
-            owners: [id],
-            type: TILUX_TYPE,
-          };
-          setTimeout(() => {
-            waitTilux.add(id);
-            window.nibus.findDevices(options).then(() => {
-              waitTilux.delete(id);
-            });
-          }, 10000);
-        }
-      }
-    },
-  });
-
-  startAppListening({
-    actionCreator: setAutobrightness,
-    effect: ({ payload: autoBrightness }, { getState }) => {
+const TILUX_TYPE = 0x0043;
+const waitTilux = new Set<DeviceId>();
+startAppListening({
+  actionCreator: addDevice,
+  effect: ({ payload: { mib, id } }, { getState }) => {
+    if (mib.startsWith('siolynx')) {
+      const autoBrightness = selectAutobrightness(getState());
       if (autoBrightness) {
-        const owners = selectLinks(getState())
-          .filter(({ mib }) => mib.startsWith('siolynx'))
-          .map(({ id }) => id);
-        owners.forEach(id => waitTilux.add(id));
         const options: FinderOptions = {
-          owners,
+          owners: [id],
           type: TILUX_TYPE,
         };
-        window.nibus.findDevices(options).then(() => {
-          owners.forEach(id => waitTilux.delete(id));
-        });
+        setTimeout(() => {
+          waitTilux.add(id);
+          window.nibus.findDevices(options).then(() => {
+            waitTilux.delete(id);
+          });
+        }, 10000);
       }
-    },
-  });
+    }
+  },
+});
 
-  startAppListening({
-    actionCreator: addDetected,
-    effect: ({ payload }, { getState }) => {
-      if (
-        waitTilux &&
-        payload.owner &&
-        payload.type === TILUX_TYPE &&
-        waitTilux.has(payload.owner)
-      ) {
-        const devices = selectDevicesByAddress(getState(), payload.address);
-        if (devices.length === 0) {
-          window.nibus.createDevice(payload.owner, payload.address, 'ti_lux_2_3');
-        }
+startAppListening({
+  actionCreator: setAutobrightness,
+  effect: ({ payload: autoBrightness }, { getState }) => {
+    if (autoBrightness) {
+      const owners = selectLinks(getState())
+        .filter(({ mib }) => mib.startsWith('siolynx'))
+        .map(({ id }) => id);
+      owners.forEach(id => waitTilux.add(id));
+      const options: FinderOptions = {
+        owners,
+        type: TILUX_TYPE,
+      };
+      window.nibus.findDevices(options).then(() => {
+        owners.forEach(id => waitTilux.delete(id));
+      });
+    }
+  },
+});
+
+startAppListening({
+  actionCreator: addDetected,
+  effect: ({ payload }, { getState }) => {
+    if (waitTilux && payload.owner && payload.type === TILUX_TYPE && waitTilux.has(payload.owner)) {
+      const devices = selectDevicesByAddress(getState(), payload.address);
+      if (devices.length === 0) {
+        window.nibus.createDevice(payload.owner, payload.address, 'ti_lux_2_3');
       }
-    },
-  });
+    }
+  },
+});
 // }

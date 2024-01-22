@@ -117,6 +117,7 @@ import {
   findPlayerWindow,
   findScreenParams,
   findScreenWindow,
+  getAllScreenParams,
   isEqualOptions,
   registerScreen,
 } from './windowStore';
@@ -262,7 +263,7 @@ const hideCursorCSS = `html, body {
   user-select: none;
 }`;
 
-const updateTest = async (scr: Screen) => {
+const updateTest = async (scr: Screen, force = false) => {
   const primary = screen.getPrimaryDisplay();
   const displays = screen.getAllDisplays();
   // debug(`updateTest: ${scr.display}, ${typeof scr.display} ${typeof primary.id}`);
@@ -296,7 +297,7 @@ const updateTest = async (scr: Screen) => {
     return;
   }
 
-  const needReload = !win || !prev || !isEqualOptions(scr, prev);
+  const needReload = force || !win || !prev || !isEqualOptions(scr, prev);
   const params = createSearchParams(scr);
   params.append('port', port.toString());
   const url = (page.permanent ? `${page.url}?${params}` : page.url)?.replaceAll(
@@ -334,10 +335,12 @@ const updateTest = async (scr: Screen) => {
   // debug(`test: ${url}`);
 };
 
-dbReady.then(async () => {
-  const screens = await getScreens();
-  await Promise.all(screens.map(updateTest));
-});
+dbReady
+  .then(() => testsDeferred.promise)
+  .then(async () => {
+    const screens = await getScreens();
+    await Promise.all(screens.map(scr => updateTest(scr)));
+  });
 
 const api = express.Router();
 
@@ -637,7 +640,7 @@ api.put('/screen', async (req, res, next) => {
     }
     await deleteExtraAddresses(props.id, addresses);
     const result = await loadScreen(props.id);
-    result && updateTest(result);
+    result && updateTest(result, true);
     res.json(result);
     broadcast({ event: 'screen', remote: req.ip });
   } catch (e) {
@@ -951,6 +954,13 @@ api.put('/pages/:id', async (req, res, next) => {
     if (!changes) res.sendStatus(404);
     else {
       res.json(await getPage(req.params.id));
+      const params = getAllScreenParams();
+      const screens = await asyncSerial(
+        params.filter(({ test }) => test === req.params.id).map(({ screenId }) => screenId),
+        loadScreen,
+      );
+      console.log('SCREENS', screens.length);
+      await Promise.all(screens.filter(notEmpty).map(scr => updateTest(scr, true)));
       broadcast({ event: 'page', remote: req.ip });
     }
   } catch (e) {

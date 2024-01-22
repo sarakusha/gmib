@@ -2,6 +2,45 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.8.5](https://github.com/sarakusha/gmib/compare/v4.8.4...v4.8.5) (2024-01-19)
+
+## [4.8.4](https://github.com/sarakusha/gmib/compare/v4.8.3...v4.8.4) (2024-01-19)
+
+
+### Features
+
+* запрет автопереключения таба ([eebc3cb](https://github.com/sarakusha/gmib/commit/eebc3cbde9448609f34001473f759424c5b93631))
+* свернутые параметры экрана ([d6fa684](https://github.com/sarakusha/gmib/commit/d6fa68444edf5638c9714f0af2159517edaab67d))
+* force quit ([0dc167e](https://github.com/sarakusha/gmib/commit/0dc167e1ba590b2ba6c175fcfdfd492c37c75496))
+
+
+### Bug Fixes
+
+* запрос пароля ([8dadd2e](https://github.com/sarakusha/gmib/commit/8dadd2e07b692c4c16f1ecd9727fe09a3daf3993))
+* не обновлялся активный тест ([e097884](https://github.com/sarakusha/gmib/commit/e097884ac0cc24c90d4f0b678bf0c27dd69cc54e))
+* опечатка ([b41a8ec](https://github.com/sarakusha/gmib/commit/b41a8ec1963eebb89c8782ebc15155c11a8bfc63))
+* отключена сортировка при вводе хоста ([aaa0ef8](https://github.com/sarakusha/gmib/commit/aaa0ef88624205b731f7fac9771d1b7ece380e58))
+* перестает стучаться ([7ae0672](https://github.com/sarakusha/gmib/commit/7ae0672aec03fec3802931b1584e1ec89318a455))
+* пустой тест при старте ([0c77351](https://github.com/sarakusha/gmib/commit/0c77351afc8891565ed97efc8042cece4b44bb75))
+* сохранялось уже удаленное окно ([c2b6b2c](https://github.com/sarakusha/gmib/commit/c2b6b2c749edc0f4b34b256020eefe897be4e245))
+
+## [4.8.3](https://github.com/sarakusha/gmib/compare/v4.8.3-demo...v4.8.3) (2023-12-22)
+
+
+### Features
+
+* автообновление screens, pages ([d2127bf](https://github.com/sarakusha/gmib/commit/d2127bfcb82d3dced57c6f12f3d71825db3a9938))
+* скрытый плеер при удаленном подключении ([db197e9](https://github.com/sarakusha/gmib/commit/db197e9de52defd5c5c2a61bbe16b0d5502fefb5))
+* сортировка хостов по имени ([d2eae44](https://github.com/sarakusha/gmib/commit/d2eae44895b2f17cfa2bfab2e991d75052d428d5))
+
+
+### Bug Fixes
+
+* обращение к не готовой БД ([7bc9b82](https://github.com/sarakusha/gmib/commit/7bc9b82aeda48edf4e44dcad5d72b9f87a2e75c6))
+* плейлист из одного ролика ([d58d7d6](https://github.com/sarakusha/gmib/commit/d58d7d69c72aa096e84dd312f244a1b61f8982c2))
+* повторный запрос WebRTC ([3b85243](https://github.com/sarakusha/gmib/commit/3b852433bcee62d35bc4cbe971986d2c8add9fa3))
+* сообщение отправлялось закрытому окну ([83c934d](https://github.com/sarakusha/gmib/commit/83c934d1412f1ea4ff6fd99a9fb84d04116f6f87))
+
 ## [4.8.2](https://github.com/sarakusha/gmib/compare/v4.8.1...v4.8.2) (2023-12-13)
 
 

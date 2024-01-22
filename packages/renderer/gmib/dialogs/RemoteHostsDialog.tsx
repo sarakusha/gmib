@@ -16,6 +16,7 @@ import { hasProps } from '@novastar/screen/common';
 import React, { useEffect, useRef, useState } from 'react';
 import type { MouseEvent } from 'react';
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
+import sortBy from 'lodash/sortBy';
 
 import type { CustomHost } from '/@common/helpers';
 
@@ -103,12 +104,12 @@ const RemoteHostsDialog: React.FC<RemoteHostsDialogProps> = ({
   useEffect(() => {
     const updateHosts = (hosts: CustomHost[] = []): void => {
       setCustomHosts(
-        hosts.map<CustomHostItem>(({ address, port, name }) => ({
+        sortBy(hosts.map<CustomHostItem>(({ address, port, name }) => ({
           address,
           port: port.toString(),
           id: timeid(),
           name,
-        })),
+        })), ['name', 'address']),
       );
       setChanged(false);
     };
@@ -195,7 +196,7 @@ const RemoteHostsDialog: React.FC<RemoteHostsDialogProps> = ({
                 <Header>
                   <div>Адрес</div>
                   <div>Порт</div>
-                  <div />
+                  <div>Имя</div>
                   <div />
                   <div />
                 </Header>
