@@ -82,6 +82,7 @@ export type PlayerMapping = {
   kiosk: boolean;
   zOrder: number;
   shader?: string;
+  transparent?: boolean;
 };
 
 export const enum DefaultDisplays {

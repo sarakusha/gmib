@@ -90,6 +90,15 @@ export const openPlayer = async (
     });
     browserWindow.webContents.setWindowOpenHandler(openHandler);
     browserWindow.webContents.setVisualZoomLevelLimits(1, 1);
+    // browserWindow.webContents.on('did-create-window', win => {
+    //   win.once('ready-to-show', () => {
+    //     console.log('READY');
+    //     win.maximize();
+    //     win.setFullScreen(true);
+    //     win.setKiosk(true);
+    //     win.setAlwaysOnTop(true);
+    //   });
+    // });
     // browserWindow.webContents.on('zoom-changed', (event, zoomDirection) => {
     //   setTimeout(() => browserWindow?.webContents.setZoomFactor(1.0), 100);
     //   debug(`zoom: ${browserWindow?.webContents.getZoomFactor()}`);

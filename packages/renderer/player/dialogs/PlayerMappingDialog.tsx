@@ -1,4 +1,4 @@
-import { FormLabel, Stack } from '@mui/material';
+import { Checkbox, FormControlLabel, FormLabel, Stack } from '@mui/material';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
@@ -61,6 +61,8 @@ const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) =
               width: player?.width ?? 320,
               height: player?.height ?? 240,
               zOrder: 0,
+              kiosk: false,
+              transparent: false,
             }
           }
           onSubmit={async (newValues, { setSubmitting }) => {
@@ -132,6 +134,27 @@ const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) =
                     type="number"
                     component={FormikTextField}
                     fullWidth
+                  />
+                </Stack>
+              </FormControl>
+              <FormControl component="fieldset" sx={{ width: 1 }} margin="normal">
+                <FormLabel component="legend">Окно</FormLabel>
+                <Stack direction="row" gap={2}>
+                  <FormControlLabel
+                    control={
+                      <Checkbox checked={values.kiosk} onChange={handleChange} name="kiosk" />
+                    }
+                    label="На весь экран"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={values.transparent}
+                        onChange={handleChange}
+                        name="transparent"
+                      />
+                    }
+                    label="Прозрачность"
                   />
                 </Stack>
               </FormControl>

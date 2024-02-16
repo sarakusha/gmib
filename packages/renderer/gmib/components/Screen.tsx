@@ -29,8 +29,8 @@ import { reIPv4, toHexId } from '/@common/helpers';
 
 import FormFieldSet from './FormFieldSet';
 import InvalidFormUpdater from './InvalidFormUpdater';
-import Accordion from "./Accordion";
-import AccordionSummary from "./AccordionSummary";
+import Accordion from './Accordion';
+import AccordionSummary from './AccordionSummary';
 
 declare global {
   interface MediaTrackConstraints {

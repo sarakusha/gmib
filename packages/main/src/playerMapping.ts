@@ -17,6 +17,7 @@ const toPlayerMapping = (row: NullableOptional): PlayerMapping => {
   return {
     ...props,
     kiosk: Boolean(flags & MappingFlags.Kiosk),
+    transparent: Boolean(flags & MappingFlags.Transparent),
   };
 };
 
@@ -36,7 +37,7 @@ const playerMappingEncoder = (props: WithRequiredProp<Partial<PlayerMapping>, 'p
   $display: props.display ?? null,
   $zOrder: props.zOrder ?? 0,
   $shader: props.shader ?? null,
-  $flags: flag(props.kiosk, MappingFlags.Kiosk),
+  $flags: flag(props.kiosk, MappingFlags.Kiosk) | flag(props.transparent, MappingFlags.Transparent),
 });
 
 export const insertPlayerMapping = promisifyRun(
