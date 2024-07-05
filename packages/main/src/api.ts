@@ -186,7 +186,7 @@ const loadMedia = async (file: File, force = false): Promise<MediaInfo> => {
   let outPath = file.filepath;
   let duration = fileMeta.format.duration !== undefined && parseFloat(fileMeta.format.duration);
   const validDuration = duration && isDurationValid(duration);
-  const isImage = !duration && file.mimetype?.startsWith('image/');
+  const isImage = file.mimetype?.startsWith('image/');
   if (!validDuration && !isImage) throw new Error('Unknown duration');
   const original = file.originalFilename ?? file.newFilename;
   let unlink = false;
