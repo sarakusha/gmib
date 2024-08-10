@@ -1,6 +1,6 @@
 {
   "name": "gmib",
-  "version": "4.8.5",
+  "version": "4.8.6",
   "description": "Nata-Info gmib tool",
   "private": true,
   "engines": {

@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.8.6](https://github.com/sarakusha/gmib/compare/v4.8.5-demo...v4.8.6) (2024-08-10)
+
+
+### Features
+
+* параметры прозрачность и фулскрин ([7fe08ef](https://github.com/sarakusha/gmib/commit/7fe08efa8889b3bcb4541c748bbb4f2a59a4631f))
+
+
+### Bug Fixes
+
+* изображения не конверировались в видео ([b4dfe67](https://github.com/sarakusha/gmib/commit/b4dfe678953a9b55b5ef8cacc85780c6806da965))
+* сброс авторизации ([870a5c3](https://github.com/sarakusha/gmib/commit/870a5c33a90220b77f5749dd3d07abd4e9fe18d1))
+
 ## [4.8.5](https://github.com/sarakusha/gmib/compare/v4.8.4...v4.8.5) (2024-01-19)
 
 ## [4.8.4](https://github.com/sarakusha/gmib/compare/v4.8.3...v4.8.4) (2024-01-19)
