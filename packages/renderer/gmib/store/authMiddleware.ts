@@ -25,6 +25,8 @@ const authMiddleware: Middleware =
       if (isAuthError(payload)) {
         setTimeout(() => dispatch(setAuthRequired(payload.data)), 0);
       }
+    } else {
+      setTimeout(() => dispatch(setAuthRequired()), 0);
     }
     next(action);
   };
