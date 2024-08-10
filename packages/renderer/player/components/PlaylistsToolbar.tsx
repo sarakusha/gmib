@@ -54,7 +54,7 @@ const PlaylistsToolbar: React.FC<Props> = ({ size }) => {
           color="inherit"
           onClick={() =>
             create({ name: 'Новый плейлист', flags: 0 }).then(res => {
-              'data' in res && dispatch(setCurrentPlaylist(res.data.id));
+              'data' in res && res.data && dispatch(setCurrentPlaylist(res.data.id));
             })
           }
           disabled={empty}
@@ -72,7 +72,7 @@ const PlaylistsToolbar: React.FC<Props> = ({ size }) => {
               if (currentPlaylist) {
                 const { id, creationTime, ...copy } = currentPlaylist;
                 const res = await create(copy);
-                if ('data' in res) {
+                if ('data' in res && res.data) {
                   dispatch(setCurrentPlaylist(res.data.id));
                 }
               }
