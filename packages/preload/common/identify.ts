@@ -11,7 +11,7 @@ const credentials: Credentials = {};
 // const host = query.get('host') ?? 'localhost';
 // const port = +(query.get('port') ?? process.env.NIBUS_PORT ?? 9001) + 1;
 
-const initialize = async () => {
+const initialize = async (): Promise<boolean> => {
   try {
     const response =
       host === 'localhost'
@@ -30,10 +30,12 @@ const initialize = async () => {
               response.apiSecret.byteLength,
             )
           : undefined;
+      return Boolean(credentials.apiSecret);
     }
   } catch (e) {
     console.error('ERROR', e);
   }
+  return false;
 };
 
 export const getSecret = () => credentials.apiSecret?.toString('base64');
@@ -53,4 +55,4 @@ export const generateSignature = (
 ): string | undefined =>
   credentials.apiSecret && genSignature(credentials.apiSecret, method, uri, timestamp, body);
 
-initialize();
+export const initialized = initialize();

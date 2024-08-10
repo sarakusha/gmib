@@ -71,12 +71,18 @@ contextBridge.exposeInMainWorld('identify', expandTypes(identify));
 //     ipcRenderer.on('get-host-options', listener),
 // });
 
+let attempts = 0;
+
 const onReady = async () => {
   const machineId = await ipcRenderer.invoke('getMachineId');
   // console.log(machineId, typeof machineId);
   if (typeof machineId === 'string') {
     // console.log({ machineId, hash: hashCode(machineId).toString(16) });
     document.body.classList.add(`gmib-${hashCode(machineId).toString(16)}`);
+  } else {
+    setTimeout(onReady, 100);
+    attempts += 1;
+    log.error(`Failed to get machine id ${attempts}`);
   }
 };
 
