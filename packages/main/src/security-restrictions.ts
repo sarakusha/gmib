@@ -27,6 +27,10 @@ const allPermissions = [
   'openExternal',
   'window-management',
   'unknown',
+  'speaker-selection',
+  'storage-access',
+  'top-level-storage-access',
+  'fileSystem',
 ] as const;
 // type AllPermissions = Parameters<Exclude<Parameters<WebContents['session']['setPermissionRequestHandler']>[0], null | undefined>>[1];
 
