@@ -71,18 +71,23 @@ contextBridge.exposeInMainWorld('identify', expandTypes(identify));
 //     ipcRenderer.on('get-host-options', listener),
 // });
 
-let attempts = 0;
+const gmibParams = new Promise<GmibWindowParams>(resolve => {
+  ipcRenderer.once('gmib-params', (_, params: GmibWindowParams) => {
+    resolve(params);
+  });
+});
 
 const onReady = async () => {
-  const machineId = await ipcRenderer.invoke('getMachineId');
+  let machineId = await ipcRenderer.invoke('getMachineId');
+  if (typeof machineId !== 'string') {
+    machineId = (await gmibParams).machineId;
+  }
   // console.log(machineId, typeof machineId);
   if (typeof machineId === 'string') {
     // console.log({ machineId, hash: hashCode(machineId).toString(16) });
     document.body.classList.add(`gmib-${hashCode(machineId).toString(16)}`);
   } else {
-    setTimeout(onReady, 100);
-    attempts += 1;
-    log.error(`Failed to get machine id ${attempts}`);
+    log.error('Failed to get machine id');
   }
 };
 
@@ -93,12 +98,6 @@ if (document.readyState === 'loading') {
   // DOM готов!
   onReady();
 }
-
-const gmibParams = new Promise<GmibWindowParams>(resolve => {
-  ipcRenderer.once('gmib-params', (_, params: GmibWindowParams) => {
-    resolve(params);
-  });
-});
 
 ipcRenderer.on('focus', (_, focused: boolean) => {
   ipcDispatch(setFocused(focused));
