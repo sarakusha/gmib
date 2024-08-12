@@ -972,7 +972,7 @@ api.put('/pages/:id', async (req, res, next) => {
         params.filter(({ test }) => test === req.params.id).map(({ screenId }) => screenId),
         loadScreen,
       );
-      console.log('SCREENS', screens.length);
+      // console.log('SCREENS', screens.length);
       await Promise.all(screens.filter(notEmpty).map(scr => updateTest(scr, true)));
       broadcast({ event: 'page', remote: req.ip });
     }
