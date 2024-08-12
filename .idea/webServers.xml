@@ -3,7 +3,11 @@
   <component name="WebServers">
     <option name="servers">
       <webServer id="97904d52-009d-4fec-bd66-72ae10cfef26" name="192.168.2.40" url="http://localhost">
-        <fileTransfer mountedRoot="/Volumes/Users/levakov" accessType="MOUNT" port="0" />
+        <fileTransfer rootFolder="/C:/Users/sarakusha" accessType="SFTP" host="192.168.2.40" port="22" sshConfigId="fe5416bb-7d2a-47c2-8ac9-d716de1f0fd7" sshConfig="sarakusha@192.168.2.40:22 key" keyPair="true">
+          <advancedOptions>
+            <advancedOptions keepAliveTimeout="0" />
+          </advancedOptions>
+        </fileTransfer>
       </webServer>
     </option>
   </component>

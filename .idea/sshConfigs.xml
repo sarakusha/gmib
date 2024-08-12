@@ -2,7 +2,7 @@
 <project version="4">
   <component name="SshConfigs">
     <configs>
-      <sshConfig host="192.168.2.40" id="fe5416bb-7d2a-47c2-8ac9-d716de1f0fd7" keyPath="$USER_HOME$/.ssh/id_rsa" port="22" nameFormat="DESCRIPTIVE" username="user" useOpenSSHConfig="true" />
+      <sshConfig host="192.168.2.40" id="fe5416bb-7d2a-47c2-8ac9-d716de1f0fd7" keyPath="$USER_HOME$/.ssh/id_rsa" port="22" nameFormat="DESCRIPTIVE" username="sarakusha" useOpenSSHConfig="true" />
       <sshConfig host="192.168.2.40" id="7e4dad76-7707-442b-9a4b-56b86e2256db" keyPath="$USER_HOME$/.ssh/id_rsa" port="22" customName="sarakusha@192.168.2.31:22" nameFormat="CUSTOM" username="sarakusha" useOpenSSHConfig="true">
         <option name="customName" value="sarakusha@192.168.2.31:22" />
       </sshConfig>
