@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.8.7](https://github.com/sarakusha/gmib/compare/v4.8.6...v4.8.7) (2024-08-12)
+
+
+### Features
+
+* обновлены permissions ([9d74a50](https://github.com/sarakusha/gmib/commit/9d74a50294cde5419e955c62d9928eca8b0e2675))
+
+
+### Bug Fixes
+
+* удаленное подключение ([a469fb0](https://github.com/sarakusha/gmib/commit/a469fb0c29abd6bc9d362f37cd9fa7afa9e127aa))
+* удаленное поключение ([6ac62a0](https://github.com/sarakusha/gmib/commit/6ac62a0d0077c5c26569fe4a259ceb45d1e13c08))
+
 ## [4.8.6](https://github.com/sarakusha/gmib/compare/v4.8.5-demo...v4.8.6) (2024-08-10)
 
 
