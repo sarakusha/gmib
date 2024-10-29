@@ -52,8 +52,7 @@ const createWindow = (title: string, preload: string, random = true): BrowserWin
     browserWindow.setSkipTaskbar(true);
     return false;
   });
-  browserWindow.on('minimize', (event: Event) => {
-    event.preventDefault();
+  browserWindow.on('minimize', () => {
     browserWindow.hide();
     return false;
   });
