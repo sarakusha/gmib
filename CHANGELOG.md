@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.8.8](https://github.com/sarakusha/gmib/compare/v4.8.7...v4.8.8) (2024-10-29)
+
+
+### Features
+
+* upgrade novastar lib ([c5d246e](https://github.com/sarakusha/gmib/commit/c5d246e8dc7d7b7077213de4a933300c5f82664c))
+
+
+### Bug Fixes
+
+* minimize event ([28bde28](https://github.com/sarakusha/gmib/commit/28bde28a4e10739cbb3e385771814d1722e6b1b9))
+
 ## [4.8.7](https://github.com/sarakusha/gmib/compare/v4.8.6...v4.8.7) (2024-08-12)
 
 
