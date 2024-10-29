@@ -1,6 +1,6 @@
 import type { DeviceId } from '@nibus/core';
 import Address from '@nibus/core/Address';
-import { series as pMap } from '@novastar/codec/helper';
+// import { series as pMap } from '@novastar/codec';
 import debugFactory from 'debug';
 import flatten from 'lodash/flatten';
 import groupBy from 'lodash/groupBy';
@@ -29,6 +29,20 @@ import {
 import type { AppThunk, RootState } from '.';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:health`);
+
+function pMap<T, R>(
+  array: ReadonlyArray<T>,
+  action: (item: T, index: number, arr: ReadonlyArray<T>, results: ReadonlyArray<R>) => Promise<R>,
+): Promise<R[]> {
+  return array.reduce<Promise<R[]>>(
+    (acc, item, index) =>
+      acc.then(async items => {
+        const result = await action(item, index, array, items);
+        return [...items, result];
+      }),
+    Promise.resolve<R[]>([]),
+  );
+}
 
 let running = false;
 let currentInterval: number | undefined;
@@ -71,7 +85,7 @@ const updateMaxBrightness =
     } =
       !health.timestamp || Date.now() - health.timestamp >= overheatProtection.interval * 2 * MINUTE
         ? {}
-        : health.screens[id] ?? {};
+        : (health.screens[id] ?? {});
     let brightness = Math.min(prevBrightness, desiredBrightness);
     const max = aggregations[overheatProtection.aggregation];
     const prevMax = prevAggregations[overheatProtection.aggregation];

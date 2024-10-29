@@ -1,7 +1,6 @@
 /* eslint-disable no-bitwise */
 import type { DeviceId } from '@nibus/core';
-import type { HWStatus } from '@novastar/screen/HWStatus';
-import type { CabinetPosition } from '@novastar/screen/getCabinetPosition';
+import type { CabinetPosition, HWStatus } from '@novastar/screen';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import propertyOf from 'lodash/propertyOf';
 import type React from 'react';

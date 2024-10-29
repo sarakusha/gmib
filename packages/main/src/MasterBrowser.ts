@@ -1,8 +1,6 @@
 // eslint-disable-next-line max-classes-per-file
 import type { Novastar, Screen, ScreenId } from '/@common/novastar';
 
-import { series } from '@novastar/codec/helper';
-
 import { delay, notEmpty } from '/@common/helpers';
 import type { CabinetInfo, NovastarTelemetry } from '/@common/helpers';
 
@@ -12,9 +10,9 @@ import { connect } from 'net';
 import dgram, { type Socket } from 'dgram';
 import { networkInterfaces } from 'os';
 
-import Connection from '@novastar/codec/Connection';
-import net, { findNetDevices, MULTICAST_ADDRESS, REQ, UDP_PORT } from '@novastar/net';
-import ScreenConfigurator from '@novastar/screen/ScreenConfigurator';
+import { Connection, series } from '@novastar/codec';
+import { findNetDevices, MULTICAST_ADDRESS, net, REQ, UDP_PORT } from '@novastar/net';
+import ScreenConfigurator from '@novastar/screen';
 import memoize from 'lodash/memoize';
 import { TypedEmitter } from 'tiny-typed-emitter';
 

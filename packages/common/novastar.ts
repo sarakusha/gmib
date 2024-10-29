@@ -1,8 +1,6 @@
 import type { ChipTypeEnum } from '@novastar/native/ChipType';
 import type { TestModeEnum } from '@novastar/native/TestMode';
-import type { DeviceInfo } from '@novastar/screen/DeviceInfo';
-import type { BrightnessRGBV } from '@novastar/screen/ScreenConfigurator';
-import type { LEDDisplayInfo } from '@novastar/screen/common';
+import type { BrightnessRGBV, DeviceInfo, LEDDisplayInfo } from '@novastar/screen';
 
 export type ScreenId = {
   path: string;
