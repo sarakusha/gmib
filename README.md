@@ -71,16 +71,49 @@ NIBUS:
 
 Для установки и запуска ПО на Linux используется переносимый формат
 [AppImage](https://ru.wikipedia.org/wiki/AppImage), когда вся программа хранится в одном сжатом
-файле. Вам нужно скопировать файл [`gmib.AppImage`](https://github.com/sarakusha/gmib/releases) в
+файле. Вам нужно скопировать файл [`gmib-x86_64.AppImage/gmib-arm64.AppImage`](https://github.com/sarakusha/gmib/releases) в
 домашнюю папку пользователя (или любое другое место на диске), сделать файл исполняемым
 (`chmod +x gmib.AppImage`) и запустить. При первом запуске программа сама создаст нужные ярлыки в
 меню приложений системы. Данные и настройки программы хранятся в папке `$XDG_CONFIG_HOME/gmib` или
-`~/.config/gmib`. Для удаления программы просто удалите файл `gmib.AppImage`, также можете удалить
-папку с данными.
+`~/.config/gmib`. Также, если Вы будете использовать функции плеера, необходимо установить ffmpeg
+включая ffprobe. Например в Ubuntu это можно сделать командой sudo apt install ffmpeg. Он
+используется для конвертации медиа-файлов. Для удаления программы просто удалите файл gmib.AppImage,
+также можете удалить папку с данными.
+Также может понадобиться добавление текущего пользователя в группу dialout:
+
+```bash
+> sudo usermod -a -G dialout $USER
+```
+
+Если при подключении устройства оно не распознается и в журнале программы выдается ошибка `LIBUSB_ERROR_ACCESS`,
+нужно создать файл `/etc/udev/rules.d/100-gmib.rules` и добавить в него по строке для каждого вида устройств.
+Узнайте `VID` и `PID` устройства командой:
+
+```bash
+> lsusb
+
+[Вывод команды]
+Bus 007 Device 003: ID 10c4:ea60 Silicon Labs CP210x UART Bridge
+Bus 007 Device 002: ID 05e3:0608 Genesys Logic, Inc. Hub
+Bus 007 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
+Bus 004 Device 001: ID 1d6b:0001 Linux Foundation 1.1 root hub
+Bus 002 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
+Bus 003 Device 001: ID 1d6b:0001 Linux Foundation 1.1 root hub
+Bus 001 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
+```
+
+Наше устройство здесь `Silicon Labs CP210x UART Bridge` и его `VID=10c4`, а `PID=ea60`.
+Тогда строчка будет выглядеть так:
+
+```
+SUBSYSTEM=="usb", ATTRS{idVendor}=="10c4",   ATTRS{idProduct}=="ea60", OWNER="user",   GROUP="plugdev", TAG+="uaccess"
+```
+
+Значение OWNER должно содержать имя текущего пользователя.
 
 ## На macOS
 
-На macOS вам нужно открыть файл [`gmib-[версия].dmg`](https://github.com/sarakusha/gmib/releases) и
+На macOS вам нужно открыть файл [`gmib-[версия].dmg или gmib-[версия]-arm64.dmg`](https://github.com/sarakusha/gmib/releases) и
 переместить его в папку `Application`. Данные и настройки программы хранятся в папке
 `~/Library/Application Support/gmib`. Чтобы удалить программу просто удалите её из папки
 `Application`. Не забудьте удалить папку с данными, если больше не будете пользоваться программой.
