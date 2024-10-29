@@ -11,6 +11,9 @@ if (process.env.VITE_APP_VERSION === undefined) {
  * @see https://www.electron.build/configuration/configuration
  */
 const config = {
+  buildDependenciesFromSource: true,
+  nodeGypRebuild: false,
+  npmRebuild: false,
   directories: {
     output: 'dist',
     buildResources: 'resources',
@@ -40,7 +43,7 @@ const config = {
   extraMetadata: {
     version: process.env.VITE_APP_VERSION,
   },
-  npmRebuild: true,
+  // npmRebuild: true,
   appId: 'ru.nata-info.gmib',
   copyright: 'Copyright © Nata-Info, 2022',
   productName: 'gmib',
@@ -95,7 +98,7 @@ const config = {
     artifactName: '${productName}-setup-${version}.${ext}',
   },
   appImage: {
-    artifactName: '${productName}.${ext}',
+    artifactName: '${productName}-${arch}.${ext}',
   },
 };
 

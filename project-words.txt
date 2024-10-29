@@ -7,6 +7,7 @@ bootloader
 browserslistrc
 demuxer
 dflt
+dialout
 dirh
 dirv
 ebml
@@ -18,6 +19,7 @@ fflags
 Ffprobe
 FOLDERID
 formik
+Genesys
 genpts
 gmib
 hexoid
@@ -41,9 +43,11 @@ leavepictureinpicture
 letterboxing
 libaom
 libtheora
+LIBUSB
 libvpx
 libx
 Lsize
+lsusb
 machineid
 matroska
 maximizable
@@ -95,9 +99,12 @@ tscc
 tssrp
 tuplify
 typecheck
+UART
+udev
 ultrafast
 unplugin
 upsert
+usermod
 vcodec
 vframes
 videogame

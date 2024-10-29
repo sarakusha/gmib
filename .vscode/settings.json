@@ -1,19 +1,18 @@
 {
   "files.exclude": {
-    "**/.git": true,
-    "**/.svn": true,
-    "**/.hg": true,
-    "**/CVS": true,
-    "**/.DS_Store": true,
-    "**/Thumbs.db": true,
-    "**/node_modules": true,
-    ".vscode": true,
-    "**/.yalc": true,
-    "**/dist": false,
-    "ffmpeg": true,
-    "**/yalc.lock": true,
+    ".github": true,
     ".idea": true,
-    ".github": true
+    ".vscode": true,
+    "**/.DS_Store": true,
+    "**/.git": true,
+    "**/.hg": true,
+    "**/.svn": true,
+    "**/.yalc": true,
+    "**/CVS": true,
+    "**/dist": false,
+    "**/Thumbs.db": true,
+    "**/yalc.lock": true,
+    "ffmpeg": true
   },
   "sqltools.connections": [
     {
