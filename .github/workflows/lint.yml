@@ -39,7 +39,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: 16 # Need for npm >=7.7
           cache: 'npm'
@@ -56,7 +56,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: 16 # Need for npm >=7.7
           cache: 'npm'
