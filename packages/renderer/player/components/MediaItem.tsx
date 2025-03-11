@@ -202,14 +202,31 @@ const MediaItem = React.forwardRef<HTMLLIElement, MediaItemProps>((props, ref) =
   });
   drag(drop(refInner));
   const DeleteCloseIcon = onMove ? CloseIcon : DeleteIcon;
+  const [title, setTitle] = React.useState<string>();
+  React.useEffect(() => {
+    if (title) {
+      const timeout = setTimeout(() => setTitle(undefined), 3000);
+      return () => {
+        clearTimeout(timeout);
+      };
+    }
+    return undefined;
+  }, [title]);
   return (
     <div ref={dragPreview}>
       <ListItemHover
+        title={title}
         ref={refInner}
         style={style}
         dense
         selected={selected || Boolean(count)}
-        onClick={() => onClick?.(md5)}
+        onClick={e => {
+          if (e.shiftKey) {
+            setTitle(info.md5);
+            navigator.clipboard.writeText(info.md5);
+          }
+          onClick?.(md5);
+        }}
         sx={{
           ...(onMove && { cursor: 'move' }),
           '&, & ~ *': { opacity: isDragging ? 0 : 1 },
@@ -234,7 +251,7 @@ const MediaItem = React.forwardRef<HTMLLIElement, MediaItemProps>((props, ref) =
         </ListItemAvatar>
         <ListItemText
           id={filename}
-          primary={<Numbered text={filename} index={pos != null ? pos + 1 : undefined} />}
+          primary={<Numbered text={title ?? filename} index={pos != null ? pos + 1 : undefined} />}
           primaryTypographyProps={{ noWrap: true }}
           secondary={duration ? <Details {...info} /> : 'loading...'}
           disableTypography
