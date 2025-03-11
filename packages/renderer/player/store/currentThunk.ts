@@ -14,7 +14,11 @@ import {
   togglePlaybackState,
 } from './currentSlice';
 import { startAppListening } from './listenerMiddleware';
-import { selectCurrent, selectDuration, selectPlaybackState } from './selectors';
+import {
+  selectCurrent,
+  selectDuration,
+  selectPlaybackState,
+} from './selectors';
 
 import { isRemoteSession } from '/@common/remote';
 

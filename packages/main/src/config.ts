@@ -12,9 +12,9 @@ import { configSchema } from '/@common/schema';
 import { asyncSerial } from '/@common/helpers';
 import Deferred from '/@common/Deferred';
 
+import { dbReady } from './db';
 import { uniquePageTitle, upsertPermanentPage } from './page';
 import relaunch from './relaunch';
-import { dbReady } from './db';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:config`);
 // const version = app.getVersion();

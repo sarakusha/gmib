@@ -1,9 +1,10 @@
 import { Backdrop, Box } from '@mui/material';
 import React from 'react';
 
-import Main from './Main';
 import { useSelector } from '../store';
 import { selectFocused } from '../store/selectors';
+
+import Main from './Main';
 
 const App: React.FC = () => {
   const focused = useSelector(selectFocused);

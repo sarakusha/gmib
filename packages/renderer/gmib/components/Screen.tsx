@@ -1,3 +1,4 @@
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import {
   // Accordion,
   AccordionDetails,
@@ -14,7 +15,6 @@ import { styled } from '@mui/material/styles';
 import ChipInput from '@sarakusha/material-ui-chip-input';
 import { Field, Form, Formik } from 'formik';
 import React, { useCallback } from 'react';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 import FormikTextField from '../../common/FormikTextField';
 import SubmitListener from '../../common/SubmitListener';
@@ -27,10 +27,10 @@ import { DefaultDisplays } from '/@common/video';
 import { reAddress } from '/@common/config';
 import { reIPv4, toHexId } from '/@common/helpers';
 
-import FormFieldSet from './FormFieldSet';
-import InvalidFormUpdater from './InvalidFormUpdater';
 import Accordion from './Accordion';
 import AccordionSummary from './AccordionSummary';
+import FormFieldSet from './FormFieldSet';
+import InvalidFormUpdater from './InvalidFormUpdater';
 
 declare global {
   interface MediaTrackConstraints {
@@ -87,9 +87,7 @@ type Props = {
 
 const keys = ['width', 'height'] as const;
 
-const noop = () => {};
-
-const createStream = async (sourceId?: string): Promise<MediaStream | undefined> => {
+/* const createStream = async (sourceId?: string): Promise<MediaStream | undefined> => {
   if (sourceId)
     try {
       return await navigator.mediaDevices.getUserMedia({
@@ -109,7 +107,7 @@ const createStream = async (sourceId?: string): Promise<MediaStream | undefined>
       console.error('error while create stream', err);
     }
   return undefined;
-};
+}; */
 
 const ScreenComponent: React.FC<Props> = ({
   id: scrId,

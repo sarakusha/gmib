@@ -25,53 +25,53 @@ const selectPlaylistData = playlistApi.endpoints.getPlaylists.select();
 
 const getFirstItemFactory =
   (getState: () => RootState) =>
-    (playlistId?: number | null): string | undefined => {
-      const playlistsData = selectPlaylistData(getState()).data;
-      return playlistId && playlistsData
-        ? selectPlaylistById(playlistsData, playlistId)?.items[0]?.id
-        : undefined;
-    };
+  (playlistId?: number | null): string | undefined => {
+    const playlistsData = selectPlaylistData(getState()).data;
+    return playlistId && playlistsData
+      ? selectPlaylistById(playlistsData, playlistId)?.items[0]?.id
+      : undefined;
+  };
 
 const getNextItemFactory =
   (getState: () => RootState) =>
-    (playlistId?: number | null, current?: string): string | undefined => {
-      const playlistsData = selectPlaylistData(getState()).data;
-      if (!playlistId || !playlistsData) return undefined;
-      const playlist = selectPlaylistById(playlistsData, playlistId);
-      if (!playlist || playlist.items.length === 0) return undefined;
-      if (!current) return playlist.items[0].id;
-      const index = playlist.items.findIndex(item => item.id === current);
-      const next = (index + 1) % playlist.items.length;
-      return playlist.items[next].id;
-    };
+  (playlistId?: number | null, current?: string): string | undefined => {
+    const playlistsData = selectPlaylistData(getState()).data;
+    if (!playlistId || !playlistsData) return undefined;
+    const playlist = selectPlaylistById(playlistsData, playlistId);
+    if (!playlist || playlist.items.length === 0) return undefined;
+    if (!current) return playlist.items[0].id;
+    const index = playlist.items.findIndex(item => item.id === current);
+    const next = (index + 1) % playlist.items.length;
+    return playlist.items[next].id;
+  };
 
 const isValidItemFactory =
   (getState: () => RootState) =>
-    (playlistId?: number | null, current?: string): boolean | undefined => {
-      const playlistsData = selectPlaylistData(getState()).data;
-      if (!playlistId || !playlistsData) return undefined;
-      const playlist = selectPlaylistById(playlistsData, playlistId);
-      if (!playlist || playlist.items.length === 0) return undefined;
-      if (!current) return false;
-      const index = playlist.items.findIndex(item => item.id === current);
-      return index !== -1;
-    };
+  (playlistId?: number | null, current?: string): boolean | undefined => {
+    const playlistsData = selectPlaylistData(getState()).data;
+    if (!playlistId || !playlistsData) return undefined;
+    const playlist = selectPlaylistById(playlistsData, playlistId);
+    if (!playlist || playlist.items.length === 0) return undefined;
+    if (!current) return false;
+    const index = playlist.items.findIndex(item => item.id === current);
+    return index !== -1;
+  };
 const updatePlayer =
   (id: number, update: SetStateAction<Player>): AppThunk =>
-    (dispatch, getState) => {
-      dispatch(
-        playerApi.util.updateQueryData('getPlayers', undefined, draft => {
-          const prev = selectPlayer(draft, id);
-          if (!prev) throw new Error(`Unknown player: ${id}`);
-          let player: Player = typeof update === 'function' ? update(prev) : update;
-          if (isValidItemFactory(getState)(player.playlistId, player.current) === false) {
-            player = { ...player, current: getFirstItemFactory(getState)(player.playlistId) };
-          }
-          dispatch(debouncedUpdatePlayer(player));
-          playerAdapter.setOne(draft, player);
-        }),
-      );
-    };
+  (dispatch, getState) => {
+    dispatch(
+      playerApi.util.updateQueryData('getPlayers', undefined, draft => {
+        const prev = selectPlayer(draft, id);
+        if (!prev) throw new Error(`Unknown player: ${id}`);
+        let player: Player = typeof update === 'function' ? update(prev) : update;
+        if (isValidItemFactory(getState)(player.playlistId, player.current) === false) {
+          player = { ...player, current: getFirstItemFactory(getState)(player.playlistId) };
+        }
+        dispatch(debouncedUpdatePlayer(player));
+        playerAdapter.setOne(draft, player);
+      }),
+    );
+  };
 
 export const playerPlay = () => updatePlayer(sourceId, props => ({ ...props, autoPlay: true }));
 export const playerPause = () => updatePlayer(sourceId, props => ({ ...props, autoPlay: false }));

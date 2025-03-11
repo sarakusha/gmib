@@ -20,7 +20,6 @@ import HttpPageDialog, { isValidUrl } from '../dialogs/HttpPageDialog';
 import { useDispatch, useSelector } from '../store';
 import type { TabValues } from '../store/currentSlice';
 import { setCurrentTab } from '../store/currentSlice';
-
 import { selectCurrentScreenId, selectCurrentTab } from '../store/selectors';
 
 import AccordionList from './AccordionList';
