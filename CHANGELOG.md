@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.8.9](https://github.com/sarakusha/gmib/compare/v4.8.8...v4.8.9) (2025-03-11)
+
+
+### Features
+
+* вывод и копирование mediaId ([caca35d](https://github.com/sarakusha/gmib/commit/caca35d6338d3541a5fcc6dd7ec67ff725ff8dc1))
+* добавлен mediaId в setCurrentPlaylistItem ([7f83742](https://github.com/sarakusha/gmib/commit/7f83742ceecf40f0374f59d12ee57d3d8f6be234))
+* передача состояния на c22 ([ac6645f](https://github.com/sarakusha/gmib/commit/ac6645f601551b97179e0abdc406584fac2e9c3d))
+* переход на electron-log@5 ([fbc5c4b](https://github.com/sarakusha/gmib/commit/fbc5c4b04116c729315adecf793888d852c27d36))
+
+
+### Bug Fixes
+
+* не отслеживались переключения состояния плеера ([ff31b91](https://github.com/sarakusha/gmib/commit/ff31b918d02ca8e6dc435afd2054957cee5555b3))
+
 ## [4.8.8](https://github.com/sarakusha/gmib/compare/v4.8.7...v4.8.8) (2024-10-29)
 
 
