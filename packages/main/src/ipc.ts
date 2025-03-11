@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 
+import { getMainWindow } from './mainWindow';
 import { getMediaByMD5 } from './media';
 import { getPlayerMappingsForPlayer } from './playerMapping';
 import { getPlaylist, getPlaylistItems } from './playlist';
@@ -34,7 +35,27 @@ app.whenReady().then(() => {
     const params = store.get(win.id);
     return isGmib(params) ? params.machineId : undefined;
   });
-  ipcMain.on('broadcast', (_, eventName: string, data: unknown[]) => {
+  ipcMain.on('broadcast', (event, eventName: string, data: unknown[]) => {
+    const main = getMainWindow()?.webContents;
+    if (main) {
+      const source = URL.parse(event.sender.getURL())?.searchParams.get('source_id');
+      switch (eventName) {
+        case 'setPosition':
+          main.send('player:position', source, data[1]);
+          break;
+        case 'setDuration':
+          main.send('player:duration', source, data[1]);
+          break;
+        case 'setCurrentPlaylistItem':
+          main.send('player:current', source, data[2]);
+          break;
+        case 'setPlaybackState':
+          main.send('player:state', source, data[1]);
+          break;
+        default:
+          break;
+      }
+    }
     broadcast({ event: eventName, data });
   });
 });

@@ -1,4 +1,5 @@
-import { Container, Paper, Tab, Tabs } from '@mui/material';
+import { Checkbox, Container, FormControlLabel, Paper, Tab, Tabs } from '@mui/material';
+import { css } from '@mui/material/styles';
 import type { DeviceId } from '@nibus/core';
 import React, { useState } from 'react';
 
@@ -16,6 +17,34 @@ type Props = {
 
 type TabState = 'props' | 'telemetry' | 'firmware';
 
+const Check: React.FC<{ path: string }> = ({ path }) => {
+  const [checked, setChecked] = React.useState(() => window.nibus.hasPlayerListener(path));
+  const changeHandler = React.useCallback<React.ChangeEventHandler<HTMLInputElement>>(
+    e => {
+      if (e.target.checked) {
+        window.nibus.addPlayerListener(path);
+      } else {
+        window.nibus.removePlayerListener(path);
+      }
+      setChecked(e.target.checked);
+    },
+    [path],
+  );
+  return (
+    <div
+      css={css`
+        margin-left: auto;
+        margin-right: auto;
+      `}
+    >
+      <FormControlLabel
+        control={<Checkbox checked={checked} onChange={changeHandler} />}
+        label="Отправлять состояние плеера на устройство"
+      />
+    </div>
+  );
+};
+
 const DeviceTabs: React.FC<Props> = ({ id }) => {
   const currentId = useSelector(selectCurrentDeviceId);
   const device = useSelector(state => selectDeviceById(state, id));
@@ -25,7 +54,7 @@ const DeviceTabs: React.FC<Props> = ({ id }) => {
   const hasTelemetry = mib && ['minihost_v2.06', 'minihost_v2.06b', 'minihost3'].includes(mib);
   const isMinihost3 = mib === 'minihost3';
   const tab = useSelector(selectCurrentTab);
-  if (!device || !mib) return null;
+  if (!device || !mib) return device.path ? <Check path={device.path} /> : null;
   return (
     <FixedHeadLayout>
       <Paper square>
