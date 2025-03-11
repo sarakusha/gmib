@@ -58,12 +58,12 @@ if (!isRemoteSession) {
       );
     },
   });
-  startAppListening({
-    actionCreator: setPlaybackState,
-    effect: action => {
-      window.socket.broadcast('setPlaybackState', action.payload);
-    },
-  });
+  // startAppListening({
+  //   actionCreator: setPlaybackState,
+  //   effect: action => {
+  //     window.socket.broadcast('setPlaybackState', action.payload);
+  //   },
+  // });
 }
 
 startAppListening({
@@ -72,6 +72,7 @@ startAppListening({
     const playbackState = selectPlaybackState(getState());
     // window.mediaStream.updatePlaybackState(playbackState);
     navigator.mediaSession.playbackState = playbackState;
+    if (!isRemoteSession) window.socket.broadcast('setPlaybackState', playbackState);
     switch (playbackState) {
       case 'none':
         setTimeout(() => dispatch(playerStop()), 0);
