@@ -32,13 +32,13 @@ const CurrentPlaylist: React.FC<Props> = ({ playerId, className }) => {
   const { data: currentPlaylist } = useGetPlaylistById(playlistId);
   const { data: mediaData } = useGetMediaQuery();
   const dispatch = useDispatch();
-  const updateCurrentHandler = React.useCallback<React.ChangeEventHandler<HTMLInputElement>>(
-    e => {
-      dispatch(setCurrentPlaylistItem(e.target.value));
-      dispatch(setPlaybackState('playing'));
-    },
-    [dispatch],
-  );
+  // const updateCurrentHandler = React.useCallback<React.ChangeEventHandler<HTMLInputElement>>(
+  //   e => {
+  //     dispatch(setCurrentPlaylistItem(e.target.value));
+  //     dispatch(setPlaybackState('playing'));
+  //   },
+  //   [dispatch],
+  // );
   if (!currentPlaylist || !mediaData) return null;
   return (
     <FormControl className={className} sx={{ width: 1 }}>
@@ -61,7 +61,19 @@ const CurrentPlaylist: React.FC<Props> = ({ playerId, className }) => {
         aria-labelledby="current-playlist-name"
         name="current-playlist"
         value={current ?? null}
-        onChange={updateCurrentHandler}
+        onChange={(e) => {
+          const itemId = e.target.value;
+          dispatch(
+            setCurrentPlaylistItem(
+              current
+                ? {
+                    itemId,
+                    mediaId: currentPlaylist.items.find(item => item.id === itemId)?.md5,
+                  }
+                : undefined,
+            ),
+          );
+        }}
       >
         <List sx={{ width: 1 }}>
           <TransitionGroup>

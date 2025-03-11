@@ -51,7 +51,11 @@ if (!isRemoteSession) {
   startAppListening({
     actionCreator: setCurrentPlaylistItem,
     effect: action => {
-      window.socket.broadcast('setCurrentPlaylistItem', action.payload);
+      window.socket.broadcast(
+        'setCurrentPlaylistItem',
+        action.payload?.itemId,
+        action.payload?.mediaId,
+      );
     },
   });
   startAppListening({
@@ -104,7 +108,7 @@ startAppListening({
     dispatch(
       updatePlayer(sourceId, props => ({
         ...props,
-        current,
+        current: current?.itemId,
       })),
     );
   },

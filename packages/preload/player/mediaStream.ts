@@ -41,14 +41,14 @@ const playNextSource = () => {
       source.options.fade = { disableIn: true, ...source.options.fade };
     }
 
-    const { itemId } = source.options;
+    const { itemId, mediaId } = source.options;
     source.play();
     currentSource = source;
     nextSource = undefined;
     ipcDispatch(setDuration(source.duration));
     videoStream.add(source.readable).then(playNextSource);
     if (player.current !== itemId) {
-      ipcDispatch(setCurrentPlaylistItem(itemId));
+      ipcDispatch(setCurrentPlaylistItem(itemId ? { itemId, mediaId } : undefined));
     } else {
       // eslint-disable-next-line @typescript-eslint/no-use-before-define
       update();
