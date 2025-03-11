@@ -1,9 +1,9 @@
 import type { LogLevel } from '@nibus/core';
 import debugFactory from 'debug';
-import log from 'electron-log';
+import log from 'electron-log/renderer';
 
-log.transports.file.level = 'info';
-log.transports.file.fileName = `${import.meta.env.VITE_APP_NAME}.log`;
+// log.transports.file.level = 'info';
+// log.transports.file.fileName = `${import.meta.env.VITE_APP_NAME}.log`;
 log.transports.console.level = false;
 
 debugFactory.log = log.log.bind(log);
