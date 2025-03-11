@@ -7,6 +7,7 @@
         <option name="customName" value="sarakusha@192.168.2.31:22" />
       </sshConfig>
       <sshConfig host="gigabyte" id="815c23ca-f642-4406-aa03-f7d5c14c068b" keyPath="$USER_HOME$/.ssh/id_rsa" port="22" nameFormat="DESCRIPTIVE" username="user" useOpenSSHConfig="true" />
+      <sshConfig host="192.168.0.101" id="381cdd5d-8a50-46ac-b93d-cfe0a522895d" keyPath="$USER_HOME$/.ssh/id_rsa" port="22" nameFormat="DESCRIPTIVE" username="sarakusha" useOpenSSHConfig="true" />
     </configs>
   </component>
 </project>
