@@ -1,5 +1,5 @@
 import { ipcRenderer } from 'electron';
-
+import type { Socket } from 'node:net';
 import type {
   Address,
   DeviceId,
@@ -25,7 +25,6 @@ import debugFactory from 'debug';
 import debounce from 'lodash/debounce';
 import memoize from 'lodash/memoize';
 import sortBy from 'lodash/sortBy';
-
 import { updateConfig } from '/@renderer/store/configSlice';
 import { setCurrentHealth } from '/@renderer/store/currentSlice';
 import { addLog } from '/@renderer/store/logSlice';
@@ -239,11 +238,37 @@ export const releaseDevice = (deviceId: DeviceId): void => {
   device.release();
 };
 
+const pureConnections: Record<string, { connection?: INibusConnection; listen?: boolean }> = {};
+
+const getStorage = (): string[] => {
+  const listeners = window.localStorage.getItem('playerListeners');
+  if (listeners && listeners.startsWith('['))
+    try {
+      return JSON.parse(listeners) as string[];
+    } catch (e) {
+      console.error('PlayerListeners error:', e);
+    }
+  return [];
+};
+
+const updateStorage = (): void => {
+  const listeners = new Set<string>( getStorage());
+  Object.values(pureConnections)
+  .forEach(({ connection, listen }) => {
+    if (connection) {
+      if (!listen) listeners.delete(connection.path);
+      else listeners.add(connection.path);
+    }
+  });
+  window.localStorage.setItem('playerListeners', JSON.stringify([...listeners]));
+};
 function openSession() {
   const addConnectionHandler = (): void => {
     ipcDispatch(setPortCount(session.ports));
   };
   const removeConnectionHandler = (connection: INibusConnection): void => {
+    const [path] = Object.entries(pureConnections).find(([_, conn]) => conn === connection) ?? [];
+    if (path) delete pureConnections[path];
     ipcDispatch(setPortCount(session.ports));
     ipcDispatch(connectionClosed(connection.path));
   };
@@ -260,6 +285,10 @@ function openSession() {
     }
   };
   const pureConnectionHandler = (connection: INibusConnection): void => {
+    pureConnections[connection.path] = {
+      connection,
+      listen: getStorage().includes(connection.path),
+    };
     ipcDispatch(
       addDevice({
         id: nanoid() as DeviceId,
@@ -733,3 +762,55 @@ export const flash = (
       }
     });
   });
+
+export const addPlayerListener = (path: string): void => {
+  if (pureConnections[path]) pureConnections[path].listen = true;
+  updateStorage();
+};
+
+export const removePlayerListener = (path: string): void => {
+  if (pureConnections[path]) pureConnections[path].listen = false;
+  updateStorage();
+};
+
+export const hasPlayerListener = (path: string): boolean => pureConnections[path]?.listen === true;
+
+type NibusSocket = {
+  socket: Socket;
+};
+
+const textEncoder = new TextEncoder();
+const sendPlayerState = (
+  event: string,
+  player: string,
+  data: Exclude<unknown, undefined>,
+): void => {
+  Object.values(pureConnections).forEach(({ connection, listen }) => {
+    if (connection && listen) {
+      const { socket } = connection as unknown as NibusSocket;
+      if (socket) {
+        socket.write(
+          textEncoder.encode(
+            `event: ${event}\r\nplayer: ${player}\r\ndata: ${JSON.stringify(data)}\r\n\r\n`,
+          ),
+        );
+      }
+    }
+  });
+};
+
+ipcRenderer.on('player:position', (event, player: string, position: string) => {
+  sendPlayerState('position', player, position);
+});
+
+ipcRenderer.on('player:duration', (event, player: string, duration: string) => {
+  if (duration !== '0') sendPlayerState('duration', player, duration);
+});
+
+ipcRenderer.on('player:current', (event, player: string, current: string) => {
+  sendPlayerState('current', player, current);
+});
+
+ipcRenderer.on('player:state', (event, player: string, state: string) => {
+  sendPlayerState('state', player, state);
+});
