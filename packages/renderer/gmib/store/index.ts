@@ -1,6 +1,7 @@
 import type { DeviceId } from '@nibus/core';
 import type { Action, ThunkAction } from '@reduxjs/toolkit';
 import { combineSlices, configureStore } from '@reduxjs/toolkit';
+import { setupListeners } from '@reduxjs/toolkit/query';
 import type { TypedUseSelectorHook } from 'react-redux';
 import { useDispatch as origUseDispatch, useSelector as origUseSelector } from 'react-redux';
 
@@ -29,7 +30,6 @@ import './deviceThunks';
 import './healthThunks';
 import './sensorThunks';
 import './currentThunks';
-import { setupListeners } from '@reduxjs/toolkit/query';
 
 const rootReducer = combineSlices(
   currentSlice,

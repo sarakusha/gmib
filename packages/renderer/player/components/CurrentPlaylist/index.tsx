@@ -17,7 +17,7 @@ import { usePlayer } from '../../api/player';
 import { useGetPlaylistById } from '../../api/playlists';
 import { clearPlayer } from '../../api/updatePlayer';
 import { useDispatch } from '../../store';
-import { setCurrentPlaylistItem, setPlaybackState } from '../../store/currentSlice';
+import { setCurrentPlaylistItem } from '../../store/currentSlice';
 
 import PlaylistItem from './PlaylistItem';
 

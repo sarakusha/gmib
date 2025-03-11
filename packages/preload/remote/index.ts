@@ -1,3 +1,4 @@
+/* eslint-disable import/extensions */
 import { contextBridge, ipcRenderer } from 'electron';
 
 import debugFactory from 'debug';

@@ -142,10 +142,10 @@ const sessions = new Map<string, SRPServerSessionStep1>();
 export const mediaRoot = path.join(electronApp.getPath('userData'), 'media');
 
 const resolveMedia = <T>(filename: T): T extends string ? string : T =>
-  typeof filename === 'string' ? path.resolve(mediaRoot, filename) : (filename as any);
+  (typeof filename === 'string' ? path.resolve(mediaRoot, filename) : filename) as any;
 
 const thumbFromName = <T>(filepath: T): T extends string ? string : T =>
-  typeof filepath === 'string' ? `${filepath}.png` : (filepath as any);
+  (typeof filepath === 'string' ? `${filepath}.png` : filepath) as any;
 
 fs.mkdir(mediaRoot, { recursive: true }, err => {
   if (err) {
@@ -412,7 +412,7 @@ api.post('/media', (req, res, next) => {
       // debug(JSON.stringify(files));
       const loaded = (
         await asyncSerial(
-          Object.values(files).map(file => (Array.isArray(file) ? file[0] : file)),
+          Object.values(files).map(file => (Array.isArray(file) ? file[0] : file)).filter(notEmpty),
           file =>
             loadMedia(file).catch(e =>
               debug(`error while loading ${file.originalFilename}: ${e.message}`),

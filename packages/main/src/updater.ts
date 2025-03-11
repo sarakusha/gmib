@@ -5,8 +5,8 @@ import type { UpdateInfo } from 'electron-updater';
 import { autoUpdater } from 'electron-updater';
 
 import log from './initlog';
-import { needRestart } from './relaunch';
 import localConfig from './localConfig';
+import { needRestart } from './relaunch';
 
 // let updater: MenuItem | null = null;
 autoUpdater.autoDownload = localConfig.get('autoUpdate');

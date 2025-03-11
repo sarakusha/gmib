@@ -17,11 +17,11 @@ import type {
 } from '/@common/WindowParams';
 import { gmibVariables, impScreenProps, isGmib, isPlayer, isScreen } from '/@common/WindowParams';
 
+import { initializePritunlClient } from './linux';
 import localConfig from './localConfig';
 
 import { replaceNull } from '/@common/helpers';
 // import { checkForUpdatesNoInteractive, updateAndRestart } from './updater';
-import { initializePritunlClient } from './linux';
 
 export const licenseNames = ['basic', 'standard', 'plus', 'premium', 'enterprise'] as const;
 

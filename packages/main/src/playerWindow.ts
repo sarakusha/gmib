@@ -19,6 +19,7 @@ import {
   updateShowPlayer,
 } from './screen';
 import { findPlayerWindow, getAllGmibParams, registerPlayer } from './windowStore';
+
 import type { GmibWindowParams } from '/@common/WindowParams';
 
 const preload = path.join(__dirname, '../../preload/dist/player.cjs');

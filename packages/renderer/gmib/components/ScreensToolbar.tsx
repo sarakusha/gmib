@@ -1,15 +1,13 @@
 import BrightnessAutoIcon from '@mui/icons-material/BrightnessAuto';
-import LockIcon from '@mui/icons-material/Lock';
-import LockOpenIcon from '@mui/icons-material/LockOpen';
+// import LockIcon from '@mui/icons-material/Lock';
+// import LockOpenIcon from '@mui/icons-material/LockOpen';
 import Refresh from '@mui/icons-material/Refresh';
-import { IconButton, Tooltip } from '@mui/material';
+import { IconButton } from '@mui/material';
 import React from 'react';
-
-import { noop } from '/@common/helpers';
 
 import { updateScreen, useReloadScreenMutation, useScreen } from '../api/screens';
 import { useDispatch, useSelector } from '../store';
-import { selectBrightness, selectCurrentScreenId, selectInvalidState } from '../store/selectors';
+import { selectBrightness, selectCurrentScreenId } from '../store/selectors';
 
 import Brightness from './HBrightness';
 
@@ -33,10 +31,7 @@ const save = (config: ConfigState): void => {
 };
 */
 
-const ScreensToolbar: React.FC<{ readonly?: boolean; toggle?: () => void }> = ({
-  readonly = true,
-  toggle = noop,
-}) => {
+const ScreensToolbar: React.FC = () => {
   const brightness = useSelector(selectBrightness);
   const dispatch = useDispatch();
   const screenId = useSelector(selectCurrentScreenId);
@@ -48,7 +43,6 @@ const ScreensToolbar: React.FC<{ readonly?: boolean; toggle?: () => void }> = ({
       dispatch(updateScreen(screenId, prev => ({ ...prev, brightness: value }))),
     [dispatch, screenId],
   );
-  const invalidState = useSelector(selectInvalidState);
   const [reload] = useReloadScreenMutation();
   const disabled = !screen || screen.brightnessFactor !== 0;
   return (

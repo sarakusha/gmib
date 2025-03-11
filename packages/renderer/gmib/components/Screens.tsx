@@ -3,7 +3,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import { Container, IconButton, Paper, Tab, Tabs } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useSnackbar } from 'notistack';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 
 import FixedHeadLayout from '../../common/FixedHeadLayout';
 import { useCreateScreenMutation, useDeleteScreenMutation, useScreens } from '../api/screens';
@@ -55,7 +55,7 @@ const Screens: React.FC = () => {
   useEffect(() => {
     if (tab === 'screens') {
       const toolbar = (
-        <ScreensToolbar readonly={readonly} /* toggle={() => setReadonly(val => !val)} */ />
+        <ScreensToolbar /* readonly={readonly} toggle={() => setReadonly(val => !val)} */ />
       );
       setToolbar(toolbar);
       return () => setToolbar(null);

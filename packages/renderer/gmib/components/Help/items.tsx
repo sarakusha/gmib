@@ -1,12 +1,11 @@
-import CheckIcon from '@mui/icons-material/Check';
-import LocationOnIconMui from '@mui/icons-material/LocationOn';
 import AddCircleOutlinedIcon from '@mui/icons-material/AddCircleOutlined';
+import CheckIcon from '@mui/icons-material/Check';
 import FeaturedVideoOutlinedIcon from '@mui/icons-material/FeaturedVideoOutlined';
+import LocationOnIconMui from '@mui/icons-material/LocationOn';
 import SmartDisplayOutlinedIcon from '@mui/icons-material/SmartDisplayOutlined';
 import { Button } from '@mui/material';
 import { alpha, css, styled } from '@mui/material/styles';
 import React from 'react';
-import { inherits } from 'util';
 
 export const LocationOnIcon = styled(LocationOnIconMui)(({ theme }) => ({
   '&.MuiSvgIcon-root': {
@@ -27,7 +26,7 @@ export const ApplyButton: React.FC = () => (
   </Button>
 );
 
-const AddOverlappedIcon = styled(AddCircleOutlinedIcon)(({ theme }) => ({
+const AddOverlappedIcon = styled(AddCircleOutlinedIcon)(() => ({
   position: 'absolute',
   left: '55%',
   top: '50%',

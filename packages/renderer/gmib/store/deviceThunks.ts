@@ -1,14 +1,15 @@
 // import debugFactory from 'debug';
+import type { DeviceId } from '@nibus/core';
 import { createAsyncThunk, isAnyOf } from '@reduxjs/toolkit';
 
 import { reAddress } from '/@common/config';
 
 import screenApi, { selectScreens, updateMinihosts } from '../api/screens';
 
-import type { DeviceId } from '@nibus/core';
 import Address, { AddressType } from '@nibus/core/Address';
 import { MCDVI_TYPE, MINIHOST_TYPE } from '@nibus/core/common';
 
+import { setAutobrightness } from './configSlice';
 import { setCurrentDevice, setCurrentTab } from './currentSlice';
 import {
   addDevice,
@@ -38,7 +39,6 @@ import type { AppThunk, AppThunkConfig } from '.';
 import { isRemoteSession } from '/@common/remote';
 import type { FinderOptions } from '/@common/helpers';
 import { asyncSerial, delay } from '/@common/helpers';
-import { setAutobrightness } from './configSlice';
 
 // const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:config`);
 const PING_INTERVAL = 10000;

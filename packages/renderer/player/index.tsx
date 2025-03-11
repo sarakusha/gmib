@@ -1,4 +1,4 @@
-import { Box, CssBaseline } from '@mui/material';
+import { CssBaseline } from '@mui/material';
 import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 import dayjs from 'dayjs';
 import Duration from 'dayjs/plugin/duration';

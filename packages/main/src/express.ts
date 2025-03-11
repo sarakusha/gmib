@@ -1,8 +1,7 @@
 import path from 'path';
 
 // import debugFactory from 'debug';
-import express from 'express';
-import type { ErrorRequestHandler } from 'express-serve-static-core';
+import express, { type NextFunction, type Request, type Response } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import bodyParser from 'body-parser';
@@ -63,7 +62,7 @@ app.use(
   express.static(outputRoot),
 );
 
-const errorHandler: ErrorRequestHandler = (error, req, res, next) => {
+const errorHandler = (error: Error, req: Request, res: Response, next: NextFunction) => {
   if ('errno' in error && 'code' in error && error.code === 'SQLITE_CONSTRAINT') {
     const { message, code, errno } = error;
     res.status(409).json({ message, code, errno });

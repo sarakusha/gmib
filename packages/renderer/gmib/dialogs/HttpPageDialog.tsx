@@ -1,14 +1,15 @@
 import { Button, Dialog, DialogActions, DialogContent, InputAdornment } from '@mui/material';
-import React from 'react';
 import { Field, Form, Formik } from 'formik';
+import React from 'react';
 
-import { updatePage, usePage } from '../api/config';
-import DialogTitle from '../components/DialogTitle';
 import FormikTextField from '../../common/FormikTextField';
+import { updatePage, usePage } from '../api/config';
+import CopyToClipboard from '../components/CopyToClipboard';
+import DialogTitle from '../components/DialogTitle';
 
 import { noop } from '/@common/helpers';
+
 import { useDispatch } from '../store';
-import CopyToClipboard from '../components/CopyToClipboard';
 
 type Props = {
   pageId?: string;

@@ -1,6 +1,5 @@
 // import debugFactory from 'debug';
-import express from 'express';
-import type { RequestHandler } from 'express-serve-static-core';
+import express, { type Request, type Response } from 'express';
 
 import type { ScreenId } from '/@common/novastar';
 import type { FilterNames } from '/@common/helpers';
@@ -78,8 +77,8 @@ api.post('/reload', async (req, res) => {
 type Methods = FilterNames<typeof master, (arg: ScreenId, value: any) => Promise<void>>;
 
 const makeHandler =
-  <K extends Methods>(method: K, defaultScreen = 0): RequestHandler =>
-  async (req, res) => {
+  <K extends Methods>(method: K, defaultScreen = 0) =>
+  async (req: Request, res: Response) => {
     try {
       const { path, screen = defaultScreen, value } = req.body;
       // debug(`${method} ${path}[${screen}] = ${value}`);

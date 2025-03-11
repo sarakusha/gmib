@@ -56,12 +56,12 @@ app.whenReady().then(() => {
   // );
   ipcMain.on('register-source-channel', (event, sourceId: number) => {
     debug(`register source: ${sourceId}`);
-    videoSources.set(sourceId, event.senderFrame);
+    event.senderFrame && videoSources.set(sourceId, event.senderFrame);
     tryCreateChannels();
   });
   ipcMain.on('request-source-channel', (event, sourceId: number, outputId: number) => {
     debug(`request source: ${sourceId}/${outputId}`);
-    videoOutputs.push({ sourceId, outputId, frame: event.senderFrame });
+    event.senderFrame && videoOutputs.push({ sourceId, outputId, frame: event.senderFrame });
     tryCreateChannels();
   });
 });

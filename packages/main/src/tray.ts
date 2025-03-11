@@ -6,9 +6,10 @@ import path from 'path';
 import sortBy from 'lodash/sortBy';
 
 import localConfig from './localConfig';
-import store, { getZIndex } from './windowStore';
-import { isGmib, isPlayer } from '/@common/WindowParams';
 import { needRestart } from './relaunch';
+import store, { getZIndex } from './windowStore';
+
+import { isGmib, isPlayer } from '/@common/WindowParams';
 
 let disableZIndex = false;
 

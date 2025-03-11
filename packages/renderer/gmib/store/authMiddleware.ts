@@ -1,9 +1,9 @@
 import type { Middleware } from '@reduxjs/toolkit';
 import { isRejectedWithValue } from '@reduxjs/toolkit';
+import type { FetchBaseQueryError } from '@reduxjs/toolkit/query';
 
 import type { Credentials } from './currentSlice';
 import { setAuthRequired } from './currentSlice';
-import type { FetchBaseQueryError } from '@reduxjs/toolkit/query';
 
 export function isFetchBaseQueryError(error: unknown): error is FetchBaseQueryError {
   return typeof error === 'object' && error != null && 'status' in error;
