@@ -128,7 +128,10 @@ export const socketMiddleware: Middleware = api => {
             dispatch(setDuration(msg.data[1]));
             break;
           case 'setCurrentPlaylistItem':
-            dispatch(setCurrentPlaylistItem(msg.data[1]));
+            {
+              const [, itemId, mediaId] = msg.data;
+              dispatch(setCurrentPlaylistItem(itemId ? { itemId, mediaId } : undefined));
+            }
             break;
           case 'setPosition':
             {
