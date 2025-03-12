@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.8.10](https://github.com/sarakusha/gmib/compare/v4.8.8...v4.8.10) (2025-03-12)
+
+
+### Features
+
+* вывод и копирование mediaId ([a8a4e77](https://github.com/sarakusha/gmib/commit/a8a4e77bf4e9fa79834b0958151ef829e8e905a9))
+* добавлен mediaId в setCurrentPlaylistItem ([9c2e4ff](https://github.com/sarakusha/gmib/commit/9c2e4ffdd918e68e9b922ba2e950dd2223daa8b4))
+* добавлен mediaId в setCurrentPlaylistItem ([7d6025a](https://github.com/sarakusha/gmib/commit/7d6025a29cf4a12913ab8190a8f347374bcdb33f))
+* передача состояния на c22 ([ce07e95](https://github.com/sarakusha/gmib/commit/ce07e953df8597081f80e5236f2ccd1d6d569d6b))
+* переход на electron-log@5 ([ea4085a](https://github.com/sarakusha/gmib/commit/ea4085ac382b5221dad02fa12ce8146704edbb29))
+
+
+### Bug Fixes
+
+* не отслеживались переключения состояния плеера ([723fcf6](https://github.com/sarakusha/gmib/commit/723fcf6c67c90242a3cb174b5dbaa725d7201e9e))
+* ошибка при отключении c22 ([8cebfa4](https://github.com/sarakusha/gmib/commit/8cebfa4543891c1d93d4422f1d8a0271aa745ebc))
+
 ## [4.8.9](https://github.com/sarakusha/gmib/compare/v4.8.8...v4.8.9) (2025-03-11)
 
 
