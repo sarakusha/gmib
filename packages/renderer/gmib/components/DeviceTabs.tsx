@@ -54,7 +54,7 @@ const DeviceTabs: React.FC<Props> = ({ id }) => {
   const hasTelemetry = mib && ['minihost_v2.06', 'minihost_v2.06b', 'minihost3'].includes(mib);
   const isMinihost3 = mib === 'minihost3';
   const tab = useSelector(selectCurrentTab);
-  if (!device || !mib) return device.path ? <Check path={device.path} /> : null;
+  if (!device || !mib) return device?.path ? <Check path={device.path} /> : null;
   return (
     <FixedHeadLayout>
       <Paper square>
