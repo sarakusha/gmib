@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.8.11](https://github.com/sarakusha/gmib/compare/v4.8.10...v4.8.11) (2025-03-21)
+
+
+### Features
+
+* ускоренный начальный поиск novastar ([b86e6f6](https://github.com/sarakusha/gmib/commit/b86e6f6bdc69f9e3aa2b6541037d744b4cb7ca8d))
+
+
+### Bug Fixes
+
+* не управлялась яркость вывод/экран на novastar ([393add5](https://github.com/sarakusha/gmib/commit/393add5aa2ed549f0c45477588ed3f631711560c))
+
 ## [4.8.10](https://github.com/sarakusha/gmib/compare/v4.8.8...v4.8.10) (2025-03-12)
 
 
