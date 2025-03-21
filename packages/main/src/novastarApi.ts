@@ -80,8 +80,12 @@ const makeHandler =
   <K extends Methods>(method: K, defaultScreen = 0) =>
   async (req: Request, res: Response) => {
     try {
-      const { path, screen = defaultScreen, value } = req.body;
+      const { screen = defaultScreen, value } = req.body;
       // debug(`${method} ${path}[${screen}] = ${value}`);
+      let { path } = req.body;
+      if (!path.includes(':')) {
+        path = `${path}:5200`;
+      }
       await master[method]({ path, screen }, value);
       res.end();
       // debug('Ok');
