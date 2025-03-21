@@ -1,6 +1,6 @@
 // eslint-disable-next-line max-classes-per-file
 import type { Novastar, Screen, ScreenId } from '/@common/novastar';
-import { delay, notEmpty } from '/@common/helpers';
+import { asyncSerial, delay, notEmpty, reIPv4 } from '/@common/helpers';
 import type { CabinetInfo, NovastarTelemetry } from '/@common/helpers';
 
 import debugFactory from 'debug';
@@ -8,6 +8,7 @@ import debugFactory from 'debug';
 import { connect } from 'net';
 import dgram, { type Socket } from 'dgram';
 import { networkInterfaces } from 'os';
+import flatten from 'lodash/flatten';
 
 import { Connection, series } from '@novastar/codec';
 import { findNetDevices, MULTICAST_ADDRESS, net, REQ, UDP_PORT } from '@novastar/net';
@@ -16,6 +17,7 @@ import memoize from 'lodash/memoize';
 import { TypedEmitter } from 'tiny-typed-emitter';
 
 import NovastarLoader from './NovastarLoader';
+import { getAddressesForScreen, getScreens } from './screen';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:master`);
 
@@ -287,11 +289,20 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
     const updateDevices = async () => {
       try {
         await this.closeBroadcastDetector();
+        const screens = await getScreens();
+        const hardAddresses = flatten(
+          await asyncSerial(screens, screen => getAddressesForScreen(screen.id)),
+        ).filter(address => reIPv4.test(address));
+        hardAddresses.forEach(address => {
+          if (!this.novastarControls.has(address)) {
+            net.open(address);
+          }
+        });
         const addresses = await findNetDevices(dest);
         // debug(`found: ${addresses.join(', ')}`);
         this.openBroadcastDetector();
         addresses.forEach(address => {
-          if (!this.novastarControls.has(address)) {
+          if (!this.novastarControls.has(address) && !hardAddresses.includes(address)) {
             net.open(address);
           }
         });
