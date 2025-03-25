@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.8.12](https://github.com/sarakusha/gmib/compare/v4.8.11...v4.8.12) (2025-03-25)
+
+
+### Bug Fixes
+
+* запаздывание при смене яркости экрана ([a4fb812](https://github.com/sarakusha/gmib/commit/a4fb812f0f0261e633a664c27097fb75096611d7))
+
 ## [4.8.11](https://github.com/sarakusha/gmib/compare/v4.8.10...v4.8.11) (2025-03-21)
 
 
