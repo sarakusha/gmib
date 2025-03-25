@@ -252,9 +252,8 @@ const getStorage = (): string[] => {
 };
 
 const updateStorage = (): void => {
-  const listeners = new Set<string>( getStorage());
-  Object.values(pureConnections)
-  .forEach(({ connection, listen }) => {
+  const listeners = new Set<string>(getStorage());
+  Object.values(pureConnections).forEach(({ connection, listen }) => {
     if (connection) {
       if (!listen) listeners.delete(connection.path);
       else listeners.add(connection.path);

@@ -54,6 +54,7 @@ const selectNovastarData = novastarApi.endpoints.getNovastars.select();
 
 // setTimeout(() => window.config.get('announce').then(console.log), 1000);
 
+// TODO: Нужна возможность добавления в экраны novastar подключенные по USB
 export const updateBrightness = createDebouncedAsyncThunk<void, undefined | number, AppThunkConfig>(
   'config/updateBrightness',
   async (id, { dispatch, getState }) => {
@@ -78,8 +79,8 @@ export const updateBrightness = createDebouncedAsyncThunk<void, undefined | numb
           const desired =
             brightnessFactor && brightnessFactor > 0
               ? Math.round(brightnessFactor * brightness)
-              : scrBrightness ?? 60;
-          const value = Math.min(desired, isValid ? scr[screenId]?.maxBrightness ?? 100 : 100);
+              : (scrBrightness ?? 60);
+          const value = Math.min(desired, isValid ? (scr[screenId]?.maxBrightness ?? 100) : 100);
           return [
             ...serials.map(path => [path as string, value] as const),
             ...addresses

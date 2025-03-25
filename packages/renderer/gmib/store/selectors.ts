@@ -66,7 +66,8 @@ export const selectAuthRequired = (state: RootState) => selectCurrent(state).aut
 export const selectBroadcastDetected = (state: RootState) => selectCurrent(state).broadcastDetected;
 export const selectInvalidState = (state: RootState) => selectCurrent(state).invalidState;
 export const selectFocused = (state: RootState) => selectCurrent(state).focused;
-export const selectTabChangedTimestamp = (state: RootState) => selectCurrent(state).tabChangedTimestamp;
+export const selectTabChangedTimestamp = (state: RootState) =>
+  selectCurrent(state).tabChangedTimestamp;
 
 type PropsSelector = <P extends string>(
   state: RootState,
