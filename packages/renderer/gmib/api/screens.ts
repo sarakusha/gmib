@@ -123,17 +123,8 @@ const screenApi = createApi({
       }),
       async onQueryStarted(screen, { dispatch, queryFulfilled }) {
         try {
-          const { data } = await queryFulfilled;
-          // eslint-disable-next-line @typescript-eslint/no-use-before-define
-          if (!debouncedUpdateScreen.pending(screen.id)) {
-            dispatch(
-              screenApi.util.updateQueryData('getScreens', undefined, state => {
-                adapter.setOne(state, data);
-              }),
-            );
-          }
+          await queryFulfilled;
           if (screen.addresses?.some(address => reAddress.test(address))) {
-            // eslint-disable-next-line @typescript-eslint/no-use-before-define
             setTimeout(() => dispatch(updateMinihosts(screen.id)), 0);
           }
         } catch (err) {
