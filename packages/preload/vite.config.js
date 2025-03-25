@@ -6,7 +6,7 @@ import { builtinModules } from 'module';
 
 import { chrome } from '../../.electron-vendors.cache.json';
 
-import external from '../../external';
+// import external from '../../external';
 // import { dependencies as external } from '../../package.json';
 
 const PACKAGE_ROOT = __dirname;
@@ -69,22 +69,22 @@ const config = {
         interop: 'compat',
       },
       plugins: [cleanup({ comments: 'none' })],
-      external,
-      // external: [
-      //   // 'debug',
-      //   'electron',
-      //   // 'electron-log',
-      //   'electron-devtools-installer',
-      //   '@serialport/bindings-cpp',
-      //   // 'usb',
-      //   // 'sqlite3',
-      //   // '@nibus/detection',
-      //   // '@nibus/core',
-      //   // '@nibus/mibs',
-      //   // '@nibus/service',
-      //   ...Object.keys(dependencies),
-      //   ...builtinModules.flatMap(p => [p, `node:${p}`]),
-      // ],
+      // external,
+      external: [
+        // 'debug',
+        'electron',
+        // 'electron-log',
+        'electron-devtools-installer',
+        // '@serialport/bindings-cpp',
+        // 'usb',
+        // 'sqlite3',
+        // '@nibus/detection',
+        // '@nibus/core',
+        '@nibus/mibs', // @nibus/mibs - содержит assets с относительными путями!,
+        // '@nibus/service',
+        // ...Object.keys(dependencies),
+        // ...builtinModules.flatMap(p => [p, `node:${p}`]),
+      ],
     },
     // commonjsOptions: {
     //   include: [/ebml/], // Important!!! Error: 'default' is not exported by...

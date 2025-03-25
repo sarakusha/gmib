@@ -38,7 +38,7 @@
     "test:renderer": "vitest run -r packages/renderer --passWithNoTests",
     "test:e2e": "pnpm run build && vitest run",
     "test:spelling": "cspell lint -c cspell.json",
-    "WATCH:gmib": "cross-env LIB_NAME=gmib node scripts/watch.mjs",
+    "dev": "cross-env LIB_NAME=gmib node scripts/watch.mjs",
     "watch:player": "cross-env LIB_NAME=player node scripts/watch.mjs",
     "fix": "run-s fix:*",
     "fix:prettier": "prettier \"packages/{main/src,common,{preload,renderer}/{common,gmib,player},preload/remote}/**/*.{ts,tsx}\" --write",
@@ -69,7 +69,7 @@
     "postinstall": "cross-env ELECTRON_RUN_AS_NODE=1 npx --no-install electron ./scripts/update-electron-vendors.js",
     "version": "commit-and-tag-version",
     "version:patch": "commit-and-tag-version -r patch",
-    "external": "echo 'module.exports = [\"electron\", \"debug\"' > external.js && pnpm list --omit=dev --depth=3 -p| grep node_modules | sed 's#^.*node_modules/\\(.*\\)$#, \"\\1\"#' | sort | uniq -u >> external.js && echo '];' >> external.js"
+    "external": "echo 'module.exports = [\"electron\", \"debug\"' > external.js && pnpm list --prod --depth=3 -p| grep node_modules | sed 's#^.*node_modules/\\(.*\\)$#, \"\\1\"#' | sort | uniq -u >> external.js && echo '];' >> external.js"
   },
   "devDependencies": {
     "@emotion/babel-plugin": "^11.10.2",
@@ -207,6 +207,7 @@
     "lodash": "^4.17.21",
     "nanoid": "3",
     "node-machine-id": "^1.1.12",
+    "reflect-metadata": "^0.2.2",
     "semver": "^7.5.4",
     "smpte-timecode": "^1.2.3",
     "sqlite3": "^5.1.7",

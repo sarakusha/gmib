@@ -13,6 +13,7 @@ process.env.VITE_PLAYER = process.env['PLAYER'];
 
 // console.log('CWD', process.cwd(), path.resolve(PACKAGE_ROOT, '../..'));
 
+
 /**
  * @type {import('vite').UserConfig}
  * @see https://vitejs.dev/config/
@@ -46,10 +47,11 @@ const config = {
       external: [
         // 'electron',
         // 'electron-devtools-installer',
-        '@serialport/bindings-cpp',
-        'usb',
-        'sqlite3',
-        '@nibus/detection',
+        // '@serialport/bindings-cpp',
+        // 'usb',
+        // 'sqlite3',
+        // '@nibus/detection',
+        // '@nibus/mibs'
       ],
       output: {
         entryFileNames: 'index.cjs',

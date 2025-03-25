@@ -12,17 +12,17 @@ importers:
         specifier: ^1.1.5
         version: 1.3.1
       '@nibus/core':
-        specifier: ^4.0.4
-        version: 4.1.0(@nibus/mibs@4.1.0)(buffer@6.0.3)(debug@4.4.0)
+        specifier: ^5.0.1
+        version: 5.0.1(@nibus/mibs@5.0.1)(buffer@6.0.3)(debug@4.4.0)
       '@nibus/detection':
-        specifier: ^4.0.1
-        version: 4.0.1(@nibus/core@4.1.0(@nibus/mibs@4.1.0)(buffer@6.0.3)(debug@4.4.0))
+        specifier: ^5.0.1
+        version: 5.0.1(@nibus/core@5.0.1(@nibus/mibs@5.0.1)(buffer@6.0.3)(debug@4.4.0))
       '@nibus/mibs':
-        specifier: ^4.0.0
-        version: 4.1.0
+        specifier: ^5.0.1
+        version: 5.0.1
       '@nibus/service':
-        specifier: ^4.0.4
-        version: 4.1.0(@nibus/mibs@4.1.0)(buffer@6.0.3)(debug@4.4.0)
+        specifier: ^5.0.1
+        version: 5.0.1(@nibus/mibs@5.0.1)(buffer@6.0.3)(debug@4.4.0)
       '@novastar/codec':
         specifier: ^2.1.0
         version: 2.1.0(buffer@6.0.3)(debug@4.4.0)(iconv-lite@0.6.3)
@@ -107,6 +107,9 @@ importers:
       node-machine-id:
         specifier: ^1.1.12
         version: 1.1.12
+      reflect-metadata:
+        specifier: ^0.2.2
+        version: 0.2.2
       semver:
         specifier: ^7.5.4
         version: 7.7.1
@@ -1255,22 +1258,22 @@ packages:
       react: ^17.0.0 || ^18.0.0
       react-dom: ^17.0.0 || ^18.0.0
 
-  '@nibus/core@4.1.0':
-    resolution: {integrity: sha512-w31BzqT+uyH4I9XSlI8s+jhB0SP0l0nMi2w2ZWlyuTnslFNVZw55/x/bC64GoKz/f4u1ygNkZZlgtDQw9/3PZQ==}
+  '@nibus/core@5.0.1':
+    resolution: {integrity: sha512-Rmb9PpH7cR9G5OFC8BysOjwDV097f9FgYAOAhCJBlcRMxF3YJcUUjeIg0GGV/TsArnNa9cnPE0KSFFJUoXHuvA==}
     peerDependencies:
-      '@nibus/mibs': ^4
+      '@nibus/mibs': ^5.0.0
       debug: ^4.3.0
 
-  '@nibus/detection@4.0.1':
-    resolution: {integrity: sha512-5FuJ6ynMhkq4jJ4Ii/PJX5z3B/8cpchNDJEHtrlviC2rFpkjpZj/i59skADIPoxc1JdldFkPEG6EWhaEkOh6PQ==}
+  '@nibus/detection@5.0.1':
+    resolution: {integrity: sha512-3GcX9KpsTdWs2f/2v0BWCvRdqn/a2fKYNb50ZPBB4461TQ7KpCYEqhAwICrhj8HH5PnsI+MqSm0/hSLfWb4lMw==}
     peerDependencies:
-      '@nibus/core': ^4
+      '@nibus/core': ^5.0.0
 
-  '@nibus/mibs@4.1.0':
-    resolution: {integrity: sha512-mjS/Xj5R+GAjyVcxfbENkXHlrHuKOTIqa4FYJ8jD/Dva+DPPv6ZOv3OtH+1urPZZFHvxj6W7jB7sFDv5jCGw0g==}
+  '@nibus/mibs@5.0.1':
+    resolution: {integrity: sha512-SwHM5VhaS6hyJLrsBrH+jLfH+bFUyymtc9iv4n+wLGKkWAgB7F5R9L5F7H2Y6jNkHdsD7VScu1oMKQ3Bq+RfWQ==}
 
-  '@nibus/service@4.1.0':
-    resolution: {integrity: sha512-BIe5PcwJK9cXaR+8oWHqjKV00JbdpHN5dgYJ/P+EQeUE9kFhr7gzuIlioQwgsjmGLRB4aQhUqTmnCLlkrQbcwg==}
+  '@nibus/service@5.0.1':
+    resolution: {integrity: sha512-v5ntnmopF6SDWA0NJ5UuoRa3j6918CJd3IEElmkKbvXDG+mtfVp7yCcYJjLHlTUeEPV1N66TLlcpsGviWyS5xw==}
     peerDependencies:
       debug: ^4.3.0
 
@@ -1450,6 +1453,14 @@ packages:
     resolution: {integrity: sha512-r2XOwY2dDvbW7dKqSPIk2gzsr6M6Qpe9+/Ngs94fNaNlcTRCV02PfaoDmRgcubpNVVcLATlxSxPTIDw12dbKOg==}
     engines: {node: '>=16.0.0'}
 
+  '@serialport/bindings-cpp@13.0.0':
+    resolution: {integrity: sha512-r25o4Bk/vaO1LyUfY/ulR6hCg/aWiN6Wo2ljVlb4Pj5bqWGcSRC4Vse4a9AcapuAu/FeBzHCbKMvRQeCuKjzIQ==}
+    engines: {node: '>=18.0.0'}
+
+  '@serialport/bindings-cpp@13.0.1':
+    resolution: {integrity: sha512-j8nD5Om5MaQwzptncOiajIKj5RuMy7RiretZYmW4ZpaaLBc5XrapdojjL6AVwhpMWao8iSstlwEx/hpTIAp6mw==}
+    engines: {node: '>=18.0.0'}
+
   '@serialport/bindings-interface@1.2.2':
     resolution: {integrity: sha512-CJaUd5bLvtM9c5dmO9rPBHPXTa9R2UwpkJ0wdh9JCYcbrPWsKz+ErvR0hBLeo7NPeiFdjFO4sonRljiw4d2XiA==}
     engines: {node: ^12.22 || ^14.13 || >=16}
@@ -1458,9 +1469,17 @@ packages:
     resolution: {integrity: sha512-0ei0txFAj+s6FTiCJFBJ1T2hpKkX8Md0Pu6dqMrYoirjPskDLJRgZGLqoy3/lnU1bkvHpnJO+9oJ3PB9v8rNlg==}
     engines: {node: '>=12.0.0'}
 
+  '@serialport/parser-byte-length@13.0.0':
+    resolution: {integrity: sha512-32yvqeTAqJzAEtX5zCrN1Mej56GJ5h/cVFsCDPbF9S1ZSC9FWjOqNAgtByseHfFTSTs/4ZBQZZcZBpolt8sUng==}
+    engines: {node: '>=20.0.0'}
+
   '@serialport/parser-cctalk@12.0.0':
     resolution: {integrity: sha512-0PfLzO9t2X5ufKuBO34DQKLXrCCqS9xz2D0pfuaLNeTkyGUBv426zxoMf3rsMRodDOZNbFblu3Ae84MOQXjnZw==}
     engines: {node: '>=12.0.0'}
+
+  '@serialport/parser-cctalk@13.0.0':
+    resolution: {integrity: sha512-RErAe57g9gvnlieVYGIn1xymb1bzNXb2QtUQd14FpmbQQYlcrmuRnJwKa1BgTCujoCkhtaTtgHlbBWOxm8U2uA==}
+    engines: {node: '>=20.0.0'}
 
   '@serialport/parser-delimiter@11.0.0':
     resolution: {integrity: sha512-aZLJhlRTjSmEwllLG7S4J8s8ctRAS0cbvCpO87smLvl3e4BgzbVgF6Z6zaJd3Aji2uSiYgfedCdNc4L6W+1E2g==}
@@ -1470,12 +1489,24 @@ packages:
     resolution: {integrity: sha512-gu26tVt5lQoybhorLTPsH2j2LnX3AOP2x/34+DUSTNaUTzu2fBXw+isVjQJpUBFWu6aeQRZw5bJol5X9Gxjblw==}
     engines: {node: '>=12.0.0'}
 
+  '@serialport/parser-delimiter@13.0.0':
+    resolution: {integrity: sha512-Qqyb0FX1avs3XabQqNaZSivyVbl/yl0jywImp7ePvfZKLwx7jBZjvL+Hawt9wIG6tfq6zbFM24vzCCK7REMUig==}
+    engines: {node: '>=20.0.0'}
+
   '@serialport/parser-inter-byte-timeout@12.0.0':
     resolution: {integrity: sha512-GnCh8K0NAESfhCuXAt+FfBRz1Cf9CzIgXfp7SdMgXwrtuUnCC/yuRTUFWRvuzhYKoAo1TL0hhUo77SFHUH1T/w==}
     engines: {node: '>=12.0.0'}
 
+  '@serialport/parser-inter-byte-timeout@13.0.0':
+    resolution: {integrity: sha512-a0w0WecTW7bD2YHWrpTz1uyiWA2fDNym0kjmPeNSwZ2XCP+JbirZt31l43m2ey6qXItTYVuQBthm75sPVeHnGA==}
+    engines: {node: '>=20.0.0'}
+
   '@serialport/parser-packet-length@12.0.0':
     resolution: {integrity: sha512-p1hiCRqvGHHLCN/8ZiPUY/G0zrxd7gtZs251n+cfNTn+87rwcdUeu9Dps3Aadx30/sOGGFL6brIRGK4l/t7MuQ==}
+    engines: {node: '>=8.6.0'}
+
+  '@serialport/parser-packet-length@13.0.0':
+    resolution: {integrity: sha512-60ZDDIqYRi0Xs2SPZUo4Jr5LLIjtb+rvzPKMJCohrO6tAqSDponcNpcB1O4W21mKTxYjqInSz+eMrtk0LLfZIg==}
     engines: {node: '>=8.6.0'}
 
   '@serialport/parser-readline@11.0.0':
@@ -1486,25 +1517,49 @@ packages:
     resolution: {integrity: sha512-O7cywCWC8PiOMvo/gglEBfAkLjp/SENEML46BXDykfKP5mTPM46XMaX1L0waWU6DXJpBgjaL7+yX6VriVPbN4w==}
     engines: {node: '>=12.0.0'}
 
+  '@serialport/parser-readline@13.0.0':
+    resolution: {integrity: sha512-dov3zYoyf0dt1Sudd1q42VVYQ4WlliF0MYvAMA3MOyiU1IeG4hl0J6buBA2w4gl3DOCC05tGgLDN/3yIL81gsA==}
+    engines: {node: '>=20.0.0'}
+
   '@serialport/parser-ready@12.0.0':
     resolution: {integrity: sha512-ygDwj3O4SDpZlbrRUraoXIoIqb8sM7aMKryGjYTIF0JRnKeB1ys8+wIp0RFMdFbO62YriUDextHB5Um5cKFSWg==}
     engines: {node: '>=12.0.0'}
+
+  '@serialport/parser-ready@13.0.0':
+    resolution: {integrity: sha512-JNUQA+y2Rfs4bU+cGYNqOPnNMAcayhhW+XJZihSLQXOHcZsFnOa2F9YtMg9VXRWIcnHldHYtisp62Etjlw24bw==}
+    engines: {node: '>=20.0.0'}
 
   '@serialport/parser-regex@12.0.0':
     resolution: {integrity: sha512-dCAVh4P/pZrLcPv9NJ2mvPRBg64L5jXuiRxIlyxxdZGH4WubwXVXY/kBTihQmiAMPxbT3yshSX8f2+feqWsxqA==}
     engines: {node: '>=12.0.0'}
 
+  '@serialport/parser-regex@13.0.0':
+    resolution: {integrity: sha512-m7HpIf56G5XcuDdA3DB34Z0pJiwxNRakThEHjSa4mG05OnWYv0IG8l2oUyYfuGMowQWaVnQ+8r+brlPxGVH+eA==}
+    engines: {node: '>=20.0.0'}
+
   '@serialport/parser-slip-encoder@12.0.0':
     resolution: {integrity: sha512-0APxDGR9YvJXTRfY+uRGhzOhTpU5akSH183RUcwzN7QXh8/1jwFsFLCu0grmAUfi+fItCkR+Xr1TcNJLR13VNA==}
     engines: {node: '>=12.0.0'}
+
+  '@serialport/parser-slip-encoder@13.0.0':
+    resolution: {integrity: sha512-fUHZEExm6izJ7rg0A1yjXwu4sOzeBkPAjDZPfb+XQoqgtKAk+s+HfICiYn7N2QU9gyaeCO8VKgWwi+b/DowYOg==}
+    engines: {node: '>=20.0.0'}
 
   '@serialport/parser-spacepacket@12.0.0':
     resolution: {integrity: sha512-dozONxhPC/78pntuxpz/NOtVps8qIc/UZzdc/LuPvVsqCoJXiRxOg6ZtCP/W58iibJDKPZPAWPGYeZt9DJxI+Q==}
     engines: {node: '>=12.0.0'}
 
+  '@serialport/parser-spacepacket@13.0.0':
+    resolution: {integrity: sha512-DoXJ3mFYmyD8X/8931agJvrBPxqTaYDsPoly9/cwQSeh/q4EjQND9ySXBxpWz5WcpyCU4jOuusqCSAPsbB30Eg==}
+    engines: {node: '>=20.0.0'}
+
   '@serialport/stream@12.0.0':
     resolution: {integrity: sha512-9On64rhzuqKdOQyiYLYv2lQOh3TZU/D3+IWCR5gk0alPel2nwpp4YwDEGiUBfrQZEdQ6xww0PWkzqth4wqwX3Q==}
     engines: {node: '>=12.0.0'}
+
+  '@serialport/stream@13.0.0':
+    resolution: {integrity: sha512-F7xLJKsjGo2WuEWMSEO1SimRcOA+WtWICsY13r0ahx8s2SecPQH06338g28OT7cW7uRXI7oEQAk62qh5gHJW3g==}
+    engines: {node: '>=20.0.0'}
 
   '@sindresorhus/is@4.6.0':
     resolution: {integrity: sha512-t09vSN3MdfsyCHoFcTRCH/iUtG7OJ0CsjzB8cjAmKc/va/kIgeDI/TxsigdncE/4be734m0cvIYwNaV4i2XqAw==}
@@ -1821,8 +1876,8 @@ packages:
   '@types/verror@1.10.11':
     resolution: {integrity: sha512-RlDm9K7+o5stv0Co8i8ZRGxDbrTxhJtgjqjFyVh/tXQyl/rYtTKlnTvZ88oSTeYREWurwx20Js4kTuKCsFkUtg==}
 
-  '@types/w3c-web-usb@1.0.6':
-    resolution: {integrity: sha512-cSjhgrr8g4KbPnnijAr/KJDNKa/bBa+ixYkywFRvrhvi9n1WEl7yYbtRyzE6jqNQiSxxJxoAW3STaOQwJHndaw==}
+  '@types/w3c-web-usb@1.0.10':
+    resolution: {integrity: sha512-CHgUI5kTc/QLMP8hODUHhge0D4vx+9UiAwIGiT0sTy/B2XpdX1U5rJt6JSISgr6ikRT7vxV9EVAFeYZqUnl1gQ==}
 
   '@types/web@0.0.209':
     resolution: {integrity: sha512-aodbPJvmgmX7MieAMvkHMMjrc7rMH2dqS3eQhyqTNBYp/ojjNT7XzbygLZ3WSdpH4sg2GAgf1ZnBD9160K6BYw==}
@@ -3363,6 +3418,10 @@ packages:
   fast-uri@3.0.6:
     resolution: {integrity: sha512-Atfo14OibSv5wAp4VWNsFYE1AchQRTv9cBGWET4pZWHzYshFSS9NQI6I57rdKn9croWVMbYFbLhJ+yJvmZIIHw==}
 
+  fast-xml-parser@4.0.1:
+    resolution: {integrity: sha512-EN1yOXDmMqpHrqkwTlCJDvFjepJBoBxjLRDtDxFmqrBILGV3NyFWpmcsofSKCCzc+YxhvNreB5rcKzG+TlyWpg==}
+    hasBin: true
+
   fast-xml-parser@4.5.3:
     resolution: {integrity: sha512-RKihhV+SHsIUGXObeVy9AXiBbFwkVk7Syp8XgwN5U3JV416+Gwp/GO9i0JYKmikykgz/UHRrrV4ROuZEo/T0ig==}
     hasBin: true
@@ -4896,14 +4955,19 @@ packages:
   node-addon-api@1.7.2:
     resolution: {integrity: sha512-ibPK3iA+vaY1eEjESkQkM0BbCqFOaZMiXRTtdB0u7b4djtY6JnsjvPdUHVMg6xQt3B8fpTTWHI9A+ADjM9frzg==}
 
-  node-addon-api@4.3.0:
-    resolution: {integrity: sha512-73sE9+3UaLYYFmDsFZnqCInzPyh3MqIwZO9cw58yIqAZhONrrabrYyYe3TuIqtIiOuTXVhsGau8hcrhhwSsDIQ==}
-
   node-addon-api@7.0.0:
     resolution: {integrity: sha512-vgbBJTS4m5/KkE16t5Ly0WW9hz46swAstv0hYYwMtbG7AznRhNyfLRe8HZAiWIpcHzoO7HxhLuBQj9rJ/Ho0ZA==}
 
   node-addon-api@7.1.1:
     resolution: {integrity: sha512-5m3bsyrjFWE1xf7nz7YXdN4udnVtXK6/Yfgn5qnahL6bCkf2yKt4k3nuTKAtT4r3IG8JNR2ncsIMdZuAzJjHQQ==}
+
+  node-addon-api@8.3.0:
+    resolution: {integrity: sha512-8VOpLHFrOQlAH+qA0ZzuGRlALRA6/LVh8QJldbrC4DY0hXoMP0l4Acq8TzFC018HztWiRqyCEj2aTWY2UvnJUg==}
+    engines: {node: ^18 || ^20 || >= 21}
+
+  node-addon-api@8.3.1:
+    resolution: {integrity: sha512-lytcDEdxKjGJPTLEfW4mYMigRezMlyJY8W4wxJK8zE533Jlb8L8dRuObJFWg2P+AuOIxoCgKF+2Oq4d4Zd0OUA==}
+    engines: {node: ^18 || ^20 || >= 21}
 
   node-api-version@0.2.0:
     resolution: {integrity: sha512-fthTTsi8CxaBXMaBAD7ST2uylwvsnYxh2PfaScwpMhos6KlSFajXQPcM4ogNE1q2s3Lbz9GCGqeIHC+C6OZnKg==}
@@ -5564,6 +5628,9 @@ packages:
   reflect-metadata@0.1.14:
     resolution: {integrity: sha512-ZhYeb6nRaXCfhnndflDK8qI6ZQ/YcWZCISRAWICW9XYqMUwjZM9Z0DveWX/ABN01oxSHwVxKQmxeYZSsm0jh5A==}
 
+  reflect-metadata@0.2.2:
+    resolution: {integrity: sha512-urBwgfrvVP/eAyXx4hluJivBKzuEbSQs9rKWCrCkbSxNv8mxPcUZKeuoF3Uy4mJl3Lwprp6yy5/39VWigZ4K6Q==}
+
   reflect.getprototypeof@1.0.10:
     resolution: {integrity: sha512-00o4I+DVrefhv+nX0ulyi3biSHCPDe+yLv5o/p6d/UVlirijB8E16FtfwSAi4g3tcqrQ4lRAqQSoFEZJehYEcw==}
     engines: {node: '>= 0.4'}
@@ -5791,6 +5858,10 @@ packages:
   serialport@12.0.0:
     resolution: {integrity: sha512-AmH3D9hHPFmnF/oq/rvigfiAouAKyK/TjnrkwZRYSFZxNggJxwvbAbfYrLeuvq7ktUdhuHdVdSjj852Z55R+uA==}
     engines: {node: '>=16.0.0'}
+
+  serialport@13.0.0:
+    resolution: {integrity: sha512-PHpnTd8isMGPfFTZNCzOZp9m4mAJSNWle9Jxu6BPTcWq7YXl5qN7tp8Sgn0h+WIGcD6JFz5QDgixC2s4VW7vzg==}
+    engines: {node: '>=20.0.0'}
 
   serve-static@1.16.2:
     resolution: {integrity: sha512-VqpjJZKadQB/PEbEwvFdO43Ax5dFBZ2UECszz8bQ7pi7wt//PWe1P6MN7eCnjsatYtBT6EuiClbjSWP2WrIoTw==}
@@ -6415,9 +6486,9 @@ packages:
   uri-js@4.4.1:
     resolution: {integrity: sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==}
 
-  usb@2.4.3:
-    resolution: {integrity: sha512-BmCjjxsriODcrb+TdXdzSDDys+MOUeRvo22ywmyIxYcuVW9YKrr2Wp2gQZUfHrQbvovKu87Po9mk5OPftJdDeQ==}
-    engines: {node: '>=10.20.0 <11.x || >=12.17.0 <13.0 || >=14.0.0'}
+  usb@2.15.0:
+    resolution: {integrity: sha512-BA9r7PFxyYp99wps1N70lIqdPb2Utcl2KkWohDtWUmhDBeM5hDH1Zl/L/CZvWxd5W3RUCNm1g+b+DEKZ6cHzqg==}
+    engines: {node: '>=12.22.0 <13.0 || >=14.17.0'}
 
   use-sync-external-store@1.4.0:
     resolution: {integrity: sha512-9WXSPC5fMv61vaupRkCKCxsPxBocVnwakBEkMIHHpkTTg6icbJtg6jzgtLDm4bl3cSHAca52rYWih0k4K3PfHw==}
@@ -7633,9 +7704,9 @@ snapshots:
     transitivePeerDependencies:
       - '@types/react'
 
-  '@nibus/core@4.1.0(@nibus/mibs@4.1.0)(buffer@6.0.3)(debug@4.4.0)':
+  '@nibus/core@5.0.1(@nibus/mibs@5.0.1)(buffer@6.0.3)(debug@4.4.0)':
     dependencies:
-      '@nibus/mibs': 4.1.0
+      '@nibus/mibs': 5.0.1
       conf: 10.2.0
       crc: 4.3.2(buffer@6.0.3)
       debug: 4.4.0
@@ -7656,31 +7727,34 @@ snapshots:
     transitivePeerDependencies:
       - buffer
 
-  '@nibus/detection@4.0.1(@nibus/core@4.1.0(@nibus/mibs@4.1.0)(buffer@6.0.3)(debug@4.4.0))':
+  '@nibus/detection@5.0.1(@nibus/core@5.0.1(@nibus/mibs@5.0.1)(buffer@6.0.3)(debug@4.4.0))':
     dependencies:
-      '@nibus/core': 4.1.0(@nibus/mibs@4.1.0)(buffer@6.0.3)(debug@4.4.0)
+      '@nibus/core': 5.0.1(@nibus/mibs@5.0.1)(buffer@6.0.3)(debug@4.4.0)
       '@types/js-yaml': 4.0.9
       fp-ts: 2.16.9
       io-ts: 2.2.22(fp-ts@2.16.9)
       js-yaml: 4.1.0
 
-  '@nibus/mibs@4.1.0':
+  '@nibus/mibs@5.0.1':
     dependencies:
+      debug: 4.4.0
       fp-ts: 2.16.9
       io-ts: 2.2.22(fp-ts@2.16.9)
+    transitivePeerDependencies:
+      - supports-color
 
-  '@nibus/service@4.1.0(@nibus/mibs@4.1.0)(buffer@6.0.3)(debug@4.4.0)':
+  '@nibus/service@5.0.1(@nibus/mibs@5.0.1)(buffer@6.0.3)(debug@4.4.0)':
     dependencies:
       '@homebridge/ciao': 1.3.1
-      '@nibus/core': 4.1.0(@nibus/mibs@4.1.0)(buffer@6.0.3)(debug@4.4.0)
-      '@nibus/detection': 4.0.1(@nibus/core@4.1.0(@nibus/mibs@4.1.0)(buffer@6.0.3)(debug@4.4.0))
-      '@serialport/bindings-cpp': 12.0.1
+      '@nibus/core': 5.0.1(@nibus/mibs@5.0.1)(buffer@6.0.3)(debug@4.4.0)
+      '@nibus/detection': 5.0.1(@nibus/core@5.0.1(@nibus/mibs@5.0.1)(buffer@6.0.3)(debug@4.4.0))
+      '@serialport/bindings-cpp': 13.0.1
       debug: 4.4.0
       fp-ts: 2.16.9
       lodash: 4.17.21
-      serialport: 12.0.0
+      serialport: 13.0.0
       tiny-typed-emitter: 2.1.0
-      usb: 2.4.3
+      usb: 2.15.0
     transitivePeerDependencies:
       - '@nibus/mibs'
       - buffer
@@ -7748,7 +7822,7 @@ snapshots:
       '@sarakusha/lzma': 2.3.4
       adm-zip: 0.5.16
       debug: 4.4.0
-      fast-xml-parser: 4.5.3
+      fast-xml-parser: 4.0.1
       fp-ts: 2.16.9
       io-ts: 2.2.22(fp-ts@2.16.9)
       lodash: 4.17.21
@@ -7924,19 +7998,49 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  '@serialport/bindings-cpp@13.0.0':
+    dependencies:
+      '@serialport/bindings-interface': 1.2.2
+      '@serialport/parser-readline': 12.0.0
+      debug: 4.4.0
+      node-addon-api: 8.3.0
+      node-gyp-build: 4.8.4
+    transitivePeerDependencies:
+      - supports-color
+
+  '@serialport/bindings-cpp@13.0.1':
+    dependencies:
+      '@serialport/bindings-interface': 1.2.2
+      '@serialport/parser-readline': 13.0.0
+      debug: 4.4.0
+      node-addon-api: 8.3.0
+      node-gyp-build: 4.8.4
+    transitivePeerDependencies:
+      - supports-color
+
   '@serialport/bindings-interface@1.2.2': {}
 
   '@serialport/parser-byte-length@12.0.0': {}
 
+  '@serialport/parser-byte-length@13.0.0': {}
+
   '@serialport/parser-cctalk@12.0.0': {}
+
+  '@serialport/parser-cctalk@13.0.0': {}
 
   '@serialport/parser-delimiter@11.0.0': {}
 
   '@serialport/parser-delimiter@12.0.0': {}
 
+  '@serialport/parser-delimiter@13.0.0': {}
+
   '@serialport/parser-inter-byte-timeout@12.0.0': {}
 
+  '@serialport/parser-inter-byte-timeout@13.0.0': {}
+
   '@serialport/parser-packet-length@12.0.0': {}
+
+  '@serialport/parser-packet-length@13.0.0': {}
 
   '@serialport/parser-readline@11.0.0':
     dependencies:
@@ -7946,18 +8050,37 @@ snapshots:
     dependencies:
       '@serialport/parser-delimiter': 12.0.0
 
+  '@serialport/parser-readline@13.0.0':
+    dependencies:
+      '@serialport/parser-delimiter': 13.0.0
+
   '@serialport/parser-ready@12.0.0': {}
+
+  '@serialport/parser-ready@13.0.0': {}
 
   '@serialport/parser-regex@12.0.0': {}
 
+  '@serialport/parser-regex@13.0.0': {}
+
   '@serialport/parser-slip-encoder@12.0.0': {}
 
+  '@serialport/parser-slip-encoder@13.0.0': {}
+
   '@serialport/parser-spacepacket@12.0.0': {}
+
+  '@serialport/parser-spacepacket@13.0.0': {}
 
   '@serialport/stream@12.0.0':
     dependencies:
       '@serialport/bindings-interface': 1.2.2
       debug: 4.3.4
+    transitivePeerDependencies:
+      - supports-color
+
+  '@serialport/stream@13.0.0':
+    dependencies:
+      '@serialport/bindings-interface': 1.2.2
+      debug: 4.4.0
     transitivePeerDependencies:
       - supports-color
 
@@ -8277,7 +8400,7 @@ snapshots:
   '@types/verror@1.10.11':
     optional: true
 
-  '@types/w3c-web-usb@1.0.6': {}
+  '@types/w3c-web-usb@1.0.10': {}
 
   '@types/web@0.0.209': {}
 
@@ -10324,6 +10447,10 @@ snapshots:
 
   fast-uri@3.0.6: {}
 
+  fast-xml-parser@4.0.1:
+    dependencies:
+      strnum: 1.1.2
+
   fast-xml-parser@4.5.3:
     dependencies:
       strnum: 1.1.2
@@ -12336,11 +12463,13 @@ snapshots:
   node-addon-api@1.7.2:
     optional: true
 
-  node-addon-api@4.3.0: {}
-
   node-addon-api@7.0.0: {}
 
   node-addon-api@7.1.1: {}
+
+  node-addon-api@8.3.0: {}
+
+  node-addon-api@8.3.1: {}
 
   node-api-version@0.2.0:
     dependencies:
@@ -13054,6 +13183,8 @@ snapshots:
 
   reflect-metadata@0.1.14: {}
 
+  reflect-metadata@0.2.2: {}
+
   reflect.getprototypeof@1.0.10:
     dependencies:
       call-bind: 1.0.8
@@ -13332,6 +13463,25 @@ snapshots:
       '@serialport/parser-spacepacket': 12.0.0
       '@serialport/stream': 12.0.0
       debug: 4.3.4
+    transitivePeerDependencies:
+      - supports-color
+
+  serialport@13.0.0:
+    dependencies:
+      '@serialport/binding-mock': 10.2.2
+      '@serialport/bindings-cpp': 13.0.0
+      '@serialport/parser-byte-length': 13.0.0
+      '@serialport/parser-cctalk': 13.0.0
+      '@serialport/parser-delimiter': 13.0.0
+      '@serialport/parser-inter-byte-timeout': 13.0.0
+      '@serialport/parser-packet-length': 13.0.0
+      '@serialport/parser-readline': 13.0.0
+      '@serialport/parser-ready': 13.0.0
+      '@serialport/parser-regex': 13.0.0
+      '@serialport/parser-slip-encoder': 13.0.0
+      '@serialport/parser-spacepacket': 13.0.0
+      '@serialport/stream': 13.0.0
+      debug: 4.4.0
     transitivePeerDependencies:
       - supports-color
 
@@ -14065,10 +14215,10 @@ snapshots:
     dependencies:
       punycode: 2.3.1
 
-  usb@2.4.3:
+  usb@2.15.0:
     dependencies:
-      '@types/w3c-web-usb': 1.0.6
-      node-addon-api: 4.3.0
+      '@types/w3c-web-usb': 1.0.10
+      node-addon-api: 8.3.1
       node-gyp-build: 4.8.4
 
   use-sync-external-store@1.4.0(react@18.3.1):
