@@ -5,14 +5,14 @@ import type {
   DeviceId,
   Display,
   FoundListener,
-  Host,
   IDevice,
   INibusConnection,
   Kind,
   NibusSessionEvents,
   PortArg,
-  VersionInfo,
+  Host,
 } from '@nibus/core';
+import type { VersionInfo } from '@nibus/core/nibus/NibusConnection';
 import {
   findDeviceById,
   findMibByType,
