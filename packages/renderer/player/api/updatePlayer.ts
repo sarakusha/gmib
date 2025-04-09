@@ -4,7 +4,6 @@ import type { SetStateAction } from 'react';
 
 import { host, port } from '/@common/remote';
 import type { Player } from '/@common/video';
-import type { PlaylistItem } from '/@common/playlist';
 
 import type { AppDispatch, AppThunk, RootState } from '../store';
 import {
@@ -26,24 +25,24 @@ const selectPlaylistData = playlistApi.endpoints.getPlaylists.select();
 
 const getFirstItemFactory =
   (getState: () => RootState) =>
-  (playlistId?: number | null): PlaylistItem | undefined => {
+  (playlistId?: number | null): string | undefined => {
     const playlistsData = selectPlaylistData(getState()).data;
     return playlistId && playlistsData
-      ? selectPlaylistById(playlistsData, playlistId)?.items[0]
+      ? selectPlaylistById(playlistsData, playlistId)?.items[0]?.id
       : undefined;
   };
 
 const getNextItemFactory =
   (getState: () => RootState) =>
-  (playlistId?: number | null, current?: string): PlaylistItem | undefined => {
+  (playlistId?: number | null, current?: string): string | undefined => {
     const playlistsData = selectPlaylistData(getState()).data;
     if (!playlistId || !playlistsData) return undefined;
     const playlist = selectPlaylistById(playlistsData, playlistId);
     if (!playlist || playlist.items.length === 0) return undefined;
-    if (!current) return playlist.items[0];
+    if (!current) return playlist.items[0].id;
     const index = playlist.items.findIndex(item => item.id === current);
     const next = (index + 1) % playlist.items.length;
-    return playlist.items[next];
+    return playlist.items[next].id;
   };
 
 const isValidItemFactory =
@@ -66,9 +65,7 @@ const updatePlayer =
         if (!prev) throw new Error(`Unknown player: ${id}`);
         let player: Player = typeof update === 'function' ? update(prev) : update;
         if (isValidItemFactory(getState)(player.playlistId, player.current) === false) {
-          const item = getFirstItemFactory(getState)(player.playlistId);
-          item && window.socket.broadcast('setCurrentPlaylistItem', item.id, item.md5);
-          player = { ...player, current: item?.id };
+          player = { ...player, current: getFirstItemFactory(getState)(player.playlistId) };
         }
         dispatch(debouncedUpdatePlayer(player));
         playerAdapter.setOne(draft, player);
@@ -80,14 +77,10 @@ export const playerPlay = () => updatePlayer(sourceId, props => ({ ...props, aut
 export const playerPause = () => updatePlayer(sourceId, props => ({ ...props, autoPlay: false }));
 export const playerNext = (): AppThunk => (dispatch, getState) => {
   dispatch(
-    updatePlayer(sourceId, props => {
-      const item = getNextItemFactory(getState)(props.playlistId, props.current);
-      item && window.socket.broadcast('setCurrentPlaylistItem', item.id, item.md5);
-      return {
-        ...props,
-        current: item?.id,
-      };
-    }),
+    updatePlayer(sourceId, props => ({
+      ...props,
+      current: getNextItemFactory(getState)(props.playlistId, props.current),
+    })),
   );
 };
 export const playerStop = (): AppThunk => dispatch => {
