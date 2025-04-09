@@ -144,7 +144,7 @@ export function createTestWindow(
     x,
     y,
     frame: false,
-    backgroundColor: '#000',
+    // backgroundColor: '#000',
     focusable: false,
     // fullscreen: true,
     // kiosk: true,
