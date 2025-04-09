@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.8.13](https://github.com/sarakusha/gmib/compare/v4.8.12...v4.8.13) (2025-04-09)
+
+
+### Features
+
+* можно сделать плеер не alwaysOnTop ([2a3a6fc](https://github.com/sarakusha/gmib/commit/2a3a6fc438fe49e3e429a0a50032b184c6608347))
+* Передача события смены ролика в C22 ([4acf1f1](https://github.com/sarakusha/gmib/commit/4acf1f12b68e2ffee188c8deba6f2241dcfa9a2d))
+* событие смены текущего медиа при инициализации и переходу к следующему ([9604055](https://github.com/sarakusha/gmib/commit/96040553491e0a4da190401108351c1aaa7a7e51))
+* убран фон в тестовых окнах, для прозрачности ([1a0a398](https://github.com/sarakusha/gmib/commit/1a0a398ef50d6cbf66f94fc6f9db326afe8378ee))
+
 ## [4.8.12](https://github.com/sarakusha/gmib/compare/v4.8.11...v4.8.12) (2025-03-25)
 
 
