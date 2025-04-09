@@ -34,6 +34,7 @@ const openHandler: Handler = ({ url }) => {
   const height = toNumber(searchParams.get('height'));
   const kiosk = !!toNumber(searchParams.get('kiosk'), 0);
   const transparent = !!toNumber(searchParams.get('transparent'), 0);
+  const alwaysOnTop = !!toNumber(searchParams.get('alwaysOnTop'), 1);
   let display: DisplayType | undefined;
   switch (displayId) {
     case DefaultDisplays.Primary:
@@ -64,7 +65,7 @@ const openHandler: Handler = ({ url }) => {
     kiosk,
     transparent,
     // show: false,
-    alwaysOnTop: true,
+    alwaysOnTop,
     skipTaskbar: true,
     hasShadow: false,
     roundedCorners: false,

@@ -83,6 +83,7 @@ export type PlayerMapping = {
   zOrder: number;
   shader?: string;
   transparent?: boolean;
+  alwaysOnTop?: boolean;
 };
 
 export const enum DefaultDisplays {

@@ -10,6 +10,7 @@ const enum MappingFlags {
   // SecondaryDisplay = 1 << 1,
   Transparent = 1 << 2,
   Kiosk = 1 << 3,
+  AlwaysOnTop = 1 << 4,
 }
 
 const toPlayerMapping = (row: NullableOptional): PlayerMapping => {
@@ -18,6 +19,7 @@ const toPlayerMapping = (row: NullableOptional): PlayerMapping => {
     ...props,
     kiosk: Boolean(flags & MappingFlags.Kiosk),
     transparent: Boolean(flags & MappingFlags.Transparent),
+    alwaysOnTop: !Boolean(flags & MappingFlags.AlwaysOnTop),
   };
 };
 
@@ -37,7 +39,10 @@ const playerMappingEncoder = (props: WithRequiredProp<Partial<PlayerMapping>, 'p
   $display: props.display ?? null,
   $zOrder: props.zOrder ?? 0,
   $shader: props.shader ?? null,
-  $flags: flag(props.kiosk, MappingFlags.Kiosk) | flag(props.transparent, MappingFlags.Transparent),
+  $flags:
+    flag(props.kiosk, MappingFlags.Kiosk) |
+    flag(props.transparent, MappingFlags.Transparent) |
+    (props.alwaysOnTop ? 0 : MappingFlags.AlwaysOnTop),
 });
 
 export const insertPlayerMapping = promisifyRun(

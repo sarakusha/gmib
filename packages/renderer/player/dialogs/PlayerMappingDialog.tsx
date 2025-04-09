@@ -63,6 +63,7 @@ const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) =
               zOrder: 0,
               kiosk: false,
               transparent: false,
+              alwaysOnTop: true,
             }
           }
           onSubmit={async (newValues, { setSubmitting }) => {
@@ -157,6 +158,16 @@ const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) =
                     label="Прозрачность"
                   />
                 </Stack>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      name="alwaysOnTop"
+                      checked={values.alwaysOnTop}
+                      onChange={handleChange}
+                    />
+                  }
+                  label="Всегда сверху"
+                />
               </FormControl>
             </Form>
           )}
