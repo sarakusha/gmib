@@ -21,7 +21,7 @@ const defaultBaseQuery = fetchBaseQuery({
   // signal: AbortSignal.timeout(3000),
 });
 
-const remoteBaseQuery: ReturnType<typeof fetchBaseQuery> = (arg, api, extra) => {
+const remoteBaseQuery: ReturnType<typeof fetchBaseQuery> = async (arg, api, extra) => {
   const {
     url: originalUrl,
     method = 'GET' as const,
@@ -32,7 +32,8 @@ const remoteBaseQuery: ReturnType<typeof fetchBaseQuery> = (arg, api, extra) => 
   const now = Date.now();
   const url = `${baseUrl}${originalUrl.startsWith('/') ? '' : '/'}${originalUrl}`;
   const headers = new Headers(originalHeaders as Headers);
-  const signature = window.identify.generateSignature(method, url, now, body);
+  const signature = await window.identify.generateSignature(method, url, now, body);
+  console.log({ signature });
   if (signature) {
     if (!identifier) identifier = window.identify.getIdentifier();
     identifier && headers.set('x-ni-identifier', identifier);
@@ -42,5 +43,7 @@ const remoteBaseQuery: ReturnType<typeof fetchBaseQuery> = (arg, api, extra) => 
   }
   return defaultBaseQuery({ url, method, headers, body, ...rest }, api, extra);
 };
+
+console.log({ isRemoteSession });
 
 export default isRemoteSession ? remoteBaseQuery : defaultBaseQuery;

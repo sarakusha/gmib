@@ -47,12 +47,12 @@ export const setSecret = (apiSecret: bigint | null, identifier = credentials.ide
 
 export const getIdentifier = () => credentials.identifier;
 
-export const generateSignature = (
+export const generateSignature = async (
   method: string,
   uri: string,
   timestamp: number,
   body?: unknown,
-): string | undefined =>
-  credentials.apiSecret && genSignature(credentials.apiSecret, method, uri, timestamp, body);
+): Promise<string | undefined> =>
+  initialized.then(() => credentials.apiSecret && genSignature(credentials.apiSecret, method, uri, timestamp, body));
 
 export const initialized = initialize();

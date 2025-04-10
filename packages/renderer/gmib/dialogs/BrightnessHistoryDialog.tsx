@@ -37,7 +37,7 @@ const getSensors = async (): Promise<Sensors[]> => {
   const headers = new Headers();
   if (isRemoteSession) {
     const now = Date.now();
-    const signature = window.identify.generateSignature('GET', sensorsUrl, now);
+    const signature = await window.identify.generateSignature('GET', sensorsUrl, now);
     if (signature) {
       const identifier = window.identify.getIdentifier();
       identifier && headers.set('x-ni-identifier', identifier);

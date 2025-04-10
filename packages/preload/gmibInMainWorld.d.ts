@@ -12,7 +12,7 @@ interface Window {
     readonly dialogs: { readonly showOpenDialogSync: { (window: Electron.BaseWindow, options: Electron.OpenDialogSyncOptions): string[] | undefined; (options: Electron.OpenDialogSyncOptions): string[] | undefined; }; readonly showErrorBox: (title: string, content: string) => void; readonly saveJSON: (options: SaveOpts) => boolean; readonly loadJSON: (title?: string) => Record<string, unknown> | null; };
     readonly log: (...params: any[]) => void;
     readonly setLogLevel: (logLevel: 'nibus' | 'none' | 'hex') => void;
-    readonly identify: { readonly getSecret: () => string | undefined; readonly setSecret: (apiSecret: bigint | null, identifier?: string | undefined) => void; readonly getIdentifier: () => string | undefined; readonly generateSignature: (method: string, uri: string, timestamp: number, body?: unknown) => string | undefined; readonly initialized: Promise<boolean>; };
+    readonly identify: { readonly getSecret: () => string | undefined; readonly setSecret: (apiSecret: bigint | null, identifier?: string | undefined) => void; readonly getIdentifier: () => string | undefined; readonly generateSignature: (method: string, uri: string, timestamp: number, body?: unknown) => Promise<string | undefined>; readonly initialized: Promise<boolean>; };
     readonly initializeNovastar: () => Promise<boolean>;
     readonly mediaSource: { readonly close: (screenId: number) => void; readonly play: _.DebouncedFunc<(screenId: number) => Promise<void>>; };
 }
