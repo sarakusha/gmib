@@ -67,8 +67,12 @@ const config = {
     category: 'Utility',
     target: 'AppImage',
     desktop: {
-      Name: '${productName}',
-      Terminal: 'false',
+      entry: {
+        Type: 'Application',
+        Name: '${productName}',
+        Version: '${version}',
+        Terminal: 'false',
+      },
     },
     // extraResources: [
     //   {
