@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.8.14](https://github.com/sarakusha/gmib/compare/v4.8.13...v4.8.14) (2025-04-10)
+
+
+### Bug Fixes
+
+* плеер не успевал получить авторизацию ([3679179](https://github.com/sarakusha/gmib/commit/36791795d387503206405cef2c216297f0ca0e66))
+
 ## [4.8.13](https://github.com/sarakusha/gmib/compare/v4.8.12...v4.8.13) (2025-04-09)
 
 
