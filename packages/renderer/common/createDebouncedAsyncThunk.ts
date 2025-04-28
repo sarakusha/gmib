@@ -13,7 +13,7 @@ type DebounceSettings<ThunkArg> = {
    * @defaultValue `false`
    */
   leading?: boolean;
-  selectId?: (arg: ThunkArg) => unknown;
+  selectId?: (arg: ThunkArg) => number | string | boolean;
 };
 
 type State = {
