@@ -98,12 +98,10 @@ export const updateBrightness = createDebouncedAsyncThunk<
             id: screenId,
             useExternalKnob,
           }) => {
-            const desired =
-              brightnessFactor && brightnessFactor > 0
-                ? Math.round(brightnessFactor * brightness)
-                : useExternalKnob && hidBrightness != null
-                  ? hidBrightness
-                  : (scrBrightness ?? 60);
+            let desired = scrBrightness ?? 60;
+            if (brightnessFactor && brightnessFactor > 0)
+              desired = Math.round(brightnessFactor * brightness);
+            else if (useExternalKnob && hidBrightness != null) desired = hidBrightness;
             const value = Math.min(desired, isValid ? (scr[screenId]?.maxBrightness ?? 100) : 100);
             return [
               ...serials.map(path => [path as string, value] as const),
@@ -133,7 +131,7 @@ export const updateBrightness = createDebouncedAsyncThunk<
   {
     maxWait: 250,
     leading: true,
-    selectId: id => Array.isArray(id) ? id.join(',') : id ?? 0,
+    selectId: id => (Array.isArray(id) ? id.join(',') : (id ?? 0)),
   },
 );
 

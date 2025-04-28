@@ -125,6 +125,7 @@ const screenApi = createApi({
         try {
           await queryFulfilled;
           if (screen.addresses?.some(address => reAddress.test(address))) {
+            // eslint-disable-next-line @typescript-eslint/no-use-before-define
             setTimeout(() => dispatch(updateMinihosts(screen.id)), 0);
           }
         } catch (err) {

@@ -35,7 +35,7 @@ const updateHid = async () => {
     }
     if (VID && PID) {
       const devices = await HID.devicesAsync();
-      if (devices.find(device => device.vendorId === VID && device.productId === PID)) {
+      if (devices.find(item => item.vendorId === VID && item.productId === PID)) {
         device = await HID.HIDAsync.open(VID, PID);
         device.on('data', listener);
         debug('open device');
@@ -46,9 +46,9 @@ const updateHid = async () => {
   }
 };
 
-const usbListener = (device: usb.Device): void => {
+const usbListener = (usbDevice: usb.Device): void => {
   const { VID, PID } = config.get('hid') ?? {};
-  if (PID && device.deviceDescriptor.idProduct === PID && VID && device.deviceDescriptor.idVendor)
+  if (PID && usbDevice.deviceDescriptor.idProduct === PID && VID && usbDevice.deviceDescriptor.idVendor)
     updateHid();
 };
 
