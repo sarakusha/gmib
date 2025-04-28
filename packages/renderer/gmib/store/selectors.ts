@@ -45,6 +45,8 @@ export const selectSessionVersion = (state: RootState): string | undefined =>
   selectConfig(state).version;
 export const selectOverheatProtection = (state: RootState): OverheatProtection | undefined =>
   selectConfig(state).overheatProtection;
+export const selectHID = (state: RootState): Config['hid'] =>
+  selectConfig(state).hid;
 export const selectCurrent = (state: RootState): CurrentState => state.current;
 export const selectCurrentTab = (state: RootState): TabValues | undefined =>
   selectCurrent(state).tab;

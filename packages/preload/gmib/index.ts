@@ -17,6 +17,8 @@ import * as nibus from './nibus';
 // import * as output from './output';
 import * as mediaSource from './mediaSource';
 
+import './hid';
+
 import expandTypes from '/@common/expandTypes';
 import { hashCode } from '/@common/helpers';
 import type { GmibWindowParams } from '/@common/WindowParams';

@@ -20,6 +20,7 @@ const enum ScreenFlags {
   None = 0,
   DownToTop = 1 << 0,
   RightToLeft = 1 << 1,
+  UseKnob = 1 << 2,
 }
 
 const enum PlayerFlags {
@@ -36,6 +37,7 @@ const toScreen = (result: NullableOptional): Omit<Screen, 'addresses'> => {
   return {
     downToTop: Boolean(flags & ScreenFlags.DownToTop),
     rightToLeft: Boolean(flags & ScreenFlags.RightToLeft),
+    useExternalKnob: Boolean(flags && ScreenFlags.UseKnob) && !props.brightnessFactor,
     ...props,
   };
 };
@@ -75,9 +77,12 @@ const screenEncoder = (screen: Omit<Screen, 'id' | 'addresses'>) => {
     test,
     display,
     brightness,
+    useExternalKnob,
   } = screen;
   const $flags =
-    flag(downToTop, ScreenFlags.DownToTop) + flag(rightToLeft, ScreenFlags.RightToLeft);
+    flag(downToTop, ScreenFlags.DownToTop) +
+    flag(rightToLeft, ScreenFlags.RightToLeft) +
+    flag(useExternalKnob && !brightnessFactor, ScreenFlags.UseKnob);
 
   const res = {
     $name: name,
@@ -119,7 +124,7 @@ export const getScreen = promisifyGet(
   toScreen,
 );
 
-export const getScreens = promisifyAll('SELECT * FROM screen', () => { }, toScreen);
+export const getScreens = promisifyAll('SELECT * FROM screen', () => {}, toScreen);
 
 export const getAddressesForScreen = promisifyAll(
   'SELECT address FROM address WHERE screenId = ?',
@@ -139,7 +144,7 @@ export const loadScreen = async (id: number): Promise<Screen | undefined> => {
 export const getAddresses = promisifyAll(
   `SELECT address
    FROM address`,
-  () => { },
+  () => {},
   ({ address }) => address as string,
 );
 
@@ -194,7 +199,7 @@ export const getPlayers = promisifyAll(
       )
     ) as current FROM player
 `,
-  () => { },
+  () => {},
   toPlayer,
 );
 
@@ -363,21 +368,20 @@ export const isPlayerActive = promisifyGet(
   result => Boolean(result?.flags & PlayerFlags.AutoPlay),
 );
 
-dbReady
-  .then(hasScreens)
-  .then(
-    async res =>
-      res ||
-      insertScreen(
-        await uniqueScreenName({
-          name: 'Экран',
-          left: 0,
-          top: 0,
-          width: 320,
-          height: 240,
-          moduleWidth: 40,
-          moduleHeight: 40,
-          display: -1,
-        }),
-      ),
-  );
+dbReady.then(hasScreens).then(
+  async res =>
+    res ||
+    insertScreen(
+      await uniqueScreenName({
+        name: 'Экран',
+        left: 0,
+        top: 0,
+        width: 320,
+        height: 240,
+        moduleWidth: 40,
+        moduleHeight: 40,
+        display: -1,
+        useExternalKnob: false,
+      }),
+    ),
+);

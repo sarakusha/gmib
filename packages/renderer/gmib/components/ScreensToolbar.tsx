@@ -7,7 +7,7 @@ import React from 'react';
 
 import { updateScreen, useReloadScreenMutation, useScreen } from '../api/screens';
 import { useDispatch, useSelector } from '../store';
-import { selectBrightness, selectCurrentScreenId } from '../store/selectors';
+import { selectBrightness, selectCurrentScreenId, selectHID } from '../store/selectors';
 
 import Brightness from './HBrightness';
 
@@ -33,6 +33,7 @@ const save = (config: ConfigState): void => {
 
 const ScreensToolbar: React.FC = () => {
   const brightness = useSelector(selectBrightness);
+  const hid = useSelector(selectHID);
   const dispatch = useDispatch();
   const screenId = useSelector(selectCurrentScreenId);
   const { screen } = useScreen(screenId);
@@ -44,7 +45,12 @@ const ScreensToolbar: React.FC = () => {
     [dispatch, screenId],
   );
   const [reload] = useReloadScreenMutation();
-  const disabled = !screen || screen.brightnessFactor !== 0;
+  const disabled = !screen || screen.brightnessFactor !== 0 || screen.useExternalKnob;
+  const isValidHid = Boolean(hid?.VID && hid.PID) && hid?.brightness != null;
+  const currentBrightness = screen?.brightnessFactor
+    ? brightness * screen.brightnessFactor
+    : ((screen?.useExternalKnob && isValidHid ? hid?.brightness : screen?.brightness) ?? 0);
+
   return (
     <>
       <IconButton
@@ -69,15 +75,12 @@ const ScreensToolbar: React.FC = () => {
         }
         title="Автояркость"
         size="large"
+        disabled={screen?.useExternalKnob && isValidHid && !screen?.brightnessFactor}
       >
         <BrightnessAutoIcon />
       </IconButton>
-      <Brightness
-        value={disabled ? brightness * (screen?.brightnessFactor ?? 1) : screen.brightness}
-        onChange={handleBrightness}
-        disabled={disabled}
-      />
-{/*       <Tooltip title={readonly ? 'Разблокировать' : 'Заблокировать'}>
+      <Brightness value={currentBrightness} onChange={handleBrightness} disabled={disabled} />
+      {/*       <Tooltip title={readonly ? 'Разблокировать' : 'Заблокировать'}>
         <IconButton onClick={toggle} color="inherit" size="large" disabled={invalidState}>
           {readonly ? <LockIcon /> : <LockOpenIcon />}
         </IconButton>

@@ -165,6 +165,7 @@ const ScreenComponent: React.FC<Props> = ({
     borderRight = 0,
     brightnessFactor = 1,
     test,
+    useExternalKnob = false,
   } = screen ?? {};
   const isActive = Boolean(test) && selected === scrId;
   React.useEffect(() => {
@@ -203,6 +204,7 @@ const ScreenComponent: React.FC<Props> = ({
               borderLeft,
               borderRight,
               brightnessFactor,
+              useExternalKnob,
             }}
             onSubmit={(newValues, { setSubmitting }) => {
               dispatch(updateScreen(scrId, prev => ({ ...prev, ...newValues })));
@@ -400,6 +402,18 @@ const ScreenComponent: React.FC<Props> = ({
                   fullWidth
                   disabled={readonly}
                 />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={!!values.useExternalKnob && !brightnessFactor}
+                      onChange={handleChange}
+                      id="useExternalKnob"
+                      disabled={!!brightnessFactor}
+                    />
+                  }
+                  label="Управление яркостью от поворотного регулятора"
+                />
+
                 <SubmitListener />
               </Form>
             )}

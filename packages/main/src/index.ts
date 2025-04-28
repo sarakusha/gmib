@@ -16,6 +16,7 @@ import './dialogs';
 import './express';
 import './ipc';
 import './rtc';
+import './hid';
 // import './channels';
 import { createMainWindow } from './mainWindow';
 import openHandler from './openHandler';

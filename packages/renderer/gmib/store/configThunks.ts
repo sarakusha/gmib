@@ -13,10 +13,13 @@ import { asyncSerial, MINUTE, notEmpty } from '/@common/helpers';
 import { isRemoteSession } from '/@common/remote';
 
 import {
+  brightnessDown,
+  brightnessUp,
   invalidateBrightness,
   setAutobrightness,
   setBrightness,
   setDisableNet,
+  setHidProp,
   setLocationProp,
   setLogLevel,
   setProtectionProp,
@@ -33,6 +36,7 @@ import {
   selectDeviceIds,
   selectDevicesByAddress,
   selectDisableNet,
+  selectHID,
   selectLastAverage,
   selectLocation,
   selectLogLevel,
@@ -55,13 +59,18 @@ const selectNovastarData = novastarApi.endpoints.getNovastars.select();
 // setTimeout(() => window.config.get('announce').then(console.log), 1000);
 
 // TODO: Нужна возможность добавления в экраны novastar подключенные по USB
-export const updateBrightness = createDebouncedAsyncThunk<void, undefined | number, AppThunkConfig>(
+export const updateBrightness = createDebouncedAsyncThunk<
+  void,
+  undefined | number | number[],
+  AppThunkConfig
+>(
   'config/updateBrightness',
-  async (id, { dispatch, getState }) => {
+  async (ids, { dispatch, getState }) => {
     const state = getState();
     // debouncedUpdateNovastarDevices(state);
     const brightness = selectBrightness(state);
     const disableNet = selectDisableNet(state);
+    const hid = selectHID(state);
     const { data: novastarData } = selectNovastarData(state);
     const { interval } = selectOverheatProtection(state) ?? {};
     const serials =
@@ -69,27 +78,44 @@ export const updateBrightness = createDebouncedAsyncThunk<void, undefined | numb
 
     const { data: screensData } = selectScreensData(state);
     if (!screensData) return;
-    const screens = id ? [selectScreen(screensData, id)] : selectScreens(screensData);
+    const screens = ids
+      ? (Array.isArray(ids) ? ids : [ids]).map(id => selectScreen(screensData, id))
+      : selectScreens(screensData);
     const { timestamp, screens: scr = {} } = await window.config.get('health');
     const isValid = timestamp && interval && Date.now() - timestamp < 2 * interval * MINUTE;
+    const hidBrightness =
+      hid?.VID && hid.PID && hid.brightness != null
+        ? Math.max(hid.brightness, hid.minBrightness ?? 0)
+        : undefined;
     const tasks = flatten(
       screens
         .filter(notEmpty)
-        .map(({ brightnessFactor, brightness: scrBrightness, addresses = [], id: screenId }) => {
-          const desired =
-            brightnessFactor && brightnessFactor > 0
-              ? Math.round(brightnessFactor * brightness)
-              : (scrBrightness ?? 60);
-          const value = Math.min(desired, isValid ? (scr[screenId]?.maxBrightness ?? 100) : 100);
-          return [
-            ...serials.map(path => [path as string, value] as const),
-            ...addresses
-              .map(address => parseLocation(address)?.address ?? address)
-              .map(address => [address, value] as const),
-          ];
-        })
+        .map(
+          ({
+            brightnessFactor,
+            brightness: scrBrightness,
+            addresses = [],
+            id: screenId,
+            useExternalKnob,
+          }) => {
+            const desired =
+              brightnessFactor && brightnessFactor > 0
+                ? Math.round(brightnessFactor * brightness)
+                : useExternalKnob && hidBrightness != null
+                  ? hidBrightness
+                  : (scrBrightness ?? 60);
+            const value = Math.min(desired, isValid ? (scr[screenId]?.maxBrightness ?? 100) : 100);
+            return [
+              ...serials.map(path => [path as string, value] as const),
+              ...addresses
+                .map(address => parseLocation(address)?.address ?? address)
+                .map(address => [address, value] as const),
+            ];
+          },
+        )
         .filter(notEmpty),
     );
+    // console.log('BRIGHTNESS', Date.now() % 10000, tasks.map(([, value]) => value).join(','));
     await Promise.allSettled(
       tasks.map(([address, value]) =>
         typeof address === 'string'
@@ -103,11 +129,11 @@ export const updateBrightness = createDebouncedAsyncThunk<void, undefined | numb
       ),
     );
   },
-  500,
+  100,
   {
-    maxWait: 1000,
+    maxWait: 250,
     leading: true,
-    selectId: id => id ?? 0,
+    selectId: id => Array.isArray(id) ? id.join(',') : id ?? 0,
   },
 );
 
@@ -263,6 +289,7 @@ startAppListening({
     setAutobrightness,
     setSpline,
     setLocationProp,
+    setHidProp,
     // setScreenProp,
     setLogLevel,
     // addAddress,
@@ -271,6 +298,8 @@ startAppListening({
     // removeScreen,
     setProtectionProp,
     setDisableNet,
+    brightnessUp,
+    brightnessDown,
   ),
   effect(action, { getState }) {
     const config = selectConfig(getState());
@@ -331,5 +360,16 @@ startAppListening({
     if (ids.length === 0 && data) ids = (data ? selectNovastarIds(data) : []) as string[];
     const [id] = ids;
     id && dispatch(setCurrentDevice(id));
+  },
+});
+
+startAppListening({
+  matcher: isAnyOf(brightnessUp, brightnessDown),
+  effect: (_, { getState, dispatch }) => {
+    const { data: screensData } = selectScreensData(getState());
+    if (!screensData) return;
+    const screens = selectScreens(screensData);
+    const ids = screens.filter(screen => screen.useExternalKnob).map(screen => screen.id);
+    if (ids.length) dispatch(updateBrightness(ids));
   },
 });

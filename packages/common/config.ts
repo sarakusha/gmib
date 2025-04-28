@@ -90,6 +90,16 @@ export const DEFAULT_OVERHEAD_PROTECTION: OverheatProtection = {
   enabled: false,
 };
 
+export type HidOptions = {
+  VID?: number;
+  PID?: number;
+  mute?: number;
+  volumeUp?: number;
+  volumeDown?: number;
+  brightness?: number;
+  minBrightness?: number;
+};
+
 export type Config = {
   location?: Location;
   spline?: SplineItem[];
@@ -103,6 +113,7 @@ export type Config = {
   version?: string;
   overheatProtection: OverheatProtection;
   disableNet?: boolean;
+  hid?: HidOptions;
 };
 
 /**

@@ -21,12 +21,21 @@ const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:config`);
 
 export const port = +(process.env['NIBUS_PORT'] ?? 9001) + 1;
 
+type OnDidChangeCallback<T> = (newValue?: T, oldValue?: T) => void;
+
+type MyStore<T extends Record<string, unknown>> = Store<T> & {
+  onDidChange<Key extends string, Value = unknown>(
+    key: Exclude<Key, keyof T>,
+    callback: OnDidChangeCallback<Value>,
+  ): () => void;
+};
+
 const config = new Store<Config>({
   name: import.meta.env.VITE_APP_NAME,
   schema: configSchema,
   watch: true,
   clearInvalidConfig: true,
-});
+}) as MyStore<Config>;
 
 // export const prevVersion = config.get('version', version);
 

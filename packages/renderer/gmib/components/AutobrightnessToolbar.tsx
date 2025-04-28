@@ -1,28 +1,32 @@
 import HelpIcon from '@mui/icons-material/Help';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import TimelineIcon from '@mui/icons-material/Timeline';
+import VolumeIcon from '@mui/icons-material/AllOut';
 import { Badge, Box, IconButton, Popover, TextField, Tooltip } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import React, { useEffect, useReducer, useState } from 'react';
 
 import BrightnessHistoryDialog from '../dialogs/BrightnessHistoryDialog';
 import { useDispatch, useSelector } from '../store';
-import { setLocationProp } from '../store/configSlice';
+import { setHidProp, setLocationProp } from '../store/configSlice';
 
-import type { Config } from '/@common/config';
+import type { Config, HidOptions } from '/@common/config';
 import { createPropsReducer, toNumber } from '/@common/helpers';
 
-import { selectLocation, selectSessionVersion } from '../store/selectors';
+import { selectHID, selectLocation, selectSessionVersion } from '../store/selectors';
 
 import FormFieldSet from './FormFieldSet';
 import AutobrightnessHelp from './Help/AutobrightnessHelp';
 
-type ActionType = 'location' | 'help';
+type ActionType = 'location' | 'help' | 'hid';
 type State = Record<ActionType, HTMLButtonElement | null>;
 const reducer = createPropsReducer<State>();
 
 type Location = Record<keyof Required<Config>['location'], string>;
 const locationReducer = createPropsReducer<Location>();
+
+// type HidProps = Record<keyof HidOptions, string>;
+// const hidReducer = createPropsReducer<HidProps>();
 
 const validateLocation = ({ longitude, latitude }: Config['location'] = {}): string | undefined => {
   if (longitude !== undefined) {
@@ -51,6 +55,14 @@ const AutobrightnessToolbar: React.FC = () => {
     latitude: '',
     longitude: '',
   });
+  const hid = useSelector(selectHID);
+  // const [hid, setHid] = useReducer(hidReducer, {
+  //   VID: '',
+  //   PID: '',
+  //   mute: '',
+  //   volumeUp: '',
+  //   volumeDown: '',
+  // });
   useEffect(() => {
     setLocation(['latitude', current?.latitude?.toString() ?? '']);
     setLocation(['longitude', current?.longitude?.toString() ?? '']);
@@ -59,6 +71,7 @@ const AutobrightnessToolbar: React.FC = () => {
   const [anchorEl, setAnchorEl] = useReducer(reducer, {
     location: null,
     help: null,
+    hid: null,
   });
   const [historyOpen, setHistoryOpen] = useState(false);
   const error = validateLocation(current);
@@ -88,8 +101,10 @@ const AutobrightnessToolbar: React.FC = () => {
     error === undefined;
   const locationOpen = Boolean(anchorEl.location) || error !== undefined;
   const helpOpen = Boolean(anchorEl.help);
+  const hidOpen = Boolean(anchorEl.hid);
   const locationId = locationOpen ? 'location-settings' : undefined;
   const helpId = helpOpen ? 'help' : undefined;
+  const hidId = hidOpen ? 'hid-settings' : undefined;
   return (
     <div className="YqATOnK8rERXOjt0JEXW0 rlXINR-cZo5bnISD5TaUT">
       {version && (
@@ -104,6 +119,11 @@ const AutobrightnessToolbar: React.FC = () => {
           <Badge variant="dot" color="secondary" invisible={isValid}>
             <LocationOnIcon />
           </Badge>
+        </IconButton>
+      </Tooltip>
+      <Tooltip title="Поворотный регулятор яркости">
+        <IconButton color="inherit" onClick={handleClick('hid')} size="large">
+          <VolumeIcon sx={{ fontSize: 36 }} />
         </IconButton>
       </Tooltip>
       <Tooltip title="Справка задания автояркости">
@@ -168,6 +188,86 @@ const AutobrightnessToolbar: React.FC = () => {
                 min: -180,
                 max: 180,
               }}
+              variant="standard"
+            />
+          </FormFieldSet>
+        </Box>
+      </Popover>
+      <Popover
+        open={hidOpen}
+        id={hidId}
+        anchorEl={anchorEl.hid}
+        onClose={handleClose('hid')}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'right',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
+      >
+        <Box
+          sx={{
+            p: 1,
+            width: '30ch',
+          }}
+        >
+          <FormFieldSet
+            legend="Параметры HID-устройства"
+            sx={{
+              '& > div': {
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 2,
+                pt: 1,
+                width: '20ch',
+                marginLeft: 'auto',
+                marginRight: 'auto',
+              },
+            }}
+            fullWidth
+          >
+            <TextField
+              type="number"
+              label="VID"
+              value={hid?.VID ?? ''}
+              onChange={e => dispatch(setHidProp(['VID', toNumber(e.target.value)]))}
+              variant="standard"
+            />
+            <TextField
+              type="number"
+              label="PID"
+              value={hid?.PID ?? ''}
+              onChange={e => dispatch(setHidProp(['PID', toNumber(e.target.value)]))}
+              variant="standard"
+            />
+            <TextField
+              type="number"
+              label="mute"
+              value={hid?.mute ?? ''}
+              onChange={e => dispatch(setHidProp(['mute', toNumber(e.target.value)]))}
+              variant="standard"
+            />
+            <TextField
+              type="number"
+              label="volumeDown"
+              value={hid?.volumeDown ?? ''}
+              onChange={e => dispatch(setHidProp(['volumeDown', toNumber(e.target.value)]))}
+              variant="standard"
+            />
+            <TextField
+              type="number"
+              label="volumeUp"
+              value={hid?.volumeUp ?? ''}
+              onChange={e => dispatch(setHidProp(['volumeUp', toNumber(e.target.value)]))}
+              variant="standard"
+            />
+            <TextField
+              type="number"
+              label="Мин. яркость"
+              value={hid?.minBrightness ?? ''}
+              onChange={e => dispatch(setHidProp(['minBrightness', toNumber(e.target.value)]))}
               variant="standard"
             />
           </FormFieldSet>

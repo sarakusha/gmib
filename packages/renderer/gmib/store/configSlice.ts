@@ -3,7 +3,7 @@ import type { LogLevel } from '@nibus/core';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { createSlice } from '@reduxjs/toolkit';
 
-import type { Config, Location, OverheatProtection } from '/@common/config';
+import type { Config, HidOptions, Location, OverheatProtection } from '/@common/config';
 import { DEFAULT_OVERHEAD_PROTECTION } from '/@common/config';
 import type { PropPayloadAction } from '/@common/helpers';
 
@@ -46,6 +46,23 @@ const configSlice = createSlice({
     setLocationProp(state, { payload: [prop, value] }: PropPayloadAction<Location>) {
       if (!state.location) state.location = {};
       state.location[prop] = value;
+    },
+    setHidProp(state, { payload: [prop, value] }: PropPayloadAction<HidOptions>) {
+      if (!state.hid) state.hid = {};
+      state.hid[prop] = value;
+    },
+    brightnessUp(state) {
+      if (state.hid) {
+        state.hid.brightness = Math.min((state.hid.brightness ?? 0) + 1, 100);
+      }
+    },
+    brightnessDown(state) {
+      if (state.hid) {
+        state.hid.brightness = Math.max(
+          (state.hid.brightness ?? 0) - 1,
+          state.hid.minBrightness ?? 0,
+        );
+      }
     },
     /*
         setScreenProp(
@@ -113,6 +130,7 @@ export const {
   setAutobrightness,
   setSpline,
   setLocationProp,
+  setHidProp,
   setLogLevel,
   // addAddress,
   // removeAddress,
@@ -122,6 +140,8 @@ export const {
   setProtectionProp,
   invalidateBrightness,
   setDisableNet,
+  brightnessDown,
+  brightnessUp,
 } = configSlice.actions;
 
 export default configSlice;

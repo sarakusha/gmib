@@ -68,6 +68,7 @@ export type Screen = {
   brightnessFactor?: number;
   test?: string;
   brightness?: number;
+  useExternalKnob?: boolean;
 };
 
 export type PlayerMapping = {

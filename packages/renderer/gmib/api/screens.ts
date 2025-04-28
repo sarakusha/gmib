@@ -177,7 +177,8 @@ export const updateScreen =
         adapter.setOne(state, screen);
         if (
           (prev.brightness !== screen.brightness && !screen.brightnessFactor) ||
-          Boolean(prev.brightnessFactor) !== Boolean(screen.brightnessFactor)
+          Boolean(prev.brightnessFactor) !== Boolean(screen.brightnessFactor) ||
+          Boolean(prev.useExternalKnob) !== Boolean(screen.useExternalKnob)
         ) {
           setTimeout(() => dispatch(invalidateBrightness(id)), 0);
         }

@@ -95,6 +95,19 @@ export const configSchema: Schema<Config> = {
     // required: ['interval', 'bottomBound', 'upperBound'],
   },
   disableNet: { type: 'boolean' },
+  hid: {
+    type: 'object',
+    properties: {
+      VID: { type: 'integer' },
+      PID: { type: 'integer' },
+      mute: { type: 'integer', default: 1 },
+      volumeDown: { type: 'integer', default: 2 },
+      volumeUp: { type: 'integer', default: 4 },
+      brightness: { type: 'integer', default: 60, minimum: 0, maximum: 100 },
+      minBrightness: { type: 'integer', default: 15, minimum: 0, maximum: 100 },
+    },
+    default: {},
+  },
 };
 const ajv = new Ajv({ removeAdditional: 'failing' });
 export const validateConfig = ajv.compile<Config>({
