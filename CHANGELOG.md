@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.9.0](https://github.com/sarakusha/gmib/compare/v4.8.14...v4.9.0) (2025-04-28)
+
+
+### Features
+
+* регулировка яркости с помощью крутилки ([118ae10](https://github.com/sarakusha/gmib/commit/118ae1088a496ab5ba718074581bd819b127968c))
+
 ## [4.8.14](https://github.com/sarakusha/gmib/compare/v4.8.13...v4.8.14) (2025-04-10)
 
 
