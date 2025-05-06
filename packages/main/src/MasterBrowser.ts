@@ -65,9 +65,13 @@ class SafeScreenConfigurator extends ScreenConfigurator {
   get isBusy() {
     return this.#isBusy > 0;
   }
+
+  timeout: NodeJS.Timeout | undefined;
 }
 
 class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
+  #unknownPath = new Set<string>();
+
   private novastarControls = new Map<string, SafeScreenConfigurator>();
 
   private broadcastDetector: Socket | undefined;
@@ -232,17 +236,26 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
 
   async setBrightness(screenId: ScreenId, percent: number) {
     const controller = this.novastarControls.get(screenId.path);
+    // debug('setBrightness: %d [%s]', percent, screenId.path);
     if (!controller) {
-      debug(`Unknown path: ${screenId.path}`);
+      if (!this.#unknownPath.has(screenId.path)) {
+        debug(`Unknown path: ${screenId.path}`);
+        this.#unknownPath.add(screenId.path);
+      }
       return;
     }
+    this.#unknownPath.delete(screenId.path);
     if (await controller.WriteBrightness(percent, screenId.screen)) {
-      const screens =
-        screenId.screen === -1 ? controller.screens.map((_, index) => index) : [screenId.screen];
-      await series(screens, async screen => {
-        const value = await controller.ReadFirstRGBVBrightness(screen);
-        if (value) this.emit('screen', { path: screenId.path, screen }, 'rgbv', value);
-      });
+      clearTimeout(controller.timeout);
+      controller.timeout = setTimeout(async () => {
+        const screens =
+          screenId.screen === -1 ? controller.screens.map((_, index) => index) : [screenId.screen];
+        await series(screens, async screen => {
+          const value = await controller.ReadFirstRGBVBrightness(screen);
+          // debug(`readRGBV: ${value}`);
+          if (value) this.emit('screen', { path: screenId.path, screen }, 'rgbv', value);
+        });
+      }, 1000);
     }
   }
 
