@@ -75,3 +75,5 @@ stats.html
 /scripts/build.js
 /scripts/keys
 .idea/webServers.xml
+.yalc/
+.idea/deployment.xml
