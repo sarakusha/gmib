@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.9.1](https://github.com/sarakusha/gmib/compare/v4.9.0...v4.9.1) (2025-05-06)
+
+
+### Features
+
+* улучшен вид режим работы от крутилки ([ccfb4bc](https://github.com/sarakusha/gmib/commit/ccfb4bcd9c2f0e83a231add369db3f949554561d))
+* debounce readRGBV после WriteBrightness ([bcf477f](https://github.com/sarakusha/gmib/commit/bcf477f371a3b9a55c109aaed3184876f862968e))
+
 ## [4.9.0](https://github.com/sarakusha/gmib/compare/v4.8.14...v4.9.0) (2025-04-28)
 
 
