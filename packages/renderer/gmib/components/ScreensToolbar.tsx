@@ -1,4 +1,5 @@
 import BrightnessAutoIcon from '@mui/icons-material/BrightnessAuto';
+import VolumeIcon from '@mui/icons-material/AllOut';
 // import LockIcon from '@mui/icons-material/Lock';
 // import LockOpenIcon from '@mui/icons-material/LockOpen';
 import Refresh from '@mui/icons-material/Refresh';
@@ -45,12 +46,17 @@ const ScreensToolbar: React.FC = () => {
     [dispatch, screenId],
   );
   const [reload] = useReloadScreenMutation();
-  const disabled = !screen || screen.brightnessFactor !== 0 || screen.useExternalKnob;
-  const isValidHid = Boolean(hid?.VID && hid.PID) && hid?.brightness != null;
-  const currentBrightness = screen?.brightnessFactor
-    ? brightness * screen.brightnessFactor
-    : ((screen?.useExternalKnob && isValidHid ? hid?.brightness : screen?.brightness) ?? 0);
-
+  const isAuto = screen && screen.brightnessFactor !== 0;
+  const isValidHid = Boolean(hid?.VID && hid.PID);
+  const useKnob = screen && !isAuto && isValidHid && screen.useExternalKnob;
+  const disabled = !screen || isAuto || useKnob;
+  let currentBrightness = 0;
+  if (screen) {
+    if (screen.brightnessFactor)
+      currentBrightness = Math.min(brightness * screen.brightnessFactor, 100);
+    else if (!useKnob) currentBrightness = screen.brightness ?? 0;
+    else currentBrightness = hid?.brightness ?? hid?.minBrightness ?? 0;
+  }
   return (
     <>
       <IconButton
@@ -75,9 +81,9 @@ const ScreensToolbar: React.FC = () => {
         }
         title="Автояркость"
         size="large"
-        disabled={screen?.useExternalKnob && isValidHid && !screen?.brightnessFactor}
+        disabled={useKnob}
       >
-        <BrightnessAutoIcon />
+        {useKnob ? <VolumeIcon /> : <BrightnessAutoIcon />}
       </IconButton>
       <Brightness value={currentBrightness} onChange={handleBrightness} disabled={disabled} />
       {/*       <Tooltip title={readonly ? 'Разблокировать' : 'Заблокировать'}>

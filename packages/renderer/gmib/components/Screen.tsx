@@ -207,6 +207,8 @@ const ScreenComponent: React.FC<Props> = ({
               useExternalKnob,
             }}
             onSubmit={(newValues, { setSubmitting }) => {
+              // eslint-disable-next-line no-param-reassign
+              if (newValues.brightnessFactor) newValues.useExternalKnob = false;
               dispatch(updateScreen(scrId, prev => ({ ...prev, ...newValues })));
               setSubmitting(false);
             }}
