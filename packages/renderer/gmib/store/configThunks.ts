@@ -333,7 +333,9 @@ if (!isRemoteSession) {
     },
   });
 }
-
+/**
+ * Лишняя action из-за циклической зависимости
+ */
 startAppListening({
   actionCreator: invalidateBrightness,
   effect({ payload: screenId }, { dispatch }) {
