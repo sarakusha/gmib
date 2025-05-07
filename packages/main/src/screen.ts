@@ -37,7 +37,7 @@ const toScreen = (result: NullableOptional): Omit<Screen, 'addresses'> => {
   return {
     downToTop: Boolean(flags & ScreenFlags.DownToTop),
     rightToLeft: Boolean(flags & ScreenFlags.RightToLeft),
-    useExternalKnob: Boolean(flags && ScreenFlags.UseKnob) && !props.brightnessFactor,
+    useExternalKnob: Boolean(flags & ScreenFlags.UseKnob) && !props.brightnessFactor,
     ...props,
   };
 };
