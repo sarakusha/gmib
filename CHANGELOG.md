@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.9.2](https://github.com/sarakusha/gmib/compare/v4.9.1...v4.9.2) (2025-05-07)
+
+
+### Bug Fixes
+
+* && => & ([bfb1a71](https://github.com/sarakusha/gmib/commit/bfb1a710779aa2dccb88fbb0b0d9763d88e2444c))
+
 ## [4.9.1](https://github.com/sarakusha/gmib/compare/v4.9.0...v4.9.1) (2025-05-06)
 
 
