@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.10.0](https://github.com/sarakusha/gmib/compare/v4.9.2...v4.10.0) (2026-01-30)
+
+
+### Features
+
+* add video test for screen ([87aed96](https://github.com/sarakusha/gmib/commit/87aed96d4cb7fdd973d7d329ba252641788c7e4c))
+* remove debounce on update ([a5a6b64](https://github.com/sarakusha/gmib/commit/a5a6b6482925705548bfe9c4da38e19e02095d22))
+
+
+### Bug Fixes
+
+* include port in address ([9e36218](https://github.com/sarakusha/gmib/commit/9e36218f94fef928a89e0c7f2368f455872a52d3))
+* type ([99b07be](https://github.com/sarakusha/gmib/commit/99b07be7e1695976a68cdc35e45d681066920d89))
+
 ## [4.9.2](https://github.com/sarakusha/gmib/compare/v4.9.1...v4.9.2) (2025-05-07)
 
 
