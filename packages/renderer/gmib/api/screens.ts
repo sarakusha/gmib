@@ -158,14 +158,14 @@ export const {
   useReloadMutation: useReloadScreenMutation,
 } = screenApi;
 
-const debouncedUpdateScreen = createDebouncedAsyncThunk<void, Screen, AppThunkConfig>(
-  'screenApi/pendingUpdateScreen',
-  (screen, { dispatch }) => {
-    dispatch(screenApi.endpoints.updateScreen.initiate(screen));
-  },
-  200,
-  { selectId: screen => screen.id, maxWait: 500 },
-);
+// const debouncedUpdateScreen = createDebouncedAsyncThunk<void, Screen, AppThunkConfig>(
+//   'screenApi/pendingUpdateScreen',
+//   (screen, { dispatch }) => {
+//     dispatch(screenApi.endpoints.updateScreen.initiate(screen));
+//   },
+//   200,
+//   { selectId: screen => screen.id, maxWait: 500 },
+// );
 
 export const updateScreen =
   (id: number, update: SetStateAction<Omit<Screen, 'id'>>): AppThunk =>
@@ -178,12 +178,13 @@ export const updateScreen =
         adapter.setOne(state, screen);
         if (
           (prev.brightness !== screen.brightness && !screen.brightnessFactor) ||
-          Boolean(prev.brightnessFactor) !== Boolean(screen.brightnessFactor) ||
-          Boolean(prev.useExternalKnob) !== Boolean(screen.useExternalKnob)
+          prev.brightnessFactor !== screen.brightnessFactor ||
+          prev.useExternalKnob !== screen.useExternalKnob
         ) {
           setTimeout(() => dispatch(invalidateBrightness(id)), 0);
         }
-        dispatch(debouncedUpdateScreen(screen));
+        dispatch(screenApi.endpoints.updateScreen.initiate(screen));
+        // dispatch(debouncedUpdateScreen(screen));
       }),
     );
   };
