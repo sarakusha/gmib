@@ -307,7 +307,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
           await asyncSerial(screens, screen => getAddressesForScreen(screen.id)),
         ).filter(address => reIPv4.test(address));
         hardAddresses.forEach(address => {
-          if (!this.novastarControls.has(address)) {
+          if (!this.novastarControls.has(`${address}:5200`)) {
             net.open(address);
           }
         });
