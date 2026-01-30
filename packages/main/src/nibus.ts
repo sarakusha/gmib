@@ -33,7 +33,7 @@ const closeNibus = (): void => {
 };
 
 (async function startLocalNibus(): Promise<void> {
-  const inUse = await tcpPortUsed.check(+(process.env['NIBUS_PORT'] ?? 9001));
+  const inUse = await tcpPortUsed.check(+(process.env.NIBUS_PORT ?? 9001));
   if (inUse) {
     debug('Port already in use');
     return;
