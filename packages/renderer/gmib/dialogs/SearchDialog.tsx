@@ -1,4 +1,4 @@
-import AddIcon from "@mui/icons-material/Add";
+import AddIcon from '@mui/icons-material/Add';
 import {
 	Box,
 	Button,
@@ -22,23 +22,23 @@ import {
 	Tab,
 	Tabs,
 	TextField,
-} from "@mui/material";
-import type { DeviceId } from "@nibus/core";
-import Address from "@nibus/core/Address";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+} from '@mui/material';
+import type { DeviceId } from '@nibus/core';
+import Address from '@nibus/core/Address';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
-import DeviceIcon from "../components/DeviceIcon";
-import { useDevices, useDispatch, useSelector } from "../store";
+import DeviceIcon from '../components/DeviceIcon';
+import { useDevices, useDispatch, useSelector } from '../store';
 import {
 	filterDevicesByAddress,
 	selectFinder,
 	selectLinks,
-} from "../store/selectors";
-import type { DeviceInfo } from "../store/sessionSlice";
-import { resetDetected } from "../store/sessionSlice";
-import useDefaultKeys from "../util/useDefaultKeys";
+} from '../store/selectors';
+import type { DeviceInfo } from '../store/sessionSlice';
+import { resetDetected } from '../store/sessionSlice';
+import useDefaultKeys from '../util/useDefaultKeys';
 
-import type { FinderOptions } from "/@common/helpers";
+import type { FinderOptions } from '/@common/helpers';
 
 type Props = {
 	open: boolean;
@@ -48,11 +48,11 @@ type Props = {
 const deviceKey = ({ address, owner }: DeviceInfo): string =>
 	`${owner}#${address.toString()}`;
 
-type SearchKind = "byAddress" | "byType";
+type SearchKind = 'byAddress' | 'byType';
 
 const SearchDialog: React.FC<Props> = ({ open, close }) => {
 	const { isSearching, detected } = useSelector(selectFinder);
-	const [kind, setKind] = useState<SearchKind>("byType");
+	const [kind, setKind] = useState<SearchKind>('byType');
 	const links = useSelector(selectLinks);
 	const devices = useDevices();
 	const dispatch = useDispatch();
@@ -61,8 +61,8 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
 	const addressRef = useRef<HTMLInputElement>(null);
 	const [invalidAddress, setInvalidAddress] = useState(false);
 	const defaultValues = useRef({
-		address: "",
-		type: "0",
+		address: '',
+		type: '0',
 	});
 	useEffect(() => {
 		dispatch(resetDetected());
@@ -75,16 +75,16 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
 		const connection = connectionRef.current?.value;
 		if (connection === undefined) return;
 		const owners: DeviceId[] = (
-			connection === "0" ? links : links.filter(({ id }) => id === connection)
+			connection === '0' ? links : links.filter(({ id }) => id === connection)
 		).map(({ id }) => id);
 		const options: FinderOptions = {
 			owners,
 		};
 		switch (kind) {
-			case "byAddress":
+			case 'byAddress':
 				options.address = addressRef.current?.value;
 				break;
-			case "byType":
+			case 'byType':
 				options.type = Number(mibTypeRef.current?.value);
 				break;
 			default:
@@ -127,10 +127,10 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
 	return (
 		<Dialog open={open} aria-labelledby="search-title" onClose={close}>
 			<DialogTitle id="search-title">Поиск устройств</DialogTitle>
-			<DialogContent sx={{ position: "relative", px: 0 }}>
+			<DialogContent sx={{ position: 'relative', px: 0 }}>
 				<Paper
 					square
-					sx={{ bgcolor: "primary.main", color: "primary.contrastText" }}
+					sx={{ bgcolor: 'primary.main', color: 'primary.contrastText' }}
 				>
 					<Tabs
 						value={kind}
@@ -147,9 +147,9 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
 					component="form"
 					sx={{
 						p: 2,
-						display: "flex",
-						flexWrap: "wrap",
-						width: "60ch",
+						display: 'flex',
+						flexWrap: 'wrap',
+						width: '60ch',
 						gap: 1,
 					}}
 					noValidate
@@ -178,7 +178,7 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
 					<TextField
 						variant="standard"
 						id="address"
-						sx={{ display: kind !== "byAddress" ? "none" : "block", flex: 1 }}
+						sx={{ display: kind !== 'byAddress' ? 'none' : 'block', flex: 1 }}
 						error={invalidAddress}
 						label="Адрес"
 						inputRef={addressRef}
@@ -188,7 +188,7 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
 						fullWidth
 					/>
 					<FormControl
-						sx={{ display: kind !== "byType" ? "none" : "block", flex: 1 }}
+						sx={{ display: kind !== 'byType' ? 'none' : 'block', flex: 1 }}
 						margin="normal"
 						disabled={isSearching}
 					>
@@ -203,7 +203,7 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
 							<MenuItem value="0">Не выбран</MenuItem>
 							{window.nibus.mibTypes.map(
 								({ name, value }) => (
-									<MenuItem key={value.toString()} value={value}>
+									<MenuItem key={value.toString()} value={String(value)}>
 										{name}
 									</MenuItem>
 								),
@@ -214,13 +214,13 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
 				<Box
 					sx={{
 						width: 1,
-						display: "flex",
-						height: "20ch",
-						justifyContent: "center",
-						overflowY: "auto",
+						display: 'flex',
+						height: '20ch',
+						justifyContent: 'center',
+						overflowY: 'auto',
 					}}
 				>
-					<List sx={{ minWidth: "40ch" }}>
+					<List sx={{ minWidth: '40ch' }}>
 						{detected.map((info) => {
 							const mib =
 								info.type > 0
@@ -253,13 +253,13 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
 				</Box>
 				{isSearching && (
 					<LinearProgress
-						sx={{ position: "absolute", bottom: 0, left: 0, right: 0 }}
+						sx={{ position: 'absolute', bottom: 0, left: 0, right: 0 }}
 					/>
 				)}
 			</DialogContent>
-			<DialogActions sx={{ position: "relative" }}>
+			<DialogActions sx={{ position: 'relative' }}>
 				<Button onClick={startStop} color="primary" type="submit">
-					{isSearching ? "Остановить" : "Начать"}
+					{isSearching ? 'Остановить' : 'Начать'}
 				</Button>
 				<Button onClick={close} color="primary">
 					Закрыть
@@ -267,7 +267,7 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
 				<Button
 					color="primary"
 					sx={{
-						position: "absolute",
+						position: 'absolute',
 						left: (theme) => theme.spacing(1),
 						top: (theme) => theme.spacing(1),
 					}}
