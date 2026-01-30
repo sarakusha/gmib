@@ -23,5 +23,6 @@
     }
   ],
   "sqltools.useNodeRuntime": true,
-  "npm.exclude": ""
+  "npm.exclude": "",
+  "biome.enabled": false,
 }
