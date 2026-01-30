@@ -15,7 +15,8 @@ import type { Kind } from '@nibus/core/flash/FlashKinds';
 import { FlashKinds, KindMap } from '@nibus/core/flash/FlashKinds';
 import type { SnackbarAction, SnackbarKey } from 'notistack';
 import { useSnackbar } from 'notistack';
-import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
+import type React from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 
 import { useDevice, useSelector } from '../store';
 import { enqueueSnackbar as enqueueSnackbarAction } from '../store/flasherSlice';
@@ -55,7 +56,7 @@ const FirmwareTab: React.FC<MinihostTabProps> = ({ id, selected = false }) => {
     (currentKind, filename, moduleSelect) => {
       snacksRef.current.forEach(closeSnackbar);
       snacksRef.current = [];
-      window.nibus.flash(id, currentKind, filename, moduleSelect).catch(err => {
+      window.nibus.flash(id, currentKind, filename, moduleSelect).catch((err: Error) => {
         enqueueSnackbar(err.message, { variant: 'error' });
       });
       // setProgress(0);
