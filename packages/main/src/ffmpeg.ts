@@ -11,7 +11,7 @@ import debugFactory from 'debug';
 import type { ExecaChildProcess, ExecaReturnValue } from 'execa';
 import execa from 'execa';
 import FileType from 'file-type';
-import type { FileTypeResult } from 'file-type/core';
+import type { FileTypeResult } from 'file-type';
 import type { FRAMERATE } from 'smpte-timecode';
 import Timecode from 'smpte-timecode';
 
@@ -149,7 +149,7 @@ export function getTimecodeFromStreams(streams: FfprobeStream[]): number | undef
 }
 
 export const getFfCommandLine = (cmd: string, args: string[]): string => {
-  const mapArg = (arg: string): string => (/[^0-9a-zA-Z-_]/.test(arg) ? `'${arg}'` : arg);
+  const mapArg = (arg: string): string => (/[^0-9a-zA-Z-_]/.test(arg) ? `"${arg}"` : arg);
   return `${cmd} ${args.map(mapArg).join(' ')}`;
 };
 
@@ -328,7 +328,8 @@ export async function generateFromImage({
     '-pix_fmt',
     'yuv420p',
     '-vf',
-    'loop=-1:1',
+    // 'loop=-1:1,pad=ceil(iw/2)*2:ceil(ih/2)*2', // some formats require even dimensions, but this can cause black bars. crop to remove them instead.
+    'loop=-1:1,crop=iw-mod(iw\\,2):ih-mod(ih\\,2)',
   ];
 
   const ffmpegArgs = ['-hide_banner', '-i', filePath, ...videoArgs, '-an', '-sn', '-y', outPath];
