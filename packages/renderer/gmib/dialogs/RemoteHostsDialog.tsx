@@ -79,7 +79,7 @@ const fallbackRender = ({ error }: FallbackProps) => (
 
   <div role="alert">
     <p>Something went wrong:</p>
-    <pre style={{ color: 'red' }}>{error.message}</pre>
+    <pre style={{ color: 'red' }}>{(error as Error).message}</pre>
   </div>
 );
 
