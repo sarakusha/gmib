@@ -12,7 +12,7 @@ import flatten from 'lodash/flatten';
 
 import { Connection, series } from '@novastar/codec';
 import { findNetDevices, MULTICAST_ADDRESS, net, REQ, UDP_PORT } from '@novastar/net';
-import ScreenConfigurator from '@novastar/screen';
+import { ScreenConfigurator } from '@novastar/screen';
 import memoize from 'lodash/memoize';
 import { TypedEmitter } from 'tiny-typed-emitter';
 

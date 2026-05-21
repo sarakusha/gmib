@@ -1,4 +1,4 @@
-import type ScreenConfigurator from '@novastar/screen';
+import { type ScreenConfigurator } from '@novastar/screen';
 import { getCabinetPosition } from '@novastar/screen';
 import flatten from 'lodash/flatten';
 // import debugFactory from 'debug';

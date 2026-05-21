@@ -1,5 +1,5 @@
 import { Box, Typography } from '@mui/material';
-import getScreenLocation from '@novastar/screen/getScreenLocation';
+import { getScreenLocation } from '@novastar/screen/getScreenLocation';
 import groupBy from 'lodash/groupBy';
 import React, { useEffect, useMemo, useState } from 'react';
 

@@ -6,7 +6,7 @@ import { css, styled } from '@mui/material/styles';
 import { ChipTypeEnum } from '@novastar/native/ChipType';
 import { DviSelectModeEnum } from '@novastar/native/DviSelectMode';
 import type { BrightnessRGBV } from '@novastar/screen';
-import getScreenLocation from '@novastar/screen/getScreenLocation';
+import { getScreenLocation } from '@novastar/screen/getScreenLocation';
 import React, { useCallback, useEffect } from 'react';
 
 import { updateNovastarScreens } from '../api/novastar';
