@@ -11,10 +11,10 @@
     ],
     "paths": {
       "/@common/*": [
-        "../common/*"
+        "../../common/*"
       ],
       "/@player/store/*": [
-        "../renderer/player/store/*"
+        "../../renderer/player/store/*"
       ]
     }
   },

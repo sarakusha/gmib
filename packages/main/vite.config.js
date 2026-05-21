@@ -1,7 +1,5 @@
 import { node } from '../../.electron-vendors.cache.json';
 import path from 'path';
-import cleanup from 'rollup-plugin-cleanup';
-import { nodeResolve } from '@rollup/plugin-node-resolve';
 
 const PACKAGE_ROOT = __dirname;
 const APP_ROOT = path.resolve(PACKAGE_ROOT, '../..');
@@ -29,9 +27,9 @@ const config = {
     conditions: ['node', 'require'],
     mainFields: ['main'],
   },
-  // ssr: {
-  //   format: 'cjs',
-  // },
+  ssr: {
+    // noExternal: true
+  },
   build: {
     ssr: true,
     sourcemap: 'inline',
@@ -45,19 +43,21 @@ const config = {
     },
     rollupOptions: {
       external: [
-        // 'electron',
-        // 'electron-devtools-installer',
-        // '@serialport/bindings-cpp',
-        // 'usb',
-        // 'sqlite3',
+        // '@nibus/core',
         // '@nibus/detection',
-        // '@nibus/mibs'
+        // '@nibus/mibs',
+        // '@nibus/service',
+        // '@novastar/codec',
+        // '@novastar/native',
+        // '@novastar/net',
+        // '@novastar/screen',
+        // '@novastar/serial',
+        // '@sarakusha/lzma',
       ],
       output: {
         entryFileNames: 'index.cjs',
-        interop: 'compat',
       },
-      plugins: [nodeResolve(['require', 'node', 'main']), cleanup({ comments: 'none' })],
+      plugins: [],
     },
     emptyOutDir: true,
   },

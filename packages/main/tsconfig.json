@@ -7,10 +7,13 @@
     // Don't automatically include anything.
     // Only include `@types` packages that we need to import.
     "types": [],
-    "baseUrl": ".",
     "paths": {
-      "bonjour-hap": ["../../types/bonjour-hap"],
-      "/@common/*": ["../common/*"]
+      "bonjour-hap": [
+        "../../types/bonjour-hap"
+      ],
+      "/@common/*": [
+        "../common/*"
+      ]
     }
   },
   "include": [
@@ -19,5 +22,10 @@
     "../../types/**/*.d.ts"
     // "../common/test.js"
   ],
-  "exclude": ["**/*.spec.ts", "**/*.test.ts", "../common/prepareDrawArgs.ts", "bak/**"]
+  "exclude": [
+    "**/*.spec.ts",
+    "**/*.test.ts",
+    "../common/prepareDrawArgs.ts",
+    "bak/**"
+  ]
 }

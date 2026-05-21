@@ -1,9 +1,4 @@
 import { join } from 'path';
-import { visualizer } from 'rollup-plugin-visualizer';
-import cleanup from 'rollup-plugin-cleanup';
-import { builtinModules } from 'module';
-// import { nodeResolve } from '@rollup/plugin-node-resolve';
-
 import { chrome } from '../../.electron-vendors.cache.json';
 
 // import external from '../../external';
@@ -66,9 +61,8 @@ const config = {
     rollupOptions: {
       output: {
         entryFileNames: `${process.env.LIB_NAME}.cjs`,
-        interop: 'compat',
       },
-      plugins: [cleanup({ comments: 'none' })],
+      plugins: [],
       // external,
       external: [
         // 'debug',

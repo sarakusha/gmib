@@ -3,15 +3,11 @@
 import { defineConfig } from 'vite';
 import { fileURLToPath } from 'url';
 import path from 'path';
-import cleanup from 'rollup-plugin-cleanup';
-// import { builtinModules } from 'module';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import react from '@vitejs/plugin-react';
 import mdx from '@mdx-js/rollup';
 import checker from 'vite-plugin-checker';
 import { createRequire } from 'module'; // Bring in the ability to create the 'require' method
-// import { visualizer } from 'rollup-plugin-visualizer';
-// import { nodeResolve } from '@rollup/plugin-node-resolve';
 import helmet from 'helmet';
 // import { renderer } from 'unplugin-auto-expose';
 import preventLoadSourceMap from '../common/preventLoadSourceMap';
@@ -95,7 +91,7 @@ export default defineConfig({
     emptyOutDir: true,
     reportCompressedSize: false,
     chunkSizeWarningLimit: 2000,
-    plugins: [cleanup({ comments: 'none' })],
+    // plugins: [cleanup({ comments: 'none' })],
     // commonjsOptions: {
     //   requireReturnsDefault: 'preferred',
     // },
