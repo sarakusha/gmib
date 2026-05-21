@@ -2,8 +2,6 @@
 import FolderIcon from '@mui/icons-material/FolderOpen';
 import SaveAltIcon from '@mui/icons-material/SaveAlt';
 import { Box, Button, FormControl, FormHelperText, IconButton } from '@mui/material';
-import type { Kind } from '@nibus/core/flash';
-import { KindMap } from '@nibus/core/flash/FlashKinds';
 import React, { memo, useCallback, useState } from 'react';
 
 import { useSelector } from '../store';
@@ -13,6 +11,8 @@ import {
   selectOverheatProtection,
 } from '../store/selectors';
 import extendStyled from '../util/extendStyled';
+import { KindMap } from '../flashKinds';
+import type { Kind } from '../flashKinds';
 
 import { getStatesAsync } from '/@common/helpers';
 

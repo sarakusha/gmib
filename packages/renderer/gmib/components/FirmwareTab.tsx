@@ -11,8 +11,6 @@ import {
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import Address from '@nibus/core/Address';
-import type { Kind } from '@nibus/core/flash/FlashKinds';
-import { FlashKinds, KindMap } from '@nibus/core/flash/FlashKinds';
 import type { SnackbarAction, SnackbarKey } from 'notistack';
 import { useSnackbar } from 'notistack';
 import type React from 'react';
@@ -22,6 +20,8 @@ import { useDevice, useSelector } from '../store';
 import { enqueueSnackbar as enqueueSnackbarAction } from '../store/flasherSlice';
 import { startAppListening } from '../store/listenerMiddleware';
 import { selectFlashing, selectProgress, selectProps } from '../store/selectors';
+import { FlashKinds, KindMap } from '../flashKinds';
+import type { Kind } from '../flashKinds';
 
 import CircularProgressWithLabel from './CircularProgressWithLabel';
 import type { Props as FlashUpgradeProps } from './FlashUpgrade';
