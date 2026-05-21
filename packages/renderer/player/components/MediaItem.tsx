@@ -213,7 +213,11 @@ const MediaItem = React.forwardRef<HTMLLIElement, MediaItemProps>((props, ref) =
     return undefined;
   }, [title]);
   return (
-    <div ref={dragPreview}>
+    <div
+      ref={node => {
+        dragPreview(node);
+      }}
+    >
       <ListItemHover
         title={title}
         ref={refInner}

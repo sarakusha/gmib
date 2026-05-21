@@ -92,7 +92,14 @@ const MediaTab: React.FC = () => {
   if (descending && items.length) items = items.reverse();
   if (search) items = items.filter(media => media.filename.toLocaleLowerCase().includes(search));
   return (
-    <Box width={1} height={1} p={0} ref={drop}>
+    <Box
+      width={1}
+      height={1}
+      p={0}
+      ref={node => {
+        drop(node as HTMLDivElement | null);
+      }}
+    >
       <Container maxWidth="sm" disableGutters sx={{ height: 1 }}>
         <FixedHeadLayout gap={0}>
           <MediaTabToolbar />
