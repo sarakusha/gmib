@@ -21,7 +21,6 @@ ipcRenderer.on('new-screen', (event, screenId: number) => {
   };
 });
 
-// eslint-disable-next-line import/prefer-default-export
 export const dispatch = (screenId: number, action: AnyAction): void => {
   const port = ports.get(screenId);
   if (port) {

@@ -61,12 +61,12 @@ const logSlice = createSlice({
       const matches = removeAnsi(line).match(
         /\[([^\]]+)] \[([^\]]+)]\s+([\d-]{10}T[\d:.]{12}Z )?(\S+)(.*)/,
       );
-      // eslint-disable-next-line no-plusplus
+
       const id = ++logIndex;
       let added = false;
       if (matches) {
         const [, time, , time2, tag, tail] = matches;
-        const [, info = tail, delta] = time2 ? [] : tail.match(/(.*)(\+\S+)$/) ?? [];
+        const [, info = tail, delta] = time2 ? [] : (tail.match(/(.*)(\+\S+)$/) ?? []);
         // console.log({ line, matches, time, time2, tag, info, delta });
         if (time2 || delta) {
           const css = `color: ${colorHash.hex(tag)};`;

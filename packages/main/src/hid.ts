@@ -48,7 +48,12 @@ const updateHid = async () => {
 
 const usbListener = (usbDevice: usb.Device): void => {
   const { VID, PID } = config.get('hid') ?? {};
-  if (PID && usbDevice.deviceDescriptor.idProduct === PID && VID && usbDevice.deviceDescriptor.idVendor)
+  if (
+    PID &&
+    usbDevice.deviceDescriptor.idProduct === PID &&
+    VID &&
+    usbDevice.deviceDescriptor.idVendor
+  )
     updateHid();
 };
 

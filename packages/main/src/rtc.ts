@@ -1,5 +1,5 @@
 /* eslint-disable no-param-reassign */
-/* eslint-disable import/prefer-default-export */
+
 import type { RtcMessage, WithWebSocketKey } from '/@common/rtc';
 
 import { app, ipcMain } from 'electron';
@@ -55,7 +55,7 @@ wss.on('connection', (ws: AliveWebSocket, req) => {
       if (['candidate', 'answer', 'request'].includes(msg.event)) {
         const win =
           msg.sourceType === 'player'
-            ? findPlayerWindow(msg.sourceId) ?? (await openPlayer(msg.sourceId, { hidden: true }))
+            ? (findPlayerWindow(msg.sourceId) ?? (await openPlayer(msg.sourceId, { hidden: true })))
             : getMainWindow();
         // console.log('FOUND', win);
         if (win) win.webContents.send('socket', { ...msg, id });

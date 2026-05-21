@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { LogLevel } from '@nibus/core/common';
 
 export type SplineItem = [lux: number, brightness: number];

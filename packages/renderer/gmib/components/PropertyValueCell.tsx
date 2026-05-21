@@ -1,4 +1,3 @@
-/* eslint-disable indent,@typescript-eslint/no-explicit-any */
 import type { SelectChangeEvent } from '@mui/material';
 import { Box, MenuItem, Select } from '@mui/material';
 import React, { memo, useCallback, useMemo } from 'react';

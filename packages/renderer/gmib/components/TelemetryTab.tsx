@@ -66,7 +66,6 @@ const TelemetryTab: React.FC<MinihostTabProps> = ({ id, selected = false }) => {
   const [modules, setModules] = useState<IModuleInfo<Minihost2Info | Minihost3Info>[]>([]);
   const telemetry = window.nibus.telemetry(id); // useMemo(() => window.nibus.telemetry(id), [id]);
   const start = useCallback(async () => {
-    // eslint-disable-next-line @typescript-eslint/no-shadow
     const [[xMin, xMax], [yMin, yMax], selectors] = await getStatesAsync(setX, setY, setSelectors);
     setLoading(true);
     await telemetry.start(

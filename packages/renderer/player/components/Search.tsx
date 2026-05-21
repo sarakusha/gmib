@@ -78,7 +78,6 @@ const Search: React.FC<Props> = ({ variant, ...props }) => {
           <IconButton
             size="small"
             color="inherit"
-            // eslint-disable-next-line react/destructuring-assignment
             sx={{ visibility: props.value ? 'inherit' : 'hidden' }}
             onClick={() => {
               const { current } = refInput;

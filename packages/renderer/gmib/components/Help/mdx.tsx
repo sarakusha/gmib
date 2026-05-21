@@ -34,24 +34,24 @@ const Blockquote = styled(Paper)(({ theme }) => ({
 }));
 
 const mdx: MDXComponents = {
-  p: ({ ref, ...props }) => <Typography paragraph {...props} />,
-  h1: ({ ref, ...props }) => <Typography {...props} component="h1" variant="h4" gutterBottom />,
-  h2: ({ ref, ...props }) => <Typography {...props} component="h2" variant="h4" gutterBottom />,
-  h3: ({ ref, ...props }) => <Typography {...props} component="h3" variant="h5" gutterBottom />,
-  h4: ({ ref, ...props }) => <Typography {...props} component="h4" variant="h6" gutterBottom />,
-  h5: ({ ref, ...props }) => <Typography {...props} component="h5" variant="h6" gutterBottom />,
-  h6: ({ ref, ...props }) => <Typography {...props} component="h6" variant="h6" gutterBottom />,
-  blockquote: ({ ref, ...props }) => <Blockquote {...(props as PaperProps<'div'>)} />,
-  ul: ({ ref, ...props }) => <Typography {...props} component="ul" />,
-  ol: ({ ref, ...props }) => <Typography {...props} component="ol" />,
-  li: ({ ref, ...props }) => <Typography {...props} component="li" />,
-  table: ({ ref, ...props }) => <MuiTable {...props} />,
-  tr: ({ ref, ...props }) => <TableRow {...props} />,
-  td: ({ ref, ...props }) => <TableCell {...(props as TableCellProps)} />,
-  tbody: ({ ref, ...props }) => <TableBody {...props} />,
-  th: ({ ref, ...props }) => <TableCell {...(props as TableCellProps)} />,
-  thead: ({ ref, ...props }) => <TableHead {...props} />,
-  code: ({ ref, ...props }) => (
+  p: ({ ref: _, ...props }) => <Typography paragraph {...props} />,
+  h1: ({ ref: _, ...props }) => <Typography {...props} component="h1" variant="h4" gutterBottom />,
+  h2: ({ ref: _, ...props }) => <Typography {...props} component="h2" variant="h4" gutterBottom />,
+  h3: ({ ref: _, ...props }) => <Typography {...props} component="h3" variant="h5" gutterBottom />,
+  h4: ({ ref: _, ...props }) => <Typography {...props} component="h4" variant="h6" gutterBottom />,
+  h5: ({ ref: _, ...props }) => <Typography {...props} component="h5" variant="h6" gutterBottom />,
+  h6: ({ ref: _, ...props }) => <Typography {...props} component="h6" variant="h6" gutterBottom />,
+  blockquote: ({ ref: _, ...props }) => <Blockquote {...(props as PaperProps<'div'>)} />,
+  ul: ({ ref: _, ...props }) => <Typography {...props} component="ul" />,
+  ol: ({ ref: _, ...props }) => <Typography {...props} component="ol" />,
+  li: ({ ref: _, ...props }) => <Typography {...props} component="li" />,
+  table: ({ ref: _, ...props }) => <MuiTable {...props} />,
+  tr: ({ ref: _, ...props }) => <TableRow {...props} />,
+  td: ({ ref: _, ...props }) => <TableCell {...(props as TableCellProps)} />,
+  tbody: ({ ref: _, ...props }) => <TableBody {...props} />,
+  th: ({ ref: _, ...props }) => <TableCell {...(props as TableCellProps)} />,
+  thead: ({ ref: _, ...props }) => <TableHead {...props} />,
+  code: ({ ref: _, ...props }) => (
     // <Typography component="div" paragraph>
     <Box
       component="span"
@@ -64,15 +64,15 @@ const mdx: MDXComponents = {
     />
     // </Typography>
   ),
-  hr: ({ ref, ...props }) => <Divider {...props} />,
-  input: ({ ref, ...props }) => {
+  hr: ({ ref: _, ...props }) => <Divider {...props} />,
+  input: ({ ref: _, ...props }) => {
     const { type } = props;
     if (type === 'checkbox') {
       return <Checkbox {...(props as CheckboxProps)} disabled={false} readOnly />;
     }
     return <input {...props} readOnly />;
   },
-  wrapper: ({ ref, ...props }) => <div {...props} className="markdown-body" />,
+  wrapper: ({ ref: _, ...props }) => <div {...props} className="markdown-body" />,
 };
 
 export default mdx;

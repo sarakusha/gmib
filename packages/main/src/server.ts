@@ -48,7 +48,6 @@ wss.on('connection', (ws: WebSocketEx) => {
 
 export const broadcast = ({ event, data = [0], remote, sourceId }: BroadcastOptions) => {
   wss.clients.forEach((ws: WebSocketEx) => {
-    // eslint-disable-next-line no-underscore-dangle
     const remoteAddress = ws._socket?.remoteAddress;
     if (
       ws.readyState === WebSocket.OPEN &&

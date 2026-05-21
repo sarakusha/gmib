@@ -45,7 +45,6 @@ const PING_INTERVAL = 10000;
 
 let pingTimer = 0;
 
-// eslint-disable-next-line import/prefer-default-export
 export const reloadDevice = createAsyncThunk<Promise<void>, DeviceId, AppThunkConfig>(
   'devices/reload',
   id => window.nibus.reloadDevice(id),

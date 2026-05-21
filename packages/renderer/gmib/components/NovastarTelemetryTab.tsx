@@ -43,7 +43,7 @@ const NovastarTelemetryTab: React.FC<{ device: Novastar | undefined; selected?: 
   const isBusy = !device || device.isBusy;
   const { path, screens = [] } = device ?? {};
   const locations = screens.map(({ info }) => info && getScreenLocation(info));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
   const { isLoading, telemetry: cabinets = [] } =
     useSelector(state => selectNovastarTelemetry(state, path ?? '')) ?? {};
   const telemetryToolbar = useMemo(

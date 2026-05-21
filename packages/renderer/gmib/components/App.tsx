@@ -96,7 +96,7 @@ const App: React.FC = () => {
         // onClose: () => {
         //   dispatch(setBroadcastDetected());
         // },
-        // eslint-disable-next-line react/no-unstable-nested-components
+
         action: key => (
           <IconButton onClick={() => closeSnackbar(key)} size="small">
             <CloseIcon fontSize="inherit" />

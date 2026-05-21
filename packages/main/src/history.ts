@@ -70,7 +70,6 @@ const getBrightnessHistoryLast = promisifyGet(
   toBrightnessHistory,
 );
 
-// eslint-disable-next-line import/prefer-default-export
 export const getBrightnessHistoryOn = async (dt: number): Promise<BrightnessHistory[]> => {
   const now = Date.now();
   const to = dt ? Math.min(now, dt + 24 * HOUR) : now;

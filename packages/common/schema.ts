@@ -1,5 +1,5 @@
 import { logLevels } from '@nibus/core/common';
-import Ajv from 'ajv';
+import Ajv from 'ajv/dist/2020';
 import type { Schema } from 'electron-store';
 
 import type { Config } from './config';
@@ -18,7 +18,7 @@ export const configSchema: Schema<Config> = {
     type: 'array',
     items: {
       type: 'array',
-      items: [
+      prefixItems: [
         {
           type: 'number',
           minimum: 0,
@@ -30,9 +30,11 @@ export const configSchema: Schema<Config> = {
           maximum: 100,
         },
       ],
-      additionalItems: false,
+      items: false,
       minItems: 2,
+      maxItems: 2,
     },
+    minItems: 2,
     default: [
       [10, 10],
       [10000, 80],

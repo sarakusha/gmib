@@ -87,9 +87,8 @@ const openSocket = async (): Promise<void> => {
   if (ws.readyState === ws.OPEN) return undefined;
   return new Promise<void>((resolve, reject) => {
     const release = () => {
-      // eslint-disable-next-line @typescript-eslint/no-use-before-define
       ws.removeEventListener('open', openHandler);
-      // eslint-disable-next-line @typescript-eslint/no-use-before-define
+
       ws.removeEventListener('error', errorHandler);
     };
     const openHandler = () => {

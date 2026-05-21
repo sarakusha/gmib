@@ -32,7 +32,6 @@ const Slider = styled(MuiSlider)({
   },
 });
 
-// eslint-disable-next-line arrow-body-style
 const ProgressControl: React.FC<Props> = ({ duration, position }) => {
   // const { video } = useVideoSource();
   // const [value, setValue] = React.useState<number | null>(null);

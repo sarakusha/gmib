@@ -179,7 +179,7 @@ export const socketMiddleware: Middleware = api => {
             break;
         }
       }
-    } catch (err) {
+    } catch {
       debug(`unknown event: ${e.data}`);
     }
   };

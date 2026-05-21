@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * https://github.com/mifi/lossless-cut/blob/master/src/ffmpeg.js
  */
@@ -8,8 +7,8 @@ import path from 'node:path';
 import readline from 'node:readline';
 
 import debugFactory from 'debug';
-import type { ExecaChildProcess, ExecaReturnValue } from 'execa';
-import execa from 'execa';
+import type { Result } from 'execa';
+import { execa } from 'execa';
 import FileType from 'file-type';
 import type { FileTypeResult } from 'file-type';
 import type { FRAMERATE } from 'smpte-timecode';
@@ -140,7 +139,7 @@ export function getTimecodeFromStreams(streams: FfprobeStream[]): number | undef
         return true;
       }
       return undefined;
-    } catch (err) {
+    } catch {
       // console.warn('Failed to parse timecode from file streams', err);
       return undefined;
     }
@@ -167,7 +166,7 @@ export const getFfprobePath = (): string => getFfPath('ffprobe');
 export async function runFfprobe(
   args: string[],
   timeout: number = import.meta.env.DEV ? 10000 : 30000,
-): Promise<ExecaReturnValue> {
+): Promise<Result> {
   const ffprobePath = getFfprobePath();
   // debug(JSON.stringify(process.env));
   // debug(getFfCommandLine(ffprobePath, args));
@@ -179,14 +178,10 @@ export async function runFfprobe(
     debug('WARN: killing timed out ffprobe');
     ps.kill();
   }, timeout);
-  try {
-    return await (ps as Promise<ExecaReturnValue>);
-  } finally {
-    clearTimeout(timer);
-  }
+  return ps.finally(() => clearTimeout(timer));
 }
 
-export function runFfmpeg(args: string[]): ExecaChildProcess {
+export function runFfmpeg(args: string[]) {
   const ffmpegPath = getFfmpegPath();
   debug(getFfCommandLine('ffmpeg', args));
   const { PATH } = process.env;
@@ -202,7 +197,7 @@ export async function renderThumbnailFromImage(
 ): Promise<string> {
   const args = ['-i', filePath, '-vf', 'scale=-2:100', thumbPath];
   const ffmpegPath = getFfmpegPath();
-  await execa(ffmpegPath, args, { encoding: null });
+  await execa(ffmpegPath, args);
   return thumbPath;
 }
 
@@ -228,7 +223,7 @@ export async function renderThumbnail(
   ];
 
   const ffmpegPath = getFfmpegPath();
-  await execa(ffmpegPath, args, { encoding: null });
+  await execa(ffmpegPath, args);
   return thumbPath;
 }
 

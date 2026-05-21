@@ -12,12 +12,7 @@ import localConfig from './localConfig';
 import main from './mainWindow';
 import openHandler from './openHandler';
 import relaunch, { needRestart } from './relaunch';
-import {
-  getPlayer,
-  getPlayers,
-  isPlayerActive,
-  updateShowPlayer,
-} from './screen';
+import { getPlayer, getPlayers, isPlayerActive, updateShowPlayer } from './screen';
 import { findPlayerWindow, getAllGmibParams, registerPlayer } from './windowStore';
 
 import type { GmibWindowParams } from '/@common/WindowParams';

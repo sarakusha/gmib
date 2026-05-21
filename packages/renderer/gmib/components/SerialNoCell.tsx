@@ -37,7 +37,6 @@ const formatChars = {
 const isEmpty = (value: string): boolean => !value || value.replace(/0/g, '') === '';
 
 const MaskedInput = IMaskMixin<IMask.AnyMaskedOptions & ExtendedProps>(({ inputRef, ...props }) => (
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   <StyledInput inputRef={inputRef} fullWidth disableUnderline {...(props as any[])} />
 ));
 

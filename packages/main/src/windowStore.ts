@@ -34,7 +34,6 @@ const HOUR = 60 * MINUTE;
 
 let zIndex = Number.MIN_SAFE_INTEGER;
 
-// eslint-disable-next-line no-plusplus
 export const getZIndex = (): number => zIndex++;
 
 // const defaultConfig = parse('{}') as LocalConfig;
@@ -107,14 +106,14 @@ const knockKnock = async (params: GmibWindowParams): Promise<void> => {
   } catch (error) {
     debug(`error while knocking: ${(error as Error).message}`);
     attempts += 1;
-    if (attempts < MAX_KNOCK_ATTEMPTS)  setTimeout(() => knockKnock(params), 10 * MINUTE).unref();
+    if (attempts < MAX_KNOCK_ATTEMPTS) setTimeout(() => knockKnock(params), 10 * MINUTE).unref();
   }
 };
 
 export const registerGmib = async (
   browserWindow: BrowserWindow,
   { host, nibusPort: port }: Pick<GmibWindowParams, 'host' | 'nibusPort'>,
-): Promise<GmibWindowParams|undefined> => {
+): Promise<GmibWindowParams | undefined> => {
   const id = register(browserWindow);
   // console.log('REGISTER', browserWindow.id);
   // debug(`register gmib: ${id}`);
@@ -126,7 +125,7 @@ export const registerGmib = async (
     zIndex: getZIndex(),
     update: values => {
       const result = Object.assign(params, pick(values, gmibVariables));
-      const { update, ...props } = result;
+      const { update: _, ...props } = result;
       browserWindow.webContents.send('gmib-params', props);
       return result;
     },
@@ -143,7 +142,7 @@ export const registerGmib = async (
         knockInterval = setInterval(() => knockKnock(params), 6 * HOUR).unref();
       }
       const announceWindow = () => {
-        const { update, ...props } = params;
+        const { update: _, ...props } = params;
         browserWindow.webContents.send('gmib-params', props);
         import.meta.env.VITE_ANNOUNCE_HOST &&
           import(import.meta.env.VITE_ANNOUNCE_HOST).then(

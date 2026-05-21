@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import crypto from 'crypto';
 import type { Display } from 'electron';
 import { BrowserWindow, app as electronApp, screen } from 'electron';
@@ -308,7 +307,6 @@ const updateTest = async (scr: Screen, force = false) => {
   const params = createSearchParams(scr);
   params.append('port', port.toString());
   const url = (page.permanent ? `${page.url}?${params}` : page.url)?.replaceAll(
-    // eslint-disable-next-line no-template-curly-in-string
     '${resources}',
     process.resourcesPath,
   );
@@ -412,7 +410,9 @@ api.post('/media', (req, res, next) => {
       // debug(JSON.stringify(files));
       const loaded = (
         await asyncSerial(
-          Object.values(files).map(file => (Array.isArray(file) ? file[0] : file)).filter(notEmpty),
+          Object.values(files)
+            .map(file => (Array.isArray(file) ? file[0] : file))
+            .filter(notEmpty),
           file =>
             loadMedia(file).catch(e =>
               debug(`error while loading ${file.originalFilename}: ${e.message}`),

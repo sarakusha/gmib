@@ -1,4 +1,3 @@
-/* eslint-disable no-bitwise */
 import FolderIcon from '@mui/icons-material/FolderOpen';
 import SaveAltIcon from '@mui/icons-material/SaveAlt';
 import { Box, Button, FormControl, FormHelperText, IconButton } from '@mui/material';

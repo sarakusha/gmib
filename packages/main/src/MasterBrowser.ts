@@ -1,4 +1,3 @@
-// eslint-disable-next-line max-classes-per-file
 import type { Novastar, Screen, ScreenId } from '/@common/novastar';
 import { asyncSerial, delay, notEmpty, reIPv4 } from '/@common/helpers';
 import type { CabinetInfo, NovastarTelemetry } from '/@common/helpers';

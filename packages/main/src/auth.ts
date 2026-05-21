@@ -24,8 +24,8 @@ export const isAuthorized = async (req: Request) => {
   // debug(`body: ${typeof req.body === 'string' ? req.body : JSON.stringify(req.body)}`);
   return Boolean(
     expectedSignature &&
-      expectedSignature === req.headers['x-ni-signature'] &&
-      Math.abs(Date.now() - timestamp) < MAX_DIFFERENCE_IN_TIME,
+    expectedSignature === req.headers['x-ni-signature'] &&
+    Math.abs(Date.now() - timestamp) < MAX_DIFFERENCE_IN_TIME,
   );
 };
 

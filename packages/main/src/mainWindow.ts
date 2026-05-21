@@ -40,7 +40,6 @@ export const createAppWindow = (
   address = 'localhost',
   name?: string,
 ): BrowserWindow => {
-  // eslint-disable-next-line no-multi-assign
   const isLocal = !address || address === 'localhost';
   const browserWindow = createWindow(
     `${name ?? 'gmib'} (${address})` /* getTitle(port, hostName) */,
@@ -104,7 +103,6 @@ export const createAppWindow = (
 
 export const createMainWindow = (): BrowserWindow => {
   if (!mainWindow) {
-    // eslint-disable-next-line no-multi-assign
     const browserWindow = (mainWindow = createAppWindow());
     // browserWindow.on('close', event => {
     //   if (

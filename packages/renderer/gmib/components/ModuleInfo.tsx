@@ -83,7 +83,6 @@ type PosProps = {
   y: number;
 };
 
-// eslint-disable-next-line react/no-unused-prop-types
 type ValueType<T = string | number> = { name?: string; value?: T; index?: number | string };
 
 const Name = styled('td')(({ theme }) => ({

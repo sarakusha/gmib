@@ -1,4 +1,3 @@
-/* eslint-disable no-bitwise */
 import { nanoid } from 'nanoid';
 
 import { flag, promisifyAll, promisifyGet, promisifyRun, removeNull, uniqueField } from './db';

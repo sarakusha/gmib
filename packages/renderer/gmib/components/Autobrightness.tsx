@@ -55,7 +55,6 @@ const unitStyles = (
   <GlobalStyles
     styles={theme => ({
       '.unit': {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ...(theme.typography.caption as any),
         opacity: 0.5,
       },
@@ -67,7 +66,7 @@ const unitStyles = (
         flexDirection: 'column',
         alignItems: 'center',
         width: '6ch',
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         ...(theme.typography.subtitle1 as any),
       },
     })}

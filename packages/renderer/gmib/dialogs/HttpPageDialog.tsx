@@ -30,7 +30,7 @@ export const isValidUrl = (urlString: string): boolean => {
   try {
     const url = new URL(decodeURI(urlString));
     return [...url.searchParams.values()].reduce((res, value) => res && isValidParam(value), true);
-  } catch (e) {
+  } catch {
     return false;
   }
 };

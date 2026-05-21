@@ -1,4 +1,3 @@
-/* eslint-disable no-bitwise */
 import { flag, promisifyAll, promisifyGet, promisifyRun, removeNull, uniqueField } from './db';
 
 import type { NullableOptional, WithRequiredProp } from '/@common/helpers';
@@ -19,7 +18,7 @@ const toPlayerMapping = (row: NullableOptional): PlayerMapping => {
     ...props,
     kiosk: Boolean(flags & MappingFlags.Kiosk),
     transparent: Boolean(flags & MappingFlags.Transparent),
-    alwaysOnTop: !Boolean(flags & MappingFlags.AlwaysOnTop),
+    alwaysOnTop: !(flags & MappingFlags.AlwaysOnTop),
   };
 };
 

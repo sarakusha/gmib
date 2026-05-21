@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-empty-function */
 import CloseIcon from '@mui/icons-material/Close';
 import {
   Box,
@@ -104,12 +103,15 @@ const RemoteHostsDialog: React.FC<RemoteHostsDialogProps> = ({
   useEffect(() => {
     const updateHosts = (hosts: CustomHost[] = []): void => {
       setCustomHosts(
-        sortBy(hosts.map<CustomHostItem>(({ address, port, name }) => ({
-          address,
-          port: port.toString(),
-          id: timeid(),
-          name,
-        })), ['name', 'address']),
+        sortBy(
+          hosts.map<CustomHostItem>(({ address, port, name }) => ({
+            address,
+            port: port.toString(),
+            id: timeid(),
+            name,
+          })),
+          ['name', 'address'],
+        ),
       );
       setChanged(false);
     };

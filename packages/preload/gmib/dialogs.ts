@@ -53,7 +53,7 @@ export const loadJSON = (title = 'Загрузить из'): Record<string, unkn
   if (fileName) {
     try {
       return JSON.parse(readFileSync(fileName).toString());
-    } catch (e) {
+    } catch {
       showErrorBox('Ошибка загрузки', 'Файл испорчен');
     }
   }

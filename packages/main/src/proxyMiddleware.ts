@@ -87,7 +87,7 @@ const tryCreateMasterBrowser = () => {
       const strongest = selectStrongest(browser.services);
       if (strongest && Number(strongest.txt.rank ?? strongest.txt.rang) > rank) {
         service.end();
-        // eslint-disable-next-line @typescript-eslint/no-use-before-define
+
         createProxy(strongest);
         isMaster = false;
         master.close();

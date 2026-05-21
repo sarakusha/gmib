@@ -61,5 +61,5 @@ function validateCheckCharacter(input) {
   return remainder == 0;
 }
 
-console.log(generateCheckCharacter('0AVFIOKWMJ9'));
-console.log(validateCheckCharacter('0AVFIOKWMJ9K'));
+// console.log(generateCheckCharacter('0AVFIOKWMJ9'));
+// console.log(validateCheckCharacter('0AVFIOKWMJ9K'));

@@ -7,7 +7,6 @@ import React from 'react';
 // import createStyles from '@mui/styles/createStyles';
 // import withStyles from '@mui/styles/withStyles';
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 // const styles = (theme: Theme) =>
 //   createStyles({
 //     root: {

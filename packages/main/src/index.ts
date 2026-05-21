@@ -75,7 +75,7 @@ app.on('activate', createMainWindow);
 if (import.meta.env.DEV) {
   app
     .whenReady()
-    // eslint-disable-next-line import/no-extraneous-dependencies
+
     .then(() => import('electron-extension-installer'))
     .then(({ default: installExtension, REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS }) =>
       fixDefault(installExtension)([REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS], {

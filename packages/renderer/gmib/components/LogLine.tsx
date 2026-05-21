@@ -37,7 +37,6 @@ const LogLine: React.FC<LogItem> = ({ prefix, tag, info, delta }) => (
     {info &&
       info.map((item, index) => (
         <span
-          // eslint-disable-next-line react/no-array-index-key
           key={index}
           css={css`
             ${item.css}

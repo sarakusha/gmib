@@ -1,4 +1,3 @@
-/* eslint-disable no-bitwise */
 import type { DeviceId } from '@nibus/core';
 import type { CabinetPosition, HWStatus } from '@novastar/screen';
 import type { PayloadAction } from '@reduxjs/toolkit';
@@ -153,17 +152,15 @@ export type SubType<Base, Condition> = Pick<Base, FilterNames<Base, Condition>>;
 export type OmitType<Base, Condition> = Omit<Base, FilterNames<Base, Condition>>;
 
 export type RequiredKeys<T> = {
-  // eslint-disable-next-line @typescript-eslint/ban-types
   [K in keyof T]-?: {} extends { [P in K]: T[K] } ? never : K;
 }[keyof T];
 export type OptionalKeys<T> = {
-  // eslint-disable-next-line @typescript-eslint/ban-types
   [K in keyof T]-?: {} extends { [P in K]: T[K] } ? K : never;
 }[keyof T];
 export type PickRequired<T> = Pick<T, RequiredKeys<T>>;
 export type PickOptional<T> = Pick<T, OptionalKeys<T>>;
 export type Nullable<T> = { [P in keyof T]: T[P] | null };
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 export type NullableOptional<T = any> = PickRequired<T> & Nullable<PickOptional<T>>;
 
 export type WithRequiredProp<T, K extends keyof T> = Omit<T, K> & Required<Pick<T, K>>;
@@ -179,13 +176,11 @@ const nameCountFunc = (s: string, index: string): string => `-${(parseInt(index,
 export const incrementCounterString = (s: string): string =>
   s.replace(nameCountRegexp, nameCountFunc);
 
-// eslint-disable-next-line @typescript-eslint/no-empty-function
-export const noop = (): void => { };
+export const noop = (): void => {};
 
 export type Writable<T> = { -readonly [P in keyof T]: T[P] };
 
 export const toErrorMessage = (e: unknown): string =>
-  // eslint-disable-next-line no-nested-ternary
   e == null ? 'Unknown error' : e instanceof Error ? e.message : `${e}`;
 
 export function minmax(max: number, value: number): number;
@@ -207,7 +202,6 @@ export const getEnumEntries = <Enum extends Record<string, number | string>>(
 
 export type VertexType = { x: number; y: number };
 
-// eslint-disable-next-line no-shadow
 export enum Minihost3Selector {
   Temperature,
   Voltage1,

@@ -1,4 +1,3 @@
-/* eslint-disable no-bitwise */
 import MinihostLoader from './MinihostLoader';
 
 import type { DeviceId } from '@nibus/core';

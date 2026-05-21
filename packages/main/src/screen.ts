@@ -1,4 +1,3 @@
-/* eslint-disable no-bitwise */
 // import debugFactory from 'debug';
 
 import type { NullableOptional } from '/@common/helpers';

@@ -19,7 +19,6 @@ const UploadButton: React.FC<UploadButtonProps> = ({ onChange, size }) => {
     if (refInput.current) refInput.current.value = '';
   }, []);
   return (
-    // eslint-disable-next-line jsx-a11y/label-has-associated-control
     <label htmlFor="icon-button-file">
       <Input
         ref={refInput}

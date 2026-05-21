@@ -5,8 +5,7 @@ import { getIn } from 'formik';
 import React from 'react';
 
 export interface FormikTextFieldProps
-  extends FieldProps,
-    Omit<MuiTextFieldProps, 'name' | 'value' | 'error'> {}
+  extends FieldProps, Omit<MuiTextFieldProps, 'name' | 'value' | 'error'> {}
 
 export function fieldToTextField({
   disabled,

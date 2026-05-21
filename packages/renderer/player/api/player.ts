@@ -49,7 +49,7 @@ const playerApi = createApi({
 
         try {
           const { data } = await queryFulfilled;
-          // eslint-disable-next-line @typescript-eslint/no-use-before-define
+
           if (!debouncedUpdatePlayer.pending) {
             dispatch(
               playerApi.util.updateQueryData('getPlayers', undefined, draft => {
@@ -57,7 +57,7 @@ const playerApi = createApi({
               }),
             );
           }
-        } catch (e) {
+        } catch {
           // console.error('error while updatePlayer', e);
           dispatch(
             playerApi.endpoints.getPlayers.initiate(undefined, {

@@ -70,7 +70,7 @@ const PlaylistsToolbar: React.FC<Props> = ({ size }) => {
             disabled={!currentPlaylist || empty}
             onClick={async () => {
               if (currentPlaylist) {
-                const { id, creationTime, ...copy } = currentPlaylist;
+                const { id: _, creationTime: __, ...copy } = currentPlaylist;
                 const res = await create(copy);
                 if ('data' in res && res.data) {
                   dispatch(setCurrentPlaylist(res.data.id));

@@ -60,7 +60,6 @@ app.whenReady().then(() => {
   });
 });
 
-// eslint-disable-next-line import/prefer-default-export
 // export const getHostOptions = async (
 //   wind = BrowserWindow.getFocusedWindow(),
 // ): Promise<Partial<Host> | undefined> => {

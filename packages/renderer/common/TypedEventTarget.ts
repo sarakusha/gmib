@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import TypedEvent from './TypedEvent';
 import { isTypedMessage } from './TypedMessage';
 

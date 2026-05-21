@@ -53,6 +53,9 @@ export const generateSignature = async (
   timestamp: number,
   body?: unknown,
 ): Promise<string | undefined> =>
-  initialized.then(() => credentials.apiSecret && genSignature(credentials.apiSecret, method, uri, timestamp, body));
+  initialized.then(
+    () =>
+      credentials.apiSecret && genSignature(credentials.apiSecret, method, uri, timestamp, body),
+  );
 
 export const initialized = initialize();

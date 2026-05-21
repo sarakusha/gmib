@@ -44,7 +44,6 @@ abstract class MinihostLoader<T extends { t?: number }> extends Runnable<
     let y = yMin;
     try {
       while (y <= yMax && !this.isCanceled) {
-        // eslint-disable-next-line no-await-in-loop
         const info = await this.getInfo(x, y);
         const module: IModuleInfo<T> = {
           x,
@@ -105,7 +104,6 @@ abstract class MinihostLoader<T extends { t?: number }> extends Runnable<
       check = i => i <= xMax;
     }
     while (!this.isCanceled && check(x)) {
-      // eslint-disable-next-line no-await-in-loop
       let column = await this.readColumn(x);
       if (this.isInvertV()) {
         column = column.reverse();

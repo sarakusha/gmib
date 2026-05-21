@@ -34,7 +34,7 @@ const AddMediaDialog: React.FC<Props> = ({ id, open, onClose }) => {
     open && setState({});
   }, [open]);
   const changeHandler = useCallback((md5: string, count: number) => {
-    setState(({ [md5]: prev, ...other }) => ({ ...other, [md5]: count }));
+    setState(({ [md5]: _prev, ...other }) => ({ ...other, [md5]: count }));
   }, []);
   const clickHandler = useCallback((md5: string) => {
     setState(({ [md5]: prev, ...other }) => ({

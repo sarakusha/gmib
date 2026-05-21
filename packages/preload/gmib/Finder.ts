@@ -1,4 +1,3 @@
-/* eslint-disable no-await-in-loop,no-bitwise */
 import debugFactory from 'debug';
 
 import type { RunnableEvents } from '/@common/Runnable';

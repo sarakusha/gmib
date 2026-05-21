@@ -66,7 +66,7 @@ const configApi = createApi({
       async onQueryStarted(page, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          // eslint-disable-next-line @typescript-eslint/no-use-before-define
+
           if (!debouncedUpdatePage.pending(page.id)) {
             dispatch(
               configApi.util.updateQueryData('getPages', undefined, draft => {

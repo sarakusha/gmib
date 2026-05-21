@@ -10,7 +10,7 @@ import VideoFrameGenerator from '@sarakusha/ebml/VideoFrameGenerator';
 
 let controller: AbortController | undefined;
 let readable: ReadableStream<VideoFrame> | undefined;
-const noop = () => { };
+const noop = () => {};
 let play = noop;
 let pause = noop;
 let cancel = false;
@@ -63,7 +63,7 @@ onmessage = async ({ data }) => {
     } finally {
       play = noop;
       pause = noop;
-      // eslint-disable-next-line no-restricted-globals
+
       close();
     }
   } else if ('play' in data && data.play) {

@@ -17,7 +17,6 @@ abstract class Runnable<
 
   private cancelPromise = Promise.resolve();
 
-  // eslint-disable-next-line class-methods-use-this
   private cancelResolve = (): void => {};
 
   cancel(): Promise<void> {

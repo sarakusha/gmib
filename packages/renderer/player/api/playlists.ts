@@ -76,7 +76,7 @@ const playlistApi = createApi({
       async onQueryStarted(playlist, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          // eslint-disable-next-line @typescript-eslint/no-use-before-define
+
           if (!debouncedUpdatePlaylist.pending) {
             dispatch(
               playlistApi.util.updateQueryData('getPlaylists', undefined, draft => {

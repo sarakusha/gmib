@@ -74,7 +74,6 @@ export const checkForUpdatesNoInteractive = () =>
   new Promise<UpdateInfo | undefined>((resolve, reject) => {
     if (!interactive) return;
     interactive = false;
-    let release: () => void;
     const available = (info: UpdateInfo) => {
       resolve(info);
       release();
@@ -87,7 +86,7 @@ export const checkForUpdatesNoInteractive = () =>
       reject(err);
       release();
     };
-    release = () => {
+    const release = (): void => {
       autoUpdater.off('error', onError);
       autoUpdater.off('update-available', available);
       autoUpdater.off('update-not-available', notAvailable);
@@ -104,7 +103,6 @@ export const updateAndRestart = () =>
   new Promise<void>((resolve, reject) => {
     if (!interactive) return;
     interactive = false;
-    let release: () => void;
     const onError = (err: Error) => {
       reject(err);
       release();
@@ -114,7 +112,7 @@ export const updateAndRestart = () =>
       quitAndRestart();
       release();
     };
-    release = () => {
+    const release = (): void => {
       autoUpdater.off('error', onError);
       autoUpdater.off('update-downloaded', downloaded);
     };

@@ -1,4 +1,3 @@
-/* eslint-disable no-bitwise */
 import type { Draft, PayloadAction } from '@reduxjs/toolkit';
 import { createSlice } from '@reduxjs/toolkit';
 import sortBy from 'lodash/sortBy';
@@ -20,9 +19,7 @@ export const TEMPERATURE = 128;
 
 export type SensorDictionary = Record<SensorAddress, SensorState>;
 
-const sensorKinds = ['temperature', 'illuminance'] as const;
-
-export type SensorKind = (typeof sensorKinds)[number];
+export type SensorKind = 'temperature' | 'illuminance';
 
 export interface SensorsState {
   /**

@@ -61,7 +61,7 @@ const CurrentPlaylist: React.FC<Props> = ({ playerId, className }) => {
         aria-labelledby="current-playlist-name"
         name="current-playlist"
         value={current ?? null}
-        onChange={(e) => {
+        onChange={e => {
           const itemId = e.target.value;
           dispatch(
             setCurrentPlaylistItem(

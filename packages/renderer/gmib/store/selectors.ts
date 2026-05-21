@@ -1,5 +1,3 @@
-/* eslint-disable no-bitwise */
-
 import type { AddressParam, Display, LogLevel } from '@nibus/core';
 import Address, { AddressType } from '@nibus/core/Address';
 import { hasProps } from '@novastar/screen/common';
@@ -45,8 +43,7 @@ export const selectSessionVersion = (state: RootState): string | undefined =>
   selectConfig(state).version;
 export const selectOverheatProtection = (state: RootState): OverheatProtection | undefined =>
   selectConfig(state).overheatProtection;
-export const selectHID = (state: RootState): Config['hid'] =>
-  selectConfig(state).hid;
+export const selectHID = (state: RootState): Config['hid'] => selectConfig(state).hid;
 export const selectCurrent = (state: RootState): CurrentState => state.current;
 export const selectCurrentTab = (state: RootState): TabValues | undefined =>
   selectCurrent(state).tab;
@@ -83,7 +80,7 @@ export const selectProps: PropsSelector = createSelector(
     (_: RootState, id: string) => id,
     (_: RootState, id: string, names: string) => names,
   ],
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   (devices, id, names) => pick(devices.entities[id], names.split(',')) as any,
 );
 

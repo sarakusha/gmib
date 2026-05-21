@@ -10,7 +10,7 @@ import BrightnessHistoryDialog from '../dialogs/BrightnessHistoryDialog';
 import { useDispatch, useSelector } from '../store';
 import { setHidProp, setLocationProp } from '../store/configSlice';
 
-import type { Config, HidOptions } from '/@common/config';
+import type { Config } from '/@common/config';
 import { createPropsReducer, toNumber } from '/@common/helpers';
 
 import { selectHID, selectLocation, selectSessionVersion } from '../store/selectors';

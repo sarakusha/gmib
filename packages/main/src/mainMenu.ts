@@ -40,7 +40,7 @@ const createNewPlayer = async (name = 'Новый плеер'): Promise<number> 
   const player = await uniquePlayerName({ name });
   const { lastID } = await insertPlayer(player);
   // await openPlayer(lastID);
-  // eslint-disable-next-line @typescript-eslint/no-use-before-define
+
   updateMenu();
   return lastID;
 };
@@ -141,7 +141,7 @@ const remoteMenu = (params?: WindowParams): AppMenuItem | undefined => {
                 });
                 if (res?.ok) {
                   params.update({ autostart: value });
-                  // eslint-disable-next-line @typescript-eslint/no-use-before-define
+
                   updateMenu();
                 }
               } catch (e) {
@@ -505,7 +505,9 @@ const blurWindows: BrowserWindow[] = [];
 app.on('browser-window-focus', (_, win) => {
   win.webContents.send('focus', true);
   const wins = blurWindows.splice(0, blurWindows.length);
-  wins.filter(item => win !== item && !item.isDestroyed()).forEach(item => item.webContents.send('focus', false));
+  wins
+    .filter(item => win !== item && !item.isDestroyed())
+    .forEach(item => item.webContents.send('focus', false));
   updateMenu();
 });
 

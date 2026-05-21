@@ -64,7 +64,7 @@ api.post('/reload', async (req, res) => {
   const { path } = req.body;
   try {
     await master.reload(path);
-  } catch (e) {
+  } catch {
     // debug(`error: ${e}`);
   }
   res.end();
@@ -73,7 +73,6 @@ api.post('/reload', async (req, res) => {
   // else res.json(device);
 });
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Methods = FilterNames<typeof master, (arg: ScreenId, value: any) => Promise<void>>;
 
 const makeHandler =

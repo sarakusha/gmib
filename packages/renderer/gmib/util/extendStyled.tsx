@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/ban-types */
 import type { PropsOf } from '@emotion/react';
 import type { Theme } from '@mui/material/styles';
 import { styled } from '@mui/material/styles';

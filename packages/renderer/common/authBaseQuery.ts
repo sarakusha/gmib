@@ -33,7 +33,7 @@ const remoteBaseQuery: ReturnType<typeof fetchBaseQuery> = async (arg, api, extr
   const url = `${baseUrl}${originalUrl.startsWith('/') ? '' : '/'}${originalUrl}`;
   const headers = new Headers(originalHeaders as Headers);
   const signature = await window.identify.generateSignature(method, url, now, body);
-  console.log({ signature });
+  // console.log({ signature });
   if (signature) {
     if (!identifier) identifier = window.identify.getIdentifier();
     identifier && headers.set('x-ni-identifier', identifier);
@@ -44,6 +44,6 @@ const remoteBaseQuery: ReturnType<typeof fetchBaseQuery> = async (arg, api, extr
   return defaultBaseQuery({ url, method, headers, body, ...rest }, api, extra);
 };
 
-console.log({ isRemoteSession });
+// console.log({ isRemoteSession });
 
 export default isRemoteSession ? remoteBaseQuery : defaultBaseQuery;

@@ -3,7 +3,7 @@
     "module": "esnext",
     "target": "esnext",
     "sourceMap": false,
-    "moduleResolution": "Node",
+    "moduleResolution": "bundler",
     "skipLibCheck": true,
     "strict": true,
     "allowSyntheticDefaultImports": true,
@@ -15,7 +15,6 @@
     // Don't automatically include anything.
     // Only include `@types` packages that we need to import.
     "types": [],
-    "baseUrl": "./",
     "paths": {
       "bonjour-hap": [
         "../../types/bonjour-hap"

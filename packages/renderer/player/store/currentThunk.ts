@@ -1,4 +1,3 @@
-/* eslint-disable import/prefer-default-export */
 import { isAnyOf } from '@reduxjs/toolkit';
 
 import playerApi, { selectPlayer } from '../api/player';
@@ -14,11 +13,7 @@ import {
   togglePlaybackState,
 } from './currentSlice';
 import { startAppListening } from './listenerMiddleware';
-import {
-  selectCurrent,
-  selectDuration,
-  selectPlaybackState,
-} from './selectors';
+import { selectCurrent, selectDuration, selectPlaybackState } from './selectors';
 
 import { isRemoteSession } from '/@common/remote';
 

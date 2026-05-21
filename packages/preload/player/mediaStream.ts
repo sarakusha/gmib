@@ -50,7 +50,6 @@ const playNextSource = () => {
     if (player.current !== itemId) {
       ipcDispatch(setCurrentPlaylistItem(itemId ? { itemId, mediaId } : undefined));
     } else {
-      // eslint-disable-next-line @typescript-eslint/no-use-before-define
       update();
     }
   }

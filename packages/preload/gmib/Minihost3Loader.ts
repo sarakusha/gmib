@@ -1,4 +1,3 @@
-/* eslint-disable no-bitwise */
 import MinihostLoader from './MinihostLoader';
 
 import type { DeviceId } from '@nibus/core';
@@ -94,13 +93,13 @@ export default class Minihost3Loader extends MinihostLoader<Minihost3Info> {
   async getInfo(x: number, y: number): Promise<Minihost3Info> {
     const { device, selectors = new Set(getEnumValues(Minihost3Selector)) } = this;
     let info: Minihost3Info = {};
-    // eslint-disable-next-line no-restricted-syntax
+
     for (const selector of selectors) {
       device.selector = selector;
       device.moduleSelect = ((x & 0xff) << 8) + (y & 0xff);
-      // eslint-disable-next-line no-await-in-loop
+
       await device.write(this.selectorId, this.moduleSelectId);
-      // eslint-disable-next-line no-await-in-loop
+
       const data = await device.upload(Minihost3Loader.DOMAIN, 0, 6);
       info = parseData(info, selector, data);
     }
