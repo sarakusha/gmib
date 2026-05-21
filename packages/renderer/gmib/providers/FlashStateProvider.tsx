@@ -1,4 +1,4 @@
-import type { Dispatch, Reducer, ReducerAction, SetStateAction } from 'react';
+import type { Dispatch, Reducer, ActionDispatch, SetStateAction } from 'react';
 import React, { useCallback, useContext, useReducer } from 'react';
 
 import type { AtLeastOne } from '/@common/helpers';
@@ -47,7 +47,7 @@ const flashReducer: FlashReducer = (state, { type, payload, kind }) => {
 };
 
 const FlashGlobalStateContext = React.createContext<FlashGlobalState>({});
-const FlashDispatchStateContext = React.createContext<Dispatch<ReducerAction<FlashReducer>>>(noop);
+const FlashDispatchStateContext = React.createContext<ActionDispatch<[Action]>>(noop);
 
 export const useGlobalFlashState = () =>
   [useContext(FlashGlobalStateContext), useContext(FlashDispatchStateContext)] as const;
@@ -70,7 +70,7 @@ export const useFlashState = (kind: Kind): FlashState & FlashSetters => {
 };
 
 export const FlashStateProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
-  const [state, dispatch] = useReducer<FlashReducer>(
+  const [state, dispatch] = useReducer(
     flashReducer,
     Object.fromEntries(
       FlashKinds.map<[Kind, FlashState]>(kind => [kind, { row: 0, column: 0, file: '' }]),
