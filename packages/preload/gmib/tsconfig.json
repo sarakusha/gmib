@@ -6,10 +6,10 @@
         "../../types/bonjour-hap"
       ],
       "/@renderer/store/*": [
-        "../renderer/gmib/store/*"
+        "../../renderer/gmib/store/*"
       ],
       "/@common/*": [
-        "../common/*"
+        "../../common/*"
       ]
     }
   },
