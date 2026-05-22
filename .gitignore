@@ -77,3 +77,4 @@ stats.html
 .idea/webServers.xml
 .yalc/
 .idea/deployment.xml
+.pnpm-store/
