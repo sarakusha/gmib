@@ -1,17 +1,41 @@
 name: Release
 on:
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Build artifacts without uploading them to GitHub Release'
+        default: true
+        required: false
+        type: boolean
+      platforms:
+        description: 'Platforms to build'
+        default: all
+        required: false
+        type: choice
+        options:
+          - all
+          - macos
+          - linux
+          - windows
   workflow_call:
     inputs:
       dry-run:
-        description: 'Compiles the app but not upload artifacts to distribution server'
+        description: 'Build artifacts without uploading them to GitHub Release'
         default: false
         required: false
         type: boolean
+      platforms:
+        description: 'Platforms to build'
+        default: all
+        required: false
+        type: string
 
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: write
 
 defaults:
   run:
@@ -24,48 +48,85 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        os: [ macos-latest, ubuntu-latest, windows-latest ]
         include:
-          - os: ubuntu-latest
-            apt-install: curl jq
+          - platform: macos
+            os: macos-15-intel
+            builder_config: .electron-builder.config.js
+            target_args: -m --x64 --arm64
+          - platform: linux
+            os: ubuntu-latest
+            builder_config: .electron-builder-light.config.js
+            target_args: -l --x64 --arm64
+          - platform: windows
+            os: windows-latest
+            builder_config: .electron-builder.config.js
+            target_args: -w --x64
 
     runs-on: ${{ matrix.os }}
+    if: ${{ inputs.platforms == 'all' || inputs.platforms == matrix.platform }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v3
+      - uses: pnpm/action-setup@v6
         with:
-          node-version: 16 # Need for npm >=7.7
-          cache: 'npm'
+          run_install: false
 
-      - if: ${{ matrix.apt-install }}
-        uses: awalsh128/cache-apt-pkgs-action@latest
+      - uses: actions/setup-node@v6
         with:
-          packages: ${{ matrix.apt-install }}
-          version: 1.0
-      - run: npm ci
+          node-version: 24
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
 
-      - run: npm run download-ffmpeg
+      - name: Download FFmpeg for macOS
+        if: ${{ matrix.platform == 'macos' }}
+        run: |
+          mkdir -p ffmpeg/darwin-x64 ffmpeg/darwin-arm64
+          curl --fail --location --retry 5 \
+            https://github.com/mifi/ffmpeg-build-script/releases/latest/download/ffmpeg-macos-X64 \
+            --output ffmpeg/darwin-x64/ffmpeg
+          curl --fail --location --retry 5 \
+            https://github.com/mifi/ffmpeg-build-script/releases/latest/download/ffprobe-macos-X64 \
+            --output ffmpeg/darwin-x64/ffprobe
+          curl --fail --location --retry 5 \
+            https://github.com/mifi/ffmpeg-build-script/releases/latest/download/ffmpeg-macos-ARM64 \
+            --output ffmpeg/darwin-arm64/ffmpeg
+          curl --fail --location --retry 5 \
+            https://github.com/mifi/ffmpeg-build-script/releases/latest/download/ffprobe-macos-ARM64 \
+            --output ffmpeg/darwin-arm64/ffprobe
+          chmod +x ffmpeg/darwin-x64/ffmpeg ffmpeg/darwin-x64/ffprobe
+          chmod +x ffmpeg/darwin-arm64/ffmpeg ffmpeg/darwin-arm64/ffprobe
 
-      - run: npm run build
+      - name: Download FFmpeg for Windows
+        if: ${{ matrix.platform == 'windows' }}
+        run: |
+          mkdir -p ffmpeg/win32-x64
+          curl --fail --location --retry 5 \
+            https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.7z \
+            --output ffmpeg/win32-x64/ffmpeg.7z
+          7z x ffmpeg/win32-x64/ffmpeg.7z -offmpeg/win32-x64/extracted
+          mv ffmpeg/win32-x64/extracted/ffmpeg-*-essentials_build/bin/ffmpeg.exe ffmpeg/win32-x64/
+          mv ffmpeg/win32-x64/extracted/ffmpeg-*-essentials_build/bin/ffprobe.exe ffmpeg/win32-x64/
+
+      - run: pnpm run build
 
       - name: Compile artifacts ${{ inputs.dry-run && '' || 'and upload them to github release' }}
         # I use this action because it is capable of retrying multiple times if there are any issues with the distribution server
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         with:
-          timeout_minutes: 15
+          timeout_minutes: 30
           max_attempts: 6
           retry_wait_seconds: 15
           retry_on: error
           shell: 'bash'
-          command: npx --no-install electron-builder --config .electron-builder.config.js --publish ${{ inputs.dry-run && 'never' || 'always' }}
+          command: pnpm exec electron-builder --config ${{ matrix.builder_config }} ${{ matrix.target_args }} --publish ${{ inputs.dry-run && 'never' || 'always' }}
         env:
           # Code Signing params
           # See https://www.electron.build/code-signing
           # CSC_LINK: ''
           # CSC_KEY_PASSWORD: ''
           # Publishing artifacts
-          GH_TOKEN: ${{ secrets.github_token }} # GitHub token, automatically provided (No need to define this secret in the repo settings)
+          GH_TOKEN: ${{ github.token }} # GitHub token, automatically provided (No need to define this secret in the repo settings)

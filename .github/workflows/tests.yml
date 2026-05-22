@@ -12,33 +12,43 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ windows-latest, ubuntu-latest, macos-latest ]
+        os: [ windows-latest, ubuntu-latest, macos-15-intel ]
         package: [ main, preload, renderer ]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
         with:
-          node-version: 18
-          cache: 'npm'
-      - run: npm ci
-      - run: npm run test:${{ matrix.package }} --if-present
+          run_install: false
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run test:${{ matrix.package }} --if-present
 
   e2e:
     strategy:
       fail-fast: false
       matrix:
-        os: [ windows-latest, ubuntu-latest, macos-latest ]
+        os: [ windows-latest, ubuntu-latest, macos-15-intel ]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
         with:
-          node-version: 18
-          cache: 'npm'
-      - run: npm ci
-      - run: npx playwright install --with-deps
-      - run: xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" -- npm run test:e2e --if-present
-        if: matrix.os == 'ubuntu-latest'
-      - run: npm run test:e2e --if-present
-        if: matrix.os != 8ubuntu-latest'
+          run_install: false
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps
+      - run: xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" -- pnpm run test:e2e --if-present
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+      - run: pnpm run test:e2e --if-present
+        if: ${{ matrix.os != 'ubuntu-latest' }}

@@ -1,5 +1,6 @@
 // TODO: Refactor this action
 
+const fs = require('fs');
 const {execSync} = require('child_process');
 
 /**
@@ -327,18 +328,18 @@ function getChangeLog(groups) {
 }
 
 
-function escapeData(s) {
-  return String(s)
-    .replace(/%/g, '%25')
-    .replace(/\r/g, '%0D')
-    .replace(/\n/g, '%0A');
-}
-
 try {
   const commits = getCommits();
   const grouped = getGroupedCommits(commits);
   const changelog = getChangeLog(grouped);
-  process.stdout.write('::set-output name=release-note::' + escapeData(changelog) + '\r\n');
+  if (process.env.GITHUB_OUTPUT) {
+    fs.appendFileSync(
+      process.env.GITHUB_OUTPUT,
+      `release-note<<__RELEASE_NOTE__\n${changelog}\n__RELEASE_NOTE__\n`,
+    );
+  } else {
+    process.stdout.write(changelog);
+  }
 // require('fs').writeFileSync('../CHANGELOG.md', changelog, {encoding: 'utf-8'})
 } catch (e) {
   console.error(e);
