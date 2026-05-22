@@ -271,7 +271,7 @@ function openSession() {
     ipcDispatch(connectionClosed(connection.path));
   };
   const foundHandler: FoundListener = async ({ address, connection }) => {
-    debug('found: %O on %s', connection.description, address.toString());
+    debug('found: %s on %s', JSON.stringify(connection.description), address.toString());
     try {
       if (connection.description.mib) {
         session.devices.create(address, connection.description.mib, connection);
