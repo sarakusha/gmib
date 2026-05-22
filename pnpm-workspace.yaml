@@ -1,0 +1,32 @@
+overrides:
+  react: $react
+  ws: $ws
+  prettier: $prettier
+  '@nibus/core': file:.yalc/@nibus/core
+  '@nibus/detection': file:.yalc/@nibus/detection
+  '@nibus/mibs': file:.yalc/@nibus/mibs
+  '@nibus/service': file:.yalc/@nibus/service
+
+updateConfig:
+  ignoreDependencies:
+    - '@mui/icons-material'
+    - '@mui/lab'
+    - '@mui/material'
+    - '@mui/styled-engine'
+    - '@mui/system'
+    - '@mui/x-tree-view'
+
+allowBuilds:
+  '@serialport/bindings-cpp': true
+  '@swc/core': true
+  bufferutil: true
+  core-js-pure: true
+  electron: true
+  electron-winstaller: true
+  esbuild: true
+  node-hid: true
+  sqlite3: true
+  usb: true
+  utf-8-validate: true
+minimumReleaseAgeExclude:
+  - vite@8.0.14
