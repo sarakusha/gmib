@@ -4,25 +4,36 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  react: ^19.2.6
+  ws: ^8.20.1
+  prettier: ^3.8.3
+
 importers:
 
   .:
     dependencies:
+      '@borewit/text-codec':
+        specifier: ^0.2.2
+        version: 0.2.2
       '@homebridge/ciao':
         specifier: ^1.3.8
         version: 1.3.8
+      '@isaacs/fs-minipass':
+        specifier: ^4.0.1
+        version: 4.0.1
       '@nibus/core':
-        specifier: file:.yalc/@nibus/core
-        version: file:.yalc/@nibus/core(@nibus/mibs@file:.yalc/@nibus/mibs)(debug@4.4.3)
+        specifier: ^6.0.0
+        version: 6.0.0(@nibus/mibs@6.0.0)(debug@4.4.3)
       '@nibus/detection':
-        specifier: file:.yalc/@nibus/detection
-        version: file:.yalc/@nibus/detection(@nibus/core@file:.yalc/@nibus/core(@nibus/mibs@file:.yalc/@nibus/mibs)(debug@4.4.3))
+        specifier: ^6.0.0
+        version: 6.0.0(@nibus/core@6.0.0(@nibus/mibs@6.0.0)(debug@4.4.3))
       '@nibus/mibs':
-        specifier: file:.yalc/@nibus/mibs
-        version: file:.yalc/@nibus/mibs
+        specifier: ^6.0.0
+        version: 6.0.0
       '@nibus/service':
-        specifier: file:.yalc/@nibus/service
-        version: file:.yalc/@nibus/service(@nibus/mibs@file:.yalc/@nibus/mibs)(debug@4.4.3)
+        specifier: ^6.0.0
+        version: 6.0.0(@nibus/mibs@6.0.0)(debug@4.4.3)
       '@novastar/codec':
         specifier: 2.2.0-alpha.3
         version: 2.2.0-alpha.3(debug@4.4.3)(iconv-lite@0.6.3)
@@ -38,6 +49,9 @@ importers:
       '@novastar/serial':
         specifier: 2.2.0-alpha.3
         version: 2.2.0-alpha.3(debug@4.4.3)(iconv-lite@0.6.3)
+      '@reduxjs/toolkit':
+        specifier: ^2.12.0
+        version: 2.12.0(react-redux@9.3.0(@types/react@19.2.15)(react@19.2.6)(redux@5.0.1))(react@19.2.6)
       '@sarakusha/lzma':
         specifier: ^2.3.4
         version: 2.3.4
@@ -47,12 +61,21 @@ importers:
       ajv:
         specifier: ^8.20.0
         version: 8.20.0
+      ansi-regex:
+        specifier: ^5.0.1
+        version: 5.0.1
       body-parser:
         specifier: ^2.2.2
         version: 2.2.2
       bonjour-hap:
         specifier: ^3.10.2
         version: 3.10.2
+      call-bind-apply-helpers:
+        specifier: ^1.0.2
+        version: 1.0.2
+      call-bound:
+        specifier: ^1.0.4
+        version: 1.0.4
       color-hash:
         specifier: ^2.0.2
         version: 2.0.2
@@ -65,9 +88,18 @@ importers:
       debug:
         specifier: ^4.4.3
         version: 4.4.3
+      dot-prop:
+        specifier: ^10.1.0
+        version: 10.1.0
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2
+      dunder-proto:
+        specifier: ^1.0.1
+        version: 1.0.1
+      ee-first:
+        specifier: ^1.1.1
+        version: 1.1.1
       electron-extension-installer:
         specifier: ^2.0.1
         version: 2.0.1(electron@42.2.0)
@@ -80,6 +112,18 @@ importers:
       electron-updater:
         specifier: ^6.8.3
         version: 6.8.3
+      emoji-regex:
+        specifier: ^8.0.0
+        version: 8.0.0
+      es-define-property:
+        specifier: ^1.0.1
+        version: 1.0.1
+      es-errors:
+        specifier: ^1.3.0
+        version: 1.3.0
+      es-object-atoms:
+        specifier: ^1.1.1
+        version: 1.1.1
       execa:
         specifier: ^9.6.1
         version: 9.6.1
@@ -89,6 +133,9 @@ importers:
       express-unless:
         specifier: ^2.1.3
         version: 2.1.3
+      fast-uri:
+        specifier: ^3.1.2
+        version: 3.1.2
       file-type:
         specifier: ^22.0.1
         version: 22.0.1
@@ -98,15 +145,54 @@ importers:
       fp-ts:
         specifier: ^2.16.11
         version: 2.16.11
+      function-bind:
+        specifier: ^1.1.2
+        version: 1.1.2
+      get-intrinsic:
+        specifier: ^1.3.0
+        version: 1.3.0
+      get-proto:
+        specifier: ^1.0.1
+        version: 1.0.1
+      gopd:
+        specifier: ^1.2.0
+        version: 1.2.0
+      has-symbols:
+        specifier: ^1.1.0
+        version: 1.1.0
+      hasown:
+        specifier: ^2.0.3
+        version: 2.0.3
       helmet:
         specifier: ^8.1.0
         version: 8.1.0
       http-proxy-middleware:
         specifier: ^4.0.0
         version: 4.0.0
+      is-fullwidth-code-point:
+        specifier: ^3.0.0
+        version: 3.0.0
+      json-schema-traverse:
+        specifier: ^1.0.0
+        version: 1.0.0
       lodash:
         specifier: ^4.18.1
         version: 4.18.1
+      math-intrinsics:
+        specifier: ^1.1.0
+        version: 1.1.0
+      media-typer:
+        specifier: ^1.1.0
+        version: 1.1.0
+      mime-db:
+        specifier: ^1.54.0
+        version: 1.54.0
+      minipass:
+        specifier: ^7.1.3
+        version: 7.1.3
+      minizlib:
+        specifier: ^3.1.0
+        version: 3.1.0
       nanoid:
         specifier: ^5.1.11
         version: 5.1.11
@@ -116,21 +202,45 @@ importers:
       node-machine-id:
         specifier: ^1.1.12
         version: 1.1.12
+      object-inspect:
+        specifier: ^1.13.4
+        version: 1.13.4
       react-scroll-to-top:
         specifier: ^3.1.0
         version: 3.1.0(react@19.2.6)
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
+      require-from-string:
+        specifier: ^2.0.2
+        version: 2.0.2
       semver:
         specifier: ^7.8.0
         version: 7.8.0
+      setprototypeof:
+        specifier: ~1.2.0
+        version: 1.2.0
+      side-channel:
+        specifier: ^1.1.0
+        version: 1.1.0
+      side-channel-list:
+        specifier: ^1.0.1
+        version: 1.0.1
+      side-channel-map:
+        specifier: ^1.0.1
+        version: 1.0.1
+      side-channel-weakmap:
+        specifier: ^1.0.2
+        version: 1.0.2
       smpte-timecode:
         specifier: ^1.3.6
         version: 1.3.6
       sqlite3:
         specifier: ^6.0.1
         version: 6.0.1
+      tagged-tag:
+        specifier: ^1.0.0
+        version: 1.0.0
       tail:
         specifier: ^2.2.6
         version: 2.2.6
@@ -140,6 +250,9 @@ importers:
       tiny-typed-emitter:
         specifier: ^2.1.0
         version: 2.1.0
+      toidentifier:
+        specifier: ~1.0.1
+        version: 1.0.1
       usb:
         specifier: ^2.17.0
         version: 2.17.0
@@ -149,6 +262,9 @@ importers:
       ws:
         specifier: ^8.20.1
         version: 8.20.1(bufferutil@4.1.0)(utf-8-validate@6.0.6)
+      yallist:
+        specifier: ^5.0.0
+        version: 5.0.0
     devDependencies:
       '@emotion/babel-plugin':
         specifier: ^11.13.5
@@ -186,9 +302,6 @@ importers:
       '@mui/x-tree-view':
         specifier: ^6.17.0
         version: 6.17.0(@emotion/react@11.14.0(@types/react@19.2.15)(react@19.2.6))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.15)(react@19.2.6))(@types/react@19.2.15)(react@19.2.6))(@mui/material@5.18.0(@emotion/react@11.14.0(@types/react@19.2.15)(react@19.2.6))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.15)(react@19.2.6))(@types/react@19.2.15)(react@19.2.6))(@types/react@19.2.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@mui/system@5.18.0(@emotion/react@11.14.0(@types/react@19.2.15)(react@19.2.6))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.15)(react@19.2.6))(@types/react@19.2.15)(react@19.2.6))(@types/react@19.2.15)(react@19.2.6))(@types/react@19.2.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
-      '@reduxjs/toolkit':
-        specifier: ^2.12.0
-        version: 2.12.0(react-redux@9.3.0(@types/react@19.2.15)(react@19.2.6)(redux@5.0.1))(react@19.2.6)
       '@rollup/plugin-commonjs':
         specifier: ^29.0.2
         version: 29.0.2(rollup@4.60.4)
@@ -829,7 +942,7 @@ packages:
     resolution: {integrity: sha512-O000MLDBDdk/EohJPFUqvnp4qnHeYkVP5B0xEG0D/L7cOKP9kefu2DXn8dj74cQfsEzUqh+sr1RzFqiL1o+PpA==}
     peerDependencies:
       '@types/react': '*'
-      react: '>=16.8.0'
+      react: ^19.2.6
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -845,7 +958,7 @@ packages:
     peerDependencies:
       '@emotion/react': ^11.0.0-rc.0
       '@types/react': '*'
-      react: '>=16.8.0'
+      react: ^19.2.6
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -856,7 +969,7 @@ packages:
   '@emotion/use-insertion-effect-with-fallbacks@1.2.0':
     resolution: {integrity: sha512-yJMtVdH59sxi/aVJBpk9FQq+OR8ll5GT8oWd57UpeaKEVGab41JWaCFA7FRLoMLloOZF/c/wsPoe+bfGmRKgDg==}
     peerDependencies:
-      react: '>=16.8.0'
+      react: ^19.2.6
 
   '@emotion/utils@1.4.2':
     resolution: {integrity: sha512-3vLclRofFziIa3J2wDh9jjbkUz9qk5Vi3IZ/FSTKViB0k+ef0fPV7dYrUIugbgupYDx7v9ud/SjrtEP8Y4xLoA==}
@@ -915,7 +1028,7 @@ packages:
   '@floating-ui/react-dom@2.1.8':
     resolution: {integrity: sha512-cC52bHwM/n/CxS87FH0yWdngEZrjdtLW/qVruo68qg+prK7ZQ4YGdut2GyDVpoGeAYe/h899rVeOVm6Oi40k2A==}
     peerDependencies:
-      react: '>=16.8.0'
+      react: ^19.2.6
       react-dom: '>=16.8.0'
 
   '@floating-ui/utils@0.2.11':
@@ -991,7 +1104,7 @@ packages:
     resolution: {integrity: sha512-f++rKLQgUVYDAtECQ6fn/is15GkEH9+nZPM3MS0RcxVqoTfawHvDlSCH7JbMhAM6uJ32v3eXLvLmLvjGu7PTQw==}
     peerDependencies:
       '@types/react': '>=16'
-      react: '>=16'
+      react: ^19.2.6
 
   '@mdx-js/rollup@3.1.1':
     resolution: {integrity: sha512-v8satFmBB+DqDzYohnm1u2JOvxx6Hl3pUvqzJvfs2Zk/ngZ1aRUhsWpXvwPkNeGN9c2NCm/38H29ZqXQUjf8dw==}
@@ -1004,7 +1117,7 @@ packages:
     deprecated: This package has been replaced by @base-ui/react
     peerDependencies:
       '@types/react': ^17.0.0 || ^18.0.0 || ^19.0.0
-      react: ^17.0.0 || ^18.0.0 || ^19.0.0
+      react: ^19.2.6
       react-dom: ^17.0.0 || ^18.0.0 || ^19.0.0
     peerDependenciesMeta:
       '@types/react':
@@ -1016,7 +1129,7 @@ packages:
     deprecated: This package has been replaced by @base-ui/react
     peerDependencies:
       '@types/react': ^17.0.0 || ^18.0.0 || ^19.0.0
-      react: ^17.0.0 || ^18.0.0 || ^19.0.0
+      react: ^19.2.6
       react-dom: ^17.0.0 || ^18.0.0 || ^19.0.0
     peerDependenciesMeta:
       '@types/react':
@@ -1031,7 +1144,7 @@ packages:
     peerDependencies:
       '@mui/material': ^5.0.0
       '@types/react': ^17.0.0 || ^18.0.0 || ^19.0.0
-      react: ^17.0.0 || ^18.0.0 || ^19.0.0
+      react: ^19.2.6
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1044,7 +1157,7 @@ packages:
       '@emotion/styled': ^11.3.0
       '@mui/material': '>=5.15.0'
       '@types/react': ^17.0.0 || ^18.0.0 || ^19.0.0
-      react: ^17.0.0 || ^18.0.0 || ^19.0.0
+      react: ^19.2.6
       react-dom: ^17.0.0 || ^18.0.0 || ^19.0.0
     peerDependenciesMeta:
       '@emotion/react':
@@ -1061,7 +1174,7 @@ packages:
       '@emotion/react': ^11.5.0
       '@emotion/styled': ^11.3.0
       '@types/react': ^17.0.0 || ^18.0.0 || ^19.0.0
-      react: ^17.0.0 || ^18.0.0 || ^19.0.0
+      react: ^19.2.6
       react-dom: ^17.0.0 || ^18.0.0 || ^19.0.0
     peerDependenciesMeta:
       '@emotion/react':
@@ -1076,7 +1189,7 @@ packages:
     engines: {node: '>=12.0.0'}
     peerDependencies:
       '@types/react': ^17.0.0 || ^18.0.0 || ^19.0.0
-      react: ^17.0.0 || ^18.0.0 || ^19.0.0
+      react: ^19.2.6
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1087,7 +1200,7 @@ packages:
     peerDependencies:
       '@emotion/react': ^11.4.1
       '@emotion/styled': ^11.3.0
-      react: ^17.0.0 || ^18.0.0 || ^19.0.0
+      react: ^19.2.6
     peerDependenciesMeta:
       '@emotion/react':
         optional: true
@@ -1101,7 +1214,7 @@ packages:
       '@emotion/react': ^11.5.0
       '@emotion/styled': ^11.3.0
       '@types/react': ^17.0.0 || ^18.0.0 || ^19.0.0
-      react: ^17.0.0 || ^18.0.0 || ^19.0.0
+      react: ^19.2.6
     peerDependenciesMeta:
       '@emotion/react':
         optional: true
@@ -1123,7 +1236,7 @@ packages:
     engines: {node: '>=12.0.0'}
     peerDependencies:
       '@types/react': ^17.0.0 || ^18.0.0 || ^19.0.0
-      react: ^17.0.0 || ^18.0.0 || ^19.0.0
+      react: ^19.2.6
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1133,7 +1246,7 @@ packages:
     engines: {node: '>=14.0.0'}
     peerDependencies:
       '@types/react': ^17.0.0 || ^18.0.0 || ^19.0.0
-      react: ^17.0.0 || ^18.0.0 || ^19.0.0
+      react: ^19.2.6
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1146,7 +1259,7 @@ packages:
       '@emotion/styled': ^11.8.1
       '@mui/material': ^5.8.6
       '@mui/system': ^5.8.0
-      react: ^17.0.0 || ^18.0.0
+      react: ^19.2.6
       react-dom: ^17.0.0 || ^18.0.0
 
   '@napi-rs/wasm-runtime@1.1.4':
@@ -1155,35 +1268,22 @@ packages:
       '@emnapi/core': ^1.7.1
       '@emnapi/runtime': ^1.7.1
 
-  '@nibus/core@5.0.1':
-    resolution: {integrity: sha512-Rmb9PpH7cR9G5OFC8BysOjwDV097f9FgYAOAhCJBlcRMxF3YJcUUjeIg0GGV/TsArnNa9cnPE0KSFFJUoXHuvA==}
-    version: 5.0.1
+  '@nibus/core@6.0.0':
+    resolution: {integrity: sha512-6OoLOEQVO71bt32SoHGD+6PsghBNI/6Pn5AaOKNLXw914Ug2WJG1c0V23QPSkTrBunSVe2SXooLj2uZRABDD2w==}
     peerDependencies:
-      '@nibus/mibs': ^5.0.0
+      '@nibus/mibs': ^6.0.0
       debug: ^4.3.0
 
-  '@nibus/core@file:.yalc/@nibus/core':
-    resolution: {directory: .yalc/@nibus/core, type: directory}
+  '@nibus/detection@6.0.0':
+    resolution: {integrity: sha512-r2UDmCsM+GzhqXE3vyYNgdi3/1cQ74wfSiAaOiA1TkPaJ500p7Qee1e9VShDecZ5SZQImyhioZJm2XLVzlrYKg==}
     peerDependencies:
-      '@nibus/mibs': ^5.0.0
-      debug: ^4.3.0
+      '@nibus/core': ^6.0.0
 
-  '@nibus/detection@5.0.2':
-    resolution: {integrity: sha512-/uXva6pYVSWaBzOLLWjFfZao7hHUU1cgNzb7h64sXQQvYv8haKTvxPrJ030qzk5m3JNIDZa+N8O+ZXWpmKKV1g==}
-    version: 5.0.2
-    peerDependencies:
-      '@nibus/core': ^5.0.0
+  '@nibus/mibs@6.0.0':
+    resolution: {integrity: sha512-aGeIFIHXl2gsxj9tx7bgx+6T3CFqv7Voz/H5hdDo9JI3P7dp9z0i9ujd5Ozjt8Sy66SJ9VbIXMkgzn/31oBvDw==}
 
-  '@nibus/detection@file:.yalc/@nibus/detection':
-    resolution: {directory: .yalc/@nibus/detection, type: directory}
-    peerDependencies:
-      '@nibus/core': ^5.0.1
-
-  '@nibus/mibs@file:.yalc/@nibus/mibs':
-    resolution: {directory: .yalc/@nibus/mibs, type: directory}
-
-  '@nibus/service@file:.yalc/@nibus/service':
-    resolution: {directory: .yalc/@nibus/service, type: directory}
+  '@nibus/service@6.0.0':
+    resolution: {integrity: sha512-NnUh9eYABQxKZ471Yo3JsTA2s2JqxOeZnllOQSRrVVbccsAriQNEXp4jpZ1hIKCAfKEV03qILx+j4HbEcGjChQ==}
     peerDependencies:
       debug: ^4.3.0
 
@@ -1283,7 +1383,7 @@ packages:
   '@reduxjs/toolkit@2.12.0':
     resolution: {integrity: sha512-KiT+RzZbp6mQET+Mg+h2c97+9j1sNflUxQkIHI7Yuzf6Peu+OYpmkn6nbHWmLLWj+1ZODUJFwGZ7gx3L9R9EOw==}
     peerDependencies:
-      react: ^16.9.0 || ^17.0.0 || ^18 || ^19
+      react: ^19.2.6
       react-redux: ^7.2.1 || ^8.1.3 || ^9.0.0
     peerDependenciesMeta:
       react:
@@ -1575,7 +1675,7 @@ packages:
       '@emotion/react': ^11.8.2
       '@emotion/styled': ^11.10.4
       '@mui/material': ^5.5.3
-      react: ^18
+      react: ^19.2.6
       react-dom: ^18
 
   '@sarakusha/tssrp6a@3.0.3':
@@ -3153,7 +3253,7 @@ packages:
       '@types/eslint': '>=8.0.0'
       eslint: '>=8.0.0'
       eslint-config-prettier: '>= 7.0.0 <10.0.0 || >=10.1.0'
-      prettier: '>=3.0.0'
+      prettier: ^3.8.3
     peerDependenciesMeta:
       '@types/eslint':
         optional: true
@@ -3426,7 +3526,7 @@ packages:
   formik@2.4.9:
     resolution: {integrity: sha512-5nI94BMnlFDdQRBY4Sz39WkhxajZJ57Fzs8wVbtsQlm5ScKIR1QLYqv/ultBnobObtlUyxpxoLodpixrsf36Og==}
     peerDependencies:
-      react: '>=16.8.0'
+      react: ^19.2.6
 
   forwarded@0.2.0:
     resolution: {integrity: sha512-buRG0fpBtRHSTCOASe6hD258tEubFoRLb4ZNA6NxMVHNw2gOcwHo9wyablzMzOA5z9xA9L1KNjk/Nt6MT9aYow==}
@@ -3663,7 +3763,7 @@ packages:
     resolution: {integrity: sha512-2gL8bVGe6Pf75tSe6IB5Ucd0nIOJX7ZrpttQBZVrjN2J9StdVZ12aOinXHIOFvlc6EzP8CbN13WS8NUq+9mptA==}
     peerDependencies:
       highcharts: '>=6.0.0'
-      react: '>=16.8.0'
+      react: ^19.2.6
 
   highcharts@10.3.3:
     resolution: {integrity: sha512-r7wgUPQI9tr3jFDn3XT36qsNwEIZYcfgz4mkKEA6E4nn5p86y+u1EZjazIG4TRkl5/gmGRtkBUiZW81g029RIw==}
@@ -3832,7 +3932,7 @@ packages:
     resolution: {directory: .yalc/iput, type: directory}
     peerDependencies:
       prop-types: ^15.7.2
-      react: '>=0.14'
+      react: ^19.2.6
 
   is-alphabetical@2.0.1:
     resolution: {integrity: sha512-FWyyY60MeTNyeSRpkM2Iry0G9hpr7/9kD40mD/cGQEuilcZYS4okz8SN2Q6rLCJ8gbCt6fN+rC+6tMGS99LaxQ==}
@@ -4330,7 +4430,7 @@ packages:
     peerDependencies:
       '@mui/material': '>=5 <10'
       '@types/react': ^16.8.0 || ^17 || ^18 || ^19
-      react: '>=16.8.0 <20'
+      react: ^19.2.6
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -4711,7 +4811,7 @@ packages:
     resolution: {integrity: sha512-0R+/arLYbK5Hh7mEfR2adt0tyXJcCC9KkA2hc56FeWik2QN6Bm/S4uW+BjzDARsJth5u06nTjelSw/VSnB1YEA==}
     engines: {node: '>=12.0.0', npm: '>=6.0.0'}
     peerDependencies:
-      react: ^17.0.0 || ^18.0.0 || ^19.0.0
+      react: ^19.2.6
       react-dom: ^17.0.0 || ^18.0.0 || ^19.0.0
 
   npm-install-checks@6.3.0:
@@ -5028,7 +5128,7 @@ packages:
   prettier-airbnb-config@1.0.0:
     resolution: {integrity: sha512-FsEe38fJftYi19AskzuOWbw8zBnXDcZwv2Uw8BI65ROyK4hE6+iojXVFu+FiYNfrRBL+UZJbl2XGk56Ur2QGsA==}
     peerDependencies:
-      prettier: ^1.18.2
+      prettier: ^3.8.3
 
   prettier-linter-helpers@1.0.1:
     resolution: {integrity: sha512-SxToR7P8Y2lWmv/kTzVLC1t/GDI2WGjMwNhLLE9qtH8Q13C+aEmuRlzDst4Up4s0Wc8sF2M+J57iB3cMLqftfg==}
@@ -5132,7 +5232,7 @@ packages:
   react-autosuggest@10.1.0:
     resolution: {integrity: sha512-/azBHmc6z/31s/lBf6irxPf/7eejQdR0IqnZUzjdSibtlS8+Rw/R79pgDAo6Ft5QqCUTyEQ+f0FhL+1olDQ8OA==}
     peerDependencies:
-      react: '>=16.3.0'
+      react: ^19.2.6
 
   react-dnd-html5-backend@16.0.1:
     resolution: {integrity: sha512-Wu3dw5aDJmOGw8WjH1I1/yTH+vlXEL4vmjk5p+MHxP8HuHJS1lAGeIdG/hze1AvNeXWo/JgULV87LyQOr+r5jw==}
@@ -5143,7 +5243,7 @@ packages:
       '@types/hoist-non-react-statics': '>= 3.3.1'
       '@types/node': '>= 12'
       '@types/react': '>= 16'
-      react: '>= 16.14'
+      react: ^19.2.6
     peerDependenciesMeta:
       '@types/hoist-non-react-statics':
         optional: true
@@ -5160,7 +5260,7 @@ packages:
   react-error-boundary@6.1.1:
     resolution: {integrity: sha512-BrYwPOdXi5mqkk5lw+Uvt0ThHx32rCt3BkukS4X23A2AIWDPSGX6iaWTc0y9TU/mHDA/6qOSGel+B2ERkOvD1w==}
     peerDependencies:
-      react: ^18.0.0 || ^19.0.0
+      react: ^19.2.6
 
   react-fast-compare@2.0.4:
     resolution: {integrity: sha512-suNP+J1VU1MWFKcyt7RtjiSWUjvidmQSlqu+eHslq+342xCbGTYmC0mEhPCOHxlW0CywylOC1u2DFAT+bv4dBw==}
@@ -5169,7 +5269,7 @@ packages:
     resolution: {integrity: sha512-vLNfzcCz62Yzx/GRGh5tiCph9Gbh2cZu+Tz8OiO5it2eNuuhpA0DWhhSlOtVtSJ80+Bx+vFK5De8eQ9AmbkXzA==}
     engines: {npm: '>=4.0.0'}
     peerDependencies:
-      react: '>=0.14.0'
+      react: ^19.2.6
 
   react-is@16.13.1:
     resolution: {integrity: sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==}
@@ -5181,7 +5281,7 @@ packages:
     resolution: {integrity: sha512-KQopgqFo/p/fgmAs5qz6p5RWaNAzq40WAu7fJIXnQpYxFPbJYtsJPWvGeF2rOBaY/kEuV77AVsX8TsQzKm+A/g==}
     peerDependencies:
       '@types/react': ^18.2.25 || ^19
-      react: ^18.0 || ^19
+      react: ^19.2.6
       redux: ^5.0.0
     peerDependenciesMeta:
       '@types/react':
@@ -5192,12 +5292,12 @@ packages:
   react-resize-detector@12.3.0:
     resolution: {integrity: sha512-mIDOVrTHKGnKe6qEUWi8dFdfHM5CPyTOpqoHctdMQf89Ljm/0qqDIzkP3vTRZZJi9/raaMiRxDEOqO4you5x+A==}
     peerDependencies:
-      react: ^18.0.0 || ^19.0.0
+      react: ^19.2.6
 
   react-scroll-to-top@3.1.0:
     resolution: {integrity: sha512-hD3bJQgCblywG2gcI515BcxP43MZkBidsYEVt9ak5pu1UOoQDJzIJp89zwccbpFuqeHZ29Lxs00T9DSxQr4cmw==}
     peerDependencies:
-      react: ^16.8.0 || 17.x || ^18 || ^19
+      react: ^19.2.6
 
   react-themeable@1.1.0:
     resolution: {integrity: sha512-kl5tQ8K+r9IdQXZd8WLa+xxYN04lLnJXRVhHfdgwsUJr/SlKJxIejoc9z9obEkx1mdqbTw1ry43fxEUwyD9u7w==}
@@ -5205,7 +5305,7 @@ packages:
   react-transition-group@4.4.5:
     resolution: {integrity: sha512-pZcd1MCJoiKiBR2NRxeCRg13uCXbydPnmB4EOeRrY7480qNWO8IIgQG6zlDkm6uRMsURXPuKq0GWtiM59a5Q6g==}
     peerDependencies:
-      react: '>=16.6.0'
+      react: ^19.2.6
       react-dom: '>=16.6.0'
 
   react@19.2.6:
@@ -6086,7 +6186,7 @@ packages:
   use-sync-external-store@1.6.0:
     resolution: {integrity: sha512-Pp6GSwGP/NrPIrxVFAIkOQeyw8lFenOHijQWkUTrDvrF4ALqylP2C/KCkeS9dpUM3KvYRQhna5vt7IL95+ZQ9w==}
     peerDependencies:
-      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+      react: ^19.2.6
 
   utf-8-validate@6.0.6:
     resolution: {integrity: sha512-q3l3P9UtEEiAHcsgsqTgf9PPjctrDWoIXW3NpOHFdRDbLvu4DLIcxHangJ4RLrWkBcKjmcs/6NkerI8T/rE4LA==}
@@ -7310,9 +7410,9 @@ snapshots:
       '@tybys/wasm-util': 0.10.2
     optional: true
 
-  '@nibus/core@5.0.1(@nibus/mibs@file:.yalc/@nibus/mibs)(debug@4.4.3)':
+  '@nibus/core@6.0.0(@nibus/mibs@6.0.0)(debug@4.4.3)':
     dependencies:
-      '@nibus/mibs': file:.yalc/@nibus/mibs
+      '@nibus/mibs': 6.0.0
       conf: 10.2.0
       crc: 4.3.2
       debug: 4.4.3
@@ -7333,46 +7433,15 @@ snapshots:
     transitivePeerDependencies:
       - buffer
 
-  '@nibus/core@file:.yalc/@nibus/core(@nibus/mibs@file:.yalc/@nibus/mibs)(debug@4.4.3)':
+  '@nibus/detection@6.0.0(@nibus/core@6.0.0(@nibus/mibs@6.0.0)(debug@4.4.3))':
     dependencies:
-      '@nibus/mibs': file:.yalc/@nibus/mibs
-      conf: 10.2.0
-      crc: 4.3.2
-      debug: 4.4.3
-      fast-xml-parser: 4.5.6
-      fp-ts: 2.16.11
-      iconv-lite: 0.6.3
-      intel-hex: 0.1.2
-      io-ts: 2.2.22(fp-ts@2.16.11)
-      io-ts-types: 0.5.19(fp-ts@2.16.11)(io-ts@2.2.22(fp-ts@2.16.11))(monocle-ts@2.3.13(fp-ts@2.16.11))(newtype-ts@0.3.5(fp-ts@2.16.11)(monocle-ts@2.3.13(fp-ts@2.16.11)))
-      lodash: 4.18.1
-      monocle-ts: 2.3.13(fp-ts@2.16.11)
-      newtype-ts: 0.3.5(fp-ts@2.16.11)(monocle-ts@2.3.13(fp-ts@2.16.11))
-      printf: 0.6.1
-      pump: 3.0.4
-      reflect-metadata: 0.1.14
-      sax: 1.6.0
-      tiny-typed-emitter: 2.1.0
-    transitivePeerDependencies:
-      - buffer
-
-  '@nibus/detection@5.0.2(@nibus/core@file:.yalc/@nibus/core(@nibus/mibs@file:.yalc/@nibus/mibs)(debug@4.4.3))':
-    dependencies:
-      '@nibus/core': file:.yalc/@nibus/core(@nibus/mibs@file:.yalc/@nibus/mibs)(debug@4.4.3)
+      '@nibus/core': 6.0.0(@nibus/mibs@6.0.0)(debug@4.4.3)
       '@types/js-yaml': 4.0.9
       fp-ts: 2.16.11
       io-ts: 2.2.22(fp-ts@2.16.11)
       js-yaml: 4.1.1
 
-  '@nibus/detection@file:.yalc/@nibus/detection(@nibus/core@file:.yalc/@nibus/core(@nibus/mibs@file:.yalc/@nibus/mibs)(debug@4.4.3))':
-    dependencies:
-      '@nibus/core': file:.yalc/@nibus/core(@nibus/mibs@file:.yalc/@nibus/mibs)(debug@4.4.3)
-      '@types/js-yaml': 4.0.9
-      fp-ts: 2.16.11
-      io-ts: 2.2.22(fp-ts@2.16.11)
-      js-yaml: 4.1.1
-
-  '@nibus/mibs@file:.yalc/@nibus/mibs':
+  '@nibus/mibs@6.0.0':
     dependencies:
       debug: 4.4.3
       fp-ts: 2.16.11
@@ -7380,11 +7449,11 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@nibus/service@file:.yalc/@nibus/service(@nibus/mibs@file:.yalc/@nibus/mibs)(debug@4.4.3)':
+  '@nibus/service@6.0.0(@nibus/mibs@6.0.0)(debug@4.4.3)':
     dependencies:
       '@homebridge/ciao': 1.3.8
-      '@nibus/core': 5.0.1(@nibus/mibs@file:.yalc/@nibus/mibs)(debug@4.4.3)
-      '@nibus/detection': 5.0.2(@nibus/core@file:.yalc/@nibus/core(@nibus/mibs@file:.yalc/@nibus/mibs)(debug@4.4.3))
+      '@nibus/core': 6.0.0(@nibus/mibs@6.0.0)(debug@4.4.3)
+      '@nibus/detection': 6.0.0(@nibus/core@6.0.0(@nibus/mibs@6.0.0)(debug@4.4.3))
       '@serialport/bindings-cpp': 13.0.1
       debug: 4.4.3
       fp-ts: 2.16.11

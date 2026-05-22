@@ -42,6 +42,12 @@ const config = {
     'node_modules/@novastar/screen/**',
     // 'node_modules/@novastar/serial/**',
     // 'node_modules/@sarakusha/lzma/**',
+    // @nibus/core still uses conf@10, which expects dot-prop@6 CommonJS exports.
+    {
+      from: 'node_modules/.pnpm/dot-prop@6.0.1/node_modules/dot-prop',
+      to: 'node_modules/@nibus/core/node_modules/dot-prop',
+      filter: ['**/*'],
+    },
     // 'node_modules/@babel/runtime/**',
     '!node_modules/{@colors,@commitlint}/**/*',
     // '!node_modules/@novastar/{codec,native,net,screen}/build/module/**',

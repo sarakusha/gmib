@@ -1,0 +1,174 @@
+{
+  "comment": "Automatically maintained by scripts/sync-packaged-deps.mjs. These packages are hoisted runtime deps needed by the packaged app.asar when using pnpm.",
+  "asar": "dist/mac-arm64/gmib.app/Contents/Resources/app.asar",
+  "dependencies": {
+    "@borewit/text-codec": "^0.2.2",
+    "@isaacs/fs-minipass": "^4.0.1",
+    "ansi-regex": "^5.0.1",
+    "call-bind-apply-helpers": "^1.0.2",
+    "call-bound": "^1.0.4",
+    "dot-prop": "^10.1.0",
+    "dunder-proto": "^1.0.1",
+    "ee-first": "^1.1.1",
+    "emoji-regex": "^8.0.0",
+    "es-define-property": "^1.0.1",
+    "es-errors": "^1.3.0",
+    "es-object-atoms": "^1.1.1",
+    "fast-uri": "^3.1.2",
+    "function-bind": "^1.1.2",
+    "get-intrinsic": "^1.3.0",
+    "get-proto": "^1.0.1",
+    "gopd": "^1.2.0",
+    "has-symbols": "^1.1.0",
+    "hasown": "^2.0.3",
+    "is-fullwidth-code-point": "^3.0.0",
+    "json-schema-traverse": "^1.0.0",
+    "math-intrinsics": "^1.1.0",
+    "media-typer": "^1.1.0",
+    "mime-db": "^1.54.0",
+    "minipass": "^7.1.3",
+    "minizlib": "^3.1.0",
+    "object-inspect": "^1.13.4",
+    "require-from-string": "^2.0.2",
+    "setprototypeof": "~1.2.0",
+    "side-channel": "^1.1.0",
+    "side-channel-list": "^1.0.1",
+    "side-channel-map": "^1.0.1",
+    "side-channel-weakmap": "^1.0.2",
+    "tagged-tag": "^1.0.0",
+    "toidentifier": "~1.0.1",
+    "yallist": "^5.0.0"
+  },
+  "sources": {
+    "@borewit/text-codec": [
+      "token-types@6.1.2 -> @borewit/text-codec@^0.2.1"
+    ],
+    "@isaacs/fs-minipass": [
+      "tar@7.5.15 -> @isaacs/fs-minipass@^4.0.0"
+    ],
+    "ansi-regex": [
+      "strip-ansi@6.0.1 -> ansi-regex@^5.0.1"
+    ],
+    "call-bind-apply-helpers": [
+      "call-bound@1.0.4 -> call-bind-apply-helpers@^1.0.2",
+      "dunder-proto@1.0.1 -> call-bind-apply-helpers@^1.0.1",
+      "get-intrinsic@1.3.0 -> call-bind-apply-helpers@^1.0.2"
+    ],
+    "call-bound": [
+      "side-channel-map@1.0.1 -> call-bound@^1.0.2",
+      "side-channel-weakmap@1.0.2 -> call-bound@^1.0.2"
+    ],
+    "dot-prop": [
+      "conf@15.1.0 -> dot-prop@^10.0.0"
+    ],
+    "dunder-proto": [
+      "get-proto@1.0.1 -> dunder-proto@^1.0.1"
+    ],
+    "ee-first": [
+      "on-finished@2.4.1 -> ee-first@1.1.1"
+    ],
+    "emoji-regex": [
+      "string-width@4.2.3 -> emoji-regex@^8.0.0"
+    ],
+    "es-define-property": [
+      "get-intrinsic@1.3.0 -> es-define-property@^1.0.1"
+    ],
+    "es-errors": [
+      "call-bind-apply-helpers@1.0.2 -> es-errors@^1.3.0",
+      "dunder-proto@1.0.1 -> es-errors@^1.3.0",
+      "es-object-atoms@1.1.1 -> es-errors@^1.3.0",
+      "get-intrinsic@1.3.0 -> es-errors@^1.3.0",
+      "side-channel-list@1.0.1 -> es-errors@^1.3.0",
+      "side-channel-map@1.0.1 -> es-errors@^1.3.0",
+      "side-channel-weakmap@1.0.2 -> es-errors@^1.3.0",
+      "side-channel@1.1.0 -> es-errors@^1.3.0"
+    ],
+    "es-object-atoms": [
+      "get-intrinsic@1.3.0 -> es-object-atoms@^1.1.1",
+      "get-proto@1.0.1 -> es-object-atoms@^1.0.0"
+    ],
+    "fast-uri": [
+      "ajv@8.20.0 -> fast-uri@^3.0.1"
+    ],
+    "function-bind": [
+      "call-bind-apply-helpers@1.0.2 -> function-bind@^1.1.2",
+      "get-intrinsic@1.3.0 -> function-bind@^1.1.2",
+      "hasown@2.0.3 -> function-bind@^1.1.2"
+    ],
+    "get-intrinsic": [
+      "call-bound@1.0.4 -> get-intrinsic@^1.3.0",
+      "side-channel-map@1.0.1 -> get-intrinsic@^1.2.5",
+      "side-channel-weakmap@1.0.2 -> get-intrinsic@^1.2.5"
+    ],
+    "get-proto": [
+      "get-intrinsic@1.3.0 -> get-proto@^1.0.1"
+    ],
+    "gopd": [
+      "dunder-proto@1.0.1 -> gopd@^1.2.0",
+      "get-intrinsic@1.3.0 -> gopd@^1.2.0"
+    ],
+    "has-symbols": [
+      "get-intrinsic@1.3.0 -> has-symbols@^1.1.0"
+    ],
+    "hasown": [
+      "get-intrinsic@1.3.0 -> hasown@^2.0.2"
+    ],
+    "is-fullwidth-code-point": [
+      "string-width@4.2.3 -> is-fullwidth-code-point@^3.0.0"
+    ],
+    "json-schema-traverse": [
+      "ajv@8.20.0 -> json-schema-traverse@^1.0.0"
+    ],
+    "math-intrinsics": [
+      "get-intrinsic@1.3.0 -> math-intrinsics@^1.1.0"
+    ],
+    "media-typer": [
+      "type-is@2.1.0 -> media-typer@^1.1.0"
+    ],
+    "mime-db": [
+      "mime-types@3.0.2 -> mime-db@^1.54.0"
+    ],
+    "minipass": [
+      "@isaacs/fs-minipass@4.0.1 -> minipass@^7.0.4",
+      "minizlib@3.1.0 -> minipass@^7.1.2",
+      "tar@7.5.15 -> minipass@^7.1.2"
+    ],
+    "minizlib": [
+      "tar@7.5.15 -> minizlib@^3.1.0"
+    ],
+    "object-inspect": [
+      "side-channel-list@1.0.1 -> object-inspect@^1.13.4",
+      "side-channel-map@1.0.1 -> object-inspect@^1.13.3",
+      "side-channel-weakmap@1.0.2 -> object-inspect@^1.13.3",
+      "side-channel@1.1.0 -> object-inspect@^1.13.3"
+    ],
+    "require-from-string": [
+      "ajv@8.20.0 -> require-from-string@^2.0.2"
+    ],
+    "setprototypeof": [
+      "http-errors@2.0.1 -> setprototypeof@~1.2.0"
+    ],
+    "side-channel": [
+      "qs@6.15.2 -> side-channel@^1.1.0"
+    ],
+    "side-channel-list": [
+      "side-channel@1.1.0 -> side-channel-list@^1.0.0"
+    ],
+    "side-channel-map": [
+      "side-channel-weakmap@1.0.2 -> side-channel-map@^1.0.1",
+      "side-channel@1.1.0 -> side-channel-map@^1.0.1"
+    ],
+    "side-channel-weakmap": [
+      "side-channel@1.1.0 -> side-channel-weakmap@^1.0.2"
+    ],
+    "tagged-tag": [
+      "type-fest@5.6.0 -> tagged-tag@^1.0.0"
+    ],
+    "toidentifier": [
+      "http-errors@2.0.1 -> toidentifier@~1.0.1"
+    ],
+    "yallist": [
+      "tar@7.5.15 -> yallist@^5.0.0"
+    ]
+  }
+}
