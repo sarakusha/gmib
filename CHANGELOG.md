@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.10.1](https://github.com/sarakusha/gmib/compare/v4.10.0...v4.10.1) (2026-05-22)
+
+
+### Features
+
+* вывод log в одну строку ([ff0dbf0](https://github.com/sarakusha/gmib/commit/ff0dbf0942046f2ce38b4ddccfad6a4774828112))
+* обновленный novastar ([aefd6e1](https://github.com/sarakusha/gmib/commit/aefd6e171219edda60bbf6ba55c6d619e6f34bcb))
+
+
+### Bug Fixes
+
+* исправлены пути для ссылок на локальные файлы ([69acd9d](https://github.com/sarakusha/gmib/commit/69acd9da47c348752495efe98bda6f32d86e7dc9))
+* при нечетеной высоте или ширине картинки конвертация не проходила ([f658e72](https://github.com/sarakusha/gmib/commit/f658e72e939e83225e8edbd08e32e0745483b761))
+* Maximum update depth exceeded ([5ceecf7](https://github.com/sarakusha/gmib/commit/5ceecf7f46399fdad140dae944f3c52e1155e8b4))
+* type ([75811ed](https://github.com/sarakusha/gmib/commit/75811ed4907e7f41a0e3ca91f6e801ad72fb7acc))
+
 ## [4.10.0](https://github.com/sarakusha/gmib/compare/v4.9.2...v4.10.0) (2026-01-30)
 
 
