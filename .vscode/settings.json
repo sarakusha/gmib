@@ -1,6 +1,5 @@
 {
   "files.exclude": {
-    ".github": true,
     ".idea": true,
     ".vscode": true,
     "**/.DS_Store": true,
@@ -11,8 +10,7 @@
     "**/CVS": true,
     "**/dist": false,
     "**/Thumbs.db": true,
-    "**/yalc.lock": true,
-    "ffmpeg": true
+    "**/yalc.lock": true
   },
   "sqltools.connections": [
     {
