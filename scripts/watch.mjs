@@ -3,7 +3,8 @@
 import { build, createServer } from 'vite';
 import electronPath from 'electron';
 import { spawn } from 'child_process';
-
+import process from 'node:process';
+import console from 'node:console';
 
 /** @type 'production' | 'development'' */
 const mode = (process.env.MODE = process.env.MODE || 'development');
@@ -60,9 +61,15 @@ const setupMainPackageWatcher = ({ resolvedUrls }) => {
           }
 
           /** Spawn new electron process */
-          spawnProcess = spawn(String(electronPath), ['--inspect', '.'], {
-            stdio: 'inherit',
-          });
+          const { ELECTRON_RUN_AS_NODE: _electronRunAsNode, ...electronEnv } = process.env;
+          spawnProcess = spawn(
+            String(electronPath),
+            ['--inspect', '--remote-debugging-port=9222', '.'],
+            {
+              env: electronEnv,
+              stdio: 'inherit',
+            },
+          );
 
           // /** Proxy all logs */
           // spawnProcess.stdout.on(
