@@ -1,4 +1,4 @@
-import type { Host } from '@nibus/core/ipc';
+import type { Host } from '@nibus/core';
 
 import type { Screen } from './video';
 

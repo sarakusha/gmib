@@ -1,9 +1,7 @@
-/* eslint-env node */
-
 import { defineConfig } from 'vite';
 import { fileURLToPath } from 'url';
-import path from 'path';
-// eslint-disable-next-line import/no-extraneous-dependencies
+import path from 'node:path';
+import process from 'node:process';
 import react from '@vitejs/plugin-react';
 import mdx from '@mdx-js/rollup';
 import checker from 'vite-plugin-checker';
@@ -22,7 +20,7 @@ process.env.VITE_APP_NAME = process.env['npm_package_name'];
 process.env.VITE_APP_VERSION = process.env['npm_package_version'];
 process.env.VITE_DEBUG = `nibus:*,novastar:*,${process.env.VITE_APP_NAME}:*`;
 
-const isDev = process.env.MODE === 'development';
+// const isDev = process.env.MODE === 'development';
 
 /**
  * @type {import('vite').UserConfig}
