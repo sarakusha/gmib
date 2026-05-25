@@ -43,28 +43,31 @@ defaults:
 
 jobs:
   draft_release:
+    if: ${{ inputs.platforms == 'all' || inputs.platforms == matrix.platform }}
     strategy:
       fail-fast: true
-      matrix: >-
-        ${{
-          fromJSON(
-            inputs.platforms == 'macos' &&
-        '{"include":[{"platform":"macos","os":"macos-15-intel","builder_config":".electron-builder.config.js","target_args":"-m
-        --x64 --arm64"}]}' ||
-            inputs.platforms == 'linux' &&
-        '{"include":[{"platform":"linux","os":"ubuntu-latest","builder_config":".electron-builder-light.config.js","target_args":"-l
-        --x64 --arm64"}]}' ||
-            inputs.platforms == 'windows' &&
-        '{"include":[{"platform":"windows","os":"windows-latest","builder_config":".electron-builder.config.js","target_args":"-w
-        --x64"}]}' ||
-            '{"include":[{"platform":"macos","os":"macos-15-intel","builder_config":".electron-builder.config.js","target_args":"-m
-        --x64
-        --arm64"},{"platform":"linux","os":"ubuntu-latest","builder_config":".electron-builder-light.config.js","target_args":"-l
-        --x64
-        --arm64"},{"platform":"windows","os":"windows-latest","builder_config":".electron-builder.config.js","target_args":"-w
-        --x64"}]}'
-          )
-        }}
+      matrix:
+        include:
+          - platform: macos
+            os: macos-15-intel
+            builder_config: .electron-builder.config.js
+            target_args:
+              - -m
+              - --x64
+              - --arm64
+          - platform: linux
+            os: ubuntu-latest
+            builder_config: .electron-builder-light.config.js
+            target_args:
+              - -l
+              - --x64
+              - --arm64
+          - platform: windows
+            os: windows-latest
+            builder_config: .electron-builder.config.js
+            target_args:
+              - -w
+              - --x64
 
     runs-on: ${{ matrix.os }}
 
@@ -254,9 +257,8 @@ jobs:
           retry_on: error
           shell: "bash"
           command: >-
-            pnpm exec electron-builder --config ${{ matrix.builder_config }} ${{ matrix.target_args
-            }} --publish never
-        env:
+            pnpm exec electron-builder --config ${{ matrix.builder_config }} ${{
+            join(matrix.target_args, ' ') }} --publish never
           GH_TOKEN: ${{ github.token }}
 
       - name: Upload missing release assets
