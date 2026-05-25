@@ -43,7 +43,7 @@
     "watch:player": "cross-env LIB_NAME=player node scripts/watch.mjs",
     "fix": "run-s fix:*",
     "fix:prettier": "prettier \"packages/{main/src,common,{preload,renderer}/{common,gmib,player},preload/remote}/**/*.{ts,tsx}\" --write",
-    "fix:lint": "pnpm run lint -- --fix",
+    "fix:lint": "pnpm run lint --fix",
     "typecheck:main": "tsc --noEmit -p packages/main/tsconfig.json",
     "typecheck:preload": "tsc --noEmit -p packages/preload/tsconfig.json",
     "typecheck:renderer": "tsc --noEmit -p packages/renderer/tsconfig.json",

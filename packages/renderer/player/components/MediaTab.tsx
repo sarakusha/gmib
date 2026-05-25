@@ -52,11 +52,11 @@ const MediaTab: React.FC = () => {
 
           const message =
             isObject &&
-              'data' in error &&
-              typeof error.data === 'object' &&
-              error.data !== null &&
-              'message' in error.data &&
-              typeof error.data.message === 'string'
+            'data' in error &&
+            typeof error.data === 'object' &&
+            error.data !== null &&
+            'message' in error.data &&
+            typeof error.data.message === 'string'
               ? error.data.message
               : 'Неизвестная ошибка';
 

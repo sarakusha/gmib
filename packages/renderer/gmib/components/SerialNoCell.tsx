@@ -46,7 +46,7 @@ const SerialNoCell: React.FC<Props> = ({
   value: initValue,
   name,
   className,
-  onChangeProperty = () => { },
+  onChangeProperty = () => {},
   dirty,
   align,
   ...props

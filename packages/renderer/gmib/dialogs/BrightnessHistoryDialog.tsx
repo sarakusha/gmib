@@ -251,19 +251,16 @@ const BrightnessHistoryDialog: React.FC<Props> = ({ open = false, onClose = noop
               sensors.filter(({ illuminance }) => illuminance != null),
               'address',
             ),
-          ).map(
-            ([address, values]) =>
-            ({
-              id: `illuminance:${address}`,
-              name: `Освещенность ${address}`,
-              yAxis: 0,
-              type: 'line' as const,
-              tooltip: { valueSuffix: ' lux' },
-              color: '#FF8000',
-              shadow: true,
-              data: values.map(({ time, illuminance }) => [time, illuminance]),
-            }),
-          );
+          ).map(([address, values]) => ({
+            id: `illuminance:${address}`,
+            name: `Освещенность ${address}`,
+            yAxis: 0,
+            type: 'line' as const,
+            tooltip: { valueSuffix: ' lux' },
+            color: '#FF8000',
+            shadow: true,
+            data: values.map(({ time, illuminance }) => [time, illuminance]),
+          }));
           const data = history.map(
             ({ timestamp, brightness }: { timestamp: number; brightness: number }) => [
               timestamp - (timestamp % 1000),

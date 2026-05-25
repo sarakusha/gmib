@@ -108,7 +108,9 @@ const migratePages = async (): Promise<void> => {
 
 const updateTests = (): void => {
   void updateTestsImpl()
-    .catch(err => debug(`error while update tests ${err instanceof Error ? err.message : String(err)}`))
+    .catch(err =>
+      debug(`error while update tests ${err instanceof Error ? err.message : String(err)}`),
+    )
     .then(migratePages);
 };
 

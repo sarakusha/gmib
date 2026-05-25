@@ -41,15 +41,15 @@ import Highcharts from './Highcharts';
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:autobrightness`);
 const setItem =
   (index: number, value?: number) =>
-    (array: (number | undefined)[]): (number | undefined)[] => {
-      const clone = [...array];
-      if (value !== undefined) {
-        clone[index] = value;
-      } else {
-        clone[index] = undefined;
-      }
-      return clone;
-    };
+  (array: (number | undefined)[]): (number | undefined)[] => {
+    const clone = [...array];
+    if (value !== undefined) {
+      clone[index] = value;
+    } else {
+      clone[index] = undefined;
+    }
+    return clone;
+  };
 
 const unitStyles = (
   <GlobalStyles
@@ -319,7 +319,7 @@ const Autobrightness: React.FC = () => {
                     InputProps={illuminanceInputProps}
                     onChange={handleChange}
                     variant="standard"
-                  // margin="dense"
+                    // margin="dense"
                   />
                   <Value
                     label={i === 0 ? 'Яркость' : undefined}

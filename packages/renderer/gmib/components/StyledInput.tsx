@@ -9,16 +9,14 @@ export type ExtendedProps = {
   dirty?: boolean;
 };
 
-const StyledInput = extendStyled(Input, { align: 'left', dirty: false })(
-  ({ align, dirty }) => ({
-    '&.MuiInput-root': {
-      fontWight: dirty ? 'bold' : 'normal',
-      fontSize: 'inherit',
-    },
-    '& input': {
-      textAlign: align,
-    },
-  }),
-);
+const StyledInput = extendStyled(Input, { align: 'left', dirty: false })(({ align, dirty }) => ({
+  '&.MuiInput-root': {
+    fontWight: dirty ? 'bold' : 'normal',
+    fontSize: 'inherit',
+  },
+  '& input': {
+    textAlign: align,
+  },
+}));
 
 export default StyledInput;
