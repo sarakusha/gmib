@@ -7,9 +7,9 @@ import path from 'node:path';
 import readline from 'node:readline';
 
 import debugFactory from 'debug';
-import type { Result } from 'execa';
+import type { Result, ResultPromise } from 'execa';
 import { execa } from 'execa';
-import FileType from 'file-type';
+import { fileTypeFromFile } from 'file-type';
 import type { FileTypeResult } from 'file-type';
 import type { FRAMERATE } from 'smpte-timecode';
 import Timecode from 'smpte-timecode';
@@ -238,7 +238,7 @@ async function readFormatData(filePath: string): Promise<FfprobeFormat> {
     filePath,
     '-hide_banner',
   ]);
-  return JSON.parse(stdout).format;
+  return stdout && JSON.parse(stdout as string).format;
 }
 
 export async function getDuration(filePath: string): Promise<number> {
@@ -246,7 +246,7 @@ export async function getDuration(filePath: string): Promise<number> {
 }
 
 function handleProgress(
-  process: ExecaChildProcess,
+  process: ResultPromise,
   cutDuration: number,
   onProgress: (percent: number) => void,
 ): void {
@@ -487,7 +487,7 @@ export async function readFileMeta(
       '-hide_banner',
     ]);
 
-    const { streams = [], format = {} } = JSON.parse(stdout);
+    const { streams = [], format = {} } = stdout ? JSON.parse(stdout as string) : {};
     return {
       format,
       streams,
@@ -557,7 +557,7 @@ export async function getSmarterOutFormat(
 
   // ffprobe sometimes returns a list of formats, try to be a bit smarter about it.
   // const bytes = await readChunk(filePath, { startPosition: 0, length: 4100 });
-  const fileTypeResponse = await FileType.fromFile(filePath);
+  const fileTypeResponse = await fileTypeFromFile(filePath);
   debug(`fileType: ${JSON.stringify(fileTypeResponse)}`);
   // debug(`fileType detected format ${JSON.stringify(fileTypeResponse)}`);
   return determineOutputFormat(formats, fileTypeResponse);
