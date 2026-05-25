@@ -98,7 +98,7 @@ api.put('/screens/mode', makeHandler('setDisplayMode'));
 api.put('/screens/gamma', makeHandler('setGamma'));
 api.put('/screens/rgbv', makeHandler('setRGBVBrightness'));
 api.put('/screens/brightness', makeHandler('setBrightness', -1));
-api.post('/serial', async (req, res) => {
+api.post('/serial', (req, res) => {
   // debug(`from: ${req.ip}`);
   const { path, port } = req.body;
   const host = req.ip?.replace(/^(::ffff:)/, '');

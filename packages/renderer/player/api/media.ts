@@ -31,7 +31,7 @@ const mediaApi = createApi({
         url: `media/${id}`,
         method: 'DELETE',
       }),
-      async onQueryStarted(id, { dispatch, queryFulfilled }) {
+      onQueryStarted(id, { dispatch, queryFulfilled }) {
         const patchResult = dispatch(
           mediaApi.util.updateQueryData('getMedia', undefined, draft => {
             mediaAdapter.removeOne(draft, id);

@@ -373,32 +373,30 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
       const socket = connect(port, host, () => {
         socket.write(path);
         setTimeout(() => {
-          void (async () => {
-            const connection = new Connection(socket);
-            const ctrl = new SafeScreenConfigurator(connection);
-            ctrl.isSerial = true;
-            // console.log('SESSION', Object.keys(ctrl.session));
-            this.novastarControls.get(id)?.session.close();
-            this.novastarControls.set(id, ctrl);
-            this.emit('add', { path: id, isBusy: ctrl.isBusy, connected: true });
-            setTimeout(() => {
-              void this.reload(id, true);
-            }, 1000);
-            setTimeout(() => {
-              void this.updateState(id);
-            }, 30000).unref();
-            socket.once('close', () => {
-              connection.close();
-            });
-            connection.once('close', () => {
-              if (this.novastarControls.get(id) === ctrl) {
-                this.emit('remove', id);
-                this.novastarControls.delete(id);
-              }
-              if (!socket.destroyed) socket.destroy();
-            });
-            resolve();
-          })();
+          const connection = new Connection(socket);
+          const ctrl = new SafeScreenConfigurator(connection);
+          ctrl.isSerial = true;
+          // console.log('SESSION', Object.keys(ctrl.session));
+          this.novastarControls.get(id)?.session.close();
+          this.novastarControls.set(id, ctrl);
+          this.emit('add', { path: id, isBusy: ctrl.isBusy, connected: true });
+          setTimeout(() => {
+            void this.reload(id, true);
+          }, 1000);
+          setTimeout(() => {
+            void this.updateState(id);
+          }, 30000).unref();
+          socket.once('close', () => {
+            connection.close();
+          });
+          connection.once('close', () => {
+            if (this.novastarControls.get(id) === ctrl) {
+              this.emit('remove', id);
+              this.novastarControls.delete(id);
+            }
+            if (!socket.destroyed) socket.destroy();
+          });
+          resolve();
         }, 100);
       });
       socket.once('error', reject);

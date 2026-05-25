@@ -113,12 +113,10 @@ const PlaylistsToolbar: React.FC<Props> = ({ size }) => {
             onClick={e => {
               if (!e.shiftKey) showAlert();
               else if (current) {
-                void (async () => {
-                  const index = findIndex(playlists, { id: current });
-                  const near = index > 0 ? index - 1 : 1;
-                  dispatch(setCurrentPlaylist(playlists[near]?.id));
-                  void remove(current);
-                })();
+                const index = findIndex(playlists, { id: current });
+                const near = index > 0 ? index - 1 : 1;
+                dispatch(setCurrentPlaylist(playlists[near]?.id));
+                void remove(current);
               }
             }}
           >

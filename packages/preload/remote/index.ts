@@ -36,7 +36,7 @@ contextBridge.exposeInMainWorld('mediaStream', { updateSrcObject });
 contextBridge.exposeInMainWorld('identify', expandTypes(identify));
 
 const ws = new WebSocket(`ws://${host}:${port + 1}`);
-ws.onopen = async () => {
+ws.onopen = () => {
   const request: RequestMessage = {
     event: 'request',
     sourceId,
@@ -46,7 +46,7 @@ ws.onopen = async () => {
 
   let timeout = 0;
   const connect = () => {
-    pc.onicecandidate = async e => {
+    pc.onicecandidate = e => {
       const { candidate } = e;
       if (!candidate) return;
       if (ws.readyState === ws.OPEN) {

@@ -170,6 +170,7 @@ const remoteMenu = (params?: WindowParams): AppMenuItem | undefined => {
   };
 };
 
+// eslint-disable-next-line @typescript-eslint/require-await
 const helpMenu = async (params?: WindowParams): Promise<AppMenuItem> => {
   // console.log(`MENU: ${JSON.stringify(params)}`);
 

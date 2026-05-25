@@ -178,7 +178,7 @@ export const setDeviceValue = (
     }
     device[name] = value;
     ipcDispatch(updateProperty([deviceId, ...getProp(name)]));
-    void drainDevice();
+    await drainDevice();
   };
 };
 

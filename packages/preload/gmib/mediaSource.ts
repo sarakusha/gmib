@@ -104,7 +104,7 @@ const openSocket = async (): Promise<void> => {
   });
 };
 
-const playRemote = debounce(async (screenId: number) => {
+const playRemote = debounce((screenId: number) => {
   // console.log('PLAY REMOTE');
   if (!ws || ws.readyState === ws.CLOSED) ws = new WebSocket(`ws://${host}:${port + 1}`);
   let pc = new RTCPeerConnection();
@@ -116,7 +116,7 @@ const playRemote = debounce(async (screenId: number) => {
 
   const connect = async () => {
     // console.log('CONNECT');
-    pc.onicecandidate = async e => {
+    pc.onicecandidate = e => {
       const { candidate } = e;
       if (!candidate) return;
       if (ws.readyState === ws.OPEN) {

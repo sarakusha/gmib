@@ -76,7 +76,7 @@ if (!localConfig.get('salt') || !localConfig.get('verifier')) {
 }
 
 void app.whenReady().then(() => {
-  ipcMain.handle('getLocalConfig', async (event, name: keyof LocalConfig) => localConfig.get(name));
+  ipcMain.handle('getLocalConfig', (_, name: keyof LocalConfig) => localConfig.get(name));
   ipcMain.handle('setLocalConfig', (_, name: keyof LocalConfig, value: unknown) => {
     localConfig.set(name, value);
   });

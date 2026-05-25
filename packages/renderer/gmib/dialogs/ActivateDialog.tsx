@@ -36,7 +36,7 @@ const ActivateDialog: React.FC = () => {
       <DialogContent>
         <Formik
           initialValues={{ name: hostName, key: '' }}
-          onSubmit={async ({ key, name }, { setSubmitting, setFieldError }) => {
+          onSubmit={({ key, name }, { setSubmitting, setFieldError }) => {
             // const res = await window.activateLicense(key, name);
             activate({ key, name })
               .unwrap()

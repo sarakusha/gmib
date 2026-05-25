@@ -210,9 +210,10 @@ export const useScreen = (id?: number) =>
 
 const selectScreenData = screenApi.endpoints.getScreens.select();
 
+// TODO: проверить, убраны async
 export const updateMinihosts = createDebouncedAsyncThunk<void, number, AppThunkConfig>(
   'updateMinihosts',
-  async (scrId, { getState }) => {
+  (scrId, { getState }) => {
     // debug(`update minihost: ${scrId}`);
     const state = getState();
     const { data: screenData } = selectScreenData(state);

@@ -64,7 +64,7 @@ module.exports = (async () => {
           },
         ],
         '@typescript-eslint/prefer-literal-enum-member': 'off',
-        '@typescript-eslint/require-await': 'off',
+        // '@typescript-eslint/require-await': 'off',
         '@typescript-eslint/restrict-template-expressions': 'off',
         '@typescript-eslint/unbound-method': 'off',
         '@typescript-eslint/unified-signatures': 'off',

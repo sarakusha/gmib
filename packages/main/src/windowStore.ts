@@ -259,7 +259,7 @@ export const findPlayerWindow = (
 export default store as ReadonlyMap<number, WindowParams>;
 
 void app.whenReady().then(() => {
-  ipcMain.handle('getParams', async (event, name: keyof WindowParams) => {
+  ipcMain.handle('getParams', (event, name: keyof WindowParams) => {
     const id = BrowserWindow.fromWebContents(event.sender)?.id;
     if (id && store.has(id)) {
       const params = store.get(id);
