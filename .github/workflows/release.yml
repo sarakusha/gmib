@@ -43,7 +43,6 @@ defaults:
 
 jobs:
   draft_release:
-    if: ${{ inputs.platforms == 'all' || inputs.platforms == matrix.platform }}
     strategy:
       fail-fast: true
       matrix:
@@ -72,10 +71,21 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
+      - name: Check platform selection
+        id: platform_check
+        run: |
+          if [[ "${{ inputs.platforms }}" == "all" || "${{ inputs.platforms }}" == "${{ matrix.platform }}" ]]; then
+            echo "selected=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "selected=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v6
+        if: ${{ steps.platform_check.outputs.selected == 'true' }}
 
       - name: Check draft release assets
         id: release_check
+        if: ${{ steps.platform_check.outputs.selected == 'true' }}
         uses: actions/github-script@v7
         env:
           BUILD_PLATFORM: ${{ matrix.platform }}
@@ -168,18 +178,21 @@ jobs:
             core.setOutput('release_id', String(release.id));
 
       - uses: pnpm/action-setup@v6
-        if: ${{ steps.release_check.outputs.skip_build != 'true' }}
+        if: ${{ steps.platform_check.outputs.selected == 'true' &&
+          steps.release_check.outputs.skip_build != 'true' }}
         with:
           run_install: false
 
       - uses: actions/setup-node@v6
-        if: ${{ steps.release_check.outputs.skip_build != 'true' }}
+        if: ${{ steps.platform_check.outputs.selected == 'true' &&
+          steps.release_check.outputs.skip_build != 'true' }}
         with:
           node-version: 24
           cache: "pnpm"
 
       - name: Write .env.local from secrets
-        if: ${{ steps.release_check.outputs.skip_build != 'true' }}
+        if: ${{ steps.platform_check.outputs.selected == 'true' &&
+          steps.release_check.outputs.skip_build != 'true' }}
         env:
           VITE_ANNOUNCE_PROXY: ${{ secrets.VITE_ANNOUNCE_PROXY }}
           VITE_ANNOUNCE_PATH: ${{ secrets.VITE_ANNOUNCE_PATH }}
@@ -210,12 +223,15 @@ jobs:
           } > .env.local
 
       - run: pnpm install --frozen-lockfile
-        if: ${{ steps.release_check.outputs.skip_build != 'true' }}
+        if: ${{ steps.platform_check.outputs.selected == 'true' &&
+          steps.release_check.outputs.skip_build != 'true' }}
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
 
       - name: Download FFmpeg for macOS
-        if: ${{ matrix.platform == 'macos' && steps.release_check.outputs.skip_build != 'true' }}
+        if:
+          ${{ steps.platform_check.outputs.selected == 'true' && matrix.platform == 'macos' &&
+          steps.release_check.outputs.skip_build != 'true' }}
         run: |
           mkdir -p ffmpeg/darwin-x64 ffmpeg/darwin-arm64
           curl --fail --location --retry 5 \
@@ -233,8 +249,24 @@ jobs:
           chmod +x ffmpeg/darwin-x64/ffmpeg ffmpeg/darwin-x64/ffprobe
           chmod +x ffmpeg/darwin-arm64/ffmpeg ffmpeg/darwin-arm64/ffprobe
 
+      - name: Download FFmpeg for Linux
+        if:
+          ${{ steps.platform_check.outputs.selected == 'true' && matrix.platform == 'linux' &&
+          steps.release_check.outputs.skip_build != 'true' }}
+        run: |
+          mkdir -p ffmpeg/linux-x64 ffmpeg/linux-arm64
+          curl --fail --location --retry 5 \
+            https://github.com/mifi/ffmpeg-build-script/releases/latest/download/ffmpeg-linux-X64 \
+            --output ffmpeg/linux-x64/ffmpeg
+          curl --fail --location --retry 5 \
+            https://github.com/mifi/ffmpeg-build-script/releases/latest/download/ffmpeg-linux-ARM64 \
+            --output ffmpeg/linux-arm64/ffmpeg
+          chmod +x ffmpeg/linux-x64/ffmpeg ffmpeg/linux-arm64/ffmpeg
+
       - name: Download FFmpeg for Windows
-        if: ${{ matrix.platform == 'windows' && steps.release_check.outputs.skip_build != 'true' }}
+        if:
+          ${{ steps.platform_check.outputs.selected == 'true' && matrix.platform == 'windows' &&
+          steps.release_check.outputs.skip_build != 'true' }}
         run: |
           mkdir -p ffmpeg/win32-x64
           curl --fail --location --retry 5 \
@@ -245,10 +277,12 @@ jobs:
           mv ffmpeg/win32-x64/extracted/ffmpeg-*-essentials_build/bin/ffprobe.exe ffmpeg/win32-x64/
 
       - run: pnpm run build
-        if: ${{ steps.release_check.outputs.skip_build != 'true' }}
+        if: ${{ steps.platform_check.outputs.selected == 'true' &&
+          steps.release_check.outputs.skip_build != 'true' }}
 
       - name: Compile artifacts without publishing
-        if: ${{ steps.release_check.outputs.skip_build != 'true' }}
+        if: ${{ steps.platform_check.outputs.selected == 'true' &&
+          steps.release_check.outputs.skip_build != 'true' }}
         uses: nick-fields/retry@v3
         with:
           timeout_minutes: 30
@@ -262,7 +296,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
       - name: Upload missing release assets
-        if: ${{ steps.release_check.outputs.skip_build != 'true' }}
+        if: ${{ steps.platform_check.outputs.selected == 'true' &&
+          steps.release_check.outputs.skip_build != 'true' && github.event_name !=
+          'workflow_dispatch' }}
         uses: actions/github-script@v7
         env:
           RELEASE_ID: ${{ steps.release_check.outputs.release_id }}
