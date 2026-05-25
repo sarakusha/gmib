@@ -75,7 +75,7 @@ const configApi = createApi({
             );
           }
         } catch {
-          dispatch(
+          void dispatch(
             configApi.endpoints.getPages.initiate(undefined, {
               subscribe: false,
               forceRefetch: true,
@@ -124,7 +124,7 @@ export const usePage = (id?: string) =>
 const debouncedUpdatePage = createDebouncedAsyncThunk<void, Page, AppThunkConfig>(
   'screenApi/pendingUpdateScreen',
   (page, { dispatch }) => {
-    dispatch(configApi.endpoints.updatePage.initiate(page));
+    void dispatch(configApi.endpoints.updatePage.initiate(page));
   },
   200,
   { selectId: page => page.id, maxWait: 500 },
@@ -139,7 +139,7 @@ export const updatePage =
         if (!prev) throw new Error(`Unknown page id: ${id}`);
         const page = { id, ...(typeof update === 'function' ? update(prev) : prev) };
         pageAdapter.setOne(draft, page);
-        dispatch(debouncedUpdatePage(page));
+        void dispatch(debouncedUpdatePage(page));
       }),
     );
 

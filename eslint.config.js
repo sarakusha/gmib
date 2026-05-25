@@ -22,7 +22,7 @@ module.exports = (async () => {
     },
 
     js.configs.recommended,
-    ...typescriptEslint.configs.recommended,
+    ...typescriptEslint.configs.recommendedTypeChecked,
 
     {
       files: ['**/*.{js,jsx,ts,tsx}'],
@@ -52,6 +52,9 @@ module.exports = (async () => {
         '@typescript-eslint/no-empty-object-type': 'off',
         '@typescript-eslint/no-explicit-any': 'off',
         '@typescript-eslint/no-invalid-void-type': 'off',
+        '@typescript-eslint/no-unsafe-argument': 'off',
+        '@typescript-eslint/no-unsafe-assignment': 'off',
+        '@typescript-eslint/no-unsafe-call': 'off',
         '@typescript-eslint/no-unused-expressions': ['error', { allowShortCircuit: true }],
         '@typescript-eslint/no-unused-vars': [
           'error',
@@ -61,6 +64,9 @@ module.exports = (async () => {
           },
         ],
         '@typescript-eslint/prefer-literal-enum-member': 'off',
+        '@typescript-eslint/require-await': 'off',
+        '@typescript-eslint/restrict-template-expressions': 'off',
+        '@typescript-eslint/unbound-method': 'off',
         '@typescript-eslint/unified-signatures': 'off',
 
         semi: ['error', 'always'],

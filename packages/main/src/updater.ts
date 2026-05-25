@@ -24,8 +24,8 @@ autoUpdater.on('error', error => {
 });
 
 autoUpdater.on('update-available', () => {
-  interactive &&
-    dialog
+  if (interactive) {
+    void dialog
       .showMessageBox({
         type: 'info',
         title: 'Найдено обновление',
@@ -33,14 +33,16 @@ autoUpdater.on('update-available', () => {
         buttons: ['Да', 'Нет'],
       })
       .then(buttonIndex => (buttonIndex.response === 0 ? autoUpdater.downloadUpdate() : []));
+  }
 });
 
 autoUpdater.on('update-not-available', () => {
-  interactive &&
-    dialog.showMessageBox({
+  if (interactive) {
+    void dialog.showMessageBox({
       title: 'Обновления нет',
       message: 'У Вас последняя версия.',
     });
+  }
 });
 
 const quitAndRestart = () => {
@@ -52,7 +54,7 @@ autoUpdater.on('update-downloaded', () => {
   if (interactive) {
     if (localConfig.get('autoUpdate')) quitAndRestart();
     else
-      dialog
+      void dialog
         .showMessageBox({
           title: 'Установка обновления',
           message: 'Обновления загружаются, приложение закроется для обновления...',
@@ -65,7 +67,7 @@ autoUpdater.on('update-downloaded', () => {
 function checkForUpdates(menuItem: MenuItem): void {
   const updater = menuItem;
   updater.enabled = false;
-  autoUpdater.checkForUpdates().then(() => {
+  void autoUpdater.checkForUpdates().then(() => {
     updater.enabled = true;
   });
 }
@@ -94,7 +96,7 @@ export const checkForUpdatesNoInteractive = () =>
     autoUpdater.once('error', onError);
     autoUpdater.once('update-available', available);
     autoUpdater.once('update-not-available', notAvailable);
-    autoUpdater.checkForUpdates();
+    void autoUpdater.checkForUpdates();
   }).finally(() => {
     interactive = true;
   });
@@ -118,7 +120,7 @@ export const updateAndRestart = () =>
     };
     autoUpdater.once('error', onError);
     autoUpdater.once('update-downloaded', downloaded);
-    autoUpdater.downloadUpdate();
+    void autoUpdater.downloadUpdate();
   }).finally(() => {
     interactive = true;
   });

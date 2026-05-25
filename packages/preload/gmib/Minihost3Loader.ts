@@ -107,7 +107,7 @@ export default class Minihost3Loader extends MinihostLoader<Minihost3Info> {
   }
 
   isInvertH(): boolean {
-    return this.device.getRawValue('dirh') || false;
+    return Boolean(this.device.getRawValue('dirh'));
   }
 
   isInvertV(): boolean {

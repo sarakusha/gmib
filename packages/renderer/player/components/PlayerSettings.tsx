@@ -154,7 +154,12 @@ const PlayerSettings: React.FC<{ id?: number }> = ({ id }) => {
                   secondaryTypographyProps={noWrap}
                 />
                 <ListItemSecondaryAction onClick={stopPropagation} onMouseDown={stopPropagation}>
-                  <IconButton size="small" onClick={() => deleteMapping(item.id)}>
+                  <IconButton
+                    size="small"
+                    onClick={() => {
+                      void deleteMapping(item.id);
+                    }}
+                  >
                     <ClearIcon fontSize="inherit" />
                   </IconButton>
                 </ListItemSecondaryAction>

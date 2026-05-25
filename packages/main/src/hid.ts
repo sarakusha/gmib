@@ -54,19 +54,23 @@ const usbListener = (usbDevice: usb.Device): void => {
     VID &&
     usbDevice.deviceDescriptor.idVendor
   )
-    updateHid();
+    void updateHid();
 };
 
 app.once('ready', () => {
-  config.onDidChange('hid.PID', updateHid);
-  config.onDidChange('hid.VID', updateHid);
+  config.onDidChange('hid.PID', () => {
+    void updateHid();
+  });
+  config.onDidChange('hid.VID', () => {
+    void updateHid();
+  });
 
   usb.on('attach', usbListener);
   usb.on('detach', usbListener);
 
-  updateHid();
+  void updateHid();
 });
 
 app.once('quit', () => {
-  if (device) device.close();
+  if (device) void device.close();
 });

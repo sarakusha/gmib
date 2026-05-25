@@ -21,7 +21,11 @@ const isecrets = new Map<string, Buffer>();
 const osecrets = new Map<string, Buffer>();
 
 const toSecret = (res: NullableOptional): Secret => {
-  const { id, secret, created } = removeNull(res);
+  const { id, secret, created } = removeNull(res) as {
+    id: string;
+    secret: string;
+    created?: string;
+  };
   return {
     id,
     secret: Buffer.from(secret, 'base64'),
@@ -84,14 +88,14 @@ export const getRemoteCredentials = async (url: string): Promise<Credentials | u
   }
 };
 
-app.whenReady().then(() => {
+void app.whenReady().then(() => {
   ipcMain.handle('getRemoteCredentials', (_, url) => getRemoteCredentials(url));
   ipcMain.handle(
     'getLocalCredentials',
     (): Credentials => ({ identifier: localConfig.get('identifier'), apiSecret: secret }),
   );
   ipcMain.on('setRemoteSecret', (_, id: string, apiSecret: bigint | null) => {
-    apiSecret && setOutgoingSecret(id, apiSecret);
+    if (apiSecret) void setOutgoingSecret(id, apiSecret);
   });
 });
 

@@ -46,7 +46,7 @@ export const createAppWindow = (
     gmibPreload,
   );
   if (isLocal) {
-    browserWindow.once('ready-to-show', async () => {
+    browserWindow.once('ready-to-show', () => {
       if (!localConfig.get('autostart')) {
         browserWindow.show();
         // The window may freeze from time to time at startup on Windows
@@ -67,8 +67,9 @@ export const createAppWindow = (
       : `http://localhost:${nibusPort + 1}/index.html?${query}`;
   // : new URL(`../renderer/dist/index.html?${query}`, `file://${__dirname}`).toString();
 
-  browserWindow.loadURL(pageUrl).catch(err => {
-    debug(`error while load main window ${pageUrl}: ${err.message}`);
+  browserWindow.loadURL(pageUrl).catch((err: unknown) => {
+    const msg = err instanceof Error ? err.message : String(err);
+    debug(`error while load main window ${pageUrl}: ${msg}`);
   });
   browserWindow.webContents.on('render-process-gone', (event, details) => {
     debug(`<<<<CRASH>>>>: renderer process gone: ${details.reason} (${details.exitCode})`);
@@ -77,7 +78,7 @@ export const createAppWindow = (
       relaunch();
     }
   });
-  registerGmib(browserWindow, { host: address, nibusPort });
+  void registerGmib(browserWindow, { host: address, nibusPort });
   browserWindow.on('close', event => {
     const gmibParams = getAllGmibParams();
     if (

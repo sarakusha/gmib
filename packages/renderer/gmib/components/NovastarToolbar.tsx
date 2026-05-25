@@ -16,7 +16,9 @@ const NovastarToolbar: React.FC = () => {
       className="yu6ODejliBoLEEgGBmOEe rlXINR-cZo5bnISD5TaUT"
       icon={<ReloadIcon />}
       title="Обновить"
-      onClick={() => path && reload(path)}
+      onClick={() => {
+        if (path) void reload(path);
+      }}
       isBusy={novastar && novastar.isBusy}
       disabled={!novastar || !novastar.connected || novastar.isBusy}
     />

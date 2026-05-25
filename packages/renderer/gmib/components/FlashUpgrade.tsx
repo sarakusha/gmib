@@ -75,11 +75,13 @@ const FlashUpgrade: React.FC<Props> = ({ kind, onFlash, hidden = false }) => {
       setFile(firmware);
     }
   }, [ext, kind, setFile]);
-  const flashHandler = useCallback<React.MouseEventHandler>(async () => {
-    const [, needModuleSelect] = KindMap[kind];
-    const [x, y, filename] = await getStatesAsync(setColumn, setRow, setFile);
-    const moduleArgs = needModuleSelect ? [(x << 8) | (y & 0xff), x, y] : [];
-    onFlash(kind, filename, ...moduleArgs);
+  const flashHandler = useCallback<React.MouseEventHandler>(() => {
+    void (async () => {
+      const [, needModuleSelect] = KindMap[kind];
+      const [x, y, filename] = await getStatesAsync(setColumn, setRow, setFile);
+      const moduleArgs = needModuleSelect ? [(x << 8) | (y & 0xff), x, y] : [];
+      onFlash(kind, filename, ...moduleArgs);
+    })();
   }, [kind, onFlash, setColumn, setRow, setFile]);
   const resetHandler = (): void => {
     onFlash(false, undefined, (column << 8) | (row & 0xff), column, row);

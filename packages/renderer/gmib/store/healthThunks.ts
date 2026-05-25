@@ -99,7 +99,7 @@ const updateMaxBrightness =
       aggregations,
       maxBrightness: max < overheatProtection.bottomBound ? undefined : Math.max(brightness, 0),
     };
-    window.config.set('health', health);
+    void window.config.set('health', health);
   };
 
 type GroupedByScreens = {
@@ -248,7 +248,7 @@ const checkTemperature =
     });
     health.timestamp = Date.now();
     await window.config.set('health', health);
-    dispatch(updateBrightness());
+    void dispatch(updateBrightness());
 
     running = false;
     debug('screens overheating check completed');
@@ -261,7 +261,9 @@ const updateOverheatProtection = (): AppThunk => (dispatch, getState) => {
     debug('overheat protection disabled');
   } else if (currentInterval !== interval) {
     clearInterval(monitorTimeout);
-    monitorTimeout = window.setInterval(() => dispatch(checkTemperature()), interval * MINUTE);
+    monitorTimeout = window.setInterval(() => {
+      void dispatch(checkTemperature());
+    }, interval * MINUTE);
     // dispatch(checkTemperature());
     const next = new Date();
     next.setMinutes(next.getMinutes() + interval);

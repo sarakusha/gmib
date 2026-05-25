@@ -21,6 +21,11 @@ import playlistApi, { selectPlaylistById } from './playlists';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:updatePlayer`);
 
+type SocketMessage = {
+  event: string;
+  data: unknown[];
+};
+
 const selectPlaylistData = playlistApi.endpoints.getPlaylists.select();
 
 const getFirstItemFactory =
@@ -67,7 +72,7 @@ const updatePlayer =
         if (isValidItemFactory(getState)(player.playlistId, player.current) === false) {
           player = { ...player, current: getFirstItemFactory(getState)(player.playlistId) };
         }
-        dispatch(debouncedUpdatePlayer(player));
+        void dispatch(debouncedUpdatePlayer(player));
         playerAdapter.setOne(draft, player);
       }),
     );
@@ -114,37 +119,48 @@ export const socketMiddleware: Middleware = api => {
   socket.onopen = () => socket.send(JSON.stringify({ sourceId }));
   socket.onmessage = (e: MessageEvent<string>) => {
     try {
-      const msg = JSON.parse(e.data);
+      const msg: unknown = JSON.parse(e.data);
       if (
         typeof msg === 'object' &&
+        msg !== null &&
         'event' in msg &&
-        typeof msg.event === 'string' &&
+        typeof (msg as SocketMessage).event === 'string' &&
         'data' in msg &&
-        Array.isArray(msg.data) &&
-        (sourceId === msg.data[0] || msg.data[0] === 0)
+        Array.isArray((msg as SocketMessage).data) &&
+        (sourceId === (msg as SocketMessage).data[0] || (msg as SocketMessage).data[0] === 0)
       ) {
-        switch (msg.event) {
+        const { event, data } = msg as SocketMessage;
+        switch (event) {
           case 'setDuration':
-            dispatch(setDuration(msg.data[1]));
+            dispatch(setDuration(data[1] as number));
             break;
           case 'setCurrentPlaylistItem':
             {
-              const [, itemId, mediaId] = msg.data;
-              dispatch(setCurrentPlaylistItem(itemId ? { itemId, mediaId } : undefined));
+              const [, itemId, mediaId] = data;
+              dispatch(
+                setCurrentPlaylistItem(
+                  typeof itemId === 'string'
+                    ? {
+                        itemId,
+                        ...(typeof mediaId === 'string' ? { mediaId } : {}),
+                      }
+                    : undefined,
+                ),
+              );
             }
             break;
           case 'setPosition':
             {
-              const [, position, duration] = msg.data;
+              const [, position, duration] = data;
               if (typeof duration === 'number') dispatch(setDuration(duration));
-              dispatch(setPosition(position));
+              if (typeof position === 'number') dispatch(setPosition(position));
             }
             break;
           case 'setPlaybackState':
-            dispatch(setPlaybackState(msg.data[1]));
+            dispatch(setPlaybackState(data[1] as Parameters<typeof setPlaybackState>[0]));
             break;
           case 'media':
-            dispatch(
+            void dispatch(
               mediaApi.endpoints.getMedia.initiate(undefined, {
                 subscribe: false,
                 forceRefetch: true,
@@ -152,7 +168,7 @@ export const socketMiddleware: Middleware = api => {
             );
             break;
           case 'player':
-            dispatch(
+            void dispatch(
               playerApi.endpoints.getPlayers.initiate(undefined, {
                 subscribe: false,
                 forceRefetch: true,
@@ -160,7 +176,7 @@ export const socketMiddleware: Middleware = api => {
             );
             break;
           case 'playlist':
-            dispatch(
+            void dispatch(
               playlistApi.endpoints.getPlaylists.initiate(undefined, {
                 subscribe: false,
                 forceRefetch: true,
@@ -168,7 +184,7 @@ export const socketMiddleware: Middleware = api => {
             );
             break;
           case 'mapping':
-            dispatch(
+            void dispatch(
               mappingApi.endpoints.getMappings.initiate(undefined, {
                 subscribe: false,
                 forceRefetch: true,

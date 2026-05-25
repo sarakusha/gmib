@@ -140,11 +140,21 @@ const sessions = new Map<string, SRPServerSessionStep1>();
 
 export const mediaRoot = path.join(electronApp.getPath('userData'), 'media');
 
-const resolveMedia = <T>(filename: T): T extends string ? string : T =>
-  (typeof filename === 'string' ? path.resolve(mediaRoot, filename) : filename) as any;
+function resolveMedia(filename: string): string;
+function resolveMedia(filename: string | undefined): string | undefined;
+function resolveMedia(filename: undefined): undefined;
+function resolveMedia(filename: string | undefined): string | undefined {
+  if (typeof filename === 'string') return path.resolve(mediaRoot, filename);
+  return undefined;
+}
 
-const thumbFromName = <T>(filepath: T): T extends string ? string : T =>
-  (typeof filepath === 'string' ? `${filepath}.png` : filepath) as any;
+function thumbFromName(filepath: string): string;
+function thumbFromName(filepath: string | undefined): string | undefined;
+function thumbFromName(filepath: undefined): undefined;
+function thumbFromName(filepath: string | undefined): string | undefined {
+  if (typeof filepath === 'string') return `${filepath}.png`;
+  return undefined;
+}
 
 fs.mkdir(mediaRoot, { recursive: true }, err => {
   if (err) {
@@ -330,17 +340,17 @@ const updateTest = async (scr: Screen, force = false) => {
   testWindow.setPosition(scr.left + display.bounds.x, scr.top + display.bounds.y);
   testWindow.setSize(scr.width, scr.height);
   if (page.userAgent && !contents.userAgent.includes(page.userAgent))
-    machineId.then(mid => {
+    void machineId.then(mid => {
       contents.userAgent = `${contents.userAgent} ${page.userAgent} machineid/${mid}`;
     });
-  needReload &&
-    url &&
-    testWindow.loadURL(url).then(() => testWindow.webContents.insertCSS(hideCursorCSS));
+  if (needReload && url) {
+    void testWindow.loadURL(url).then(() => testWindow.webContents.insertCSS(hideCursorCSS));
+  }
   testWindow.show();
   // debug(`test: ${url}`);
 };
 
-dbReady
+void dbReady
   .then(() => testsDeferred.promise)
   .then(async () => {
     const screens = await getScreens();
@@ -362,10 +372,10 @@ if (!localConfig.get('unsafeMode')) {
   );
 }
 
-getAnnounce().then(announce => {
+void getAnnounce().then(announce => {
   if (announce && typeof announce === 'object' && 'useProxy' in announce) {
     api.use(proxyMiddleware);
-    import(import.meta.env.VITE_ANNOUNCE_PROXY).then(({ default: API }) => {
+    void import(import.meta.env.VITE_ANNOUNCE_PROXY).then(({ default: API }) => {
       api.use(import.meta.env.VITE_ANNOUNCE_PATH, API);
     });
   }
@@ -403,27 +413,31 @@ api.post('/media', (req, res, next) => {
       (mimetype != null && (mimetype.startsWith('image/') || mimetype.startsWith('video/'))) ||
       (name != null && ['.mkv'].includes(path.extname(name))),
   });
-  form.parse(req, async (err, fields, files) => {
-    if (err) {
-      next(err);
-    } else {
-      // debug(JSON.stringify(files));
-      const loaded = (
-        await asyncSerial(
-          Object.values(files)
-            .map(file => (Array.isArray(file) ? file[0] : file))
-            .filter(notEmpty),
-          file =>
-            loadMedia(file).catch(e =>
-              debug(`error while loading ${file.originalFilename}: ${e.message}`),
-            ),
-        )
-      ).filter(notEmpty);
-      debug(`files uploaded: ${JSON.stringify(loaded)}`);
-      getAllMedia().then(result => res.json(result), next);
-      const sourceId = req.headers['x-ni-source-id'];
-      broadcast({ event: 'media', remote: req.ip, ...(sourceId && { sourceId: +sourceId }) });
-    }
+  form.parse(req, (err, fields, files) => {
+    void (async () => {
+      if (err) {
+        next(err);
+      } else {
+        // debug(JSON.stringify(files));
+        const loaded = (
+          await asyncSerial(
+            Object.values(files)
+              .map(file => (Array.isArray(file) ? file[0] : file))
+              .filter(notEmpty),
+            file =>
+              loadMedia(file).catch(e =>
+                debug(
+                  `error while loading ${file.originalFilename}: ${e instanceof Error ? e.message : String(e)}`,
+                ),
+              ),
+          )
+        ).filter(notEmpty);
+        debug(`files uploaded: ${JSON.stringify(loaded)}`);
+        getAllMedia().then(result => res.json(result), next);
+        const sourceId = req.headers['x-ni-source-id'];
+        broadcast({ event: 'media', remote: req.ip, ...(sourceId && { sourceId: +sourceId }) });
+      }
+    })();
   });
 });
 
@@ -443,8 +457,9 @@ api.delete('/media/:md5', async (req, res, next) => {
         fs.unlinkSync(thumbnail);
         debug(`${path.basename(thumbnail)} deleted`);
       }
-    } catch (e: any) {
-      debug(`error while deleting file ${filename}: ${e.message}`);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      debug(`error while deleting file ${filename}: ${message}`);
     }
     getAllMedia().then(result => res.json(result), next);
     const sourceId = req.headers['x-ni-source-id'];
@@ -560,7 +575,7 @@ api.patch('/playlist/:id', async (req, res, next) => {
     }
     let removeId: string | undefined;
     if ('insert' in req.body) {
-      const ids = req.body.insert as string[];
+      const ids = (req.body as { insert: string[] }).insert;
       transaction = await beginTransaction();
       const offset = ((await getLastPlaylistItemPos(id)) ?? -1) + 1;
       await Promise.all(
@@ -568,7 +583,8 @@ api.patch('/playlist/:id', async (req, res, next) => {
       );
       transaction = await commitTransaction();
     } else if ('remove' in req.body) {
-      removeId = req.body.remove as string;
+      const body = req.body as { remove: string };
+      removeId = body.remove;
       await deletePlaylistItemById(removeId);
     }
     const items = await getPlaylistItems(id);
@@ -612,7 +628,7 @@ api.post('/screen', async (req, res, next) => {
   try {
     const { lastID } = await insertScreen(await uniqueScreenName(req.body));
     const scr = await loadScreen(lastID);
-    scr && updateTest(scr);
+    if (scr) void updateTest(scr);
     res.json(scr);
     broadcast({ event: 'screen', remote: req.ip });
   } catch (e) {
@@ -653,7 +669,7 @@ api.put('/screen', async (req, res, next) => {
     }
     await deleteExtraAddresses(props.id, addresses);
     const result = await loadScreen(props.id);
-    result && updateTest(result, true);
+    if (result) void updateTest(result, true);
     res.json(result);
     broadcast({ event: 'screen', remote: req.ip });
   } catch (e) {
@@ -832,10 +848,20 @@ api.post('/login/:id', async (req, res) => {
   const { id } = req.params;
   const handshake = sessions.get(id);
   if (!handshake) return res.sendStatus(404);
-  const { salt, verifier } = req.body;
+  const {
+    salt,
+    verifier,
+    A: rawA,
+    M1: rawM1,
+  } = req.body as {
+    salt?: string;
+    verifier?: string;
+    A: string;
+    M1: string;
+  };
   try {
-    const A = BigInt(req.body.A);
-    const M1 = BigInt(req.body.M1);
+    const A = BigInt(rawA);
+    const M1 = BigInt(rawM1);
     const M2 = await handshake.step2(A, M1);
     if (salt && verifier) {
       localConfig.set('salt', salt);
@@ -945,7 +971,7 @@ api.post('/relaunch', (req, res) => {
 // })
 
 api.get('/pages', (req, res, next) => {
-  testsDeferred.promise.finally(() => {
+  void testsDeferred.promise.finally(() => {
     getPages().then(pages => res.json(pages), next);
   });
 });

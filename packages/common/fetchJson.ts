@@ -25,7 +25,8 @@ export default async function fetchJson<JSON = unknown>(
   // response.ok is true when res.status is 2xx
   // https://developer.mozilla.org/en-US/docs/Web/API/Response/ok
   if (response.ok) {
-    return response.json();
+    const data = await response.json();
+    return data as JSON;
   }
 
   throw new FetchError(await response.text(), response);

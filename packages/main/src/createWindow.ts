@@ -30,13 +30,14 @@ const createWindow = (title: string, preload: string, random = true): BrowserWin
     },
   });
 
-  random &&
-    app.whenReady().then(() => {
+  if (random) {
+    void app.whenReady().then(() => {
       const display = screen.getPrimaryDisplay().workAreaSize;
       const x = Math.round(Math.random() * Math.max(0, display.width - size.width));
       const y = Math.round(Math.random() * Math.max(0, display.height - size.height));
       browserWindow.setPosition(x, y);
     });
+  }
 
   // windows.add(browserWindow);
   // browserWindow.on('closed', () => {

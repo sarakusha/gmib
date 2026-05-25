@@ -18,7 +18,7 @@ const toPlaylist = (res: NullableOptional): Omit<Playlist, 'items'> => {
 
 const toPlaylistItem = (res: NullableOptional): PlaylistItem => {
   const { media_md5: md5, flags, start, duration, id } = removeNull(res);
-  return { md5, flags, start, duration, id } as PlaylistItem;
+  return { md5, flags, start, duration, id };
 };
 
 export const getPlaylist = promisifyGet(
@@ -104,7 +104,7 @@ export const deleteAllPlaylistItems = promisifyRun(
 
 export const existsPlaylistName = promisifyGet(
   'SELECT 1 FROM playlist WHERE name=? AND id != ? LIMIT 1',
-  (name: string, id = 0) => [name, id],
+  (name: string, id = 0) => [name, id as number],
   result => !!result,
 );
 

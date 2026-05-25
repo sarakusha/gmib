@@ -118,8 +118,10 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
       const controller = new SafeScreenConfigurator(session);
       this.novastarControls.set(address, controller);
       this.emit('add', { path: address, isBusy: controller.isBusy, connected: true });
-      this.reload(address, true);
-      setTimeout(() => this.updateState(address), 30000).unref();
+      void this.reload(address, true);
+      setTimeout(() => {
+        void this.updateState(address);
+      }, 30000).unref();
     }
   };
 
@@ -155,7 +157,9 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
     if (attempts <= -5) attempts = 1;
     this.sensors.set(address, attempts);
 
-    setTimeout(() => this.updateState(address), 30000).unref();
+    setTimeout(() => {
+      void this.updateState(address);
+    }, 30000).unref();
   }
 
   async getNovastar(address: string, first = false): Promise<Novastar | undefined> {
@@ -177,7 +181,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
         });
       }
       const screens = controller.screens.map(info => ({ info }));
-      series(controller.screens, async (info, index) => {
+      void series(controller.screens, async (info, index) => {
         const screen: Screen = {
           info,
           mode: await controller.ReadFirstDisplayMode(index),
@@ -246,20 +250,24 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
     this.#unknownPath.delete(screenId.path);
     if (await controller.WriteBrightness(percent, screenId.screen)) {
       clearTimeout(controller.timeout);
-      controller.timeout = setTimeout(async () => {
-        const screens =
-          screenId.screen === -1 ? controller.screens.map((_, index) => index) : [screenId.screen];
-        await series(screens, async screen => {
-          const value = await controller.ReadFirstRGBVBrightness(screen);
-          // debug(`readRGBV: ${value}`);
-          if (value) this.emit('screen', { path: screenId.path, screen }, 'rgbv', value);
-        });
+      controller.timeout = setTimeout(() => {
+        void (async () => {
+          const screens =
+            screenId.screen === -1
+              ? controller.screens.map((_, index) => index)
+              : [screenId.screen];
+          await series(screens, async screen => {
+            const value = await controller.ReadFirstRGBVBrightness(screen);
+            // debug(`readRGBV: ${value}`);
+            if (value) this.emit('screen', { path: screenId.path, screen }, 'rgbv', value);
+          });
+        })();
       }, 1000);
     }
   }
 
   openBroadcastDetector() {
-    this.closeBroadcastDetector().then(() => {
+    void this.closeBroadcastDetector().then(() => {
       const broadcastDetector = dgram.createSocket('udp4');
       broadcastDetector.bind(UDP_PORT, () => {
         // debug(`listen on ${UDP_PORT}`);
@@ -319,7 +327,9 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
           }
         });
       } finally {
-        this.finder = setTimeout(updateDevices, interval);
+        this.finder = setTimeout(() => {
+          void updateDevices();
+        }, interval);
       }
     };
 
@@ -327,7 +337,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
     net.on('disconnect', this.disconnectHandler);
     net.on('close', this.closeHandler);
 
-    updateDevices();
+    void updateDevices();
     this.emit('open');
 
     return true;
@@ -339,7 +349,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
     clearTimeout(this.finder);
     [...this.novastarControls.values()].forEach(control => control.session.close());
     this.novastarControls.clear();
-    this.closeBroadcastDetector();
+    void this.closeBroadcastDetector();
     await delay(0);
     this.emit('close');
     return true;
@@ -362,27 +372,33 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
       if (this.novastarControls.has(id)) resolve();
       const socket = connect(port, host, () => {
         socket.write(path);
-        setTimeout(async () => {
-          const connection = new Connection(socket);
-          const ctrl = new SafeScreenConfigurator(connection);
-          ctrl.isSerial = true;
-          // console.log('SESSION', Object.keys(ctrl.session));
-          this.novastarControls.get(id)?.session.close();
-          this.novastarControls.set(id, ctrl);
-          this.emit('add', { path: id, isBusy: ctrl.isBusy, connected: true });
-          setTimeout(() => this.reload(id, true), 1000);
-          setTimeout(() => this.updateState(id), 30000).unref();
-          socket.once('close', () => {
-            connection.close();
-          });
-          connection.once('close', () => {
-            if (this.novastarControls.get(id) === ctrl) {
-              this.emit('remove', id);
-              this.novastarControls.delete(id);
-            }
-            if (!socket.destroyed) socket.destroy();
-          });
-          resolve();
+        setTimeout(() => {
+          void (async () => {
+            const connection = new Connection(socket);
+            const ctrl = new SafeScreenConfigurator(connection);
+            ctrl.isSerial = true;
+            // console.log('SESSION', Object.keys(ctrl.session));
+            this.novastarControls.get(id)?.session.close();
+            this.novastarControls.set(id, ctrl);
+            this.emit('add', { path: id, isBusy: ctrl.isBusy, connected: true });
+            setTimeout(() => {
+              void this.reload(id, true);
+            }, 1000);
+            setTimeout(() => {
+              void this.updateState(id);
+            }, 30000).unref();
+            socket.once('close', () => {
+              connection.close();
+            });
+            connection.once('close', () => {
+              if (this.novastarControls.get(id) === ctrl) {
+                this.emit('remove', id);
+                this.novastarControls.delete(id);
+              }
+              if (!socket.destroyed) socket.destroy();
+            });
+            resolve();
+          })();
         }, 100);
       });
       socket.once('error', reject);

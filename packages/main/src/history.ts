@@ -122,10 +122,12 @@ ipcMain.on('sensors', (_, data: SensorsData) => {
 });
 
 config.onDidChange('brightness', brightness => {
-  if (brightness !== undefined) insertBrightness(brightness);
+  if (brightness !== undefined) void insertBrightness(brightness);
 });
 
-ipcMain.on('addTelemetry', (_, params: TelemetryOpts) => insertTelemetry(params));
+ipcMain.on('addTelemetry', (_, params: TelemetryOpts) => {
+  void insertTelemetry(params);
+});
 
 const removeOutdated = () => {
   const date = new Date();

@@ -29,7 +29,7 @@ const mappingApi = createApi({
         body: mapping,
       }),
       onQueryStarted(_, { dispatch, queryFulfilled }) {
-        queryFulfilled.then(({ data: mapping }) => {
+        void queryFulfilled.then(({ data: mapping }) => {
           dispatch(
             mappingApi.util.updateQueryData('getMappings', undefined, draft => {
               mappingAdapter.setOne(draft, mapping);

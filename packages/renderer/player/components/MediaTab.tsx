@@ -38,11 +38,32 @@ const MediaTab: React.FC = () => {
     (md5: string) => {
       deleteMedia(md5)
         .unwrap()
-        .catch(error => {
+        .catch((error: unknown) => {
+          const isObject = typeof error === 'object' && error !== null;
+          const isConstraintError =
+            isObject &&
+            'status' in error &&
+            error.status === 409 &&
+            'data' in error &&
+            typeof error.data === 'object' &&
+            error.data !== null &&
+            'code' in error.data &&
+            error.data.code === 'SQLITE_CONSTRAINT';
+
+          const message =
+            isObject &&
+              'data' in error &&
+              typeof error.data === 'object' &&
+              error.data !== null &&
+              'message' in error.data &&
+              typeof error.data.message === 'string'
+              ? error.data.message
+              : 'Неизвестная ошибка';
+
           enqueueSnackbar(
-            error.status === 409 && error.data?.code === 'SQLITE_CONSTRAINT'
+            isConstraintError
               ? 'Нельзя удалить медиа, если оно включено в плейлист'
-              : `Ошибка при удалении: ${error.data?.message}`,
+              : `Ошибка при удалении: ${message}`,
             {
               variant: 'error',
               preventDuplicate: true,
@@ -77,7 +98,7 @@ const MediaTab: React.FC = () => {
         );
       },
       drop(item) {
-        upload(item.files);
+        void upload(item.files);
       },
       collect(monitor) {
         return {

@@ -20,5 +20,5 @@ export default function extendStyled<
 >(component: C, additionalProps: P): CreateStyledComponent<ExtendProps<C, P>, {}, {}, Theme> {
   return styled(component, {
     shouldForwardProp: prop => !Object.prototype.hasOwnProperty.call(additionalProps, prop),
-  }) as any;
+  }) as CreateStyledComponent<ExtendProps<C, P>, {}, {}, Theme>;
 }

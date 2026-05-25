@@ -180,8 +180,29 @@ export const noop = (): void => {};
 
 export type Writable<T> = { -readonly [P in keyof T]: T[P] };
 
-export const toErrorMessage = (e: unknown): string =>
-  e == null ? 'Unknown error' : e instanceof Error ? e.message : `${e}`;
+export const toErrorMessage = (e: unknown): string => {
+  if (e == null) return 'Unknown error';
+  if (e instanceof Error) return e.message;
+
+  switch (typeof e) {
+    case 'string':
+      return e;
+    case 'number':
+    case 'boolean':
+    case 'bigint':
+    case 'symbol':
+      return String(e);
+    default: {
+      try {
+        const json = JSON.stringify(e);
+        if (json) return json;
+      } catch {
+        // Fall through to a stable object tag.
+      }
+      return Object.prototype.toString.call(e);
+    }
+  }
+};
 
 export function minmax(max: number, value: number): number;
 export function minmax(min: number, max: number, value: number): number;

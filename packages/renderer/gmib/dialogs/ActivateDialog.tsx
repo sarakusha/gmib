@@ -13,8 +13,8 @@ import { selectHostName, selectIsActivateDialogOpen } from '../store/selectors';
 const AutoFillKey = ({ field = 'key' }: { field?: string }) => {
   const { setFieldValue } = useFormikContext();
   React.useEffect(() => {
-    navigator.clipboard.readText().then(key => {
-      if (charValidator(key)) setFieldValue(field, key);
+    void navigator.clipboard.readText().then(key => {
+      if (charValidator(key)) void setFieldValue(field, key);
       // else window.license().then(lic => setFieldValue(field, lic.key));
     });
   }, [field, setFieldValue]);

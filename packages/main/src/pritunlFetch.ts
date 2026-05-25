@@ -12,7 +12,12 @@ type PritunlQuery = {
   data?: object;
 };
 
-const pritunlFetch = async ({ path, method = 'GET', query, data }: PritunlQuery) => {
+const pritunlFetch = async ({
+  path,
+  method = 'GET',
+  query,
+  data,
+}: PritunlQuery): Promise<undefined | Record<string, unknown>> => {
   const apiToken = process.env.PRI_API_TOKEN;
   const apiSecret = process.env.PRI_API_SECRET;
   const baseUrl = process.env.PRITUNL_URL;
@@ -36,7 +41,7 @@ const pritunlFetch = async ({ path, method = 'GET', query, data }: PritunlQuery)
     body: data && JSON.stringify(data),
   });
   if (!res.ok) debug(`error while pritunl request: ${await res.text()}`);
-  return res.ok ? res.json() : undefined;
+  return res.ok ? (res.json() as Promise<Record<string, unknown>>) : undefined;
 };
 
 export default pritunlFetch;

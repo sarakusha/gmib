@@ -44,7 +44,7 @@ import {
   selectSpline,
 } from './selectors';
 
-import type { AppThunkConfig, RootState } from '.';
+import type { AppThunkConfig } from '.';
 
 export const BRIGHTNESS_INTERVAL = 60 * 1000;
 
@@ -104,7 +104,7 @@ export const updateBrightness = createDebouncedAsyncThunk<
             else if (useExternalKnob && hidBrightness != null) desired = hidBrightness;
             const value = Math.min(desired, isValid ? (scr[screenId]?.maxBrightness ?? 100) : 100);
             return [
-              ...serials.map(path => [path as string, value] as const),
+              ...serials.map(path => [path, value] as const),
               ...addresses
                 .map(address => parseLocation(address)?.address ?? address)
                 .map(address => [address, value] as const),
@@ -144,14 +144,14 @@ startAppListening({
   actionCreator: setBrightness,
   // matcher: isAnyOf(setBrightness, updateConfig),
   effect(_, { dispatch }) {
-    dispatch(updateBrightness());
+    void dispatch(updateBrightness());
   },
 });
 
 const calculateBrightness = createAsyncThunk<void, void, AppThunkConfig>(
   'config/calculateBrightness',
   (_, { dispatch, getState }) => {
-    const state = getState() as RootState;
+    const state = getState();
     const autobrightness = selectAutobrightness(state);
     if (!autobrightness) return;
     const spline = selectSpline(state);
@@ -325,10 +325,9 @@ if (!isRemoteSession) {
         window.clearInterval(brightnessTimer);
         brightnessTimer = 0;
       } else if (!brightnessTimer) {
-        brightnessTimer = window.setInterval(
-          () => dispatch(calculateBrightness()),
-          BRIGHTNESS_INTERVAL,
-        );
+        brightnessTimer = window.setInterval(() => {
+          void dispatch(calculateBrightness());
+        }, BRIGHTNESS_INTERVAL);
       }
     },
   });
@@ -339,7 +338,7 @@ if (!isRemoteSession) {
 startAppListening({
   actionCreator: invalidateBrightness,
   effect({ payload: screenId }, { dispatch }) {
-    dispatch(updateBrightness(screenId));
+    void dispatch(updateBrightness(screenId));
   },
 });
 
@@ -356,8 +355,8 @@ startAppListening({
   effect(_, { getState, dispatch }) {
     const state = getState();
     const { data } = selectNovastarData(state);
-    let ids = selectDeviceIds(state) as string[];
-    if (ids.length === 0 && data) ids = (data ? selectNovastarIds(data) : []) as string[];
+    let ids = selectDeviceIds(state);
+    if (ids.length === 0 && data) ids = data ? selectNovastarIds(data) : [];
     const [id] = ids;
     id && dispatch(setCurrentDevice(id));
   },
@@ -370,6 +369,6 @@ startAppListening({
     if (!screensData) return;
     const screens = selectScreens(screensData);
     const ids = screens.filter(screen => screen.useExternalKnob).map(screen => screen.id);
-    if (ids.length) dispatch(updateBrightness(ids));
+    if (ids.length) void dispatch(updateBrightness(ids));
   },
 });

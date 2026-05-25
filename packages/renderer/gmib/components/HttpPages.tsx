@@ -119,7 +119,10 @@ const HttpPages: React.FC = () => {
                     edge="end"
                     aria-label="remove"
                     size="small"
-                    onClick={e => (e.shiftKey ? deletePage(id) : showAlert())}
+                    onClick={e => {
+                      if (e.shiftKey) void deletePage(id);
+                      else showAlert();
+                    }}
                     color="secondary"
                     title="Удалить"
                   >
@@ -132,7 +135,9 @@ const HttpPages: React.FC = () => {
           );
         })}
         <ListItemButton
-          onClick={addPageHandler}
+          onClick={() => {
+            void addPageHandler();
+          }}
           className="rlXINR-cZo5bnISD5TaUT CG7cBydXFzf6qGSi-xBj8 MeE8KHrK9KuXZe0HnW47V"
         >
           <ListItemIcon>

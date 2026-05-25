@@ -50,7 +50,7 @@ const tryCreateChannels = () => {
 //   }
 // };
 
-app.whenReady().then(() => {
+void app.whenReady().then(() => {
   // ipcMain.on('request-screen-channel', async (event, screenId: number) =>
   //   createScreenChannel(event.senderFrame, screenId),
   // );

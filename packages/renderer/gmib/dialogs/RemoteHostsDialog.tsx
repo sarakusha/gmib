@@ -95,7 +95,7 @@ const RemoteHostsDialog: React.FC<RemoteHostsDialogProps> = ({
       port: +port,
       name,
     }));
-    window.config.set('hosts', valid);
+    void window.config.set('hosts', valid);
     onClose();
   };
   const cancelHandler = onClose;
@@ -115,7 +115,7 @@ const RemoteHostsDialog: React.FC<RemoteHostsDialogProps> = ({
       );
       setChanged(false);
     };
-    window.config.get('hosts').then(updateHosts);
+    void window.config.get('hosts').then(updateHosts);
   }, [open]);
   const refLast = useRef<HTMLDivElement>(null);
 

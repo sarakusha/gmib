@@ -66,7 +66,7 @@ const playerSubmenu = async (params: GmibWindowParams): Promise<MenuItemConstruc
     return players.map<MenuItemConstructorOptions>(({ id, name }) => ({
       label: name ?? `player#${id}`,
       click: () => {
-        openPlayer(id, { gmibParams: params });
+        void openPlayer(id, { gmibParams: params });
       },
     }));
   } catch (error) {
@@ -129,24 +129,26 @@ const remoteMenu = (params?: WindowParams): AppMenuItem | undefined => {
           {
             label: 'Автозапуск',
             type: 'checkbox',
-            click: async () => {
-              const value = !params.autostart;
-              try {
-                const res = await authRequest({
-                  api: '/autostart',
-                  method: 'POST',
-                  host: params.host,
-                  port: params.nibusPort + 1,
-                  body: { value },
-                });
-                if (res?.ok) {
-                  params.update({ autostart: value });
+            click: () => {
+              void (async () => {
+                const value = !params.autostart;
+                try {
+                  const res = await authRequest({
+                    api: '/autostart',
+                    method: 'POST',
+                    host: params.host,
+                    port: params.nibusPort + 1,
+                    body: { value },
+                  });
+                  if (res?.ok) {
+                    params.update({ autostart: value });
 
-                  updateMenu();
+                    updateMenu();
+                  }
+                } catch (e) {
+                  console.error(`error while fetch: ${e}`);
                 }
-              } catch (e) {
-                console.error(`error while fetch: ${e}`);
-              }
+              })();
             },
             checked: params.autostart,
           },
@@ -216,7 +218,9 @@ const helpMenu = async (params?: WindowParams): Promise<AppMenuItem> => {
         : []),
       {
         label: 'Все версии',
-        click: () => shell.openExternal('https://app.nata-info.ru/gmib/releases'),
+        click: () => {
+          void shell.openExternal('https://app.nata-info.ru/gmib/releases');
+        },
       },
       {
         label: 'Проверить обновления',
@@ -232,7 +236,7 @@ const helpMenu = async (params?: WindowParams): Promise<AppMenuItem> => {
                 });
                 if (!resp) return;
                 if (resp.ok) {
-                  dialog.showMessageBox({
+                  void dialog.showMessageBox({
                     title: 'Обновление установлено',
                     message: 'Программа перезапущена',
                   });
@@ -250,7 +254,7 @@ const helpMenu = async (params?: WindowParams): Promise<AppMenuItem> => {
               if (res.ok) {
                 const info = (await res.json()) as undefined | UpdateInfo;
                 if (info) {
-                  dialog
+                  void dialog
                     .showMessageBox({
                       type: 'info',
                       title: 'Найдено обновление',
@@ -258,10 +262,10 @@ const helpMenu = async (params?: WindowParams): Promise<AppMenuItem> => {
                       buttons: ['Установить', 'Не сейчас'],
                     })
                     .then(buttonIndex => {
-                      if (buttonIndex.response === 0) updateAndRestart();
+                      if (buttonIndex.response === 0) void updateAndRestart();
                     });
                 } else {
-                  dialog.showMessageBox({
+                  void dialog.showMessageBox({
                     title: 'Обновления не найдены',
                     message: 'Установлена последняя версия',
                   });
@@ -534,6 +538,6 @@ localConfig.onDidChange('autostart', updateMenu);
 mdnsBrowser.on('up', updateMenu);
 mdnsBrowser.on('down', updateMenu);
 
-dbReady.then(hasPlayers).then(async res => res || (await createNewPlayer('Плеер')));
+void dbReady.then(hasPlayers).then(async res => res || (await createNewPlayer('Плеер')));
 
 export default updateMenu;

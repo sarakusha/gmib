@@ -52,11 +52,11 @@ const PlaylistsToolbar: React.FC<Props> = ({ size }) => {
         <IconButton
           size={size}
           color="inherit"
-          onClick={() =>
-            create({ name: 'Новый плейлист', flags: 0 }).then(res => {
+          onClick={() => {
+            void create({ name: 'Новый плейлист', flags: 0 }).then(res => {
               'data' in res && res.data && dispatch(setCurrentPlaylist(res.data.id));
-            })
-          }
+            });
+          }}
           disabled={empty}
         >
           <InsertDriveFileIcon fontSize="inherit" />
@@ -68,13 +68,15 @@ const PlaylistsToolbar: React.FC<Props> = ({ size }) => {
             size={size}
             color="inherit"
             disabled={!currentPlaylist || empty}
-            onClick={async () => {
+            onClick={() => {
               if (currentPlaylist) {
-                const { id: _, creationTime: __, ...copy } = currentPlaylist;
-                const res = await create(copy);
-                if ('data' in res && res.data) {
-                  dispatch(setCurrentPlaylist(res.data.id));
-                }
+                void (async () => {
+                  const { id: _, creationTime: __, ...copy } = currentPlaylist;
+                  const res = await create(copy);
+                  if ('data' in res && res.data) {
+                    dispatch(setCurrentPlaylist(res.data.id));
+                  }
+                })();
               }
             }}
           >
@@ -88,15 +90,15 @@ const PlaylistsToolbar: React.FC<Props> = ({ size }) => {
             color="inherit"
             disabled={!currentPlaylist || empty}
             size={size}
-            onClick={() =>
-              dispatch(
+            onClick={() => {
+              void dispatch(
                 updatePlayer(sourceId, prev => ({
                   ...prev,
                   playlistId: current,
                   current: undefined,
                 })),
-              )
-            }
+              );
+            }}
           >
             <OndemandVideoIcon fontSize="inherit" />
           </IconButton>
@@ -108,13 +110,15 @@ const PlaylistsToolbar: React.FC<Props> = ({ size }) => {
             size={size}
             color="inherit"
             disabled={!current}
-            onClick={async e => {
+            onClick={e => {
               if (!e.shiftKey) showAlert();
               else if (current) {
-                const index = findIndex(playlists, { id: current });
-                const near = index > 0 ? index - 1 : 1;
-                dispatch(setCurrentPlaylist(playlists[near]?.id));
-                remove(current);
+                void (async () => {
+                  const index = findIndex(playlists, { id: current });
+                  const near = index > 0 ? index - 1 : 1;
+                  dispatch(setCurrentPlaylist(playlists[near]?.id));
+                  void remove(current);
+                })();
               }
             }}
           >

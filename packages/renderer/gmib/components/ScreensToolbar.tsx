@@ -64,7 +64,9 @@ const ScreensToolbar: React.FC = () => {
         size="large"
         disabled={!screen?.test}
         color="inherit"
-        onClick={() => screenId && reload(screenId)}
+        onClick={() => {
+          if (screenId) void reload(screenId);
+        }}
       >
         <Refresh />
       </IconButton>

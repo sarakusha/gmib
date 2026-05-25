@@ -67,7 +67,7 @@ const Screens: React.FC = () => {
     e => {
       e.stopPropagation();
       if (e.shiftKey) {
-        removeScreen(id);
+        void removeScreen(id);
       } else {
         enqueueSnackbar('Удерживайте клавишу Shift, чтобы удалить безвозвратно', {
           variant: 'info',
@@ -118,7 +118,9 @@ const Screens: React.FC = () => {
               icon={<AddToQueue color={readonly || invalidState ? 'inherit' : 'secondary'} />}
               sx={{ flexGrow: 0, minWidth: 48 }}
               // textColor="secondary"
-              onClick={() => createScreen()}
+              onClick={() => {
+                void createScreen();
+              }}
               title="Добавить экран"
               value={-1}
               disabled={readonly || invalidState}

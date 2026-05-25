@@ -107,12 +107,12 @@ const migratePages = async (): Promise<void> => {
 };
 
 const updateTests = (): void => {
-  updateTestsImpl()
-    .catch(err => debug(`error while update tests ${err.message}`))
+  void updateTestsImpl()
+    .catch(err => debug(`error while update tests ${err instanceof Error ? err.message : String(err)}`))
     .then(migratePages);
 };
 
-dbReady.then(updateTests);
+void dbReady.then(updateTests);
 
 // config.onDidChange('pages', newValue => {
 //   if (newValue?.some(({ permanent }) => permanent)) return;

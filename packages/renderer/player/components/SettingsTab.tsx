@@ -124,7 +124,7 @@ const SettingsTab: React.FC = () => {
     dispatch(setSettingsNode(nodeId));
   };
   const deleteHandler = (id: number) => (e: React.MouseEvent<HTMLElement>) => {
-    if (e.shiftKey) deletePlayer(id);
+    if (e.shiftKey) void deletePlayer(id);
     else showAlert();
   };
   const [expanded, setExpanded] = React.useState<string[]>([]);

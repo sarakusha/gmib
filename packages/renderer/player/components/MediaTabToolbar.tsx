@@ -57,7 +57,9 @@ const MediaTabToolbar: React.FC<Props> = ({ size }) => {
         <div>
           <UploadButton
             size={size}
-            onChange={event => event.target.files && upload(event.target.files)}
+            onChange={event => {
+              if (event.target.files) void upload(event.target.files);
+            }}
           />
         </div>
       </Tooltip>
@@ -67,7 +69,13 @@ const MediaTabToolbar: React.FC<Props> = ({ size }) => {
         </IconButton>
       </Tooltip>
       <Tooltip title="Обновить">
-        <IconButton size={size} color="inherit" onClick={refetch}>
+        <IconButton
+          size={size}
+          color="inherit"
+          onClick={() => {
+            void refetch();
+          }}
+        >
           <CachedIcon fontSize="inherit" />
         </IconButton>
       </Tooltip>

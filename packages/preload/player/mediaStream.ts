@@ -46,11 +46,11 @@ const playNextSource = () => {
     currentSource = source;
     nextSource = undefined;
     ipcDispatch(setDuration(source.duration));
-    videoStream.add(source.readable).then(playNextSource);
+    void videoStream.add(source.readable).then(playNextSource);
     if (player.current !== itemId) {
       ipcDispatch(setCurrentPlaylistItem(itemId ? { itemId, mediaId } : undefined));
     } else {
-      update();
+      void update();
     }
   }
 };
@@ -131,9 +131,10 @@ const update = async () => {
           duration: 500,
         },
         mediaId: currentItem.md5,
-        onMessage: ({ data }) => {
-          if (typeof data === 'object' && 'duration' in data) {
-            ipcDispatch(setDuration(data.duration));
+        onMessage: ({ data }: { data: unknown }) => {
+          if (data && typeof data === 'object' && 'duration' in data) {
+            const dur = data.duration;
+            if (typeof dur === 'number') ipcDispatch(setDuration(dur));
           }
         },
       });
@@ -143,7 +144,7 @@ const update = async () => {
       } else {
         currentSource = videoSource;
         // videoSource.options.fade?.disableOut = true;
-        videoStream.add(videoSource.readable).then(playNextSource);
+        void videoStream.add(videoSource.readable).then(playNextSource);
         // eslint-disable-next-line no-useless-assignment
         delay = 1000;
       }
@@ -178,7 +179,7 @@ const initialize = async () => {
   });
   videoStream = mergeStreams<VideoFrame>();
   const trackGenerator = new MediaStreamTrackGenerator({ kind: 'video' });
-  videoStream.pipeTo(trackGenerator.writable);
+  void videoStream.pipeTo(trackGenerator.writable);
   stream.addTrack(trackGenerator);
   streamReady.resolve();
   player = await ipcRenderer.invoke('getPlayer', sourceId);
@@ -186,32 +187,34 @@ const initialize = async () => {
     playlist = await ipcRenderer.invoke('getPlaylist', player.playlistId);
     if (player.autoPlay) playbackState = 'playing';
   }
-  update();
+  void update();
 };
 
-initialize();
+void initialize();
 
-ipcRenderer.on('player', async (_, value: Player) => {
-  player = value;
-  playlist = player.playlistId
-    ? await ipcRenderer.invoke('getPlaylist', player.playlistId)
-    : undefined;
-  const state: 'paused' | 'none' = playlist?.items.length ? 'paused' : 'none';
-  if (player.autoPlay !== (playbackState === 'playing')) {
-    playbackState = player.autoPlay ? 'playing' : state;
-  }
-  update();
+ipcRenderer.on('player', (_, value: Player) => {
+  void (async () => {
+    player = value;
+    playlist = player.playlistId
+      ? await ipcRenderer.invoke('getPlaylist', player.playlistId)
+      : undefined;
+    const state: 'paused' | 'none' = playlist?.items.length ? 'paused' : 'none';
+    if (player.autoPlay !== (playbackState === 'playing')) {
+      playbackState = player.autoPlay ? 'playing' : state;
+    }
+    void update();
+  })();
 });
 
 ipcRenderer.on('updatePlaylist', (_, updatedPlaylist) => {
   playlist = updatedPlaylist;
-  update();
+  void update();
 });
 
 ipcRenderer.on('stop', () => {
   if (playbackState !== 'none') {
     playbackState = 'none';
-    update();
+    void update();
   }
   const { duration = 0 } = currentSource ?? {};
   ipcDispatch(setDuration(duration));
@@ -219,76 +222,78 @@ ipcRenderer.on('stop', () => {
 
 const peers = new Map<string, RTCPeerConnection>();
 
-ipcRenderer.on('socket', async (_, { id, ...msg }: WithWebSocketKey<RtcMessage>) => {
-  if (msg.sourceId !== sourceId) return;
-  switch (msg.event) {
-    case 'request':
-      try {
-        const pc = new RTCPeerConnection();
-        peers.set(id, pc);
+ipcRenderer.on('socket', (_, { id, ...msg }: WithWebSocketKey<RtcMessage>) => {
+  void (async () => {
+    if (msg.sourceId !== sourceId) return;
+    switch (msg.event) {
+      case 'request':
+        try {
+          const pc = new RTCPeerConnection();
+          peers.set(id, pc);
 
-        pc.onconnectionstatechange = () => {
-          if (['closed', 'failed'].includes(pc.connectionState)) peers.delete(id);
-        };
+          pc.onconnectionstatechange = () => {
+            if (['closed', 'failed'].includes(pc.connectionState)) peers.delete(id);
+          };
 
-        pc.onicecandidate = e => {
-          const { candidate } = e;
-          if (!candidate) return;
-          const candidateMsg: WithWebSocketKey<CandidateMessage> = {
+          pc.onicecandidate = e => {
+            const { candidate } = e;
+            if (!candidate) return;
+            const candidateMsg: WithWebSocketKey<CandidateMessage> = {
+              id,
+              event: 'candidate',
+              candidate: candidate.toJSON(),
+              sourceId,
+              sourceType: 'player',
+            };
+            void ipcRenderer.invoke('socket', candidateMsg);
+          };
+          await streamReady.promise;
+          stream.getVideoTracks().forEach(track => {
+            const sender = pc.addTrack(track, stream);
+            const updateParams = () => {
+              const params = sender.getParameters();
+              if (!params.encodings || params.encodings.length === 0) setTimeout(updateParams, 10);
+              else {
+                // params.encodings[0].maxBitrate = 128000;
+                // params.encodings[0].maxFramerate = 1;
+                void sender.setParameters(params);
+              }
+            };
+            updateParams();
+          });
+
+          const offer = await pc.createOffer();
+          const offerMsg: WithWebSocketKey<OfferMessage> = {
             id,
-            event: 'candidate',
-            candidate: candidate.toJSON(),
+            event: 'offer',
+            desc: JSON.parse(JSON.stringify(offer)),
             sourceId,
             sourceType: 'player',
           };
-          ipcRenderer.invoke('socket', candidateMsg);
-        };
-        await streamReady.promise;
-        stream.getVideoTracks().forEach(track => {
-          const sender = pc.addTrack(track, stream);
-          const updateParams = () => {
-            const params = sender.getParameters();
-            if (!params.encodings || params.encodings.length === 0) setTimeout(updateParams, 10);
-            else {
-              // params.encodings[0].maxBitrate = 128000;
-              // params.encodings[0].maxFramerate = 1;
-              sender.setParameters(params);
-            }
-          };
-          updateParams();
-        });
-
-        const offer = await pc.createOffer();
-        const offerMsg: WithWebSocketKey<OfferMessage> = {
-          id,
-          event: 'offer',
-          desc: JSON.parse(JSON.stringify(offer)),
-          sourceId,
-          sourceType: 'player',
-        };
-        await pc.setLocalDescription(offer);
-        await ipcRenderer.invoke('socket', offerMsg);
-      } catch (e) {
-        debug(`error while create offer: ${(e as Error).message}`);
-      }
-      break;
-    case 'candidate':
-      {
-        const pc = peers.get(id);
-        if (!pc) debug(`Unknown id: ${id} [${[...peers.keys()].join(',')}]`);
-        else if (msg.candidate) await pc.addIceCandidate(msg.candidate);
-      }
-      break;
-    case 'answer':
-      {
-        const pc = peers.get(id);
-        if (!pc) debug(`Unknown id: ${id} [${[...peers.keys()].join(',')}]`);
-        else await pc.setRemoteDescription(msg.desc);
-      }
-      break;
-    default:
-      debug(`Unknown event: ${msg.event}`);
-  }
+          await pc.setLocalDescription(offer);
+          await ipcRenderer.invoke('socket', offerMsg);
+        } catch (e) {
+          debug(`error while create offer: ${(e as Error).message}`);
+        }
+        break;
+      case 'candidate':
+        {
+          const pc = peers.get(id);
+          if (!pc) debug(`Unknown id: ${id} [${[...peers.keys()].join(',')}]`);
+          else if (msg.candidate) await pc.addIceCandidate(msg.candidate);
+        }
+        break;
+      case 'answer':
+        {
+          const pc = peers.get(id);
+          if (!pc) debug(`Unknown id: ${id} [${[...peers.keys()].join(',')}]`);
+          else await pc.setRemoteDescription(msg.desc);
+        }
+        break;
+      default:
+        debug(`Unknown event: ${msg.event}`);
+    }
+  })();
 });
 
 export default stream;

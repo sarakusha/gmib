@@ -12,7 +12,7 @@ const safeParseNumber = (value: unknown): number => parseFloat(value as string);
 
 type Props = {
   name: string;
-  value?: InputBaseProps['value'] | Error;
+  value?: InputBaseProps['value'];
   type?: InputBaseProps['type'];
   unit?: string;
   min?: number;

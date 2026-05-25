@@ -93,8 +93,8 @@ function createTables(): void {
       err => err && debug(`error while create sensors ${err}`),
     );
     /** Были опечатки в названиях полей в старых версиях БД */
-    checkColumnExists('sensors', 'temperature', 'INT (1)');
-    checkColumnExists('sensors', 'illuminance', 'INT (2)');
+    void checkColumnExists('sensors', 'temperature', 'INT (1)');
+    void checkColumnExists('sensors', 'illuminance', 'INT (2)');
     db.run(
       `CREATE TABLE IF NOT EXISTS brightness (
                 timestamp INT PRIMARY KEY NOT NULL,
@@ -212,7 +212,7 @@ function createTables(): void {
         )`,
       err => err && debug(`error while create screen ${err}`),
     );
-    checkColumnExists('screen', 'brightness', 'INTEGER default 60');
+    void checkColumnExists('screen', 'brightness', 'INTEGER default 60');
     db.run(
       `CREATE TABLE IF NOT EXISTS address (
             address TEXT NOT NULL,

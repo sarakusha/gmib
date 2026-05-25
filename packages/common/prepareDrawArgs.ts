@@ -33,7 +33,7 @@ const prepareDrawArgs = (
     dy = half(height - dHeight);
   }
 
-  return [frame as unknown as CanvasImageSource, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight];
+  return [frame, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight];
 };
 
 export default prepareDrawArgs;

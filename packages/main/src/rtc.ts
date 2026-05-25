@@ -26,6 +26,13 @@ function heartbeat(this: AliveWebSocket) {
   this.isAlive = true;
 }
 
+const rawDataToString = (data: WebSocket.RawData): string =>
+  Array.isArray(data)
+    ? Buffer.concat(data).toString()
+    : data instanceof ArrayBuffer
+      ? Buffer.from(new Uint8Array(data)).toString()
+      : data.toString();
+
 const interval = setInterval(() => {
   wss.clients.forEach((ws: AliveWebSocket) => {
     if (ws.isAlive === false) {
@@ -48,19 +55,22 @@ wss.on('connection', (ws: AliveWebSocket, req) => {
     return;
   }
   sockets.set(id, ws);
-  ws.on('message', async (data, isBinary) => {
-    if (!isBinary) {
-      const msg = JSON.parse(data.toString()) as RtcMessage;
-      // console.log({ message: msg });
-      if (['candidate', 'answer', 'request'].includes(msg.event)) {
-        const win =
-          msg.sourceType === 'player'
-            ? (findPlayerWindow(msg.sourceId) ?? (await openPlayer(msg.sourceId, { hidden: true })))
-            : getMainWindow();
-        // console.log('FOUND', win);
-        if (win) win.webContents.send('socket', { ...msg, id });
+  ws.on('message', (data, isBinary) => {
+    void (async () => {
+      if (!isBinary) {
+        const msg = JSON.parse(rawDataToString(data)) as RtcMessage;
+        // console.log({ message: msg });
+        if (['candidate', 'answer', 'request'].includes(msg.event)) {
+          const win =
+            msg.sourceType === 'player'
+              ? (findPlayerWindow(msg.sourceId) ??
+                (await openPlayer(msg.sourceId, { hidden: true })))
+              : getMainWindow();
+          // console.log('FOUND', win);
+          if (win) win.webContents.send('socket', { ...msg, id });
+        }
       }
-    }
+    })();
   });
   ws.on('close', () => {
     sockets.delete(id);
@@ -102,7 +112,7 @@ wss.once('close', () => {
   close();
 });
 
-app.whenReady().then(() => {
+void app.whenReady().then(() => {
   ipcMain.handle('socket', (_, { id, ...msg }: WithWebSocketKey<RtcMessage>) => {
     const ws = sockets.get(id);
     if (!ws || ws.readyState !== ws.OPEN) debug('Unknown or closed socket');

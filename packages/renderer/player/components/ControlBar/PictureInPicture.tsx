@@ -9,10 +9,10 @@ const PictureInPicture: React.FC = () => {
   const pip = useSelector(selectPiP);
   const toggleHandler = React.useCallback(() => {
     if (document.pictureInPictureElement) {
-      document.exitPictureInPicture();
+      void document.exitPictureInPicture();
     } else if (document.pictureInPictureEnabled) {
       const video = document.querySelector('video#player') as HTMLVideoElement;
-      video?.requestPictureInPicture();
+      void video?.requestPictureInPicture();
     }
   }, []);
   return (

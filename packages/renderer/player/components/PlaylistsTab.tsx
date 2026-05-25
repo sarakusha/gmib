@@ -62,7 +62,7 @@ const PlaylistsTab: React.FC = () => {
   }, [ref, setAnchorEl]);
   const removeItemHandler = useCallback(
     (id: string) => {
-      current && removeMedia({ id: current, itemId: id });
+      if (current) void removeMedia({ id: current, itemId: id });
     },
     [current, removeMedia],
   );

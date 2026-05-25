@@ -54,8 +54,20 @@ const NovastarTelemetryTab: React.FC<{ device: Novastar | undefined; selected?: 
         onSelectorChanged={setSelectors}
         loading={isLoading}
         isBusy={isBusy}
-        start={path ? () => startTelemetry({ path, selectors: [...selectors] }) : undefined}
-        cancel={path ? () => cancelTelemetry(path) : undefined}
+        start={
+          path
+            ? () => {
+                void startTelemetry({ path, selectors: [...selectors] });
+              }
+            : undefined
+        }
+        cancel={
+          path
+            ? () => {
+                void cancelTelemetry(path);
+              }
+            : undefined
+        }
       />
     ),
     [selectors, isLoading, isBusy, path, startTelemetry, cancelTelemetry],

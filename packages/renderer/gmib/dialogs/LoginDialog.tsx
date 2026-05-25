@@ -47,19 +47,21 @@ const LoginDialog: React.FC = () => {
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState<string | undefined>();
   const dispatch = useDispatch();
-  const loginHandler: React.FormEventHandler = async e => {
+  const loginHandler: React.FormEventHandler = e => {
     e.preventDefault();
-    try {
-      const secret = await login(
-        password,
-        credentials?.host ?? `${remote.host}:${remote.port + 1}`,
-      );
-      window.identify.setSecret(secret, credentials?.identifier);
-      setTimeout(() => window.location.reload(), 200);
-    } catch (err) {
-      if (err instanceof FetchError && err.response.status === 401) setError('Неверный пароль');
-      else if (err instanceof Error) setError(err.message);
-    }
+    void (async () => {
+      try {
+        const secret = await login(
+          password,
+          credentials?.host ?? `${remote.host}:${remote.port + 1}`,
+        );
+        window.identify.setSecret(secret, credentials?.identifier);
+        setTimeout(() => window.location.reload(), 200);
+      } catch (err) {
+        if (err instanceof FetchError && err.response.status === 401) setError('Неверный пароль');
+        else if (err instanceof Error) setError(err.message);
+      }
+    })();
   };
   return (
     <Dialog open={!!credentials} maxWidth="xs" fullWidth>

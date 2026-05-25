@@ -125,10 +125,12 @@ const screenApi = createApi({
         try {
           await queryFulfilled;
           if (screen.addresses?.some(address => reAddress.test(address))) {
-            setTimeout(() => dispatch(updateMinihosts(screen.id)), 0);
+            setTimeout(() => {
+              void dispatch(updateMinihosts(screen.id));
+            }, 0);
           }
         } catch {
-          dispatch(screenApi.endpoints.getScreens.initiate());
+          void dispatch(screenApi.endpoints.getScreens.initiate());
         }
       },
       invalidatesTags: ['address'],
@@ -182,7 +184,7 @@ export const updateScreen =
         ) {
           setTimeout(() => dispatch(invalidateBrightness(id)), 0);
         }
-        dispatch(screenApi.endpoints.updateScreen.initiate(screen));
+        void dispatch(screenApi.endpoints.updateScreen.initiate(screen));
         // dispatch(debouncedUpdateScreen(screen));
       }),
     );
@@ -277,7 +279,7 @@ export const updateMinihosts = createDebouncedAsyncThunk<void, number, AppThunkC
               }
               Object.entries(props).forEach(([name, value]) => {
                 // debug(`setValue ${name} = ${value}`);
-                value !== undefined && value !== null && setValue(name, value);
+                if (value !== undefined && value !== null) void setValue(name, value);
               });
             });
           });

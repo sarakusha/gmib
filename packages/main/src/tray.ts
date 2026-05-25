@@ -103,7 +103,7 @@ export const updateTray = (): void => {
 
 const assets = path.resolve(__dirname, '../../renderer/assets');
 
-app.whenReady().then(() => {
+void app.whenReady().then(() => {
   let icon = path.join(assets, 'icon16x16.png');
   if (process.platform === 'win32') icon = path.join(assets, 'icon.ico');
   else if (process.platform === 'linux' && os.version().indexOf('astra') !== -1)

@@ -169,7 +169,7 @@ const ScreenComponent: React.FC<Props> = ({
   } = screen ?? {};
   const isActive = Boolean(test) && selected === scrId;
   React.useEffect(() => {
-    if (isActive) window.mediaSource.play(scrId);
+    if (isActive) void window.mediaSource.play(scrId);
     else window.mediaSource.close(scrId);
   }, [scrId, isActive]);
   return !screen ? null : (

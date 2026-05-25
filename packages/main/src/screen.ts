@@ -31,12 +31,19 @@ const enum PlayerFlags {
 }
 
 const toScreen = (result: NullableOptional): Omit<Screen, 'addresses'> => {
-  const { flags = 0, ...props } = removeNull(result);
+  const {
+    flags = 0,
+    brightnessFactor,
+    ...props
+  } = removeNull(result) as Omit<Screen, 'addresses'> & {
+    flags?: number;
+    brightnessFactor?: number | null;
+  };
 
   return {
     downToTop: Boolean(flags & ScreenFlags.DownToTop),
     rightToLeft: Boolean(flags & ScreenFlags.RightToLeft),
-    useExternalKnob: Boolean(flags & ScreenFlags.UseKnob) && !props.brightnessFactor,
+    useExternalKnob: Boolean(flags & ScreenFlags.UseKnob) && !brightnessFactor,
     ...props,
   };
 };
@@ -301,7 +308,7 @@ export const existsPlayerName = promisifyGet(
   `SELECT 1
    FROM player
    WHERE name = ? AND id != ? LIMIT 1`,
-  (name: string, id = 0) => [name, id],
+  (name: string, id = 0) => [name, id as number],
   result => !!result,
 );
 
@@ -343,7 +350,7 @@ export const existsScreenName = promisifyGet(
   `SELECT 1
    FROM screen
    WHERE name = ? AND id != ? LIMIT 1`,
-  (name: string, id = 0) => [name, id],
+  (name: string, id = 0) => [name, id as number],
   result => !!result,
 );
 
@@ -367,7 +374,7 @@ export const isPlayerActive = promisifyGet(
   result => Boolean(result?.flags & PlayerFlags.AutoPlay),
 );
 
-dbReady.then(hasScreens).then(
+void dbReady.then(hasScreens).then(
   async res =>
     res ||
     insertScreen(

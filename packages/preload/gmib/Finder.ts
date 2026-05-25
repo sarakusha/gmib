@@ -113,22 +113,24 @@ export default class Finder extends Runnable<FinderOptions, FinderEvents> {
           .filter(notEmpty)
           .map(({ address: ownerAddress }) => ownerAddress.toString()),
       );
-      return async (datagram: SarpDatagram) => {
-        if (datagram.queryType !== queryType) return;
-        const { deviceType } = datagram;
-        if (!deviceType || (queryType === SarpQueryType.ByType && deviceType !== type)) return;
-        const mac = new Address(datagram.mac);
-        const key = mac.toString();
-        if (detected.has(key)) return;
-        const info = await connection.getVersion(mac);
-        counter = 0;
-        detected.add(key);
-        this.emit('found', {
-          owner: connection.owner?.id,
-          address: key,
-          version: info?.version,
-          type: deviceType,
-        });
+      return (datagram: SarpDatagram) => {
+        void (async () => {
+          if (datagram.queryType !== queryType) return;
+          const { deviceType } = datagram;
+          if (!deviceType || (queryType === SarpQueryType.ByType && deviceType !== type)) return;
+          const mac = new Address(datagram.mac);
+          const key = mac.toString();
+          if (detected.has(key)) return;
+          const info = await connection.getVersion(mac);
+          counter = 0;
+          detected.add(key);
+          this.emit('found', {
+            owner: connection.owner?.id,
+            address: key,
+            version: info?.version,
+            type: deviceType,
+          });
+        })();
       };
     };
     let listeners: [INibusConnection, (datagram: SarpDatagram) => void][] = [];

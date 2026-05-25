@@ -82,10 +82,10 @@ export const openPlayer = async (
     registerPlayer(browserWindow, { host, port: nibusPort, playerId: id }, gmibParams);
     isQuitting = false;
     browserWindow.loadURL(url).catch(err => {
-      debug(`error while load player ${url}: ${err.message}`);
+      debug(`error while load player ${url}: ${err instanceof Error ? err.message : String(err)}`);
     });
     browserWindow.webContents.setWindowOpenHandler(openHandler);
-    browserWindow.webContents.setVisualZoomLevelLimits(1, 1);
+    void browserWindow.webContents.setVisualZoomLevelLimits(1, 1);
     // browserWindow.webContents.on('did-create-window', win => {
     //   win.once('ready-to-show', () => {
     //     console.log('READY');
@@ -113,7 +113,7 @@ export const openPlayer = async (
         event.preventDefault();
         browserWindow?.hide();
         if (!localConfig.get('autostart')) {
-          isPlayerActive(id).then(async isActive => {
+          void isPlayerActive(id).then(async isActive => {
             if (isActive && import.meta.env.PROD) {
               const { response } = await confirmClose();
               if (response === 1) return;
@@ -130,7 +130,7 @@ export const openPlayer = async (
       }
     });
     browserWindow.on('show', () => {
-      updateShowPlayer(id);
+      void updateShowPlayer(id);
     });
     if (!hidden)
       browserWindow.once('ready-to-show', () => {
@@ -148,6 +148,6 @@ export const launchPlayers = async () => {
   await dbReady;
   const players = await getPlayers();
   players.forEach(player => {
-    if (player.playlistId && player.autoPlay) openPlayer(player.id, { hidden: true });
+    if (player.playlistId && player.autoPlay) void openPlayer(player.id, { hidden: true });
   });
 };

@@ -10,8 +10,13 @@ interface MinihostLoaderEvents<T> extends RunnableEvents {
 }
 
 // Не срабатывает instanceof!!!
-const isNibusError = (error: unknown): error is NibusError =>
-  Object.getPrototypeOf(error).constructor.name === 'NibusError';
+const isNibusError = (error: unknown): error is NibusError => {
+  if (typeof error !== 'object' || error === null) return false;
+  const proto = Object.getPrototypeOf(error);
+  if (!proto || typeof proto !== 'object') return false;
+  const ctor = (proto as { constructor?: unknown }).constructor;
+  return typeof ctor === 'function' && ctor.name === 'NibusError';
+};
 
 abstract class MinihostLoader<T extends { t?: number }> extends Runnable<
   LoaderOptions,

@@ -11,10 +11,12 @@ import TableCell from './TableCell';
 
 import type { ValueState, ValueType } from '/@common/helpers';
 
-const capitalize = <T extends string | undefined>(
-  str: T,
-): T extends string ? Capitalize<T> : undefined =>
-  str && ((str.charAt(0).toUpperCase() + str.slice(1)) as any);
+function capitalize(str: string): Capitalize<string>;
+function capitalize(str: undefined): undefined;
+function capitalize(str: string | undefined): string | undefined {
+  if (typeof str !== 'string') return undefined;
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
 
 type Props = {
   meta: PropMetaInfo;

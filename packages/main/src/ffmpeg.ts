@@ -132,10 +132,11 @@ export function getTimecodeFromStreams(streams: FfprobeStream[]): number | undef
   let foundTimecode: number | undefined;
   streams.find(stream => {
     try {
-      if (stream.tags && stream.tags.timecode) {
+      const timecode = (stream.tags as { timecode?: string } | undefined)?.timecode;
+      if (timecode) {
         const fps = getStreamFps(stream);
-        foundTimecode = parseTimecode(stream.tags.timecode, fps);
-        debug(`Loaded timecode ${stream.tags.timecode} from stream ${stream.index}`);
+        foundTimecode = parseTimecode(timecode, fps);
+        debug(`Loaded timecode ${timecode} from stream ${stream.index}`);
         return true;
       }
       return undefined;
@@ -238,7 +239,7 @@ async function readFormatData(filePath: string): Promise<FfprobeFormat> {
     filePath,
     '-hide_banner',
   ]);
-  return stdout && JSON.parse(stdout as string).format;
+  return (JSON.parse(stdout as string) as { format: FfprobeFormat }).format;
 }
 
 export async function getDuration(filePath: string): Promise<number> {
@@ -492,10 +493,20 @@ export async function readFileMeta(
       format,
       streams,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const exitCode =
+      typeof err === 'object' && err !== null && 'exitCode' in err
+        ? (err as { exitCode?: number }).exitCode
+        : undefined;
+    const code =
+      typeof err === 'object' && err !== null && 'code' in err
+        ? (err as { code?: string }).code
+        : undefined;
+    const message = err instanceof Error ? err.message : String(err);
+
     // Windows will throw error with code ENOENT if format detection fails.
-    if (err.exitCode === 1 || (isWindows && err.code === 'ENOENT')) {
-      throw new Error(`Unsupported file: ${err.message}`);
+    if (exitCode === 1 || (isWindows && code === 'ENOENT')) {
+      throw new Error(`Unsupported file: ${message}`);
     }
     throw err;
   }

@@ -50,7 +50,7 @@ const getSensors = async (): Promise<Sensors[]> => {
   }
   const res = await fetch(sensorsUrl, { headers });
   if (!res.ok) return [];
-  return res.json();
+  return res.json() as Promise<Sensors[]>;
 };
 
 const highchartsOptions: Highcharts.Options = {
@@ -243,57 +243,59 @@ const BrightnessHistoryDialog: React.FC<Props> = ({ open = false, onClose = noop
   const lastIlluminance = useSelector(state => selectLastWithAddress(state, 'illuminance'));
   useEffect(() => {
     if (!open) return;
-    Promise.all([window.nibus.getBrightnessHistory(), getSensors()]).then(([history, sensors]) => {
-      setOptions(opts => {
-        const series = Object.entries(
-          groupBy(
-            sensors.filter(({ illuminance }) => illuminance != null),
-            'address',
-          ),
-        ).map(
-          ([address, values]) =>
+    void Promise.all([window.nibus.getBrightnessHistory(), getSensors()]).then(
+      ([history, sensors]: [Array<{ timestamp: number; brightness: number }>, Sensors[]]) => {
+        setOptions(opts => {
+          const series = Object.entries(
+            groupBy(
+              sensors.filter(({ illuminance }) => illuminance != null),
+              'address',
+            ),
+          ).map(
+            ([address, values]) =>
             ({
               id: `illuminance:${address}`,
               name: `Освещенность ${address}`,
               yAxis: 0,
-              type: 'line',
+              type: 'line' as const,
               tooltip: { valueSuffix: ' lux' },
               color: '#FF8000',
               shadow: true,
               data: values.map(({ time, illuminance }) => [time, illuminance]),
-            }) as SeriesLineOptions,
-        );
-        const data = history.map(
-          ({ timestamp, brightness }: { timestamp: number; brightness: number }) => [
-            timestamp - (timestamp % 1000),
-            brightness,
-          ],
-        );
-        const brightSeries: SeriesLineOptions = {
-          id: 'brightness',
-          name: 'Яркость',
-          type: 'line',
-          step: 'left',
-          yAxis: 1,
-          tooltip: { valueSuffix: '%' },
-          data,
-        };
-        if (isValidLocation) {
-          const now = new Date();
-          const yesterday = new Date();
-          yesterday.setDate(yesterday.getDate() - 1);
-          const xAxis = opts.xAxis as XAxisOptions;
-          const [yPlotBands, yPlotLines] = getBands(latitude, longitude, yesterday);
-          const [plotBands, plotLines] = getBands(latitude, longitude, now);
-          xAxis.plotBands = [...yPlotBands, ...plotBands];
-          xAxis.plotLines = [...yPlotLines, ...plotLines];
-        }
-        return {
-          ...opts,
-          series: [brightSeries, ...series],
-        };
-      });
-    });
+            }),
+          );
+          const data = history.map(
+            ({ timestamp, brightness }: { timestamp: number; brightness: number }) => [
+              timestamp - (timestamp % 1000),
+              brightness,
+            ],
+          );
+          const brightSeries: SeriesLineOptions = {
+            id: 'brightness',
+            name: 'Яркость',
+            type: 'line',
+            step: 'left',
+            yAxis: 1,
+            tooltip: { valueSuffix: '%' },
+            data,
+          };
+          if (isValidLocation) {
+            const now = new Date();
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const xAxis = opts.xAxis as XAxisOptions;
+            const [yPlotBands, yPlotLines] = getBands(latitude, longitude, yesterday);
+            const [plotBands, plotLines] = getBands(latitude, longitude, now);
+            xAxis.plotBands = [...yPlotBands, ...plotBands];
+            xAxis.plotLines = [...yPlotLines, ...plotLines];
+          }
+          return {
+            ...opts,
+            series: [brightSeries, ...series],
+          };
+        });
+      },
+    );
   }, [open, latitude, longitude, isValidLocation]);
   React.useEffect(() => {
     if (!open) return;

@@ -46,12 +46,12 @@ const AddMediaDialog: React.FC<Props> = ({ id, open, onClose }) => {
     if (!id) return;
     const add = await getStateAsync(setState);
     const chunks = Object.entries<number>(add).map<string[]>(([md5, count]) =>
-      new Array(count).fill(md5),
+      Array.from({ length: count }, () => md5),
     );
     const ids: string[] = flatten(chunks);
     // console.log({ chunks, ids });
     if (ids.length === 0) return;
-    insert({ id, insert: ids });
+    void insert({ id, insert: ids });
     onClose();
   }, [insert, id, onClose]);
   React.useEffect(() => {
@@ -85,7 +85,13 @@ const AddMediaDialog: React.FC<Props> = ({ id, open, onClose }) => {
           <Search value={search} onChange={e => setSearch(e.target.value)} fixed variant="main" />
         </Box>
         <Button onClick={onClose}>Отмена</Button>
-        <Button onClick={addHandler}>Добавить</Button>
+        <Button
+          onClick={() => {
+            void addHandler();
+          }}
+        >
+          Добавить
+        </Button>
       </DialogActions>
     </Dialog>
   );

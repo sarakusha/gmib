@@ -6,14 +6,15 @@ import { setActivateDialogOpen, setRemoteDialogOpen } from '/@renderer/store/cur
 
 import ipcDispatch from '../common/ipcDispatch';
 
-export const showOpenDialogSync: Dialog['showOpenDialogSync'] = options =>
-  ipcRenderer.sendSync('showOpenDialogSync', options);
+export const showOpenDialogSync: Dialog['showOpenDialogSync'] = (options): string[] | undefined =>
+  ipcRenderer.sendSync('showOpenDialogSync', options) as string[] | undefined;
 
-export const showErrorBox: Dialog['showErrorBox'] = (title, content) =>
+export const showErrorBox: Dialog['showErrorBox'] = (title, content): void => {
   ipcRenderer.sendSync('showErrorBox', title, content);
+};
 
-const showSaveDialogSync: Dialog['showSaveDialogSync'] = options =>
-  ipcRenderer.sendSync('showSaveDialogSync', options);
+const showSaveDialogSync = (options: unknown): string | undefined =>
+  (ipcRenderer.sendSync('showSaveDialogSync', options) as string | undefined) ?? undefined;
 
 type SaveOpts = Pick<SaveDialogSyncOptions, 'title' | 'defaultPath'> & {
   data: Record<string, unknown>;
@@ -52,7 +53,7 @@ export const loadJSON = (title = 'Загрузить из'): Record<string, unkn
     }) ?? [];
   if (fileName) {
     try {
-      return JSON.parse(readFileSync(fileName).toString());
+      return JSON.parse(readFileSync(fileName).toString()) as Record<string, unknown>;
     } catch {
       showErrorBox('Ошибка загрузки', 'Файл испорчен');
     }

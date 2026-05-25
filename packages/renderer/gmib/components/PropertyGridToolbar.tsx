@@ -24,7 +24,9 @@ const load = (dispatch: AppDispatch, id: DeviceId, mib: string): boolean => {
     }
     delete data.$mib;
     const setValue = window.nibus.setDeviceValue(id);
-    Object.entries(data).forEach(prop => setValue(...(prop as PropTuple)));
+    Object.entries(data).forEach(prop => {
+      void setValue(...(prop as PropTuple));
+    });
     return true;
   }
   return false;
@@ -38,7 +40,7 @@ const PropertyGridToolbar: React.FC = () => {
   const closeSaveDialog = useCallback(() => setSaveOpen(false), []);
   const saveHandler = useCallback(() => setSaveOpen(true), []);
   const reloadHandler = (): void => {
-    id && dispatch(reloadDevice(id));
+    if (id) void dispatch(reloadDevice(id));
   };
   return (
     <>
@@ -47,7 +49,9 @@ const PropertyGridToolbar: React.FC = () => {
           <div>
             <IconButton
               color="inherit"
-              onClick={() => id && window.nibus.writeToStorage(id)}
+              onClick={() => {
+                if (id) void window.nibus.writeToStorage(id);
+              }}
               disabled={!mib}
               size="large"
             >

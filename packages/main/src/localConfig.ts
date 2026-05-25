@@ -68,14 +68,14 @@ const localConfig = new Store<LocalConfig>({
 if (!localConfig.get('salt') || !localConfig.get('verifier')) {
   const routines = new SRPRoutines(new SRPParameters());
   const password = 'nata-info';
-  createVerifierAndSalt(routines, 'gmib', password).then(({ v, s }) => {
+  void createVerifierAndSalt(routines, 'gmib', password).then(({ v, s }) => {
     debug(`set default password: ${password}`);
     localConfig.set('verifier', `0x${v.toString(16)}`);
     localConfig.set('salt', `0x${s.toString(16)}`);
   });
 }
 
-app.whenReady().then(() => {
+void app.whenReady().then(() => {
   ipcMain.handle('getLocalConfig', async (event, name: keyof LocalConfig) => localConfig.get(name));
   ipcMain.handle('setLocalConfig', (_, name: keyof LocalConfig, value: unknown) => {
     localConfig.set(name, value);

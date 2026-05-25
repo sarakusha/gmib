@@ -7,18 +7,18 @@ import type React from 'react';
 
 export type ExtendProps<
   C extends
-    | React.ComponentClass<React.ComponentProps<C>>
-    | React.JSXElementConstructor<React.ComponentProps<C>>,
+  | React.ComponentClass<React.ComponentProps<C>>
+  | React.JSXElementConstructor<React.ComponentProps<C>>,
   P,
 > = PropsOf<C> & Partial<P> & MUIStyledCommonProps<Theme>;
 
 export default function extendStyled<
   C extends
-    | React.ComponentClass<React.ComponentProps<C>>
-    | React.JSXElementConstructor<React.ComponentProps<C>>,
+  | React.ComponentClass<React.ComponentProps<C>>
+  | React.JSXElementConstructor<React.ComponentProps<C>>,
   P,
 >(component: C, additionalProps: P): CreateStyledComponent<ExtendProps<C, P>, {}, {}, Theme> {
   return styled(component, {
     shouldForwardProp: prop => !Object.prototype.hasOwnProperty.call(additionalProps, prop),
-  }) as any;
+  }) as CreateStyledComponent<ExtendProps<C, P>, {}, {}, Theme>;
 }

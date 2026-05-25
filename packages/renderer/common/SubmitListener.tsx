@@ -22,7 +22,7 @@ const SubmitListener: React.FC = () => {
     }
 
     if (!valuesEqualLastValues && !valuesEqualInitialValues && formik.isValid) {
-      submitForm();
+      void submitForm();
     }
   }, [formik.values, formik.isValid, lastValues, formik.initialValues, submitForm]);
 

@@ -51,7 +51,7 @@ const toMediaInfo = (res: NullableOptional): MediaInfo => {
     fieldOrder,
     uploadTime: parseDate(uploadTime),
     thumbnail,
-  } as MediaInfo;
+  };
 };
 
 export const getMediaByMD5 = promisifyGet(

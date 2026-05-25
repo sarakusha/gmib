@@ -13,13 +13,14 @@ const credentials: Credentials = {};
 
 const initialize = async (): Promise<boolean> => {
   try {
-    const response =
+    const response = (
       host === 'localhost'
         ? await ipcRenderer.invoke('getLocalCredentials')
         : await ipcRenderer.invoke(
             'getRemoteCredentials',
             `http://${host}:${port + 1}/api/identifier`,
-          );
+          )
+    ) as { identifier?: string; apiSecret?: Uint8Array } | null;
     if (response) {
       credentials.identifier = response.identifier;
       credentials.apiSecret =

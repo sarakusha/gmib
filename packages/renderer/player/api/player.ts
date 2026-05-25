@@ -59,7 +59,7 @@ const playerApi = createApi({
           }
         } catch {
           // console.error('error while updatePlayer', e);
-          dispatch(
+          void dispatch(
             playerApi.endpoints.getPlayers.initiate(undefined, {
               subscribe: false,
               forceRefetch: true,
@@ -75,7 +75,7 @@ const playerApi = createApi({
         body: { ...defaultPlayer, ...player },
       }),
       onQueryStarted(_, { dispatch, queryFulfilled }) {
-        queryFulfilled.then(({ data: player }) => {
+        void queryFulfilled.then(({ data: player }) => {
           dispatch(
             playerApi.util.updateQueryData('getPlayers', undefined, draft => {
               playerAdapter.setOne(draft, player);
@@ -135,7 +135,7 @@ export const {
 export const debouncedUpdatePlayer = createDebouncedAsyncThunk<void, Player, AppThunkConfig>(
   'playerApi/pendingUpdate',
   (player, { dispatch }) => {
-    dispatch(playerApi.endpoints.updatePlayer.initiate(player));
+    void dispatch(playerApi.endpoints.updatePlayer.initiate(player));
   },
   200,
   { selectId: player => player.id, maxWait: 500 },

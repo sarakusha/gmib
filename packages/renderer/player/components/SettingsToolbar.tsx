@@ -46,7 +46,8 @@ const SettingsToolbar: React.FC<Props> = ({ size, group, id }) => {
         if (player) setTimeout(() => dispatch(setSettingsNode(`players:${player.id}`)), 0);
       })
       .catch(err => {
-        enqueueSnackbar(`Не удалось создать плеер: ${err.message}`, {
+        const message = err instanceof Error ? err.message : String(err);
+        enqueueSnackbar(`Не удалось создать плеер: ${message}`, {
           variant: 'error',
           preventDuplicate: true,
           autoHideDuration: 3000,
@@ -103,7 +104,14 @@ const SettingsToolbar: React.FC<Props> = ({ size, group, id }) => {
           >
             <LocationSearchingIcon />
           </IconButton>
-          <IconButton color="inherit" size={size} title="Обновить" onClick={refetch}>
+          <IconButton
+            color="inherit"
+            size={size}
+            title="Обновить"
+            onClick={() => {
+              void refetch();
+            }}
+          >
             <CachedIcon fontSize="inherit" />
           </IconButton>
         </>

@@ -78,7 +78,7 @@ export const linuxMakeDesktop = (): void => {
   fs.chmodSync(file, '644');
 };
 
-app.whenReady().then(linuxMakeDesktop);
+void app.whenReady().then(linuxMakeDesktop);
 
 type PritunlConnection = {
   id: string;
@@ -88,7 +88,7 @@ type PritunlConnection = {
   registration_key: string;
   connected: boolean;
   uptime: number;
-  status: 'Disconnected' | string; // '5 hours 46 mins 41 secs',
+  status: string; // 'Disconnected' or '5 hours 46 mins 41 secs',
   server_address: string;
   client_address: string;
 };
@@ -151,7 +151,8 @@ const createPritunlUser = async (orgId: string, name: string): Promise<string | 
     port_forwarding: [],
   };
   const create = await pritunlFetch({ path: api, method: 'POST', data });
-  return create?.[0]?.id;
+  const users = create as { id?: string }[] | undefined;
+  return users?.[0]?.id;
 };
 
 const addPritunlProfiles = (url: string) =>
@@ -194,15 +195,28 @@ export const initializePritunlClient = async ({
       userId && (await delay(30));
     }
     if (!userId) {
-      setTimeout(initializePritunlClient, 1000 * 60 * 3).unref();
+      setTimeout(
+        () => {
+          void initializePritunlClient();
+        },
+        1000 * 60 * 3,
+      ).unref();
       return;
     }
-    const links = await pritunlFetch({ path: `/key/${orgId}/${userId}` });
-    if (!links.uri_url) {
-      setTimeout(initializePritunlClient, 1000 * 60 * 3).unref();
+    const links = (await pritunlFetch({ path: `/key/${orgId}/${userId}` })) as
+      | { uri_url?: string }
+      | undefined;
+    const uriUrl = links?.uri_url;
+    if (!uriUrl) {
+      setTimeout(
+        () => {
+          void initializePritunlClient();
+        },
+        1000 * 60 * 3,
+      ).unref();
       return;
     }
-    if (!(await addPritunlProfiles(`pritunl://${pritunlUrl.hostname}${links.uri_url}`))) return;
+    if (!(await addPritunlProfiles(`pritunl://${pritunlUrl.hostname}${uriUrl}`))) return;
     connections = await getPritunlConnections();
     if (!connections || connections.length === 0) return;
     if (mainServer && connections.length > 1) {
@@ -220,9 +234,9 @@ export const initializePritunlClient = async ({
   const isActive = enabled.reduce((res, { run_state }) => res || run_state === 'Active', false);
   if (!isActive) {
     const [first] = enabled;
-    if (first) startPritunlConnection(first.id);
+    if (first) void startPritunlConnection(first.id);
   }
   fs.existsSync(envPath) && fs.unlinkSync(envPath);
 };
 
-app.whenReady().then(() => initializePritunlClient());
+void app.whenReady().then(() => initializePritunlClient());

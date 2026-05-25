@@ -227,7 +227,7 @@ const MediaItem = React.forwardRef<HTMLLIElement, MediaItemProps>((props, ref) =
         onClick={e => {
           if (e.shiftKey) {
             setTitle(info.md5);
-            navigator.clipboard.writeText(info.md5);
+            void navigator.clipboard.writeText(info.md5);
           }
           onClick?.(md5);
         }}

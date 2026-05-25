@@ -68,14 +68,22 @@ const discoverScreenDevices = (): AppThunk => async (dispatch, getState) => {
     const needUpdate = new Set<number>();
     await asyncSerial(addresses, async address => {
       if (reAddress.test(address) && !deviceAddressExists(address)) {
-        const [timeout, info] = await window.nibus.ping(address);
+        const [timeout, info] = (await window.nibus.ping(address)) as [
+          number,
+          { type: number; owner?: string; version?: string },
+        ];
         if (
           timeout !== -1 &&
           isSlaveMinihostOrMcdvi(info) &&
           info.owner &&
           !deviceAddressExists(address)
         ) {
-          window.nibus.createDevice(info.owner, address, info.type, info.version);
+          window.nibus.createDevice(
+            info.owner,
+            address,
+            info.type,
+            info.version != null ? Number(info.version) : undefined,
+          );
           await delay(5);
           screens &&
             screens
@@ -84,10 +92,14 @@ const discoverScreenDevices = (): AppThunk => async (dispatch, getState) => {
         }
       }
     });
-    needUpdate.forEach(screenId => dispatch(updateMinihosts(screenId)));
+    needUpdate.forEach(screenId => {
+      void dispatch(updateMinihosts(screenId));
+    });
   }
   pingTimer = window.setTimeout(
-    () => dispatch(discoverScreenDevices()),
+    () => {
+      void dispatch(discoverScreenDevices());
+    },
     isRemoteSession ? PING_INTERVAL * 4 : PING_INTERVAL,
   );
 };
@@ -95,7 +107,7 @@ const discoverScreenDevices = (): AppThunk => async (dispatch, getState) => {
 startAppListening({
   actionCreator: setConnected,
   effect: ({ payload: [id, connected] }, { dispatch }) => {
-    connected && dispatch(reloadDevice(id));
+    if (connected) void dispatch(reloadDevice(id));
   },
 });
 
@@ -161,7 +173,7 @@ startAppListening({
             const { data: screenData } = selectScreenData(state);
             const screens = screenData ? selectScreens(screenData) : [];
             screens.forEach(item => {
-              if (item.addresses?.includes(address)) dispatch(updateMinihosts(item.id));
+              if (item.addresses?.includes(address)) void dispatch(updateMinihosts(item.id));
             });
             return;
           }
@@ -198,7 +210,7 @@ startAppListening({
         };
         setTimeout(() => {
           waitTilux.add(id);
-          window.nibus.findDevices(options).then(() => {
+          void window.nibus.findDevices(options).then(() => {
             waitTilux.delete(id);
           });
         }, 10000);
@@ -219,7 +231,7 @@ startAppListening({
         owners,
         type: TILUX_TYPE,
       };
-      window.nibus.findDevices(options).then(() => {
+      void window.nibus.findDevices(options).then(() => {
         owners.forEach(id => waitTilux.delete(id));
       });
     }

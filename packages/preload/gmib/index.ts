@@ -95,10 +95,12 @@ const onReady = async () => {
 
 if (document.readyState === 'loading') {
   // ещё загружается, ждём события
-  document.addEventListener('DOMContentLoaded', onReady);
+  document.addEventListener('DOMContentLoaded', () => {
+    void onReady();
+  });
 } else {
   // DOM готов!
-  onReady();
+  void onReady();
 }
 
 ipcRenderer.on('focus', (_, focused: boolean) => {

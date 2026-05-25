@@ -21,7 +21,7 @@ const updateSrcObject = (selector: string) => {
   videoSelector = selector;
   const video = document.querySelector(selector) as HTMLVideoElement;
   if (video)
-    deferred.promise.then(stream => {
+    void deferred.promise.then(stream => {
       video.srcObject = stream;
     });
 };
@@ -82,9 +82,15 @@ ws.onopen = async () => {
     };
     sendRequest();
   };
-  ws.onmessage = async ev => {
+  ws.onmessage = async (ev: MessageEvent) => {
     try {
-      const msg = JSON.parse(ev.data.toString()) as RtcMessage;
+      let payload: string;
+      if (typeof ev.data === 'string') payload = ev.data;
+      else if (ev.data instanceof ArrayBuffer) payload = new TextDecoder().decode(ev.data);
+      else if (ev.data instanceof Blob) payload = await ev.data.text();
+      else payload = String(ev.data);
+
+      const msg = JSON.parse(payload) as RtcMessage;
       switch (msg.event) {
         case 'candidate':
           if (msg.sourceId === sourceId && 'candidate' in msg) {

@@ -81,7 +81,7 @@ const makeHandler =
     try {
       const { screen = defaultScreen, value } = req.body;
       // debug(`${method} ${path}[${screen}] = ${value}`);
-      let { path } = req.body;
+      let { path } = req.body as { path: string };
       if (!path.includes(':')) {
         path = `${path}:5200`;
       }
@@ -115,7 +115,7 @@ api.post('/telemetry/start', (req, res) => {
   if (!telemetry) {
     res.sendStatus(404);
   } else {
-    telemetry.start({ selectors: new Set(selectors) });
+    void telemetry.start({ selectors: new Set(selectors) });
     res.end();
   }
 });
@@ -126,7 +126,7 @@ api.post('/telemetry/cancel', (req, res) => {
   if (!telemetry) {
     res.sendStatus(404);
   } else {
-    telemetry.cancel();
+    void telemetry.cancel();
     res.end();
   }
 });

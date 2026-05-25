@@ -63,7 +63,6 @@ import type {
   NibusTelemetry,
   RemoteHost,
   SensorsData,
-  TelemetryOpts,
   ValueState,
   ValueType,
 } from '/@common/helpers';
@@ -107,13 +106,14 @@ const getDeviceProp =
   (device: IDevice) =>
   (idOrName: string | number): PropEntity => {
     const error = device.getError(idOrName);
+    const unknownError: unknown = error;
     const name = device.getName(idOrName);
     return [
       name,
       {
         status: error ? 'failed' : device.isDirty(idOrName) ? 'pending' : 'succeeded',
         value: device[name],
-        error: error?.message,
+        error: unknownError instanceof Error ? unknownError.message : undefined,
         raw: device.getRawValue(idOrName),
       },
     ];
@@ -123,9 +123,9 @@ const getProps = (device: IDevice, idsOrNames?: (number | string)[]): DeviceProp
   const proto = Reflect.getPrototypeOf(device) ?? {};
   const names =
     idsOrNames ??
-    ((Reflect.getMetadata('mibProperties', proto) as string[]).filter(name =>
+    (Reflect.getMetadata('mibProperties', proto) as string[]).filter(name =>
       Reflect.getMetadata('isReadable', proto, name),
-    ) as (string | number)[]);
+    );
   const getProp = getDeviceProp(device);
   return Object.fromEntries<ValueState>(names.map(getProp));
 };
@@ -178,7 +178,7 @@ export const setDeviceValue = (
     }
     device[name] = value;
     ipcDispatch(updateProperty([deviceId, ...getProp(name)]));
-    drainDevice();
+    void drainDevice();
   };
 };
 
@@ -270,18 +270,20 @@ function openSession() {
     ipcDispatch(setPortCount(session.ports));
     ipcDispatch(connectionClosed(connection.path));
   };
-  const foundHandler: FoundListener = async ({ address, connection }) => {
-    debug('found: %s on %s', JSON.stringify(connection.description), address.toString());
-    try {
-      if (connection.description.mib) {
-        session.devices.create(address, connection.description.mib, connection);
-      } else {
-        const { version, type } = (await connection.getVersion(address)) ?? {};
-        type != null && session.devices.create(address, type, version, connection);
+  const foundHandler: FoundListener = ({ address, connection }) => {
+    void (async () => {
+      debug('found: %s on %s', JSON.stringify(connection.description), address.toString());
+      try {
+        if (connection.description.mib) {
+          session.devices.create(address, connection.description.mib, connection);
+        } else {
+          const { version, type } = (await connection.getVersion(address)) ?? {};
+          type != null && session.devices.create(address, type, version, connection);
+        }
+      } catch (e) {
+        debug('error in found handler', e);
       }
-    } catch (e) {
-      debug('error in found handler', e);
-    }
+    })();
   };
   const pureConnectionHandler = (connection: INibusConnection): void => {
     pureConnections[connection.path] = {
@@ -290,7 +292,7 @@ function openSession() {
     };
     ipcDispatch(
       addDevice({
-        id: nanoid() as DeviceId,
+        id: nanoid(),
         address: '',
         mib: '',
         connected: true,
@@ -303,87 +305,89 @@ function openSession() {
       }),
     );
   };
-  const newDeviceHandler = async (device: IDevice): Promise<void> => {
-    const { id: deviceId, address, connection } = device;
-    const connectedHandler = (): void => {
-      ipcDispatch(setConnected([deviceId, !!device.connection]));
-    };
-    const disconnectedHandler = (): void => {
-      device.release();
-    };
-    const addressHandler = (prev: Address, value: Address): void => {
-      ipcDispatch(changeAddress([deviceId, value.toString()]));
-    };
-    const releaseHandler = (): void => {
-      device.off('connected', connectedHandler);
-      device.off('disconnected', disconnectedHandler);
-      device.off('release', releaseHandler);
-      device.off('addressChanged', addressHandler);
-    };
-    device.on('connected', connectedHandler);
-    device.on('disconnected', disconnectedHandler);
-    device.on('release', releaseHandler);
-    device.on('addressChanged', addressHandler);
+  const newDeviceHandler = (device: IDevice): void => {
+    void (async () => {
+      const { id: deviceId, address, connection } = device;
+      const connectedHandler = (): void => {
+        ipcDispatch(setConnected([deviceId, !!device.connection]));
+      };
+      const disconnectedHandler = (): void => {
+        device.release();
+      };
+      const addressHandler = (prev: Address, value: Address): void => {
+        ipcDispatch(changeAddress([deviceId, value.toString()]));
+      };
+      const releaseHandler = (): void => {
+        device.off('connected', connectedHandler);
+        device.off('disconnected', disconnectedHandler);
+        device.off('release', releaseHandler);
+        device.off('addressChanged', addressHandler);
+      };
+      device.on('connected', connectedHandler);
+      device.on('disconnected', disconnectedHandler);
+      device.on('release', releaseHandler);
+      device.on('addressChanged', addressHandler);
 
-    const mib = Reflect.getMetadata('mib', device);
-    const proto = Reflect.getPrototypeOf(device) ?? {};
-    const mibProperties = (Reflect.getMetadata('mibProperties', proto) ?? []) as string[];
-    const properties = Object.fromEntries(
-      mibProperties.map<[string, PropMetaInfo]>(name => {
-        const getPropMeta = (key: string): any => Reflect.getMetadata(key, proto, name);
-        return [
-          name,
-          {
-            id: device.getId(name),
-            displayName: getPropMeta('displayName'),
-            isReadable: getPropMeta('isReadable'),
-            isWritable: getPropMeta('isWritable'),
-            type: getPropMeta('type'),
-            simpleType: getPropMeta('simpleType'),
-            category: getPropMeta('category'),
-            rank: getPropMeta('rank'),
-            unit: getPropMeta('unit'),
-            min: getPropMeta('min'),
-            max: getPropMeta('max'),
-            step: getPropMeta('step'),
-            enumeration: getPropMeta('enum'),
-            convertFrom: getPropMeta('convertFrom'),
-          } as PropMetaInfo,
-        ];
-      }),
-    );
-    const mibInfo: MibInfo = {
-      name: mib,
-      properties,
-      disableBatchReading: Reflect.getMetadata('disableBatchReading', proto),
-    };
-    ipcDispatch(addMib(mibInfo));
-    const entity: DeviceState = {
-      id: deviceId,
-      address: address.toString(),
-      connected: !!connection,
-      path: connection?.path,
-      mib: Reflect.getMetadata('mib', device),
-      isEmptyAddress: address.isEmpty,
-      props: getProps(device),
-      isBusy: 0,
-    };
-    if (connection?.owner === device) {
-      entity.isLinkingDevice = connection.description.link;
-      entity.category = connection.description.category;
-      if (entity.isLinkingDevice) {
-        const idleHandler = () => {
-          const [older] = sortBy(getChildren(device), 'lastActivity');
-          if (older) older.ping();
-        };
-        connection.on('idle', idleHandler);
-        connection.once('close', () => {
-          connection.off('idle', idleHandler);
-        });
+      const mib = Reflect.getMetadata('mib', device);
+      const proto = Reflect.getPrototypeOf(device) ?? {};
+      const mibProperties = (Reflect.getMetadata('mibProperties', proto) ?? []) as string[];
+      const properties = Object.fromEntries(
+        mibProperties.map<[string, PropMetaInfo]>(name => {
+          const getPropMeta = (key: string): any => Reflect.getMetadata(key, proto, name);
+          return [
+            name,
+            {
+              id: device.getId(name),
+              displayName: getPropMeta('displayName'),
+              isReadable: getPropMeta('isReadable'),
+              isWritable: getPropMeta('isWritable'),
+              type: getPropMeta('type'),
+              simpleType: getPropMeta('simpleType'),
+              category: getPropMeta('category'),
+              rank: getPropMeta('rank'),
+              unit: getPropMeta('unit'),
+              min: getPropMeta('min'),
+              max: getPropMeta('max'),
+              step: getPropMeta('step'),
+              enumeration: getPropMeta('enum'),
+              convertFrom: getPropMeta('convertFrom'),
+            },
+          ];
+        }),
+      );
+      const mibInfo: MibInfo = {
+        name: mib,
+        properties,
+        disableBatchReading: Reflect.getMetadata('disableBatchReading', proto),
+      };
+      ipcDispatch(addMib(mibInfo));
+      const entity: DeviceState = {
+        id: deviceId,
+        address: address.toString(),
+        connected: !!connection,
+        path: connection?.path,
+        mib: Reflect.getMetadata('mib', device),
+        isEmptyAddress: address.isEmpty,
+        props: getProps(device),
+        isBusy: 0,
+      };
+      if (connection?.owner === device) {
+        entity.isLinkingDevice = connection.description.link;
+        entity.category = connection.description.category;
+        if (entity.isLinkingDevice) {
+          const idleHandler = () => {
+            const [older] = sortBy(getChildren(device), 'lastActivity');
+            if (older) void older.ping();
+          };
+          connection.on('idle', idleHandler);
+          connection.once('close', () => {
+            connection.off('idle', idleHandler);
+          });
+        }
       }
-    }
-    ipcDispatch(addDevice(entity));
-    await reloadDevice(deviceId);
+      ipcDispatch(addDevice(entity));
+      await reloadDevice(deviceId);
+    })();
   };
   const deleteDeviceHandler = (device: IDevice): void => {
     try {
@@ -418,12 +422,9 @@ function openSession() {
   };
 
   // TODO: REMOTE
-  const addForeignDeviceHandler = async ({
-    portInfo: { path },
-    description,
-  }: PortArg): Promise<void> => {
+  const addForeignDeviceHandler = ({ portInfo: { path }, description }: PortArg): void => {
     if (description.category !== 'novastar') return;
-    fetch(`http://${host}:${port + 1}/api/novastar/serial`, {
+    void fetch(`http://${host}:${port + 1}/api/novastar/serial`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -439,7 +440,7 @@ function openSession() {
     debounce(() => {
       const data = sensorsState.get(address);
       if (data) {
-        ipcRenderer.send('sensors', { address, ...data } as SensorsData);
+        ipcRenderer.send('sensors', { address, ...data });
         sensorsState.delete(address);
       }
     }, 1000),
@@ -493,7 +494,9 @@ function openSession() {
   session.once('host', hostHandler);
   session.on('informationReport', informationListener);
   if (!isRemoteSession) {
-    addForeign.then(val => val && session.on('foreign', addForeignDeviceHandler));
+    void addForeign.then(val => {
+      if (val) session.on('foreign', addForeignDeviceHandler);
+    });
   }
   session.on('health', healthHandler);
   session.devices.on('new', newDeviceHandler);
@@ -536,7 +539,7 @@ function openSession() {
           }),
         );
       })
-      .catch(e => {
+      .catch((e: Error) => {
         if (isRemoteSession) {
           ipcRenderer.send('startLocalNibus');
         } else {
@@ -608,7 +611,7 @@ type SaveTelemetry = (x: number, y: number, temperature: number) => void;
 const startTelemetry = (address: string): SaveTelemetry => {
   const timestamp = Date.now();
   return (x, y, temperature) => {
-    ipcRenderer.send('addTelemetry', { timestamp, address, x, y, temperature } as TelemetryOpts);
+    ipcRenderer.send('addTelemetry', { timestamp, address, x, y, temperature });
   };
 };
 

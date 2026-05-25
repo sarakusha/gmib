@@ -85,7 +85,7 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
       default:
     }
     if (isSearching) {
-      window.nibus.cancelSearch();
+      void window.nibus.cancelSearch();
     } else {
       window.nibus.findDevices(options).then(
         () => setInvalidAddress(false),
@@ -94,7 +94,7 @@ const SearchDialog: React.FC<Props> = ({ open, close }) => {
     }
   }, [links, kind, isSearching /* , finder */]);
   useEffect(() => {
-    window.nibus.cancelSearch();
+    void window.nibus.cancelSearch();
     if (!open) {
       addressRef.current && (defaultValues.current.address = addressRef.current.value);
       mibTypeRef.current && (defaultValues.current.type = mibTypeRef.current.value);

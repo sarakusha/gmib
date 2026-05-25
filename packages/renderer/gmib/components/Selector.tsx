@@ -24,10 +24,11 @@ const Selector: React.FC<Props> = ({ label, groupName, value, onChange, max, cla
     value !== ALL && setCached(value);
   }, [value]);
   const checkHandler = useCallback<React.ChangeEventHandler<HTMLInputElement>>(
-    async e => {
+    e => {
       const { checked } = e.target;
-      const current = await getStateAsync(setCached);
-      onChange(checked ? ALL : current);
+      void getStateAsync(setCached).then(current => {
+        onChange(checked ? ALL : current);
+      });
     },
     [onChange],
   );

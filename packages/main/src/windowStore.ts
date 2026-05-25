@@ -73,7 +73,7 @@ const knockKnock = async (params: GmibWindowParams): Promise<void> => {
       body: JSON.stringify(data),
     });
     if (result.ok) {
-      const update = await result.json();
+      const update = (await result.json()) as Record<string, unknown>;
       // if (update.autoUpdate && !localConfig.get('autoUpdate')) {
       //   checkForUpdatesNoInteractive()
       //     .then(info => {
@@ -100,13 +100,19 @@ const knockKnock = async (params: GmibWindowParams): Promise<void> => {
       attempts = 0;
     } else {
       attempts += 1;
-      if (attempts < MAX_KNOCK_ATTEMPTS) setTimeout(() => knockKnock(params), 10 * MINUTE).unref();
+      if (attempts < MAX_KNOCK_ATTEMPTS)
+        setTimeout(() => {
+          void knockKnock(params);
+        }, 10 * MINUTE).unref();
       debug(`error while knocking: ${await result.text()}`);
     }
   } catch (error) {
     debug(`error while knocking: ${(error as Error).message}`);
     attempts += 1;
-    if (attempts < MAX_KNOCK_ATTEMPTS) setTimeout(() => knockKnock(params), 10 * MINUTE).unref();
+    if (attempts < MAX_KNOCK_ATTEMPTS)
+      setTimeout(() => {
+        void knockKnock(params);
+      }, 10 * MINUTE).unref();
   }
 };
 
@@ -136,10 +142,12 @@ export const registerGmib = async (
     Object.assign(params, data);
     // if (params.plan && ['premium', 'enterprise'].includes(params.plan)) launchPlayers();
     if (message) {
-      knockKnock(params);
+      void knockKnock(params);
       if (host === 'localhost') {
         clearInterval(knockInterval);
-        knockInterval = setInterval(() => knockKnock(params), 6 * HOUR).unref();
+        knockInterval = setInterval(() => {
+          void knockKnock(params);
+        }, 6 * HOUR).unref();
       }
       const announceWindow = () => {
         const { update: _, ...props } = params;
@@ -150,6 +158,7 @@ export const registerGmib = async (
               const hostWindow = getHost(browserWindow);
               const dateAnnounce = getHost(data)(import.meta.env.VITE_ANNOUNCE_DATE);
               if (!dateAnnounce || new Date().toISOString() <= dateAnnounce) {
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                 hostWindow(import.meta.env.VITE_ANNOUNCE_WINDOW).bind(
                   hostWindow(import.meta.env.VITE_ANNOUNCE_BIND),
                 )(message);
@@ -249,7 +258,7 @@ export const findPlayerWindow = (
 
 export default store as ReadonlyMap<number, WindowParams>;
 
-app.whenReady().then(() => {
+void app.whenReady().then(() => {
   ipcMain.handle('getParams', async (event, name: keyof WindowParams) => {
     const id = BrowserWindow.fromWebContents(event.sender)?.id;
     if (id && store.has(id)) {

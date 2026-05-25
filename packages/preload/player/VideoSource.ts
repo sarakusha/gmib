@@ -17,6 +17,15 @@ export type VideoSourceOptions = {
   mediaId?: string;
 };
 
+type DecoderMessage = {
+  frame?: VideoFrame;
+  done?: boolean;
+  duration?: number;
+  err?: {
+    message?: string;
+  };
+};
+
 export default class VideoSource {
   #closed = false;
 
@@ -76,7 +85,7 @@ export default class VideoSource {
         decoder.postMessage({ close: true });
         setTimeout(() => decoder.terminate(), 100);
       }
-      writer.close().catch();
+      void writer.close().catch();
     };
     const start = (closed?: boolean) => {
       decoder.postMessage({
@@ -96,25 +105,26 @@ export default class VideoSource {
     }
     const onMessage = options.onMessage ? options.onMessage.bind(this) : () => {};
     decoder.onmessage = ev => {
-      const { data } = ev;
-      if (typeof data !== 'object') return;
-      if ('frame' in data) {
+      const payload: unknown = ev.data;
+      if (!payload || typeof payload !== 'object') return;
+      const data = payload as DecoderMessage;
+      if (data.frame) {
         if (readable.locked && !this.#closed) {
           writer.ready
             .then(() => writer.write(data.frame))
             .catch(() => {
-              data.frame.close();
+              data.frame?.close();
             });
         } else {
           data.frame.close();
         }
       }
-      if ('done' in data && data.done) {
+      if (data.done) {
         close(true);
       }
-      if ('duration' in data) this.#duration = data.duration;
-      if ('err' in data) {
-        debug(`error: ${data.err.message}`);
+      if (typeof data.duration === 'number') this.#duration = data.duration;
+      if (data.err) {
+        debug(`error: ${data.err.message ?? 'unknown error'}`);
         close();
       }
       onMessage(ev);

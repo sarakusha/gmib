@@ -47,7 +47,7 @@ const createVideoOut = (mapping: PlayerMapping): void => {
         list.forEach(elem => {
           // eslint-disable-next-line no-param-reassign
           elem.srcObject = stream;
-          debug(`set stream ${elem}: ${stream}`);
+          debug(`set stream ${elem.tagName.toLowerCase()}: ${stream.id}`);
         });
       }, 1000);
     },
@@ -76,9 +76,11 @@ export const update = async () => {
   });
 };
 
-ipcRenderer.on('updateVideoOuts', update);
+ipcRenderer.on('updateVideoOuts', () => {
+  void update();
+});
 
-update();
+void update();
 
 // window.addEventListener('load', update);
 

@@ -61,7 +61,12 @@ const PropertyGridTab: React.FC<MinihostTabProps> = ({ id, selected = false }) =
           alignItems: 'center',
         }}
       >
-        <ErrorCard error={error} onAction={() => dispatch(reloadDevice(id))} />
+        <ErrorCard
+          error={error}
+          onAction={() => {
+            void dispatch(reloadDevice(id));
+          }}
+        />
       </Box>
     );
   }

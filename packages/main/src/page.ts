@@ -17,7 +17,7 @@ const toPage = (result: NullableOptional): Page => {
     permanent: Boolean(flags & PageFlags.Permanent),
     hidden: Boolean(flags & PageFlags.Hidden),
     ...props,
-  };
+  } as Page;
 };
 
 const pageEncoder = ({

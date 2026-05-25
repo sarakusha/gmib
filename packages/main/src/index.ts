@@ -26,7 +26,7 @@ import { fixDefault } from '/@common/helpers';
 
 process.env['npm_package_version'] = import.meta.env.VITE_APP_VERSION;
 
-import('./nibus');
+void import('./nibus');
 
 // import {REDUX_DEVTOOLS} from 'electron-devtools-installer';
 // import.meta.env.PROD && Sentry.init({ dsn: 'https://fbd4024789d247fcb5eb2493d1aa28b6@o1412889.ingest.sentry.io/6752393' });
@@ -97,7 +97,7 @@ app
   .then(createMainWindow)
   .then(main => {
     main.webContents.setWindowOpenHandler(openHandler);
-    launchPlayers();
+    void launchPlayers();
   })
   .then(() => {
     if (!powerSaveBlocker.isStarted(suspendBlocker)) {

@@ -32,13 +32,23 @@ const ipEqual = (ip1 = '::1', ip2 = '::1'): boolean => {
   return ip1 === ip2;
 };
 
+const rawDataToString = (data: WebSocket.RawData): string =>
+  Array.isArray(data)
+    ? Buffer.concat(data).toString()
+    : data instanceof ArrayBuffer
+      ? Buffer.from(new Uint8Array(data)).toString()
+      : data.toString();
+
 wss.on('connection', (ws: WebSocketEx) => {
   ws.once('message', raw => {
     try {
-      const data = JSON.parse(raw.toString());
-      if (typeof data === 'object' && 'sourceId' in data && typeof data.sourceId === 'number') {
-        // eslint-disable-next-line no-param-reassign
-        ws.sourceId = data.sourceId;
+      const parsed: unknown = JSON.parse(rawDataToString(raw));
+      if (typeof parsed === 'object' && parsed !== null && 'sourceId' in parsed) {
+        const obj = parsed as Record<string, unknown>;
+        if (typeof obj.sourceId === 'number') {
+          // eslint-disable-next-line no-param-reassign
+          ws.sourceId = obj.sourceId;
+        }
       }
     } catch (error) {
       debug(`error while parse ws-message: ${(error as Error).message}`);

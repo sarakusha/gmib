@@ -81,7 +81,8 @@ export const selectProps: PropsSelector = createSelector(
     (_: RootState, id: string, names: string) => names,
   ],
 
-  (devices, id, names) => pick(devices.entities[id], names.split(',')) as any,
+  (devices, id, names) =>
+    pick(devices.entities[id], names.split(',')) as Record<string, ValueState | undefined>,
 );
 
 export const selectLinks = createSelector(selectAllDevices, devices =>
@@ -89,7 +90,7 @@ export const selectLinks = createSelector(selectAllDevices, devices =>
 );
 
 export const selectAllDevicesWithParent = createSelector(
-  [selectAllDevices, state => state],
+  [selectAllDevices, (state: RootState) => state],
   (devices, state) =>
     devices.map(({ parent, ...props }) => ({
       ...props,

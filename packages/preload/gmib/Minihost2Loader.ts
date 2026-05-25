@@ -47,10 +47,10 @@ export default class Minihost2Loader extends MinihostLoader<Minihost2Info> {
   }
 
   isInvertH(): boolean {
-    return this.device.getRawValue('hinvert') || false;
+    return Boolean(this.device.getRawValue('hinvert'));
   }
 
   isInvertV(): boolean {
-    return this.device.getRawValue('vinvert') || false;
+    return Boolean(this.device.getRawValue('vinvert'));
   }
 }

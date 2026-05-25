@@ -4,6 +4,7 @@ import os from 'node:os';
 import * as ciao from '@homebridge/ciao';
 import debugFactory from 'debug';
 import express from 'express';
+import type { Request, Response } from 'express';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import type { RequestHandler } from 'http-proxy-middleware';
 import sortBy from 'lodash/sortBy';
@@ -28,7 +29,7 @@ type ProxyOptions = {
   readonly rank: number;
 };
 
-type Proxy = RequestHandler &
+type Proxy = RequestHandler<Request, Response> &
   ProxyOptions & {
     secret(value: bigint): void;
   };
@@ -80,17 +81,17 @@ const selectStrongest = (
   sortBy(remotes, remote => -Number(remote.txt.rank ?? remote.txt.rang))[0];
 
 const tryCreateMasterBrowser = () => {
-  service
+  void service
     .advertise()
     .then(delay100)
     .then(() => {
       const strongest = selectStrongest(browser.services);
       if (strongest && Number(strongest.txt.rank ?? strongest.txt.rang) > rank) {
-        service.end();
+        void service.end();
 
         createProxy(strongest);
         isMaster = false;
-        master.close();
+        void master.close();
         // debug(`close MBR: ${rank}`);
       } else {
         // debug(`MBR ${rank}`);
@@ -113,10 +114,10 @@ if (!disableNet) {
   isMaster = true;
 }
 
-config.onDidChange('disableNet', async (newValue, oldValue) => {
+config.onDidChange('disableNet', (_newValue, oldValue) => {
   if (oldValue != null && import.meta.env.PROD) {
     debug('relaunch...');
-    responder.shutdown().finally(relaunch);
+    void responder.shutdown().finally(relaunch);
   }
 });
 
@@ -127,46 +128,48 @@ const createProxy = (remote: bonjourHap.RemoteService) => {
   // const { host, port, identifier } = opts;
   const remoteTarget = `${host}:${port}`;
   let secret: Buffer | undefined;
-  getOutgoingSecret(identifier).then(value => {
+  void getOutgoingSecret(identifier).then(value => {
     secret = value;
   });
-  const handler = createProxyMiddleware({
+  const handler = createProxyMiddleware<Request, Response>({
     target: `http://${remoteTarget}`,
     changeOrigin: true,
-    onProxyReq: (proxyReq, req) => {
-      if (secret) {
-        const now = Date.now();
-        proxyReq.setHeader('X-NI-Identifier', localConfig.get('identifier'));
-        proxyReq.setHeader('X-NI-Timestamp', now.toString());
-        proxyReq.setHeader(
-          'X-NI-Signature',
-          generateSignature(secret, req.method, req.url, now, req.body),
-        );
-      }
-      proxyReq.removeHeader('authorization');
-      /**
-       * https://github.com/chimurai/http-proxy-middleware/issues/40#issuecomment-249430255
-       */
-      if (req.body) {
-        const body = JSON.stringify(req.body);
-        proxyReq.setHeader('Content-Type', 'application/json');
-        proxyReq.setHeader('Content-Length', Buffer.byteLength(body));
-        proxyReq.write(body);
-      }
-    },
-    onProxyRes: proxyRes => {
-      // eslint-disable-next-line no-param-reassign
-      proxyRes.headers['x-ni-identifier'] = identifier;
-      // eslint-disable-next-line no-param-reassign
-      proxyRes.headers['x-from'] = remoteTarget;
-      // debug(`<<${req.method} ${req.url}`);
-    },
-    onError: (err: NodeJS.ErrnoException) => {
-      debug(`proxy error: ${err}`);
-      masterProxy = undefined;
-      ready = new Deferred();
-      browser.update();
-      timeout = setTimeout(tryCreateMasterBrowser, 3000);
+    on: {
+      proxyReq: (proxyReq, req) => {
+        if (secret) {
+          const now = Date.now();
+          proxyReq.setHeader('X-NI-Identifier', localConfig.get('identifier'));
+          proxyReq.setHeader('X-NI-Timestamp', now.toString());
+          proxyReq.setHeader(
+            'X-NI-Signature',
+            generateSignature(secret, req.method, req.url, now, req.body),
+          );
+        }
+        proxyReq.removeHeader('authorization');
+        /**
+         * https://github.com/chimurai/http-proxy-middleware/issues/40#issuecomment-249430255
+         */
+        if (req.body) {
+          const body = JSON.stringify(req.body);
+          proxyReq.setHeader('Content-Type', 'application/json');
+          proxyReq.setHeader('Content-Length', Buffer.byteLength(body));
+          proxyReq.write(body);
+        }
+      },
+      proxyRes: proxyRes => {
+        // eslint-disable-next-line no-param-reassign
+        proxyRes.headers['x-ni-identifier'] = identifier;
+        // eslint-disable-next-line no-param-reassign
+        proxyRes.headers['x-from'] = remoteTarget;
+        // debug(`<<${req.method} ${req.url}`);
+      },
+      error: (err: NodeJS.ErrnoException) => {
+        debug(`proxy error: ${err}`);
+        masterProxy = undefined;
+        ready = new Deferred();
+        browser.update();
+        timeout = setTimeout(tryCreateMasterBrowser, 3000);
+      },
     },
   });
   masterProxy = Object.assign(handler, {
@@ -181,22 +184,24 @@ const createProxy = (remote: bonjourHap.RemoteService) => {
   ready.resolve();
 };
 
-browser.on('up', async remote => {
-  // debug(`UP ${remote.referer.address}`);
-  waitWebContents().then(webContents =>
-    setTimeout(() => webContents.send('reloadDevices'), 1000).unref(),
-  );
-  if (isLocalhost(remote.referer.address) || disableNet) return;
-  const remoteRang = Number(remote.txt.rank);
-  if (isMaster && remoteRang > rank) {
-    await service.end();
-    isMaster = false;
-    await master.close();
-    // debug(`close MBR: ${rank}`);
-  }
-  if (!isMaster && (!masterProxy || masterProxy.rank < remoteRang)) {
-    createProxy(remote);
-  }
+browser.on('up', remote => {
+  void (async () => {
+    // debug(`UP ${remote.referer.address}`);
+    void waitWebContents().then(webContents =>
+      setTimeout(() => webContents.send('reloadDevices'), 1000).unref(),
+    );
+    if (isLocalhost(remote.referer.address) || disableNet) return;
+    const remoteRang = Number(remote.txt.rank);
+    if (isMaster && remoteRang > rank) {
+      await service.end();
+      isMaster = false;
+      await master.close();
+      // debug(`close MBR: ${rank}`);
+    }
+    if (!isMaster && (!masterProxy || masterProxy.rank < remoteRang)) {
+      createProxy(remote);
+    }
+  })();
 });
 
 browser.on('down', remote => {
@@ -216,8 +221,8 @@ browser.on('down', remote => {
 
 app.on('will-quit', () => {
   try {
-    if (isMaster && master) master.close();
-    service.destroy();
+    if (isMaster && master) void master.close();
+    void service.destroy();
   } catch (err) {
     debug(`error while close: ${(err as Error).message}`);
   }
@@ -231,7 +236,7 @@ const middleware = express.Router();
 
 middleware.use('/novastar', async (req, res, next) => {
   await ready.promise;
-  if (masterProxy) masterProxy(req, res, next);
+  if (masterProxy) void masterProxy(req, res, next);
   else next();
 });
 

@@ -18,8 +18,9 @@ const CopyToClipboard = React.forwardRef<HTMLButtonElement, Props>(
     const { values } = useFormikContext<Record<string, string>>();
     const copy = name && name in values ? values[name] : text;
     const [copied, setCopied] = React.useState(false);
-    const handleCopyClick = () =>
-      copy && navigator.clipboard.writeText(copy).then(() => setCopied(true));
+    const handleCopyClick = () => {
+      if (copy) void navigator.clipboard.writeText(copy).then(() => setCopied(true));
+    };
 
     React.useEffect(() => {
       setCopied(false);

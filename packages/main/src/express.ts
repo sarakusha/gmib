@@ -75,7 +75,7 @@ app.use('/public', express.static(mediaRoot));
 app.use(
   '/api',
   (_, __, next) => {
-    dbReady.then(next);
+    void dbReady.then(next);
   },
   api,
 );

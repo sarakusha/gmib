@@ -46,7 +46,7 @@ const setItem =
     if (value !== undefined) {
       clone[index] = value;
     } else {
-      delete clone[index];
+      clone[index] = undefined;
     }
     return clone;
   };

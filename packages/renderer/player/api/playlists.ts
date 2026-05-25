@@ -46,7 +46,7 @@ const playlistApi = createApi({
             currentPlayer = selectPlayer(playerData, sourceId);
           }
           if (currentPlaylist == null) {
-            const [first] = playlistData.ids as number[];
+            const [first] = playlistData.ids;
             dispatch(setCurrentPlaylist(currentPlayer?.playlistId ?? first));
           }
         }
@@ -85,7 +85,7 @@ const playlistApi = createApi({
             );
           }
         } catch {
-          dispatch(
+          void dispatch(
             playlistApi.endpoints.getPlaylists.initiate(undefined, {
               subscribe: false,
               forceRefetch: true,
@@ -194,7 +194,7 @@ export const useGetPlaylistById = (id?: number | null) =>
 const debouncedUpdatePlaylist = createDebouncedAsyncThunk<void, Playlist, AppThunkConfig>(
   'playlistApi/pendingUpdate',
   (playlist, { dispatch }) => {
-    dispatch(playlistApi.endpoints.updatePlaylist.initiate(playlist));
+    void dispatch(playlistApi.endpoints.updatePlaylist.initiate(playlist));
   },
   200,
   { maxWait: 1000, selectId: ({ id }) => id },
@@ -210,7 +210,7 @@ export const updatePlaylist =
         if (!prev) throw new Error(`Unknown playlist: ${id}`);
         const playlist = typeof update === 'function' ? update(prev) : update;
         adapter.setOne(draft, playlist);
-        dispatch(debouncedUpdatePlaylist(playlist));
+        void dispatch(debouncedUpdatePlaylist(playlist));
       }),
     );
   };

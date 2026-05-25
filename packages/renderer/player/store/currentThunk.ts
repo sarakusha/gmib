@@ -75,7 +75,7 @@ startAppListening({
     switch (playbackState) {
       case 'none':
         setTimeout(() => dispatch(playerStop()), 0);
-        dispatch(playerApi.endpoints.stopPlayer.initiate());
+        void dispatch(playerApi.endpoints.stopPlayer.initiate());
         break;
       case 'paused':
         dispatch(playerPause());

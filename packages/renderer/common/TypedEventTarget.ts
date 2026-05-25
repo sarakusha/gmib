@@ -38,7 +38,9 @@ export default class TypedEventTarget<
   };
 
   on<U extends keyof L>(event: U, listener: L[U], once = false): this {
-    const eventListener: TypedEventListener = e => listener(e.payload);
+    const eventListener: TypedEventListener = e => {
+      listener(e.payload);
+    };
     if (!this.#listeners[event]) {
       this.#listeners[event] = [];
     }

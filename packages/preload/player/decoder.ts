@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 import EbmlDecoder from '@sarakusha/ebml';
 import CancelError from '@sarakusha/ebml/CancelError';
+import type { FadeOptions } from '@sarakusha/ebml/FadeTransform';
 import FadeTransform from '@sarakusha/ebml/FadeTransform';
 import RangeFetcher from '@sarakusha/ebml/RangeFetcher';
 import ReducingValve from '@sarakusha/ebml/ReducingValve';
@@ -16,19 +17,29 @@ let pause = noop;
 let cancel = false;
 let fade: FadeTransform | undefined;
 
-onmessage = async ({ data }) => {
-  if (typeof data !== 'object') return;
-  if ('uri' in data) {
+onmessage = async (event: MessageEvent<unknown>) => {
+  const data = event.data;
+  if (typeof data !== 'object' || data === null) return;
+  const d = data as {
+    uri?: string;
+    fade?: FadeOptions;
+    closed?: boolean;
+    play?: () => void;
+    pause?: () => void;
+    close?: () => void;
+    disableFadeOut?: boolean;
+  };
+  if ('uri' in data && typeof d.uri === 'string') {
     const ebml = new EbmlDecoder();
     const chunkGenerator = new VideoChunkGenerator();
     const frameGenerator = new VideoFrameGenerator(chunkGenerator.config, 20);
-    fade = new FadeTransform(data.fade);
-    const valve = new ReducingValve(data.closed);
+    fade = new FadeTransform(d.fade);
+    const valve = new ReducingValve(d.closed);
     play = valve.open;
     pause = valve.close;
     if (controller) controller.abort(new CancelError());
     controller = new AbortController();
-    const fetcher = new RangeFetcher(data.uri, {
+    const fetcher = new RangeFetcher(d.uri, {
       abortController: controller,
       chunkSize: 5 * 1024 * 1024,
     });
@@ -66,15 +77,15 @@ onmessage = async ({ data }) => {
 
       close();
     }
-  } else if ('play' in data && data.play) {
+  } else if ('play' in data && d.play) {
     postMessage({ state: 'playing...', noop: play === noop });
     play();
-  } else if ('pause' in data && data.pause) {
+  } else if ('pause' in data && d.pause) {
     pause();
-  } else if ('close' in data && data.close) {
+  } else if ('close' in data && d.close) {
     controller?.abort(new CancelError());
     cancel = true;
   } else if ('disableFadeOut' in data) {
-    fade?.setDisableFadeOut(Boolean(data.disableFadeOut));
+    fade?.setDisableFadeOut(Boolean(d.disableFadeOut));
   }
 };

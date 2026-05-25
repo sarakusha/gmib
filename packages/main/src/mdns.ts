@@ -68,7 +68,7 @@ const serviceDown = (svc: RemoteService): void => {
 app.once('ready', () => {
   mdnsBrowser.on('up', serviceUp);
   mdnsBrowser.on('down', serviceDown);
-  waitWebContents().then(() => {
+  void waitWebContents().then(() => {
     mdnsBrowser.services.forEach(serviceUp);
   });
 });

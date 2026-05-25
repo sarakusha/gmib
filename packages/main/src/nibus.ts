@@ -43,26 +43,28 @@ const closeNibus = (): void => {
     const file = log.transports.file.getFile().path;
     if (fs.existsSync(file)) {
       setTimeout(() => {
-        reader
-          .read(file)
-          .then(lines => lines.forEach(line => service.server.send(socket, 'log', line)));
+        void reader.read(file).then(lines =>
+          lines.forEach(line => {
+            void service.server.send(socket, 'log', line);
+          }),
+        );
       }, 3000);
     }
-    service?.server.send(socket, 'config', config.store);
-    service?.server.send(socket, 'displays', getAllDisplays());
+    void service?.server.send(socket, 'config', config.store);
+    void service?.server.send(socket, 'displays', getAllDisplays());
   });
   service.server.on('client:config', (socket, store) => {
     try {
       config.store = store as typeof config.store;
-      service.server.broadcast('config', config.store);
+      void service.server.broadcast('config', config.store);
     } catch (err) {
       debug(`Error while save config: ${(err as Error).message}`, true);
-      service.server.send(socket, 'config', config.store);
+      void service.server.send(socket, 'config', config.store);
     }
   });
   service.server.on('client:getBrightnessHistory', (socket, dt) => {
     if (dt != null)
-      getBrightnessHistoryOn(dt).then(rows =>
+      void getBrightnessHistoryOn(dt).then(rows =>
         service.server.send(socket, 'brightnessHistory', rows),
       );
   });
@@ -78,12 +80,14 @@ let lastHealth: number | undefined;
 localConfig.onDidChange('health', health => {
   if (health && health.timestamp !== lastHealth) {
     lastHealth = health.timestamp;
-    service?.server.broadcast('health', health);
+    void service?.server.broadcast('health', health);
   }
 });
 
 const tail = new Tail(log.transports.file.getFile().path);
-tail.on('line', line => service.server.broadcast('log', line));
+tail.on('line', line => {
+  void service.server.broadcast('log', line);
+});
 
 // TODO: Screens
 /*

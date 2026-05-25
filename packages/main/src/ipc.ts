@@ -10,7 +10,7 @@ import store, { findScreenParams } from './windowStore';
 
 import { isGmib } from '/@common/WindowParams';
 
-app.whenReady().then(() => {
+void app.whenReady().then(() => {
   ipcMain.handle('getPlayer', (_, id) => getPlayer(id));
   ipcMain.handle('getPlaylist', async (_, id) => {
     const playlist = await getPlaylist(id);

@@ -36,7 +36,7 @@ let needRender = true;
 if (needRender) {
   // eslint-disable-next-line no-useless-assignment
   needRender = false;
-  window.identify.initialized.then(() => {
+  void window.identify.initialized.then(() => {
     const container = document.getElementById('app') as HTMLElement;
     const root = createRoot(container);
 

@@ -28,7 +28,7 @@ let novastarEnabled = false;
 
 export const hasNovastar = () => novastarEnabled;
 
-window.initializeNovastar().then(value => {
+void window.initializeNovastar().then(value => {
   if (value !== novastarEnabled) {
     novastarEnabled = value;
   }
@@ -78,9 +78,9 @@ const novastarApi = createApi({
       query: () => ({
         url: 'novastar',
         responseHandler: async response => {
-          const result = response.ok ? await response.json() : [];
+          const result: Novastar[] = response.ok ? ((await response.json()) as Novastar[]) : [];
           // if (response.status === 401) {
-          //   result.host = response.headers.get('x-from');
+          //   (result as any).host = response.headers.get('x-from');
           // }
           return result;
         },
@@ -137,7 +137,7 @@ const novastarApi = createApi({
 const debouncedUpdateNovastarScreens = createDebouncedAsyncThunk<void, ScreenParam, AppThunkConfig>(
   'novastarApi/updateScreens',
   (update, { dispatch }) => {
-    dispatch(novastarApi.endpoints.updateScreens.initiate(update));
+    void dispatch(novastarApi.endpoints.updateScreens.initiate(update));
   },
   200,
   { selectId: ({ path, screen, name }) => `${path}[${screen}].${name}` },
@@ -169,7 +169,7 @@ export const updateNovastarScreens = <K extends keyof Screen, S extends number>(
           screen === -1 || index === screen ? updateScreen(scr) : scr,
         );
         adapter.updateOne(draft, { id: path, changes: { screens } });
-        dispatch(
+        void dispatch(
           debouncedUpdateNovastarScreens({
             path,
             screen,
@@ -219,15 +219,17 @@ export const sse: Middleware = api => {
   const evtSource = new EventTarget();
   socket.onmessage = (e: MessageEvent<string>) => {
     try {
-      const msg = JSON.parse(e.data);
+      const msg: unknown = JSON.parse(e.data);
       if (
         typeof msg === 'object' &&
+        msg !== null &&
         'event' in msg &&
         typeof msg.event === 'string' &&
         'data' in msg &&
-        Array.isArray(msg.data)
+        Array.isArray((msg as { data: unknown }).data)
       ) {
-        evtSource.dispatchEvent(new CustomEvent(msg.event, { detail: msg.data }));
+        const { event, data } = msg as { event: string; data: unknown[] };
+        evtSource.dispatchEvent(new CustomEvent(event, { detail: data }));
       }
     } catch {
       debug(`unknown event: ${e.data}`);
@@ -235,39 +237,41 @@ export const sse: Middleware = api => {
   };
   const novastarReady = () =>
     new Promise<void>((resolve, reject) => {
-      setTimeout(
-        () =>
-          dispatch(novastarApi.endpoints.getNovastars.initiate())
-            .unwrap()
-            .then(() => resolve(), reject),
-        0,
-      );
+      setTimeout(() => {
+        void dispatch(novastarApi.endpoints.getNovastars.initiate())
+          .unwrap()
+          .then(() => resolve(), reject);
+      }, 0);
     });
-  evtSource.addEventListener('add', async e => {
-    try {
-      const [device] = (e as CustomEvent<[Novastar]>).detail;
-      await novastarReady();
-      dispatch(
-        novastarApi.util.updateQueryData('getNovastars', undefined, draft => {
-          adapter.addOne(draft, device);
-        }),
-      );
-    } catch (err) {
-      console.error(`error while parse args: ${(err as Error).message}`);
-    }
+  evtSource.addEventListener('add', e => {
+    void (async () => {
+      try {
+        const [device] = (e as CustomEvent<[Novastar]>).detail;
+        await novastarReady();
+        dispatch(
+          novastarApi.util.updateQueryData('getNovastars', undefined, draft => {
+            adapter.addOne(draft, device);
+          }),
+        );
+      } catch (err) {
+        console.error(`error while parse args: ${(err as Error).message}`);
+      }
+    })();
   });
-  evtSource.addEventListener('change', async e => {
-    try {
-      const [id, changes] = (e as CustomEvent<[string, Partial<Novastar>]>).detail;
-      await novastarReady();
-      dispatch(
-        novastarApi.util.updateQueryData('getNovastars', undefined, draft => {
-          adapter.updateOne(draft, { id, changes });
-        }),
-      );
-    } catch (err) {
-      console.error(`error while parse args: ${(err as Error).message}`);
-    }
+  evtSource.addEventListener('change', e => {
+    void (async () => {
+      try {
+        const [id, changes] = (e as CustomEvent<[string, Partial<Novastar>]>).detail;
+        await novastarReady();
+        dispatch(
+          novastarApi.util.updateQueryData('getNovastars', undefined, draft => {
+            adapter.updateOne(draft, { id, changes });
+          }),
+        );
+      } catch (err) {
+        console.error(`error while parse args: ${(err as Error).message}`);
+      }
+    })();
   });
   evtSource.addEventListener('illuminance', e => {
     try {
@@ -277,51 +281,57 @@ export const sse: Middleware = api => {
       console.error(`error while parse args: ${(err as Error).message}`);
     }
   });
-  evtSource.addEventListener('remove', async e => {
-    try {
-      const [path] = (e as CustomEvent<[string]>).detail;
-      await novastarReady();
-      dispatch(
-        novastarApi.util.updateQueryData('getNovastars', undefined, draft => {
-          adapter.removeOne(draft, path);
-        }),
-      );
-      if (selectCurrentDeviceId(getState()) === path) {
-        dispatch(setCurrentDevice(undefined));
+  evtSource.addEventListener('remove', e => {
+    void (async () => {
+      try {
+        const [path] = (e as CustomEvent<[string]>).detail;
+        await novastarReady();
+        dispatch(
+          novastarApi.util.updateQueryData('getNovastars', undefined, draft => {
+            adapter.removeOne(draft, path);
+          }),
+        );
+        if (selectCurrentDeviceId(getState()) === path) {
+          dispatch(setCurrentDevice(undefined));
+        }
+      } catch (err) {
+        console.error(`error while parse args: ${(err as Error).message}`);
       }
-    } catch (err) {
-      console.error(`error while parse args: ${(err as Error).message}`);
-    }
+    })();
   });
-  evtSource.addEventListener('screen', async e => {
-    try {
-      const [screenId, key, value] = (e as CustomEvent<[ScreenId, keyof Screen, never]>).detail;
-      await novastarReady();
-      dispatch(
-        novastarApi.util.updateQueryData('getNovastars', undefined, draft => {
-          // const device = selectNovastar(draft, screenId.path);
-          const screen = draft.entities[screenId.path]?.screens?.[screenId.screen];
-          if (screen) {
-            screen[key] = value;
-          }
-        }),
-      );
-    } catch (err) {
-      console.error(`error while parse args: ${(err as Error).message}`);
-    }
+  evtSource.addEventListener('screen', e => {
+    void (async () => {
+      try {
+        const [screenId, key, value] = (e as CustomEvent<[ScreenId, keyof Screen, never]>).detail;
+        await novastarReady();
+        dispatch(
+          novastarApi.util.updateQueryData('getNovastars', undefined, draft => {
+            // const device = selectNovastar(draft, screenId.path);
+            const screen = draft.entities[screenId.path]?.screens?.[screenId.screen];
+            if (screen) {
+              screen[key] = value;
+            }
+          }),
+        );
+      } catch (err) {
+        console.error(`error while parse args: ${(err as Error).message}`);
+      }
+    })();
   });
-  evtSource.addEventListener('update', async e => {
-    try {
-      const [device] = (e as CustomEvent<[Novastar]>).detail;
-      await novastarReady();
-      dispatch(
-        novastarApi.util.updateQueryData('getNovastars', undefined, draft => {
-          adapter.setOne(draft, device);
-        }),
-      );
-    } catch (err) {
-      console.error(`error while parse args: ${(err as Error).message}`);
-    }
+  evtSource.addEventListener('update', e => {
+    void (async () => {
+      try {
+        const [device] = (e as CustomEvent<[Novastar]>).detail;
+        await novastarReady();
+        dispatch(
+          novastarApi.util.updateQueryData('getNovastars', undefined, draft => {
+            adapter.setOne(draft, device);
+          }),
+        );
+      } catch (err) {
+        console.error(`error while parse args: ${(err as Error).message}`);
+      }
+    })();
   });
   evtSource.addEventListener('telemetry', e => {
     try {

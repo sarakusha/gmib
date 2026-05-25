@@ -13,13 +13,24 @@ const enum MappingFlags {
 }
 
 const toPlayerMapping = (row: NullableOptional): PlayerMapping => {
-  const { flags = 0, ...props } = removeNull(row);
+  const raw = removeNull(row) as Record<string, unknown> | null | undefined;
+  const flags = (raw && (raw.flags as number)) || 0;
+
   return {
-    ...props,
+    id: raw?.id as number | undefined,
+    name: raw?.name as string | null,
+    player: raw?.player as number | null,
+    left: (raw?.left as number) ?? 0,
+    top: (raw?.top as number) ?? 0,
+    width: raw?.width as number | null,
+    height: raw?.height as number | null,
+    display: raw?.display as number | null,
+    zOrder: (raw?.zOrder as number) ?? 0,
+    shader: raw?.shader as string | null,
     kiosk: Boolean(flags & MappingFlags.Kiosk),
     transparent: Boolean(flags & MappingFlags.Transparent),
     alwaysOnTop: !(flags & MappingFlags.AlwaysOnTop),
-  };
+  } as PlayerMapping;
 };
 
 export const getPlayerMappings = promisifyAll(
@@ -78,7 +89,7 @@ export const updatePlayerMapping = promisifyRun(
       height=$height,
       display=$display,
       zOrder=$zOrder,
-      shader=$shader, 
+      shader=$shader,
       flags=$flags
     WHERE id=$id`,
   (id: number, ...[props]: Parameters<typeof playerMappingEncoder>) => ({
@@ -89,7 +100,7 @@ export const updatePlayerMapping = promisifyRun(
 
 export const existsPlayerMappingName = promisifyGet(
   'SELECT 1 FROM playerMapping WHERE name = ? AND id != ? LIMIT 1',
-  (name: string, id = 0) => [name, id],
+  (name: string, id = 0) => [name, id as number],
   result => !!result,
 );
 
