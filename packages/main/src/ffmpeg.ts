@@ -34,7 +34,7 @@ export interface FfprobeFormat {
   probe_score?: number;
   tags?: Record<string, string | number>;
 
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface FfprobeStreamDisposition {
@@ -51,7 +51,7 @@ export interface FfprobeStreamDisposition {
   attached_pic?: number;
   timed_thumbnails?: number;
 
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface FfprobeStream {
@@ -102,7 +102,7 @@ export interface FfprobeStream {
   disposition?: FfprobeStreamDisposition;
   rotation?: string | number;
 
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:ffmpeg`);

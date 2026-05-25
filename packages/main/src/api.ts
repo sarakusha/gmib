@@ -487,7 +487,7 @@ api.get('/playlist/:id', async (req, res, next) => {
     }
     const items = (await getPlaylistItems(id)) ?? [];
     return res.json({ ...playlist, items });
-  } catch (err: any) {
+  } catch (err: unknown) {
     return next(err);
   }
 });

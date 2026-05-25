@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { DeviceId } from '@nibus/core';
 import type { CabinetPosition, HWStatus } from '@novastar/screen';
 import type { PayloadAction } from '@reduxjs/toolkit';

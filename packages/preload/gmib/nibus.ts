@@ -333,6 +333,7 @@ function openSession() {
       const mibProperties = (Reflect.getMetadata('mibProperties', proto) ?? []) as string[];
       const properties = Object.fromEntries(
         mibProperties.map<[string, PropMetaInfo]>(name => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const getPropMeta = (key: string): any => Reflect.getMetadata(key, proto, name);
           return [
             name,

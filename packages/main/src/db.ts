@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { app } from 'electron';
 import path from 'path';
 import { promisify } from 'util';
@@ -289,7 +290,7 @@ function createTables(): void {
   });
 }
 
-export function removeNull<T = any>(value: NullableOptional<T>): T {
+export function removeNull<T = unknown>(value: NullableOptional<T>): T {
   return Object.fromEntries(Object.entries(value).filter(([, val]) => val != null)) as unknown as T;
 }
 

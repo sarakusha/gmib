@@ -73,6 +73,7 @@ api.post('/reload', async (req, res) => {
   // else res.json(device);
 });
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Methods = FilterNames<typeof master, (arg: ScreenId, value: any) => Promise<void>>;
 
 const makeHandler =

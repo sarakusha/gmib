@@ -37,7 +37,7 @@ const formatChars = {
 const isEmpty = (value: string): boolean => !value || value.replace(/0/g, '') === '';
 
 const MaskedInput = IMaskMixin<IMask.AnyMaskedOptions & ExtendedProps>(({ inputRef, ...props }) => (
-  <StyledInput inputRef={inputRef} fullWidth disableUnderline {...(props as any[])} />
+  <StyledInput inputRef={inputRef} fullWidth disableUnderline {...(props as unknown[])} />
 ));
 
 const toUpper = (str: string): string => str.toUpperCase();
@@ -46,7 +46,7 @@ const SerialNoCell: React.FC<Props> = ({
   value: initValue,
   name,
   className,
-  onChangeProperty = () => {},
+  onChangeProperty = () => { },
   dirty,
   align,
   ...props
