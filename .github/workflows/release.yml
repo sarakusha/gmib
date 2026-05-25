@@ -99,9 +99,7 @@ jobs:
               ],
               linux: [
                 'gmib-x86_64.AppImage',
-                'gmib-x86_64.AppImage.blockmap',
                 'gmib-arm64.AppImage',
-                'gmib-arm64.AppImage.blockmap',
                 'latest-linux.yml',
               ],
               windows: [
