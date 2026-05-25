@@ -11,15 +11,17 @@ process.env.VITE_APP_NAME = process.env['npm_package_name'];
 process.env.VITE_APP_VERSION = process.env['npm_package_version'];
 process.env.VITE_DEBUG = `nibus:*,novastar:*,${process.env.VITE_APP_NAME}:*`;
 
+const LIB_NAME = process.env.LIB_NAME ?? 'gmib';
+
 const lib = {
   gmib: 'gmib/index.ts',
   player: 'player/index.ts',
   remote: 'remote/index.ts',
 };
 
-const currentLib = lib[process.env.LIB_NAME];
+const currentLib = lib[LIB_NAME];
 if (!currentLib) {
-  throw new Error(`LIB_NAME:${process.env.LIB_NAME} is not defined or is not valid`);
+  throw new Error(`LIB_NAME:${LIB_NAME} is not defined or is not valid`);
 }
 /**
  * @type {import('vite').UserConfig}
@@ -49,7 +51,7 @@ const config = {
     assetsDir: '.',
     minify: process.env.MODE !== 'development',
     lib: {
-      fileName: process.env.LIB_NAME, // '[name]',
+      fileName: LIB_NAME, // '[name]',
       entry: currentLib,
       // entry: {
       //   gmib: 'gmib/index.ts',
@@ -74,7 +76,7 @@ const config = {
         // 'sqlite3',
         // '@nibus/detection',
         // '@nibus/core',
-        '@nibus/mibs', // @nibus/mibs - содержит assets с относительными путями!,
+        // '@nibus/mibs', // @nibus/mibs - содержит assets с относительными путями!,
         // '@nibus/service',
         // ...Object.keys(dependencies),
         // ...builtinModules.flatMap(p => [p, `node:${p}`]),
