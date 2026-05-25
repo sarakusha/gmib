@@ -38,7 +38,7 @@
     "test:renderer": "vitest run -r packages/renderer --passWithNoTests",
     "test:e2e": "pnpm run build && vitest run",
     "test:spelling": "cspell lint -c cspell.json",
-    "lint": "eslint packages/{main/src,common,{preload,renderer}/{common,gmib,player},preload/remote}",
+    "lint": "eslint packages/main/src packages/common packages/preload/common packages/preload/gmib packages/preload/player packages/preload/remote packages/renderer/common packages/renderer/gmib packages/renderer/player",
     "dev": "cross-env LIB_NAME=gmib DEBUG_COLORS=0 node scripts/watch.mjs",
     "watch:player": "cross-env LIB_NAME=player node scripts/watch.mjs",
     "fix": "run-s fix:*",
