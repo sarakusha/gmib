@@ -71,16 +71,114 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Check draft release assets
+        id: release_check
+        uses: actions/github-script@v7
+        env:
+          BUILD_PLATFORM: ${{ matrix.platform }}
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            const version = JSON.parse(
+              fs.readFileSync(path.join(process.env.GITHUB_WORKSPACE, 'package.json'), 'utf8'),
+            ).version;
+
+            const expectedFilesByPlatform = {
+              macos: [
+                `gmib-${version}.dmg`,
+                `gmib-${version}.dmg.blockmap`,
+                `gmib-${version}-mac.zip`,
+                `gmib-${version}-mac.zip.blockmap`,
+                `gmib-${version}-arm64.dmg`,
+                `gmib-${version}-arm64.dmg.blockmap`,
+                `gmib-${version}-arm64-mac.zip`,
+                `gmib-${version}-arm64-mac.zip.blockmap`,
+                'latest-mac.yml',
+              ],
+              linux: [
+                'gmib-x86_64.AppImage',
+                'gmib-x86_64.AppImage.blockmap',
+                'gmib-arm64.AppImage',
+                'gmib-arm64.AppImage.blockmap',
+                'latest-linux.yml',
+              ],
+              windows: [
+                `gmib-setup-${version}.exe`,
+                `gmib-setup-${version}.exe.blockmap`,
+                'latest.yml',
+              ],
+            };
+
+            const expectedFiles = expectedFilesByPlatform[process.env.BUILD_PLATFORM];
+            if (!expectedFiles) {
+              throw new Error(`Unknown platform: ${process.env.BUILD_PLATFORM}`);
+            }
+
+            const { owner, repo } = context.repo;
+            const releases = (await github.rest.repos.listReleases({ owner, repo, per_page: 100 })).data;
+            let release = releases.find(
+              candidate => candidate.draft && (candidate.tag_name === `v${version}` || candidate.tag_name === version),
+            );
+
+            if (!release) {
+              try {
+                release = (
+                  await github.rest.repos.createRelease({
+                    owner,
+                    repo,
+                    tag_name: `v${version}`,
+                    target_commitish: context.sha,
+                    name: `v${version}`,
+                    draft: true,
+                    prerelease: false,
+                  })
+                ).data;
+              } catch (error) {
+                if (error.status !== 422) throw error;
+
+                const refreshed = (await github.rest.repos.listReleases({ owner, repo, per_page: 100 })).data;
+                release = refreshed.find(
+                  candidate => candidate.draft && (candidate.tag_name === `v${version}` || candidate.tag_name === version),
+                );
+
+                if (!release) {
+                  throw error;
+                }
+              }
+            }
+
+            const assetNames = new Set(release.assets.map(({ name }) => name));
+            const missingExpectedFiles = expectedFiles.filter(name => !assetNames.has(name));
+
+            if (missingExpectedFiles.length === 0) {
+              core.notice(
+                `All draft release assets already exist for ${process.env.BUILD_PLATFORM}: ${expectedFiles.join(', ')}`,
+              );
+              core.setOutput('skip_build', 'true');
+            } else {
+              core.notice(
+                `Missing draft release assets for ${process.env.BUILD_PLATFORM}: ${missingExpectedFiles.join(', ')}`,
+              );
+              core.setOutput('skip_build', 'false');
+            }
+
+            core.setOutput('release_id', String(release.id));
+
       - uses: pnpm/action-setup@v6
+        if: ${{ steps.release_check.outputs.skip_build != 'true' }}
         with:
           run_install: false
 
       - uses: actions/setup-node@v6
+        if: ${{ steps.release_check.outputs.skip_build != 'true' }}
         with:
           node-version: 24
           cache: "pnpm"
 
       - name: Write .env.local from secrets
+        if: ${{ steps.release_check.outputs.skip_build != 'true' }}
         env:
           VITE_ANNOUNCE_PROXY: ${{ secrets.VITE_ANNOUNCE_PROXY }}
           VITE_ANNOUNCE_PATH: ${{ secrets.VITE_ANNOUNCE_PATH }}
@@ -111,11 +209,12 @@ jobs:
           } > .env.local
 
       - run: pnpm install --frozen-lockfile
+        if: ${{ steps.release_check.outputs.skip_build != 'true' }}
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
 
       - name: Download FFmpeg for macOS
-        if: ${{ matrix.platform == 'macos' }}
+        if: ${{ matrix.platform == 'macos' && steps.release_check.outputs.skip_build != 'true' }}
         run: |
           mkdir -p ffmpeg/darwin-x64 ffmpeg/darwin-arm64
           curl --fail --location --retry 5 \
@@ -134,7 +233,7 @@ jobs:
           chmod +x ffmpeg/darwin-arm64/ffmpeg ffmpeg/darwin-arm64/ffprobe
 
       - name: Download FFmpeg for Windows
-        if: ${{ matrix.platform == 'windows' }}
+        if: ${{ matrix.platform == 'windows' && steps.release_check.outputs.skip_build != 'true' }}
         run: |
           mkdir -p ffmpeg/win32-x64
           curl --fail --location --retry 5 \
@@ -145,9 +244,10 @@ jobs:
           mv ffmpeg/win32-x64/extracted/ffmpeg-*-essentials_build/bin/ffprobe.exe ffmpeg/win32-x64/
 
       - run: pnpm run build
+        if: ${{ steps.release_check.outputs.skip_build != 'true' }}
 
-      - name: Compile artifacts ${{ inputs.dry-run && '' || 'and upload them to github release' }}
-        # I use this action because it is capable of retrying multiple times if there are any issues with the distribution server
+      - name: Compile artifacts without publishing
+        if: ${{ steps.release_check.outputs.skip_build != 'true' }}
         uses: nick-fields/retry@v3
         with:
           timeout_minutes: 30
@@ -157,11 +257,50 @@ jobs:
           shell: "bash"
           command: >-
             pnpm exec electron-builder --config ${{ matrix.builder_config }} ${{ matrix.target_args
-            }} --publish ${{ inputs.dry-run && 'never' || 'always' }}
+            }} --publish never
+
+      - name: Upload missing release assets
+        if: ${{ steps.release_check.outputs.skip_build != 'true' }}
+        uses: actions/github-script@v7
         env:
-          # Code Signing params
-          # See https://www.electron.build/code-signing
-          # CSC_LINK: ''
-          # CSC_KEY_PASSWORD: ''
-          # Publishing artifacts
-          GH_TOKEN: ${{ github.token }} # GitHub token, automatically provided (No need to define this secret in the repo settings)
+          RELEASE_ID: ${{ steps.release_check.outputs.release_id }}
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            const { owner, repo } = context.repo;
+            const releaseId = Number(process.env.RELEASE_ID);
+            const { data: release } = await github.rest.repos.getRelease({ owner, repo, release_id: releaseId });
+            const assetNames = new Set(release.assets.map(({ name }) => name));
+
+            const distDir = path.join(process.env.GITHUB_WORKSPACE, 'dist');
+            const localAssets = fs
+              .readdirSync(distDir, { withFileTypes: true })
+              .filter(entry => entry.isFile())
+              .map(entry => entry.name)
+              .filter(name => (name.startsWith('gmib-') || name.startsWith('latest')) && !assetNames.has(name));
+
+            if (localAssets.length === 0) {
+              core.notice('No missing release assets to upload.');
+              return;
+            }
+
+            for (const assetName of localAssets) {
+              const assetPath = path.join(distDir, assetName);
+              const data = fs.readFileSync(assetPath);
+
+              await github.rest.repos.uploadReleaseAsset({
+                owner,
+                repo,
+                release_id: releaseId,
+                name: assetName,
+                data,
+                headers: {
+                  'content-type': 'application/octet-stream',
+                  'content-length': data.length,
+                },
+              });
+
+              core.notice(`Uploaded ${assetName}`);
+            }
