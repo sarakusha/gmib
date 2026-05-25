@@ -5,30 +5,30 @@ on:
   push:
     branches:
       - main
-      - 'renovate/**'
+      - "renovate/**"
     paths-ignore:
-      - '.github/**'
-      - '!.github/workflows/ci.yml'
-      - '!.github/workflows/typechecking.yml'
-      - '!.github/workflows/tests.yml'
-      - '!.github/workflows/release.yml'
-      - '**.md'
+      - ".github/**"
+      - "!.github/workflows/ci.yml"
+      - "!.github/workflows/typechecking.yml"
+      - "!.github/workflows/tests.yml"
+      - "!.github/workflows/release.yml"
+      - "**.md"
       - .editorconfig
       - .gitignore
-      - '.idea/**'
-      - '.vscode/**'
+      - ".idea/**"
+      - ".vscode/**"
   pull_request:
     paths-ignore:
-      - '.github/**'
-      - '!.github/workflows/ci.yml'
-      - '!.github/workflows/typechecking.yml'
-      - '!.github/workflows/tests.yml'
-      - '!.github/workflows/release.yml'
-      - '**.md'
+      - ".github/**"
+      - "!.github/workflows/ci.yml"
+      - "!.github/workflows/typechecking.yml"
+      - "!.github/workflows/tests.yml"
+      - "!.github/workflows/release.yml"
+      - "**.md"
       - .editorconfig
       - .gitignore
-      - '.idea/**'
-      - '.vscode/**'
+      - ".idea/**"
+      - ".vscode/**"
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -37,10 +37,11 @@ concurrency:
 jobs:
   typechecking:
     uses: ./.github/workflows/typechecking.yml
-#  tests:
-#    uses: ./.github/workflows/tests.yml
+  #  tests:
+  #    uses: ./.github/workflows/tests.yml
   draft_release:
+    if: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
     with:
       dry-run: ${{ github.event_name != 'push' || github.ref_name != 'main' }}
-    needs: [ typechecking ]
+    needs: [typechecking]
     uses: ./.github/workflows/release.yml
