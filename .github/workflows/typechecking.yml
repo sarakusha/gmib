@@ -1,5 +1,5 @@
 name: Typechecking
-on: [ workflow_call ]
+on: [workflow_call]
 
 concurrency:
   group: typechecking-${{ github.ref }}
@@ -7,7 +7,7 @@ concurrency:
 
 defaults:
   run:
-    shell: 'bash'
+    shell: "bash"
 
 jobs:
   typescript:
@@ -23,10 +23,10 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - run: pnpm install --frozen-lockfile
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
 
-      - run: pnpm run typecheck --if-present
+      - run: pnpm run typecheck
