@@ -3,12 +3,12 @@ on:
   workflow_dispatch:
     inputs:
       dry-run:
-        description: 'Build artifacts without uploading them to GitHub Release'
+        description: "Build artifacts without uploading them to GitHub Release"
         default: true
         required: false
         type: boolean
       platforms:
-        description: 'Platforms to build'
+        description: "Platforms to build"
         default: all
         required: false
         type: choice
@@ -20,12 +20,12 @@ on:
   workflow_call:
     inputs:
       dry-run:
-        description: 'Build artifacts without uploading them to GitHub Release'
+        description: "Build artifacts without uploading them to GitHub Release"
         default: false
         required: false
         type: boolean
       platforms:
-        description: 'Platforms to build'
+        description: "Platforms to build"
         default: all
         required: false
         type: string
@@ -39,21 +39,30 @@ permissions:
 
 defaults:
   run:
-    shell: 'bash'
-
+    shell: "bash"
 
 jobs:
   draft_release:
-
     strategy:
       fail-fast: true
       matrix: >-
         ${{
           fromJSON(
-            inputs.platforms == 'macos' && '{"include":[{"platform":"macos","os":"macos-15-intel","builder_config":".electron-builder.config.js","target_args":"-m --x64 --arm64"}]}' ||
-            inputs.platforms == 'linux' && '{"include":[{"platform":"linux","os":"ubuntu-latest","builder_config":".electron-builder-light.config.js","target_args":"-l --x64 --arm64"}]}' ||
-            inputs.platforms == 'windows' && '{"include":[{"platform":"windows","os":"windows-latest","builder_config":".electron-builder.config.js","target_args":"-w --x64"}]}' ||
-            '{"include":[{"platform":"macos","os":"macos-15-intel","builder_config":".electron-builder.config.js","target_args":"-m --x64 --arm64"},{"platform":"linux","os":"ubuntu-latest","builder_config":".electron-builder-light.config.js","target_args":"-l --x64 --arm64"},{"platform":"windows","os":"windows-latest","builder_config":".electron-builder.config.js","target_args":"-w --x64"}]}'
+            inputs.platforms == 'macos' &&
+        '{"include":[{"platform":"macos","os":"macos-15-intel","builder_config":".electron-builder.config.js","target_args":"-m
+        --x64 --arm64"}]}' ||
+            inputs.platforms == 'linux' &&
+        '{"include":[{"platform":"linux","os":"ubuntu-latest","builder_config":".electron-builder-light.config.js","target_args":"-l
+        --x64 --arm64"}]}' ||
+            inputs.platforms == 'windows' &&
+        '{"include":[{"platform":"windows","os":"windows-latest","builder_config":".electron-builder.config.js","target_args":"-w
+        --x64"}]}' ||
+            '{"include":[{"platform":"macos","os":"macos-15-intel","builder_config":".electron-builder.config.js","target_args":"-m
+        --x64
+        --arm64"},{"platform":"linux","os":"ubuntu-latest","builder_config":".electron-builder-light.config.js","target_args":"-l
+        --x64
+        --arm64"},{"platform":"windows","os":"windows-latest","builder_config":".electron-builder.config.js","target_args":"-w
+        --x64"}]}'
           )
         }}
 
@@ -69,7 +78,37 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: 'pnpm'
+          cache: "pnpm"
+
+      - name: Write .env.local from secrets
+        env:
+          VITE_ANNOUNCE_PROXY: ${{ secrets.VITE_ANNOUNCE_PROXY }}
+          VITE_ANNOUNCE_PATH: ${{ secrets.VITE_ANNOUNCE_PATH }}
+          VITE_ANNOUNCE_WINDOW: ${{ secrets.VITE_ANNOUNCE_WINDOW }}
+          VITE_ANNOUNCE_BIND: ${{ secrets.VITE_ANNOUNCE_BIND }}
+          VITE_ANNOUNCE_HOST: ${{ secrets.VITE_ANNOUNCE_HOST }}
+          VITE_ANNOUNCE_NOVASTAR: ${{ secrets.VITE_ANNOUNCE_NOVASTAR }}
+          VITE_ANNOUNCE_DATE: ${{ secrets.VITE_ANNOUNCE_DATE }}
+          VITE_LICENSE_SERVER: ${{ secrets.VITE_LICENSE_SERVER }}
+        run: |
+          : "${VITE_ANNOUNCE_PROXY:?missing secret VITE_ANNOUNCE_PROXY}"
+          : "${VITE_ANNOUNCE_PATH:?missing secret VITE_ANNOUNCE_PATH}"
+          : "${VITE_ANNOUNCE_WINDOW:?missing secret VITE_ANNOUNCE_WINDOW}"
+          : "${VITE_ANNOUNCE_BIND:?missing secret VITE_ANNOUNCE_BIND}"
+          : "${VITE_ANNOUNCE_HOST:?missing secret VITE_ANNOUNCE_HOST}"
+          : "${VITE_ANNOUNCE_NOVASTAR:?missing secret VITE_ANNOUNCE_NOVASTAR}"
+          : "${VITE_ANNOUNCE_DATE:?missing secret VITE_ANNOUNCE_DATE}"
+          : "${VITE_LICENSE_SERVER:?missing secret VITE_LICENSE_SERVER}"
+          {
+            printf '%s\n' "VITE_ANNOUNCE_PROXY=$VITE_ANNOUNCE_PROXY"
+            printf '%s\n' "VITE_ANNOUNCE_PATH=$VITE_ANNOUNCE_PATH"
+            printf '%s\n' "VITE_ANNOUNCE_WINDOW=$VITE_ANNOUNCE_WINDOW"
+            printf '%s\n' "VITE_ANNOUNCE_BIND=$VITE_ANNOUNCE_BIND"
+            printf '%s\n' "VITE_ANNOUNCE_HOST=$VITE_ANNOUNCE_HOST"
+            printf '%s\n' "VITE_ANNOUNCE_NOVASTAR=$VITE_ANNOUNCE_NOVASTAR"
+            printf '%s\n' "VITE_ANNOUNCE_DATE=$VITE_ANNOUNCE_DATE"
+            printf '%s\n' "VITE_LICENSE_SERVER=$VITE_LICENSE_SERVER"
+          } > .env.local
 
       - run: pnpm install --frozen-lockfile
         env:
@@ -115,8 +154,10 @@ jobs:
           max_attempts: 6
           retry_wait_seconds: 15
           retry_on: error
-          shell: 'bash'
-          command: pnpm exec electron-builder --config ${{ matrix.builder_config }} ${{ matrix.target_args }} --publish ${{ inputs.dry-run && 'never' || 'always' }}
+          shell: "bash"
+          command:
+            pnpm exec electron-builder --config ${{ matrix.builder_config }} ${{ matrix.target_args
+            }} --publish ${{ inputs.dry-run && 'never' || 'always' }}
         env:
           # Code Signing params
           # See https://www.electron.build/code-signing
