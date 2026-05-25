@@ -20,6 +20,7 @@ module.exports = [
       '**/*.mdx',
       '.eslintignore',
       'packages/common/test.js',
+      '**/vite.config.js',
     ],
   },
 

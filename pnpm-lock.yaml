@@ -23,17 +23,20 @@ importers:
         specifier: ^4.0.1
         version: 4.0.1
       '@nibus/core':
-        specifier: ^6.0.0
-        version: 6.0.0(@nibus/mibs@6.0.0)(debug@4.4.3)
+        specifier: ^6.0.2
+        version: 6.0.2(@nibus/mibs@6.0.2)(debug@4.4.3)
       '@nibus/detection':
-        specifier: ^6.0.0
-        version: 6.0.0(@nibus/core@6.0.0(@nibus/mibs@6.0.0)(debug@4.4.3))
+        specifier: ^6.0.2
+        version: 6.0.2(@nibus/mibs@6.0.2)(debug@4.4.3)
       '@nibus/mibs':
-        specifier: ^6.0.0
-        version: 6.0.0
+        specifier: ^6.0.2
+        version: 6.0.2
       '@nibus/service':
-        specifier: ^6.0.0
-        version: 6.0.0(@nibus/mibs@6.0.0)(debug@4.4.3)
+        specifier: ^6.0.2
+        version: 6.0.2(@nibus/mibs@6.0.2)(debug@4.4.3)
+      '@nodable/entities':
+        specifier: ^2.1.0
+        version: 2.1.0
       '@novastar/codec':
         specifier: 2.2.0-alpha.3
         version: 2.2.0-alpha.3(debug@4.4.3)(iconv-lite@0.6.3)
@@ -58,12 +61,21 @@ importers:
       '@sarakusha/tssrp6a':
         specifier: ^3.0.3
         version: 3.0.3
+      '@types/w3c-web-usb':
+        specifier: ^1.0.6
+        version: 1.0.14
       ajv:
         specifier: ^8.20.0
         version: 8.20.0
+      ajv-formats:
+        specifier: ^3.0.1
+        version: 3.0.1(ajv@8.20.0)
       ansi-regex:
         specifier: ^5.0.1
         version: 5.0.1
+      atomically:
+        specifier: ^2.0.3
+        version: 2.1.1
       body-parser:
         specifier: ^2.2.2
         version: 2.2.2
@@ -85,6 +97,9 @@ importers:
       dayjs:
         specifier: ^1.11.20
         version: 1.11.20
+      debounce-fn:
+        specifier: ^6.0.0
+        version: 6.0.0
       debug:
         specifier: ^4.4.3
         version: 4.4.3
@@ -115,6 +130,9 @@ importers:
       emoji-regex:
         specifier: ^8.0.0
         version: 8.0.0
+      env-paths:
+        specifier: ^3.0.0
+        version: 3.0.0
       es-define-property:
         specifier: ^1.0.1
         version: 1.0.1
@@ -136,6 +154,9 @@ importers:
       fast-uri:
         specifier: ^3.1.2
         version: 3.1.2
+      fast-xml-builder:
+        specifier: ^1.2.0
+        version: 1.2.0
       file-type:
         specifier: ^22.0.1
         version: 22.0.1
@@ -175,6 +196,9 @@ importers:
       json-schema-traverse:
         specifier: ^1.0.0
         version: 1.0.0
+      json-schema-typed:
+        specifier: ^8.0.1
+        version: 8.0.2
       lodash:
         specifier: ^4.18.1
         version: 4.18.1
@@ -187,6 +211,9 @@ importers:
       mime-db:
         specifier: ^1.54.0
         version: 1.54.0
+      mimic-function:
+        specifier: ^5.0.0
+        version: 5.0.1
       minipass:
         specifier: ^7.1.3
         version: 7.1.3
@@ -205,6 +232,9 @@ importers:
       object-inspect:
         specifier: ^1.13.4
         version: 1.13.4
+      path-expression-matcher:
+        specifier: ^1.5.0
+        version: 1.5.0
       react-scroll-to-top:
         specifier: ^3.1.0
         version: 3.1.0(react@19.2.6)
@@ -238,6 +268,15 @@ importers:
       sqlite3:
         specifier: ^6.0.1
         version: 6.0.1
+      strnum:
+        specifier: ^2.3.0
+        version: 2.3.0
+      stubborn-fs:
+        specifier: ^2.0.0
+        version: 2.0.0
+      stubborn-utils:
+        specifier: ^1.0.1
+        version: 1.0.2
       tagged-tag:
         specifier: ^1.0.0
         version: 1.0.0
@@ -259,9 +298,15 @@ importers:
       uuid:
         specifier: ^14.0.0
         version: 14.0.0
+      when-exit:
+        specifier: ^2.1.4
+        version: 2.1.5
       ws:
         specifier: ^8.20.1
         version: 8.20.1(bufferutil@4.1.0)(utf-8-validate@6.0.6)
+      xml-naming:
+        specifier: ^0.1.0
+        version: 0.1.0
       yallist:
         specifier: ^5.0.0
         version: 5.0.0
@@ -309,8 +354,8 @@ importers:
         specifier: ^12.3.0
         version: 12.3.0(rollup@4.60.4)(tslib@2.8.1)(typescript@6.0.3)
       '@sarakusha/ebml':
-        specifier: file:.yalc/@sarakusha/ebml
-        version: file:.yalc/@sarakusha/ebml
+        specifier: ^0.0.4
+        version: 0.0.4
       '@sarakusha/material-ui-chip-input':
         specifier: ^2.0.1
         version: 2.0.1(@emotion/react@11.14.0(@types/react@19.2.15)(react@19.2.6))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.15)(react@19.2.6))(@types/react@19.2.15)(react@19.2.6))(@mui/material@5.18.0(@emotion/react@11.14.0(@types/react@19.2.15)(react@19.2.6))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.15)(react@19.2.6))(@types/react@19.2.15)(react@19.2.6))(@types/react@19.2.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -471,8 +516,8 @@ importers:
         specifier: ^4.0.4
         version: 4.0.4
       iput:
-        specifier: file:.yalc/iput
-        version: file:.yalc/iput(prop-types@15.8.1)(react@19.2.6)
+        specifier: ^2.0.1
+        version: 2.0.1(prop-types@15.8.1)(react@19.2.6)
       material-ui-popup-state:
         specifier: ^5.3.7
         version: 5.3.7(@mui/material@5.18.0(@emotion/react@11.14.0(@types/react@19.2.15)(react@19.2.6))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.15)(react@19.2.6))(@types/react@19.2.15)(react@19.2.6))(@types/react@19.2.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@types/react@19.2.15)(react@19.2.6)
@@ -1268,22 +1313,20 @@ packages:
       '@emnapi/core': ^1.7.1
       '@emnapi/runtime': ^1.7.1
 
-  '@nibus/core@6.0.0':
-    resolution: {integrity: sha512-6OoLOEQVO71bt32SoHGD+6PsghBNI/6Pn5AaOKNLXw914Ug2WJG1c0V23QPSkTrBunSVe2SXooLj2uZRABDD2w==}
+  '@nibus/core@6.0.2':
+    resolution: {integrity: sha512-P5Ug0ILz+43SK8PWht4MnZ5/jnAkf1muuAKYmXhsIJDgTDgDHUhh5aRiwAjV/W9j6WqZkdS1bTNFmMX8s6W0BQ==}
     peerDependencies:
-      '@nibus/mibs': ^6.0.0
+      '@nibus/mibs': ^6.0.2
       debug: ^4.3.0
 
-  '@nibus/detection@6.0.0':
-    resolution: {integrity: sha512-r2UDmCsM+GzhqXE3vyYNgdi3/1cQ74wfSiAaOiA1TkPaJ500p7Qee1e9VShDecZ5SZQImyhioZJm2XLVzlrYKg==}
-    peerDependencies:
-      '@nibus/core': ^6.0.0
+  '@nibus/detection@6.0.2':
+    resolution: {integrity: sha512-M+FAZKE+uPrnNgCyI1ZWdVvGivaw1XziH8+/Ho+ewcW054KygidNbHUDpkhCHe97tSTa9ceC4pdwwTwCaa603A==}
 
-  '@nibus/mibs@6.0.0':
-    resolution: {integrity: sha512-aGeIFIHXl2gsxj9tx7bgx+6T3CFqv7Voz/H5hdDo9JI3P7dp9z0i9ujd5Ozjt8Sy66SJ9VbIXMkgzn/31oBvDw==}
+  '@nibus/mibs@6.0.2':
+    resolution: {integrity: sha512-umqQ57b9AwMQHTtEEJ5fcuSyNPO05KW1E14qmnw/sBZmctmk72AZZXO6iTRh82IwBFBkF2OYBNQYdi1IxKboRQ==}
 
-  '@nibus/service@6.0.0':
-    resolution: {integrity: sha512-NnUh9eYABQxKZ471Yo3JsTA2s2JqxOeZnllOQSRrVVbccsAriQNEXp4jpZ1hIKCAfKEV03qILx+j4HbEcGjChQ==}
+  '@nibus/service@6.0.2':
+    resolution: {integrity: sha512-6vni/FOAJk4R+bJuiFeZs/Oh3izXVLydyM4MZxhgCdu+4UQt6/7ISBTAdjJId6G8BiEvTco4vYU1Pja7yPTOSg==}
     peerDependencies:
       debug: ^4.3.0
 
@@ -1661,8 +1704,8 @@ packages:
   '@rtsao/scc@1.1.0':
     resolution: {integrity: sha512-zt6OdqaDoOnJ1ZYsCYGt9YmWzDXl4vQdKTyJev62gFhRGKdx7mcT54V9KIjg+d2wi9EXsPvAPKe7i7WjfVWB8g==}
 
-  '@sarakusha/ebml@file:.yalc/@sarakusha/ebml':
-    resolution: {directory: .yalc/@sarakusha/ebml, type: directory}
+  '@sarakusha/ebml@0.0.4':
+    resolution: {integrity: sha512-WEOdev5kbf77x5oN1u6qlJf9PxcRLxz/ed0g4yPQFRfRseRB6z9daXw4KXWJ2eHcGjAIhCTu9cCx/HpoRjozCg==}
     engines: {node: '>=16'}
 
   '@sarakusha/lzma@2.3.4':
@@ -2142,14 +2185,6 @@ packages:
     resolution: {integrity: sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==}
     engines: {node: '>= 14'}
 
-  ajv-formats@2.1.1:
-    resolution: {integrity: sha512-Wx0Kx52hxE7C18hkMEggYlEifqWZtYaRgouJor+WMdPnQyEK13vgEWyVNup7SoeeoLMsr4kf5h6dOW11I15MUA==}
-    peerDependencies:
-      ajv: ^8.0.0
-    peerDependenciesMeta:
-      ajv:
-        optional: true
-
   ajv-formats@3.0.1:
     resolution: {integrity: sha512-8iUql50EUR+uUcdRQ3HDqa6EVyo3docL8g5WJ3FNcWmu62IbkGUue/pEyLBW8VGKKucTPgqeks4fIU1DA4yowQ==}
     peerDependencies:
@@ -2291,10 +2326,6 @@ packages:
   at-least-node@1.0.0:
     resolution: {integrity: sha512-+q/t7Ekv1EDY2l6Gda6LLiX14rU9TV20Wa3ofeQmwPFZbOMo9DXrLbOjFaaclkXKWidIaopwAObQDqwWtGUjqg==}
     engines: {node: '>= 4.0.0'}
-
-  atomically@1.7.0:
-    resolution: {integrity: sha512-Xcz9l0z7y9yQ9rdDaxlmaI4uJHf/T8g9hOEzJcsEqX2SjCj4J20uK7+ldkDHMbpJDK76wF7xEIgxc/vSlsfw5w==}
-    engines: {node: '>=10.12.0'}
 
   atomically@2.1.1:
     resolution: {integrity: sha512-P4w9o2dqARji6P7MHprklbfiArZAWvo07yW7qs3pdljb3BWr12FIB7W+p0zJiuiVsUpRO0iZn1kFFcpPegg0tQ==}
@@ -2600,10 +2631,6 @@ packages:
     resolution: {integrity: sha512-MWufYdFw53ccGjCA+Ol7XJYpAlW6/prSMzuPOTRnJGcGzuhLn4Scrz7qf6o8bROZ514ltazcIFJZevcfbo0x7A==}
     engines: {'0': node >= 6.0}
 
-  conf@10.2.0:
-    resolution: {integrity: sha512-8fLl9F04EJqjSqH+QjITQfJF8BrOVaYr1jewVgSRAEWePfxT0sku4w2hrGQ60BC/TNLGQ2pgxNlTbWQmMPFvXg==}
-    engines: {node: '>=12'}
-
   conf@15.1.0:
     resolution: {integrity: sha512-Uy5YN9KEu0WWDaZAVJ5FAmZoaJt9rdK6kH+utItPyGsCqCgaTKkrmZx3zoE0/3q6S3bcp3Ihkk+ZqPxWxFK5og==}
     engines: {node: '>=20'}
@@ -2822,10 +2849,6 @@ packages:
   dayjs@1.11.20:
     resolution: {integrity: sha512-YbwwqR/uYpeoP4pu043q+LTDLFBLApUP6VxRihdfNTqu4ubqMlGDLd6ErXhEgsyvY0K6nCs7nggYumAN+9uEuQ==}
 
-  debounce-fn@4.0.0:
-    resolution: {integrity: sha512-8pYCQiL9Xdcg0UPSD3d+0KMlOjp+KGU5EPwYddgzQ7DATsg4fuUDjQtsYLmWjnk2obnNHgV3vE2Y4jejSOJVBQ==}
-    engines: {node: '>=10'}
-
   debounce-fn@6.0.0:
     resolution: {integrity: sha512-rBMW+F2TXryBwB54Q0d8drNEI+TfoS9JpNTAoVpukbWEhjXQq4rySFYLaqXMFXwdv61Zb2OHtj5bviSoimqxRQ==}
     engines: {node: '>=18'}
@@ -2994,10 +3017,6 @@ packages:
   dot-prop@5.3.0:
     resolution: {integrity: sha512-QM8q3zDe58hqUqjraQOmzZ1LIH9SWQJTlEKCH4kJ2oQvLZk7RbQXvtDM2XEq3fwkV9CCvvH4LA0AV+ogFsBM2Q==}
     engines: {node: '>=8'}
-
-  dot-prop@6.0.1:
-    resolution: {integrity: sha512-tE7ztYzXHIeyvc7N+hR3oi7FIbf/NIjVP9hmAt3yMXzrQ072/fpjGLx2GxNxGxUl5V73MEqYzioOMoVhGMJ5cA==}
-    engines: {node: '>=10'}
 
   dotenv-expand@11.0.7:
     resolution: {integrity: sha512-zIHwmZPRshsCdpMDyVsqGmgyP0yT8GAgXUnkdAoJisxvf33k7yO6OuoKmcTGuXPWSsm8Oh88nZicRLA9Y0rUeA==}
@@ -3423,10 +3442,6 @@ packages:
 
   fast-xml-builder@1.2.0:
     resolution: {integrity: sha512-00aAWieqff+ZJhsXA4g1g7M8k+7AYoMUUHF+/zFb5U6Uv/P0Vl4QZo84/IcufzYalLuEj9928bXN9PbbFzMF0Q==}
-
-  fast-xml-parser@4.5.6:
-    resolution: {integrity: sha512-Yd4vkROfJf8AuJrDIVMVmYfULKmIJszVsMv7Vo71aocsKgFxpdlpSHXSaInvyYfgw2PRuObQSW2GFpVMUjxu9A==}
-    hasBin: true
 
   fast-xml-parser@5.8.0:
     resolution: {integrity: sha512-6bIM7fsJxeo3uXv7OncQYsBAMPJ7V16Slahl/6M98C/i2q+vB1+4a0MtrvYwDFEUrwDSbAmeLDRXsOBwrL7yAg==}
@@ -3900,8 +3915,8 @@ packages:
   inline-style-parser@0.2.7:
     resolution: {integrity: sha512-Nb2ctOyNR8DqQoR0OwRG95uNWIC0C1lCgf5Naz5H6Ji72KZ8OcFZLz2P5sNgwlyoJ8Yif11oMuYs5pBQa86csA==}
 
-  intel-hex@0.1.2:
-    resolution: {integrity: sha512-BHdANJX9xz74E1IeaRklWDnUEgVuWKD6HQ6ESklElF+4O9/8UtLzuEYoFOiSWcYZV7I40Xwv6c/BKhJqu0w6lQ==}
+  intel-hex@0.2.0:
+    resolution: {integrity: sha512-PJNkAm4N32VjcP7D14q1M+y/en/VlhqFyeaGiEhW/L9gPa7Lv+7vAcVlVBamKMfk6cZCcA9dTvHVXahcOxKzlw==}
 
   internal-slot@1.1.0:
     resolution: {integrity: sha512-4gd7VpWNQNB4UKKCFFVcp1AVv+FMOgs9NKzjHKusc8jTMhd5eL1NqQqOpE0KzMds804/yHlglp3uxgluOqAPLw==}
@@ -3928,8 +3943,8 @@ packages:
     resolution: {integrity: sha512-0KI/607xoxSToH7GjN1FfSbLoU0+btTicjsQSWQlh/hZykN8KpmMf7uYwPW3R+akZ6R/w18ZlXSHBYXiYUPO3g==}
     engines: {node: '>= 0.10'}
 
-  iput@file:.yalc/iput:
-    resolution: {directory: .yalc/iput, type: directory}
+  iput@2.0.1:
+    resolution: {integrity: sha512-0t4cvbIYiKzaQUkB+oMKUCOgygFa2f1JJuCkYpofeHkKDukybxk3mEADitC8moa20BgnNnlz10+y67SkD3pq/A==}
     peerDependencies:
       prop-types: ^15.7.2
       react: ^19.2.6
@@ -4193,9 +4208,6 @@ packages:
 
   json-schema-traverse@1.0.0:
     resolution: {integrity: sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug==}
-
-  json-schema-typed@7.0.3:
-    resolution: {integrity: sha512-7DE8mpG+/fVw+dTpjbxnx47TaMnDfOI1jwft9g1VybltZCduyRQPJPvc+zzKY9WPHxhPWczyFuYa6I8Mw4iU5A==}
 
   json-schema-typed@8.0.2:
     resolution: {integrity: sha512-fQhoXdcvc3V28x7C7BMs4P5+kNlgUURe2jmUT1T//oBRMDrqy1QPelJimwZGo7Hg9VPV3EQV5Bnq4hbFy2vetA==}
@@ -4603,14 +4615,6 @@ packages:
     engines: {node: '>=4.0.0'}
     hasBin: true
 
-  mimic-fn@2.1.0:
-    resolution: {integrity: sha512-OqbOk5oEQeAZ8WXWydlu9HJjz9WVdEIvamMCcXmuqUYjTknH/sqsWvhQ3vgwKFRR1HpjvNBKQ37nbJgYzGqGcg==}
-    engines: {node: '>=6'}
-
-  mimic-fn@3.1.0:
-    resolution: {integrity: sha512-Ysbi9uYW9hFyfrThdDEQuykN4Ey6BuwPD2kpI5ES/nFTDn/98yxYNLZJcgUAKPT/mcrLLKaGzJR9YVxJrIdASQ==}
-    engines: {node: '>=8'}
-
   mimic-function@5.0.1:
     resolution: {integrity: sha512-VP79XUPxV2CigYP3jWwAUFSku2aKqBH7uTAapFWCBqutsbmDo96KY5o8uh6U+/YSIn5OxJnXp73beVkpqMIGhA==}
     engines: {node: '>=18'}
@@ -4889,10 +4893,6 @@ packages:
   once@1.4.0:
     resolution: {integrity: sha512-lNaJgI+2Q5URQBkccEKHTQOPaXdUxnZZElQTZY0MFUAuaEqe1E+Nyvgdz/aIyNi6Z9MzO5dv1H8n58/GELp3+w==}
 
-  onetime@5.1.2:
-    resolution: {integrity: sha512-kbpaSSGJTWdAY5KPVeMOKXSrPtr8C8C7wodJbcsd51jRnmD+GZu8Y0VoU6Dm5Z4vWr0Ig/1NKuWRKf7j5aaYSg==}
-    engines: {node: '>=6'}
-
   open@11.0.0:
     resolution: {integrity: sha512-smsWv2LzFjP03xmvFoJ331ss6h+jixfA4UUV/Bsiyuu4YJPfN+FIQGOIiv4w9/+MoHkfkJ22UIaQWRVFRfH6Vw==}
     engines: {node: '>=20'}
@@ -5085,10 +5085,6 @@ packages:
     resolution: {integrity: sha512-D9wlkXZCmjxj2kBHTw3fGSyjoahr33breGBoJcoezpi7ouYS59DJVOHMZ+dgqacSrZiJo4qtkXxLQTE+BqXJmQ==}
     engines: {node: '>= 14.15.0'}
     hasBin: true
-
-  pkg-up@3.1.0:
-    resolution: {integrity: sha512-nDywThFk1i4BQK4twPQ6TA4RT8bDY96yeuCVBWL3ePARCiEKDRSrNGbFIgUJpLp+XeIR65v8ra7WuJOFUBtkMA==}
-    engines: {node: '>=8'}
 
   plist@3.1.0:
     resolution: {integrity: sha512-uysumyrvkUX0rX/dEVqt8gC3sTBzd4zoWfLeS29nb53imdaXVvLINYXTI2GNqzaMuvacNx4uJQ8+b3zXR0pkgQ==}
@@ -5390,9 +5386,6 @@ packages:
 
   redux@5.0.1:
     resolution: {integrity: sha512-M9/ELqF6fy8FwmkpnF0S3YKOqMyoWJ4+CS5Efg2ct3oY9daQvd/Pc71FpGZsVsbl3Cpb+IIcjBDUnnyBdQbq4w==}
-
-  reflect-metadata@0.1.14:
-    resolution: {integrity: sha512-ZhYeb6nRaXCfhnndflDK8qI6ZQ/YcWZCISRAWICW9XYqMUwjZM9Z0DveWX/ABN01oxSHwVxKQmxeYZSsm0jh5A==}
 
   reflect-metadata@0.2.2:
     resolution: {integrity: sha512-urBwgfrvVP/eAyXx4hluJivBKzuEbSQs9rKWCrCkbSxNv8mxPcUZKeuoF3Uy4mJl3Lwprp6yy5/39VWigZ4K6Q==}
@@ -5834,9 +5827,6 @@ packages:
     resolution: {integrity: sha512-4gB8na07fecVVkOI6Rs4e7T6NOTki5EmL7TUduTs6bu3EdnSycntVJ4re8kgZA+wx9IueI2Y11bfbgwtzuE0KQ==}
     engines: {node: '>=0.10.0'}
 
-  strnum@1.1.2:
-    resolution: {integrity: sha512-vrN+B7DBIoTTZjnPNewwhx6cBA/H+IS7rfW68n7XxC1y7uoiGQBxaKzqucGUgavX15dJgiGztLJ8vxuEzwqBdA==}
-
   strnum@2.3.0:
     resolution: {integrity: sha512-ums3KNd42PGyx5xaoVTO1mjU1bH3NpY4vsrVlnv9PNGqQj8wd7rJ6nEypLrJ7z5vxK5RP0yMLo6J/Gsm62DI5Q==}
 
@@ -6174,10 +6164,6 @@ packages:
 
   uri-js@4.4.1:
     resolution: {integrity: sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==}
-
-  usb@2.15.0:
-    resolution: {integrity: sha512-BA9r7PFxyYp99wps1N70lIqdPb2Utcl2KkWohDtWUmhDBeM5hDH1Zl/L/CZvWxd5W3RUCNm1g+b+DEKZ6cHzqg==}
-    engines: {node: '>=12.22.0 <13.0 || >=14.17.0'}
 
   usb@2.17.0:
     resolution: {integrity: sha512-UuFgrlglgDn5ll6d5l7kl3nDb2Yx43qLUGcDq+7UNLZLtbNug0HZBb2Xodhgx2JZB1LqvU+dOGqLEeYUeZqsHg==}
@@ -7410,16 +7396,16 @@ snapshots:
       '@tybys/wasm-util': 0.10.2
     optional: true
 
-  '@nibus/core@6.0.0(@nibus/mibs@6.0.0)(debug@4.4.3)':
+  '@nibus/core@6.0.2(@nibus/mibs@6.0.2)(debug@4.4.3)':
     dependencies:
-      '@nibus/mibs': 6.0.0
-      conf: 10.2.0
+      '@nibus/mibs': 6.0.2
+      conf: 15.1.0
       crc: 4.3.2
       debug: 4.4.3
-      fast-xml-parser: 4.5.6
+      fast-xml-parser: 5.8.0
       fp-ts: 2.16.11
-      iconv-lite: 0.6.3
-      intel-hex: 0.1.2
+      iconv-lite: 0.7.2
+      intel-hex: 0.2.0
       io-ts: 2.2.22(fp-ts@2.16.11)
       io-ts-types: 0.5.19(fp-ts@2.16.11)(io-ts@2.2.22(fp-ts@2.16.11))(monocle-ts@2.3.13(fp-ts@2.16.11))(newtype-ts@0.3.5(fp-ts@2.16.11)(monocle-ts@2.3.13(fp-ts@2.16.11)))
       lodash: 4.18.1
@@ -7427,21 +7413,25 @@ snapshots:
       newtype-ts: 0.3.5(fp-ts@2.16.11)(monocle-ts@2.3.13(fp-ts@2.16.11))
       printf: 0.6.1
       pump: 3.0.4
-      reflect-metadata: 0.1.14
+      reflect-metadata: 0.2.2
       sax: 1.6.0
       tiny-typed-emitter: 2.1.0
     transitivePeerDependencies:
       - buffer
 
-  '@nibus/detection@6.0.0(@nibus/core@6.0.0(@nibus/mibs@6.0.0)(debug@4.4.3))':
+  '@nibus/detection@6.0.2(@nibus/mibs@6.0.2)(debug@4.4.3)':
     dependencies:
-      '@nibus/core': 6.0.0(@nibus/mibs@6.0.0)(debug@4.4.3)
+      '@nibus/core': 6.0.2(@nibus/mibs@6.0.2)(debug@4.4.3)
       '@types/js-yaml': 4.0.9
       fp-ts: 2.16.11
       io-ts: 2.2.22(fp-ts@2.16.11)
       js-yaml: 4.1.1
+    transitivePeerDependencies:
+      - '@nibus/mibs'
+      - buffer
+      - debug
 
-  '@nibus/mibs@6.0.0':
+  '@nibus/mibs@6.0.2':
     dependencies:
       debug: 4.4.3
       fp-ts: 2.16.11
@@ -7449,18 +7439,18 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@nibus/service@6.0.0(@nibus/mibs@6.0.0)(debug@4.4.3)':
+  '@nibus/service@6.0.2(@nibus/mibs@6.0.2)(debug@4.4.3)':
     dependencies:
       '@homebridge/ciao': 1.3.8
-      '@nibus/core': 6.0.0(@nibus/mibs@6.0.0)(debug@4.4.3)
-      '@nibus/detection': 6.0.0(@nibus/core@6.0.0(@nibus/mibs@6.0.0)(debug@4.4.3))
+      '@nibus/core': 6.0.2(@nibus/mibs@6.0.2)(debug@4.4.3)
+      '@nibus/detection': 6.0.2(@nibus/mibs@6.0.2)(debug@4.4.3)
       '@serialport/bindings-cpp': 13.0.1
       debug: 4.4.3
       fp-ts: 2.16.11
       lodash: 4.18.1
       serialport: 13.0.0
       tiny-typed-emitter: 2.1.0
-      usb: 2.15.0
+      usb: 2.17.0
     transitivePeerDependencies:
       - '@nibus/mibs'
       - buffer
@@ -7788,7 +7778,7 @@ snapshots:
 
   '@rtsao/scc@1.1.0': {}
 
-  '@sarakusha/ebml@file:.yalc/@sarakusha/ebml': {}
+  '@sarakusha/ebml@0.0.4': {}
 
   '@sarakusha/lzma@2.3.4': {}
 
@@ -8289,10 +8279,6 @@ snapshots:
 
   agent-base@7.1.4: {}
 
-  ajv-formats@2.1.1(ajv@8.20.0):
-    optionalDependencies:
-      ajv: 8.20.0
-
   ajv-formats@3.0.1(ajv@8.20.0):
     optionalDependencies:
       ajv: 8.20.0
@@ -8476,8 +8462,6 @@ snapshots:
   asynckit@0.4.0: {}
 
   at-least-node@1.0.0: {}
-
-  atomically@1.7.0: {}
 
   atomically@2.1.1:
     dependencies:
@@ -8821,19 +8805,6 @@ snapshots:
       readable-stream: 3.6.2
       typedarray: 0.0.6
 
-  conf@10.2.0:
-    dependencies:
-      ajv: 8.20.0
-      ajv-formats: 2.1.1(ajv@8.20.0)
-      atomically: 1.7.0
-      debounce-fn: 4.0.0
-      dot-prop: 6.0.1
-      env-paths: 2.2.1
-      json-schema-typed: 7.0.3
-      onetime: 5.1.2
-      pkg-up: 3.1.0
-      semver: 7.8.0
-
   conf@15.1.0:
     dependencies:
       ajv: 8.20.0
@@ -9119,10 +9090,6 @@ snapshots:
 
   dayjs@1.11.20: {}
 
-  debounce-fn@4.0.0:
-    dependencies:
-      mimic-fn: 3.1.0
-
   debounce-fn@6.0.0:
     dependencies:
       mimic-function: 5.0.1
@@ -9283,10 +9250,6 @@ snapshots:
       type-fest: 5.6.0
 
   dot-prop@5.3.0:
-    dependencies:
-      is-obj: 2.0.0
-
-  dot-prop@6.0.1:
     dependencies:
       is-obj: 2.0.0
 
@@ -9937,10 +9900,6 @@ snapshots:
       path-expression-matcher: 1.5.0
       xml-naming: 0.1.0
 
-  fast-xml-parser@4.5.6:
-    dependencies:
-      strnum: 1.1.2
-
   fast-xml-parser@5.8.0:
     dependencies:
       '@nodable/entities': 2.1.0
@@ -10505,7 +10464,7 @@ snapshots:
 
   inline-style-parser@0.2.7: {}
 
-  intel-hex@0.1.2: {}
+  intel-hex@0.2.0: {}
 
   internal-slot@1.1.0:
     dependencies:
@@ -10528,7 +10487,7 @@ snapshots:
 
   ipaddr.js@1.9.1: {}
 
-  iput@file:.yalc/iput(prop-types@15.8.1)(react@19.2.6):
+  iput@2.0.1(prop-types@15.8.1)(react@19.2.6):
     dependencies:
       prop-types: 15.8.1
       react: 19.2.6
@@ -10760,8 +10719,6 @@ snapshots:
   json-schema-traverse@0.4.1: {}
 
   json-schema-traverse@1.0.0: {}
-
-  json-schema-typed@7.0.3: {}
 
   json-schema-typed@8.0.2: {}
 
@@ -11342,10 +11299,6 @@ snapshots:
 
   mime@2.6.0: {}
 
-  mimic-fn@2.1.0: {}
-
-  mimic-fn@3.1.0: {}
-
   mimic-function@5.0.1: {}
 
   mimic-response@1.0.1: {}
@@ -11615,10 +11568,6 @@ snapshots:
     dependencies:
       wrappy: 1.0.2
 
-  onetime@5.1.2:
-    dependencies:
-      mimic-fn: 2.1.0
-
   open@11.0.0:
     dependencies:
       default-browser: 5.5.0
@@ -11791,10 +11740,6 @@ snapshots:
   pkg-prebuilds@1.0.0:
     dependencies:
       yargs: 17.7.2
-
-  pkg-up@3.1.0:
-    dependencies:
-      find-up: 3.0.0
 
   plist@3.1.0:
     dependencies:
@@ -12120,8 +12065,6 @@ snapshots:
       '@babel/runtime': 7.29.2
 
   redux@5.0.1: {}
-
-  reflect-metadata@0.1.14: {}
 
   reflect-metadata@0.2.2: {}
 
@@ -12702,8 +12645,6 @@ snapshots:
 
   strip-json-comments@2.0.1: {}
 
-  strnum@1.1.2: {}
-
   strnum@2.3.0: {}
 
   strtok3@10.3.5:
@@ -13072,12 +13013,6 @@ snapshots:
   uri-js@4.4.1:
     dependencies:
       punycode: 2.3.1
-
-  usb@2.15.0:
-    dependencies:
-      '@types/w3c-web-usb': 1.0.14
-      node-addon-api: 8.7.0
-      node-gyp-build: 4.8.4
 
   usb@2.17.0:
     dependencies:

@@ -2,6 +2,7 @@ overrides:
   react: $react
   ws: $ws
   prettier: $prettier
+  # "@sarakusha/ebml": "file:.yalc/@sarakusha/ebml"
   # '@nibus/core': file:.yalc/@nibus/core
   # '@nibus/detection': file:.yalc/@nibus/detection
   # '@nibus/mibs': file:.yalc/@nibus/mibs
@@ -30,7 +31,5 @@ allowBuilds:
   utf-8-validate: true
 minimumReleaseAgeExclude:
   - vite@8.0.14
-  - '@nibus/core@6.0.0'
-  - '@nibus/detection@6.0.0'
-  - '@nibus/mibs@6.0.0'
-  - '@nibus/service@6.0.0'
+  - "@nibus/*"
+  - '@sarakusha/ebml@0.0.4'
