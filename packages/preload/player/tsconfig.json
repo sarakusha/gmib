@@ -1,21 +1,11 @@
 {
   "extends": "../tsconfig.json",
   "compilerOptions": {
-    "types": [
-      "vite/client"
-    ],
-    "lib": [
-      "webworker",
-      "DOM",
-      "ESNext"
-    ],
+    "types": ["vite/client"],
+    "lib": ["webworker", "DOM", "ESNext"],
     "paths": {
-      "/@common/*": [
-        "../../common/*"
-      ],
-      "/@player/store/*": [
-        "../../renderer/player/store/*"
-      ]
+      "/@common/*": ["../../common/*"],
+      "/@player/store/*": ["../../renderer/player/store/*"]
     }
   },
   "include": [
@@ -29,8 +19,5 @@
     "../../../node_modules/@types/offscreencanvas/index.d.ts",
     "../../common/test.js"
   ],
-  "exclude": [
-    "**/*.spec.ts",
-    "**/*.test.ts"
-  ]
+  "exclude": ["**/*.spec.ts", "**/*.test.ts"]
 }

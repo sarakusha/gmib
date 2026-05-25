@@ -19,16 +19,8 @@
     "filetypes",
     "softwareTerms"
   ],
-  "ignorePaths": [
-    "node_modules/",
-    "/project-words.txt",
-    "bak/",
-    "dist/"
-  ],
-  "files": [
-    "packages/**/*.{ts,tsx,js,mjs,cjs,md,mdx}",
-    "docs/**/*.md"
-  ],
+  "ignorePaths": ["node_modules/", "/project-words.txt", "bak/", "dist/"],
+  "files": ["packages/**/*.{ts,tsx,js,mjs,cjs,md,mdx}", "docs/**/*.md"],
   "overrides": [
     {
       "filename": "**/*.{ts,tsx}",

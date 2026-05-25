@@ -4,3 +4,11 @@ assets
 resources
 build
 *.mdx
+node_modules
+.pnpm-store
+.mypy_cache
+.vscode
+.github/.vscode
+.electron-vendors.cache.json
+external.js
+packages/preload/*InMainWorld.d.ts

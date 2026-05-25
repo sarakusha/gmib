@@ -175,7 +175,8 @@ const requiredCount = Object.keys(nextAutoDependencies).length;
 console.log(`${requiredCount} packaged runtime dependencies are required.`);
 if (changes.length > 0) {
   console.log(changes.join('\n'));
-  if (!write) console.log('Run with --write to update package.json and scripts/packaged-runtime-deps.json.');
+  if (!write)
+    console.log('Run with --write to update package.json and scripts/packaged-runtime-deps.json.');
 } else {
   console.log('No package.json changes needed.');
 }

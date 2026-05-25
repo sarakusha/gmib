@@ -11,8 +11,8 @@ export declare type ReactMaskProps<
   Value = Unmask extends 'typed'
     ? IMask.InputMask<Opts>['typedValue']
     : Unmask extends Falsy
-    ? IMask.InputMask<Opts>['value']
-    : IMask.InputMask<Opts>['unmaskedValue'],
+      ? IMask.InputMask<Opts>['value']
+      : IMask.InputMask<Opts>['unmaskedValue'],
   MaskElement extends ReactElement = ReactElement,
 > = {
   onAccept?: (value: Value, maskRef: IMask.InputMask<Opts>, e?: InputEvent) => void;
@@ -34,8 +34,8 @@ export declare type IMaskMixinProps<
   Value = Unmask extends 'typed'
     ? IMask.InputMask<Opts>['typedValue']
     : Unmask extends Falsy
-    ? IMask.InputMask<Opts>['value']
-    : IMask.InputMask<Opts>['unmaskedValue'],
+      ? IMask.InputMask<Opts>['value']
+      : IMask.InputMask<Opts>['unmaskedValue'],
   MaskElement extends ReactElement = ReactElement,
 > = Opts & ReactMaskProps<Opts, Unmask, Value, MaskElement>;
 export declare type IMaskInputProps<
@@ -44,8 +44,8 @@ export declare type IMaskInputProps<
   Value = Unmask extends 'typed'
     ? IMask.InputMask<Opts>['typedValue']
     : Unmask extends Falsy
-    ? IMask.InputMask<Opts>['value']
-    : IMask.InputMask<Opts>['unmaskedValue'],
+      ? IMask.InputMask<Opts>['value']
+      : IMask.InputMask<Opts>['unmaskedValue'],
   MaskElement extends ReactElement = ReactElement,
 > = ReactElementProps<MaskElement> & IMaskMixinProps<Opts, Unmask, Value, MaskElement>;
 export default function IMaskMixin<
@@ -54,8 +54,8 @@ export default function IMaskMixin<
   Value = Unmask extends 'typed'
     ? IMask.InputMask<Opts>['typedValue']
     : Unmask extends Falsy
-    ? IMask.InputMask<Opts>['value']
-    : IMask.InputMask<Opts>['unmaskedValue'],
+      ? IMask.InputMask<Opts>['value']
+      : IMask.InputMask<Opts>['unmaskedValue'],
   MaskElement extends ReactElement = ReactElement,
 >(
   ComposedComponent: ReactMixinComponent<MaskElement>,

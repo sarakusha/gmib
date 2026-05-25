@@ -2,15 +2,9 @@
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "paths": {
-      "bonjour-hap": [
-        "../../types/bonjour-hap"
-      ],
-      "/@renderer/store/*": [
-        "../../renderer/gmib/store/*"
-      ],
-      "/@common/*": [
-        "../../common/*"
-      ]
+      "bonjour-hap": ["../../types/bonjour-hap"],
+      "/@renderer/store/*": ["../../renderer/gmib/store/*"],
+      "/@common/*": ["../../common/*"]
     }
   },
   "include": [
@@ -21,8 +15,5 @@
     "../../../types/**/*.d.ts",
     "../../common/test.js"
   ],
-  "exclude": [
-    "**/*.spec.ts",
-    "**/*.test.ts"
-  ]
+  "exclude": ["**/*.spec.ts", "**/*.test.ts"]
 }

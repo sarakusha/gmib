@@ -1,7 +1,7 @@
 // TODO: Refactor this action
 
 const fs = require('fs');
-const {execSync} = require('child_process');
+const { execSync } = require('child_process');
 
 /**
  * Gets the value of an input.  The value is also trimmed.
@@ -35,7 +35,6 @@ const INCLUDE_ABBREVIATED_COMMIT = getInput('include-abbreviated-commit') === 't
  * @typedef {ICommit & {type: string | undefined, scope: string | undefined}} ICommitExtended
  */
 
-
 /**
  * Any unique string that is guaranteed not to be used in committee text.
  * Used to split data in the commit line
@@ -43,14 +42,12 @@ const INCLUDE_ABBREVIATED_COMMIT = getInput('include-abbreviated-commit') === 't
  */
 const commitInnerSeparator = '~~~~';
 
-
 /**
  * Any unique string that is guaranteed not to be used in committee text.
  * Used to split each commit line
  * @type {string}
  */
 const commitOuterSeparator = '₴₴₴₴';
-
 
 /**
  * Commit data to be obtained.
@@ -75,7 +72,6 @@ if (INCLUDE_ABBREVIATED_COMMIT) {
  * @type {string}
  */
 const fallbackType = 'other';
-
 
 /**
  * List of all desired commit groups and in what order to display them.
@@ -104,10 +100,7 @@ const supportedTypes = [
 function parseCommit(commitString) {
   /** @type {ICommit} */
   const commitDataObj = {};
-  const commitDataArray =
-    commitString
-      .split(commitInnerSeparator)
-      .map(s => s.trim());
+  const commitDataArray = commitString.split(commitInnerSeparator).map(s => s.trim());
 
   for (const [key] of commitDataMap) {
     commitDataObj[key] = commitDataArray.shift();
@@ -121,10 +114,12 @@ function parseCommit(commitString) {
  * @return {ICommit[]}
  */
 function getCommits() {
+  const format =
+    Array.from(commitDataMap.values()).join(commitInnerSeparator) + commitOuterSeparator;
 
-  const format = Array.from(commitDataMap.values()).join(commitInnerSeparator) + commitOuterSeparator;
-
-  const logs = String(execSync(`git --no-pager log ${START_FROM}..${END_TO} --pretty=format:"${format}" --reverse`));
+  const logs = String(
+    execSync(`git --no-pager log ${START_FROM}..${END_TO} --pretty=format:"${format}" --reverse`),
+  );
 
   return logs
     .trim()
@@ -133,14 +128,12 @@ function getCommits() {
     .map(parseCommit);
 }
 
-
 /**
  *
  * @param {ICommit} commit
  * @return {ICommitExtended}
  */
 function setCommitTypeAndScope(commit) {
-
   const matchRE = new RegExp(`^(?:(${supportedTypes.join('|')})(?:\\((\\S+)\\))?:)?(.*)`, 'i');
 
   let [, type, scope, clearSubject] = commit.subject.match(matchRE);
@@ -163,7 +156,7 @@ function setCommitTypeAndScope(commit) {
 
 class CommitGroup {
   constructor() {
-    this.scopes = new Map;
+    this.scopes = new Map();
     this.commits = [];
   }
 
@@ -192,7 +185,7 @@ class CommitGroup {
       return;
     }
 
-    const scope = this.scopes.get(commit.scope) || {commits: []};
+    const scope = this.scopes.get(commit.scope) || { commits: [] };
     CommitGroup._pushOrMerge(scope.commits, commit);
     this.scopes.set(commit.scope, scope);
   }
@@ -202,7 +195,6 @@ class CommitGroup {
   }
 }
 
-
 /**
  * Groups all commits by type and scopes
  * @param {ICommit[]} commits
@@ -211,9 +203,7 @@ class CommitGroup {
 function getGroupedCommits(commits) {
   const parsedCommits = commits.map(setCommitTypeAndScope);
 
-  const types = new Map(
-    supportedTypes.map(id => ([id, new CommitGroup()])),
-  );
+  const types = new Map(supportedTypes.map(id => [id, new CommitGroup()]));
 
   for (const parsedCommit of parsedCommits) {
     const typeId = parsedCommit.type;
@@ -247,19 +237,16 @@ function getCommitsList(commits, pad = '') {
 
     const body = commit.body.replace('[skip ci]', '').trim();
     if (body !== '') {
-      changelog += `${
-        body
-          .split(/\r*\n+/)
-          .filter(s => !!s.trim())
-          .map(s => `${pad}  ${s}`)
-          .join('\r\n')
-      }${'\r\n'}`;
+      changelog += `${body
+        .split(/\r*\n+/)
+        .filter(s => !!s.trim())
+        .map(s => `${pad}  ${s}`)
+        .join('\r\n')}${'\r\n'}`;
     }
   }
 
   return changelog;
 }
-
 
 function replaceHeader(str) {
   switch (str) {
@@ -294,13 +281,11 @@ function replaceHeader(str) {
   }
 }
 
-
 /**
  * Return markdown string with changelog
  * @param {Map<string, CommitGroup>} groups
  */
 function getChangeLog(groups) {
-
   let changelog = '';
 
   for (const [typeId, group] of groups) {
@@ -321,12 +306,11 @@ function getChangeLog(groups) {
       changelog += getCommitsList(group.commits);
     }
 
-    changelog += ('\r\n' + '\r\n');
+    changelog += '\r\n' + '\r\n';
   }
 
   return changelog.trim();
 }
-
 
 try {
   const commits = getCommits();
@@ -340,7 +324,7 @@ try {
   } else {
     process.stdout.write(changelog);
   }
-// require('fs').writeFileSync('../CHANGELOG.md', changelog, {encoding: 'utf-8'})
+  // require('fs').writeFileSync('../CHANGELOG.md', changelog, {encoding: 'utf-8'})
 } catch (e) {
   console.error(e);
   process.exit(1);

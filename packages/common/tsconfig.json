@@ -16,18 +16,10 @@
     // Only include `@types` packages that we need to import.
     "types": [],
     "paths": {
-      "bonjour-hap": [
-        "../../types/bonjour-hap"
-      ],
-      "mp4box": [
-        "../../types/mp4box"
-      ]
+      "bonjour-hap": ["../../types/bonjour-hap"],
+      "mp4box": ["../../types/mp4box"]
     },
-    "lib": [
-      "ESNext",
-      "dom",
-      "dom.iterable"
-    ]
+    "lib": ["ESNext", "dom", "dom.iterable"]
   },
   "include": [
     "*.ts",
@@ -39,10 +31,7 @@
     "../renderer/common/authBaseQuery.ts",
     "test.js"
   ],
-  "exclude": [
-    "**/*.spec.ts",
-    "**/*.test.ts"
-  ]
+  "exclude": ["**/*.spec.ts", "**/*.test.ts"]
   //  "paths": {
   //    "@mdx-js/react": [
   //      "mdx-js__react"

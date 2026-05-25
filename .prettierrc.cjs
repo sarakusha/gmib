@@ -1,7 +1,13 @@
-const { jsxBracketSameLine, ...cfg } = require('prettier-airbnb-config');
 module.exports = {
-  ...cfg,
+  arrowParens: 'avoid',
   bracketSpacing: true,
+  jsxSingleQuote: false,
   printWidth: 100,
-  trailingComma: 'all'
+  proseWrap: 'always',
+  quoteProps: 'as-needed',
+  semi: true,
+  singleQuote: true,
+  tabWidth: 2,
+  trailingComma: 'all',
+  useTabs: false,
 };
