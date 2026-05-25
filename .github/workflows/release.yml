@@ -155,7 +155,7 @@ jobs:
           retry_wait_seconds: 15
           retry_on: error
           shell: "bash"
-          command:
+          command: >-
             pnpm exec electron-builder --config ${{ matrix.builder_config }} ${{ matrix.target_args
             }} --publish ${{ inputs.dry-run && 'never' || 'always' }}
         env:
