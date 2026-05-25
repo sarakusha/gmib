@@ -144,6 +144,7 @@ const update = async () => {
         currentSource = videoSource;
         // videoSource.options.fade?.disableOut = true;
         videoStream.add(videoSource.readable).then(playNextSource);
+        // eslint-disable-next-line no-useless-assignment
         delay = 1000;
       }
     }
