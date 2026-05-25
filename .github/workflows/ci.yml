@@ -41,6 +41,8 @@ jobs:
   #    uses: ./.github/workflows/tests.yml
   draft_release:
     if: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
+    permissions:
+      contents: write
     with:
       dry-run: ${{ github.event_name != 'push' || github.ref_name != 'main' }}
     needs: [typechecking]
