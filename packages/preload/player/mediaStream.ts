@@ -31,7 +31,7 @@ const stream = new MediaStream();
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:mediastream`);
 
 const getMediaUri = (name?: string) =>
-  name && new URL(`/public/${name}`, new URL(import.meta.url).origin).href;
+  name && new URL(getUrl(`/public/${name}`), window.location.href).href;
 
 const playNextSource = () => {
   const source = nextSource;
