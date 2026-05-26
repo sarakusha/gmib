@@ -38,7 +38,7 @@ const playNextSource = () => {
   if (source) {
     const same = currentSource?.options.mediaId === source.options.mediaId;
     if (same && !source.options.fade?.disableIn) {
-      source.options.fade = { disableIn: true, ...source.options.fade };
+      source.setDisableFadeIn();
     }
 
     const { itemId, mediaId } = source.options;
