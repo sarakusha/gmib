@@ -217,12 +217,24 @@ class TabbedWindow {
     this.activate(id);
   }
 
+  activateNext() {
+    this.activateByOffset(1);
+  }
+
+  activatePrevious() {
+    this.activateByOffset(-1);
+  }
+
   getActiveWindow(): ManagedWindow | undefined {
     return this.activeTab()?.window;
   }
 
   getWindowById(id: number): ManagedWindow | undefined {
     return this.tabs.find(item => item.id === id)?.window;
+  }
+
+  getTitleById(id: number): string | undefined {
+    return this.tabs.find(item => item.id === id)?.title;
   }
 
   private activateByOffset(offset: number) {
@@ -447,8 +459,16 @@ export const getTabbedBrowserWindow = (): BrowserWindow | undefined => manager?.
 
 export const getActiveTabbedWindow = (): ManagedWindow | undefined => manager?.getActiveWindow();
 
+export const activateNextTabbedWindow = (): void => manager?.activateNext();
+
+export const activatePreviousTabbedWindow = (): void => manager?.activatePrevious();
+
+export const activateTabbedWindow = (id: number): void => manager?.activate(id);
+
 export const getTabbedWindowById = (id: number): ManagedWindow | undefined =>
   manager?.getWindowById(id);
+
+export const getTabbedWindowTitle = (id: number): string | undefined => manager?.getTitleById(id);
 
 export const isTabbedBrowserWindow = (window: BrowserWindow | undefined | null): boolean =>
   !!window && window === manager?.window;

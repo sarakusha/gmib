@@ -22,7 +22,14 @@ import store, { findManagedWindow, getAllGmibParams } from './windowStore';
 import authRequest from './authRequest';
 import mdnsBrowser, { pickRemoteService } from './mdns';
 import { createAppWindow, getMainWindow } from './mainWindow';
-import { getActiveTabbedWindow, isTabbedBrowserWindow } from './tabbedWindow';
+import {
+  activateNextTabbedWindow,
+  activatePreviousTabbedWindow,
+  activateTabbedWindow,
+  getActiveTabbedWindow,
+  getTabbedWindowTitle,
+  isTabbedBrowserWindow,
+} from './tabbedWindow';
 
 import type { GmibWindowParams, WindowParams } from '/@common/WindowParams';
 import { isGmib, isPlayer } from '/@common/WindowParams';
@@ -89,6 +96,27 @@ const paramsToRemote = (params: GmibWindowParams) => ({
   port: params.nibusPort,
   name: params.info?.name,
 });
+
+const getWindowMenuLabel = (params: WindowParams): string => {
+  const title = getTabbedWindowTitle(params.id);
+  if (title) return title;
+  if (isGmib(params)) return `${params.info?.name ?? 'gmib'} (${params.host})`;
+  if (isPlayer(params)) return `player#${params.playerId}`;
+  return `window#${params.id}`;
+};
+
+const openWindowsSubmenu = (activeId?: number): MenuItemConstructorOptions[] =>
+  sortBy(
+    [...store.values()].filter(param => isGmib(param) || isPlayer(param)),
+    'zIndex',
+  ).map((item, index) => ({
+    label: `${index + 1}. ${getWindowMenuLabel(item)}`,
+    type: 'checkbox',
+    checked: item.id === activeId,
+    click: () => {
+      activateTabbedWindow(item.id);
+    },
+  }));
 
 const remoteMenu = (params?: WindowParams): AppMenuItem | undefined => {
   const gmibParams = getGmibParams(params);
@@ -303,6 +331,8 @@ const helpMenu = async (params?: WindowParams): Promise<AppMenuItem> => {
 
 const template = async (params?: WindowParams): Promise<MenuItemConstructorOptions[]> => {
   const remote = remoteMenu(params);
+  const activeId = getFocusedManagedWindow()?.id;
+  const openWindows = openWindowsSubmenu(activeId);
   return [
     ...(process.platform === 'darwin'
       ? [
@@ -443,6 +473,25 @@ const template = async (params?: WindowParams): Promise<MenuItemConstructorOptio
       role: 'windowMenu',
       submenu: [
         {
+          label: 'Следующее окно',
+          accelerator: 'CmdOrCtrl+Tab',
+          enabled: openWindows.length > 1,
+          click: () => {
+            activateNextTabbedWindow();
+          },
+        },
+        {
+          label: 'Предыдущее окно',
+          accelerator: 'CmdOrCtrl+Shift+Tab',
+          enabled: openWindows.length > 1,
+          click: () => {
+            activatePreviousTabbedWindow();
+          },
+        },
+        {
+          type: 'separator',
+        },
+        {
           label: 'Минимизировать',
           // accelerator: 'CmdOrCtrl+M',
           role: 'minimize',
@@ -452,6 +501,14 @@ const template = async (params?: WindowParams): Promise<MenuItemConstructorOptio
           // accelerator: 'CmdOrCtrl+W',
           role: 'close',
         },
+        ...(openWindows.length > 0
+          ? [
+              {
+                type: 'separator',
+              } as MenuItemConstructorOptions,
+              ...openWindows,
+            ]
+          : []),
       ],
     },
     // { role: 'viewMenu' },
