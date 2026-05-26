@@ -75,4 +75,4 @@ jobs:
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
 
-      - run: pnpm exec prettier --check "**/*.{js,mjs,cjs,jsx,ts,mts,cts,tsx,vue,json}"
+      - run: pnpm exec prettier --check "packages/**/*.{js,mjs,cjs,jsx,ts,mts,cts,tsx,vue,json}"
