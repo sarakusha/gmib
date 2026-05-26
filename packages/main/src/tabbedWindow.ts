@@ -1,4 +1,4 @@
-import type { BrowserWindowConstructorOptions, WebPreferences } from 'electron';
+import type { BrowserWindowConstructorOptions, Event, Input, WebPreferences } from 'electron';
 import { app, BrowserWindow, WebContentsView } from 'electron';
 import { EventEmitter } from 'events';
 
@@ -123,6 +123,7 @@ class TabbedWindow {
       event.preventDefault();
       this.handleChromeUrl(url);
     });
+    this.installKeyboardShortcuts(this.chrome);
     void this.chrome.webContents.loadURL(this.chromeUrl()).then(() => this.render());
     this.layout();
   }
@@ -140,6 +141,7 @@ class TabbedWindow {
     const fullTab = Object.assign(tab, { window });
     this.tabs.push(fullTab);
     this.window.contentView.addChildView(view);
+    this.installKeyboardShortcuts(view);
     view.webContents.once('did-finish-load', () => {
       window.emit('ready-to-show');
     });
@@ -223,8 +225,26 @@ class TabbedWindow {
     return this.tabs.find(item => item.id === id)?.window;
   }
 
+  private activateByOffset(offset: number) {
+    const visibleTabs = this.visibleTabs();
+    if (visibleTabs.length === 0) return;
+    const activeIndex = visibleTabs.findIndex(tab => tab.id === this.activeId);
+    const currentIndex = activeIndex >= 0 ? activeIndex : 0;
+    const index = (currentIndex + offset + visibleTabs.length) % visibleTabs.length;
+    this.activate(visibleTabs[index].id);
+  }
+
+  private activateByPosition(position: number) {
+    const tab = this.visibleTabs()[position];
+    if (tab) this.activate(tab.id);
+  }
+
   private activeTab() {
     return this.tabs.find(item => item.id === this.activeId);
+  }
+
+  private visibleTabs() {
+    return this.tabs.filter(tab => !tab.hidden && !tab.destroyed);
   }
 
   private layout() {
@@ -261,6 +281,50 @@ class TabbedWindow {
     } catch {
       // Ignore malformed chrome navigation.
     }
+  }
+
+  private handleKeyboardShortcut(event: Event, input: Input) {
+    if (input.type !== 'keyDown') return;
+    const commandOrControl = input.meta || input.control;
+    if (!commandOrControl || input.alt) return;
+    const key = input.key.toLowerCase();
+    const code = input.code.toLowerCase();
+    const digit = key.match(/^\d$/)?.[0] ?? code.match(/^digit(\d)$/)?.[1];
+    if (digit) {
+      event.preventDefault();
+      this.activateByPosition(digit === '0' ? 9 : Number(digit) - 1);
+      return;
+    }
+    if (key === 'tab') {
+      event.preventDefault();
+      this.activateByOffset(input.shift ? -1 : 1);
+      return;
+    }
+    if (key === 'pageup') {
+      event.preventDefault();
+      this.activateByOffset(-1);
+      return;
+    }
+    if (key === 'pagedown') {
+      event.preventDefault();
+      this.activateByOffset(1);
+      return;
+    }
+    if (input.shift && (key === '[' || code === 'bracketleft')) {
+      event.preventDefault();
+      this.activateByOffset(-1);
+      return;
+    }
+    if (input.shift && (key === ']' || code === 'bracketright')) {
+      event.preventDefault();
+      this.activateByOffset(1);
+    }
+  }
+
+  private installKeyboardShortcuts(view: WebContentsView) {
+    view.webContents.on('before-input-event', (event, input) => {
+      this.handleKeyboardShortcut(event, input);
+    });
   }
 
   private chromeUrl() {
