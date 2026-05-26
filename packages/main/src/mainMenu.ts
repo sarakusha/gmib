@@ -109,14 +109,16 @@ const openWindowsSubmenu = (activeId?: number): MenuItemConstructorOptions[] =>
   sortBy(
     [...store.values()].filter(param => isGmib(param) || isPlayer(param)),
     'zIndex',
-  ).map((item, index) => ({
-    label: `${index + 1}. ${getWindowMenuLabel(item)}`,
-    type: 'checkbox',
-    checked: item.id === activeId,
-    click: () => {
-      activateTabbedWindow(item.id);
-    },
-  }));
+  )
+    .filter(item => process.platform !== 'darwin' || item.id !== activeId)
+    .map((item, index) => ({
+      label: `${index + 1}. ${getWindowMenuLabel(item)}`,
+      type: 'checkbox',
+      checked: item.id === activeId,
+      click: () => {
+        activateTabbedWindow(item.id);
+      },
+    }));
 
 const remoteMenu = (params?: WindowParams): AppMenuItem | undefined => {
   const gmibParams = getGmibParams(params);
@@ -470,6 +472,7 @@ const template = async (params?: WindowParams): Promise<MenuItemConstructorOptio
     },
     {
       label: 'Окно',
+      ...(process.platform === 'darwin' ? { role: 'windowMenu' as const } : {}),
       submenu: [
         {
           label: 'Следующее окно',
