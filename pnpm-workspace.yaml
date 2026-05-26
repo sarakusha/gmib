@@ -4,9 +4,9 @@ overrides:
   prettier: $prettier
   # "@sarakusha/ebml": "file:.yalc/@sarakusha/ebml"
   # '@nibus/core': file:.yalc/@nibus/core
-  # '@nibus/detection': file:.yalc/@nibus/detection
+  # "@nibus/detection": file:.yalc/@nibus/detection
   # '@nibus/mibs': file:.yalc/@nibus/mibs
-  # '@nibus/service': file:.yalc/@nibus/service
+  # "@nibus/service": file:.yalc/@nibus/service
 
 updateConfig:
   ignoreDependencies:
@@ -32,4 +32,4 @@ allowBuilds:
 minimumReleaseAgeExclude:
   - vite@8.0.14
   - "@nibus/*"
-  - '@sarakusha/ebml@0.0.4'
+  - "@sarakusha/ebml@0.0.5"
