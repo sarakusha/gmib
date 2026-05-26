@@ -296,7 +296,7 @@ jobs:
           command: >-
             pnpm exec electron-builder --config ${{ matrix.builder_config }} ${{
             join(matrix.target_args, ' ') }} --publish never
-          GH_TOKEN: ${{ github.token }}
+          # GH_TOKEN: ${{ github.token }}
 
       - name: Upload missing release assets
         if: ${{ steps.platform_check.outputs.selected == 'true' &&
