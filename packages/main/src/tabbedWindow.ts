@@ -36,7 +36,10 @@ export type TabbedWindowItem = {
 class TabWindow extends EventEmitter implements ManagedWindow {
   readonly id: number;
 
-  constructor(private readonly manager: TabbedWindow, private readonly tab: Omit<Tab, 'window'>) {
+  constructor(
+    private readonly manager: TabbedWindow,
+    private readonly tab: Omit<Tab, 'window'>,
+  ) {
     super();
     this.id = tab.id;
   }
@@ -292,7 +295,6 @@ class TabbedWindow {
     app.quit();
   }
 
-
   private visibleTabs() {
     return this.tabs.filter(tab => !tab.hidden && !tab.destroyed);
   }
@@ -478,10 +480,7 @@ const getManager = () => {
   return manager;
 };
 
-export const createTabbedWindow = (
-  title: string,
-  preload: string,
-): ManagedWindow => {
+export const createTabbedWindow = (title: string, preload: string): ManagedWindow => {
   const webPreferences: WebPreferences = {
     webviewTag: false,
     preload,

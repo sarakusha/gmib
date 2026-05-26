@@ -248,8 +248,7 @@ const helpMenu = async (params?: WindowParams): Promise<AppMenuItem> => {
                   : []),
                 {
                   label: 'Активировать лицензию',
-                  click: () =>
-                    getFocusedManagedWindow()?.webContents.send('activateLicense'),
+                  click: () => getFocusedManagedWindow()?.webContents.send('activateLicense'),
                 },
               ],
             },

@@ -8,12 +8,7 @@ import localConfig from './localConfig';
 import type { CloseEvent, ManagedWindow } from './managedWindow';
 import relaunch, { needRestart } from './relaunch';
 import { createTabbedWindow } from './tabbedWindow';
-import {
-  getAllGmibParams,
-  getAllScreenParams,
-  getPlayerParams,
-  registerGmib,
-} from './windowStore';
+import { getAllGmibParams, getAllScreenParams, getPlayerParams, registerGmib } from './windowStore';
 
 import Deferred from '/@common/Deferred';
 

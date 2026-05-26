@@ -47,9 +47,12 @@ const playNextSource = () => {
     currentSource = source;
     nextSource = undefined;
     ipcDispatch(setDuration(source.duration));
-    void videoStream.add(source.readable).then(playNextSource).catch(err => {
-      debug(`error while adding next video source: ${(err as Error).message}`);
-    });
+    void videoStream
+      .add(source.readable)
+      .then(playNextSource)
+      .catch(err => {
+        debug(`error while adding next video source: ${(err as Error).message}`);
+      });
     if (player.current !== itemId) {
       ipcDispatch(setCurrentPlaylistItem(itemId ? { itemId, mediaId } : undefined));
     } else {
@@ -147,9 +150,12 @@ const update = async () => {
       } else {
         currentSource = videoSource;
         // videoSource.options.fade?.disableOut = true;
-        void videoStream.add(videoSource.readable).then(playNextSource).catch(err => {
-          debug(`error while adding video source: ${(err as Error).message}`);
-        });
+        void videoStream
+          .add(videoSource.readable)
+          .then(playNextSource)
+          .catch(err => {
+            debug(`error while adding video source: ${(err as Error).message}`);
+          });
         // eslint-disable-next-line no-useless-assignment
         delay = 1000;
       }

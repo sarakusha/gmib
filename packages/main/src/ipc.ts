@@ -31,7 +31,8 @@ void app.whenReady().then(() => {
   // ipcMain.handle('getScreens', getScreens); // TODO: Возможно не используется
   ipcMain.handle('getMachineId', event => {
     const win = BrowserWindow.fromWebContents(event.sender);
-    const params = (win && findParamsByWebContentsId(win.webContents.id)) ??
+    const params =
+      (win && findParamsByWebContentsId(win.webContents.id)) ??
       findParamsByWebContentsId(event.sender.id);
     return isGmib(params) ? params.machineId : undefined;
   });

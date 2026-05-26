@@ -107,8 +107,7 @@ const openHandler: Handler = ({ url }) => {
   const kiosk = !!toNumber(searchParams.get('kiosk'), 0);
   const transparent = !!toNumber(searchParams.get('transparent'), 0);
   const isVideoOutput = parsedUrl.pathname === '/output/index.html';
-  const alwaysOnTop =
-    isVideoOutput || !!toNumber(searchParams.get('alwaysOnTop'), 1);
+  const alwaysOnTop = isVideoOutput || !!toNumber(searchParams.get('alwaysOnTop'), 1);
   let display: DisplayType | undefined;
   switch (displayId) {
     case DefaultDisplays.Primary:
