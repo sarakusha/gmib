@@ -51,6 +51,8 @@ jobs:
       release_id: ${{ steps.release_check.outputs.release_id }}
 
     steps:
+      - uses: actions/checkout@v6
+
       - name: Check draft release assets
         id: release_check
         uses: actions/github-script@v9
