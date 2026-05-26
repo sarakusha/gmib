@@ -252,19 +252,19 @@ jobs:
           chmod +x ffmpeg/darwin-x64/ffmpeg ffmpeg/darwin-x64/ffprobe
           chmod +x ffmpeg/darwin-arm64/ffmpeg ffmpeg/darwin-arm64/ffprobe
 
-      - name: Download FFmpeg for Linux
-        if:
-          ${{ steps.platform_check.outputs.selected == 'true' && matrix.platform == 'linux' &&
-          steps.release_check.outputs.skip_build != 'true' }}
-        run: |
-          mkdir -p ffmpeg/linux-x64 ffmpeg/linux-arm64
-          curl --fail --location --retry 5 \
-            https://github.com/mifi/ffmpeg-build-script/releases/latest/download/ffmpeg-linux-X64 \
-            --output ffmpeg/linux-x64/ffmpeg
-          curl --fail --location --retry 5 \
-            https://github.com/mifi/ffmpeg-build-script/releases/latest/download/ffmpeg-linux-ARM64 \
-            --output ffmpeg/linux-arm64/ffmpeg
-          chmod +x ffmpeg/linux-x64/ffmpeg ffmpeg/linux-arm64/ffmpeg
+      # - name: Download FFmpeg for Linux
+      #   if:
+      #     ${{ steps.platform_check.outputs.selected == 'true' && matrix.platform == 'linux' &&
+      #     steps.release_check.outputs.skip_build != 'true' }}
+      #   run: |
+      #     mkdir -p ffmpeg/linux-x64 ffmpeg/linux-arm64
+      #     curl --fail --location --retry 5 \
+      #       https://github.com/mifi/ffmpeg-build-script/releases/latest/download/ffmpeg-linux-X64 \
+      #       --output ffmpeg/linux-x64/ffmpeg
+      #     curl --fail --location --retry 5 \
+      #       https://github.com/mifi/ffmpeg-build-script/releases/latest/download/ffmpeg-linux-ARM64 \
+      #       --output ffmpeg/linux-arm64/ffmpeg
+      #     chmod +x ffmpeg/linux-x64/ffmpeg ffmpeg/linux-arm64/ffmpeg
 
       - name: Download FFmpeg for Windows
         if:
