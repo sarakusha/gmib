@@ -7,7 +7,6 @@ import RangeFetcher from '@sarakusha/ebml/RangeFetcher';
 import ReducingValve from '@sarakusha/ebml/ReducingValve';
 import VideoChunkGenerator from '@sarakusha/ebml/VideoChunkGenerator';
 import VideoFrameGenerator from '@sarakusha/ebml/VideoFrameGenerator';
-// import VideoFrameTransformer from '@sarakusha/ebml/VideoFrameTransformer';
 
 let controller: AbortController | undefined;
 let readable: ReadableStream<VideoFrame> | undefined;
@@ -15,7 +14,14 @@ const noop = () => {};
 let play = noop;
 let pause = noop;
 let cancel = false;
+
 let fade: FadeTransform | undefined;
+
+const serializeError = (err: unknown) => {
+  if (err instanceof CancelError) return undefined;
+  if (err instanceof Error) return { name: err.name, message: err.message, stack: err.stack };
+  return { message: String(err) };
+};
 
 onmessage = async (event: MessageEvent<unknown>) => {
   const data = event.data;
@@ -24,12 +30,14 @@ onmessage = async (event: MessageEvent<unknown>) => {
     uri?: string;
     fade?: FadeOptions;
     closed?: boolean;
-    play?: () => void;
-    pause?: () => void;
-    close?: () => void;
+    play?: boolean;
+    pause?: boolean;
+    close?: boolean;
     disableFadeOut?: boolean;
+    disableFadeIn?: boolean;
   };
   if ('uri' in data && typeof d.uri === 'string') {
+    cancel = false;
     const ebml = new EbmlDecoder();
     const chunkGenerator = new VideoChunkGenerator();
     const frameGenerator = new VideoFrameGenerator(chunkGenerator.config, 20);
@@ -70,7 +78,8 @@ onmessage = async (event: MessageEvent<unknown>) => {
       };
       await transfer();
     } catch (err) {
-      postMessage({ err });
+      const serialized = serializeError(err);
+      if (serialized) postMessage({ err: serialized });
     } finally {
       play = noop;
       pause = noop;
@@ -87,5 +96,7 @@ onmessage = async (event: MessageEvent<unknown>) => {
     cancel = true;
   } else if ('disableFadeOut' in data) {
     fade?.setDisableFadeOut(Boolean(d.disableFadeOut));
+  } else if ('disableFadeIn' in data) {
+    fade?.setDisableFadeIn?.(Boolean(d.disableFadeIn));
   }
 };
