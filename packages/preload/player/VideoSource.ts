@@ -68,6 +68,11 @@ export default class VideoSource {
     this.decoder.postMessage({ disableFadeOut: value });
   }
 
+  setDisableFadeIn(value = true) {
+    this.options.fade = { ...this.options.fade, disableIn: value };
+    this.decoder.postMessage({ disableFadeIn: value });
+  }
+
   constructor(
     readonly uri: string,
     readonly options: VideoSourceOptions = {},
@@ -76,8 +81,18 @@ export default class VideoSource {
     this.id = lastId;
     this.#hasStarted = !!options.autoplay;
     const decoder = new DecoderWorker();
-    const { readable, writable } = new TransformStream<VideoFrame, VideoFrame>();
-    const writer = writable.getWriter();
+    let streamController: ReadableStreamDefaultController<VideoFrame> | undefined;
+    const readable = new ReadableStream<VideoFrame>(
+      {
+        start: controller => {
+          streamController = controller;
+        },
+        cancel: () => {
+          close();
+        },
+      },
+      new CountQueuingStrategy({ highWaterMark: 8 }),
+    );
     const close = (hidden?: true) => {
       if (this.#closed) return;
       this.#closed = true;
@@ -85,7 +100,12 @@ export default class VideoSource {
         decoder.postMessage({ close: true });
         setTimeout(() => decoder.terminate(), 100);
       }
-      void writer.close().catch();
+      try {
+        streamController?.close();
+      } catch {
+        // Already closed or errored by the reader.
+      }
+      streamController = undefined;
     };
     const start = (closed?: boolean) => {
       decoder.postMessage({
@@ -109,12 +129,8 @@ export default class VideoSource {
       if (!payload || typeof payload !== 'object') return;
       const data = payload as DecoderMessage;
       if (data.frame) {
-        if (readable.locked && !this.#closed) {
-          writer.ready
-            .then(() => writer.write(data.frame))
-            .catch(() => {
-              data.frame?.close();
-            });
+        if (streamController && !this.#closed && (streamController.desiredSize ?? 0) > 0) {
+          streamController.enqueue(data.frame);
         } else {
           data.frame.close();
         }
@@ -125,6 +141,12 @@ export default class VideoSource {
       if (typeof data.duration === 'number') this.#duration = data.duration;
       if (data.err) {
         debug(`error: ${data.err.message ?? 'unknown error'}`);
+        try {
+          streamController?.error(new Error(data.err.message ?? 'Unknown decoder error'));
+        } catch {
+          // Already closed by a concurrent close.
+        }
+        streamController = undefined;
         close();
       }
       onMessage(ev);
