@@ -19,7 +19,7 @@ import './rtc';
 import './hid';
 // import './channels';
 import { createMainWindow } from './mainWindow';
-import openHandler from './openHandler';
+import { installWindowOpenHandler } from './openHandler';
 import { launchPlayers } from './playerWindow';
 
 import { fixDefault } from '/@common/helpers';
@@ -96,7 +96,7 @@ app
   .whenReady()
   .then(createMainWindow)
   .then(main => {
-    main.webContents.setWindowOpenHandler(openHandler);
+    installWindowOpenHandler(main.webContents);
     void launchPlayers();
   })
   .then(() => {

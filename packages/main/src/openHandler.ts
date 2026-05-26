@@ -1,4 +1,4 @@
-import type { BrowserWindowConstructorOptions, WebContents } from 'electron';
+import type { BrowserWindow, BrowserWindowConstructorOptions, WebContents } from 'electron';
 
 import type { Display as DisplayType } from '@nibus/core';
 import debugFactory from 'debug';
@@ -9,8 +9,12 @@ import { DefaultDisplays } from '/@common/video';
 import getAllDisplays from './getAllDisplays';
 
 type Handler = Parameters<WebContents['setWindowOpenHandler']>[0];
+type AlwaysOnTopLevel = Parameters<BrowserWindow['setAlwaysOnTop']>[1];
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:window`);
+const TOPMOST_LEVEL: AlwaysOnTopLevel = 'screen-saver';
+
+const isMacOS = process.platform === 'darwin';
 
 const toNumber = <T extends number | undefined>(
   value: string | null,
@@ -20,8 +24,76 @@ const toNumber = <T extends number | undefined>(
   return (Number.isNaN(result) ? defaultValue : result) as T;
 };
 
+const isOutputWindowUrl = (url: string) => {
+  try {
+    return new URL(url).pathname.startsWith('/output/');
+  } catch {
+    return false;
+  }
+};
+
+const isVideoOutputWindowUrl = (url: string) => {
+  try {
+    return new URL(url).pathname === '/output/index.html';
+  } catch {
+    return false;
+  }
+};
+
+const hideCursorCSS = `
+html.cursor-hidden,
+html.cursor-hidden * {
+  cursor: none !important;
+}
+`;
+
+const shouldKeepOnTop = (url: string) => {
+  if (isVideoOutputWindowUrl(url)) return true;
+  try {
+    const { searchParams } = new URL(url);
+    return !!toNumber(searchParams.get('alwaysOnTop'), 1);
+  } catch {
+    return true;
+  }
+};
+
+export const configureOutputWindow = (window: BrowserWindow, url: string): void => {
+  if (!isOutputWindowUrl(url)) return;
+  const isVideoOutput = isVideoOutputWindowUrl(url);
+
+  const keepOnTop = () => {
+    if (window.isDestroyed()) return;
+    window.setAlwaysOnTop(true, TOPMOST_LEVEL);
+    window.moveTop();
+  };
+
+  window.setParentWindow(null);
+  if (isMacOS) window.setFullScreenable(false);
+  if (isVideoOutput) {
+    window.webContents.once('did-finish-load', () => {
+      window.webContents.insertCSS(hideCursorCSS).catch(err => {
+        debug(`error while insert cursor css: ${(err as Error).message}`);
+      });
+    });
+  }
+  if (!window.isVisible()) window.showInactive();
+  if (!shouldKeepOnTop(url)) return;
+
+  keepOnTop();
+  window.on('show', keepOnTop);
+  window.on('restore', keepOnTop);
+};
+
+export const installWindowOpenHandler = (contents: WebContents): void => {
+  contents.setWindowOpenHandler(openHandler);
+  contents.on('did-create-window', (window, { url }) => {
+    configureOutputWindow(window, url);
+  });
+};
+
 const openHandler: Handler = ({ url }) => {
-  const { searchParams } = new URL(url);
+  const parsedUrl = new URL(url);
+  const { searchParams } = parsedUrl;
   // if (pathname !== '/output/index.html') return { action: 'deny' };
   const displays = getAllDisplays();
   // debug(`OPEN-HANDLER: ${JSON.stringify({ url, displays })}`);
@@ -34,7 +106,9 @@ const openHandler: Handler = ({ url }) => {
   const height = toNumber(searchParams.get('height'));
   const kiosk = !!toNumber(searchParams.get('kiosk'), 0);
   const transparent = !!toNumber(searchParams.get('transparent'), 0);
-  const alwaysOnTop = !!toNumber(searchParams.get('alwaysOnTop'), 1);
+  const isVideoOutput = parsedUrl.pathname === '/output/index.html';
+  const alwaysOnTop =
+    isVideoOutput || !!toNumber(searchParams.get('alwaysOnTop'), 1);
   let display: DisplayType | undefined;
   switch (displayId) {
     case DefaultDisplays.Primary:
@@ -52,19 +126,31 @@ const openHandler: Handler = ({ url }) => {
     debug(`${url} open denied`);
     return { action: 'deny' };
   }
+  const useNativeKiosk = kiosk && !isMacOS;
+  const windowBounds = kiosk
+    ? {
+        x: display.bounds.x,
+        y: display.bounds.y,
+        width: display.bounds.width,
+        height: display.bounds.height,
+      }
+    : {
+        x: x + display.bounds.x,
+        y: y + display.bounds.y,
+        width,
+        height,
+      };
   const overrideBrowserWindowOptions: BrowserWindowConstructorOptions = {
-    x: x + display.bounds.x,
-    y: y + display.bounds.y,
-    width,
-    height,
-    frame: kiosk,
+    ...windowBounds,
+    frame: false,
     backgroundColor: transparent ? undefined : '#000',
-    focusable: false,
+    focusable: isMacOS && isVideoOutput,
     // fullscreen: kiosk,
     // simpleFullscreen: true,
-    kiosk,
+    fullscreenable: false,
+    kiosk: useNativeKiosk,
     transparent,
-    // show: false,
+    show: false,
     alwaysOnTop,
     skipTaskbar: true,
     hasShadow: false,

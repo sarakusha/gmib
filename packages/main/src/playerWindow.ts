@@ -10,7 +10,7 @@ import createWindow from './createWindow';
 import { dbReady } from './db';
 import localConfig from './localConfig';
 import main from './mainWindow';
-import openHandler from './openHandler';
+import { installWindowOpenHandler } from './openHandler';
 import relaunch, { needRestart } from './relaunch';
 import { getPlayer, getPlayers, isPlayerActive, updateShowPlayer } from './screen';
 import { findPlayerWindow, getAllGmibParams, registerPlayer } from './windowStore';
@@ -84,7 +84,7 @@ export const openPlayer = async (
     browserWindow.loadURL(url).catch(err => {
       debug(`error while load player ${url}: ${err instanceof Error ? err.message : String(err)}`);
     });
-    browserWindow.webContents.setWindowOpenHandler(openHandler);
+    installWindowOpenHandler(browserWindow.webContents);
     void browserWindow.webContents.setVisualZoomLevelLimits(1, 1);
     // browserWindow.webContents.on('did-create-window', win => {
     //   win.once('ready-to-show', () => {

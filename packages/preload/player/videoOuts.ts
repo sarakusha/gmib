@@ -56,6 +56,9 @@ const createVideoOut = (mapping: PlayerMapping): void => {
   win.onerror = (ev, source, lineno, colno, error) => {
     debug(`error while create ${url}: ${error}`);
   };
+  win.addEventListener('beforeunload', () => {
+    videoOuts.delete(mapping.id);
+  });
   videoOuts.set(mapping.id, { window: win, port: port1, mapping });
 };
 
@@ -63,7 +66,10 @@ export const update = async () => {
   const mappings: PlayerMapping[] = await ipcRenderer.invoke('getPlayerMappings', sourceId);
   const ids = mappings.map(({ id }) => id);
   [...videoOuts].forEach(([id, entry]) => {
-    if (!ids.includes(id)) entry.window.close();
+    if (!ids.includes(id)) {
+      entry.window.close();
+      videoOuts.delete(id);
+    }
   });
   mappings.forEach(mapping => {
     const entry = videoOuts.get(mapping.id);
@@ -82,6 +88,11 @@ ipcRenderer.on('updateVideoOuts', () => {
 
 void update();
 
-// window.addEventListener('load', update);
+window.addEventListener('beforeunload', () => {
+  videoOuts.forEach(({ window: outputWindow }) => {
+    outputWindow.close();
+  });
+  videoOuts.clear();
+});
 
 export default videoOuts;
