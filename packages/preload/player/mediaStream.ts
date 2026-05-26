@@ -8,6 +8,7 @@ import VideoSource from './VideoSource';
 
 import type { MediaInfo } from '/@common/mediaInfo';
 import type { Playlist } from '/@common/playlist';
+import { getUrl } from '/@common/remote';
 
 import ipcDispatch from '../common/ipcDispatch';
 
@@ -46,7 +47,9 @@ const playNextSource = () => {
     currentSource = source;
     nextSource = undefined;
     ipcDispatch(setDuration(source.duration));
-    void videoStream.add(source.readable).then(playNextSource);
+    void videoStream.add(source.readable).then(playNextSource).catch(err => {
+      debug(`error while adding next video source: ${(err as Error).message}`);
+    });
     if (player.current !== itemId) {
       ipcDispatch(setCurrentPlaylistItem(itemId ? { itemId, mediaId } : undefined));
     } else {
@@ -144,7 +147,9 @@ const update = async () => {
       } else {
         currentSource = videoSource;
         // videoSource.options.fade?.disableOut = true;
-        void videoStream.add(videoSource.readable).then(playNextSource);
+        void videoStream.add(videoSource.readable).then(playNextSource).catch(err => {
+          debug(`error while adding video source: ${(err as Error).message}`);
+        });
         // eslint-disable-next-line no-useless-assignment
         delay = 1000;
       }
@@ -179,7 +184,9 @@ const initialize = async () => {
   });
   videoStream = mergeStreams<VideoFrame>();
   const trackGenerator = new MediaStreamTrackGenerator({ kind: 'video' });
-  void videoStream.pipeTo(trackGenerator.writable);
+  void videoStream.pipeTo(trackGenerator.writable).catch(err => {
+    debug(`error while piping video stream to track: ${(err as Error).message}`);
+  });
   stream.addTrack(trackGenerator);
   streamReady.resolve();
   player = await ipcRenderer.invoke('getPlayer', sourceId);
