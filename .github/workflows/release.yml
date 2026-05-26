@@ -37,6 +37,9 @@ concurrency:
 permissions:
   contents: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 defaults:
   run:
     shell: "bash"
@@ -86,7 +89,7 @@ jobs:
       - name: Check draft release assets
         id: release_check
         if: ${{ steps.platform_check.outputs.selected == 'true' }}
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         env:
           BUILD_PLATFORM: ${{ matrix.platform }}
         with:
@@ -283,7 +286,7 @@ jobs:
       - name: Compile artifacts without publishing
         if: ${{ steps.platform_check.outputs.selected == 'true' &&
           steps.release_check.outputs.skip_build != 'true' }}
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@v4
         with:
           timeout_minutes: 30
           max_attempts: 6
@@ -299,7 +302,7 @@ jobs:
         if: ${{ steps.platform_check.outputs.selected == 'true' &&
           steps.release_check.outputs.skip_build != 'true' && github.event_name !=
           'workflow_dispatch' }}
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         env:
           RELEASE_ID: ${{ steps.release_check.outputs.release_id }}
         with:
