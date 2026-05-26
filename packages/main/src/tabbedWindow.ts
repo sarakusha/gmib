@@ -1,13 +1,19 @@
 import type { BrowserWindowConstructorOptions, Event, Input, WebPreferences } from 'electron';
-import { app, BrowserWindow, WebContentsView } from 'electron';
+import { app, BrowserWindow, dialog, WebContentsView } from 'electron';
 import { EventEmitter } from 'events';
 
 import { createCloseEvent } from './managedWindow';
+import localConfig from './localConfig';
 
 import type { ManagedWindow } from './managedWindow';
 
 const TAB_HEIGHT = 36;
 let forceClose = false;
+const listeners = new Set<() => void>();
+
+const emitChange = () => {
+  listeners.forEach(listener => listener());
+};
 
 app.once('before-quit', () => {
   forceClose = true;
@@ -20,6 +26,11 @@ type Tab = {
   window: TabWindow;
   hidden: boolean;
   destroyed: boolean;
+};
+
+export type TabbedWindowItem = {
+  id: number;
+  title: string;
 };
 
 class TabWindow extends EventEmitter implements ManagedWindow {
@@ -104,10 +115,8 @@ class TabbedWindow {
     this.window.on('resize', () => this.layout());
     this.window.on('close', event => {
       if (forceClose) return;
-      const active = this.activeTab();
-      if (!active) return;
       event.preventDefault();
-      this.closeTab(active.id);
+      void this.closeApplication();
     });
     this.window.on('closed', () => {
       for (const tab of this.tabs) {
@@ -151,6 +160,7 @@ class TabbedWindow {
     if (!this.activeId) this.activeId = tab.id;
     this.render();
     this.layout();
+    emitChange();
     return window;
   }
 
@@ -168,6 +178,7 @@ class TabbedWindow {
     tab.window.webContents.send('focus', true);
     this.render();
     this.layout();
+    emitChange();
   }
 
   closeTab(id: number) {
@@ -187,6 +198,7 @@ class TabbedWindow {
       this.render();
       this.window.close();
     }
+    emitChange();
   }
 
   hide(id: number) {
@@ -199,6 +211,7 @@ class TabbedWindow {
       if (this.activeId) this.activate(this.activeId);
     }
     this.render();
+    emitChange();
   }
 
   isVisible(id: number) {
@@ -211,6 +224,7 @@ class TabbedWindow {
     tab.title = title;
     if (this.activeId === id) this.window.setTitle(title);
     this.render();
+    emitChange();
   }
 
   show(id: number) {
@@ -237,6 +251,10 @@ class TabbedWindow {
     return this.tabs.find(item => item.id === id)?.title;
   }
 
+  getItems(): TabbedWindowItem[] {
+    return this.visibleTabs().map(({ id, title }) => ({ id, title }));
+  }
+
   private activateByOffset(offset: number) {
     const visibleTabs = this.visibleTabs();
     if (visibleTabs.length === 0) return;
@@ -254,6 +272,26 @@ class TabbedWindow {
   private activeTab() {
     return this.tabs.find(item => item.id === this.activeId);
   }
+
+  private async closeApplication() {
+    if (localConfig.get('autostart')) {
+      this.window.hide();
+      return;
+    }
+    if (this.visibleTabs().length > 1) {
+      const { response } = await dialog.showMessageBox(this.window, {
+        type: 'question',
+        title: 'Закрыть приложение',
+        message: 'Закрыть все вкладки и выйти из приложения?',
+        buttons: ['Закрыть', 'Отмена'],
+        defaultId: 1,
+        cancelId: 1,
+      });
+      if (response !== 0) return;
+    }
+    app.quit();
+  }
+
 
   private visibleTabs() {
     return this.tabs.filter(tab => !tab.hidden && !tab.destroyed);
@@ -470,5 +508,12 @@ export const getTabbedWindowById = (id: number): ManagedWindow | undefined =>
 
 export const getTabbedWindowTitle = (id: number): string | undefined => manager?.getTitleById(id);
 
+export const getTabbedWindowItems = (): TabbedWindowItem[] => manager?.getItems() ?? [];
+
 export const isTabbedBrowserWindow = (window: BrowserWindow | undefined | null): boolean =>
   !!window && window === manager?.window;
+
+export const onTabbedWindowChange = (listener: () => void): (() => void) => {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+};

@@ -27,8 +27,9 @@ import {
   activatePreviousTabbedWindow,
   activateTabbedWindow,
   getActiveTabbedWindow,
-  getTabbedWindowTitle,
+  getTabbedWindowItems,
   isTabbedBrowserWindow,
+  onTabbedWindowChange,
 } from './tabbedWindow';
 
 import type { GmibWindowParams, WindowParams } from '/@common/WindowParams';
@@ -98,21 +99,22 @@ const paramsToRemote = (params: GmibWindowParams) => ({
 });
 
 const getWindowMenuLabel = (params: WindowParams): string => {
-  const title = getTabbedWindowTitle(params.id);
-  if (title) return title;
   if (isGmib(params)) return `${params.info?.name ?? 'gmib'} (${params.host})`;
   if (isPlayer(params)) return `player#${params.playerId}`;
   return `window#${params.id}`;
 };
 
 const openWindowsSubmenu = (activeId?: number): MenuItemConstructorOptions[] =>
-  sortBy(
-    [...store.values()].filter(param => isGmib(param) || isPlayer(param)),
-    'zIndex',
-  )
-    .filter(item => process.platform !== 'darwin' || item.id !== activeId)
+  getTabbedWindowItems()
+    .map(({ id, title }) => {
+      const params = store.get(id);
+      if (!params || (!isGmib(params) && !isPlayer(params))) return undefined;
+      return { id, title: title || getWindowMenuLabel(params) };
+    })
+    .filter(notEmpty)
     .map((item, index) => ({
-      label: `${index + 1}. ${getWindowMenuLabel(item)}`,
+      label: `${index + 1}. ${item.title}`,
+      accelerator: index < 10 ? `CmdOrCtrl+${index === 9 ? 0 : index + 1}` : undefined,
       type: 'checkbox',
       checked: item.id === activeId,
       click: () => {
@@ -605,6 +607,7 @@ localConfig.onDidChange('hosts', updateMenu);
 localConfig.onDidChange('autostart', updateMenu);
 mdnsBrowser.on('up', updateMenu);
 mdnsBrowser.on('down', updateMenu);
+onTabbedWindowChange(updateMenu);
 
 void dbReady.then(hasPlayers).then(async res => res || (await createNewPlayer('Плеер')));
 
