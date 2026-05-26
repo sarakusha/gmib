@@ -4,10 +4,16 @@ import { join } from 'path';
 
 import debugFactory from 'debug';
 
-import createWindow from './createWindow';
 import localConfig from './localConfig';
+import type { CloseEvent, ManagedWindow } from './managedWindow';
 import relaunch, { needRestart } from './relaunch';
-import { getAllGmibParams, getAllScreenParams, getPlayerParams, registerGmib } from './windowStore';
+import { createTabbedWindow } from './tabbedWindow';
+import {
+  getAllGmibParams,
+  getAllScreenParams,
+  getPlayerParams,
+  registerGmib,
+} from './windowStore';
 
 import Deferred from '/@common/Deferred';
 
@@ -19,8 +25,8 @@ app.once('quit', () => {
   isQuitting = true;
 });
 
-let mainWindow: BrowserWindow | null = null;
-const mainWindowDeferred = new Deferred<BrowserWindow>();
+let mainWindow: ManagedWindow | null = null;
+const mainWindowDeferred = new Deferred<ManagedWindow>();
 export default mainWindowDeferred.promise;
 
 export const waitWebContents = (): Promise<WebContents> =>
@@ -39,9 +45,9 @@ export const createAppWindow = (
   nibusPort = +(process.env['NIBUS_PORT'] ?? 9001),
   address = 'localhost',
   name?: string,
-): BrowserWindow => {
+): ManagedWindow => {
   const isLocal = !address || address === 'localhost';
-  const browserWindow = createWindow(
+  const browserWindow = createTabbedWindow(
     `${name ?? 'gmib'} (${address})` /* getTitle(port, hostName) */,
     gmibPreload,
   );
@@ -80,6 +86,7 @@ export const createAppWindow = (
   });
   void registerGmib(browserWindow, { host: address, nibusPort });
   browserWindow.on('close', event => {
+    const closeEvent = event as CloseEvent;
     const gmibParams = getAllGmibParams();
     if (
       import.meta.env.PROD &&
@@ -90,7 +97,7 @@ export const createAppWindow = (
         getPlayerParams().length > 0 || // .some(params => params.parent.id === browserWindow.id) ||
         gmibParams.length > 1)
     ) {
-      event.preventDefault();
+      closeEvent.preventDefault();
       browserWindow.hide();
     } else if (isLocal) {
       getAllScreenParams().forEach(({ id }) => BrowserWindow.fromId(id)?.close());
@@ -102,7 +109,7 @@ export const createAppWindow = (
   return browserWindow;
 };
 
-export const createMainWindow = (): BrowserWindow => {
+export const createMainWindow = (): ManagedWindow => {
   if (!mainWindow) {
     const browserWindow = (mainWindow = createAppWindow());
     // browserWindow.on('close', event => {
@@ -127,7 +134,7 @@ export const createMainWindow = (): BrowserWindow => {
   return mainWindow;
 };
 
-export const getMainWindow = (): BrowserWindow | null => mainWindow;
+export const getMainWindow = (): ManagedWindow | null => mainWindow;
 
 export function createTestWindow(
   width: number,

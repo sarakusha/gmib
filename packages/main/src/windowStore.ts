@@ -19,8 +19,10 @@ import { gmibVariables, impScreenProps, isGmib, isPlayer, isScreen } from '/@com
 
 import { initializePritunlClient } from './linux';
 import localConfig from './localConfig';
+import { getTabbedWindowById } from './tabbedWindow';
 
 import { replaceNull } from '/@common/helpers';
+import type { ManagedWindow } from './managedWindow';
 // import { checkForUpdatesNoInteractive, updateAndRestart } from './updater';
 
 export const licenseNames = ['basic', 'standard', 'plus', 'premium', 'enterprise'] as const;
@@ -44,7 +46,7 @@ let knockInterval: NodeJS.Timeout;
 let attempts = 0;
 const MAX_KNOCK_ATTEMPTS = 10;
 
-const register = (browserWindow: BrowserWindow): number => {
+const register = (browserWindow: ManagedWindow): number => {
   const { id } = browserWindow;
   if (!store.has(id)) {
     browserWindow.once('closed', () => store.delete(id));
@@ -117,7 +119,7 @@ const knockKnock = async (params: GmibWindowParams): Promise<void> => {
 };
 
 export const registerGmib = async (
-  browserWindow: BrowserWindow,
+  browserWindow: ManagedWindow,
   { host, nibusPort: port }: Pick<GmibWindowParams, 'host' | 'nibusPort'>,
 ): Promise<GmibWindowParams | undefined> => {
   const id = register(browserWindow);
@@ -210,7 +212,7 @@ export const registerScreen = (browserWindow: BrowserWindow, scr: Screen) => {
 };
 
 export const registerPlayer = (
-  browserWindow: BrowserWindow,
+  browserWindow: ManagedWindow,
   { playerId, host, port }: Pick<PlayerWindowParams, 'playerId' | 'host' | 'port'>,
   parent: GmibWindowParams,
 ): number => {
@@ -251,18 +253,27 @@ export const findPlayerParams = (
 export const findPlayerWindow = (
   playerId: number,
   host = 'localhost',
-): BrowserWindow | undefined => {
+): ManagedWindow | undefined => {
   const params = findPlayerParams(playerId, host);
-  return params && (BrowserWindow.fromId(params.id) ?? undefined);
+  return params && findManagedWindow(params.id);
 };
+
+export const findManagedWindow = (id: number): ManagedWindow | undefined =>
+  getTabbedWindowById(id) ?? BrowserWindow.fromId(id) ?? undefined;
+
+export const findParamsByWebContentsId = (id: number): WindowParams | undefined =>
+  [...store.values()].find(params => {
+    const win = findManagedWindow(params.id);
+    return win?.webContents.id === id;
+  });
 
 export default store as ReadonlyMap<number, WindowParams>;
 
 void app.whenReady().then(() => {
   ipcMain.handle('getParams', (event, name: keyof WindowParams) => {
     const id = BrowserWindow.fromWebContents(event.sender)?.id;
-    if (id && store.has(id)) {
-      const params = store.get(id);
+    const params = (id && store.get(id)) ?? findParamsByWebContentsId(event.sender.id);
+    if (params) {
       return params?.[name];
     }
     return undefined;

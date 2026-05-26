@@ -6,7 +6,7 @@ import { getPlayerMappingsForPlayer } from './playerMapping';
 import { getPlaylist, getPlaylistItems } from './playlist';
 import { getPlayer, loadScreen } from './screen';
 import { broadcast } from './server';
-import store, { findScreenParams } from './windowStore';
+import { findParamsByWebContentsId, findScreenParams } from './windowStore';
 
 import { isGmib } from '/@common/WindowParams';
 
@@ -31,8 +31,8 @@ void app.whenReady().then(() => {
   // ipcMain.handle('getScreens', getScreens); // TODO: Возможно не используется
   ipcMain.handle('getMachineId', event => {
     const win = BrowserWindow.fromWebContents(event.sender);
-    if (!win) return undefined;
-    const params = store.get(win.id);
+    const params = (win && findParamsByWebContentsId(win.webContents.id)) ??
+      findParamsByWebContentsId(event.sender.id);
     return isGmib(params) ? params.machineId : undefined;
   });
   ipcMain.on('broadcast', (event, eventName: string, data: unknown[]) => {

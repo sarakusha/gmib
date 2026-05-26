@@ -1,5 +1,5 @@
 import type { MenuItem, MenuItemConstructorOptions } from 'electron';
-import { app, BrowserWindow, Menu, Tray } from 'electron';
+import { app, Menu, Tray } from 'electron';
 import os from 'os';
 import path from 'path';
 
@@ -7,7 +7,8 @@ import sortBy from 'lodash/sortBy';
 
 import localConfig from './localConfig';
 import { needRestart } from './relaunch';
-import store, { getZIndex } from './windowStore';
+import { getActiveTabbedWindow, isTabbedBrowserWindow } from './tabbedWindow';
+import store, { findManagedWindow, getZIndex } from './windowStore';
 
 import { isGmib, isPlayer } from '/@common/WindowParams';
 
@@ -15,7 +16,8 @@ let disableZIndex = false;
 
 app.on('browser-window-focus', (_, window) => {
   if (!disableZIndex) {
-    const params = store.get(window.id);
+    const managed = isTabbedBrowserWindow(window) ? getActiveTabbedWindow() : window;
+    const params = managed && store.get(managed.id);
     if (params && (isGmib(params) || isPlayer(params))) params.zIndex = getZIndex();
   }
 });
@@ -28,7 +30,7 @@ const getAllWindowParams = () =>
 
 const showLast = () => {
   const top = getAllWindowParams().at(-1);
-  top && BrowserWindow.fromId(top.id)?.show();
+  top && findManagedWindow(top.id)?.show();
 };
 
 const showAll = () => {
@@ -36,26 +38,24 @@ const showAll = () => {
   const params = getAllWindowParams();
   const [top] = params.splice(-1, 1);
   params.forEach(({ id }) => {
-    const win = BrowserWindow.fromId(id);
+    const win = findManagedWindow(id);
     if (win) {
-      if (win.isMinimized()) win.show();
-      else win.showInactive();
+      win.show();
       setTimeout(() => win.webContents.send('focus', false), 100);
     }
   });
   setTimeout(() => {
     disableZIndex = false;
-    const win = top && BrowserWindow.fromId(top.id);
+    const win = top && findManagedWindow(top.id);
     if (win) {
-      if (win.isMinimized()) win.restore();
-      else win.show();
+      win.show();
       win.focus();
     }
   }, 100);
 };
 
 const hideAll = () => {
-  getAllWindowParams().forEach(({ id }) => BrowserWindow.fromId(id)?.hide());
+  getAllWindowParams().forEach(({ id }) => findManagedWindow(id)?.hide());
 };
 
 const tray: { appIcon: Tray | null } = { appIcon: null };

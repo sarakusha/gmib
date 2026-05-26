@@ -18,10 +18,11 @@ import { hasPlayers, insertPlayer, uniquePlayerName } from './screen';
 import { dbReady } from './db';
 import checkForUpdates from './updater';
 // import type { WindowParams } from './windowStore';
-import store, { getAllGmibParams } from './windowStore';
+import store, { findManagedWindow, getAllGmibParams } from './windowStore';
 import authRequest from './authRequest';
 import mdnsBrowser, { pickRemoteService } from './mdns';
 import { createAppWindow, getMainWindow } from './mainWindow';
+import { getActiveTabbedWindow, isTabbedBrowserWindow } from './tabbedWindow';
 
 import type { GmibWindowParams, WindowParams } from '/@common/WindowParams';
 import { isGmib, isPlayer } from '/@common/WindowParams';
@@ -78,6 +79,11 @@ const playerSubmenu = async (params: GmibWindowParams): Promise<MenuItemConstruc
 const findGmib = (host: string): GmibWindowParams | undefined =>
   getAllGmibParams().find(item => item.host === host);
 
+const getFocusedManagedWindow = () => {
+  const focused = BrowserWindow.getFocusedWindow();
+  return isTabbedBrowserWindow(focused) ? getActiveTabbedWindow() : focused;
+};
+
 const paramsToRemote = (params: GmibWindowParams) => ({
   address: params.host,
   port: params.nibusPort,
@@ -89,7 +95,7 @@ const remoteMenu = (params?: WindowParams): AppMenuItem | undefined => {
   if (!gmibParams) return undefined;
   const self = paramsToRemote(gmibParams);
   const local = findGmib('localhost');
-  const focused = BrowserWindow.getFocusedWindow()?.id;
+  const focused = getFocusedManagedWindow()?.id;
   const remotes = isGmib(params)
     ? uniqBy(
         [
@@ -108,7 +114,7 @@ const remoteMenu = (params?: WindowParams): AppMenuItem | undefined => {
       click: () => {
         const gmib = findGmib(address);
         if (gmib) {
-          const window = BrowserWindow.fromId(gmib.id);
+          const window = findManagedWindow(gmib.id);
           if (window) {
             window.show();
             window.focus();
@@ -211,7 +217,7 @@ const helpMenu = async (params?: WindowParams): Promise<AppMenuItem> => {
                 {
                   label: 'Активировать лицензию',
                   click: () =>
-                    BrowserWindow.getFocusedWindow()?.webContents.send('activateLicense'),
+                    getFocusedManagedWindow()?.webContents.send('activateLicense'),
                 },
               ],
             },
@@ -492,12 +498,13 @@ const template = async (params?: WindowParams): Promise<MenuItemConstructorOptio
 
 let menuReady = Promise.resolve();
 const update = async () => {
-  const win = BrowserWindow.getFocusedWindow();
+  const win = getFocusedManagedWindow();
   const id = win?.id;
   const params = id ? store.get(id) : undefined;
   const tmpl = await template(params);
   const mainMenu = Menu.buildFromTemplate(tmpl);
-  if (['win32', 'linux'].includes(process.platform)) win?.setMenu(mainMenu);
+  if (['win32', 'linux'].includes(process.platform))
+    BrowserWindow.getFocusedWindow()?.setMenu(mainMenu);
   else Menu.setApplicationMenu(mainMenu);
 };
 
@@ -508,7 +515,8 @@ const updateMenu = debounce((): void => {
 const blurWindows: BrowserWindow[] = [];
 
 app.on('browser-window-focus', (_, win) => {
-  win.webContents.send('focus', true);
+  const active = isTabbedBrowserWindow(win) ? getActiveTabbedWindow() : win;
+  active?.webContents.send('focus', true);
   const wins = blurWindows.splice(0, blurWindows.length);
   wins
     .filter(item => win !== item && !item.isDestroyed())

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog } from 'electron';
+import { app, dialog } from 'electron';
 import path from 'path';
 
 import debugFactory from 'debug';
@@ -6,14 +6,15 @@ import debugFactory from 'debug';
 import type { Player } from '/@common/video';
 
 import authRequest from './authRequest';
-import createWindow from './createWindow';
 import { dbReady } from './db';
 import localConfig from './localConfig';
 import main from './mainWindow';
+import type { CloseEvent, ManagedWindow } from './managedWindow';
 import { installWindowOpenHandler } from './openHandler';
 import relaunch, { needRestart } from './relaunch';
 import { getPlayer, getPlayers, isPlayerActive, updateShowPlayer } from './screen';
-import { findPlayerWindow, getAllGmibParams, registerPlayer } from './windowStore';
+import { createTabbedWindow } from './tabbedWindow';
+import { findManagedWindow, findPlayerWindow, getAllGmibParams, registerPlayer } from './windowStore';
 
 import type { GmibWindowParams } from '/@common/WindowParams';
 
@@ -50,7 +51,7 @@ const confirmClose = (hasVisibleParent?: boolean) =>
 export const openPlayer = async (
   id: number,
   options?: Options,
-): Promise<BrowserWindow | undefined> => {
+): Promise<ManagedWindow | undefined> => {
   const { gmibParams = getAllGmibParams()[0], hidden = false } = options ?? {};
   const { host, nibusPort, info } = gmibParams;
   const isRemote = host !== 'localhost';
@@ -75,7 +76,7 @@ export const openPlayer = async (
         ? `${import.meta.env.VITE_DEV_SERVER_URL}player.html?${query}`
         : `http://localhost:${nibusPort + 1}/player.html?${query}`;
     const title = getPlayerTitle(player);
-    browserWindow = createWindow(
+    browserWindow = createTabbedWindow(
       isRemote ? `${info?.name ?? host}:${title}` : title,
       isRemote ? remotePreload : preload,
     );
@@ -109,8 +110,9 @@ export const openPlayer = async (
       }
     });
     browserWindow.on('close', event => {
+      const closeEvent = event as CloseEvent;
       if (!isRemote && !needRestart() && !isQuitting) {
-        event.preventDefault();
+        closeEvent.preventDefault();
         browserWindow?.hide();
         if (!localConfig.get('autostart')) {
           void isPlayerActive(id).then(async isActive => {
@@ -123,7 +125,7 @@ export const openPlayer = async (
           });
         }
       } else if (isRemote || !gmibParams.autostart) {
-        const parent = BrowserWindow.fromId(gmibParams.id);
+        const parent = findManagedWindow(gmibParams.id);
         if (parent && !parent.isVisible()) {
           setTimeout(() => parent.close(), 100);
         }

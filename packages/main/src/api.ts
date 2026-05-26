@@ -118,7 +118,6 @@ import { broadcast } from './server';
 import { checkForUpdatesNoInteractive, updateAndRestart } from './updater';
 import {
   createSearchParams,
-  findPlayerParams,
   findPlayerWindow,
   findScreenParams,
   findScreenWindow,
@@ -524,8 +523,7 @@ api.post('/playlist', async (req, res, next) => {
 const revalidatePlaylist = async (playlist: Playlist): Promise<void> => {
   const players = await getPlaylistPlayers(playlist.id);
   players.forEach(player => {
-    const params = findPlayerParams(player.id);
-    const win = params && BrowserWindow.fromId(params.id);
+    const win = findPlayerWindow(player.id);
     if (win) {
       win.webContents.send('updatePlaylist', playlist);
     }
@@ -750,8 +748,7 @@ api.put('/player', async (req, res, next) => {
       else {
         res.json(player);
         broadcast({ event: 'player', remote: req.ip });
-        const params = findPlayerParams(player.id);
-        const win = params && BrowserWindow.fromId(params.id);
+        const win = findPlayerWindow(player.id);
         if (win) {
           win.setTitle(getPlayerTitle(player));
           win.webContents.send('player', player);
