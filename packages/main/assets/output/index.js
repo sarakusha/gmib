@@ -3,10 +3,22 @@ const search = new URLSearchParams(window.location.search);
 // const outputId = +search.get('output_id');
 const width = +search.get('width');
 const height = +search.get('height');
+const HIDE_CURSOR_DELAY = 1000;
 
 // document.body.requestPointerLock();
 
 let port;
+let cursorTimer = 0;
+
+const hideCursor = () => {
+  document.documentElement.classList.add('cursor-hidden');
+};
+
+const showCursor = () => {
+  document.documentElement.classList.remove('cursor-hidden');
+  clearTimeout(cursorTimer);
+  cursorTimer = window.setTimeout(hideCursor, HIDE_CURSOR_DELAY);
+};
 
 window.onmessage = ev => {
   console.log(ev.data);
@@ -17,6 +29,10 @@ window.onmessage = ev => {
 };
 
 window.onload = () => {
+  document.addEventListener('mousemove', showCursor);
+  document.addEventListener('mouseleave', hideCursor);
+  showCursor();
+
   const videoElement = document.querySelector('video');
   if (videoElement) {
     // videoElement.style=`width: ${width}px; height: ${height}px;`;
