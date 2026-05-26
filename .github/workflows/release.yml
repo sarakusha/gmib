@@ -45,7 +45,61 @@ defaults:
     shell: "bash"
 
 jobs:
+  prepare_release:
+    runs-on: ubuntu-latest
+    outputs:
+      release_id: ${{ steps.release_check.outputs.release_id }}
+
+    steps:
+      - name: Check draft release assets
+        id: release_check
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            const version = JSON.parse(
+              fs.readFileSync(path.join(process.env.GITHUB_WORKSPACE, 'package.json'), 'utf8'),
+            ).version;
+
+            const { owner, repo } = context.repo;
+            const releases = (await github.rest.repos.listReleases({ owner, repo, per_page: 100 })).data;
+            let release = releases.find(
+              candidate => candidate.draft && (candidate.tag_name === `v${version}` || candidate.tag_name === version),
+            );
+
+            if (!release) {
+              try {
+                release = (
+                  await github.rest.repos.createRelease({
+                    owner,
+                    repo,
+                    tag_name: `v${version}`,
+                    target_commitish: context.sha,
+                    name: `v${version}`,
+                    draft: true,
+                    prerelease: false,
+                  })
+                ).data;
+              } catch (error) {
+                if (error.status !== 422) throw error;
+
+                const refreshed = (await github.rest.repos.listReleases({ owner, repo, per_page: 100 })).data;
+                release = refreshed.find(
+                  candidate => candidate.draft && (candidate.tag_name === `v${version}` || candidate.tag_name === version),
+                );
+
+                if (!release) {
+                  throw error;
+                }
+              }
+            }
+
+            core.setOutput('release_id', String(release.id));
+
   draft_release:
+    needs: prepare_release
     strategy:
       fail-fast: true
       matrix:
@@ -92,6 +146,7 @@ jobs:
         uses: actions/github-script@v9
         env:
           BUILD_PLATFORM: ${{ matrix.platform }}
+          RELEASE_ID: ${{ needs.prepare_release.outputs.release_id }}
         with:
           script: |
             const fs = require('fs');
@@ -131,37 +186,8 @@ jobs:
             }
 
             const { owner, repo } = context.repo;
-            const releases = (await github.rest.repos.listReleases({ owner, repo, per_page: 100 })).data;
-            let release = releases.find(
-              candidate => candidate.draft && (candidate.tag_name === `v${version}` || candidate.tag_name === version),
-            );
-
-            if (!release) {
-              try {
-                release = (
-                  await github.rest.repos.createRelease({
-                    owner,
-                    repo,
-                    tag_name: `v${version}`,
-                    target_commitish: context.sha,
-                    name: `v${version}`,
-                    draft: true,
-                    prerelease: false,
-                  })
-                ).data;
-              } catch (error) {
-                if (error.status !== 422) throw error;
-
-                const refreshed = (await github.rest.repos.listReleases({ owner, repo, per_page: 100 })).data;
-                release = refreshed.find(
-                  candidate => candidate.draft && (candidate.tag_name === `v${version}` || candidate.tag_name === version),
-                );
-
-                if (!release) {
-                  throw error;
-                }
-              }
-            }
+            const releaseId = Number(process.env.RELEASE_ID);
+            const { data: release } = await github.rest.repos.getRelease({ owner, repo, release_id: releaseId });
 
             const assetNames = new Set(release.assets.map(({ name }) => name));
             const missingExpectedFiles = expectedFiles.filter(name => !assetNames.has(name));
@@ -304,7 +330,7 @@ jobs:
           'workflow_dispatch' }}
         uses: actions/github-script@v9
         env:
-          RELEASE_ID: ${{ steps.release_check.outputs.release_id }}
+          RELEASE_ID: ${{ needs.prepare_release.outputs.release_id }}
         with:
           script: |
             const fs = require('fs');

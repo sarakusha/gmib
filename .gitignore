@@ -78,3 +78,4 @@ stats.html
 .yalc/
 .idea/deployment.xml
 .pnpm-store/
+scripts/merge-releases.sh
