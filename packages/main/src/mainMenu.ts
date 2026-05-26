@@ -470,7 +470,6 @@ const template = async (params?: WindowParams): Promise<MenuItemConstructorOptio
     },
     {
       label: 'Окно',
-      role: 'windowMenu',
       submenu: [
         {
           label: 'Следующее окно',
