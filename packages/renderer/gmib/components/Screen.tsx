@@ -274,7 +274,7 @@ const ScreenComponent: React.FC<Props> = ({
                       label="Ширина"
                       type="number"
                       component={StyledFormikTextField}
-                      inputProps={inputSize}
+                      slotProps={{ htmlInput: inputSize }}
                       disabled={readonly}
                     />
                     <Field
@@ -283,7 +283,7 @@ const ScreenComponent: React.FC<Props> = ({
                       label="Высота"
                       type="number"
                       component={StyledFormikTextField}
-                      inputProps={inputSize}
+                      slotProps={{ htmlInput: inputSize }}
                       disabled={readonly}
                     />
                   </FieldSet>
@@ -294,7 +294,7 @@ const ScreenComponent: React.FC<Props> = ({
                       label="Ширина"
                       type="number"
                       component={StyledFormikTextField}
-                      inputProps={inputSize}
+                      slotProps={{ htmlInput: inputSize }}
                       disabled={readonly}
                     />
                     <Field
@@ -303,7 +303,7 @@ const ScreenComponent: React.FC<Props> = ({
                       label="Высота"
                       type="number"
                       component={StyledFormikTextField}
-                      inputProps={inputSize}
+                      slotProps={{ htmlInput: inputSize }}
                       disabled={readonly}
                     />
                   </FieldSet>

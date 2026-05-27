@@ -1,11 +1,14 @@
 import type { TextFieldProps as MuiTextFieldProps } from '@mui/material/TextField';
 import MuiTextField from '@mui/material/TextField';
+import type { InputBaseProps } from '@mui/material/InputBase';
 import type { FieldProps } from 'formik';
 import { getIn } from 'formik';
 import React from 'react';
 
 export interface FormikTextFieldProps
-  extends FieldProps, Omit<MuiTextFieldProps, 'name' | 'value' | 'error'> {}
+  extends FieldProps, Omit<MuiTextFieldProps, 'name' | 'value' | 'error'> {
+  inputProps?: InputBaseProps['inputProps'];
+}
 
 export function fieldToTextField({
   disabled,
@@ -13,6 +16,7 @@ export function fieldToTextField({
   form: { isSubmitting, touched, errors },
   onBlur = e => fieldOnBlur(e ?? field.name),
   helperText,
+  inputProps,
   slotProps,
   ...props
 }: FormikTextFieldProps): MuiTextFieldProps {
@@ -27,6 +31,7 @@ export function fieldToTextField({
     slotProps: {
       ...slotProps,
       htmlInput: {
+        ...inputProps,
         ...slotProps?.htmlInput,
         autoComplete: 'off',
       },
