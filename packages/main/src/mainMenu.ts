@@ -92,6 +92,20 @@ const getFocusedManagedWindow = () => {
   return isTabbedBrowserWindow(focused) ? getActiveTabbedWindow() : focused;
 };
 
+const toggleFocusedDevTools = (): void => {
+  const win = getFocusedManagedWindow();
+  if (!win || win.webContents.isDestroyed()) return;
+
+  if (win.webContents.isDevToolsOpened()) {
+    win.webContents.closeDevTools();
+    return;
+  }
+
+  win.show();
+  win.focus();
+  win.webContents.openDevTools({ mode: 'detach', activate: true });
+};
+
 const paramsToRemote = (params: GmibWindowParams) => ({
   address: params.host,
   port: params.nibusPort,
@@ -445,14 +459,8 @@ const template = async (params?: WindowParams): Promise<MenuItemConstructorOptio
         },
         {
           label: 'Инструменты разработчика',
-          role: 'toggleDevTools',
-          // accelerator: (function () {
-          //   if (process.platform === 'darwin') return 'Alt+Command+I';
-          //   else return 'Ctrl+Shift+I';
-          // })(),
-          // click: function (item, focusedWindow) {
-          //   if (focusedWindow) focusedWindow.toggleDevTools();
-          // },
+          accelerator: process.platform === 'darwin' ? 'Alt+Command+I' : 'Ctrl+Shift+I',
+          click: toggleFocusedDevTools,
         },
         {
           type: 'separator',
