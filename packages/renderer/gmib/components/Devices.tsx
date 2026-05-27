@@ -115,7 +115,7 @@ const Devices: React.FC = () => {
   const tab = useSelector(selectCurrentTab);
   const { novastars = [] } = useNovastars(); // useSelector(selectAllNovastars);
   // const [, setAccordion] = useAccordion();
-  const reloadHandler = useCallback<React.MouseEventHandler<HTMLButtonElement>>(e => {
+  const reloadHandler = useCallback<React.EventHandler<React.BaseSyntheticEvent<Event>>>(e => {
     window.nibus.reloadDevices();
     // TODO: force update novastar device list
     // dispatch(updateNovastarDevices());
@@ -142,9 +142,33 @@ const Devices: React.FC = () => {
         }}
       >
         <Typography>Устройства</Typography>
-        <IconButton size="small" title="Повторить поиск" onClick={reloadHandler}>
-          <ReloadIcon />
-        </IconButton>
+
+        <Box
+          role="button"
+          tabIndex={0}
+          title="Повторить поиск"
+          onClick={reloadHandler}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              reloadHandler(e)
+            }
+          }}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 32,
+            height: 32,
+            borderRadius: '50%',
+            cursor: 'pointer',
+            '&:hover': {
+              bgcolor: 'action.hover',
+            },
+          }}
+        >
+          <ReloadIcon fontSize="small" />
+        </Box>
       </Box>
     ),
     [reloadHandler],
