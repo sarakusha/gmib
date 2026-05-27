@@ -27,6 +27,7 @@ import {
   activatePreviousTabbedWindow,
   activateTabbedWindow,
   getActiveTabbedWindow,
+  getTabbedBrowserWindow,
   getTabbedWindowItems,
   isTabbedBrowserWindow,
   onTabbedWindowChange,
@@ -92,6 +93,15 @@ const getFocusedManagedWindow = () => {
   return isTabbedBrowserWindow(focused) ? getActiveTabbedWindow() : focused;
 };
 
+const getMenuParams = (): WindowParams | undefined => {
+  const focused = getFocusedManagedWindow();
+  const focusedParams = focused ? store.get(focused.id) : undefined;
+  if (focusedParams) return focusedParams;
+
+  const active = getActiveTabbedWindow();
+  return active ? store.get(active.id) : undefined;
+};
+
 const toggleFocusedDevTools = (): void => {
   const win = getFocusedManagedWindow();
   if (!win || win.webContents.isDestroyed()) return;
@@ -139,19 +149,16 @@ const openWindowsSubmenu = (activeId?: number): MenuItemConstructorOptions[] =>
 const remoteMenu = (params?: WindowParams): AppMenuItem | undefined => {
   const gmibParams = getGmibParams(params);
   if (!gmibParams) return undefined;
-  const self = paramsToRemote(gmibParams);
   const local = findGmib('localhost');
-  const focused = getFocusedManagedWindow()?.id;
-  const remotes = isGmib(params)
-    ? uniqBy(
-        [
-          ...(local ? [paramsToRemote(local)] : []),
-          ...mdnsBrowser.services.map(pickRemoteService).filter(notEmpty),
-          ...sortBy(localConfig.get('hosts'), ['name', 'address']),
-        ],
-        'address',
-      )
-    : [self];
+  const focused = isPlayer(params) ? gmibParams.id : getFocusedManagedWindow()?.id;
+  const remotes = uniqBy(
+    [
+      ...(local ? [paramsToRemote(local)] : []),
+      ...mdnsBrowser.services.map(pickRemoteService).filter(notEmpty),
+      ...sortBy(localConfig.get('hosts'), ['name', 'address']),
+    ],
+    'address',
+  );
   const links = remotes.map(
     ({ address, port, name }): MenuItemConstructorOptions => ({
       label: name ? `${name} (${address})` : address,
@@ -176,49 +183,47 @@ const remoteMenu = (params?: WindowParams): AppMenuItem | undefined => {
   );
   return {
     label: 'GMIB',
-    submenu: isGmib(params)
-      ? [
-          {
-            label: 'Автозапуск',
-            type: 'checkbox',
-            click: () => {
-              void (async () => {
-                const value = !params.autostart;
-                try {
-                  const res = await authRequest({
-                    api: '/autostart',
-                    method: 'POST',
-                    host: params.host,
-                    port: params.nibusPort + 1,
-                    body: { value },
-                  });
-                  if (res?.ok) {
-                    params.update({ autostart: value });
+    submenu: [
+      {
+        label: 'Автозапуск',
+        type: 'checkbox',
+        click: () => {
+          void (async () => {
+            const value = !gmibParams.autostart;
+            try {
+              const res = await authRequest({
+                api: '/autostart',
+                method: 'POST',
+                host: gmibParams.host,
+                port: gmibParams.nibusPort + 1,
+                body: { value },
+              });
+              if (res?.ok) {
+                gmibParams.update({ autostart: value });
 
-                    updateMenu();
-                  }
-                } catch (e) {
-                  console.error(`error while fetch: ${e}`);
-                }
-              })();
-            },
-            checked: params.autostart,
-          },
-          {
-            label: 'Изменить список ...',
-            click: () => {
-              const window = getMainWindow();
-              if (window) {
-                window.show();
-                window.focus();
-                window.webContents.send('editRemoteHosts');
+                updateMenu();
               }
-            },
-          },
-          { type: 'separator' },
-          ...links,
-        ]
-      : links,
+            } catch (e) {
+              console.error(`error while fetch: ${e}`);
+            }
+          })();
+        },
+        checked: gmibParams.autostart,
+      },
+      {
+        label: 'Изменить список ...',
+        click: () => {
+          const window = getMainWindow();
+          if (window) {
+            window.show();
+            window.focus();
+            window.webContents.send('editRemoteHosts');
+          }
+        },
+      },
+      { type: 'separator' },
+      ...links,
+    ],
   };
 };
 
@@ -566,14 +571,13 @@ const template = async (params?: WindowParams): Promise<MenuItemConstructorOptio
 
 let menuReady = Promise.resolve();
 const update = async () => {
-  const win = getFocusedManagedWindow();
-  const id = win?.id;
-  const params = id ? store.get(id) : undefined;
+  const params = getMenuParams();
   const tmpl = await template(params);
   const mainMenu = Menu.buildFromTemplate(tmpl);
-  if (['win32', 'linux'].includes(process.platform))
-    BrowserWindow.getFocusedWindow()?.setMenu(mainMenu);
-  else Menu.setApplicationMenu(mainMenu);
+  if (['win32', 'linux'].includes(process.platform)) {
+    const window = BrowserWindow.getFocusedWindow() ?? (getActiveTabbedWindow() && getTabbedBrowserWindow());
+    window?.setMenu(mainMenu);
+  } else Menu.setApplicationMenu(mainMenu);
 };
 
 const updateMenu = debounce((): void => {
