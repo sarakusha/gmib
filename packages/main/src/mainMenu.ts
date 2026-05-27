@@ -18,7 +18,7 @@ import { hasPlayers, insertPlayer, uniquePlayerName } from './screen';
 import { dbReady } from './db';
 import checkForUpdates from './updater';
 // import type { WindowParams } from './windowStore';
-import store, { findManagedWindow, getAllGmibParams } from './windowStore';
+import store, { findManagedWindow, getAllGmibParams, onWindowStoreChange } from './windowStore';
 import authRequest from './authRequest';
 import mdnsBrowser, { pickRemoteService } from './mdns';
 import { createAppWindow, getMainWindow } from './mainWindow';
@@ -615,6 +615,7 @@ localConfig.onDidChange('autostart', updateMenu);
 mdnsBrowser.on('up', updateMenu);
 mdnsBrowser.on('down', updateMenu);
 onTabbedWindowChange(updateMenu);
+onWindowStoreChange(updateMenu);
 
 void dbReady.then(hasPlayers).then(async res => res || (await createNewPlayer('Плеер')));
 

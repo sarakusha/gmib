@@ -41,6 +41,11 @@ export const getZIndex = (): number => zIndex++;
 // const defaultConfig = parse('{}') as LocalConfig;
 
 const store = new Map<number, WindowParams>();
+const listeners = new Set<() => void>();
+
+const emitChange = (): void => {
+  listeners.forEach(listener => listener());
+};
 
 let knockInterval: NodeJS.Timeout;
 let attempts = 0;
@@ -49,9 +54,17 @@ const MAX_KNOCK_ATTEMPTS = 10;
 const register = (browserWindow: ManagedWindow): number => {
   const { id } = browserWindow;
   if (!store.has(id)) {
-    browserWindow.once('closed', () => store.delete(id));
+    browserWindow.once('closed', () => {
+      store.delete(id);
+      emitChange();
+    });
   }
   return id;
+};
+
+export const onWindowStoreChange = (listener: () => void): (() => void) => {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
 };
 
 const knockKnock = async (params: GmibWindowParams): Promise<void> => {
@@ -135,6 +148,7 @@ export const registerGmib = async (
       const result = Object.assign(params, pick(values, gmibVariables));
       const { update: _, ...props } = result;
       browserWindow.webContents.send('gmib-params', props);
+      emitChange();
       return result;
     },
   };
@@ -177,6 +191,7 @@ export const registerGmib = async (
   }
   if (browserWindow.isDestroyed()) return undefined;
   store.set(id, params);
+  emitChange();
   return params;
 };
 
@@ -209,6 +224,7 @@ export const registerScreen = (browserWindow: BrowserWindow, scr: Screen) => {
     moduleHeight,
   };
   store.set(id, params);
+  emitChange();
 };
 
 export const registerPlayer = (
@@ -218,6 +234,7 @@ export const registerPlayer = (
 ): number => {
   const id = register(browserWindow);
   store.set(id, { id, type: 'player', playerId, host, port, parent, zIndex: getZIndex() });
+  emitChange();
   return id;
 };
 
