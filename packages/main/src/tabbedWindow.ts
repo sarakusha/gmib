@@ -396,16 +396,43 @@ class TabbedWindow {
         user-select: none;
       }
       #tabs {
+        --active-left: 0px;
+        --active-right: 0px;
+        position: relative;
         height: ${TAB_HEIGHT}px;
         display: flex;
         align-items: end;
         gap: 2px;
         padding: 4px 8px 0;
-        border-bottom: 1px solid #b8c2cc;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: none;
+      }
+      #tabs::before,
+      #tabs::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        height: 1px;
+        background: #b8c2cc;
+        pointer-events: none;
+        z-index: 2;
+      }
+      #tabs::before {
+        left: 0;
+        width: var(--active-left);
+      }
+      #tabs::after {
+        left: var(--active-right);
+        right: 0;
+      }
+      #tabs::-webkit-scrollbar {
+        display: none;
       }
       .tab {
         min-width: 120px;
         max-width: 240px;
+        flex: 0 0 auto;
         height: 31px;
         display: flex;
         align-items: center;
@@ -419,8 +446,6 @@ class TabbedWindow {
       .tab.active {
         position: relative;
         z-index: 1;
-        height: 32px;
-        margin-bottom: -1px;
         background: #fff;
       }
       .title {
@@ -446,12 +471,33 @@ class TabbedWindow {
     <div id="tabs"></div>
     <script>
       const tabsNode = document.getElementById('tabs');
+      const updateActiveGap = activeNode => {
+        if (!activeNode) {
+          tabsNode.style.setProperty('--active-left', '0px');
+          tabsNode.style.setProperty('--active-right', '0px');
+          return;
+        }
+        const tabsRect = tabsNode.getBoundingClientRect();
+        const activeRect = activeNode.getBoundingClientRect();
+        const left = Math.max(0, Math.min(tabsRect.width, activeRect.left - tabsRect.left));
+        const right = Math.max(0, Math.min(tabsRect.width, activeRect.right - tabsRect.left));
+        tabsNode.style.setProperty('--active-left', left + 'px');
+        tabsNode.style.setProperty('--active-right', right + 'px');
+      };
+      tabsNode.addEventListener('wheel', event => {
+        if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+        tabsNode.scrollLeft += event.deltaY;
+        event.preventDefault();
+      }, { passive: false });
+      tabsNode.addEventListener('scroll', () => updateActiveGap(tabsNode.querySelector('.tab.active')));
       window.renderTabs = tabs => {
         tabsNode.textContent = '';
+        let activeNode;
         tabs.filter(tab => !tab.hidden).forEach(tab => {
           const item = document.createElement('div');
           item.className = 'tab' + (tab.active ? ' active' : '');
           item.title = tab.title;
+          if (tab.active) activeNode = item;
           item.addEventListener('click', () => {
             window.location.href = 'gmib-tab://activate?id=' + tab.id;
           });
@@ -470,6 +516,8 @@ class TabbedWindow {
           item.append(title, close);
           tabsNode.append(item);
         });
+        activeNode?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        requestAnimationFrame(() => updateActiveGap(activeNode));
       };
       window.renderTabs([]);
     </script>
