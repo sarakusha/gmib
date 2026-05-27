@@ -416,7 +416,13 @@ class TabbedWindow {
         padding: 0 7px 0 10px;
         background: #d9e2ec;
       }
-      .tab.active { background: #fff; }
+      .tab.active {
+        position: relative;
+        z-index: 1;
+        height: 32px;
+        margin-bottom: -1px;
+        background: #fff;
+      }
       .title {
         overflow: hidden;
         text-overflow: ellipsis;
