@@ -1,4 +1,4 @@
-import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutlineOutlined';
 import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
 import {
@@ -82,6 +82,7 @@ const HttpPages: React.FC = () => {
           const [primary, secondary = ''] = title.split('/', 2);
           const isValid = permanent || (url && isValidUrl(url));
           return (
+            // </div>
             <ListItemButton
               key={id}
               className={clsx({
@@ -99,8 +100,10 @@ const HttpPages: React.FC = () => {
               <ListItemText
                 primary={primary}
                 secondary={permanent ? secondary : url}
-                primaryTypographyProps={noWrap}
-                secondaryTypographyProps={noWrap}
+                slotProps={{
+                  primary: noWrap,
+                  secondary: noWrap,
+                }}
               />
               {!permanent && (
                 <ListItemSecondaryAction className="tNX9k9byJD58qNs4nxAIi CG7cBydXFzf6qGSi-xBj8">
@@ -131,7 +134,6 @@ const HttpPages: React.FC = () => {
                 </ListItemSecondaryAction>
               )}
             </ListItemButton>
-            // </div>
           );
         })}
         <ListItemButton

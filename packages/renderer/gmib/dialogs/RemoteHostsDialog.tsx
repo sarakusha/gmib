@@ -228,17 +228,23 @@ const RemoteHostsDialog: React.FC<RemoteHostsDialogProps> = ({
                         value={port ?? ''}
                         type="number"
                         onChange={makePortHandler(id)}
-                        InputProps={portProps}
+                        slotProps={{
+                          input: portProps,
+                        }}
                       />
                       <TextField
                         variant="standard"
                         value={name ?? ''}
                         onChange={makeNameHandler(id)}
-                        InputProps={portProps}
+                        slotProps={{
+                          input: portProps,
+                        }}
                       />
                       <Box
-                        alignSelf="flex-start"
                         ref={index === customHosts.length - 1 ? refLast : undefined}
+                        sx={{
+                          alignSelf: 'flex-start',
+                        }}
                       >
                         <IconButton size="small" title="Удалить" onClick={makeCloseHandler(id)}>
                           <CloseIcon fontSize="inherit" />

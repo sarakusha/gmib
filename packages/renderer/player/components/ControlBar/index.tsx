@@ -19,7 +19,18 @@ type Props = {
 
 const ControlBar = React.forwardRef<HTMLDivElement, Props>(
   ({ duration, position = 0, sx, className }, ref) => (
-    <Stack direction="row" spacing={1} alignItems="center" sx={sx} ref={ref} className={className}>
+    <Stack
+      direction="row"
+      spacing={1}
+      ref={ref}
+      className={className}
+      sx={[
+        {
+          alignItems: 'center',
+        },
+        ...(Array.isArray(sx) ? sx : [sx]),
+      ]}
+    >
       <PlayToggle />
       <NextTrack />
       <Stop />

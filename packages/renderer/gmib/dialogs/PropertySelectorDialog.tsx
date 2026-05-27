@@ -74,7 +74,11 @@ const PropertySelectorDialog: React.FC<Props> = ({
     <Dialog open={open} aria-labelledby="selector-title">
       <DialogTitle id="selector-title">Выбор переменных для опроса</DialogTitle>
       <DialogContent>
-        <Box display="flex">
+        <Box
+          sx={{
+            display: 'flex',
+          }}
+        >
           <FormFieldSet sx={{ m: 3 }} legend="Доступные переменные">
             <FormGroup>
               {getEnumEntries(properties).map(([name, value]) => (

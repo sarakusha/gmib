@@ -21,7 +21,13 @@ const Brightness: React.FC<BrightnessProps> = ({
   disabled,
   ...props
 }) => (
-  <Box display="flex" alignItems="center" p={1}>
+  <Box
+    sx={{
+      display: 'flex',
+      alignItems: 'center',
+      p: 1,
+    }}
+  >
     <CircularProgressWithLabel
       variant="determinate"
       value={value}
@@ -29,12 +35,14 @@ const Brightness: React.FC<BrightnessProps> = ({
       size="3.5rem"
     />
     <Box
-      display="flex"
-      flexDirection="column"
-      height={1}
-      alignItems="center"
-      px={1}
       className={className}
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: 1,
+        alignItems: 'center',
+        px: 1,
+      }}
     >
       <RepeatButton
         size="small"
@@ -44,7 +52,12 @@ const Brightness: React.FC<BrightnessProps> = ({
       >
         <BrightnessHighIcon fontSize="inherit" />
       </RepeatButton>
-      <Box flexGrow={1} p={1}>
+      <Box
+        sx={{
+          flexGrow: 1,
+          p: 1,
+        }}
+      >
         <Slider
           size="small"
           orientation="vertical"

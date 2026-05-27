@@ -40,17 +40,19 @@ const Selector: React.FC<Props> = ({ label, groupName, value, onChange, max, cla
         value={value === ALL ? groupName : value}
         label={label}
         type={value === ALL ? 'text' : 'number'}
-        InputProps={{
-          readOnly: value === 0xff,
-          endAdornment: (
-            <InputAdornment position="end">
-              <Checkbox onChange={checkHandler} />
-            </InputAdornment>
-          ),
-          inputProps: { max, min: 0 },
-        }}
         onChange={changeHandler}
         className={className}
+        slotProps={{
+          input: {
+            readOnly: value === 0xff,
+            endAdornment: (
+              <InputAdornment position="end">
+                <Checkbox onChange={checkHandler} />
+              </InputAdornment>
+            ),
+            inputProps: { max, min: 0 },
+          },
+        }}
       />
     </div>
   );

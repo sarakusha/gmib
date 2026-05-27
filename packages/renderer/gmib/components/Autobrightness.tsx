@@ -154,17 +154,17 @@ const highChartsOptions: Highcharts.Options = {
   ],
 };
 
-const brightnessInputProps = {
-  startAdornment: <InputAdornment position="start">%</InputAdornment>,
-  inputProps: {
+const brightnessSlotProps = {
+  input: { startAdornment: <InputAdornment position="start">%</InputAdornment> },
+  htmlInput: {
     min: 0,
     max: 100,
   },
 };
 
-const illuminanceInputProps = {
-  startAdornment: <InputAdornment position="start">lux</InputAdornment>,
-  inputProps: {
+const illuminanceSlotProps = {
+  input: { startAdornment: <InputAdornment position="start">lux</InputAdornment> },
+  htmlInput: {
     min: 0,
     max: 65535,
   },
@@ -316,7 +316,7 @@ const Autobrightness: React.FC = () => {
                     id={`lux-${i}`}
                     value={lux[i] ?? ''}
                     type="number"
-                    InputProps={illuminanceInputProps}
+                    slotProps={illuminanceSlotProps}
                     onChange={handleChange}
                     variant="standard"
                     // margin="dense"
@@ -326,7 +326,7 @@ const Autobrightness: React.FC = () => {
                     id={`bright-${i}`}
                     value={bright[i] ?? ''}
                     type="number"
-                    InputProps={brightnessInputProps}
+                    slotProps={brightnessSlotProps}
                     onChange={handleChange}
                     // margin="dense"
                     error={!!error[i]}

@@ -146,14 +146,24 @@ const TelemetryTab: React.FC<MinihostTabProps> = ({ id, selected = false }) => {
             borderColor: 'white',
           }}
         >
-          <Typography variant="caption" color="inherit">
+          <Typography
+            variant="caption"
+            sx={{
+              color: 'inherit',
+            }}
+          >
             <b>
               {xMin}..{xMax}
             </b>
           </Typography>
         </Box>
         <div>
-          <Typography variant="caption" color="inherit">
+          <Typography
+            variant="caption"
+            sx={{
+              color: 'inherit',
+            }}
+          >
             <b>
               {yMin}..{yMax}
             </b>

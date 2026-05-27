@@ -10,8 +10,8 @@ import {
   type SvgIconProps,
   Typography,
 } from '@mui/material';
-import type { TreeItemProps, TreeViewProps } from '@mui/x-tree-view';
-import { TreeItem as MuiTreeItem, TreeView as MuiTreeView } from '@mui/x-tree-view';
+import type { SimpleTreeViewProps, TreeItemProps } from '@mui/x-tree-view';
+import { TreeItem as MuiTreeItem, SimpleTreeView as MuiTreeView } from '@mui/x-tree-view';
 import * as React from 'react';
 import { TransitionGroup } from 'react-transition-group';
 
@@ -57,11 +57,12 @@ const PlusSquare: React.FC<SvgIconProps> = props => (
 //   </SvgIcon>
 // );
 
-const TreeView = React.forwardRef<HTMLUListElement, TreeViewProps<false>>((props, ref) => (
+const TreeView = React.forwardRef<HTMLUListElement, SimpleTreeViewProps<false>>((props, ref) => (
   <MuiTreeView
-    defaultCollapseIcon={<MinusSquare />}
-    defaultExpandIcon={<PlusSquare />}
-    defaultEndIcon="&#8226;"
+    slots={{
+      collapseIcon: MinusSquare,
+      expandIcon: PlusSquare,
+    }}
     // defaultEndIcon={<CloseSquare />}
     // defaultCollapseIcon={<ExpandMoreIcon />}
     // defaultExpandIcon={<ChevronRightIcon />}
@@ -120,8 +121,8 @@ const SettingsTab: React.FC = () => {
   const selected = useSelector(selectSettingsNode);
   const [deletePlayer] = useDeletePlayerMutation();
   const showAlert = useShiftAlert();
-  const handleSelect = (e: React.SyntheticEvent, nodeId: string) => {
-    dispatch(setSettingsNode(nodeId));
+  const handleSelect = (e: React.SyntheticEvent | null, itemId: string | null) => {
+    if (itemId) dispatch(setSettingsNode(itemId));
   };
   const deleteHandler = (id: number) => (e: React.MouseEvent<HTMLElement>) => {
     if (e.shiftKey) void deletePlayer(id);
@@ -137,20 +138,26 @@ const SettingsTab: React.FC = () => {
       <PlayerMappingDialogProvider>
         <FixedHeadLayout gap={0}>
           <SettingsToolbar group={group} id={+id} />
-          <Stack direction="row" gap={1} sx={{ height: 1 }}>
+          <Stack
+            direction="row"
+            sx={{
+              gap: 1,
+              height: 1,
+            }}
+          >
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <TreeView
-                selected={selected}
-                onNodeSelect={handleSelect}
-                expanded={expanded}
-                onNodeToggle={(_, ids) => setExpanded(ids)}
+                selectedItems={selected}
+                onSelectedItemsChange={handleSelect}
+                expandedItems={expanded}
+                onExpandedItemsChange={(_, ids: string[]) => setExpanded(ids)}
               >
-                <TreeItem nodeId="players" label="Плееры">
+                <TreeItem itemId="players" label="Плееры">
                   <TransitionGroup>
                     {players.map(player => (
                       <Collapse key={player.id}>
                         <TreeItem
-                          nodeId={`players:${player.id}`}
+                          itemId={`players:${player.id}`}
                           label={player.name}
                           onDelete={deleteHandler(player.id)}
                         />
@@ -158,12 +165,12 @@ const SettingsTab: React.FC = () => {
                     ))}
                   </TransitionGroup>
                 </TreeItem>
-                <TreeItem nodeId="displays" label="Устройства вывода">
+                <TreeItem itemId="displays" label="Устройства вывода">
                   <TransitionGroup>
                     {displays.map((display, i) => (
                       <Collapse key={display.id}>
                         <TreeItem
-                          nodeId={`displays:${display.id}:${i}`}
+                          itemId={`displays:${display.id}:${i}`}
                           label={getDisplayLabel(display, i)}
                           bold={display.primary}
                         />

@@ -168,11 +168,26 @@ const App: React.FC = () => {
                 whiteSpace: 'nowrap',
               }}
             >
-              <Typography component="h1" variant="h6" color="inherit" noWrap display="inline">
+              <Typography
+                component="h1"
+                variant="h6"
+                noWrap
+                sx={{
+                  color: 'inherit',
+                  display: 'inline',
+                }}
+              >
                 {import.meta.env.VITE_APP_NAME}
               </Typography>
               &nbsp;
-              <Typography component="h1" variant="subtitle1" color="inherit" display="inline">
+              <Typography
+                component="h1"
+                variant="subtitle1"
+                sx={{
+                  color: 'inherit',
+                  display: 'inline',
+                }}
+              >
                 {version}
               </Typography>
             </Box>
@@ -237,7 +252,9 @@ const App: React.FC = () => {
                   edge="end"
                   onChange={() => dispatch(setAutobrightness(!autobrightness))}
                   checked={autobrightness}
-                  inputProps={{ 'aria-labelledby': 'switch-autobrightness' }}
+                  slotProps={{
+                    input: { 'aria-labelledby': 'switch-autobrightness' },
+                  }}
                 />
               </ListItemSecondaryAction>
             </Item>
@@ -251,8 +268,10 @@ const App: React.FC = () => {
                 <Switch
                   edge="end"
                   checked={protectionEnabled}
-                  inputProps={{ 'aria-labelledby': 'switch-overheat-protection' }}
                   onClick={() => dispatch(setProtectionProp(['enabled', !protectionEnabled]))}
+                  slotProps={{
+                    input: { 'aria-labelledby': 'switch-overheat-protection' },
+                  }}
                 />
               </ListItemSecondaryAction>
             </Item>

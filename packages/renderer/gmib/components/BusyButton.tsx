@@ -19,7 +19,12 @@ const BusyButton: React.FC<BusyButtonProps> = ({
   className,
 }) => (
   <Tooltip title={title} enterDelay={1000}>
-    <Box position="relative" className={className}>
+    <Box
+      className={className}
+      sx={{
+        position: 'relative',
+      }}
+    >
       <IconButton color="inherit" onClick={onClick} disabled={disabled ?? isBusy} size="large">
         {icon}
       </IconButton>

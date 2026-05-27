@@ -16,7 +16,13 @@ const App: React.FC = () => {
         height: 1,
       }}
     >
-      <Box minWidth={600} height={1} width={1}>
+      <Box
+        sx={{
+          minWidth: 600,
+          height: 1,
+          width: 1,
+        }}
+      >
         <Backdrop
           sx={{
             zIndex: theme => theme.zIndex.drawer + 20,

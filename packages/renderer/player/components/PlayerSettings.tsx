@@ -94,7 +94,12 @@ const PlayerSettings: React.FC<{ id?: number }> = ({ id }) => {
             />
             <FormControl component="fieldset" margin="normal" fullWidth>
               <FormLabel component="legend">Предпочтительный размер в пикселях</FormLabel>
-              <Stack direction="row" gap={4}>
+              <Stack
+                direction="row"
+                sx={{
+                  gap: 4,
+                }}
+              >
                 <Field
                   name="width"
                   label="Ширина"
@@ -150,8 +155,10 @@ const PlayerSettings: React.FC<{ id?: number }> = ({ id }) => {
                   secondary={`${getDisplay(item.display)} (${item.left},${item.top}-${item.width}x${
                     item.height
                   })`}
-                  primaryTypographyProps={noWrap}
-                  secondaryTypographyProps={noWrap}
+                  slotProps={{
+                    primary: noWrap,
+                    secondary: noWrap,
+                  }}
                 />
                 <ListItemSecondaryAction onClick={stopPropagation} onMouseDown={stopPropagation}>
                   <IconButton

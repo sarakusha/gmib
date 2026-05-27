@@ -85,10 +85,20 @@ const NovastarTelemetryTab: React.FC<{ device: Novastar | undefined; selected?: 
     [cabinets],
   );
   return (
-    <Box display={active ? 'inline-block' : 'none'}>
+    <Box
+      sx={{
+        display: active ? 'inline-block' : 'none',
+      }}
+    >
       {grouped.map(([screen, cabs], index) => (
         <React.Fragment key={screen}>
-          <Typography color="inherit">Экран #{Number(screen) + 1}</Typography>
+          <Typography
+            sx={{
+              color: 'inherit',
+            }}
+          >
+            Экран #{Number(screen) + 1}
+          </Typography>
           <Box
             sx={{
               display: 'grid',

@@ -44,7 +44,12 @@ const AccordionList: React.FC<React.PropsWithChildren<AccordionListProps>> = ({
       {typeof title === 'string' ? <Typography>{title}</Typography> : title}
     </AccordionSummary>
     <AccordionDetails sx={{ p: 0 }}>
-      <Box component={component} width={1}>
+      <Box
+        component={component}
+        sx={{
+          width: 1,
+        }}
+      >
         {children}
       </Box>
     </AccordionDetails>

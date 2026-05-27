@@ -42,7 +42,14 @@ const CurrentPlaylist: React.FC<Props> = ({ playerId, className }) => {
   if (!currentPlaylist || !mediaData) return null;
   return (
     <FormControl className={className} sx={{ width: 1 }}>
-      <Stack direction="row" width={1} justifyContent="space-between" alignItems="center">
+      <Stack
+        direction="row"
+        sx={{
+          width: 1,
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
         <FormLabel id="current-playlist-name">
           <Typography variant="body2" noWrap>
             {currentPlaylist.name}

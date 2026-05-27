@@ -28,9 +28,11 @@ const ReadonlyField = React.forwardRef<HTMLDivElement, React.PropsWithoutRef<Tex
       fullWidth
       margin="dense"
       disabled
-      inputProps={readonly}
       ref={ref}
       {...props}
+      slotProps={{
+        htmlInput: readonly,
+      }}
     />
   ),
 );
@@ -42,15 +44,30 @@ const OutputSettings: React.FC<Props> = ({ id, index = 0 }) => {
       <FormControl component="fieldset" sx={{ width: 1 }}>
         <FormLabel component="legend">Дисплей #{toHexId(display.id)}</FormLabel>
         <TextField name="name" value={getDisplayLabel(display, index)} label="Имя" />
-        <Stack direction="row" gap={2}>
+        <Stack
+          direction="row"
+          sx={{
+            gap: 2,
+          }}
+        >
           <ReadonlyField name="width" label="Ширина" value={display.bounds.width} />
           <ReadonlyField name="height" label="Высота" value={display.bounds.height} />
         </Stack>
-        <Stack direction="row" gap={2}>
+        <Stack
+          direction="row"
+          sx={{
+            gap: 2,
+          }}
+        >
           <ReadonlyField name="x" label="X" value={display.bounds.x} />
           <ReadonlyField name="y" label="Y" value={display.bounds.y} />
         </Stack>
-        <Stack direction="row" gap={2}>
+        <Stack
+          direction="row"
+          sx={{
+            gap: 2,
+          }}
+        >
           <FormControlLabel
             label="Основной"
             disabled

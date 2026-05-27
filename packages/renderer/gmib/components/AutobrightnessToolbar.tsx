@@ -171,10 +171,7 @@ const AutobrightnessToolbar: React.FC = () => {
               onChange={handleChange('latitude')}
               // onChange={e => setLocation(['latitude', e.target.value])}
               // onBlur={e => dispatch(setLatitude(toNumber(e.target.value)))}
-              inputProps={{
-                min: -90,
-                max: 90,
-              }}
+              slotProps={{ htmlInput: { min: -90, max: 90 } }}
               variant="standard"
             />
             <Item
@@ -184,10 +181,7 @@ const AutobrightnessToolbar: React.FC = () => {
               onChange={handleChange('longitude')}
               // onChange={e => setLocation(['longitude', e.target.value])}
               // onBlur={e => dispatch(setLongitude(toNumber(e.target.value)))}
-              inputProps={{
-                min: -180,
-                max: 180,
-              }}
+              slotProps={{ htmlInput: { min: -180, max: 180 } }}
               variant="standard"
             />
           </FormFieldSet>

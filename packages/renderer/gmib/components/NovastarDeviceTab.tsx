@@ -117,7 +117,14 @@ const NovastarDeviceTab: React.FC<{ device: Novastar | undefined; selected?: boo
       y: location?.leftTop.y ?? '-',
     }));
   return (
-    <Box p={1} width={1} fontSize="body1.fontSize" display={active ? 'block' : 'none'}>
+    <Box
+      sx={{
+        p: 1,
+        width: 1,
+        fontSize: 'body1.fontSize',
+        display: active ? 'block' : 'none',
+      }}
+    >
       <Paper>
         {info && (
           <StyledAccordionList name="common" title={info.name} component={Table} expanded>

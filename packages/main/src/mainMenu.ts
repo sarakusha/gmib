@@ -575,7 +575,8 @@ const update = async () => {
   const tmpl = await template(params);
   const mainMenu = Menu.buildFromTemplate(tmpl);
   if (['win32', 'linux'].includes(process.platform)) {
-    const window = BrowserWindow.getFocusedWindow() ?? (getActiveTabbedWindow() && getTabbedBrowserWindow());
+    const window =
+      BrowserWindow.getFocusedWindow() ?? (getActiveTabbedWindow() && getTabbedBrowserWindow());
     window?.setMenu(mainMenu);
   } else Menu.setApplicationMenu(mainMenu);
 };

@@ -108,7 +108,12 @@ const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) =
               </FormControl>
               <FormControl component="fieldset" sx={{ width: 1 }} margin="normal">
                 <FormLabel component="legend">Положение</FormLabel>
-                <Stack direction="row" gap={2}>
+                <Stack
+                  direction="row"
+                  sx={{
+                    gap: 2,
+                  }}
+                >
                   <Field
                     name="left"
                     label="X"
@@ -121,7 +126,12 @@ const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) =
               </FormControl>
               <FormControl component="fieldset" sx={{ width: 1 }} margin="normal">
                 <FormLabel component="legend">Размер</FormLabel>
-                <Stack direction="row" gap={2}>
+                <Stack
+                  direction="row"
+                  sx={{
+                    gap: 2,
+                  }}
+                >
                   <Field
                     name="width"
                     label="Ширина"
@@ -140,7 +150,12 @@ const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) =
               </FormControl>
               <FormControl component="fieldset" sx={{ width: 1 }} margin="normal">
                 <FormLabel component="legend">Окно</FormLabel>
-                <Stack direction="row" gap={2}>
+                <Stack
+                  direction="row"
+                  sx={{
+                    gap: 2,
+                  }}
+                >
                   <FormControlLabel
                     control={
                       <Checkbox checked={values.kiosk} onChange={handleChange} name="kiosk" />

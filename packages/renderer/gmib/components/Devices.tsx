@@ -133,7 +133,14 @@ const Devices: React.FC = () => {
   );
   const title = useMemo(
     () => (
-      <Box display="flex" alignItems="center" justifyContent="space-between" width={1}>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          width: 1,
+        }}
+      >
         <Typography>Устройства</Typography>
         <IconButton size="small" title="Повторить поиск" onClick={reloadHandler}>
           <ReloadIcon />
@@ -192,10 +199,12 @@ const Devices: React.FC = () => {
                   </Wrapper>
                 </ListItemIcon>
                 <ListItemText
-                  primaryTypographyProps={noWrap}
-                  secondaryTypographyProps={noWrap}
                   primary={isEmptyAddress ? category : name}
                   secondary={isEmptyAddress ? path : mib}
+                  slotProps={{
+                    primary: noWrap,
+                    secondary: noWrap,
+                  }}
                 />
                 {removable && id && (
                   <ListItemSecondaryAction>
@@ -237,10 +246,12 @@ const Devices: React.FC = () => {
                 </Wrapper>
               </ListItemIcon>
               <ListItemText
-                primaryTypographyProps={noWrap}
                 primary={card.info?.name}
                 secondary={card.path}
-                secondaryTypographyProps={noWrap}
+                slotProps={{
+                  primary: noWrap,
+                  secondary: noWrap,
+                }}
               />
             </ListItemButton>
           </Collapse>

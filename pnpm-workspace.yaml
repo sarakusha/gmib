@@ -8,6 +8,11 @@ overrides:
   # '@nibus/mibs': file:.yalc/@nibus/mibs
   # "@nibus/service": file:.yalc/@nibus/service
 
+peerDependencyRules:
+  allowedVersions:
+    "@mui/material": "9"
+    react-dom: "19"
+
 updateConfig:
   ignoreDependencies:
     - "@mui/icons-material"

@@ -223,7 +223,6 @@ const MediaItem = React.forwardRef<HTMLLIElement, MediaItemProps>((props, ref) =
         ref={refInner}
         style={style}
         dense
-        selected={selected || Boolean(count)}
         onClick={e => {
           if (e.shiftKey) {
             setTitle(info.md5);
@@ -233,6 +232,9 @@ const MediaItem = React.forwardRef<HTMLLIElement, MediaItemProps>((props, ref) =
         }}
         sx={{
           ...(onMove && { cursor: 'move' }),
+          ...((selected || Boolean(count)) && {
+            backgroundColor: 'action.selected',
+          }),
           '&, & ~ *': { opacity: isDragging ? 0 : 1 },
         }}
       >
@@ -256,9 +258,11 @@ const MediaItem = React.forwardRef<HTMLLIElement, MediaItemProps>((props, ref) =
         <ListItemText
           id={filename}
           primary={<Numbered text={title ?? filename} index={pos != null ? pos + 1 : undefined} />}
-          primaryTypographyProps={{ noWrap: true }}
           secondary={duration ? <Details {...info} /> : 'loading...'}
           disableTypography
+          slotProps={{
+            primary: { noWrap: true },
+          }}
         />
         {onDelete && id && (
           <ListItemSecondaryAction onClick={stopPropagation} onMouseDown={stopPropagation}>

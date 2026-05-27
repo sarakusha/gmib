@@ -93,8 +93,10 @@ const OverheatProtectionTab: React.FC = () => {
             label="Интервал"
             value={interval}
             type="number"
-            InputProps={intervalInputProps}
             onChange={handleChange}
+            slotProps={{
+              input: intervalInputProps,
+            }}
           />
           <TextField
             variant="standard"
@@ -102,8 +104,10 @@ const OverheatProtectionTab: React.FC = () => {
             label="Шаг понижения"
             value={step}
             type="number"
-            InputProps={stepInputProps}
             onChange={handleChange}
+            slotProps={{
+              input: stepInputProps,
+            }}
           />
           <TextField
             variant="standard"
@@ -125,14 +129,16 @@ const OverheatProtectionTab: React.FC = () => {
             label="Нижняя граница"
             value={bottomBound}
             type="number"
-            InputProps={{
-              startAdornment: <InputAdornment position="start">&deg;C</InputAdornment>,
-              inputProps: {
-                min: 30,
-                max: upperBound,
+            onChange={handleChange}
+            slotProps={{
+              input: {
+                startAdornment: <InputAdornment position="start">&deg;C</InputAdornment>,
+                inputProps: {
+                  min: 30,
+                  max: upperBound,
+                },
               },
             }}
-            onChange={handleChange}
           />
           <TextField
             variant="standard"
@@ -140,21 +146,27 @@ const OverheatProtectionTab: React.FC = () => {
             label="Верхняя граница"
             value={upperBound}
             type="number"
-            InputProps={{
-              startAdornment: <InputAdornment position="start">&deg;C</InputAdornment>,
-              inputProps: {
-                min: bottomBound,
-                max: 120,
+            onChange={handleChange}
+            slotProps={{
+              input: {
+                startAdornment: <InputAdornment position="start">&deg;C</InputAdornment>,
+                inputProps: {
+                  min: bottomBound,
+                  max: 120,
+                },
               },
             }}
-            onChange={handleChange}
           />
         </Params>
       </Paper>
       {health && Object.keys(health.screens).length > 0 && (
         <Paper sx={{ p: 1 }}>
           {health.timestamp && (
-            <Typography paragraph>
+            <Typography
+              sx={{
+                marginBottom: '16px',
+              }}
+            >
               Состояние на {new Date(health.timestamp).toLocaleString()}
             </Typography>
           )}

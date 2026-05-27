@@ -72,7 +72,14 @@ const PropertyGridTab: React.FC<MinihostTabProps> = ({ id, selected = false }) =
   }
 
   return (
-    <Box px={1} width={1} fontSize="body1.fontSize" display={selected ? 'block' : 'none'}>
+    <Box
+      sx={{
+        px: 1,
+        width: 1,
+        fontSize: 'body1.fontSize',
+        display: selected ? 'block' : 'none',
+      }}
+    >
       <Paper>
         {Object.entries(categories).map(([category, propNames]) => (
           <StyledAccordionList

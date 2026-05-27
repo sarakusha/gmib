@@ -21,15 +21,22 @@ const Brightness: React.FC<BrightnessProps> = ({
   disabled,
   ...props
 }) => (
-  <Box display="flex" alignItems="center">
+  <Box
+    sx={{
+      display: 'flex',
+      alignItems: 'center',
+    }}
+  >
     <CircularProgressWithLabel variant="determinate" value={value} color="secondary" size="3rem" />
     <Box
-      display="flex"
-      flexDirection="row"
-      height={1}
-      alignItems="center"
       className={className}
-      gap={1}
+      sx={{
+        display: 'flex',
+        flexDirection: 'row',
+        height: 1,
+        alignItems: 'center',
+        gap: 1,
+      }}
     >
       <RepeatButton
         size="small"

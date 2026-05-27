@@ -79,7 +79,11 @@ const MediaTabToolbar: React.FC<Props> = ({ size }) => {
           <CachedIcon fontSize="inherit" />
         </IconButton>
       </Tooltip>
-      <Box flex="1" />
+      <Box
+        sx={{
+          flex: '1',
+        }}
+      />
       <Search value={search} onChange={handleChangeSearch} />
       <Menu
         id="menu-sort-item"

@@ -13,7 +13,7 @@ export function fieldToTextField({
   form: { isSubmitting, touched, errors },
   onBlur = e => fieldOnBlur(e ?? field.name),
   helperText,
-  inputProps,
+  slotProps,
   ...props
 }: FormikTextFieldProps): MuiTextFieldProps {
   const fieldError = getIn(errors, field.name);
@@ -24,9 +24,12 @@ export function fieldToTextField({
     error: showError,
     helperText: showError ? fieldError : helperText,
     disabled: disabled ?? isSubmitting,
-    inputProps: {
-      ...inputProps,
-      autoComplete: 'off',
+    slotProps: {
+      ...slotProps,
+      htmlInput: {
+        ...slotProps?.htmlInput,
+        autoComplete: 'off',
+      },
     },
     onBlur,
     ...field,

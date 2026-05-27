@@ -129,14 +129,16 @@ const PlaylistsTab: React.FC = () => {
                     name="name"
                     value={formik.values.name}
                     onChange={formik.handleChange}
-                    InputProps={{
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <PopupIndicator {...bindTrigger(popupState)} title="Выбрать плейлист">
-                            <ArrowDropDownIcon />
-                          </PopupIndicator>
-                        </InputAdornment>
-                      ),
+                    slotProps={{
+                      input: {
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <PopupIndicator {...bindTrigger(popupState)} title="Выбрать плейлист">
+                              <ArrowDropDownIcon />
+                            </PopupIndicator>
+                          </InputAdornment>
+                        ),
+                      },
                     }}
                   />
                   <SubmitListener />

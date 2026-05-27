@@ -11,8 +11,8 @@ import {
   TableRow,
   Typography,
 } from '@mui/material';
-import type { PaperProps } from '@mui/material/Paper/Paper';
-import type { TableCellProps } from '@mui/material/TableCell/TableCell';
+import type { PaperProps } from '@mui/material/Paper';
+import type { TableCellProps } from '@mui/material/TableCell';
 import { styled } from '@mui/material/styles';
 import type { MDXComponents } from 'mdx/types';
 import React from 'react';
@@ -34,7 +34,14 @@ const Blockquote = styled(Paper)(({ theme }) => ({
 }));
 
 const mdx: MDXComponents = {
-  p: ({ ref: _, ...props }) => <Typography paragraph {...props} />,
+  p: ({ ref: _, ...props }) => (
+    <Typography
+      {...props}
+      sx={{
+        marginBottom: '16px',
+      }}
+    />
+  ),
   h1: ({ ref: _, ...props }) => <Typography {...props} component="h1" variant="h4" gutterBottom />,
   h2: ({ ref: _, ...props }) => <Typography {...props} component="h2" variant="h4" gutterBottom />,
   h3: ({ ref: _, ...props }) => <Typography {...props} component="h3" variant="h5" gutterBottom />,
@@ -55,12 +62,14 @@ const mdx: MDXComponents = {
     // <Typography component="div" paragraph>
     <Box
       component="span"
-      fontFamily="Monospace"
-      bgcolor="text.primary"
-      color="background.paper"
-      p={1}
-      borderRadius={1}
       {...props}
+      sx={{
+        fontFamily: 'Monospace',
+        bgcolor: 'text.primary',
+        color: 'background.paper',
+        p: 1,
+        borderRadius: 1,
+      }}
     />
     // </Typography>
   ),

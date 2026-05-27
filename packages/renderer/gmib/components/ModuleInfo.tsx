@@ -218,12 +218,22 @@ const Position: React.FC<PosProps> = ({ x, y }) => (
         borderColor: 'white',
       }}
     >
-      <Typography variant="caption" color="inherit">
+      <Typography
+        variant="caption"
+        sx={{
+          color: 'inherit',
+        }}
+      >
         <b>{x}</b>
       </Typography>
     </Box>
     <div>
-      <Typography variant="caption" color="inherit">
+      <Typography
+        variant="caption"
+        sx={{
+          color: 'inherit',
+        }}
+      >
         <b>{y}</b>
       </Typography>
     </div>
