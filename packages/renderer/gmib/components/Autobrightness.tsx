@@ -7,31 +7,40 @@ import {
   FormControlLabel,
   GlobalStyles,
   IconButton,
-  InputAdornment,
-  Paper,
   TextField,
+  Typography,
 } from '@mui/material';
 import { css, styled } from '@mui/material/styles';
 import debugFactory from 'debug';
 import type { SeriesSolidgaugeOptions } from 'highcharts';
 import HighchartsReact from 'highcharts-react-official';
 import sortBy from 'lodash/sortBy';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import SunCalc from 'suncalc';
 
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useDispatch, useSelector } from '../store';
-import { setBrightness, setDisableNet, setSpline } from '../store/configSlice';
+import {
+  setBrightness,
+  setDisableNet,
+  setNightMode,
+  setSpline,
+  setSunSpline,
+} from '../store/configSlice';
 import {
   selectAutobrightness,
   selectBrightness,
   selectCurrentTab,
   selectDisableNet,
   selectLastIlluminance,
+  selectLocation,
+  selectNightMode,
   selectSpline,
+  selectSunSpline,
 } from '../store/selectors';
 
-import type { SplineItem } from '/@common/config';
-import { SPLINE_COUNT } from '/@common/config';
+import type { NightBrightnessMode, SplineItem, SunEvent, SunSplineItem } from '/@common/config';
+import { SPLINE_COUNT, sunEventLabels, sunEvents } from '/@common/config';
 import { noop, notEmpty, toErrorMessage } from '/@common/helpers';
 
 import AutobrightnessToolbar from './AutobrightnessToolbar';
@@ -154,22 +163,6 @@ const highChartsOptions: Highcharts.Options = {
   ],
 };
 
-const brightnessSlotProps = {
-  input: { startAdornment: <InputAdornment position="start">%</InputAdornment> },
-  htmlInput: {
-    min: 0,
-    max: 100,
-  },
-};
-
-const illuminanceSlotProps = {
-  input: { startAdornment: <InputAdornment position="start">lux</InputAdornment> },
-  htmlInput: {
-    min: 0,
-    max: 65535,
-  },
-};
-
 const columnStyle = css`
   display: flex;
   flex-direction: column;
@@ -179,13 +172,135 @@ const columnStyle = css`
 const Control = styled('div')(({ theme }) => ({
   display: 'flex',
   justifyContent: 'center',
-  paddingTop: theme.spacing(1),
-  paddingBottom: theme.spacing(1),
+  paddingTop: theme.spacing(0.5),
+  paddingBottom: theme.spacing(0.5),
 }));
 
-const Value = styled(TextField)`
-  min-width: 14ch;
-`;
+const fieldSx = {
+  '& .MuiInputBase-root': {
+    height: 32,
+  },
+  '& .MuiFormHelperText-root': {
+    minHeight: 16,
+    mt: 0.25,
+  },
+};
+const valueSx = { ...fieldSx, width: '10ch' };
+const luxSx = { ...fieldSx, width: '12ch' };
+const timeSx = { ...fieldSx, width: '10ch' };
+const sectionSx = { width: 360 };
+const unitCellSx = {
+  height: 32,
+  display: 'flex',
+  alignItems: 'center',
+  mt: 2.25,
+  mb: 2.25,
+  color: 'text.secondary',
+};
+const fieldWithUnitSx = {
+  display: 'flex',
+  alignItems: 'flex-start',
+  gap: 0.5,
+};
+const compactGridSx = {
+  p: 0.5,
+  columnGap: 1,
+  rowGap: 0,
+  alignItems: 'start',
+};
+const rowTextSx = {
+  height: 32,
+  display: 'flex',
+  alignItems: 'center',
+  mt: 2.25,
+  mb: 2.25,
+};
+const clearCellSx = { alignSelf: 'start', pt: 2.5 };
+const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
+const minuteMs = 60 * 1000;
+
+type SunEventRow = {
+  event: SunEvent;
+  time?: number;
+};
+
+type NightModeState = Record<keyof Required<NightBrightnessMode>, string>;
+type NightModeError = Partial<Record<keyof NightModeState, string>>;
+type SunBrightnessState = Partial<Record<SunEvent, number | undefined>>;
+
+const getTimeOfDay = (date: Date): number =>
+  (date.getHours() * 60 + date.getMinutes()) * minuteMs +
+  date.getSeconds() * 1000 +
+  date.getMilliseconds();
+
+const formatTime = (value?: number): string => {
+  if (value === undefined) return 'N/A';
+  const hours = Math.floor(value / (60 * minuteMs));
+  const minutes = Math.floor((value % (60 * minuteMs)) / minuteMs);
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+};
+
+const getSunEventRows = (latitude?: number, longitude?: number): SunEventRow[] => {
+  if (latitude === undefined || longitude === undefined)
+    return sunEvents.map(event => ({ event }));
+
+  const times = SunCalc.getTimes(new Date(), latitude, longitude);
+  return sunEvents
+    .map(event => {
+      const date = times[event];
+      return {
+        event,
+        time:
+          date instanceof Date && !Number.isNaN(date.getTime()) ? getTimeOfDay(date) : undefined,
+      };
+    })
+    .sort((a, b) => (a.time ?? Number.MAX_SAFE_INTEGER) - (b.time ?? Number.MAX_SAFE_INTEGER));
+};
+
+const isMonotonicUpThenDown = (values: Array<[index: number, brightness: number]>): number[] => {
+  const errors: number[] = [];
+  let descending = false;
+  for (let i = 1; i < values.length; i += 1) {
+    const [index, current] = values[i];
+    const [, previous] = values[i - 1];
+    if (current < previous) {
+      descending = true;
+    } else if (descending && current > previous) {
+      errors.push(index);
+    }
+  }
+  return errors;
+};
+
+const getNightState = (nightMode?: NightBrightnessMode): NightModeState => ({
+  start: nightMode?.start ?? '',
+  end: nightMode?.end ?? '',
+  brightness: nightMode?.brightness?.toString() ?? '',
+});
+
+const parseNightMode = (night: NightModeState): [NightBrightnessMode | undefined, NightModeError] => {
+  const start = night.start.trim();
+  const end = night.end.trim();
+  const brightnessText = night.brightness.trim();
+  const hasAnyNightValue = start.length > 0 || end.length > 0 || brightnessText.length > 0;
+  if (!hasAnyNightValue) return [undefined, {}];
+
+  const errors: NightModeError = {};
+  if (!timePattern.test(start)) errors.start = 'HH:MM';
+  if (!timePattern.test(end)) errors.end = 'HH:MM';
+
+  const brightness = Number(brightnessText);
+  if (brightnessText.length === 0 || Number.isNaN(brightness)) {
+    errors.brightness = '0..100%';
+  } else if (brightness < 0 || brightness > 100) {
+    errors.brightness = '0..100%';
+  }
+
+  return [
+    Object.keys(errors).length === 0 ? { start, end, brightness } : undefined,
+    errors,
+  ];
+};
 
 const Autobrightness: React.FC = () => {
   const [options, setOptions] = useState<Highcharts.Options>(highChartsOptions);
@@ -210,15 +325,36 @@ const Autobrightness: React.FC = () => {
   }, [illuminance]);
   const [lux, setLux] = useState<(number | undefined)[]>([]);
   const [bright, setBright] = useState<(number | undefined)[]>([]);
+  const [sunBright, setSunBright] = useState<SunBrightnessState>({});
+  const [night, setNight] = useState<NightModeState>(getNightState());
   const spline = useSelector(selectSpline);
+  const sunSpline = useSelector(selectSunSpline);
+  const location = useSelector(selectLocation);
+  const nightMode = useSelector(selectNightMode);
+  const sunRows = useMemo(
+    () => getSunEventRows(location?.latitude, location?.longitude),
+    [location?.latitude, location?.longitude],
+  );
   const [changed, setChanged] = useState(false);
   useEffect(() => {
     if (!changed) {
       setLux(spline ? spline.map(([l]) => l) : []);
       setBright(spline ? spline.map(([, b]) => b) : []);
+      setSunBright(
+        (sunSpline ?? []).reduce<SunBrightnessState>((acc, [reference, brightnessValue]) => {
+          if (reference.startsWith('event:')) {
+            const event = reference.slice('event:'.length) as SunEvent;
+            if (sunEvents.includes(event)) return { ...acc, [event]: brightnessValue };
+          }
+          return acc;
+        }, {}),
+      );
+      setNight(getNightState(nightMode));
     }
-  }, [spline, changed]);
+  }, [spline, sunSpline, nightMode, changed]);
   const [error, setError] = useState<string[]>([]);
+  const [sunError, setSunError] = useState<string[]>([]);
+  const [nightError, setNightError] = useState<NightModeError>({});
   const handleChange = useCallback<React.ChangeEventHandler<HTMLInputElement>>(e => {
     const { id, value } = e.target;
     const [type, index] = id.split('-', 2);
@@ -232,12 +368,20 @@ const Autobrightness: React.FC = () => {
       case 'bright':
         setBright(setItem(i, val));
         break;
+      case 'sunBright':
+        setSunBright(prev => ({ ...prev, [index as SunEvent]: val }));
+        break;
+      case 'night':
+        setNight(prev => ({ ...prev, [index as keyof NightModeState]: value }));
+        break;
       default:
         break;
     }
   }, []);
   const handleSave = (): void => {
     setError([]);
+    setSunError([]);
+    setNightError({});
     let saveSpline: (SplineItem | undefined)[] = [];
     for (let i = 0; i < SPLINE_COUNT; i += 1) {
       const curLux = lux[i];
@@ -247,6 +391,16 @@ const Autobrightness: React.FC = () => {
           ? [curLux, curBright]
           : undefined;
     }
+    const definedSun = sunRows
+      .map(({ event }, index) => {
+        const brightnessValue = sunBright[event];
+        return brightnessValue === undefined ? undefined : { index, event, brightnessValue };
+      })
+      .filter(notEmpty);
+    const saveSunSpline = definedSun.map<SunSplineItem>(({ event, brightnessValue }) => [
+      `event:${event}`,
+      brightnessValue,
+    ]);
     saveSpline = sortBy(saveSpline.filter(notEmpty), ([l]) => l);
     const errors: string[] = [];
     for (let i = 0; i < saveSpline.length; i += 1) {
@@ -261,15 +415,35 @@ const Autobrightness: React.FC = () => {
         errors[i] = '0..100%';
       }
     }
-    if (errors.length === 0) {
+    const sunErrors: string[] = [];
+    definedSun.forEach(({ index, brightnessValue }) => {
+      if (Number.isNaN(brightnessValue) || brightnessValue < 0 || brightnessValue > 100) {
+        sunErrors[index] = '0..100%';
+      }
+    });
+    isMonotonicUpThenDown(
+      definedSun.map(({ index, brightnessValue }) => [index, brightnessValue]),
+    ).forEach(index => {
+      if (sunErrors[index] === undefined) sunErrors[index] = 'Рост, затем спад';
+    });
+    const [saveNightMode, nightErrors] = parseNightMode(night);
+    if (
+      errors.length === 0 &&
+      sunErrors.length === 0 &&
+      Object.keys(nightErrors).length === 0
+    ) {
       try {
         dispatch(setSpline(saveSpline.filter(notEmpty)));
+        dispatch(setSunSpline(saveSunSpline));
+        dispatch(setNightMode(saveNightMode));
         setChanged(false);
       } catch (e) {
         debug(`error while save spline: ${toErrorMessage(e)}`);
       }
     }
     setError(errors);
+    setSunError(sunErrors);
+    setNightError(nightErrors);
   };
   const handleClear: React.MouseEventHandler<HTMLButtonElement> = e => {
     const { id } = e.currentTarget;
@@ -277,6 +451,17 @@ const Autobrightness: React.FC = () => {
     const i = Number(index);
     setLux(setItem(i));
     setBright(setItem(i));
+    setChanged(true);
+  };
+  const handleSunClear: React.MouseEventHandler<HTMLButtonElement> = e => {
+    const { id } = e.currentTarget;
+    const [, event] = id.split('-', 2);
+    setSunBright(prev => ({ ...prev, [event as SunEvent]: undefined }));
+    setChanged(true);
+  };
+  const handleNightClear = (): void => {
+    setNight(getNightState());
+    setNightError({});
     setChanged(true);
   };
   const brightness = useSelector(selectBrightness);
@@ -289,7 +474,7 @@ const Autobrightness: React.FC = () => {
   const autobrightness = useSelector(selectAutobrightness);
   return (
     <Box sx={{ pt: 1, mx: 'auto' }} className="YqATOnK8rERXOjt0JEXW0 rlXINR-cZo5bnISD5TaUT">
-      <Paper css={columnStyle}>
+      <Box css={columnStyle}>
         <Control>
           {unitStyles}
           <HighchartsReact highcharts={Highcharts} options={options} />
@@ -300,40 +485,53 @@ const Autobrightness: React.FC = () => {
           />
         </Control>
         <Control>
-          <Box css={columnStyle}>
+          <Box css={columnStyle} sx={sectionSx}>
+            <Typography variant="subtitle2">По освещенности</Typography>
             <Box
               sx={{
-                p: 1,
+                ...compactGridSx,
                 display: 'grid',
-                gridTemplateColumns: '[lux] 1fr [brightness] 1fr [clear] auto',
-                gap: 1,
+                gridTemplateColumns: '[lux] 12ch [brightness] 10ch [clear] auto',
               }}
             >
               {[...Array(SPLINE_COUNT).keys()].map(i => (
                 <React.Fragment key={i}>
-                  <Value
-                    label={i === 0 ? 'Освещенность' : undefined}
-                    id={`lux-${i}`}
-                    value={lux[i] ?? ''}
-                    type="number"
-                    slotProps={illuminanceSlotProps}
-                    onChange={handleChange}
-                    variant="standard"
-                    // margin="dense"
-                  />
-                  <Value
-                    label={i === 0 ? 'Яркость' : undefined}
-                    id={`bright-${i}`}
-                    value={bright[i] ?? ''}
-                    type="number"
-                    slotProps={brightnessSlotProps}
-                    onChange={handleChange}
-                    // margin="dense"
-                    error={!!error[i]}
-                    helperText={error[i] ?? ' '}
-                    variant="standard"
-                  />
-                  <Box sx={{ alignSelf: 'center', pb: 2 }}>
+                  <Box sx={fieldWithUnitSx}>
+                    <TextField
+                      label={i === 0 ? 'Освещенность' : ' '}
+                      id={`lux-${i}`}
+                      value={lux[i] ?? ''}
+                      type="number"
+                      onChange={handleChange}
+                      helperText=" "
+                      sx={luxSx}
+                      variant="standard"
+                      size="small"
+                      // margin="dense"
+                    />
+                    <Typography sx={unitCellSx} variant="caption">
+                      lux
+                    </Typography>
+                  </Box>
+                  <Box sx={fieldWithUnitSx}>
+                    <TextField
+                      label={i === 0 ? 'Яркость' : ' '}
+                      id={`bright-${i}`}
+                      value={bright[i] ?? ''}
+                      type="number"
+                      onChange={handleChange}
+                      // margin="dense"
+                      error={!!error[i]}
+                      helperText={error[i] ?? ' '}
+                      sx={valueSx}
+                      variant="standard"
+                      size="small"
+                    />
+                    <Typography sx={unitCellSx} variant="caption">
+                      %
+                    </Typography>
+                  </Box>
+                  <Box sx={clearCellSx}>
                     <IconButton size="small" onClick={handleClear} id={`clear-${i}`}>
                       <CloseIcon fontSize="inherit" />
                     </IconButton>
@@ -342,6 +540,109 @@ const Autobrightness: React.FC = () => {
               ))}
             </Box>
           </Box>
+        </Control>
+        <Control>
+          <Box css={columnStyle} sx={sectionSx}>
+            <Typography variant="subtitle2">По времени суток</Typography>
+            <Box
+              sx={{
+                ...compactGridSx,
+                display: 'grid',
+                gridTemplateColumns:
+                  '[event] 11ch [time] 7ch [brightness] 10ch [unit] 2ch [clear] auto',
+              }}
+            >
+              {sunRows.map(({ event, time }, i) => (
+                <React.Fragment key={event}>
+                  <Typography sx={rowTextSx} variant="body2">
+                    {sunEventLabels[event]}
+                  </Typography>
+                  <Typography
+                    sx={rowTextSx}
+                    color={time === undefined ? 'text.disabled' : 'text.secondary'}
+                    variant="body2"
+                  >
+                    {formatTime(time)}
+                  </Typography>
+                  <TextField
+                    label={i === 0 ? 'Яркость' : ' '}
+                    id={`sunBright-${event}`}
+                    value={sunBright[event] ?? ''}
+                    type="number"
+                    onChange={handleChange}
+                    error={!!sunError[i]}
+                    helperText={sunError[i] ?? ' '}
+                    sx={valueSx}
+                    variant="standard"
+                    size="small"
+                  />
+                  <Typography sx={unitCellSx} variant="caption">
+                    %
+                  </Typography>
+                  <Box sx={clearCellSx}>
+                    <IconButton size="small" onClick={handleSunClear} id={`sun-${event}`}>
+                      <CloseIcon fontSize="inherit" />
+                    </IconButton>
+                  </Box>
+                </React.Fragment>
+              ))}
+            </Box>
+            <Typography variant="subtitle2">Ночной режим</Typography>
+            <Box
+              sx={{
+                ...compactGridSx,
+                display: 'grid',
+                gridTemplateColumns: '[start] 10ch [end] 10ch [brightness] 10ch [unit] 2ch [clear] auto',
+              }}
+            >
+              <TextField
+                label="Начало"
+                id="night-start"
+                value={night.start}
+                type="time"
+                onChange={handleChange}
+                error={!!nightError.start}
+                helperText={nightError.start ?? ' '}
+                sx={timeSx}
+                variant="standard"
+                size="small"
+              />
+              <TextField
+                label="Конец"
+                id="night-end"
+                value={night.end}
+                type="time"
+                onChange={handleChange}
+                error={!!nightError.end}
+                helperText={nightError.end ?? ' '}
+                sx={timeSx}
+                variant="standard"
+                size="small"
+              />
+              <TextField
+                label="Яркость"
+                id="night-brightness"
+                value={night.brightness}
+                type="number"
+                onChange={handleChange}
+                error={!!nightError.brightness}
+                helperText={nightError.brightness ?? ' '}
+                sx={valueSx}
+                variant="standard"
+                size="small"
+              />
+              <Typography sx={unitCellSx} variant="caption">
+                %
+              </Typography>
+              <Box sx={clearCellSx}>
+                <IconButton size="small" onClick={handleNightClear}>
+                  <CloseIcon fontSize="inherit" />
+                </IconButton>
+              </Box>
+            </Box>
+          </Box>
+        </Control>
+        <Control>
           <Button
             color="primary"
             startIcon={<CheckIcon />}
@@ -366,7 +667,7 @@ const Autobrightness: React.FC = () => {
             label="Не использовать сетевые устройства (перезапуск)"
           />
         </Control>
-      </Paper>
+      </Box>
     </Box>
   );
 };

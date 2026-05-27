@@ -36,6 +36,10 @@ export const selectBrightness = (state: RootState): number => selectConfig(state
 export const selectAutobrightness = (state: RootState): boolean =>
   selectConfig(state).autobrightness;
 export const selectSpline = (state: RootState): Config['spline'] => selectConfig(state).spline;
+export const selectSunSpline = (state: RootState): Config['sunSpline'] =>
+  selectConfig(state).sunSpline;
+export const selectNightMode = (state: RootState): Config['nightMode'] =>
+  selectConfig(state).nightMode;
 export const selectLocation = (state: RootState): Config['location'] =>
   selectConfig(state).location;
 export const selectLogLevel = (state: RootState): LogLevel => selectConfig(state).logLevel;

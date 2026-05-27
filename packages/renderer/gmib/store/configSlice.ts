@@ -42,6 +42,12 @@ const configSlice = createSlice({
     setSpline(state, { payload: spline }: PayloadAction<Config['spline']>) {
       state.spline = spline;
     },
+    setSunSpline(state, { payload: sunSpline }: PayloadAction<Config['sunSpline']>) {
+      state.sunSpline = sunSpline;
+    },
+    setNightMode(state, { payload: nightMode }: PayloadAction<Config['nightMode']>) {
+      state.nightMode = nightMode;
+    },
     setLocationProp(state, { payload: [prop, value] }: PropPayloadAction<Location>) {
       if (!state.location) state.location = {};
       state.location[prop] = value;
@@ -128,6 +134,8 @@ export const {
   // showHttpPage,
   setAutobrightness,
   setSpline,
+  setSunSpline,
+  setNightMode,
   setLocationProp,
   setHidProp,
   setLogLevel,

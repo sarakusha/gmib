@@ -22,8 +22,10 @@ import {
   setHidProp,
   setLocationProp,
   setLogLevel,
+  setNightMode,
   setProtectionProp,
   setSpline,
+  setSunSpline,
   updateConfig,
 } from './configSlice';
 import { setCurrentDevice } from './currentSlice';
@@ -40,16 +42,104 @@ import {
   selectLastAverage,
   selectLocation,
   selectLogLevel,
+  selectNightMode,
   selectOverheatProtection,
   selectSpline,
+  selectSunSpline,
 } from './selectors';
 
 import type { AppThunkConfig } from '.';
+import type { NightBrightnessMode, SunEvent, SunReference, SunSplineItem } from '/@common/config';
 
 export const BRIGHTNESS_INTERVAL = 60 * 1000;
 
 const getValue = (value: number, min: number, max: number): number =>
   Math.min(Math.max(value, min), max);
+
+const DAY = 24 * 60 * 60 * 1000;
+const MINUTE_MS = 60 * 1000;
+const timePattern = /^([01]\d|2[0-3]):([0-5]\d)$/;
+const timeReferencePattern = /^time:([01]\d|2[0-3]):([0-5]\d)$/;
+
+const getDayStart = (date: Date): Date =>
+  new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+const getTime = (date: Date, dayStart = getDayStart(date)): number =>
+  date.getTime() - dayStart.getTime();
+
+const getTimeOfDay = (date: Date): number =>
+  (date.getHours() * 60 + date.getMinutes()) * MINUTE_MS +
+  date.getSeconds() * 1000 +
+  date.getMilliseconds();
+
+const getTimeValue = (value: string | undefined): number | undefined => {
+  const matches = value?.match(timePattern);
+  return matches ? (+matches[1] * 60 + +matches[2]) * MINUTE_MS : undefined;
+};
+
+const getNightModeBrightness = (
+  { start, end, brightness }: NightBrightnessMode = {},
+  date: Date,
+): number | undefined => {
+  const startTime = getTimeValue(start);
+  const endTime = getTimeValue(end);
+  if (startTime === undefined || endTime === undefined || brightness === undefined) return undefined;
+  const now = getTime(date);
+  const active =
+    startTime <= endTime
+      ? now >= startTime && now < endTime
+      : now >= startTime || now < endTime;
+  return active ? getValue(Math.round(brightness), 0, 100) : undefined;
+};
+
+const getSunReferenceTime = (
+  reference: SunReference,
+  date: Date,
+  latitude: number,
+  longitude: number,
+): number | undefined => {
+  const timeMatches = reference.match(timeReferencePattern);
+  if (timeMatches) return (+timeMatches[1] * 60 + +timeMatches[2]) * 60 * 1000;
+
+  if (!reference.startsWith('event:')) return undefined;
+  const event = reference.slice('event:'.length) as SunEvent;
+  const eventTime = SunCalc.getTimes(date, latitude, longitude)[event];
+  return eventTime instanceof Date && !Number.isNaN(eventTime.getTime())
+    ? getTimeOfDay(eventTime)
+    : undefined;
+};
+
+const interpolateCyclicSpline = (points: Point[], value: number): number | undefined => {
+  const sorted = sortBy(points, ([time]) => time);
+  if (sorted.length === 0) return undefined;
+  if (sorted.length === 1) return sorted[0][1];
+
+  const [first] = sorted;
+  const last = sorted[sorted.length - 1];
+  const wrappedPoints: Point[] =
+    value < first[0]
+      ? ([[last[0] - DAY, last[1]], ...sorted] as Point[])
+      : ([...sorted, [first[0] + DAY, first[1]]] as Point[]);
+  return new MonotonicCubicSpline(wrappedPoints).interpolate(value);
+};
+
+const calculateSunBrightness = (
+  spline: SunSplineItem[] | undefined,
+  date: Date,
+  latitude: number,
+  longitude: number,
+): number | undefined => {
+  if (!spline) return undefined;
+  const points = spline
+    .filter(notEmpty)
+    .map<Point | undefined>(([reference, brightness]) => {
+      const time = getSunReferenceTime(reference, date, latitude, longitude);
+      return time === undefined ? undefined : [time, brightness];
+    })
+    .filter(notEmpty);
+  const result = interpolateCyclicSpline(points, getTime(date));
+  return result === undefined ? undefined : getValue(Math.round(result), 0, 100);
+};
 
 // const hasBrightnessFactor = hasProps('brightnessFactor');
 
@@ -155,9 +245,17 @@ const calculateBrightness = createAsyncThunk<void, void, AppThunkConfig>(
     const autobrightness = selectAutobrightness(state);
     if (!autobrightness) return;
     const spline = selectSpline(state);
+    const sunSpline = selectSunSpline(state);
+    const nightMode = selectNightMode(state);
     const illuminance = selectLastAverage(state, 'illuminance');
     // console.log({ illuminance });
     let brightness = selectBrightness(state);
+    const now = new Date();
+    const nightBrightness = getNightModeBrightness(nightMode, now);
+    if (nightBrightness !== undefined) {
+      dispatch(setBrightness(nightBrightness));
+      return;
+    }
     const { latitude, longitude } = selectLocation(state) ?? {};
     const isValidLocation = latitude !== undefined && longitude !== undefined;
     if (spline) {
@@ -175,45 +273,10 @@ const calculateBrightness = createAsyncThunk<void, void, AppThunkConfig>(
         if (illuminance <= minLux) brightness = minBrightness;
         else if (illuminance >= maxLux) brightness = maxBrightness;
         else brightness = Math.round(illuminanceSpline.interpolate(Math.log(1 + illuminance)));
-      } else if (isValidLocation) {
-        // По высоте солнца
-        // Полдень = 1, Начало вечера/Конец утра = 3/4, Заход/Восход = 1/2, ночь = 0
-        const now = new Date();
-        const midnight = new Date();
-        midnight.setHours(0, 0, 0, 0);
-        const getTime = (date: Date): number => date.getTime() - midnight.getTime();
-        const getBrightness = (aspect: number): number =>
-          minBrightness + (maxBrightness - minBrightness) * aspect;
-        const { dawn, sunriseEnd, goldenHourEnd, solarNoon, goldenHour, sunsetStart, dusk } =
-          SunCalc.getTimes(now, latitude, longitude);
-        // debug(
-        //   `dawn: ${dawn.toLocaleTimeString()}, sunriseEnd: ${sunriseEnd.toLocaleTimeString()},
-        // goldenHourEnd: ${goldenHourEnd.toLocaleTimeString()}, noon:
-        // ${solarNoon.toLocaleTimeString()}` ); debug( `goldenHour:
-        // ${goldenHour.toLocaleTimeString()}, sunsetStart: ${sunsetStart.toLocaleTimeString()},
-        // dusk: ${dusk.toLocaleTimeString()}` ); debug(`now: ${getTime(now)}`);
-        if (now > dawn && now < dusk) {
-          const sunSpline =
-            now <= solarNoon
-              ? new MonotonicCubicSpline([
-                  [getTime(dawn), getBrightness(0)],
-                  [getTime(sunriseEnd), getBrightness(1 / 2)],
-                  [getTime(goldenHourEnd), getBrightness(3 / 4)],
-                  [getTime(solarNoon), getBrightness(1)],
-                ])
-              : new MonotonicCubicSpline([
-                  [getTime(solarNoon), getBrightness(1)],
-                  [getTime(goldenHour), getBrightness(3 / 4)],
-                  [getTime(sunsetStart), getBrightness(1 / 2)],
-                  [getTime(dusk), getBrightness(0)],
-                ]);
-          brightness = getValue(
-            Math.round(sunSpline.interpolate(getTime(now))),
-            minBrightness,
-            maxBrightness,
-          );
-        } else brightness = minBrightness;
       }
+    }
+    if (illuminance === undefined && isValidLocation) {
+      brightness = calculateSunBrightness(sunSpline, now, latitude, longitude) ?? brightness;
     }
     dispatch(setBrightness(brightness));
   },
@@ -286,6 +349,8 @@ startAppListening({
     setBrightness,
     setAutobrightness,
     setSpline,
+    setSunSpline,
+    setNightMode,
     setLocationProp,
     setHidProp,
     // setScreenProp,

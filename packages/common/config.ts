@@ -1,6 +1,39 @@
 import type { LogLevel } from '@nibus/core/common';
 
 export type SplineItem = [lux: number, brightness: number];
+export const sunEvents = [
+  'dawn',
+  'sunrise',
+  'sunriseEnd',
+  'goldenHourEnd',
+  'solarNoon',
+  'goldenHour',
+  'sunsetStart',
+  'sunset',
+  'dusk',
+  'nadir',
+] as const;
+export type SunEvent = (typeof sunEvents)[number];
+export type SunReference = `event:${SunEvent}` | `time:${string}`;
+export type SunSplineItem = [reference: SunReference, brightness: number];
+export const SUN_SPLINE_COUNT = 10;
+export type NightBrightnessMode = {
+  start?: string;
+  end?: string;
+  brightness?: number;
+};
+export const sunEventLabels: Record<SunEvent, string> = {
+  dawn: 'Рассвет',
+  sunrise: 'Восход',
+  sunriseEnd: 'Утро',
+  goldenHourEnd: 'День',
+  solarNoon: 'Зенит',
+  goldenHour: 'Вечер',
+  sunsetStart: 'Закат',
+  sunset: 'Сумерки',
+  dusk: 'Ночь',
+  nadir: 'Надир',
+};
 export const SPLINE_COUNT = 4;
 export type Page = {
   id: string;
@@ -102,6 +135,8 @@ export type HidOptions = {
 export type Config = {
   location?: Location;
   spline?: SplineItem[];
+  sunSpline?: SunSplineItem[];
+  nightMode?: NightBrightnessMode;
   autobrightness: boolean;
   brightness: number;
   logLevel: LogLevel;

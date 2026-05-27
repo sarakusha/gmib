@@ -3,7 +3,7 @@ import Ajv from 'ajv/dist/2020';
 import type { Schema } from 'electron-store';
 
 import type { Config } from './config';
-import { DEFAULT_OVERHEAD_PROTECTION, SPLINE_COUNT } from './config';
+import { DEFAULT_OVERHEAD_PROTECTION, SPLINE_COUNT, SUN_SPLINE_COUNT } from './config';
 
 export const configSchema: Schema<Config> = {
   location: {
@@ -40,6 +40,42 @@ export const configSchema: Schema<Config> = {
       [10000, 80],
     ],
     maxItems: SPLINE_COUNT,
+  },
+  sunSpline: {
+    type: 'array',
+    items: {
+      type: 'array',
+      prefixItems: [
+        {
+          type: 'string',
+          pattern:
+            '^(event:(dawn|sunrise|sunriseEnd|goldenHourEnd|solarNoon|goldenHour|sunsetStart|sunset|dusk|nadir)|time:([01]\\d|2[0-3]):[0-5]\\d)$',
+        },
+        {
+          type: 'number',
+          minimum: 0,
+          maximum: 100,
+        },
+      ],
+      items: false,
+      minItems: 2,
+      maxItems: 2,
+    },
+    minItems: 0,
+    default: [
+      ['event:dawn', 10],
+      ['event:solarNoon', 80],
+      ['event:dusk', 10],
+    ],
+    maxItems: SUN_SPLINE_COUNT,
+  },
+  nightMode: {
+    type: 'object',
+    properties: {
+      start: { type: 'string', pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' },
+      end: { type: 'string', pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' },
+      brightness: { type: 'number', minimum: 0, maximum: 100 },
+    },
   },
   autobrightness: {
     type: 'boolean',
