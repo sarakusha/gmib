@@ -148,10 +148,10 @@ const Devices: React.FC = () => {
           tabIndex={0}
           title="Повторить поиск"
           onClick={reloadHandler}
-          onKeyDown={(e) => {
+          onKeyDown={e => {
             if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault()
-              reloadHandler(e)
+              e.preventDefault();
+              reloadHandler(e);
             }
           }}
           sx={{

@@ -83,12 +83,11 @@ const getNightModeBrightness = (
 ): number | undefined => {
   const startTime = getTimeValue(start);
   const endTime = getTimeValue(end);
-  if (startTime === undefined || endTime === undefined || brightness === undefined) return undefined;
+  if (startTime === undefined || endTime === undefined || brightness === undefined)
+    return undefined;
   const now = getTime(date);
   const active =
-    startTime <= endTime
-      ? now >= startTime && now < endTime
-      : now >= startTime || now < endTime;
+    startTime <= endTime ? now >= startTime && now < endTime : now >= startTime || now < endTime;
   return active ? getValue(Math.round(brightness), 0, 100) : undefined;
 };
 
