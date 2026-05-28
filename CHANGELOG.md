@@ -2,6 +2,48 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.10.2](https://github.com/sarakusha/gmib/compare/v4.10.1...v4.10.2) (2026-05-28)
+
+
+### Features
+
+* время в виде HH:MM без секунд ([bfc1a92](https://github.com/sarakusha/gmib/commit/bfc1a92549412e9b8baca04c85b766cfbc5ad081))
+* генерация .env из секретов перед сборкой ([ce0fd79](https://github.com/sarakusha/gmib/commit/ce0fd795ee220ed8833d416345d97c9f0ac4a1c6))
+* изменили цвет шкалы освещенности ([ccf5423](https://github.com/sarakusha/gmib/commit/ccf54239cd685fe336ecf3f0cb0bdd1b914b0880))
+* логирование ошибок ([0d01390](https://github.com/sarakusha/gmib/commit/0d0139010517907af14d3b78b3d7c86aac43ad00))
+* одинаковое меню для всех вкладок ([747fbb7](https://github.com/sarakusha/gmib/commit/747fbb7561e7cf4a7b529b599e6f1c3b72dce225))
+* сериализация ошибок ([1b0d3fd](https://github.com/sarakusha/gmib/commit/1b0d3fd7778e54e459274c3a46c16c72f9d43f26))
+* скрол для табов ([5b1f1c9](https://github.com/sarakusha/gmib/commit/5b1f1c9b051e28e3616593c58433a85beaba9a7e))
+* убран нижний бордер в табе ([cca72b1](https://github.com/sarakusha/gmib/commit/cca72b1bf89b75b27c33bf0dcf980bae040e7e5e))
+* улучшен вид формы с параметрами ([3e1edc6](https://github.com/sarakusha/gmib/commit/3e1edc628e235a917240b6c74590c1c333016416))
+* add open tabs to window menu ([cc7c9e6](https://github.com/sarakusha/gmib/commit/cc7c9e6e90bb7c95a8dba31f5ee5cb7813f42ecd))
+* add tab switching shortcuts ([79d6a2f](https://github.com/sarakusha/gmib/commit/79d6a2f2078ebb6245f74090a081e6e88c7d30ae))
+* add time-based autobrightness controls ([78aca88](https://github.com/sarakusha/gmib/commit/78aca88e9e01f82c4898cc6e8c26c9598ce55bba))
+* bounded ReadableStream-очередь. ([db062e4](https://github.com/sarakusha/gmib/commit/db062e4da1ae277c17086c00907b467271df7514))
+* group gmib and player windows into tabs ([ca02fba](https://github.com/sarakusha/gmib/commit/ca02fba2b4d9cb527a7c07aafc030d6db96e7b84))
+* upgrade file-type ([82060bf](https://github.com/sarakusha/gmib/commit/82060bf67d5e0f0cbf0604a75ea8c605a59afea4))
+
+
+### Bug Fixes
+
+* <button> cannot be a descendant of <button>. ([d71ba2b](https://github.com/sarakusha/gmib/commit/d71ba2bcc423143b262eb0fd23ccd6d1d3a4cda9))
+* вернули DevTools для активной вкладки ([2edbddc](https://github.com/sarakusha/gmib/commit/2edbddccbe1e5d68c02a6a46ccbc85cba37c83d4))
+* задаем timezone для графика ([3a530ec](https://github.com/sarakusha/gmib/commit/3a530ec26451aeede56bb570a64b8a150aaea5bc))
+* замена абсолютных путей на относительные ([01e470d](https://github.com/sarakusha/gmib/commit/01e470dce22846d8edb9c2ac530803cd4c01fb67))
+* не передавлась версия при сборке ([653ebcb](https://github.com/sarakusha/gmib/commit/653ebcb36c86c2442a828b02205ead515b89133b))
+* обновление меню при открытии вкладки ([3b47eb3](https://github.com/sarakusha/gmib/commit/3b47eb32a2660dac708bd70955b838bc74d88544))
+* откат до версии vite@8.0.13, не работал рендерер ([b2829d8](https://github.com/sarakusha/gmib/commit/b2829d8421053d2c905b2706608eeec0e8d9d573))
+* avoid duplicate active tab in window menu ([017775e](https://github.com/sarakusha/gmib/commit/017775e1a91208308ef930730d40aac52e4c64bb))
+* Cannot find module '@sarakusha/ebml' ([977f408](https://github.com/sarakusha/gmib/commit/977f40861097aef7c37b929594e42676e9648271))
+* configure video output windows ([a20ccfa](https://github.com/sarakusha/gmib/commit/a20ccfae8734f818aa9d3d7c516463f1a414cfb3))
+* fade-in ([e5ae05a](https://github.com/sarakusha/gmib/commit/e5ae05a41fc6c56c0c4113f1a9474dcc1a02629d))
+* hide cursor on video output ([faa415f](https://github.com/sarakusha/gmib/commit/faa415fee3fd12bcbebffeb9548c4c62625a03da))
+* http:, а не file: url ([56dcca1](https://github.com/sarakusha/gmib/commit/56dcca1609e37646daf3607636f0bdf8b6467426))
+* pass text field input props through slots ([2ea52d5](https://github.com/sarakusha/gmib/commit/2ea52d522bdc44b20a412fc020b46eba26e602f0))
+* preserve macos window menu actions ([06eb9dc](https://github.com/sarakusha/gmib/commit/06eb9dc6a73480add2697ca86353ebbc5d594de0))
+* serialize release build steps ([4570b31](https://github.com/sarakusha/gmib/commit/4570b313f0b99de66fdcc34bd7382c312a9a9254))
+* sync tab menu and close behavior ([4f7930d](https://github.com/sarakusha/gmib/commit/4f7930dd42df0eac4237de39b406ef94079989dd))
+
 ## [4.10.1](https://github.com/sarakusha/gmib/compare/v4.10.0...v4.10.1) (2026-05-22)
 
 
