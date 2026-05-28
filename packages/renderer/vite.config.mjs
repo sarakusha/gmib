@@ -97,9 +97,18 @@ export default defineConfig({
   test: {
     environment: 'happy-dom',
   },
-  // optimizeDeps: {
-  //   include: ['react/jsx-runtime'],
-  // },
+  optimizeDeps: {
+    include: [
+      'react/jsx-runtime',
+      '@emotion/react/jsx-runtime',
+      '@emotion/react/jsx-dev-runtime',
+      '@emotion/react',
+      '@emotion/styled',
+      '@mui/material',
+      '@mui/system',
+    ],
+    // exclude: ['@mui/material/zero-styled'],
+  },
   // https://github.com/vitejs/vite/issues/8644#issuecomment-1159308803
   esbuild: {
     logOverride: { 'this-is-undefined-in-esm': 'silent' },
