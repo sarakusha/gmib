@@ -7,7 +7,7 @@ overrides:
   # "@nibus/detection": file:.yalc/@nibus/detection
   # '@nibus/mibs': file:.yalc/@nibus/mibs
   # "@nibus/service": file:.yalc/@nibus/service
-  "@sarakusha/material-ui-chip-input": "file:.yalc/@sarakusha/material-ui-chip-input"
+  # "@sarakusha/material-ui-chip-input": "file:.yalc/@sarakusha/material-ui-chip-input"
 
 peerDependencyRules:
   allowedVersions:
@@ -39,4 +39,4 @@ minimumReleaseAgeExclude:
   - vite@8.0.13
   - "@nibus/*"
   - "@sarakusha/ebml@0.0.5"
-  - '@sarakusha/material-ui-chip-input@2.1.0'
+  - "@sarakusha/material-ui-chip-input@2.1.0"

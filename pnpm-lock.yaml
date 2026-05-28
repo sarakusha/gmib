@@ -8,7 +8,6 @@ overrides:
   react: ^19.2.6
   ws: ^8.20.1
   prettier: ^3.8.3
-  '@sarakusha/material-ui-chip-input': file:.yalc/@sarakusha/material-ui-chip-input
 
 importers:
 
