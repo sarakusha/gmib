@@ -5,7 +5,20 @@ const { promisify } = require('node:util');
 
 const execFileAsync = promisify(execFile);
 
+function normalizeArch(arch) {
+  const archByValue = {
+    0: 'ia32',
+    1: 'x64',
+    2: 'armv7l',
+    3: 'arm64',
+    4: 'universal',
+  };
+
+  return archByValue[arch] ?? arch;
+}
+
 exports.default = async function verifySqlite3Arch(context) {
+  const arch = normalizeArch(context.arch);
   const unpackedSqlite3Path =
     context.electronPlatformName === 'darwin' || context.electronPlatformName === 'mas'
       ? path.join(
@@ -25,7 +38,7 @@ exports.default = async function verifySqlite3Arch(context) {
   if (context.electronPlatformName === 'darwin' || context.electronPlatformName === 'mas') {
     const { stdout } = await execFileAsync('lipo', ['-archs', binaryPath]);
     const archs = stdout.trim().split(/\s+/);
-    const expectedArch = context.arch === 'x64' ? 'x86_64' : context.arch;
+    const expectedArch = arch === 'x64' ? 'x86_64' : arch;
 
     if (!archs.includes(expectedArch)) {
       throw new Error(
@@ -41,7 +54,7 @@ exports.default = async function verifySqlite3Arch(context) {
   }
 
   const { stdout } = await execFileAsync('file', [binaryPath]);
-  const expectedText = context.arch === 'arm64' ? 'aarch64' : 'x86-64';
+  const expectedText = arch === 'arm64' ? 'aarch64' : 'x86-64';
 
   if (!stdout.toLowerCase().includes(expectedText)) {
     throw new Error(
