@@ -68,7 +68,7 @@
     "download-ffmpeg:win32": "mkdirp ffmpeg/win32-x64 && cd ffmpeg/win32-x64 && npx --yes download-cli https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.7z --out . --filename ffmpeg.7z && 7z x ffmpeg.7z && npx shx --yes mv ffmpeg-*-essentials_build/bin/ffmpeg.exe ./ && npx shx mv ffmpeg-*-essentials_build/bin/ffprobe.exe ./",
     "vite:clean": "rimraf node_modules/.vite && rimraf packages/{main,preload,renderer,playerPreload}/dist/*",
     "packaged-deps:sync": "node scripts/sync-packaged-deps.mjs --write",
-    "postinstall": "cross-env ELECTRON_RUN_AS_NODE=1 npx --no-install electron ./scripts/update-electron-vendors.js",
+    "postinstall": "node ./scripts/run-electron-vendors.js",
     "version": "commit-and-tag-version",
     "version:patch": "commit-and-tag-version -r patch",
     "external": "echo 'module.exports = [\"electron\", \"debug\"' > external.js && pnpm list --prod --depth=3 -p| grep node_modules | sed 's#^.*node_modules/\\(.*\\)$#, \"\\1\"#' | sort | uniq -u >> external.js && echo '];' >> external.js"
