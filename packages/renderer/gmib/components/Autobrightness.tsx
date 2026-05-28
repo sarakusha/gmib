@@ -7,6 +7,7 @@ import {
   FormControlLabel,
   GlobalStyles,
   IconButton,
+  InputAdornment,
   TextField,
   Typography,
 } from '@mui/material';
@@ -50,15 +51,15 @@ import Highcharts from './Highcharts';
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:autobrightness`);
 const setItem =
   (index: number, value?: number) =>
-  (array: (number | undefined)[]): (number | undefined)[] => {
-    const clone = [...array];
-    if (value !== undefined) {
-      clone[index] = value;
-    } else {
-      clone[index] = undefined;
-    }
-    return clone;
-  };
+    (array: (number | undefined)[]): (number | undefined)[] => {
+      const clone = [...array];
+      if (value !== undefined) {
+        clone[index] = value;
+      } else {
+        clone[index] = undefined;
+      }
+      return clone;
+    };
 
 const unitStyles = (
   <GlobalStyles
@@ -189,19 +190,6 @@ const valueSx = { ...fieldSx, width: '10ch' };
 const luxSx = { ...fieldSx, width: '12ch' };
 const timeSx = { ...fieldSx, width: '10ch' };
 const sectionSx = { width: 360 };
-const unitCellSx = {
-  height: 32,
-  display: 'flex',
-  alignItems: 'center',
-  mt: 2.25,
-  mb: 2.25,
-  color: 'text.secondary',
-};
-const fieldWithUnitSx = {
-  display: 'flex',
-  alignItems: 'flex-start',
-  gap: 0.5,
-};
 const compactGridSx = {
   p: 0.5,
   columnGap: 1,
@@ -212,8 +200,8 @@ const rowTextSx = {
   height: 32,
   display: 'flex',
   alignItems: 'center',
-  mt: 2.25,
-  mb: 2.25,
+  mt: 2,
+  // mb: 2.25,
 };
 const clearCellSx = { alignSelf: 'start', pt: 2.5 };
 const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -301,6 +289,12 @@ const parseNightMode = (night: NightModeState): [NightBrightnessMode | undefined
     errors,
   ];
 };
+
+const percentUnit = {
+  input: {
+    startAdornment: <InputAdornment position="start">%</InputAdornment>,
+  },
+} as const;
 
 const Autobrightness: React.FC = () => {
   const [options, setOptions] = useState<Highcharts.Options>(highChartsOptions);
@@ -486,7 +480,7 @@ const Autobrightness: React.FC = () => {
         </Control>
         <Control>
           <Box css={columnStyle} sx={sectionSx}>
-            <Typography variant="subtitle2">По освещенности</Typography>
+            <Typography variant="h6">По освещенности</Typography>
             <Box
               sx={{
                 ...compactGridSx,
@@ -496,41 +490,37 @@ const Autobrightness: React.FC = () => {
             >
               {[...Array(SPLINE_COUNT).keys()].map(i => (
                 <React.Fragment key={i}>
-                  <Box sx={fieldWithUnitSx}>
-                    <TextField
-                      label={i === 0 ? 'Освещенность' : ' '}
-                      id={`lux-${i}`}
-                      value={lux[i] ?? ''}
-                      type="number"
-                      onChange={handleChange}
-                      helperText=" "
-                      sx={luxSx}
-                      variant="standard"
-                      size="small"
-                      // margin="dense"
-                    />
-                    <Typography sx={unitCellSx} variant="caption">
-                      lux
-                    </Typography>
-                  </Box>
-                  <Box sx={fieldWithUnitSx}>
-                    <TextField
-                      label={i === 0 ? 'Яркость' : ' '}
-                      id={`bright-${i}`}
-                      value={bright[i] ?? ''}
-                      type="number"
-                      onChange={handleChange}
-                      // margin="dense"
-                      error={!!error[i]}
-                      helperText={error[i] ?? ' '}
-                      sx={valueSx}
-                      variant="standard"
-                      size="small"
-                    />
-                    <Typography sx={unitCellSx} variant="caption">
-                      %
-                    </Typography>
-                  </Box>
+                  <TextField
+                    label={i === 0 ? 'Освещенность' : ' '}
+                    id={`lux-${i}`}
+                    value={lux[i] ?? ''}
+                    type="number"
+                    onChange={handleChange}
+                    helperText=" "
+                    sx={luxSx}
+                    variant="standard"
+                    size="small"
+                    slotProps={{
+                      input: {
+                        startAdornment: <InputAdornment position="start">lux</InputAdornment>,
+                      },
+                    }}
+                  // margin="dense"
+                  />
+                  <TextField
+                    label={i === 0 ? 'Яркость' : ' '}
+                    id={`bright-${i}`}
+                    value={bright[i] ?? ''}
+                    type="number"
+                    onChange={handleChange}
+                    // margin="dense"
+                    error={!!error[i]}
+                    helperText={error[i] ?? ' '}
+                    sx={valueSx}
+                    variant="standard"
+                    size="small"
+                    slotProps={percentUnit}
+                  />
                   <Box sx={clearCellSx}>
                     <IconButton size="small" onClick={handleClear} id={`clear-${i}`}>
                       <CloseIcon fontSize="inherit" />
@@ -543,24 +533,24 @@ const Autobrightness: React.FC = () => {
         </Control>
         <Control>
           <Box css={columnStyle} sx={sectionSx}>
-            <Typography variant="subtitle2">По времени суток</Typography>
+            <Typography variant="h6">По времени суток</Typography>
             <Box
               sx={{
                 ...compactGridSx,
                 display: 'grid',
                 gridTemplateColumns:
-                  '[event] 11ch [time] 7ch [brightness] 10ch [unit] 2ch [clear] auto',
+                  '[event] 11ch [time] 7ch [brightness] 10ch [clear] auto',
               }}
             >
               {sunRows.map(({ event, time }, i) => (
                 <React.Fragment key={event}>
-                  <Typography sx={rowTextSx} variant="body2">
+                  <Typography sx={rowTextSx} variant="body1">
                     {sunEventLabels[event]}
                   </Typography>
                   <Typography
                     sx={rowTextSx}
                     color={time === undefined ? 'text.disabled' : 'text.secondary'}
-                    variant="body2"
+                    variant="body1"
                   >
                     {formatTime(time)}
                   </Typography>
@@ -575,10 +565,8 @@ const Autobrightness: React.FC = () => {
                     sx={valueSx}
                     variant="standard"
                     size="small"
+                    slotProps={percentUnit}
                   />
-                  <Typography sx={unitCellSx} variant="caption">
-                    %
-                  </Typography>
                   <Box sx={clearCellSx}>
                     <IconButton size="small" onClick={handleSunClear} id={`sun-${event}`}>
                       <CloseIcon fontSize="inherit" />
@@ -630,10 +618,8 @@ const Autobrightness: React.FC = () => {
                 sx={valueSx}
                 variant="standard"
                 size="small"
+                slotProps={percentUnit}
               />
-              <Typography sx={unitCellSx} variant="caption">
-                %
-              </Typography>
               <Box sx={clearCellSx}>
                 <IconButton size="small" onClick={handleNightClear}>
                   <CloseIcon fontSize="inherit" />
