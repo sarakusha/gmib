@@ -55,6 +55,9 @@ const getSensors = async (): Promise<Sensors[]> => {
 
 const highchartsOptions: Highcharts.Options = {
   title: { text: 'История' },
+  time: {
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  },
   chart: {
     zooming: {
       type: 'x',
