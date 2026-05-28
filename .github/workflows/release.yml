@@ -107,20 +107,35 @@ jobs:
       matrix:
         include:
           - platform: macos
+            arch: x64
             os: macos-15-intel
             builder_config: .electron-builder.config.js
             target_args:
               - -m
               - --x64
+          - platform: macos
+            arch: arm64
+            os: macos-15
+            builder_config: .electron-builder.config.js
+            target_args:
+              - -m
               - --arm64
           - platform: linux
-            os: ubuntu-latest
+            arch: x64
+            os: ubuntu-24.04
             builder_config: .electron-builder-light.config.js
             target_args:
               - -l
               - --x64
+          - platform: linux
+            arch: arm64
+            os: ubuntu-24.04-arm
+            builder_config: .electron-builder-light.config.js
+            target_args:
+              - -l
               - --arm64
           - platform: windows
+            arch: x64
             os: windows-latest
             builder_config: .electron-builder.config.js
             target_args:
@@ -148,6 +163,7 @@ jobs:
         uses: actions/github-script@v9
         env:
           BUILD_PLATFORM: ${{ matrix.platform }}
+          BUILD_ARCH: ${{ matrix.arch }}
           RELEASE_ID: ${{ needs.prepare_release.outputs.release_id }}
         with:
           script: |
@@ -158,33 +174,38 @@ jobs:
               fs.readFileSync(path.join(process.env.GITHUB_WORKSPACE, 'package.json'), 'utf8'),
             ).version;
 
-            const expectedFilesByPlatform = {
-              macos: [
+            const expectedFilesByBuild = {
+              'macos-x64': [
                 `gmib-${version}.dmg`,
                 `gmib-${version}.dmg.blockmap`,
                 `gmib-${version}-mac.zip`,
                 `gmib-${version}-mac.zip.blockmap`,
+              ],
+              'macos-arm64': [
                 `gmib-${version}-arm64.dmg`,
                 `gmib-${version}-arm64.dmg.blockmap`,
                 `gmib-${version}-arm64-mac.zip`,
                 `gmib-${version}-arm64-mac.zip.blockmap`,
                 'latest-mac.yml',
               ],
-              linux: [
+              'linux-x64': [
                 'gmib-x86_64.AppImage',
+              ],
+              'linux-arm64': [
                 'gmib-arm64.AppImage',
                 'latest-linux.yml',
               ],
-              windows: [
+              'windows-x64': [
                 `gmib-setup-${version}.exe`,
                 `gmib-setup-${version}.exe.blockmap`,
                 'latest.yml',
               ],
             };
 
-            const expectedFiles = expectedFilesByPlatform[process.env.BUILD_PLATFORM];
+            const buildKey = `${process.env.BUILD_PLATFORM}-${process.env.BUILD_ARCH}`;
+            const expectedFiles = expectedFilesByBuild[buildKey];
             if (!expectedFiles) {
-              throw new Error(`Unknown platform: ${process.env.BUILD_PLATFORM}`);
+              throw new Error(`Unknown build target: ${buildKey}`);
             }
 
             const { owner, repo } = context.repo;
@@ -207,6 +228,7 @@ jobs:
             }
 
             core.setOutput('release_id', String(release.id));
+            core.setOutput('expected_files', JSON.stringify(expectedFiles));
 
       - uses: pnpm/action-setup@v6
         if: ${{ steps.platform_check.outputs.selected == 'true' &&
@@ -333,6 +355,7 @@ jobs:
         uses: actions/github-script@v9
         env:
           RELEASE_ID: ${{ needs.prepare_release.outputs.release_id }}
+          EXPECTED_FILES: ${{ steps.release_check.outputs.expected_files }}
         with:
           script: |
             const fs = require('fs');
@@ -340,6 +363,7 @@ jobs:
 
             const { owner, repo } = context.repo;
             const releaseId = Number(process.env.RELEASE_ID);
+            const expectedFiles = new Set(JSON.parse(process.env.EXPECTED_FILES));
             const { data: release } = await github.rest.repos.getRelease({ owner, repo, release_id: releaseId });
             const assetNames = new Set(release.assets.map(({ name }) => name));
 
@@ -348,7 +372,7 @@ jobs:
               .readdirSync(distDir, { withFileTypes: true })
               .filter(entry => entry.isFile())
               .map(entry => entry.name)
-              .filter(name => (name.startsWith('gmib-') || name.startsWith('latest')) && !assetNames.has(name));
+              .filter(name => expectedFiles.has(name) && !assetNames.has(name));
 
             if (localAssets.length === 0) {
               core.notice('No missing release assets to upload.');

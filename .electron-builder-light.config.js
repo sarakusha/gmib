@@ -71,7 +71,7 @@ const config = {
   extraMetadata: {
     version: process.env.VITE_APP_VERSION,
   },
-  afterPack: './scripts/rebuild-sqlite3.js',
+  afterPack: './scripts/verify-sqlite3-arch.js',
   // npmRebuild: true,
   appId: 'ru.nata-info.gmib',
   copyright: 'Copyright © Nata-Info, 2022',
