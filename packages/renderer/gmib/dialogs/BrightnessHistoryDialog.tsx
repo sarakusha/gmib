@@ -321,27 +321,27 @@ const BrightnessHistoryDialog: React.FC<Props> = ({ open = false, onClose = noop
           <Box sx={{ display: 'flex', justifyContent: 'space-evenly' }}>
             <Grid>
               <Typography>Рассвет</Typography>
-              <Typography>{suntimes.dawn.toLocaleTimeString()}</Typography>
+              <Typography>{suntimes.dawn.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Typography>
               <Typography>Восход</Typography>
-              <Typography>{suntimes.sunrise.toLocaleTimeString()}</Typography>
+              <Typography>{suntimes.sunrise.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Typography>
               <Typography>Утро</Typography>
-              <Typography>{suntimes.sunriseEnd.toLocaleTimeString()}</Typography>
+              <Typography>{suntimes.sunriseEnd.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Typography>
               <Typography>День</Typography>
-              <Typography>{suntimes.goldenHourEnd.toLocaleTimeString()}</Typography>
+              <Typography>{suntimes.goldenHourEnd.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Typography>
               <Typography>Зенит</Typography>
-              <Typography>{suntimes.solarNoon.toLocaleTimeString()}</Typography>
+              <Typography>{suntimes.solarNoon.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Typography>
             </Grid>
             <Grid>
               <Typography>Вечер</Typography>
-              <Typography>{suntimes.goldenHour.toLocaleTimeString()}</Typography>
+              <Typography>{suntimes.goldenHour.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Typography>
               <Typography>Закат</Typography>
-              <Typography>{suntimes.sunsetStart.toLocaleTimeString()}</Typography>
+              <Typography>{suntimes.sunsetStart.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Typography>
               <Typography>Сумерки</Typography>
-              <Typography>{suntimes.sunset.toLocaleTimeString()}</Typography>
+              <Typography>{suntimes.sunset.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Typography>
               <Typography>Ночь</Typography>
-              <Typography>{suntimes.dusk.toLocaleTimeString()}</Typography>
+              <Typography>{suntimes.dusk.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Typography>
               <Typography>Надир</Typography>
-              <Typography>{suntimes.nadir.toLocaleTimeString()}</Typography>
+              <Typography>{suntimes.nadir.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Typography>
             </Grid>
           </Box>
         )}
