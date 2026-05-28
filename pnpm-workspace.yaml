@@ -7,20 +7,21 @@ overrides:
   # "@nibus/detection": file:.yalc/@nibus/detection
   # '@nibus/mibs': file:.yalc/@nibus/mibs
   # "@nibus/service": file:.yalc/@nibus/service
+  "@sarakusha/material-ui-chip-input": "file:.yalc/@sarakusha/material-ui-chip-input"
 
 peerDependencyRules:
   allowedVersions:
     "@mui/material": "9"
     react-dom: "19"
 
-updateConfig:
-  ignoreDependencies:
-    - "@mui/icons-material"
-    - "@mui/lab"
-    - "@mui/material"
-    - "@mui/styled-engine"
-    - "@mui/system"
-    - "@mui/x-tree-view"
+# updateConfig:
+#   ignoreDependencies:
+#     - "@mui/icons-material"
+#     - "@mui/lab"
+#     - "@mui/material"
+#     - "@mui/styled-engine"
+#     - "@mui/system"
+#     - "@mui/x-tree-view"
 
 allowBuilds:
   "@serialport/bindings-cpp": true
@@ -35,6 +36,6 @@ allowBuilds:
   usb: true
   utf-8-validate: true
 minimumReleaseAgeExclude:
-  - vite@8.0.14
+  - vite@8.0.13
   - "@nibus/*"
   - "@sarakusha/ebml@0.0.5"
