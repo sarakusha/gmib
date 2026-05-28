@@ -186,14 +186,12 @@ jobs:
                 `gmib-${version}-arm64.dmg.blockmap`,
                 `gmib-${version}-arm64-mac.zip`,
                 `gmib-${version}-arm64-mac.zip.blockmap`,
-                'latest-mac.yml',
               ],
               'linux-x64': [
                 'gmib-x86_64.AppImage',
               ],
               'linux-arm64': [
                 'gmib-arm64.AppImage',
-                'latest-linux.yml',
               ],
               'windows-x64': [
                 `gmib-setup-${version}.exe`,
@@ -396,4 +394,148 @@ jobs:
               });
 
               core.notice(`Uploaded ${assetName}`);
+            }
+
+  update_release_metadata:
+    needs:
+      - prepare_release
+      - draft_release
+    runs-on: ubuntu-24.04
+    if: ${{ github.event_name != 'workflow_dispatch' }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Upload update metadata
+        uses: actions/github-script@v9
+        env:
+          RELEASE_ID: ${{ needs.prepare_release.outputs.release_id }}
+          BUILD_PLATFORMS: ${{ inputs.platforms }}
+        with:
+          script: |
+            const crypto = require('crypto');
+            const fs = require('fs');
+            const path = require('path');
+
+            const version = JSON.parse(
+              fs.readFileSync(path.join(process.env.GITHUB_WORKSPACE, 'package.json'), 'utf8'),
+            ).version;
+
+            const selectedPlatforms = process.env.BUILD_PLATFORMS;
+            const shouldPublishPlatform = platform => selectedPlatforms === 'all' || selectedPlatforms === platform;
+
+            const metadataFiles = [];
+
+            if (shouldPublishPlatform('macos')) {
+              metadataFiles.push({
+                name: 'latest-mac.yml',
+                assets: [
+                  `gmib-${version}-mac.zip`,
+                  `gmib-${version}.dmg`,
+                  `gmib-${version}-arm64-mac.zip`,
+                  `gmib-${version}-arm64.dmg`,
+                ],
+              });
+            }
+
+            if (shouldPublishPlatform('linux')) {
+              metadataFiles.push(
+                {
+                  name: 'latest-linux.yml',
+                  assets: ['gmib-x86_64.AppImage'],
+                },
+                {
+                  name: 'latest-linux-arm64.yml',
+                  assets: ['gmib-arm64.AppImage'],
+                },
+              );
+            }
+
+            if (metadataFiles.length === 0) {
+              core.notice('No update metadata needs to be generated for the selected platforms.');
+              return;
+            }
+
+            const { owner, repo } = context.repo;
+            const releaseId = Number(process.env.RELEASE_ID);
+            const { data: release } = await github.rest.repos.getRelease({ owner, repo, release_id: releaseId });
+            const assetsByName = new Map(release.assets.map(asset => [asset.name, asset]));
+
+            const getAssetBytes = async asset => {
+              const response = await github.request('GET /repos/{owner}/{repo}/releases/assets/{asset_id}', {
+                owner,
+                repo,
+                asset_id: asset.id,
+                headers: {
+                  accept: 'application/octet-stream',
+                },
+              });
+
+              return Buffer.isBuffer(response.data)
+                ? response.data
+                : Buffer.from(response.data);
+            };
+
+            const buildMetadata = async ({ assets }) => {
+              const files = [];
+
+              for (const assetName of assets) {
+                const asset = assetsByName.get(assetName);
+
+                if (!asset) {
+                  throw new Error(`Cannot generate update metadata: missing release asset ${assetName}`);
+                }
+
+                const data = await getAssetBytes(asset);
+                files.push({
+                  url: asset.name,
+                  sha512: crypto.createHash('sha512').update(data).digest('base64'),
+                  size: asset.size,
+                });
+              }
+
+              const primaryFile = files[0];
+              const lines = [
+                `version: ${version}`,
+                'files:',
+                ...files.flatMap(file => [
+                  `  - url: ${file.url}`,
+                  `    sha512: ${file.sha512}`,
+                  `    size: ${file.size}`,
+                ]),
+                `path: ${primaryFile.url}`,
+                `sha512: ${primaryFile.sha512}`,
+                `releaseDate: '${new Date().toISOString()}'`,
+                '',
+              ];
+
+              return Buffer.from(lines.join('\n'));
+            };
+
+            for (const metadataFile of metadataFiles) {
+              const existingAsset = assetsByName.get(metadataFile.name);
+
+              if (existingAsset) {
+                await github.rest.repos.deleteReleaseAsset({
+                  owner,
+                  repo,
+                  asset_id: existingAsset.id,
+                });
+              }
+
+              const data = await buildMetadata(metadataFile);
+
+              await github.rest.repos.uploadReleaseAsset({
+                owner,
+                repo,
+                release_id: releaseId,
+                name: metadataFile.name,
+                data,
+                headers: {
+                  'content-type': 'text/yaml',
+                  'content-length': data.length,
+                },
+              });
+
+              core.notice(`Uploaded ${metadataFile.name}`);
             }
