@@ -12,9 +12,8 @@ import {
   Typography,
 } from '@mui/material';
 import { css, styled } from '@mui/material/styles';
+import { Chart as HighchartsReact } from '@highcharts/react';
 import debugFactory from 'debug';
-import type { SeriesSolidgaugeOptions } from 'highcharts';
-import HighchartsReact from 'highcharts-react-official';
 import sortBy from 'lodash/sortBy';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import SunCalc from 'suncalc';
@@ -47,19 +46,20 @@ import { noop, notEmpty, toErrorMessage } from '/@common/helpers';
 import AutobrightnessToolbar from './AutobrightnessToolbar';
 import Brightness from './Brightness';
 import Highcharts from './Highcharts';
+import type { SeriesSolidgaugeOptions } from './Highcharts';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:autobrightness`);
 const setItem =
   (index: number, value?: number) =>
-    (array: (number | undefined)[]): (number | undefined)[] => {
-      const clone = [...array];
-      if (value !== undefined) {
-        clone[index] = value;
-      } else {
-        clone[index] = undefined;
-      }
-      return clone;
-    };
+  (array: (number | undefined)[]): (number | undefined)[] => {
+    const clone = [...array];
+    if (value !== undefined) {
+      clone[index] = value;
+    } else {
+      clone[index] = undefined;
+    }
+    return clone;
+  };
 
 const unitStyles = (
   <GlobalStyles
@@ -129,7 +129,7 @@ const highChartsOptions: Highcharts.Options = {
       [0.9, '#DF5353'], // red
     ],
     lineWidth: 5,
-    minorTickInterval: null,
+    minorTickInterval: undefined,
 
     tickWidth: 1,
     labels: {
@@ -229,8 +229,7 @@ const formatTime = (value?: number): string => {
 };
 
 const getSunEventRows = (latitude?: number, longitude?: number): SunEventRow[] => {
-  if (latitude === undefined || longitude === undefined)
-    return sunEvents.map(event => ({ event }));
+  if (latitude === undefined || longitude === undefined) return sunEvents.map(event => ({ event }));
 
   const times = SunCalc.getTimes(new Date(), latitude, longitude);
   return sunEvents
@@ -266,7 +265,9 @@ const getNightState = (nightMode?: NightBrightnessMode): NightModeState => ({
   brightness: nightMode?.brightness?.toString() ?? '',
 });
 
-const parseNightMode = (night: NightModeState): [NightBrightnessMode | undefined, NightModeError] => {
+const parseNightMode = (
+  night: NightModeState,
+): [NightBrightnessMode | undefined, NightModeError] => {
   const start = night.start.trim();
   const end = night.end.trim();
   const brightnessText = night.brightness.trim();
@@ -284,10 +285,7 @@ const parseNightMode = (night: NightModeState): [NightBrightnessMode | undefined
     errors.brightness = '0..100%';
   }
 
-  return [
-    Object.keys(errors).length === 0 ? { start, end, brightness } : undefined,
-    errors,
-  ];
+  return [Object.keys(errors).length === 0 ? { start, end, brightness } : undefined, errors];
 };
 
 const percentUnit = {
@@ -421,11 +419,7 @@ const Autobrightness: React.FC = () => {
       if (sunErrors[index] === undefined) sunErrors[index] = 'Рост, затем спад';
     });
     const [saveNightMode, nightErrors] = parseNightMode(night);
-    if (
-      errors.length === 0 &&
-      sunErrors.length === 0 &&
-      Object.keys(nightErrors).length === 0
-    ) {
+    if (errors.length === 0 && sunErrors.length === 0 && Object.keys(nightErrors).length === 0) {
       try {
         dispatch(setSpline(saveSpline.filter(notEmpty)));
         dispatch(setSunSpline(saveSunSpline));
@@ -505,7 +499,7 @@ const Autobrightness: React.FC = () => {
                         startAdornment: <InputAdornment position="start">lux</InputAdornment>,
                       },
                     }}
-                  // margin="dense"
+                    // margin="dense"
                   />
                   <TextField
                     label={i === 0 ? 'Яркость' : ' '}
@@ -538,8 +532,7 @@ const Autobrightness: React.FC = () => {
               sx={{
                 ...compactGridSx,
                 display: 'grid',
-                gridTemplateColumns:
-                  '[event] 11ch [time] 7ch [brightness] 10ch [clear] auto',
+                gridTemplateColumns: '[event] 11ch [time] 7ch [brightness] 10ch [clear] auto',
               }}
             >
               {sunRows.map(({ event, time }, i) => (
@@ -580,7 +573,8 @@ const Autobrightness: React.FC = () => {
               sx={{
                 ...compactGridSx,
                 display: 'grid',
-                gridTemplateColumns: '[start] 10ch [end] 10ch [brightness] 10ch [unit] 2ch [clear] auto',
+                gridTemplateColumns:
+                  '[start] 10ch [end] 10ch [brightness] 10ch [unit] 2ch [clear] auto',
               }}
             >
               <TextField

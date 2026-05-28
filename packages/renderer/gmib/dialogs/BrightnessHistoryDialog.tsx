@@ -1,3 +1,4 @@
+import { Chart as HighchartsReact } from '@highcharts/react';
 import { Box, Button, Dialog, DialogActions, DialogContent, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
 // import debugFactory from 'debug';
@@ -6,8 +7,7 @@ import type {
   XAxisOptions,
   XAxisPlotBandsOptions,
   XAxisPlotLinesOptions,
-} from 'highcharts';
-import HighchartsReact from 'highcharts-react-official';
+} from '../components/Highcharts';
 import groupBy from 'lodash/groupBy';
 import React, { useEffect, useState } from 'react';
 import SunCalc from 'suncalc';
@@ -55,9 +55,6 @@ const getSensors = async (): Promise<Sensors[]> => {
 
 const highchartsOptions: Highcharts.Options = {
   title: { text: 'История' },
-  time: {
-    useUTC: false,
-  },
   chart: {
     zooming: {
       type: 'x',
@@ -90,7 +87,7 @@ const highchartsOptions: Highcharts.Options = {
         text: 'Освещенность (lux)',
       },
       type: 'logarithmic',
-      minorTickInterval: null,
+      minorTickInterval: undefined,
       min: 1,
       max: 100000,
     },
@@ -298,9 +295,10 @@ const BrightnessHistoryDialog: React.FC<Props> = ({ open = false, onClose = noop
     if (!open) return;
     setOptions(opts => {
       const ts = Math.floor(Date.now() / 1000) * 1000;
-      const brightnessSeries = opts.series?.find(({ id }) => id === 'brightness');
-      if (brightnessSeries && brightnessSeries.type === 'line')
-        brightnessSeries.data?.push([ts, currentBrightness]);
+      const brightnessSeries = opts.series?.find(({ id }) => id === 'brightness') as
+        | SeriesLineOptions
+        | undefined;
+      brightnessSeries?.data?.push([ts, currentBrightness]);
       return { ...opts };
     });
   }, [currentBrightness, open]);
@@ -309,10 +307,8 @@ const BrightnessHistoryDialog: React.FC<Props> = ({ open = false, onClose = noop
     const [address, timestamp, value] = lastIlluminance.split(':');
     const id = `illuminance:${address}`;
     setOptions(opts => {
-      const series = opts.series?.find(item => item.id === id);
-      if (series && series.type === 'line') {
-        series.data?.push([Number(timestamp), Number(value)]);
-      }
+      const series = opts.series?.find(item => item.id === id) as SeriesLineOptions | undefined;
+      series?.data?.push([Number(timestamp), Number(value)]);
       return { ...opts };
     });
   }, [lastIlluminance, open]);

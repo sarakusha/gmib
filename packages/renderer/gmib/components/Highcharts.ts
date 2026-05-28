@@ -1,11 +1,8 @@
-import Highcharts from 'highcharts';
-import highchartsMore from 'highcharts/highcharts-more';
-import highchartsSolidGauge from 'highcharts/modules/solid-gauge';
+import Highcharts from 'highcharts/es-modules/masters/highcharts.src.js';
+import 'highcharts/es-modules/masters/highcharts-more.src.js';
+import 'highcharts/es-modules/masters/modules/solid-gauge.src.js';
 
-export type * from 'highcharts';
-
-highchartsMore(Highcharts);
-highchartsSolidGauge(Highcharts);
+export type * from 'highcharts/highcharts.src';
 
 Highcharts.setOptions({
   lang: {
