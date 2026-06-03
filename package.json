@@ -58,7 +58,7 @@
     "dist:win32": "cross-env NODE_ENV=production electron-builder --config .electron-builder.config.js -w --x64",
     "dist:linux": "cross-env NODE_ENV=production electron-builder --config .electron-builder.config.js -l --x64 --arm64",
     "dist-light": "run-script-os",
-    "dist-light:darwin": "cross-env NODE_ENV=production electron-builder --config .electron-builder-light.config.js -m --x64 --arm64",
+    "dist-light:darwin": "cross-env NODE_ENV=production electron-builder --config .electron-builder-light.config.js -m --arm64",
     "dist-light:win32": "cross-env NODE_ENV=production electron-builder --config .electron-builder-light.config.js -w --x64",
     "dist-light:linux": "cross-env NODE_ENV=production electron-builder --config .electron-builder-light.config.js -l --x64 --arm64",
     "download-ffmpeg": "run-script-os",
