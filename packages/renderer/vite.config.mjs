@@ -98,15 +98,7 @@ export default defineConfig({
     environment: 'happy-dom',
   },
   optimizeDeps: {
-    include: [
-      'react/jsx-runtime',
-      '@emotion/react/jsx-runtime',
-      '@emotion/react/jsx-dev-runtime',
-      '@emotion/react',
-      '@emotion/styled',
-      '@mui/material',
-      '@mui/system',
-    ],
+    include: ['react/jsx-runtime'],
     // exclude: ['@mui/material/zero-styled'],
   },
   // https://github.com/vitejs/vite/issues/8644#issuecomment-1159308803

@@ -2,6 +2,9 @@ overrides:
   react: $react
   ws: $ws
   prettier: $prettier
+  "@emotion/react": "11.14.0"
+  "@emotion/styled": "11.14.0"
+  "@emotion/cache": "11.14.0"
   # "@sarakusha/ebml": "file:.yalc/@sarakusha/ebml"
   # '@nibus/core': file:.yalc/@nibus/core
   # "@nibus/detection": file:.yalc/@nibus/detection
@@ -39,4 +42,4 @@ minimumReleaseAgeExclude:
   - vite@8.0.13
   - "@nibus/*"
   - "@sarakusha/ebml@0.0.5"
-  - "@sarakusha/material-ui-chip-input@2.1.0"
+  - "@sarakusha/material-ui-chip-input"
