@@ -114,15 +114,25 @@ const TreeItem = React.forwardRef<HTMLLIElement, StyledTreeItemProps>(
   ),
 );
 
+const normalizeSelectedItem = (value: string | readonly string[] | null | undefined): string => {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  return value[0] ?? '';
+};
+
 const SettingsTab: React.FC = () => {
   const { displays = [] } = useDisplays();
   const { players = [] } = usePlayers();
   const dispatch = useDispatch();
-  const selected = useSelector(selectSettingsNode);
+  const selected = normalizeSelectedItem(useSelector(selectSettingsNode));
   const [deletePlayer] = useDeletePlayerMutation();
   const showAlert = useShiftAlert();
-  const handleSelect = (e: React.SyntheticEvent | null, itemId: string | null) => {
-    if (itemId) dispatch(setSettingsNode(itemId));
+  const handleSelect = (
+    e: React.SyntheticEvent | null,
+    itemId: string | readonly string[] | null,
+  ) => {
+    const next = normalizeSelectedItem(itemId);
+    if (next) dispatch(setSettingsNode(next));
   };
   const deleteHandler = (id: number) => (e: React.MouseEvent<HTMLElement>) => {
     if (e.shiftKey) void deletePlayer(id);
