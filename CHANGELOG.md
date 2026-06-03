@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.10.3](https://github.com/sarakusha/gmib/compare/v4.10.2...v4.10.3) (2026-06-03)
+
+
+### Bug Fixes
+
+* инструменты разработчика ([1f4de9c](https://github.com/sarakusha/gmib/commit/1f4de9cf82881388ad53c8f58ae0a7ace9e1e52c))
+* исправлена сборка под vite ([3941995](https://github.com/sarakusha/gmib/commit/3941995ee36a1aac1e56ad3275cd0bfd4051ce45))
+* обновление @mui/x-tree-view ([18ffa89](https://github.com/sarakusha/gmib/commit/18ffa8951a49cc054b91a36960f585e3dd0c75eb))
+* build native artifacts on matching runners ([5994ab0](https://github.com/sarakusha/gmib/commit/5994ab01c103eed9971350bfcbd9f03857d7785d))
+* generate release update metadata after arch builds ([f2bbcd5](https://github.com/sarakusha/gmib/commit/f2bbcd5b00742ff5ad4d39fe36e9c005823305e0))
+* make postinstall resilient in CI ([f08a8cc](https://github.com/sarakusha/gmib/commit/f08a8cc3ee3b9d27ba1e47dbe3b2ba747516f5fc))
+* normalize electron builder arch in sqlite check ([80419e3](https://github.com/sarakusha/gmib/commit/80419e3b0a40bca950daf1118a9ed535f53eba01))
+* rebuild sqlite3 in packaged app ([8af0d36](https://github.com/sarakusha/gmib/commit/8af0d36d6ca1bd9d02841025d405e89635b2fc7c))
+
 ## [4.10.2](https://github.com/sarakusha/gmib/compare/v4.10.1...v4.10.2) (2026-05-28)
 
 
