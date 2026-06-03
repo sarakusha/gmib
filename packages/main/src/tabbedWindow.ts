@@ -131,7 +131,7 @@ class TabbedWindow {
       this.window.focus();
       this.activeTab()?.window.webContents.focus();
     });
-    this.chrome.webContents.on('will-navigate', (event, url) => {
+    this.chrome.webContents.prependListener('will-navigate', (event, url) => {
       event.preventDefault();
       this.handleChromeUrl(url);
     });
