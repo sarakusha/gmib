@@ -242,6 +242,21 @@ class TabbedWindow {
     this.activateByOffset(-1);
   }
 
+  toggleActiveDevTools(): boolean {
+    const active = this.activeTab();
+    if (!active || active.view.webContents.isDestroyed()) return false;
+    const { webContents } = active.view;
+    if (webContents.isDevToolsOpened()) {
+      webContents.closeDevTools();
+      return true;
+    }
+    this.window.show();
+    this.window.focus();
+    webContents.focus();
+    webContents.openDevTools({ mode: 'detach', activate: true });
+    return true;
+  }
+
   getActiveWindow(): ManagedWindow | undefined {
     return this.activeTab()?.window;
   }
@@ -337,6 +352,11 @@ class TabbedWindow {
 
   private handleKeyboardShortcut(event: Event, input: Input) {
     if (input.type !== 'keyDown') return;
+    if (this.isDevToolsShortcut(input)) {
+      event.preventDefault();
+      this.toggleActiveDevTools();
+      return;
+    }
     const commandOrControl = input.meta || input.control;
     if (!commandOrControl || input.alt) return;
     const key = input.key.toLowerCase();
@@ -371,6 +391,17 @@ class TabbedWindow {
       event.preventDefault();
       this.activateByOffset(1);
     }
+  }
+
+  private isDevToolsShortcut(input: Input) {
+    const key = input.key.toLowerCase();
+    const code = input.code.toLowerCase();
+    const commandOrControl = input.meta || input.control;
+    return (
+      key === 'f12' ||
+      code === 'f12' ||
+      (commandOrControl && key === 'i' && (input.shift || input.alt))
+    );
   }
 
   private installKeyboardShortcuts(view: WebContentsView) {
@@ -555,6 +586,8 @@ export const activateNextTabbedWindow = (): void => manager?.activateNext();
 export const activatePreviousTabbedWindow = (): void => manager?.activatePrevious();
 
 export const activateTabbedWindow = (id: number): void => manager?.activate(id);
+
+export const toggleActiveTabbedDevTools = (): boolean => manager?.toggleActiveDevTools() ?? false;
 
 export const getTabbedWindowById = (id: number): ManagedWindow | undefined =>
   manager?.getWindowById(id);

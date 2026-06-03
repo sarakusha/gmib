@@ -31,6 +31,7 @@ import {
   getTabbedWindowItems,
   isTabbedBrowserWindow,
   onTabbedWindowChange,
+  toggleActiveTabbedDevTools,
 } from './tabbedWindow';
 
 import type { GmibWindowParams, WindowParams } from '/@common/WindowParams';
@@ -103,6 +104,9 @@ const getMenuParams = (): WindowParams | undefined => {
 };
 
 const toggleFocusedDevTools = (): void => {
+  if (isTabbedBrowserWindow(BrowserWindow.getFocusedWindow()) && toggleActiveTabbedDevTools()) {
+    return;
+  }
   const win = getFocusedManagedWindow();
   if (!win || win.webContents.isDestroyed()) return;
 
