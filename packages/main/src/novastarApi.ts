@@ -83,7 +83,7 @@ const makeHandler =
       const { screen = defaultScreen, value } = req.body;
       // debug(`${method} ${path}[${screen}] = ${value}`);
       let { path } = req.body as { path: string };
-      if (!path.includes(':')) {
+      if (!path.includes(':') && !path.includes('/')) {
         path = `${path}:5200`;
       }
       await master[method]({ path, screen }, value);
