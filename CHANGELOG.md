@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.10.5](https://github.com/sarakusha/gmib/compare/v4.10.4...v4.10.5) (2026-06-05)
+
+
+### Bug Fixes
+
+* preserve novastar serial paths ([ec06ce4](https://github.com/sarakusha/gmib/commit/ec06ce48491d91ddeabcd2c4cfef7f6af30c3789))
+* route novastar proxy requests through api path ([86e4f8b](https://github.com/sarakusha/gmib/commit/86e4f8bcfa0252c1e68a6fb784455b5528522be7))
+
 ## [4.10.4](https://github.com/sarakusha/gmib/compare/v4.10.3...v4.10.4) (2026-06-05)
 
 
