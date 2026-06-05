@@ -131,7 +131,7 @@ class TabbedWindow {
       this.window.focus();
       this.activeTab()?.window.webContents.focus();
     });
-    this.chrome.webContents.prependListener('will-navigate', (event, url) => {
+    this.chrome.webContents.prependListener('will-navigate', (event: Event, url: string) => {
       event.preventDefault();
       this.handleChromeUrl(url);
     });
@@ -157,7 +157,7 @@ class TabbedWindow {
     view.webContents.once('did-finish-load', () => {
       window.emit('ready-to-show');
     });
-    view.webContents.on('page-title-updated', event => {
+    view.webContents.on('page-title-updated', (event: Event) => {
       event.preventDefault();
     });
     if (!this.activeId) this.activeId = tab.id;
