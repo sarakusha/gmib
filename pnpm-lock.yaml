@@ -26,17 +26,17 @@ importers:
         specifier: ^4.0.1
         version: 4.0.1
       '@nibus/core':
-        specifier: ^6.0.3
-        version: 6.0.3(@nibus/mibs@6.0.3)(debug@4.4.3)
+        specifier: ^6.0.4
+        version: 6.0.4(@nibus/mibs@6.0.4)(debug@4.4.3)
       '@nibus/detection':
-        specifier: ^6.0.3
-        version: 6.0.3(@nibus/mibs@6.0.3)(debug@4.4.3)
+        specifier: ^6.0.4
+        version: 6.0.4(@nibus/mibs@6.0.4)(debug@4.4.3)
       '@nibus/mibs':
-        specifier: ^6.0.3
-        version: 6.0.3
+        specifier: ^6.0.4
+        version: 6.0.4
       '@nibus/service':
-        specifier: ^6.0.3
-        version: 6.0.3(@nibus/mibs@6.0.3)(debug@4.4.3)
+        specifier: ^6.0.4
+        version: 6.0.4(@nibus/mibs@6.0.4)(debug@4.4.3)
       '@nodable/entities':
         specifier: ^2.1.0
         version: 2.1.1
@@ -1310,20 +1310,20 @@ packages:
       '@emnapi/core': ^1.7.1
       '@emnapi/runtime': ^1.7.1
 
-  '@nibus/core@6.0.3':
-    resolution: {integrity: sha512-KUdCLJyuogLgYEQAuEGoMhtW2eZ8IEv18G7QyXmXBZH7FfGa5GzLcjgLDwPbZZLvGKyobqBC/HtyN7YJdXGUQg==}
+  '@nibus/core@6.0.4':
+    resolution: {integrity: sha512-lxt3a07IjCJhjCooMAk0YvOaO6Gjqrfd3K/Q4op5H9dP/yMkq6yllYSdmAf2eJmPF1levGHm0WcQDWrFKndy8A==}
     peerDependencies:
-      '@nibus/mibs': ^6.0.3
+      '@nibus/mibs': ^6.0.4
       debug: ^4.3.0
 
-  '@nibus/detection@6.0.3':
-    resolution: {integrity: sha512-OrjMfIwLK+50V3isfi0XHxdISLtq7imTLZmYKEw8IlsZUkGcV7GW2t+L46C+hwgdqFSd2oEAGWghicTJk1KbvQ==}
+  '@nibus/detection@6.0.4':
+    resolution: {integrity: sha512-Png1YcZpyjTjMjdA83E8y9mVRxChLL3WfV7VZw1bikYqL4wLrI6nBhFFsf0xGo2a/ZvTJ/SCr8Xs+jHQuHMacg==}
 
-  '@nibus/mibs@6.0.3':
-    resolution: {integrity: sha512-L88cDFCksirA5Kmo93Uu5cVnVfsc9ig3hDI2LkPu1eZJD2tT1tbDJhmTaMQ59dRCn1JOHayhdi2Teq7ZJ9CD4Q==}
+  '@nibus/mibs@6.0.4':
+    resolution: {integrity: sha512-IgVdBoBsgby9K7zmPBmK3dKZamRp3/Y3qaDlKATKjnNLEKkxaWjF2zcSwBjJWezSo+A53SQTM18IVgsPd/4gjw==}
 
-  '@nibus/service@6.0.3':
-    resolution: {integrity: sha512-bFVmrpucP7p3EbqwqwHJ6Ix6MX6rYmGewgsYsE/doJkjN1DT9eqc/T/n91w7fwGzkKfZEQDLaOr/gUGSuEcPXQ==}
+  '@nibus/service@6.0.4':
+    resolution: {integrity: sha512-lXxEy3xTWlB9GAHMiKNm+LEeYUrmqhJITYFYvZ/on4TI1GEAXSkplTqY0sM1njyYjSXFmfUhE3PDH/9a8iBkTg==}
     peerDependencies:
       debug: ^4.3.0
 
@@ -6951,9 +6951,9 @@ snapshots:
       '@tybys/wasm-util': 0.10.2
     optional: true
 
-  '@nibus/core@6.0.3(@nibus/mibs@6.0.3)(debug@4.4.3)':
+  '@nibus/core@6.0.4(@nibus/mibs@6.0.4)(debug@4.4.3)':
     dependencies:
-      '@nibus/mibs': 6.0.3
+      '@nibus/mibs': 6.0.4
       conf: 15.1.0
       crc: 4.3.2
       debug: 4.4.3
@@ -6974,9 +6974,9 @@ snapshots:
     transitivePeerDependencies:
       - buffer
 
-  '@nibus/detection@6.0.3(@nibus/mibs@6.0.3)(debug@4.4.3)':
+  '@nibus/detection@6.0.4(@nibus/mibs@6.0.4)(debug@4.4.3)':
     dependencies:
-      '@nibus/core': 6.0.3(@nibus/mibs@6.0.3)(debug@4.4.3)
+      '@nibus/core': 6.0.4(@nibus/mibs@6.0.4)(debug@4.4.3)
       '@types/js-yaml': 4.0.9
       fp-ts: 2.16.11
       io-ts: 2.2.22(fp-ts@2.16.11)
@@ -6986,7 +6986,7 @@ snapshots:
       - buffer
       - debug
 
-  '@nibus/mibs@6.0.3':
+  '@nibus/mibs@6.0.4':
     dependencies:
       debug: 4.4.3
       fp-ts: 2.16.11
@@ -6994,11 +6994,11 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@nibus/service@6.0.3(@nibus/mibs@6.0.3)(debug@4.4.3)':
+  '@nibus/service@6.0.4(@nibus/mibs@6.0.4)(debug@4.4.3)':
     dependencies:
       '@homebridge/ciao': 1.3.9
-      '@nibus/core': 6.0.3(@nibus/mibs@6.0.3)(debug@4.4.3)
-      '@nibus/detection': 6.0.3(@nibus/mibs@6.0.3)(debug@4.4.3)
+      '@nibus/core': 6.0.4(@nibus/mibs@6.0.4)(debug@4.4.3)
+      '@nibus/detection': 6.0.4(@nibus/mibs@6.0.4)(debug@4.4.3)
       '@serialport/bindings-cpp': 13.0.1
       debug: 4.4.3
       fp-ts: 2.16.11
