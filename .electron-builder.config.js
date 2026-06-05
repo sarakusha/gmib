@@ -2,6 +2,8 @@
  * @type {import('electron-builder').Configuration}
  * @see https://www.electron.build/configuration/configuration
  */
+const macIdentity = process.env.GMIB_MAC_CODESIGN_IDENTITY || process.env.CSC_NAME;
+
 const config = {
   extends: ['./.electron-builder-light.config.js'],
   // directories: {
@@ -12,6 +14,7 @@ const config = {
   mac: {
     category: 'public.app-category.utilities',
     target: ['dmg', 'zip'],
+    ...(macIdentity ? { identity: macIdentity } : {}),
     extraResources: [
       {
         from: 'ffmpeg/darwin-${arch}/ffmpeg',

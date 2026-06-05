@@ -279,6 +279,48 @@ jobs:
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
 
+      - name: Import macOS code signing certificate
+        if:
+          ${{ steps.platform_check.outputs.selected == 'true' && matrix.platform == 'macos' &&
+          steps.release_check.outputs.skip_build != 'true' }}
+        env:
+          MACOS_CODESIGN_CERTIFICATE_BASE64: ${{ secrets.MACOS_CODESIGN_CERTIFICATE_BASE64 }}
+          MACOS_CODESIGN_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CODESIGN_CERTIFICATE_PASSWORD }}
+          GMIB_MAC_CODESIGN_IDENTITY:
+            ${{ secrets.GMIB_MAC_CODESIGN_IDENTITY || 'gmib Self-Signed Code Signing' }}
+        run: |
+          : "${MACOS_CODESIGN_CERTIFICATE_BASE64:?missing secret MACOS_CODESIGN_CERTIFICATE_BASE64}"
+          : "${MACOS_CODESIGN_CERTIFICATE_PASSWORD:?missing secret MACOS_CODESIGN_CERTIFICATE_PASSWORD}"
+          : "${GMIB_MAC_CODESIGN_IDENTITY:?missing macOS code signing identity}"
+
+          certificate_path="$RUNNER_TEMP/gmib-codesign.p12"
+          certificate_pem_path="$RUNNER_TEMP/gmib-codesign.pem"
+          keychain_path="$RUNNER_TEMP/gmib-signing.keychain-db"
+          keychain_password="$(openssl rand -base64 32)"
+
+          printf '%s' "$MACOS_CODESIGN_CERTIFICATE_BASE64" | base64 --decode > "$certificate_path"
+
+          security create-keychain -p "$keychain_password" "$keychain_path"
+          security set-keychain-settings -lut 21600 "$keychain_path"
+          security unlock-keychain -p "$keychain_password" "$keychain_path"
+          security list-keychains -d user -s "$keychain_path" $(security list-keychains -d user | tr -d '"')
+          security import "$certificate_path" -k "$keychain_path" -P "$MACOS_CODESIGN_CERTIFICATE_PASSWORD" -A
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$keychain_password" "$keychain_path"
+          security find-certificate -c "$GMIB_MAC_CODESIGN_IDENTITY" -p "$keychain_path" > "$certificate_pem_path"
+          sudo security add-trusted-cert -d -r trustRoot -p codeSign \
+            -k /Library/Keychains/System.keychain "$certificate_pem_path"
+
+          security find-identity -v -p codesigning "$keychain_path"
+          if ! security find-identity -v -p codesigning "$keychain_path" | grep -F "$GMIB_MAC_CODESIGN_IDENTITY"; then
+            echo "Cannot find macOS code signing identity: $GMIB_MAC_CODESIGN_IDENTITY" >&2
+            exit 1
+          fi
+
+          {
+            printf '%s\n' "CSC_NAME=$GMIB_MAC_CODESIGN_IDENTITY"
+            printf '%s\n' "GMIB_MAC_CODESIGN_IDENTITY=$GMIB_MAC_CODESIGN_IDENTITY"
+          } >> "$GITHUB_ENV"
+
       - name: Download FFmpeg for macOS
         if:
           ${{ steps.platform_check.outputs.selected == 'true' && matrix.platform == 'macos' &&
@@ -345,6 +387,23 @@ jobs:
             pnpm exec electron-builder --config ${{ matrix.builder_config }} ${{
             join(matrix.target_args, ' ') }} --publish never
           # GH_TOKEN: ${{ github.token }}
+
+      - name: Verify macOS code signature
+        if:
+          ${{ steps.platform_check.outputs.selected == 'true' && matrix.platform == 'macos' &&
+          steps.release_check.outputs.skip_build != 'true' }}
+        run: |
+          app_path="$(find dist -name 'gmib.app' -type d | head -n 1)"
+          : "${app_path:?cannot find built gmib.app}"
+
+          codesign -dv --verbose=4 "$app_path" 2>&1 | tee "$RUNNER_TEMP/gmib-codesign.log"
+          codesign -d -r- "$app_path"
+          codesign --verify --deep --strict --verbose=4 "$app_path"
+
+          if grep -q 'Signature=adhoc' "$RUNNER_TEMP/gmib-codesign.log"; then
+            echo "macOS app was signed ad-hoc; Squirrel.Mac auto-update will reject future releases." >&2
+            exit 1
+          fi
 
       - name: Upload missing release assets
         if: ${{ steps.platform_check.outputs.selected == 'true' &&

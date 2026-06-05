@@ -1,5 +1,7 @@
 const { version } = require('./package.json');
 
+const macIdentity = process.env.GMIB_MAC_CODESIGN_IDENTITY || process.env.CSC_NAME;
+
 if (process.env.VITE_APP_VERSION === undefined) {
   // const now = new Date();
   // process.env.VITE_APP_VERSION = `${now.getUTCFullYear() - 2000}.${
@@ -81,6 +83,7 @@ const config = {
     // executableName: 'gmiby',
     category: 'public.app-category.utilities',
     target: ['dmg', 'zip'],
+    ...(macIdentity ? { identity: macIdentity } : {}),
     // extraResources: [
     //   {
     //     from: 'ffmpeg/darwin-${arch}/ffmpeg',
