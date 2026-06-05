@@ -1,6 +1,7 @@
 import path from 'path';
 
 // import debugFactory from 'debug';
+import { app as electronApp } from 'electron';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
@@ -13,6 +14,7 @@ import { app } from './server';
 import preventLoadSourceMap from '/@common/preventLoadSourceMap';
 
 // const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:express`);
+const isDevRuntime = import.meta.env.DEV && !electronApp.isPackaged;
 
 // const isAuthorized = (req: IncomingMessage) =>
 //   import.meta.env.DEV ||
@@ -35,12 +37,12 @@ app.use(
   }),
 );
 app.use(cors({ origin: '*', exposedHeaders: ['x-ni-identifier', 'x-from'] }));
-import.meta.env.PROD && app.use(preventLoadSourceMap);
+!isDevRuntime && app.use(preventLoadSourceMap);
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 
-if (!import.meta.env.DEV) {
+if (!isDevRuntime) {
   const root = path.join(__dirname, '../../renderer/dist');
   app.get('/index.html' /* , isAuthorizedHandler */);
   app.get('/player.html' /* , isAuthorizedHandler */);

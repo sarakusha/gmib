@@ -26,6 +26,7 @@ import type { GmibWindowParams } from '/@common/WindowParams';
 const preload = path.join(__dirname, '../../preload/dist/player.cjs');
 const remotePreload = path.join(__dirname, '../../preload/dist/remote.cjs');
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:playerWindow`);
+const isDevRuntime = import.meta.env.DEV && !app.isPackaged;
 
 let isQuitting = false;
 
@@ -77,7 +78,7 @@ export const openPlayer = async (
     if (!player) return undefined;
     const query = `source_id=${id}&host=${host}&port=${nibusPort}`;
     const url =
-      import.meta.env.DEV && import.meta.env.VITE_DEV_SERVER_URL
+      isDevRuntime && import.meta.env.VITE_DEV_SERVER_URL
         ? `${import.meta.env.VITE_DEV_SERVER_URL}player.html?${query}`
         : `http://localhost:${nibusPort + 1}/player.html?${query}`;
     const title = getPlayerTitle(player);

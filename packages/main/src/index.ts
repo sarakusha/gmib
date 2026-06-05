@@ -33,6 +33,7 @@ void import('./nibus');
 crashReporter.start({ uploadToServer: false });
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:main`);
+const isDevRuntime = import.meta.env.DEV && !app.isPackaged;
 // debug(`Starting ${__filename}|${process.pid}|${new Error().stack}...`);
 debug(`local-config: ${localConfig.path}`);
 
@@ -72,7 +73,7 @@ app.on('activate', createMainWindow);
 
 /**
  */
-if (import.meta.env.DEV) {
+if (isDevRuntime) {
   app
     .whenReady()
 

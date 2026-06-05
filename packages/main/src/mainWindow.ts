@@ -13,6 +13,7 @@ import { getAllGmibParams, getAllScreenParams, getPlayerParams, registerGmib } f
 import Deferred from '/@common/Deferred';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:wnd`);
+const isDevRuntime = import.meta.env.DEV && !app.isPackaged;
 
 let isQuitting = false;
 
@@ -63,7 +64,7 @@ export const createAppWindow = (
   }
   const query = `port=${nibusPort}${address ? `&host=${address}` : ''}`;
   const pageUrl =
-    import.meta.env.DEV && import.meta.env.VITE_DEV_SERVER_URL !== undefined
+    isDevRuntime && import.meta.env.VITE_DEV_SERVER_URL !== undefined
       ? `${import.meta.env.VITE_DEV_SERVER_URL}?${query}`
       : `http://localhost:${nibusPort + 1}/index.html?${query}`;
   // : new URL(`../renderer/dist/index.html?${query}`, `file://${__dirname}`).toString();
@@ -167,7 +168,7 @@ export function createTestWindow(
     },
   });
 
-  if (import.meta.env.DEV && preload) {
+  if (isDevRuntime && preload) {
     window.webContents.once('did-frame-finish-load', () => {
       window.webContents.openDevTools();
     });

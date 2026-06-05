@@ -9,6 +9,7 @@ import { port } from './config';
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:sec`);
 
 const localhost = `http://localhost:${port}`;
+const isDevRuntime = import.meta.env.DEV && !app.isPackaged;
 
 const allPermissions = [
   'clipboard-read',
@@ -46,7 +47,7 @@ type Permissions = Set<AllPermissions>;
  */
 const ALLOWED_ORIGINS_AND_PERMISSIONS = new Map<string, Permissions>([[localhost, fullGrant]]);
 
-if (import.meta.env.DEV) {
+if (isDevRuntime) {
   if (import.meta.env.VITE_DEV_SERVER_URL) {
     ALLOWED_ORIGINS_AND_PERMISSIONS.set(
       import.meta.env.VITE_DEV_SERVER_URL.replace(/\/$/, ''),
