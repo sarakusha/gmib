@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.10.4](https://github.com/sarakusha/gmib/compare/v4.10.3...v4.10.4) (2026-06-05)
+
+
+### Bug Fixes
+
+* дожидаемся закрытия nibus перед выходом ([64cb377](https://github.com/sarakusha/gmib/commit/64cb3774ab599784333907a187c04775d327c580))
+* пердотвращение повторного особождения ресурсов ([17d9e04](https://github.com/sarakusha/gmib/commit/17d9e04fe7fa6a346b711f5063d8722367d31fc1))
+* avoid false security log for tab navigation ([cb0d57f](https://github.com/sarakusha/gmib/commit/cb0d57fcfbc4c8e35e22aa0c8c18d227ca95dd6f))
+
 ## [4.10.3](https://github.com/sarakusha/gmib/compare/v4.10.2...v4.10.3) (2026-06-03)
 
 
