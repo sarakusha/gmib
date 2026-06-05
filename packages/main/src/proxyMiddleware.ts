@@ -127,12 +127,13 @@ const createProxy = (remote: bonjourHap.RemoteService) => {
   const { identifier } = remote.txt;
   // const { host, port, identifier } = opts;
   const remoteTarget = `${host}:${port}`;
+  const remotePath = '/api/novastar';
   let secret: Buffer | undefined;
   void getOutgoingSecret(identifier).then(value => {
     secret = value;
   });
   const handler = createProxyMiddleware<Request, Response>({
-    target: `http://${remoteTarget}`,
+    target: `http://${remoteTarget}${remotePath}`,
     changeOrigin: true,
     on: {
       proxyReq: (proxyReq, req) => {
@@ -142,7 +143,7 @@ const createProxy = (remote: bonjourHap.RemoteService) => {
           proxyReq.setHeader('X-NI-Timestamp', now.toString());
           proxyReq.setHeader(
             'X-NI-Signature',
-            generateSignature(secret, req.method, req.url, now, req.body),
+            generateSignature(secret, req.method, `${remotePath}${req.url}`, now, req.body),
           );
         }
         proxyReq.removeHeader('authorization');
