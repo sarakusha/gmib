@@ -219,10 +219,16 @@ browser.on('down', remote => {
   }
 });
 
-app.on('will-quit', () => {
+let isClosing = false;
+
+app.on('before-quit', () => {
+  if (isClosing) return;
+  isClosing = true;
   try {
-    if (isMaster && master) void master.close();
-    void service.destroy();
+    void master.close();
+    void service.destroy().catch(err => {
+      debug(`error while destroy service: ${(err as Error).message}`);
+    });
   } catch (err) {
     debug(`error while close: ${(err as Error).message}`);
   }
