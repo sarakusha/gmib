@@ -1,4 +1,4 @@
-import { app } from 'electron';
+import { app, type Event } from 'electron';
 import fs from 'fs';
 
 import service from '@nibus/service';
@@ -22,14 +22,28 @@ const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:nibus`);
 
 export default { service } as const;
 
-const closeNibus = (): void => {
+let isClosing = false;
+let isClosed = false;
+
+const closeNibus = async (): Promise<void> => {
+  if (isClosed) return;
   if (!service) return;
   try {
-    service.stop();
+    await service.stop();
+    isClosed = true;
     // service = undefined;
   } catch (e) {
     debug(`error while close nibus: ${(e as Error).message}`);
   }
+};
+
+const quitHandler = (event: Event): void => {
+  if (isClosed || isClosing) return;
+  event.preventDefault();
+  isClosing = true;
+  void closeNibus().finally(() => {
+    app.quit();
+  });
 };
 
 (async function startLocalNibus(): Promise<void> {
@@ -105,4 +119,4 @@ app.once('ready', () => {
 });
 */
 
-app.once('quit', closeNibus);
+app.on('before-quit', quitHandler);
