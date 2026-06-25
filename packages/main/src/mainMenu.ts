@@ -180,6 +180,7 @@ const remoteMenu = (params?: WindowParams): AppMenuItem | undefined => {
       type: 'checkbox',
       checked: focused ? findGmib(address)?.id === focused : false,
       click: () => {
+        if (address === 'localhost') localConfig.set('localGmibHidden', false);
         const gmib = findGmib(address);
         if (gmib) {
           const window = findManagedWindow(gmib.id);

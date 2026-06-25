@@ -18,7 +18,7 @@ import './ipc';
 import './rtc';
 import './hid';
 // import './channels';
-import { createMainWindow } from './mainWindow';
+import { activateMainWindow, createMainWindow, persistLocalWindowState } from './mainWindow';
 import { installWindowOpenHandler, toggleOutputWindowsVisibility } from './openHandler';
 import { launchPlayers } from './playerWindow';
 
@@ -46,7 +46,7 @@ if (!isSingleInstance) {
   app.quit();
   process.exit(0);
 }
-app.on('second-instance', createMainWindow);
+app.on('second-instance', activateMainWindow);
 
 /**
  * Disable Hardware Acceleration for more power-save
@@ -70,10 +70,12 @@ app.on('will-quit', () => {
   globalShortcut.unregisterAll();
 });
 
+app.on('before-quit', persistLocalWindowState);
+
 /**
  * @see https://www.electronjs.org/docs/v14-x-y/api/app#event-activate-macos Event: 'activate'
  */
-app.on('activate', createMainWindow);
+app.on('activate', activateMainWindow);
 
 /**
  */

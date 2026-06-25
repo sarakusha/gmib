@@ -8,7 +8,7 @@ import type { Player } from '/@common/video';
 import authRequest from './authRequest';
 import { dbReady } from './db';
 import localConfig from './localConfig';
-import main from './mainWindow';
+import main, { activateMainWindow } from './mainWindow';
 import type { CloseEvent, ManagedWindow } from './managedWindow';
 import { installWindowOpenHandler } from './openHandler';
 import relaunch, { needRestart } from './relaunch';
@@ -40,6 +40,17 @@ export const getPlayerTitle = (player: Player): string =>
 type Options = {
   gmibParams?: GmibWindowParams;
   hidden?: boolean;
+};
+
+const sleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
+
+const waitForLocalGmibParams = async (): Promise<GmibWindowParams | undefined> => {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    const gmibParams = getAllGmibParams().find(({ host }) => host === 'localhost');
+    if (gmibParams) return gmibParams;
+    await sleep(100);
+  }
+  return undefined;
 };
 
 const confirmClose = (hasVisibleParent?: boolean) =>
@@ -155,6 +166,17 @@ export const openPlayer = async (
 export const launchPlayers = async () => {
   await dbReady;
   const players = await getPlayers();
+  const localPlayerTabs = localConfig.get('localPlayerTabs');
+  if (localPlayerTabs) {
+    const gmibParams = await waitForLocalGmibParams();
+    const restored = gmibParams
+      ? await Promise.all(localPlayerTabs.map(id => openPlayer(id, { gmibParams })))
+      : [];
+    if (restored.every(window => window === undefined) && localConfig.get('localGmibHidden')) {
+      activateMainWindow();
+    }
+    return;
+  }
   players.forEach(player => {
     if (player.playlistId && player.autoPlay) void openPlayer(player.id, { hidden: true });
   });

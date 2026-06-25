@@ -7,10 +7,12 @@ import debugFactory from 'debug';
 import localConfig from './localConfig';
 import type { CloseEvent, ManagedWindow } from './managedWindow';
 import relaunch, { needRestart } from './relaunch';
-import { createTabbedWindow } from './tabbedWindow';
-import { getAllGmibParams, getAllScreenParams, registerGmib } from './windowStore';
+import { createTabbedWindow, getTabbedWindowItems } from './tabbedWindow';
+import store, { getAllGmibParams, getAllScreenParams, registerGmib } from './windowStore';
 
 import Deferred from '/@common/Deferred';
+import { isGmib, isPlayer } from '/@common/WindowParams';
+import type { PlayerWindowParams, WindowParams } from '/@common/WindowParams';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:wnd`);
 const isDevRuntime = import.meta.env.DEV && !app.isPackaged;
@@ -37,6 +39,32 @@ export const waitWebContents = (): Promise<WebContents> =>
 const gmibPreload = join(__dirname, '../../preload/dist/gmib.cjs');
 // const playerPreload = join(__dirname, '../../playerPreload/dist/index.cjs');
 
+const getVisibleWindowParams = (): WindowParams[] =>
+  getTabbedWindowItems()
+    .map(({ id }) => store.get(id))
+    .filter((params): params is WindowParams => params !== undefined);
+
+const isLocalPlayer = (params: WindowParams): params is PlayerWindowParams =>
+  isPlayer(params) && params.host === 'localhost';
+
+const shouldPersistHiddenLocalGmib = (closingId: number): boolean => {
+  const remaining = getVisibleWindowParams().filter(params => params.id !== closingId);
+  return remaining.length > 0 && remaining.every(isLocalPlayer);
+};
+
+export const persistLocalWindowState = (): void => {
+  const visible = getVisibleWindowParams();
+  const localPlayerTabs = visible.filter(isLocalPlayer).map(({ playerId }) => playerId);
+  const hasLocalGmib = visible.some(params => isGmib(params) && params.host === 'localhost');
+  const onlyLocalPlayers = visible.length > 0 && visible.every(isLocalPlayer);
+
+  localConfig.set('localPlayerTabs', localPlayerTabs);
+  localConfig.set('localGmibHidden', !hasLocalGmib && onlyLocalPlayers);
+};
+
+export const hasPersistedLocalTabs = (): boolean =>
+  !localConfig.get('localGmibHidden') || (localConfig.get('localPlayerTabs')?.length ?? 0) > 0;
+
 export const createAppWindow = (
   nibusPort = +(process.env['NIBUS_PORT'] ?? 9001),
   address = 'localhost',
@@ -49,7 +77,7 @@ export const createAppWindow = (
   );
   if (isLocal) {
     browserWindow.once('ready-to-show', () => {
-      if (!localConfig.get('autostart')) {
+      if (!localConfig.get('autostart') && !localConfig.get('localGmibHidden')) {
         browserWindow.show();
         // The window may freeze from time to time at startup on Windows
         setTimeout(() => browserWindow.show(), 100);
@@ -81,11 +109,14 @@ export const createAppWindow = (
     }
   });
   void registerGmib(browserWindow, { host: address, nibusPort });
+  if (isLocal && localConfig.get('localGmibHidden')) browserWindow.hide();
   browserWindow.on('close', event => {
     const closeEvent = event as CloseEvent;
     if (isLocal && !isQuitting && !needRestart()) {
+      if (getTabbedWindowItems().length <= 1) return;
       // Keep the main GMIB instance alive so it can be reopened from the menu.
       closeEvent.preventDefault();
+      localConfig.set('localGmibHidden', shouldPersistHiddenLocalGmib(browserWindow.id));
       browserWindow.hide();
       return;
     }
@@ -100,6 +131,7 @@ export const createAppWindow = (
 };
 
 export const createMainWindow = (): ManagedWindow => {
+  if (!hasPersistedLocalTabs()) localConfig.set('localGmibHidden', false);
   if (!mainWindow) {
     const browserWindow = (mainWindow = createAppWindow());
     // browserWindow.on('close', event => {
@@ -122,6 +154,14 @@ export const createMainWindow = (): ManagedWindow => {
     mainWindowDeferred.resolve(browserWindow);
   }
   return mainWindow;
+};
+
+export const activateMainWindow = (): ManagedWindow => {
+  localConfig.set('localGmibHidden', false);
+  const browserWindow = createMainWindow();
+  browserWindow.show();
+  browserWindow.focus();
+  return browserWindow;
 };
 
 export const getMainWindow = (): ManagedWindow | null => mainWindow;

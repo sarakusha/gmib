@@ -298,6 +298,8 @@ export type LocalConfig = {
   hosts: CustomHost[];
   autostart: boolean;
   health: Health;
+  localGmibHidden: boolean;
+  localPlayerTabs?: number[];
   salt?: string;
   verifier?: string;
   readonly identifier: string;
