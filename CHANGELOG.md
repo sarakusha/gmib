@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.11.1](https://github.com/sarakusha/gmib/compare/v4.11.0...v4.11.1) (2026-06-25)
+
+
+### Features
+
+* add per-player object-fit selection for output windows ([d03fe1f](https://github.com/sarakusha/gmib/commit/d03fe1fd10e3e8d0fc80ef85f7f274fe9b1d4ac7))
+* hide restored local gmib in player-only mode ([688964c](https://github.com/sarakusha/gmib/commit/688964c2c317bbd9131c1c3fbe6c1fe6966cb003))
+* indicate hidden output in previews ([309fa00](https://github.com/sarakusha/gmib/commit/309fa00d28ba4d0448f25978a8083663c28e82ef))
+* sync player preview object-fit with first mapping ([7081a69](https://github.com/sarakusha/gmib/commit/7081a69d7e6501d7732bc4d72079191255e57d36))
+
+
+### Bug Fixes
+
+* avoid USB hotplug crash on app shutdown ([6663c4f](https://github.com/sarakusha/gmib/commit/6663c4fe22168a7ccbf9671672fa3b61289f6882))
+* hide main gmib instead of closing it ([1bfdc6b](https://github.com/sarakusha/gmib/commit/1bfdc6b898a9ef1066e4b08ff40028a3241d452d))
+
 ## [4.11.0](https://github.com/sarakusha/gmib/compare/v4.10.5...v4.11.0) (2026-06-25)
 
 
