@@ -6,11 +6,13 @@ import { selectMediaById, useGetMediaQuery } from '../api/media';
 import { usePlayer } from '../api/player';
 import { usePlayerMappings } from '../api/mapping';
 import { useGetPlaylistById } from '../api/playlists';
-import { useSelector } from '../store';
+import { useDispatch, useSelector } from '../store';
+import { setPosition } from '../store/currentSlice';
 import { selectCurrent, selectOutputHidden, selectPosition } from '../store/selectors';
 
 import type { MediaInfo } from '/@common/mediaInfo';
 import type { ObjectFitMode } from '/@common/video';
+import { isRemoteSession } from '/@common/remote';
 
 import ControlBar from './ControlBar';
 
@@ -26,6 +28,7 @@ const Player: React.FC<Props> = ({ className, playerId = 0 }) => {
   const { data: mediaData } = useGetMediaQuery();
   const { duration, playbackState } = useSelector(selectCurrent);
   const position = useSelector(selectPosition);
+  const dispatch = useDispatch();
   const outputHidden = useSelector(selectOutputHidden);
   const { width = 320, height = 240 } = player ?? {};
   const previewObjectFit: ObjectFitMode =
@@ -39,6 +42,15 @@ const Player: React.FC<Props> = ({ className, playerId = 0 }) => {
   React.useEffect(() => {
     window.mediaStream.updateSrcObject('video#player');
   }, []);
+  const stopped = playbackState === 'none';
+  const isCaptureEngine = player?.playbackEngine === 'capture';
+  const onTimeUpdate = React.useCallback<React.ReactEventHandler<HTMLVideoElement>>(
+    e => {
+      const { currentTime } = e.target as HTMLVideoElement;
+      dispatch(setPosition(stopped ? 0 : currentTime));
+    },
+    [dispatch, stopped],
+  );
   return (
     <Box sx={{ width: 1, position: 'relative' }}>
       <Box
@@ -66,6 +78,7 @@ const Player: React.FC<Props> = ({ className, playerId = 0 }) => {
             objectFit: previewObjectFit,
             backgroundColor: 'black',
           }}
+          onTimeUpdate={isRemoteSession || isCaptureEngine ? undefined : onTimeUpdate}
         >
           {current?.filename}
         </video>
