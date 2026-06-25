@@ -127,6 +127,17 @@ const paramsToRemote = (params: GmibWindowParams) => ({
   name: params.info?.name,
 });
 
+const getLocalRemote = (): { address: string; port: number; name?: string } => {
+  const local = findGmib('localhost');
+  return local
+    ? paramsToRemote(local)
+    : {
+        address: 'localhost',
+        port: +(process.env['NIBUS_PORT'] ?? 9001),
+        name: 'gmib',
+      };
+};
+
 const getWindowMenuLabel = (params: WindowParams): string => {
   if (isGmib(params)) return `${params.info?.name ?? 'gmib'} (${params.host})`;
   if (isPlayer(params)) return `player#${params.playerId}`;
@@ -154,11 +165,10 @@ const openWindowsSubmenu = (activeId?: number): MenuItemConstructorOptions[] =>
 const remoteMenu = (params?: WindowParams): AppMenuItem | undefined => {
   const gmibParams = getGmibParams(params);
   if (!gmibParams) return undefined;
-  const local = findGmib('localhost');
   const focused = isPlayer(params) ? gmibParams.id : getFocusedManagedWindow()?.id;
   const remotes = uniqBy(
     [
-      ...(local ? [paramsToRemote(local)] : []),
+      getLocalRemote(),
       ...mdnsBrowser.services.map(pickRemoteService).filter(notEmpty),
       ...sortBy(localConfig.get('hosts'), ['name', 'address']),
     ],

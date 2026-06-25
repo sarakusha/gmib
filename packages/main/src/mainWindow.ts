@@ -8,7 +8,7 @@ import localConfig from './localConfig';
 import type { CloseEvent, ManagedWindow } from './managedWindow';
 import relaunch, { needRestart } from './relaunch';
 import { createTabbedWindow } from './tabbedWindow';
-import { getAllGmibParams, getAllScreenParams, getPlayerParams, registerGmib } from './windowStore';
+import { getAllGmibParams, getAllScreenParams, registerGmib } from './windowStore';
 
 import Deferred from '/@common/Deferred';
 
@@ -83,22 +83,16 @@ export const createAppWindow = (
   void registerGmib(browserWindow, { host: address, nibusPort });
   browserWindow.on('close', event => {
     const closeEvent = event as CloseEvent;
-    const gmibParams = getAllGmibParams();
-    if (
-      import.meta.env.PROD &&
-      isLocal &&
-      !needRestart() &&
-      !isQuitting &&
-      (localConfig.get('autostart') ||
-        getPlayerParams().length > 0 || // .some(params => params.parent.id === browserWindow.id) ||
-        gmibParams.length > 1)
-    ) {
+    if (isLocal && !isQuitting && !needRestart()) {
+      // Keep the main GMIB instance alive so it can be reopened from the menu.
       closeEvent.preventDefault();
       browserWindow.hide();
-    } else if (isLocal) {
+      return;
+    }
+    if (isLocal) {
       getAllScreenParams().forEach(({ id }) => BrowserWindow.fromId(id)?.close());
       mainWindow = null;
-    } else if (gmibParams.length - 1 === 1 && mainWindow && !mainWindow.isVisible()) {
+    } else if (getAllGmibParams().length - 1 === 1 && mainWindow && !mainWindow.isVisible()) {
       setTimeout(() => mainWindow?.close(), 100);
     }
   });
