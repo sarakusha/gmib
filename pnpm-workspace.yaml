@@ -41,5 +41,5 @@ allowBuilds:
 minimumReleaseAgeExclude:
   - vite@8.0.13
   - "@nibus/*"
-  - "@sarakusha/ebml@0.0.5"
+  - "@sarakusha/ebml@0.0.6"
   - "@sarakusha/material-ui-chip-input"

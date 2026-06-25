@@ -59,8 +59,8 @@ importers:
         specifier: ^2.12.0
         version: 2.12.0(react-redux@9.3.0(@types/react@19.2.16)(react@19.2.7)(redux@5.0.1))(react@19.2.7)
       '@sarakusha/ebml':
-        specifier: ^0.0.5
-        version: 0.0.5
+        specifier: ^0.0.6
+        version: 0.0.6
       '@sarakusha/lzma':
         specifier: ^2.3.4
         version: 2.3.4
@@ -1666,8 +1666,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@sarakusha/ebml@0.0.5':
-    resolution: {integrity: sha512-NLgfWC1c77zAE4ai9F0GpcAZ2KSURWq1U+VJ/AysvZmxpF5NcTZlkkfZT0Ujdt/Ac02tPlZH5QApAZcaS2Prsw==}
+  '@sarakusha/ebml@0.0.6':
+    resolution: {integrity: sha512-MIAzCwjVhKeadVhQRZwQUe/D4ZG6zyu4bkyj+VSGu/7hrCvFJNLi5z99vgruszyDS+OuTJ9l2TRTcuANQDgtuA==}
     engines: {node: '>=16'}
 
   '@sarakusha/lzma@2.3.4':
@@ -7274,7 +7274,7 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.61.0':
     optional: true
 
-  '@sarakusha/ebml@0.0.5': {}
+  '@sarakusha/ebml@0.0.6': {}
 
   '@sarakusha/lzma@2.3.4': {}
 
