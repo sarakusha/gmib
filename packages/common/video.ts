@@ -33,6 +33,7 @@ export type Player = {
   autoPlay?: boolean;
   disableFadeIn?: boolean;
   disableFadeOut?: boolean;
+  playbackEngine?: 'decoder' | 'capture';
   hidden?: boolean;
 };
 

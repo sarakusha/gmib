@@ -21,6 +21,7 @@ type DecoderMessage = {
   frame?: VideoFrame;
   done?: boolean;
   duration?: number;
+  debug?: string;
   err?: {
     message?: string;
   };
@@ -128,6 +129,7 @@ export default class VideoSource {
       const payload: unknown = ev.data;
       if (!payload || typeof payload !== 'object') return;
       const data = payload as DecoderMessage;
+      if (data.debug) debug(data.debug);
       if (data.frame) {
         if (streamController && !this.#closed && (streamController.desiredSize ?? 0) > 0) {
           streamController.enqueue(data.frame);

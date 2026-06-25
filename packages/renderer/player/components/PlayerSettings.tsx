@@ -12,6 +12,8 @@ import {
   ListItemButton,
   ListItemSecondaryAction,
   ListItemText,
+  MenuItem,
+  Select,
   Stack,
 } from '@mui/material';
 import { Field, Form, Formik } from 'formik';
@@ -43,6 +45,7 @@ const PlayerSettings: React.FC<{ id?: number }> = ({ id }) => {
     disableFadeIn = false,
     disableFadeOut = false,
     autoPlay = false,
+    playbackEngine = 'decoder',
   } = player ?? {};
   const dispatch = useDispatch();
   const { mappings = [] } = usePlayerMappings();
@@ -67,7 +70,15 @@ const PlayerSettings: React.FC<{ id?: number }> = ({ id }) => {
   return (
     <Box sx={{ width: 1, height: 1, overflowY: 'auto' }}>
       <Formik
-        initialValues={{ name, width, height, disableFadeIn, disableFadeOut, autoPlay }}
+        initialValues={{
+          name,
+          width,
+          height,
+          disableFadeIn,
+          disableFadeOut,
+          autoPlay,
+          playbackEngine,
+        }}
         onSubmit={(values, { setSubmitting }) => {
           id && dispatch(updatePlayer(id, prev => ({ ...prev, ...values })));
           setSubmitting(false);
@@ -92,6 +103,18 @@ const PlayerSettings: React.FC<{ id?: number }> = ({ id }) => {
               variant="standard"
               fullWidth
             />
+            <FormControl component="fieldset" margin="normal" fullWidth>
+              <FormLabel component="legend">Движок воспроизведения</FormLabel>
+              <Select
+                name="playbackEngine"
+                value={values.playbackEngine}
+                onChange={handleChange}
+                variant="standard"
+              >
+                <MenuItem value="decoder">WebCodecs decoder (video only)</MenuItem>
+                <MenuItem value="capture">HTMLVideo captureStream</MenuItem>
+              </Select>
+            </FormControl>
             <FormControl component="fieldset" margin="normal" fullWidth>
               <FormLabel component="legend">Предпочтительный размер в пикселях</FormLabel>
               <Stack
@@ -130,12 +153,12 @@ const PlayerSettings: React.FC<{ id?: number }> = ({ id }) => {
               <FormGroup>
                 <FormControlLabel
                   name="disableFadeIn"
-                  control={<Checkbox checked={values.disableFadeIn} onChange={handleChange} />}
+                  control={<Checkbox checked={values.disableFadeIn} onChange={handleChange} disabled={values.playbackEngine !== 'decoder'} />}
                   label="Отключить плавное появление"
                 />
                 <FormControlLabel
                   name="disableFadeOut"
-                  control={<Checkbox checked={values.disableFadeOut} onChange={handleChange} />}
+                  control={<Checkbox checked={values.disableFadeOut} onChange={handleChange} disabled={values.playbackEngine !== 'decoder'} />}
                   label="Отключить плавное исчезание"
                 />
               </FormGroup>
@@ -152,9 +175,8 @@ const PlayerSettings: React.FC<{ id?: number }> = ({ id }) => {
               <ListItemButton onClick={() => id && openPlayerMappingDialog(id, item.id)} dense>
                 <ListItemText
                   primary={item.name}
-                  secondary={`${getDisplay(item.display)} (${item.left},${item.top}-${item.width}x${
-                    item.height
-                  })`}
+                  secondary={`${getDisplay(item.display)} (${item.left},${item.top}-${item.width}x${item.height
+                    })`}
                   slotProps={{
                     primary: noWrap,
                     secondary: noWrap,

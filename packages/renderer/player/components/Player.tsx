@@ -4,16 +4,12 @@ import React from 'react';
 import { selectMediaById, useGetMediaQuery } from '../api/media';
 import { usePlayer } from '../api/player';
 import { useGetPlaylistById } from '../api/playlists';
-import { useDispatch, useSelector } from '../store';
+import { useSelector } from '../store';
 import { selectCurrent, selectPosition } from '../store/selectors';
 
 import type { MediaInfo } from '/@common/mediaInfo';
 
 import ControlBar from './ControlBar';
-
-import { setPosition } from '../store/currentSlice';
-
-import { isRemoteSession } from '/@common/remote';
 
 type Props = {
   className?: string;
@@ -26,7 +22,6 @@ const Player: React.FC<Props> = ({ className, playerId = 0 }) => {
   const { data: mediaData } = useGetMediaQuery();
   const { duration, playbackState } = useSelector(selectCurrent);
   const position = useSelector(selectPosition);
-  const dispatch = useDispatch();
   const { width = 320, height = 240 } = player ?? {};
   let current: MediaInfo | undefined;
   if (player && playlist?.items && mediaData) {
@@ -37,14 +32,6 @@ const Player: React.FC<Props> = ({ className, playerId = 0 }) => {
   React.useEffect(() => {
     window.mediaStream.updateSrcObject('video#player');
   }, []);
-  const stopped = playbackState === 'none';
-  const onTimeUpdate = React.useCallback<React.ReactEventHandler<HTMLVideoElement>>(
-    e => {
-      const { currentTime } = e.target as HTMLVideoElement;
-      dispatch(setPosition(stopped ? 0 : currentTime));
-    },
-    [dispatch, stopped],
-  );
   return (
     <Box sx={{ width: 1, position: 'relative' }}>
       <Box
@@ -72,7 +59,6 @@ const Player: React.FC<Props> = ({ className, playerId = 0 }) => {
             objectFit: 'cover',
             backgroundColor: 'black',
           }}
-          onTimeUpdate={isRemoteSession ? undefined : onTimeUpdate}
         >
           {current?.filename}
         </video>

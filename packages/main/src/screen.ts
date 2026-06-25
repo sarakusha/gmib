@@ -28,6 +28,7 @@ const enum PlayerFlags {
   DisableFadeIn = 1 << 1,
   DisableFadeOut = 1 << 2,
   Hidden = 1 << 3,
+  CaptureEngine = 1 << 4,
 }
 
 const toScreen = (result: NullableOptional): Omit<Screen, 'addresses'> => {
@@ -60,6 +61,7 @@ const toPlayer = (result: NullableOptional): Player => {
     autoPlay: Boolean(flags & PlayerFlags.AutoPlay),
     disableFadeIn: Boolean(flags & PlayerFlags.DisableFadeIn),
     disableFadeOut: Boolean(flags & PlayerFlags.DisableFadeOut),
+    playbackEngine: flags & PlayerFlags.CaptureEngine ? 'capture' : 'decoder',
     hidden: Boolean(flags & PlayerFlags.Hidden),
   };
 };
@@ -121,6 +123,7 @@ const playerEncoder = (player: Partial<Omit<Player, 'id'>>) => ({
     flag(player.autoPlay, PlayerFlags.AutoPlay) |
     flag(player.disableFadeIn, PlayerFlags.DisableFadeIn) |
     flag(player.disableFadeOut, PlayerFlags.DisableFadeOut) |
+    flag(player.playbackEngine === 'capture', PlayerFlags.CaptureEngine) |
     flag(player.hidden, PlayerFlags.Hidden),
 });
 

@@ -5,7 +5,7 @@ import isEqual from 'lodash/isEqual';
 
 import type { PlayerMapping } from '/@common/video';
 
-import stream from './mediaStream';
+import { attachStreamToVideo } from './mediaStream';
 
 const search = new URLSearchParams(window.location.search);
 const sourceId = +(search.get('source_id') ?? 1);
@@ -46,8 +46,9 @@ const createVideoOut = (mapping: PlayerMapping): void => {
         const list = win.document.querySelectorAll('video');
         list.forEach(elem => {
           // eslint-disable-next-line no-param-reassign
-          elem.srcObject = stream;
-          debug(`set stream ${elem.tagName.toLowerCase()}: ${stream.id}`);
+          elem.muted = true;
+          attachStreamToVideo(elem);
+          debug(`set stream ${elem.tagName.toLowerCase()}`);
         });
       }, 1000);
     },

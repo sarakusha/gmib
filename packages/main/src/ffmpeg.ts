@@ -343,9 +343,18 @@ export async function convertCopy(filePath: string, outPath: string): Promise<vo
     '+genpts',
     '-i',
     filePath,
+    '-map',
+    '0:v:0?',
+    '-map',
+    '0:a:0?',
     '-vcodec',
     'copy',
-    '-an',
+    '-c:a',
+    'opus',
+    '-b:a',
+    '128k',
+    '-strict',
+    '-2',
     '-sn',
     '-y',
     outPath,
@@ -463,7 +472,25 @@ export async function html5ify({
     }
   }
 
-  const ffmpegArgs = ['-hide_banner', '-i', filePath, ...videoArgs, '-an', '-sn', '-y', outPath];
+  const ffmpegArgs = [
+    '-hide_banner',
+    '-i',
+    filePath,
+    '-map',
+    '0:v:0?',
+    '-map',
+    '0:a:0?',
+    ...videoArgs,
+    '-c:a',
+    'opus',
+    '-b:a',
+    '128k',
+    '-strict',
+    '-2',
+    '-sn',
+    '-y',
+    outPath,
+  ];
 
   const duration = await getDuration(filePath);
   const process = runFfmpeg(ffmpegArgs);

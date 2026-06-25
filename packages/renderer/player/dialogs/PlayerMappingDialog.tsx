@@ -1,4 +1,4 @@
-import { Checkbox, FormControlLabel, FormLabel, Stack } from '@mui/material';
+import { Checkbox, FormControlLabel, FormHelperText, FormLabel, Stack } from '@mui/material';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
@@ -183,6 +183,9 @@ const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) =
                   }
                   label="Всегда сверху"
                 />
+                <FormHelperText>
+                  На Windows рекомендуется выбрать один из режимов <i>На весь экран</i> или <i>Прозрачность</i>.
+                </FormHelperText>
               </FormControl>
             </Form>
           )}
