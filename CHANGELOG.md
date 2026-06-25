@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.11.0](https://github.com/sarakusha/gmib/compare/v4.10.5...v4.11.0) (2026-06-25)
+
+
+### Features
+
+* добавлен движок воспроизведения 'capture' ([283aa56](https://github.com/sarakusha/gmib/commit/283aa566ab937d0c13c24c3c995c2c6c35409edb))
+
+
+### Bug Fixes
+
+* prevent packaged app using dev server ([dd488ed](https://github.com/sarakusha/gmib/commit/dd488ed1daa56c5ae84065aecb9831172c91267d))
+* rebuild before packaging app ([24fad87](https://github.com/sarakusha/gmib/commit/24fad8713b57f3976fd5dc81631d79580345e9b4))
+
 ## [4.10.5](https://github.com/sarakusha/gmib/compare/v4.10.4...v4.10.5) (2026-06-05)
 
 
