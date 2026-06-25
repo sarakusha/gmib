@@ -16,6 +16,7 @@ import FormikTextField from '../../common/FormikTextField';
 import { useDisplays } from '../../common/displays';
 
 import { DefaultDisplays, getDisplayLabel } from '/@common/video';
+import type { ObjectFitMode, PlayerMapping } from '/@common/video';
 
 import {
   useCreateMappingMutation,
@@ -33,6 +34,19 @@ type Props = {
 };
 
 const formId = 'playerMappingForm';
+
+type MappingFormValues = Omit<PlayerMapping, 'id' | 'objectFit'> & {
+  id?: number;
+  objectFit: ObjectFitMode;
+};
+
+const objectFitOptions: Array<{ value: ObjectFitMode; label: string }> = [
+  { value: 'cover', label: 'Заполнить область с обрезкой краев' },
+  { value: 'contain', label: 'Показать целиком, оставив поля' },
+  { value: 'fill', label: 'Растянуть без сохранения пропорций' },
+  { value: 'none', label: 'Оставить исходный размер' },
+  { value: 'scale-down', label: 'Уменьшать только при необходимости' },
+];
 
 const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) => {
   const { displays = [] } = useDisplays();
@@ -53,18 +67,22 @@ const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) =
         <DialogContentText>Укажите параметры окна вывода для {player?.name}</DialogContentText>
         <Formik
           initialValues={
-            mapping ?? {
-              name: `${player?.name} - Вывод`,
-              display: 0,
-              left: 0,
-              top: 0,
-              width: player?.width ?? 320,
-              height: player?.height ?? 240,
-              zOrder: 0,
-              kiosk: false,
-              transparent: false,
-              alwaysOnTop: true,
-            }
+            (mapping
+              ? { ...mapping, objectFit: mapping.objectFit ?? 'cover' }
+              : {
+                name: `${player?.name} - Вывод`,
+                player: playerId ?? 0,
+                display: 0,
+                left: 0,
+                top: 0,
+                width: player?.width ?? 320,
+                height: player?.height ?? 240,
+                zOrder: 0,
+                kiosk: false,
+                transparent: false,
+                alwaysOnTop: true,
+                objectFit: 'cover',
+              }) as MappingFormValues
           }
           onSubmit={async (newValues, { setSubmitting }) => {
             if (!playerId) throw new Error('Unknown player');
@@ -184,8 +202,30 @@ const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) =
                   label="Всегда сверху"
                 />
                 <FormHelperText>
-                  На Windows рекомендуется выбрать один из режимов <i>На весь экран</i> или <i>Прозрачность</i>.
+                  На Windows рекомендуется выбрать один из режимов <i>На весь экран</i> или{' '}
+                  <i>Прозрачность</i>.
                 </FormHelperText>
+                <FormControl fullWidth margin="normal">
+                  <InputLabel id="object-fit-label">Режим масштабирования</InputLabel>
+                  <Select
+                    labelId="object-fit-label"
+                    id="objectFit"
+                    name="objectFit"
+                    value={values.objectFit ?? 'cover'}
+                    onBlur={handleBlur}
+                    onChange={handleChange}
+                    variant="standard"
+                  >
+                    {objectFitOptions.map(option => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  <FormHelperText>
+                    По умолчанию используется режим с заполнением области и обрезкой краев.
+                  </FormHelperText>
+                </FormControl>
               </FormControl>
             </Form>
           )}

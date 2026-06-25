@@ -3,7 +3,9 @@ const search = new URLSearchParams(window.location.search);
 // const outputId = +search.get('output_id');
 const width = +search.get('width');
 const height = +search.get('height');
+const objectFit = search.get('objectFit');
 const HIDE_CURSOR_DELAY = 1000;
+const allowedObjectFits = new Set(['fill', 'contain', 'cover', 'none', 'scale-down']);
 
 // document.body.requestPointerLock();
 
@@ -38,6 +40,10 @@ window.onload = () => {
     // videoElement.style=`width: ${width}px; height: ${height}px;`;
     videoElement.width = width;
     videoElement.height = height;
+    videoElement.style.setProperty(
+      '--object-fit',
+      allowedObjectFits.has(objectFit) ? objectFit : 'cover',
+    );
     // window.setInterval(() => {
     //   const { droppedVideoFrames, totalVideoFrames, creationTime } = videoElement.getVideoPlaybackQuality();
     //   console.log(!!port, droppedVideoFrames, totalVideoFrames);

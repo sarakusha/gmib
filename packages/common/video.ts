@@ -37,6 +37,8 @@ export type Player = {
   hidden?: boolean;
 };
 
+export type ObjectFitMode = 'fill' | 'contain' | 'cover' | 'none' | 'scale-down';
+
 // export type VideoOutput = {
 //   id: number;
 //   name?: string;
@@ -86,6 +88,7 @@ export type PlayerMapping = {
   shader?: string;
   transparent?: boolean;
   alwaysOnTop?: boolean;
+  objectFit?: ObjectFitMode;
 };
 
 export const enum DefaultDisplays {

@@ -171,6 +171,7 @@ function createTables(): void {
           width INTEGER,
           height INTEGER,
           shader TEXT,
+          objectFit TEXT DEFAULT 'cover',
           zOrder INTEGER DEFAULT 0,
           flags INTEGER DEFAULT 0,
           FOREIGN KEY (player)
@@ -178,6 +179,7 @@ function createTables(): void {
         )`,
       err => err && debug(`error while create playerMapping: ${err}`),
     );
+    void checkColumnExists('playerMapping', 'objectFit', "TEXT DEFAULT 'cover'");
     // db.run(
     //   `CREATE TABLE IF NOT EXISTS videoOutput (
     //     id INTEGER PRIMARY KEY,

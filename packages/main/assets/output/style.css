@@ -8,6 +8,6 @@ html.cursor-hidden * {
     cursor: none !important;
 }
 video {
-    object-fit: cover;
+    object-fit: var(--object-fit, cover);
     user-select: none;
 }
