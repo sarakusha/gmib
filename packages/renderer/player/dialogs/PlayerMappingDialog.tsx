@@ -67,6 +67,7 @@ const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) =
         <DialogContentText>Укажите параметры окна вывода для {player?.name}</DialogContentText>
         <Formik
           initialValues={
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
             (mapping
               ? { ...mapping, objectFit: mapping.objectFit ?? 'cover' }
               : {

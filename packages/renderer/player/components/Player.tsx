@@ -4,11 +4,13 @@ import React from 'react';
 
 import { selectMediaById, useGetMediaQuery } from '../api/media';
 import { usePlayer } from '../api/player';
+import { usePlayerMappings } from '../api/mapping';
 import { useGetPlaylistById } from '../api/playlists';
 import { useSelector } from '../store';
 import { selectCurrent, selectOutputHidden, selectPosition } from '../store/selectors';
 
 import type { MediaInfo } from '/@common/mediaInfo';
+import type { ObjectFitMode } from '/@common/video';
 
 import ControlBar from './ControlBar';
 
@@ -19,12 +21,15 @@ type Props = {
 
 const Player: React.FC<Props> = ({ className, playerId = 0 }) => {
   const { player } = usePlayer(playerId);
+  const { mappings = [] } = usePlayerMappings();
   const { data: playlist } = useGetPlaylistById(player?.playlistId);
   const { data: mediaData } = useGetMediaQuery();
   const { duration, playbackState } = useSelector(selectCurrent);
   const position = useSelector(selectPosition);
   const outputHidden = useSelector(selectOutputHidden);
   const { width = 320, height = 240 } = player ?? {};
+  const previewObjectFit: ObjectFitMode =
+    mappings.find(item => item.player === playerId)?.objectFit ?? 'cover';
   let current: MediaInfo | undefined;
   if (player && playlist?.items && mediaData) {
     const item = playlist.items.find(({ id }) => id === player.current) ?? playlist.items[0];
@@ -58,7 +63,7 @@ const Player: React.FC<Props> = ({ className, playerId = 0 }) => {
           css={{
             width: '100%',
             height: '100%',
-            objectFit: 'cover',
+            objectFit: previewObjectFit,
             backgroundColor: 'black',
           }}
         >
