@@ -1,9 +1,8 @@
-import { Checkbox, FormControlLabel, FormHelperText, FormLabel, Stack } from '@mui/material';
+import { Box, Checkbox, FormControlLabel, FormHelperText, FormLabel, Stack } from '@mui/material';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
-import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
@@ -62,9 +61,9 @@ const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) =
   ];
   return (
     <Dialog open={open && !!playerId} onClose={onClose} fullWidth maxWidth="xs">
-      <DialogTitle>Окно вывода</DialogTitle>
+      <DialogTitle>Окно вывода для <b>{player?.name}</b></DialogTitle>
       <DialogContent>
-        <DialogContentText>Укажите параметры окна вывода для {player?.name}</DialogContentText>
+        {/* <DialogContentText>Укажите параметры окна вывода для {player?.name}</DialogContentText> */}
         <Formik
           initialValues={
             // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
@@ -125,48 +124,50 @@ const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) =
                   )}
                 </Select>
               </FormControl>
-              <FormControl component="fieldset" sx={{ width: 1 }} margin="normal">
-                <FormLabel component="legend">Положение</FormLabel>
-                <Stack
-                  direction="row"
-                  sx={{
-                    gap: 2,
-                  }}
-                >
-                  <Field
-                    name="left"
-                    label="X"
-                    type="number"
-                    component={FormikTextField}
-                    fullWidth
-                  />
-                  <Field name="top" label="Y" type="number" component={FormikTextField} fullWidth />
-                </Stack>
-              </FormControl>
-              <FormControl component="fieldset" sx={{ width: 1 }} margin="normal">
-                <FormLabel component="legend">Размер</FormLabel>
-                <Stack
-                  direction="row"
-                  sx={{
-                    gap: 2,
-                  }}
-                >
-                  <Field
-                    name="width"
-                    label="Ширина"
-                    type="number"
-                    component={FormikTextField}
-                    fullWidth
-                  />
-                  <Field
-                    name="height"
-                    label="Высота"
-                    type="number"
-                    component={FormikTextField}
-                    fullWidth
-                  />
-                </Stack>
-              </FormControl>
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <FormControl component="fieldset" sx={{ width: 1 }} margin="normal">
+                  <FormLabel component="legend">Положение</FormLabel>
+                  <Stack
+                    direction="row"
+                    sx={{
+                      gap: 2,
+                    }}
+                  >
+                    <Field
+                      name="left"
+                      label="X"
+                      type="number"
+                      component={FormikTextField}
+                      fullWidth
+                    />
+                    <Field name="top" label="Y" type="number" component={FormikTextField} fullWidth />
+                  </Stack>
+                </FormControl>
+                <FormControl component="fieldset" sx={{ width: 1 }} margin="normal">
+                  <FormLabel component="legend">Размер</FormLabel>
+                  <Stack
+                    direction="row"
+                    sx={{
+                      gap: 2,
+                    }}
+                  >
+                    <Field
+                      name="width"
+                      label="Ширина"
+                      type="number"
+                      component={FormikTextField}
+                      fullWidth
+                    />
+                    <Field
+                      name="height"
+                      label="Высота"
+                      type="number"
+                      component={FormikTextField}
+                      fullWidth
+                    />
+                  </Stack>
+                </FormControl>
+              </Box>
               <FormControl component="fieldset" sx={{ width: 1 }} margin="normal">
                 <FormLabel component="legend">Окно</FormLabel>
                 <Stack
