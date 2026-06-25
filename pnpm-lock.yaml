@@ -5,9 +5,9 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  react: ^19.2.6
-  ws: ^8.20.1
-  prettier: ^3.8.3
+  react: ^19.2.7
+  ws: ^8.21.0
+  prettier: ^3.8.4
   '@emotion/react': 11.14.0
   '@emotion/styled': 11.14.0
   '@emotion/cache': 11.14.0
@@ -298,9 +298,6 @@ importers:
       toidentifier:
         specifier: ~1.0.1
         version: 1.0.1
-      usb:
-        specifier: ^2.18.0
-        version: 2.18.0
       uuid:
         specifier: ^14.0.1
         version: 14.0.1
@@ -632,7 +629,7 @@ packages:
     resolution: {integrity: sha512-x/PDDCYzoqPpjrdyb3VcyylTI2IjUXEtYDGi5foh7KsnmNJIIaVwA2GLgDH1dps1GgXiJbA60hM+AyuTfQzIvw==}
     peerDependencies:
       '@types/react': ^17 || ^18 || ^19
-      react: ^19.2.6
+      react: ^19.2.7
       react-dom: ^17 || ^18 || ^19
     peerDependenciesMeta:
       '@types/react':
@@ -947,7 +944,7 @@ packages:
     resolution: {integrity: sha512-O000MLDBDdk/EohJPFUqvnp4qnHeYkVP5B0xEG0D/L7cOKP9kefu2DXn8dj74cQfsEzUqh+sr1RzFqiL1o+PpA==}
     peerDependencies:
       '@types/react': '*'
-      react: ^19.2.6
+      react: ^19.2.7
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -963,7 +960,7 @@ packages:
     peerDependencies:
       '@emotion/react': 11.14.0
       '@types/react': '*'
-      react: ^19.2.6
+      react: ^19.2.7
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -974,7 +971,7 @@ packages:
   '@emotion/use-insertion-effect-with-fallbacks@1.2.0':
     resolution: {integrity: sha512-yJMtVdH59sxi/aVJBpk9FQq+OR8ll5GT8oWd57UpeaKEVGab41JWaCFA7FRLoMLloOZF/c/wsPoe+bfGmRKgDg==}
     peerDependencies:
-      react: ^19.2.6
+      react: ^19.2.7
 
   '@emotion/utils@1.4.2':
     resolution: {integrity: sha512-3vLclRofFziIa3J2wDh9jjbkUz9qk5Vi3IZ/FSTKViB0k+ef0fPV7dYrUIugbgupYDx7v9ud/SjrtEP8Y4xLoA==}
@@ -1081,7 +1078,7 @@ packages:
     peerDependencies:
       '@types/react': '>=18'
       highcharts: '>=12.0.0'
-      react: ^19.2.6
+      react: ^19.2.7
       react-dom: '>=18'
     peerDependenciesMeta:
       '@types/react':
@@ -1150,7 +1147,7 @@ packages:
     resolution: {integrity: sha512-f++rKLQgUVYDAtECQ6fn/is15GkEH9+nZPM3MS0RcxVqoTfawHvDlSCH7JbMhAM6uJ32v3eXLvLmLvjGu7PTQw==}
     peerDependencies:
       '@types/react': '>=16'
-      react: ^19.2.6
+      react: ^19.2.7
 
   '@mdx-js/rollup@3.1.1':
     resolution: {integrity: sha512-v8satFmBB+DqDzYohnm1u2JOvxx6Hl3pUvqzJvfs2Zk/ngZ1aRUhsWpXvwPkNeGN9c2NCm/38H29ZqXQUjf8dw==}
@@ -1166,7 +1163,7 @@ packages:
     peerDependencies:
       '@mui/material': ^9.1.1
       '@types/react': ^17.0.0 || ^18.0.0 || ^19.0.0
-      react: ^19.2.6
+      react: ^19.2.7
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1180,7 +1177,7 @@ packages:
       '@mui/material': ^9.0.1
       '@mui/material-pigment-css': ^9.0.1
       '@types/react': ^17.0.0 || ^18.0.0 || ^19.0.0
-      react: ^19.2.6
+      react: ^19.2.7
       react-dom: ^17.0.0 || ^18.0.0 || ^19.0.0
     peerDependenciesMeta:
       '@emotion/react':
@@ -1200,7 +1197,7 @@ packages:
       '@emotion/styled': 11.14.0
       '@mui/material-pigment-css': ^9.1.1
       '@types/react': ^17.0.0 || ^18.0.0 || ^19.0.0
-      react: ^19.2.6
+      react: ^19.2.7
       react-dom: ^17.0.0 || ^18.0.0 || ^19.0.0
     peerDependenciesMeta:
       '@emotion/react':
@@ -1217,7 +1214,7 @@ packages:
     engines: {node: '>=14.0.0'}
     peerDependencies:
       '@types/react': ^17.0.0 || ^18.0.0 || ^19.0.0
-      react: ^19.2.6
+      react: ^19.2.7
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1228,7 +1225,7 @@ packages:
     peerDependencies:
       '@emotion/react': 11.14.0
       '@emotion/styled': 11.14.0
-      react: ^19.2.6
+      react: ^19.2.7
     peerDependenciesMeta:
       '@emotion/react':
         optional: true
@@ -1242,7 +1239,7 @@ packages:
       '@emotion/react': 11.14.0
       '@emotion/styled': 11.14.0
       '@types/react': ^17.0.0 || ^18.0.0 || ^19.0.0
-      react: ^19.2.6
+      react: ^19.2.7
     peerDependenciesMeta:
       '@emotion/react':
         optional: true
@@ -1264,7 +1261,7 @@ packages:
     engines: {node: '>=14.0.0'}
     peerDependencies:
       '@types/react': ^17.0.0 || ^18.0.0 || ^19.0.0
-      react: ^19.2.6
+      react: ^19.2.7
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1273,7 +1270,7 @@ packages:
     resolution: {integrity: sha512-lBh+4P2CRyspoFbBwCemTFIYmAAX8esznDsYYDGgV0+Id9z7Xi5pRZUAFY33XodYgTnMPiN4TJyfd8bfJbPNzg==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
-      react: ^19.2.6
+      react: ^19.2.7
 
   '@mui/x-tree-view@9.6.0':
     resolution: {integrity: sha512-CZ7G2iuOiKMRZjaBd5wGiRhBZYdAmycguWkkSlOqrkqs7r79zbQYBZh97sZWYBesd+a4rAAJI23oDV3mf2IRYg==}
@@ -1283,7 +1280,7 @@ packages:
       '@emotion/styled': 11.14.0
       '@mui/material': ^7.3.0 || ^9.0.0
       '@mui/system': ^7.3.0 || ^9.0.0
-      react: ^19.2.6
+      react: ^19.2.7
       react-dom: ^17.0.0 || ^18.0.0 || ^19.0.0
     peerDependenciesMeta:
       '@emotion/react':
@@ -1400,7 +1397,7 @@ packages:
   '@reduxjs/toolkit@2.12.0':
     resolution: {integrity: sha512-KiT+RzZbp6mQET+Mg+h2c97+9j1sNflUxQkIHI7Yuzf6Peu+OYpmkn6nbHWmLLWj+1ZODUJFwGZ7gx3L9R9EOw==}
     peerDependencies:
-      react: ^19.2.6
+      react: ^19.2.7
       react-redux: ^7.2.1 || ^8.1.3 || ^9.0.0
     peerDependenciesMeta:
       react:
@@ -1689,7 +1686,7 @@ packages:
       '@emotion/react': 11.14.0
       '@emotion/styled': 11.14.0
       '@mui/material': ^9.0.0
-      react: ^19.2.6
+      react: ^19.2.7
       react-dom: ^19.0.0
 
   '@sarakusha/tssrp6a@3.0.3':
@@ -3311,7 +3308,7 @@ packages:
   formik@2.4.9:
     resolution: {integrity: sha512-5nI94BMnlFDdQRBY4Sz39WkhxajZJ57Fzs8wVbtsQlm5ScKIR1QLYqv/ultBnobObtlUyxpxoLodpixrsf36Og==}
     peerDependencies:
-      react: ^19.2.6
+      react: ^19.2.7
 
   forwarded@0.2.0:
     resolution: {integrity: sha512-buRG0fpBtRHSTCOASe6hD258tEubFoRLb4ZNA6NxMVHNw2gOcwHo9wyablzMzOA5z9xA9L1KNjk/Nt6MT9aYow==}
@@ -3695,7 +3692,7 @@ packages:
     resolution: {integrity: sha512-0t4cvbIYiKzaQUkB+oMKUCOgygFa2f1JJuCkYpofeHkKDukybxk3mEADitC8moa20BgnNnlz10+y67SkD3pq/A==}
     peerDependencies:
       prop-types: ^15.7.2
-      react: ^19.2.6
+      react: ^19.2.7
 
   is-alphabetical@2.0.1:
     resolution: {integrity: sha512-FWyyY60MeTNyeSRpkM2Iry0G9hpr7/9kD40mD/cGQEuilcZYS4okz8SN2Q6rLCJ8gbCt6fN+rC+6tMGS99LaxQ==}
@@ -4155,7 +4152,7 @@ packages:
     peerDependencies:
       '@mui/material': '>=5 <10'
       '@types/react': ^16.8.0 || ^17 || ^18 || ^19
-      react: ^19.2.6
+      react: ^19.2.7
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -4511,7 +4508,7 @@ packages:
     resolution: {integrity: sha512-0R+/arLYbK5Hh7mEfR2adt0tyXJcCC9KkA2hc56FeWik2QN6Bm/S4uW+BjzDARsJth5u06nTjelSw/VSnB1YEA==}
     engines: {node: '>=12.0.0', npm: '>=6.0.0'}
     peerDependencies:
-      react: ^19.2.6
+      react: ^19.2.7
       react-dom: ^17.0.0 || ^18.0.0 || ^19.0.0
 
   npm-run-all@4.1.5:
@@ -4867,7 +4864,7 @@ packages:
       '@types/hoist-non-react-statics': '>= 3.3.1'
       '@types/node': '>= 12'
       '@types/react': '>= 16'
-      react: ^19.2.6
+      react: ^19.2.7
     peerDependenciesMeta:
       '@types/hoist-non-react-statics':
         optional: true
@@ -4879,12 +4876,12 @@ packages:
   react-dom@19.2.7:
     resolution: {integrity: sha512-t0BRVXvbiE/o20Hfw669rLbMCDWtYZLvmJigy2f0MxsXF+71pxhR3xOkspmsO8h3ZlNzyibAmtCa3l4lYKk6gQ==}
     peerDependencies:
-      react: ^19.2.6
+      react: ^19.2.7
 
   react-error-boundary@6.1.2:
     resolution: {integrity: sha512-3DpCr5HVdZ0caUjYE/kIHBEJN0mNP3ZCgf16c48uJ5TbWjorKVp+YG8W3XqlJ7vJAVNw6wNIImyPXmFydwmyng==}
     peerDependencies:
-      react: ^19.2.6
+      react: ^19.2.7
 
   react-fast-compare@2.0.4:
     resolution: {integrity: sha512-suNP+J1VU1MWFKcyt7RtjiSWUjvidmQSlqu+eHslq+342xCbGTYmC0mEhPCOHxlW0CywylOC1u2DFAT+bv4dBw==}
@@ -4893,7 +4890,7 @@ packages:
     resolution: {integrity: sha512-vLNfzcCz62Yzx/GRGh5tiCph9Gbh2cZu+Tz8OiO5it2eNuuhpA0DWhhSlOtVtSJ80+Bx+vFK5De8eQ9AmbkXzA==}
     engines: {npm: '>=4.0.0'}
     peerDependencies:
-      react: ^19.2.6
+      react: ^19.2.7
 
   react-is@16.13.1:
     resolution: {integrity: sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==}
@@ -4905,7 +4902,7 @@ packages:
     resolution: {integrity: sha512-KQopgqFo/p/fgmAs5qz6p5RWaNAzq40WAu7fJIXnQpYxFPbJYtsJPWvGeF2rOBaY/kEuV77AVsX8TsQzKm+A/g==}
     peerDependencies:
       '@types/react': ^18.2.25 || ^19
-      react: ^19.2.6
+      react: ^19.2.7
       redux: ^5.0.0
     peerDependenciesMeta:
       '@types/react':
@@ -4916,17 +4913,17 @@ packages:
   react-resize-detector@12.3.0:
     resolution: {integrity: sha512-mIDOVrTHKGnKe6qEUWi8dFdfHM5CPyTOpqoHctdMQf89Ljm/0qqDIzkP3vTRZZJi9/raaMiRxDEOqO4you5x+A==}
     peerDependencies:
-      react: ^19.2.6
+      react: ^19.2.7
 
   react-scroll-to-top@3.1.0:
     resolution: {integrity: sha512-hD3bJQgCblywG2gcI515BcxP43MZkBidsYEVt9ak5pu1UOoQDJzIJp89zwccbpFuqeHZ29Lxs00T9DSxQr4cmw==}
     peerDependencies:
-      react: ^19.2.6
+      react: ^19.2.7
 
   react-transition-group@4.4.5:
     resolution: {integrity: sha512-pZcd1MCJoiKiBR2NRxeCRg13uCXbydPnmB4EOeRrY7480qNWO8IIgQG6zlDkm6uRMsURXPuKq0GWtiM59a5Q6g==}
     peerDependencies:
-      react: ^19.2.6
+      react: ^19.2.7
       react-dom: '>=16.6.0'
 
   react@19.2.7:
@@ -5725,14 +5722,10 @@ packages:
     resolution: {integrity: sha512-UuFgrlglgDn5ll6d5l7kl3nDb2Yx43qLUGcDq+7UNLZLtbNug0HZBb2Xodhgx2JZB1LqvU+dOGqLEeYUeZqsHg==}
     engines: {node: '>=12.22.0 <13.0 || >=14.17.0'}
 
-  usb@2.18.0:
-    resolution: {integrity: sha512-klAJPUTaSxRvTgrIh7om6UTrgRxdzioD+rJc/MaoiN8+OGdqRzai39tR00asnoCesPNikItWB9zBZoo0pJsWaA==}
-    engines: {node: '>=12.22.0 <13.0 || >=14.17.0'}
-
   use-sync-external-store@1.6.0:
     resolution: {integrity: sha512-Pp6GSwGP/NrPIrxVFAIkOQeyw8lFenOHijQWkUTrDvrF4ALqylP2C/KCkeS9dpUM3KvYRQhna5vt7IL95+ZQ9w==}
     peerDependencies:
-      react: ^19.2.6
+      react: ^19.2.7
 
   utf-8-validate@6.0.6:
     resolution: {integrity: sha512-q3l3P9UtEEiAHcsgsqTgf9PPjctrDWoIXW3NpOHFdRDbLvu4DLIcxHangJ4RLrWkBcKjmcs/6NkerI8T/rE4LA==}
@@ -11968,12 +11961,6 @@ snapshots:
       punycode: 2.3.1
 
   usb@2.17.0:
-    dependencies:
-      '@types/w3c-web-usb': 1.0.14
-      node-addon-api: 8.8.0
-      node-gyp-build: 4.8.4
-
-  usb@2.18.0:
     dependencies:
       '@types/w3c-web-usb': 1.0.14
       node-addon-api: 8.8.0

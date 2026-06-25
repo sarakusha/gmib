@@ -19,7 +19,7 @@ const isDevRuntime = import.meta.env.DEV && !app.isPackaged;
 
 let isQuitting = false;
 
-app.once('quit', () => {
+app.once('before-quit', () => {
   isQuitting = true;
 });
 
@@ -103,7 +103,11 @@ export const createAppWindow = (
   });
   browserWindow.webContents.on('render-process-gone', (event, details) => {
     debug(`<<<<CRASH>>>>: renderer process gone: ${details.reason} (${details.exitCode})`);
-    if (import.meta.env.PROD && ![/* 'clean-exit', */ 'killed'].includes(details.reason)) {
+    if (
+      import.meta.env.PROD &&
+      !isQuitting &&
+      ![/* 'clean-exit', */ 'killed'].includes(details.reason)
+    ) {
       debug('relaunch...');
       relaunch();
     }
