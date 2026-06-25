@@ -1,4 +1,4 @@
-import { app, crashReporter, powerSaveBlocker } from 'electron';
+import { app, crashReporter, globalShortcut, powerSaveBlocker } from 'electron';
 
 // import * as Sentry from '@sentry/electron/main';
 import debugFactory from 'debug';
@@ -19,7 +19,7 @@ import './rtc';
 import './hid';
 // import './channels';
 import { createMainWindow } from './mainWindow';
-import { installWindowOpenHandler } from './openHandler';
+import { installWindowOpenHandler, toggleOutputWindowsVisibility } from './openHandler';
 import { launchPlayers } from './playerWindow';
 
 import { fixDefault } from '/@common/helpers';
@@ -66,6 +66,10 @@ app.on('window-all-closed', () => {
   // }
 });
 
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll();
+});
+
 /**
  * @see https://www.electronjs.org/docs/v14-x-y/api/app#event-activate-macos Event: 'activate'
  */
@@ -99,6 +103,9 @@ app
   .then(main => {
     installWindowOpenHandler(main.webContents);
     void launchPlayers();
+    if (!globalShortcut.register('CommandOrControl+Alt+H', toggleOutputWindowsVisibility)) {
+      debug('Failed to register output window hotkey CommandOrControl+Alt+H');
+    }
   })
   .then(() => {
     if (!powerSaveBlocker.isStarted(suspendBlocker)) {

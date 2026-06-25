@@ -1,4 +1,5 @@
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import TvOffIcon from '@mui/icons-material/TvOff';
 import {
   // Accordion,
   AccordionDetails,
@@ -20,8 +21,9 @@ import FormikTextField from '../../common/FormikTextField';
 import SubmitListener from '../../common/SubmitListener';
 import { useDisplays } from '../../common/displays';
 import { updateScreen, useScreen } from '../api/screens';
-import { useDispatch } from '../store';
+import { useDispatch, useSelector } from '../store';
 import { setInvalidState } from '../store/currentSlice';
+import { selectOutputHidden } from '../store/selectors';
 
 import { DefaultDisplays } from '/@common/video';
 import { reAddress } from '/@common/config';
@@ -116,6 +118,7 @@ const ScreenComponent: React.FC<Props> = ({
   single = true,
 }) => {
   const dispatch = useDispatch();
+  const outputHidden = useSelector(selectOutputHidden);
   const { screen } = useScreen(scrId);
   const { displays = [] } = useDisplays();
   const addAddress = useCallback(
@@ -172,6 +175,7 @@ const ScreenComponent: React.FC<Props> = ({
     if (isActive) void window.mediaSource.play(scrId);
     else window.mediaSource.close(scrId);
   }, [scrId, isActive]);
+  console.log({ outputHidden, test });
   return !screen ? null : (
     <Box
       sx={{
@@ -450,6 +454,25 @@ const ScreenComponent: React.FC<Props> = ({
             visibility: screen.test ? 'visible' : 'hidden',
           }}
         />
+        {screen.test && outputHidden && (
+          <TvOffIcon
+            aria-label="Вывод отключен"
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              m: 'auto',
+              width: '34%',
+              height: '34%',
+              minWidth: 96,
+              minHeight: 96,
+              maxWidth: 220,
+              maxHeight: 220,
+              color: 'rgba(255,255,255,0.62)',
+              filter: 'drop-shadow(0 4px 18px rgba(0,0,0,0.65))',
+              pointerEvents: 'none',
+            }}
+          />
+        )}
       </Paper>
     </Box>
   );

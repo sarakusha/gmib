@@ -10,7 +10,7 @@ import type { AnswerMessage, CandidateMessage, RequestMessage, RtcMessage } from
 import Deferred from '/@common/Deferred';
 import expandTypes from '/@common/expandTypes';
 import { host, port, sourceId } from '/@common/remote';
-import { setFocused } from '/@player/store/currentSlice';
+import { setFocused, setOutputHidden } from '/@player/store/currentSlice';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:remote`);
 
@@ -110,6 +110,9 @@ ws.onopen = () => {
             await pc.setLocalDescription(answer.desc);
             ws.send(JSON.stringify(answer));
           }
+          break;
+        case 'outputVisibility':
+          ipcDispatch(setOutputHidden(msg.hidden));
           break;
         default:
           // console.warn(`Unknown msg: ${msg}`);

@@ -94,15 +94,11 @@ const createSourceVideo = (uri: string): HTMLVideoElement => {
   const captured = capturedStream;
   debug(`create capture stream #${generation}: ${captured.id}`);
   captured.addEventListener('addtrack', event => {
-    debug(
-      `capture stream #${generation} add ${event.track.kind} track: ${event.track.id}`,
-    );
+    debug(`capture stream #${generation} add ${event.track.kind} track: ${event.track.id}`);
     if (capturedStream === captured) refreshStreamTracks();
   });
   captured.addEventListener('removetrack', event => {
-    debug(
-      `capture stream #${generation} remove ${event.track.kind} track: ${event.track.id}`,
-    );
+    debug(`capture stream #${generation} remove ${event.track.kind} track: ${event.track.id}`);
     if (capturedStream === captured) refreshStreamTracks();
   });
   return video;
@@ -520,7 +516,9 @@ ipcRenderer.on('stop', () => {
   }
   blankConsumers();
   ipcDispatch(
-    setDuration(activeEngine === 'decoder' ? (currentSource?.duration ?? 0) : (sourceVideo?.duration ?? 0)),
+    setDuration(
+      activeEngine === 'decoder' ? (currentSource?.duration ?? 0) : (sourceVideo?.duration ?? 0),
+    ),
   );
   ipcDispatch(setPosition(0));
 });
@@ -568,6 +566,7 @@ const addTrackSender = (pc: RTCPeerConnection, kind: TrackKind): RTCRtpSender =>
 
 ipcRenderer.on('socket', (_, { id, ...msg }: WithWebSocketKey<RtcMessage>) => {
   void (async () => {
+    if (msg.event === 'outputVisibility') return;
     if (msg.sourceId !== sourceId) return;
     switch (msg.event) {
       case 'request':

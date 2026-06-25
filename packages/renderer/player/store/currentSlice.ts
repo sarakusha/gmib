@@ -17,6 +17,7 @@ export type CurrentState = MediaPositionState & {
   search: string;
   settingsNode: string;
   focused: boolean;
+  outputHidden: boolean;
 };
 
 export const tabs: Record<TabNames, string> = {
@@ -36,6 +37,7 @@ const initialState: CurrentState = {
   search: '',
   settingsNode: '',
   focused: true,
+  outputHidden: false,
 };
 
 const currentSlice = createSlice({
@@ -86,6 +88,9 @@ const currentSlice = createSlice({
     setFocused(state, { payload: focused }: PayloadAction<boolean>) {
       state.focused = focused;
     },
+    setOutputHidden(state, { payload: outputHidden }: PayloadAction<boolean>) {
+      state.outputHidden = outputHidden;
+    },
   },
 });
 
@@ -104,6 +109,7 @@ export const {
   setCurrentPlaylistItem,
   setDuration,
   setFocused,
+  setOutputHidden,
 } = currentSlice.actions;
 
 export default currentSlice.reducer;

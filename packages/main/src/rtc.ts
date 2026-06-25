@@ -13,6 +13,7 @@ import { openPlayer } from './playerWindow';
 import { findPlayerWindow } from './windowStore';
 import master from './MasterBrowser';
 import { getMainWindow } from './mainWindow';
+import { isOutputHidden } from './outputVisibility';
 
 const sockets = new Map<string, WebSocket>();
 
@@ -55,12 +56,13 @@ wss.on('connection', (ws: AliveWebSocket, req) => {
     return;
   }
   sockets.set(id, ws);
+  ws.send(JSON.stringify({ event: 'outputVisibility', hidden: isOutputHidden() }));
   ws.on('message', (data, isBinary) => {
     void (async () => {
       if (!isBinary) {
         const msg = JSON.parse(rawDataToString(data)) as RtcMessage;
         // console.log({ message: msg });
-        if (['candidate', 'answer', 'request'].includes(msg.event)) {
+        if (msg.event === 'candidate' || msg.event === 'answer' || msg.event === 'request') {
           const win =
             msg.sourceType === 'player'
               ? (findPlayerWindow(msg.sourceId) ??

@@ -12,6 +12,9 @@ import type {
   RtcMessage,
   WithWebSocketKey,
 } from '/@common/rtc';
+import { setOutputHidden } from '/@renderer/store/currentSlice';
+
+import ipcDispatch from '../common/ipcDispatch';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:mediaSource`);
 
@@ -182,6 +185,9 @@ const playRemote = debounce((screenId: number) => {
             ws.send(JSON.stringify(answer));
           }
           break;
+        case 'outputVisibility':
+          ipcDispatch(setOutputHidden(msg.hidden));
+          break;
         default:
           // console.warn(`Unknown msg: ${msg}`);
           break;
@@ -200,6 +206,7 @@ if (!isRemoteSession) {
     void (async () => {
       // console.log({ socket: msg });
       // if (msg.sourceId !== sourceId) return;
+      if (msg.event === 'outputVisibility') return;
       const stream = await createStream(await getMediaSourceId(msg.sourceId));
       if (!stream) return;
       switch (msg.event) {

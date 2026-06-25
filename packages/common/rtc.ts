@@ -26,7 +26,17 @@ export type RequestMessage = {
   sourceType: SourceType;
 };
 
-export type RtcMessage = CandidateMessage | OfferMessage | AnswerMessage | RequestMessage;
+export type OutputVisibilityMessage = {
+  event: 'outputVisibility';
+  hidden: boolean;
+};
+
+export type RtcMessage =
+  | CandidateMessage
+  | OfferMessage
+  | AnswerMessage
+  | RequestMessage
+  | OutputVisibilityMessage;
 
 export type WithWebSocketKey<T extends RtcMessage> = T & {
   id: string;

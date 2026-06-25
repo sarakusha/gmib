@@ -1,3 +1,4 @@
+import TvOffIcon from '@mui/icons-material/TvOff';
 import { Box } from '@mui/material';
 import React from 'react';
 
@@ -5,7 +6,7 @@ import { selectMediaById, useGetMediaQuery } from '../api/media';
 import { usePlayer } from '../api/player';
 import { useGetPlaylistById } from '../api/playlists';
 import { useSelector } from '../store';
-import { selectCurrent, selectPosition } from '../store/selectors';
+import { selectCurrent, selectOutputHidden, selectPosition } from '../store/selectors';
 
 import type { MediaInfo } from '/@common/mediaInfo';
 
@@ -22,6 +23,7 @@ const Player: React.FC<Props> = ({ className, playerId = 0 }) => {
   const { data: mediaData } = useGetMediaQuery();
   const { duration, playbackState } = useSelector(selectCurrent);
   const position = useSelector(selectPosition);
+  const outputHidden = useSelector(selectOutputHidden);
   const { width = 320, height = 240 } = player ?? {};
   let current: MediaInfo | undefined;
   if (player && playlist?.items && mediaData) {
@@ -38,7 +40,7 @@ const Player: React.FC<Props> = ({ className, playerId = 0 }) => {
         sx={{
           width: 1,
           aspectRatio: `${width}/${height}`,
-          // position: 'relative',
+          position: 'relative',
           overflow: 'hidden',
           maxHeight: '50vh',
           mx: 'auto',
@@ -62,6 +64,26 @@ const Player: React.FC<Props> = ({ className, playerId = 0 }) => {
         >
           {current?.filename}
         </video>
+        {outputHidden && (
+          <TvOffIcon
+            aria-label="Вывод отключен"
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              m: 'auto',
+              width: '34%',
+              height: '34%',
+              minWidth: 96,
+              minHeight: 96,
+              maxWidth: 220,
+              maxHeight: 220,
+              color: 'rgba(255,255,255,0.62)',
+              filter: 'drop-shadow(0 4px 18px rgba(0,0,0,0.65))',
+              pointerEvents: 'none',
+              zIndex: 1,
+            }}
+          />
+        )}
         <ControlBar
           className="control-bar"
           duration={duration}
@@ -75,6 +97,7 @@ const Player: React.FC<Props> = ({ className, playerId = 0 }) => {
             left: 0,
             opacity: playbackState !== 'playing' || pip ? 1 : 0,
             transition: 'opacity 0.4s',
+            zIndex: 2,
           }}
         />
         {/*       <Backdrop

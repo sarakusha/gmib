@@ -273,6 +273,12 @@ class TabbedWindow {
     return this.visibleTabs().map(({ id, title }) => ({ id, title }));
   }
 
+  broadcast(event: string, ...args: unknown[]) {
+    for (const tab of this.tabs) {
+      if (!tab.destroyed) tab.view.webContents.send(event, ...args);
+    }
+  }
+
   private activateByOffset(offset: number) {
     const visibleTabs = this.visibleTabs();
     if (visibleTabs.length === 0) return;
@@ -603,3 +609,6 @@ export const onTabbedWindowChange = (listener: () => void): (() => void) => {
   listeners.add(listener);
   return () => listeners.delete(listener);
 };
+
+export const broadcastToTabbedWindows = (event: string, ...args: unknown[]): void =>
+  manager?.broadcast(event, ...args);

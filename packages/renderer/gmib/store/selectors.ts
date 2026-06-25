@@ -69,6 +69,7 @@ export const selectAuthRequired = (state: RootState) => selectCurrent(state).aut
 export const selectBroadcastDetected = (state: RootState) => selectCurrent(state).broadcastDetected;
 export const selectInvalidState = (state: RootState) => selectCurrent(state).invalidState;
 export const selectFocused = (state: RootState) => selectCurrent(state).focused;
+export const selectOutputHidden = (state: RootState): boolean => selectCurrent(state).outputHidden;
 export const selectTabChangedTimestamp = (state: RootState) =>
   selectCurrent(state).tabChangedTimestamp;
 

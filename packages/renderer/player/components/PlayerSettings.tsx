@@ -111,7 +111,7 @@ const PlayerSettings: React.FC<{ id?: number }> = ({ id }) => {
                 onChange={handleChange}
                 variant="standard"
               >
-                <MenuItem value="decoder">WebCodecs decoder (video only)</MenuItem>
+                <MenuItem value="decoder">WebCodecs decoder (video only, recommended)</MenuItem>
                 <MenuItem value="capture">HTMLVideo captureStream</MenuItem>
               </Select>
             </FormControl>

@@ -1,4 +1,5 @@
-import type { BrowserWindow, BrowserWindowConstructorOptions, WebContents } from 'electron';
+import type { BrowserWindowConstructorOptions, WebContents } from 'electron';
+import { app, BrowserWindow, ipcMain } from 'electron';
 
 import type { Display as DisplayType } from '@nibus/core';
 import debugFactory from 'debug';
@@ -7,6 +8,10 @@ import find from 'lodash/find';
 import { DefaultDisplays } from '/@common/video';
 
 import getAllDisplays from './getAllDisplays';
+import { isOutputHidden, setOutputHidden } from './outputVisibility';
+import { wss } from './server';
+import { findManagedWindow, getAllScreenParams } from './windowStore';
+import { broadcastToTabbedWindows } from './tabbedWindow';
 
 type Handler = Parameters<WebContents['setWindowOpenHandler']>[0];
 type AlwaysOnTopLevel = Parameters<BrowserWindow['setAlwaysOnTop']>[1];
@@ -38,6 +43,28 @@ const isVideoOutputWindowUrl = (url: string) => {
   } catch {
     return false;
   }
+};
+
+const isVideoOutputWindow = (window: BrowserWindow): boolean => {
+  if (window.isDestroyed()) return false;
+  return isVideoOutputWindowUrl(window.webContents.getURL());
+};
+
+const getOutputWindows = (): BrowserWindow[] => {
+  const videoOutputs = BrowserWindow.getAllWindows().filter(isVideoOutputWindow);
+  const screenOutputs = getAllScreenParams()
+    .map(({ id }) => findManagedWindow(id))
+    .filter((window): window is BrowserWindow => window instanceof BrowserWindow)
+    .filter(window => !window.isDestroyed());
+  return [...new Set([...videoOutputs, ...screenOutputs])];
+};
+
+const broadcastOutputVisibility = (hidden: boolean): void => {
+  const message = JSON.stringify({ event: 'outputVisibility', hidden });
+  wss.clients.forEach(ws => {
+    if (ws.readyState === ws.OPEN) ws.send(message);
+  });
+  broadcastToTabbedWindows('outputVisibility', hidden);
 };
 
 const hideCursorCSS = `
@@ -76,13 +103,35 @@ export const configureOutputWindow = (window: BrowserWindow, url: string): void 
       });
     });
   }
-  if (!window.isVisible()) window.showInactive();
+  if (isOutputHidden()) window.hide();
+  else if (!window.isVisible()) window.showInactive();
   if (!shouldKeepOnTop(url)) return;
 
   keepOnTop();
   window.on('show', keepOnTop);
   window.on('restore', keepOnTop);
 };
+
+export const toggleOutputWindowsVisibility = (): boolean => {
+  const outputs = getOutputWindows();
+  if (outputs.length === 0) return false;
+
+  const visible = outputs.filter(window => window.isVisible());
+  if (visible.length > 0) {
+    visible.forEach(window => window.hide());
+    broadcastOutputVisibility(setOutputHidden(true));
+    return true;
+  }
+
+  outputs.forEach(window => {
+    window.show();
+  });
+  outputs.at(-1)?.focus();
+  broadcastOutputVisibility(setOutputHidden(false));
+  return true;
+};
+
+export const isOutputWindowsHidden = isOutputHidden;
 
 export const installWindowOpenHandler = (contents: WebContents): void => {
   contents.setWindowOpenHandler(openHandler);
@@ -171,3 +220,7 @@ const openHandler: Handler = ({ url }) => {
 };
 
 export default openHandler;
+
+void app.whenReady().then(() => {
+  ipcMain.handle('getOutputVisibility', isOutputWindowsHidden);
+});

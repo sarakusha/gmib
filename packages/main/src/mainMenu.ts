@@ -33,6 +33,7 @@ import {
   onTabbedWindowChange,
   toggleActiveTabbedDevTools,
 } from './tabbedWindow';
+import { toggleOutputWindowsVisibility } from './openHandler';
 
 import type { GmibWindowParams, WindowParams } from '/@common/WindowParams';
 import { isGmib, isPlayer } from '/@common/WindowParams';
@@ -470,6 +471,13 @@ const template = async (params?: WindowParams): Promise<MenuItemConstructorOptio
           label: 'Инструменты разработчика',
           accelerator: process.platform === 'darwin' ? 'Alt+Command+I' : 'Ctrl+Shift+I',
           click: toggleFocusedDevTools,
+        },
+        {
+          label: 'Показать или скрыть окно вывода',
+          accelerator: 'CommandOrControl+Alt+H',
+          click: () => {
+            toggleOutputWindowsVisibility();
+          },
         },
         {
           type: 'separator',

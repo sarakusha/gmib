@@ -22,7 +22,7 @@ import './hid';
 import expandTypes from '/@common/expandTypes';
 import { hashCode } from '/@common/helpers';
 import type { GmibWindowParams } from '/@common/WindowParams';
-import { setFocused } from '/@renderer/store/currentSlice';
+import { setFocused, setOutputHidden } from '/@renderer/store/currentSlice';
 
 /**
  * The "Main World" is the JavaScript context that your main renderer code runs in.
@@ -106,6 +106,17 @@ if (document.readyState === 'loading') {
 ipcRenderer.on('focus', (_, focused: boolean) => {
   ipcDispatch(setFocused(focused));
 });
+
+ipcRenderer.on('outputVisibility', (_, hidden: boolean) => {
+  ipcDispatch(setOutputHidden(hidden));
+});
+
+ipcRenderer
+  .invoke('getOutputVisibility')
+  .then(hidden => {
+    ipcDispatch(setOutputHidden(Boolean(hidden)));
+  })
+  .catch(() => undefined);
 
 // contextBridge.exposeInMainWorld('license', () =>
 //   gmibParams.then(({ plan, renew, key }) => ({ plan, renew, key })),

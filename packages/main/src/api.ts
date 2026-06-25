@@ -49,6 +49,7 @@ import localConfig from './localConfig';
 import machineId from './machineId';
 import updateMenu from './mainMenu';
 import { createTestWindow } from './mainWindow';
+import { isOutputWindowsHidden } from './openHandler';
 import {
   deleteMedia,
   getAllMedia,
@@ -345,7 +346,8 @@ const updateTest = async (scr: Screen, force = false) => {
   if (needReload && url) {
     void testWindow.loadURL(url).then(() => testWindow.webContents.insertCSS(hideCursorCSS));
   }
-  testWindow.show();
+  if (isOutputWindowsHidden()) testWindow.hide();
+  else testWindow.show();
   // debug(`test: ${url}`);
 };
 
