@@ -142,14 +142,16 @@ export default class VideoSource {
       }
       if (typeof data.duration === 'number') this.#duration = data.duration;
       if (data.err) {
-        debug(`error: ${data.err.message ?? 'unknown error'}`);
+        debug(`decoder error, ending source: ${data.err.message ?? 'unknown error'}`);
+        // Treat decoder failures as a source boundary so playback can continue
+        // with the next item instead of tearing down the whole stream.
         try {
-          streamController?.error(new Error(data.err.message ?? 'Unknown decoder error'));
+          streamController?.close();
         } catch {
           // Already closed by a concurrent close.
         }
         streamController = undefined;
-        close();
+        close(true);
       }
       onMessage(ev);
     };
