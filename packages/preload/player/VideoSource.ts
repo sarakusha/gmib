@@ -124,12 +124,16 @@ export default class VideoSource {
     } else {
       start(!options.autoplay);
     }
+    const sourceLabel =
+      [options.itemId && `item=${options.itemId}`, options.mediaId && `media=${options.mediaId}`]
+        .filter(Boolean)
+        .join(' ') || uri;
     const onMessage = options.onMessage ? options.onMessage.bind(this) : () => {};
     decoder.onmessage = ev => {
       const payload: unknown = ev.data;
       if (!payload || typeof payload !== 'object') return;
       const data = payload as DecoderMessage;
-      if (data.debug) debug(data.debug);
+      if (data.debug) debug(`${sourceLabel}: ${data.debug}`);
       if (data.frame) {
         if (streamController && !this.#closed && (streamController.desiredSize ?? 0) > 0) {
           streamController.enqueue(data.frame);
@@ -142,7 +146,9 @@ export default class VideoSource {
       }
       if (typeof data.duration === 'number') this.#duration = data.duration;
       if (data.err) {
-        debug(`decoder error, ending source: ${data.err.message ?? 'unknown error'}`);
+        debug(
+          `${sourceLabel}: decoder error, ending source: ${data.err.message ?? 'unknown error'}`,
+        );
         // Treat decoder failures as a source boundary so playback can continue
         // with the next item instead of tearing down the whole stream.
         try {
