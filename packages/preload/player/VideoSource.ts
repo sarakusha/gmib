@@ -22,7 +22,12 @@ type DecoderMessage = {
   frame?: VideoFrame;
   done?: boolean;
   duration?: number;
+  seekStartTime?: number;
+  timer?: number;
   debug?: string;
+  recoverableError?: {
+    message?: string;
+  };
   err?: {
     message?: string;
   };

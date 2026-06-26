@@ -256,6 +256,26 @@ let currentSource: VideoSource | undefined;
 let nextSource: VideoSource | undefined;
 let videoStream: MergeableStream<VideoFrame> | undefined;
 let prevDecoderEnabled: boolean | undefined;
+let decoderPosition = 0;
+
+const DECODER_RECOVERY_SEEK_STEP = 2;
+const DECODER_MAX_RECOVERY_ATTEMPTS = 5;
+const decoderRecoveryAttempts = new Map<string, number>();
+
+type DecoderSourceMessage = {
+  duration?: number;
+  seekStartTime?: number;
+  timer?: number;
+  recoverableError?: {
+    message?: string;
+  };
+};
+
+const getDecoderRecoveryKey = (source: VideoSource): string =>
+  source.options.itemId ?? source.options.mediaId ?? source.uri;
+
+const getDecoderSourcePosition = (source: VideoSource, timer = 0): number =>
+  (source.options.startTime ?? 0) + timer;
 
 const disposeDecoder = (): void => {
   debug('dispose decoder engine');
@@ -265,8 +285,54 @@ const disposeDecoder = (): void => {
   nextSource = undefined;
   videoStream = undefined;
   prevDecoderEnabled = undefined;
+  decoderPosition = 0;
+  decoderRecoveryAttempts.clear();
   blankConsumers();
   replaceStreamTracks(new MediaStream());
+};
+
+const recoverDecoderSource = (source: VideoSource, reason?: string): void => {
+  if (source !== currentSource || !videoStream || source.closed) return;
+  const key = getDecoderRecoveryKey(source);
+  const attempts = (decoderRecoveryAttempts.get(key) ?? 0) + 1;
+  decoderRecoveryAttempts.set(key, attempts);
+  if (attempts > DECODER_MAX_RECOVERY_ATTEMPTS) {
+    debug(
+      `decoder recovery limit reached, ending source: item=${source.options.itemId ?? '<none>'} media=${source.options.mediaId ?? '<none>'} reason=${reason ?? 'unknown error'}`,
+    );
+    return;
+  }
+
+  const duration = source.duration || undefined;
+  const recoveryPosition = Math.min(
+    duration ? Math.max(0, duration - 0.1) : Number.POSITIVE_INFINITY,
+    Math.max(decoderPosition, source.options.startTime ?? 0) + DECODER_RECOVERY_SEEK_STEP,
+  );
+  if (!Number.isFinite(recoveryPosition)) return;
+  debug(
+    `recover decoder source after error, seeking to ${recoveryPosition}s (attempt ${attempts}/${DECODER_MAX_RECOVERY_ATTEMPTS}): item=${source.options.itemId ?? '<none>'} media=${source.options.mediaId ?? '<none>'} reason=${reason ?? 'unknown error'}`,
+  );
+  seekDecoderSource(recoveryPosition, 'recover');
+};
+
+const handleDecoderSourceMessage = (source: VideoSource, data: DecoderSourceMessage): void => {
+  if (typeof data.duration === 'number') ipcDispatch(setDuration(data.duration));
+  if (typeof data.seekStartTime === 'number') {
+    source.options.startTime = data.seekStartTime;
+    if (source === currentSource) {
+      decoderPosition = data.seekStartTime;
+      ipcDispatch(setPosition(decoderPosition));
+    }
+  }
+  if (typeof data.timer === 'number' && source === currentSource) {
+    decoderPosition = getDecoderSourcePosition(source, data.timer);
+    ipcDispatch(
+      setPosition(source.duration ? Math.min(source.duration, decoderPosition) : decoderPosition),
+    );
+  }
+  if (data.recoverableError && source === currentSource) {
+    recoverDecoderSource(source, data.recoverableError.message);
+  }
 };
 
 const playNextDecoderSource = () => {
@@ -281,6 +347,8 @@ const playNextDecoderSource = () => {
     if (playbackState === 'playing') source.play();
     currentSource = source;
     nextSource = undefined;
+    decoderPosition = source.options.startTime ?? 0;
+    ipcDispatch(setPosition(decoderPosition));
     ipcDispatch(setDuration(source.duration));
     void videoStream
       .add(source.readable)
@@ -296,15 +364,16 @@ const playNextDecoderSource = () => {
   }
 };
 
-const seekDecoderSource = (position: number): void => {
+const seekDecoderSource = (position: number, reason: 'user' | 'recover' = 'user'): void => {
   const source = currentSource;
   if (!source || !videoStream || source.closed) return;
   const { itemId, mediaId } = source.options;
+  if (reason === 'user') decoderRecoveryAttempts.delete(getDecoderRecoveryKey(source));
   debug(
-    `seek decoder source to ${position}s: item=${itemId ?? '<none>'} media=${mediaId ?? '<none>'}`,
+    `seek decoder source to ${position}s (${reason}): item=${itemId ?? '<none>'} media=${mediaId ?? '<none>'}`,
   );
   nextSource?.close();
-  nextSource = new VideoSource(source.uri, {
+  const recoverySource = new VideoSource(source.uri, {
     itemId,
     autoplay: playbackState === 'playing',
     startTime: position,
@@ -315,12 +384,12 @@ const seekDecoderSource = (position: number): void => {
     },
     mediaId,
     onMessage: ({ data }: { data: unknown }) => {
-      if (data && typeof data === 'object' && 'duration' in data) {
-        const dur = data.duration;
-        if (typeof dur === 'number') ipcDispatch(setDuration(dur));
+      if (data && typeof data === 'object') {
+        handleDecoderSourceMessage(recoverySource, data as DecoderSourceMessage);
       }
     },
   });
+  nextSource = recoverySource;
   source.close();
   ipcDispatch(setPosition(position));
 };
@@ -386,7 +455,7 @@ const updateDecoder = async (): Promise<void> => {
     if (nextSource && !nextSource.hasStarted) nextSource.close();
     const uri = getMediaUri(nextMedia?.filename);
     if (uri) {
-      nextSource = new VideoSource(uri, {
+      const preloadedSource = new VideoSource(uri, {
         itemId: nextItem.id,
         delay,
         fade: {
@@ -395,7 +464,13 @@ const updateDecoder = async (): Promise<void> => {
           duration: 500,
         },
         mediaId: nextItem.md5,
+        onMessage: ({ data }: { data: unknown }) => {
+          if (data && typeof data === 'object') {
+            handleDecoderSourceMessage(preloadedSource, data as DecoderSourceMessage);
+          }
+        },
       });
+      nextSource = preloadedSource;
     }
   }
   if (!currentSource?.closed && current !== currentSource?.options.itemId) {
@@ -416,9 +491,8 @@ const updateDecoder = async (): Promise<void> => {
         },
         mediaId: currentItem.md5,
         onMessage: ({ data }: { data: unknown }) => {
-          if (data && typeof data === 'object' && 'duration' in data) {
-            const dur = data.duration;
-            if (typeof dur === 'number') ipcDispatch(setDuration(dur));
+          if (data && typeof data === 'object') {
+            handleDecoderSourceMessage(videoSource, data as DecoderSourceMessage);
           }
         },
       });
