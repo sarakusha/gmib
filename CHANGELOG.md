@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.11.2](https://github.com/sarakusha/gmib/compare/v4.11.1...v4.11.2) (2026-06-26)
+
+
+### Bug Fixes
+
+* separate progress updates by playback engine ([9860be0](https://github.com/sarakusha/gmib/commit/9860be05532723ed2e31690337e845700f10b86e))
+
 ## [4.11.1](https://github.com/sarakusha/gmib/compare/v4.11.0...v4.11.1) (2026-06-25)
 
 
