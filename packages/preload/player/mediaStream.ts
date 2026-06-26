@@ -278,7 +278,7 @@ const playNextDecoderSource = () => {
     }
 
     const { itemId, mediaId } = source.options;
-    source.play();
+    if (playbackState === 'playing') source.play();
     currentSource = source;
     nextSource = undefined;
     ipcDispatch(setDuration(source.duration));
@@ -294,6 +294,35 @@ const playNextDecoderSource = () => {
       void update();
     }
   }
+};
+
+const seekDecoderSource = (position: number): void => {
+  const source = currentSource;
+  if (!source || !videoStream || source.closed) return;
+  const { itemId, mediaId } = source.options;
+  debug(
+    `seek decoder source to ${position}s: item=${itemId ?? '<none>'} media=${mediaId ?? '<none>'}`,
+  );
+  nextSource?.close();
+  nextSource = new VideoSource(source.uri, {
+    itemId,
+    autoplay: playbackState === 'playing',
+    startTime: position,
+    fade: {
+      disableIn: true,
+      disableOut: true,
+      duration: 0,
+    },
+    mediaId,
+    onMessage: ({ data }: { data: unknown }) => {
+      if (data && typeof data === 'object' && 'duration' in data) {
+        const dur = data.duration;
+        if (typeof dur === 'number') ipcDispatch(setDuration(dur));
+      }
+    },
+  });
+  source.close();
+  ipcDispatch(setPosition(position));
 };
 
 const initializeDecoderStream = (): void => {
@@ -478,6 +507,19 @@ export const attachStreamToVideo = (video: HTMLVideoElement): void => {
 export const updateSrcObject = (selector: string) => {
   const video = document.querySelector(selector) as HTMLVideoElement;
   if (video) attachStreamToVideo(video);
+};
+
+export const seek = (position: number): void => {
+  if (!Number.isFinite(position)) return;
+  const nextPosition = Math.max(0, position);
+  if (activeEngine === 'capture') {
+    if (!sourceVideo) return;
+    debug(`seek capture source to ${nextPosition}s: ${currentUri ?? '<empty>'}`);
+    sourceVideo.currentTime = Math.min(nextPosition, sourceVideo.duration || nextPosition);
+    ipcDispatch(setPosition(sourceVideo.currentTime));
+    return;
+  }
+  if (activeEngine === 'decoder') seekDecoderSource(nextPosition);
 };
 
 const initialize = async () => {

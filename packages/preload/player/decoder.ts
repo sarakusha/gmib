@@ -30,6 +30,7 @@ onmessage = async (event: MessageEvent<unknown>) => {
     uri?: string;
     fade?: FadeOptions;
     closed?: boolean;
+    startTime?: number;
     play?: boolean;
     pause?: boolean;
     close?: boolean;
@@ -39,7 +40,7 @@ onmessage = async (event: MessageEvent<unknown>) => {
   if ('uri' in data && typeof d.uri === 'string') {
     cancel = false;
     const ebml = new EbmlDecoder();
-    const chunkGenerator = new VideoChunkGenerator();
+    const chunkGenerator = new VideoChunkGenerator({ startTime: d.startTime });
     void chunkGenerator.config
       .then(config => {
         postMessage({ debug: `decoder video config: ${JSON.stringify(config)}` });

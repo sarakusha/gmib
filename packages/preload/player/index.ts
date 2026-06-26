@@ -10,7 +10,7 @@ import log from '../common/initlog';
 import ipcDispatch, { setDispatch } from '../common/ipcDispatch';
 // import '@sentry/electron/preload';
 
-import { updateSrcObject } from './mediaStream';
+import { seek, updateSrcObject } from './mediaStream';
 // import * as nodeCrypto from './nodeCrypto';
 
 import './videoOuts';
@@ -24,7 +24,7 @@ const sourceId = +(search.get('source_id') ?? 1);
 // ipcRenderer.send('register-source-channel', sourceId);
 
 // contextBridge.exposeInMainWorld('nodeCrypto', expandTypes(nodeCrypto));
-contextBridge.exposeInMainWorld('mediaStream', { updateSrcObject });
+contextBridge.exposeInMainWorld('mediaStream', { seek, updateSrcObject });
 contextBridge.exposeInMainWorld('log', log.log.bind(log));
 contextBridge.exposeInMainWorld('setDispatch', setDispatch);
 contextBridge.exposeInMainWorld('identify', expandTypes(identify));

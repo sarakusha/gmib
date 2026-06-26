@@ -2,6 +2,8 @@ import MuiSlider from '@mui/material/Slider';
 import { styled } from '@mui/material/styles';
 import * as React from 'react';
 
+import { useDispatch } from '../../store';
+import { setPosition } from '../../store/currentSlice';
 import { formatTime } from '../../utils';
 
 type Props = {
@@ -33,34 +35,32 @@ const Slider = styled(MuiSlider)({
 });
 
 const ProgressControl: React.FC<Props> = ({ duration, position }) => {
-  // const { video } = useVideoSource();
-  // const [value, setValue] = React.useState<number | null>(null);
-  /*   React.useEffect(() => {
-    const seeked = () => setValue(null);
-    video?.addEventListener('seeked', seeked);
-    return () => {
-      video?.removeEventListener('seeked', seeked);
-    };
-  }, [video]); */
-  // const changeHandler = React.useCallback((event: Event, pos: number | number[]) => {
-  //   setValue(pos as number);
-  // }, []);
-  /*   const commitHandler = React.useCallback(
-    (event: React.SyntheticEvent | Event, pos: number | number[]) => {
-      if (video) video.currentTime = pos as number;
+  const dispatch = useDispatch();
+  const [value, setValue] = React.useState<number | null>(null);
+  const max = Math.max(duration ?? 0, 0.0001);
+  const sliderValue = value ?? Math.min(position ?? 0, max);
+  const changeHandler = React.useCallback((_: Event, pos: number | number[]) => {
+    setValue(Array.isArray(pos) ? pos[0] : pos);
+  }, []);
+  const commitHandler = React.useCallback(
+    (_: React.SyntheticEvent | Event, pos: number | number[]) => {
+      const nextPosition = Array.isArray(pos) ? pos[0] : pos;
+      setValue(null);
+      window.mediaStream.seek?.(nextPosition);
+      dispatch(setPosition(nextPosition));
     },
-    [video],
-  ); */
+    [dispatch],
+  );
   return (
     <Slider
       aria-label="time-indicator"
       size="small"
-      value={/* value ?? */ Math.min(position ?? 0, duration ?? 0)}
+      value={sliderValue}
       min={0}
-      max={Math.max(duration ?? 0, 0.0001)}
-      // step={1}
-      // onChange={changeHandler}
-      // onChangeCommitted={commitHandler}
+      max={max}
+      disabled={!duration}
+      onChange={changeHandler}
+      onChangeCommitted={commitHandler}
       valueLabelDisplay="auto"
       valueLabelFormat={formatTime}
     />
