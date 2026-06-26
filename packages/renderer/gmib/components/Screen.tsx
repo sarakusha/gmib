@@ -175,7 +175,6 @@ const ScreenComponent: React.FC<Props> = ({
     if (isActive) void window.mediaSource.play(scrId);
     else window.mediaSource.close(scrId);
   }, [scrId, isActive]);
-  console.log({ outputHidden, test });
   return !screen ? null : (
     <Box
       sx={{
