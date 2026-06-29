@@ -5,7 +5,7 @@ overrides:
   "@emotion/react": "11.14.0"
   "@emotion/styled": "11.14.0"
   "@emotion/cache": "11.14.0"
-  # "@sarakusha/ebml": "file:.yalc/@sarakusha/ebml"
+  # "@sarakusha/ebml": "link:../ebml"
   # '@nibus/core': file:.yalc/@nibus/core
   # "@nibus/detection": file:.yalc/@nibus/detection
   # '@nibus/mibs': file:.yalc/@nibus/mibs
@@ -41,5 +41,5 @@ allowBuilds:
 minimumReleaseAgeExclude:
   - vite@8.0.13
   - "@nibus/*"
-  - "@sarakusha/ebml@0.0.6"
+  - "@sarakusha/ebml@0.0.8"
   - "@sarakusha/material-ui-chip-input"
