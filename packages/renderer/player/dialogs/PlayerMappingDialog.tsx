@@ -61,7 +61,9 @@ const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) =
   ];
   return (
     <Dialog open={open && !!playerId} onClose={onClose} fullWidth maxWidth="xs">
-      <DialogTitle>Окно вывода для <b>{player?.name}</b></DialogTitle>
+      <DialogTitle>
+        Окно вывода для <b>{player?.name}</b>
+      </DialogTitle>
       <DialogContent>
         {/* <DialogContentText>Укажите параметры окна вывода для {player?.name}</DialogContentText> */}
         <Formik
@@ -70,19 +72,19 @@ const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) =
             (mapping
               ? { ...mapping, objectFit: mapping.objectFit ?? 'cover' }
               : {
-                name: `${player?.name} - Вывод`,
-                player: playerId ?? 0,
-                display: 0,
-                left: 0,
-                top: 0,
-                width: player?.width ?? 320,
-                height: player?.height ?? 240,
-                zOrder: 0,
-                kiosk: false,
-                transparent: false,
-                alwaysOnTop: true,
-                objectFit: 'cover',
-              }) as MappingFormValues
+                  name: `${player?.name} - Вывод`,
+                  player: playerId ?? 0,
+                  display: 0,
+                  left: 0,
+                  top: 0,
+                  width: player?.width ?? 320,
+                  height: player?.height ?? 240,
+                  zOrder: 0,
+                  kiosk: false,
+                  transparent: false,
+                  alwaysOnTop: true,
+                  objectFit: 'cover',
+                }) as MappingFormValues
           }
           onSubmit={async (newValues, { setSubmitting }) => {
             if (!playerId) throw new Error('Unknown player');
@@ -140,7 +142,13 @@ const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) =
                       component={FormikTextField}
                       fullWidth
                     />
-                    <Field name="top" label="Y" type="number" component={FormikTextField} fullWidth />
+                    <Field
+                      name="top"
+                      label="Y"
+                      type="number"
+                      component={FormikTextField}
+                      fullWidth
+                    />
                   </Stack>
                 </FormControl>
                 <FormControl component="fieldset" sx={{ width: 1 }} margin="normal">

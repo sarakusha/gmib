@@ -153,12 +153,24 @@ const PlayerSettings: React.FC<{ id?: number }> = ({ id }) => {
               <FormGroup>
                 <FormControlLabel
                   name="disableFadeIn"
-                  control={<Checkbox checked={values.disableFadeIn} onChange={handleChange} disabled={values.playbackEngine !== 'decoder'} />}
+                  control={
+                    <Checkbox
+                      checked={values.disableFadeIn}
+                      onChange={handleChange}
+                      disabled={values.playbackEngine !== 'decoder'}
+                    />
+                  }
                   label="Отключить плавное появление"
                 />
                 <FormControlLabel
                   name="disableFadeOut"
-                  control={<Checkbox checked={values.disableFadeOut} onChange={handleChange} disabled={values.playbackEngine !== 'decoder'} />}
+                  control={
+                    <Checkbox
+                      checked={values.disableFadeOut}
+                      onChange={handleChange}
+                      disabled={values.playbackEngine !== 'decoder'}
+                    />
+                  }
                   label="Отключить плавное исчезание"
                 />
               </FormGroup>
@@ -175,8 +187,9 @@ const PlayerSettings: React.FC<{ id?: number }> = ({ id }) => {
               <ListItemButton onClick={() => id && openPlayerMappingDialog(id, item.id)} dense>
                 <ListItemText
                   primary={`${item.name} (${item.objectFit})`}
-                  secondary={`${getDisplay(item.display)} (${item.left},${item.top}-${item.width}x${item.height
-                    })`}
+                  secondary={`${getDisplay(item.display)} (${item.left},${item.top}-${item.width}x${
+                    item.height
+                  })`}
                   slotProps={{
                     primary: noWrap,
                     secondary: noWrap,

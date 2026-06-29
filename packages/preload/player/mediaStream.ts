@@ -293,7 +293,9 @@ const clampSeekPosition = (position: number, duration?: number): number => {
 const getActiveDuration = (): number =>
   activeEngine === 'decoder'
     ? decoderDuration || currentSource?.duration || nextSource?.duration || 0
-    : Number.isFinite(sourceVideo?.duration) ? (sourceVideo?.duration ?? 0) : 0;
+    : Number.isFinite(sourceVideo?.duration)
+      ? (sourceVideo?.duration ?? 0)
+      : 0;
 
 const disposeDecoder = (): void => {
   debug('dispose decoder engine');

@@ -83,7 +83,7 @@ const Player: React.FC<Props> = ({ className, playerId = 0 }) => {
             objectFit: previewObjectFit,
             backgroundColor: 'black',
           }}
-        // onTimeUpdate={isRemoteSession || isCaptureEngine ? undefined : onTimeUpdate}
+          // onTimeUpdate={isRemoteSession || isCaptureEngine ? undefined : onTimeUpdate}
         >
           {current?.filename}
         </video>
