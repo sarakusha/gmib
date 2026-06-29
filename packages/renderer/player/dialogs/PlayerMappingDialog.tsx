@@ -60,10 +60,43 @@ const shaderPresets = [
 return vec4(vec3(luma), color.a);`,
   },
   {
+    value: 'sepia',
+    label: 'Сепия',
+    source: `vec3 sepia = vec3(
+  dot(color.rgb, vec3(0.393, 0.769, 0.189)),
+  dot(color.rgb, vec3(0.349, 0.686, 0.168)),
+  dot(color.rgb, vec3(0.272, 0.534, 0.131))
+);
+return vec4(min(sepia, vec3(1.0)), color.a);`,
+  },
+  {
+    value: 'invert',
+    label: 'Инверсия',
+    source: `return vec4(1.0 - color.rgb, color.a);`,
+  },
+  {
     value: 'soft-contrast',
     label: 'Мягкий контраст',
     source: `vec3 adjusted = smoothstep(0.05, 0.95, color.rgb);
 return vec4(adjusted, color.a);`,
+  },
+  {
+    value: 'high-contrast',
+    label: 'Высокий контраст',
+    source: `vec3 adjusted = (color.rgb - 0.5) * 1.35 + 0.5;
+return vec4(clamp(adjusted, 0.0, 1.0), color.a);`,
+  },
+  {
+    value: 'warm',
+    label: 'Теплый тон',
+    source: `vec3 adjusted = color.rgb * vec3(1.12, 1.03, 0.9);
+return vec4(clamp(adjusted, 0.0, 1.0), color.a);`,
+  },
+  {
+    value: 'cool',
+    label: 'Холодный тон',
+    source: `vec3 adjusted = color.rgb * vec3(0.9, 1.02, 1.15);
+return vec4(clamp(adjusted, 0.0, 1.0), color.a);`,
   },
   {
     value: 'vignette',
@@ -78,6 +111,66 @@ return vec4(color.rgb * vignette, color.a);`,
     source: `float line = sin(uv.y * u_sourceResolution.y * 3.14159265);
 float brightness = mix(0.82, 1.0, step(0.0, line));
 return vec4(color.rgb * brightness, color.a);`,
+  },
+  {
+    value: 'crt',
+    label: 'CRT',
+    source: `vec2 centered = uv - 0.5;
+vec2 warpedUv = uv + centered * dot(centered, centered) * 0.12;
+if (warpedUv.x < 0.0 || warpedUv.y < 0.0 || warpedUv.x > 1.0 || warpedUv.y > 1.0) {
+  return vec4(0.0, 0.0, 0.0, color.a);
+}
+vec4 crtColor = sampleSource(warpedUv);
+float line = sin(uv.y * u_sourceResolution.y * 3.14159265);
+float scanline = mix(0.72, 1.0, step(0.0, line));
+float glow = smoothstep(0.85, 0.25, distance(uv, vec2(0.5)));
+return vec4(crtColor.rgb * scanline * glow, crtColor.a);`,
+  },
+  {
+    value: 'chromatic-aberration',
+    label: 'Хроматическая аберрация',
+    source: `vec2 offset = (uv - 0.5) * 0.012;
+float red = sampleSource(uv + offset).r;
+float green = color.g;
+float blue = sampleSource(uv - offset).b;
+return vec4(red, green, blue, color.a);`,
+  },
+  {
+    value: 'pixelate',
+    label: 'Пикселизация',
+    source: `vec2 blockSize = vec2(96.0, 54.0);
+vec2 pixelUv = (floor(uv * blockSize) + 0.5) / blockSize;
+return sampleSource(pixelUv);`,
+  },
+  {
+    value: 'wave',
+    label: 'Волна',
+    source: `vec2 waveUv = uv;
+waveUv.x += sin((uv.y * 18.0) + (u_time * 2.0)) * 0.012;
+return sampleSource(waveUv);`,
+  },
+  {
+    value: 'mirror-horizontal',
+    label: 'Зеркало по горизонтали',
+    source: `return sampleSource(vec2(1.0 - uv.x, uv.y));`,
+  },
+  {
+    value: 'mirror-kaleidoscope',
+    label: 'Калейдоскоп',
+    source: `vec2 mirrored = abs(fract(uv * 2.0) - 0.5) * 2.0;
+return sampleSource(mirrored);`,
+  },
+  {
+    value: 'edge',
+    label: 'Контуры',
+    source: `vec2 texel = 1.0 / u_sourceResolution;
+float center = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+float left = dot(sampleSource(uv - vec2(texel.x, 0.0)).rgb, vec3(0.299, 0.587, 0.114));
+float right = dot(sampleSource(uv + vec2(texel.x, 0.0)).rgb, vec3(0.299, 0.587, 0.114));
+float top = dot(sampleSource(uv - vec2(0.0, texel.y)).rgb, vec3(0.299, 0.587, 0.114));
+float bottom = dot(sampleSource(uv + vec2(0.0, texel.y)).rgb, vec3(0.299, 0.587, 0.114));
+float edge = abs(center - left) + abs(center - right) + abs(center - top) + abs(center - bottom);
+return vec4(vec3(smoothstep(0.05, 0.25, edge)), color.a);`,
   },
 ];
 
