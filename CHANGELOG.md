@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [4.12.0](https://github.com/sarakusha/gmib/compare/v4.11.2...v4.12.0) (2026-06-29)
+
+
+### Features
+
+* add playback seeking from progress slider ([758d184](https://github.com/sarakusha/gmib/commit/758d18412f1e50b3ca6ab89c026a6116168ded62))
+* show media upload progress and allow canceling uploads ([5ec241b](https://github.com/sarakusha/gmib/commit/5ec241bceb597d9dddaf7cca7a635bc1952aaf37))
+
+
+### Bug Fixes
+
+* include source context in decoder logs ([d4b9a1f](https://github.com/sarakusha/gmib/commit/d4b9a1f8cc64f4c0388ae00c21cd5e4eb24fc687))
+* prevent progress jitter during seek ([1171305](https://github.com/sarakusha/gmib/commit/1171305b7f6f21d0fefaf47ab8bb5ba5667d0cf7))
+* recover decoder playback after frame errors ([fb84b60](https://github.com/sarakusha/gmib/commit/fb84b608c65fa30f7a009cbc4e89b6df3b17e252))
+* recover playback after decoder source errors ([395208b](https://github.com/sarakusha/gmib/commit/395208bd152e0f61d347dd85c571ab34f798887a))
+* reset player position on stop and single-track next ([25baf4e](https://github.com/sarakusha/gmib/commit/25baf4e9c4809d99f84255d814bade18a05beadc))
+* restore media item delete icon hover visibility ([ed912ed](https://github.com/sarakusha/gmib/commit/ed912edc194e1e404c2766668f53ae0450c32e82))
+
 ## [4.11.2](https://github.com/sarakusha/gmib/compare/v4.11.1...v4.11.2) (2026-06-26)
 
 
