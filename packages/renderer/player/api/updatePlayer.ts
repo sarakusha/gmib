@@ -26,6 +26,7 @@ type SocketMessage = {
   data: unknown[];
 };
 
+const selectPlayersData = playerApi.endpoints.getPlayers.select();
 const selectPlaylistData = playlistApi.endpoints.getPlaylists.select();
 
 const getFirstItemFactory =
@@ -81,6 +82,13 @@ const updatePlayer =
 export const playerPlay = () => updatePlayer(sourceId, props => ({ ...props, autoPlay: true }));
 export const playerPause = () => updatePlayer(sourceId, props => ({ ...props, autoPlay: false }));
 export const playerNext = (): AppThunk => (dispatch, getState) => {
+  const playersData = selectPlayersData(getState()).data;
+  const player = playersData && selectPlayer(playersData, sourceId);
+  const next = getNextItemFactory(getState)(player?.playlistId, player?.current);
+  if (next && next === player?.current) {
+    window.mediaStream.seek?.(0);
+    dispatch(setPosition(0));
+  }
   dispatch(
     updatePlayer(sourceId, props => ({
       ...props,

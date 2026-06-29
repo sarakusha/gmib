@@ -43,14 +43,19 @@ const Player: React.FC<Props> = ({ className, playerId = 0 }) => {
     window.mediaStream.updateSrcObject('video#player');
   }, []);
   const stopped = playbackState === 'none';
-  const isCaptureEngine = player?.playbackEngine === 'capture';
-  const onTimeUpdate = React.useCallback<React.ReactEventHandler<HTMLVideoElement>>(
-    e => {
-      const { currentTime } = e.target as HTMLVideoElement;
-      dispatch(setPosition(stopped ? 0 : currentTime));
-    },
-    [dispatch, stopped],
-  );
+  React.useEffect(() => {
+    if (stopped) {
+      dispatch(setPosition(0));
+    }
+  }, [dispatch, stopped]);
+  // const isCaptureEngine = player?.playbackEngine === 'capture';
+  // const onTimeUpdate = React.useCallback<React.ReactEventHandler<HTMLVideoElement>>(
+  //   e => {
+  //     const { currentTime } = e.target as HTMLVideoElement;
+  //     // dispatch(setPosition(stopped ? 0 : currentTime));
+  //   },
+  //   [dispatch, stopped],
+  // );
   return (
     <Box sx={{ width: 1, position: 'relative' }}>
       <Box
@@ -78,7 +83,7 @@ const Player: React.FC<Props> = ({ className, playerId = 0 }) => {
             objectFit: previewObjectFit,
             backgroundColor: 'black',
           }}
-          onTimeUpdate={isRemoteSession || isCaptureEngine ? undefined : onTimeUpdate}
+        // onTimeUpdate={isRemoteSession || isCaptureEngine ? undefined : onTimeUpdate}
         >
           {current?.filename}
         </video>

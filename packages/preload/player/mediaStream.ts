@@ -73,6 +73,7 @@ const createSourceVideo = (uri: string): HTMLVideoElement => {
     ipcDispatch(setDuration(Number.isFinite(video.duration) ? video.duration : undefined));
   });
   video.addEventListener('timeupdate', () => {
+    debug(`source time update: ${video.currentTime}s`);
     ipcDispatch(setPosition(video.currentTime));
   });
   video.addEventListener('ended', () => {
@@ -111,6 +112,7 @@ const shouldEnableTrack = (track: MediaStreamTrack): boolean => {
 };
 
 const syncConsumerPlayback = (): void => {
+  debug(`sync consumer playback: ${(new Error().stack ?? '').split('\n')[1]?.trim()}`);
   consumers.forEach(video => {
     if (!video.isConnected) {
       consumers.delete(video);
@@ -122,9 +124,12 @@ const syncConsumerPlayback = (): void => {
     }
     if (playbackState === 'playing') {
       void video.play().catch(err => {
-        debug(`error while starting stream consumer: ${(err as Error).message}`);
+        debug(
+          `error while starting stream consumer: ${(err as Error).message} ${JSON.stringify((err as Error).stack)}`,
+        );
       });
     } else {
+      debug(`pause stream consumer: ${video.id ?? '<unknown>'}`);
       video.pause();
     }
   });
@@ -257,9 +262,11 @@ let nextSource: VideoSource | undefined;
 let videoStream: MergeableStream<VideoFrame> | undefined;
 let prevDecoderEnabled: boolean | undefined;
 let decoderPosition = 0;
+let decoderDuration = 0;
 
 const DECODER_RECOVERY_SEEK_STEP = 2;
 const DECODER_MAX_RECOVERY_ATTEMPTS = 5;
+const SEEK_END_GUARD = 0.1;
 const decoderRecoveryAttempts = new Map<string, number>();
 
 type DecoderSourceMessage = {
@@ -277,6 +284,17 @@ const getDecoderRecoveryKey = (source: VideoSource): string =>
 const getDecoderSourcePosition = (source: VideoSource, timer = 0): number =>
   (source.options.startTime ?? 0) + timer;
 
+const clampSeekPosition = (position: number, duration?: number): number => {
+  const nextPosition = Math.max(0, position);
+  if (!duration || !Number.isFinite(duration)) return nextPosition;
+  return Math.min(nextPosition, Math.max(0, duration - SEEK_END_GUARD));
+};
+
+const getActiveDuration = (): number =>
+  activeEngine === 'decoder'
+    ? decoderDuration || currentSource?.duration || nextSource?.duration || 0
+    : Number.isFinite(sourceVideo?.duration) ? (sourceVideo?.duration ?? 0) : 0;
+
 const disposeDecoder = (): void => {
   debug('dispose decoder engine');
   currentSource?.close();
@@ -286,6 +304,7 @@ const disposeDecoder = (): void => {
   videoStream = undefined;
   prevDecoderEnabled = undefined;
   decoderPosition = 0;
+  decoderDuration = 0;
   decoderRecoveryAttempts.clear();
   blankConsumers();
   replaceStreamTracks(new MediaStream());
@@ -316,9 +335,16 @@ const recoverDecoderSource = (source: VideoSource, reason?: string): void => {
 };
 
 const handleDecoderSourceMessage = (source: VideoSource, data: DecoderSourceMessage): void => {
-  if (typeof data.duration === 'number') ipcDispatch(setDuration(data.duration));
+  if (typeof data.duration === 'number' && source === currentSource) {
+    decoderDuration = data.duration;
+    ipcDispatch(setDuration(data.duration));
+  }
   if (typeof data.seekStartTime === 'number') {
+    // eslint-disable-next-line no-param-reassign
     source.options.startTime = data.seekStartTime;
+    debug(
+      `decoder source seek start time: ${data.seekStartTime}s: media=${source.options.mediaId ?? '<none>'}, current: ${source === currentSource ? 'yes' : 'no'}`,
+    );
     if (source === currentSource) {
       decoderPosition = data.seekStartTime;
       ipcDispatch(setPosition(decoderPosition));
@@ -326,6 +352,9 @@ const handleDecoderSourceMessage = (source: VideoSource, data: DecoderSourceMess
   }
   if (typeof data.timer === 'number' && source === currentSource) {
     decoderPosition = getDecoderSourcePosition(source, data.timer);
+    debug(
+      `decoder source timer: ${data.timer}s, position: ${decoderPosition}s: media=${source.options.mediaId ?? '<none>'}`,
+    );
     ipcDispatch(
       setPosition(source.duration ? Math.min(source.duration, decoderPosition) : decoderPosition),
     );
@@ -348,8 +377,9 @@ const playNextDecoderSource = () => {
     currentSource = source;
     nextSource = undefined;
     decoderPosition = source.options.startTime ?? 0;
+    decoderDuration = source.duration || decoderDuration;
     ipcDispatch(setPosition(decoderPosition));
-    ipcDispatch(setDuration(source.duration));
+    ipcDispatch(setDuration(decoderDuration));
     void videoStream
       .add(source.readable)
       .then(playNextDecoderSource)
@@ -368,15 +398,16 @@ const seekDecoderSource = (position: number, reason: 'user' | 'recover' = 'user'
   const source = currentSource;
   if (!source || !videoStream || source.closed) return;
   const { itemId, mediaId } = source.options;
+  const nextPosition = clampSeekPosition(position, source.duration || decoderDuration);
   if (reason === 'user') decoderRecoveryAttempts.delete(getDecoderRecoveryKey(source));
   debug(
-    `seek decoder source to ${position}s (${reason}): item=${itemId ?? '<none>'} media=${mediaId ?? '<none>'}`,
+    `seek decoder source to ${nextPosition}s (${reason}): item=${itemId ?? '<none>'} media=${mediaId ?? '<none>'}`,
   );
   nextSource?.close();
   const recoverySource = new VideoSource(source.uri, {
     itemId,
     autoplay: playbackState === 'playing',
-    startTime: position,
+    startTime: nextPosition,
     fade: {
       disableIn: true,
       disableOut: true,
@@ -385,13 +416,17 @@ const seekDecoderSource = (position: number, reason: 'user' | 'recover' = 'user'
     mediaId,
     onMessage: ({ data }: { data: unknown }) => {
       if (data && typeof data === 'object') {
-        handleDecoderSourceMessage(recoverySource, data as DecoderSourceMessage);
+        handleDecoderSourceMessage(recoverySource, data);
       }
     },
   });
   nextSource = recoverySource;
   source.close();
-  ipcDispatch(setPosition(position));
+  debug(
+    `seek decoder source: closed previous source, added recovery source: position=${nextPosition}s item=${itemId ?? '<none>'} media=${mediaId ?? '<none>'}`,
+  );
+  decoderPosition = nextPosition;
+  ipcDispatch(setPosition(nextPosition));
 };
 
 const initializeDecoderStream = (): void => {
@@ -466,7 +501,7 @@ const updateDecoder = async (): Promise<void> => {
         mediaId: nextItem.md5,
         onMessage: ({ data }: { data: unknown }) => {
           if (data && typeof data === 'object') {
-            handleDecoderSourceMessage(preloadedSource, data as DecoderSourceMessage);
+            handleDecoderSourceMessage(preloadedSource, data);
           }
         },
       });
@@ -492,7 +527,7 @@ const updateDecoder = async (): Promise<void> => {
         mediaId: currentItem.md5,
         onMessage: ({ data }: { data: unknown }) => {
           if (data && typeof data === 'object') {
-            handleDecoderSourceMessage(videoSource, data as DecoderSourceMessage);
+            handleDecoderSourceMessage(videoSource, data);
           }
         },
       });
@@ -588,8 +623,9 @@ export const seek = (position: number): void => {
   const nextPosition = Math.max(0, position);
   if (activeEngine === 'capture') {
     if (!sourceVideo) return;
-    debug(`seek capture source to ${nextPosition}s: ${currentUri ?? '<empty>'}`);
-    sourceVideo.currentTime = Math.min(nextPosition, sourceVideo.duration || nextPosition);
+    const capturePosition = clampSeekPosition(nextPosition, sourceVideo.duration);
+    debug(`seek capture source to ${capturePosition}s: ${currentUri ?? '<empty>'}`);
+    sourceVideo.currentTime = capturePosition;
     ipcDispatch(setPosition(sourceVideo.currentTime));
     return;
   }
@@ -626,16 +662,18 @@ ipcRenderer.on('updatePlaylist', (_, updatedPlaylist) => {
 });
 
 ipcRenderer.on('stop', () => {
+  const duration = getActiveDuration();
+  if (sourceVideo) {
+    sourceVideo.pause();
+    sourceVideo.currentTime = 0;
+  }
+  decoderPosition = 0;
   if (playbackState !== 'none') {
     playbackState = 'none';
     void update();
   }
   blankConsumers();
-  ipcDispatch(
-    setDuration(
-      activeEngine === 'decoder' ? (currentSource?.duration ?? 0) : (sourceVideo?.duration ?? 0),
-    ),
-  );
+  ipcDispatch(setDuration(duration));
   ipcDispatch(setPosition(0));
 });
 

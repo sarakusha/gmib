@@ -11,6 +11,8 @@ type Props = {
   position?: number;
 };
 
+const SEEK_END_GUARD = 0.1;
+
 const Slider = styled(MuiSlider)({
   height: 4,
   color: 'inherit',
@@ -45,11 +47,14 @@ const ProgressControl: React.FC<Props> = ({ duration, position }) => {
   const commitHandler = React.useCallback(
     (_: React.SyntheticEvent | Event, pos: number | number[]) => {
       const nextPosition = Array.isArray(pos) ? pos[0] : pos;
+      const seekPosition = duration
+        ? Math.min(nextPosition, Math.max(0, duration - SEEK_END_GUARD))
+        : nextPosition;
       setValue(null);
-      window.mediaStream.seek?.(nextPosition);
-      dispatch(setPosition(nextPosition));
+      window.mediaStream.seek?.(seekPosition);
+      dispatch(setPosition(seekPosition));
     },
-    [dispatch],
+    [dispatch, duration],
   );
   return (
     <Slider
