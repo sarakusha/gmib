@@ -166,6 +166,11 @@ fs.mkdir(mediaRoot, { recursive: true }, err => {
 
 const noop = (): void => {};
 
+type MediaUploadError = {
+  filename: string;
+  message: string;
+};
+
 const getHash = (filepath: string): Promise<string> =>
   new Promise<string>((resolve, reject) => {
     const hashSum = crypto.createHash('md5');
@@ -420,21 +425,44 @@ api.post('/media', (req, res, next) => {
         next(err);
       } else {
         // debug(JSON.stringify(files));
+        const errors: MediaUploadError[] = [];
         const loaded = (
           await asyncSerial(
             Object.values(files)
               .map(file => (Array.isArray(file) ? file[0] : file))
               .filter(notEmpty),
-            file =>
-              loadMedia(file).catch(e =>
-                debug(
-                  `error while loading ${file.originalFilename}: ${e instanceof Error ? e.message : String(e)}`,
-                ),
-              ),
+            async file => {
+              try {
+                return await loadMedia(file);
+              } catch (e) {
+                const message = e instanceof Error ? e.message : String(e);
+                try {
+                  fs.existsSync(file.filepath) && fs.unlinkSync(file.filepath);
+                } catch (unlinkError) {
+                  debug(
+                    `error while removing failed upload ${file.originalFilename}: ${
+                      unlinkError instanceof Error ? unlinkError.message : String(unlinkError)
+                    }`,
+                  );
+                }
+                errors.push({
+                  filename: file.originalFilename ?? file.newFilename,
+                  message,
+                });
+                debug(`error while loading ${file.originalFilename}: ${message}`);
+                return undefined;
+              }
+            },
           )
         ).filter(notEmpty);
         debug(`files uploaded: ${JSON.stringify(loaded)}`);
-        getAllMedia().then(result => res.json(result), next);
+        getAllMedia().then(result => {
+          if (errors.length > 0) {
+            res.status(207).json({ media: result, errors });
+            return;
+          }
+          res.json(result);
+        }, next);
         const sourceId = req.headers['x-ni-source-id'];
         broadcast({ event: 'media', remote: req.ip, ...(sourceId && { sourceId: +sourceId }) });
       }

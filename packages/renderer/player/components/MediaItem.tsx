@@ -8,6 +8,7 @@ import {
   Badge,
   Checkbox,
   IconButton,
+  LinearProgress,
   ListItem,
   ListItemAvatar,
   ListItemIcon,
@@ -29,10 +30,12 @@ import { useDrag, useDrop } from 'react-dnd';
 // import type { ListChildComponentProps } from 'react-window';
 
 import { getUrl } from '/@common/remote';
+import { toErrorMessage } from '/@common/helpers';
 
 import { formatTime, ItemTypes } from '../utils';
 
 import Numbered from './Numbered';
+import type { MediaTransferProgress } from '../api/media';
 
 const Thumbnail = styled(Avatar)(({ theme }) => ({
   width: 52,
@@ -86,6 +89,8 @@ export type MediaItemProps = {
   onMove?: (from: number, to: number) => void;
   onMoveFinished?: () => void;
   deleteTitle?: string;
+  uploadProgress?: MediaTransferProgress;
+  onCancelUpload?: () => void;
 };
 
 /* const getDuration = (seconds: number): string => {
@@ -150,6 +155,16 @@ const Details: React.FC<MediaInfo> = ({ duration, height, width, size, uploadTim
 
 const stopPropagation: React.MouseEventHandler = e => e.stopPropagation();
 
+const uploadStatusText = (uploadProgress: MediaItemProps['uploadProgress']): string | undefined => {
+  if (!uploadProgress) return undefined;
+  if (uploadProgress.phase === 'failed') return `Ошибка: ${toErrorMessage(uploadProgress.error)}`;
+  if (uploadProgress.phase === 'canceled') return 'Загрузка отменена';
+  if (uploadProgress.phase === 'queued') return 'Ожидает загрузки';
+  const progress =
+    typeof uploadProgress.progress === 'number' ? ` ${Math.round(uploadProgress.progress)}%` : '';
+  return uploadProgress.phase === 'uploading' ? `Загрузка${progress}` : 'Конвертация...';
+};
+
 const MediaItem = React.forwardRef<HTMLLIElement, MediaItemProps>((props, ref) => {
   const {
     id,
@@ -165,6 +180,8 @@ const MediaItem = React.forwardRef<HTMLLIElement, MediaItemProps>((props, ref) =
     onMove,
     onMoveFinished,
     deleteTitle,
+    uploadProgress,
+    onCancelUpload,
   } = props;
   const { md5, thumbnail, duration, filename } = info;
   const refInner = React.useRef<HTMLLIElement>(null);
@@ -206,6 +223,7 @@ const MediaItem = React.forwardRef<HTMLLIElement, MediaItemProps>((props, ref) =
   drag(drop(refInner));
   const DeleteCloseIcon = onMove ? CloseIcon : DeleteIcon;
   const [title, setTitle] = React.useState<string>();
+  const statusText = uploadStatusText(uploadProgress);
   React.useEffect(() => {
     if (title) {
       const timeout = setTimeout(() => setTitle(undefined), 3000);
@@ -261,7 +279,35 @@ const MediaItem = React.forwardRef<HTMLLIElement, MediaItemProps>((props, ref) =
         <ListItemText
           id={filename}
           primary={<Numbered text={title ?? filename} index={pos != null ? pos + 1 : undefined} />}
-          secondary={duration ? <Details {...info} /> : 'loading...'}
+          secondary={
+            statusText ? (
+              <Stack spacing={0.5} sx={{ minWidth: 0 }}>
+                <Typography
+                  variant="body2"
+                  color={uploadProgress?.phase === 'failed' ? 'error' : 'text.secondary'}
+                  noWrap
+                >
+                  {statusText}
+                </Typography>
+                {uploadProgress?.phase !== 'failed' && uploadProgress?.phase !== 'canceled' && (
+                  <LinearProgress
+                    color="secondary"
+                    variant={
+                      uploadProgress?.phase === 'uploading' && uploadProgress.progress != null
+                        ? 'determinate'
+                        : 'indeterminate'
+                    }
+                    value={uploadProgress?.progress ?? 0}
+                    sx={{ height: 4, borderRadius: 999 }}
+                  />
+                )}
+              </Stack>
+            ) : duration ? (
+              <Details {...info} />
+            ) : (
+              'loading...'
+            )
+          }
           disableTypography
           slotProps={{
             primary: { noWrap: true },
@@ -282,6 +328,24 @@ const MediaItem = React.forwardRef<HTMLLIElement, MediaItemProps>((props, ref) =
             </IconButton>
           </ListItemSecondaryAction>
         )}
+        {onCancelUpload &&
+          uploadProgress?.phase !== 'converting' &&
+          uploadProgress?.phase !== 'failed' &&
+          uploadProgress?.phase !== 'canceled' && (
+            <ListItemSecondaryAction onClick={stopPropagation} onMouseDown={stopPropagation}>
+              <IconButton
+                edge="end"
+                aria-label="cancel upload"
+                onClick={onCancelUpload}
+                sx={{ color: 'secondary.main' }}
+                size="small"
+                title="Отменить загрузку"
+                tabIndex={-1}
+              >
+                <CloseIcon fontSize="inherit" />
+              </IconButton>
+            </ListItemSecondaryAction>
+          )}
         {onChange && (
           <ListItemSecondaryAction onClick={stopPropagation} onMouseDown={stopPropagation}>
             <Stack direction="column">

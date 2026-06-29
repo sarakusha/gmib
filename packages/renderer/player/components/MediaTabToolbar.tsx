@@ -18,7 +18,7 @@ import UploadButton from './UploadButton';
 import Search from './Search';
 import Toolbar from './StyledToolbar';
 
-import { useGetMedia, useUploadMediaMutation } from '../api/media';
+import { useGetMedia } from '../api/media';
 import { useDispatch, useSelector } from '../store';
 import { selectDescending, selectSearch, selectSortOrder } from '../store/selectors';
 import { setDescending, setSearch, setSortOrder } from '../store/currentSlice';
@@ -26,12 +26,11 @@ import { setDescending, setSearch, setSortOrder } from '../store/currentSlice';
 import type { SortOrder } from '/@common/mediaInfo';
 
 type Props = {
-  // upload?: (files: FileList | null) => void;
+  upload?: (files: FileList) => void;
   size?: IconButtonProps['size'];
 };
 
-const MediaTabToolbar: React.FC<Props> = ({ size }) => {
-  const [upload] = useUploadMediaMutation();
+const MediaTabToolbar: React.FC<Props> = ({ size, upload }) => {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const handleClose = () => setAnchorEl(null);
   const handleMenu: React.MouseEventHandler<HTMLElement> = e => setAnchorEl(e.currentTarget);
@@ -58,7 +57,9 @@ const MediaTabToolbar: React.FC<Props> = ({ size }) => {
           <UploadButton
             size={size}
             onChange={event => {
-              if (event.target.files) void upload(event.target.files);
+              const input = event.currentTarget;
+              if (input.files) upload?.(input.files);
+              input.value = '';
             }}
           />
         </div>
