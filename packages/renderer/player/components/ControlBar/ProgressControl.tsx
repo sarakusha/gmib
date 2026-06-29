@@ -2,8 +2,6 @@ import MuiSlider from '@mui/material/Slider';
 import { styled } from '@mui/material/styles';
 import * as React from 'react';
 
-import { useDispatch } from '../../store';
-import { setPosition } from '../../store/currentSlice';
 import { formatTime } from '../../utils';
 
 type Props = {
@@ -12,6 +10,8 @@ type Props = {
 };
 
 const SEEK_END_GUARD = 0.1;
+const SEEK_SETTLE_TOLERANCE = 0.15;
+const SEEK_SETTLE_TIMEOUT = 2000;
 
 const Slider = styled(MuiSlider)({
   height: 4,
@@ -37,11 +37,34 @@ const Slider = styled(MuiSlider)({
 });
 
 const ProgressControl: React.FC<Props> = ({ duration, position }) => {
-  const dispatch = useDispatch();
   const [value, setValue] = React.useState<number | null>(null);
+  const pendingSeekRef = React.useRef<number | null>(null);
+  const settleTimeoutRef = React.useRef<number | null>(null);
   const max = Math.max(duration ?? 0, 0.0001);
   const sliderValue = value ?? Math.min(position ?? 0, max);
+  React.useEffect(
+    () => () => {
+      if (settleTimeoutRef.current !== null) window.clearTimeout(settleTimeoutRef.current);
+    },
+    [],
+  );
+  React.useEffect(() => {
+    const pendingSeek = pendingSeekRef.current;
+    if (pendingSeek === null || typeof position !== 'number') return;
+    if (Math.abs(position - pendingSeek) > SEEK_SETTLE_TOLERANCE) return;
+    pendingSeekRef.current = null;
+    if (settleTimeoutRef.current !== null) {
+      window.clearTimeout(settleTimeoutRef.current);
+      settleTimeoutRef.current = null;
+    }
+    setValue(null);
+  }, [position]);
   const changeHandler = React.useCallback((_: Event, pos: number | number[]) => {
+    pendingSeekRef.current = null;
+    if (settleTimeoutRef.current !== null) {
+      window.clearTimeout(settleTimeoutRef.current);
+      settleTimeoutRef.current = null;
+    }
     setValue(Array.isArray(pos) ? pos[0] : pos);
   }, []);
   const commitHandler = React.useCallback(
@@ -50,11 +73,17 @@ const ProgressControl: React.FC<Props> = ({ duration, position }) => {
       const seekPosition = duration
         ? Math.min(nextPosition, Math.max(0, duration - SEEK_END_GUARD))
         : nextPosition;
-      setValue(null);
+      pendingSeekRef.current = seekPosition;
+      if (settleTimeoutRef.current !== null) window.clearTimeout(settleTimeoutRef.current);
+      settleTimeoutRef.current = window.setTimeout(() => {
+        pendingSeekRef.current = null;
+        settleTimeoutRef.current = null;
+        setValue(null);
+      }, SEEK_SETTLE_TIMEOUT);
+      setValue(seekPosition);
       window.mediaStream.seek?.(seekPosition);
-      dispatch(setPosition(seekPosition));
     },
-    [dispatch, duration],
+    [duration],
   );
   return (
     <Slider
