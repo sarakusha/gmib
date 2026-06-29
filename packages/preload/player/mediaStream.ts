@@ -73,7 +73,7 @@ const createSourceVideo = (uri: string): HTMLVideoElement => {
     ipcDispatch(setDuration(Number.isFinite(video.duration) ? video.duration : undefined));
   });
   video.addEventListener('timeupdate', () => {
-    debug(`source time update: ${video.currentTime}s`);
+    // debug(`source time update: ${video.currentTime}s`);
     ipcDispatch(setPosition(video.currentTime));
   });
   video.addEventListener('ended', () => {
@@ -112,7 +112,7 @@ const shouldEnableTrack = (track: MediaStreamTrack): boolean => {
 };
 
 const syncConsumerPlayback = (): void => {
-  debug(`sync consumer playback: ${(new Error().stack ?? '').split('\n')[1]?.trim()}`);
+  // debug(`sync consumer playback: ${(new Error().stack ?? '').split('\n')[1]?.trim()}`);
   consumers.forEach(video => {
     if (!video.isConnected) {
       consumers.delete(video);
