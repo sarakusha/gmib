@@ -12,7 +12,7 @@ import { selectCurrent, selectOutputHidden, selectPosition } from '../store/sele
 
 import type { MediaInfo } from '/@common/mediaInfo';
 import type { ObjectFitMode } from '/@common/video';
-import { isRemoteSession } from '/@common/remote';
+// import { isRemoteSession } from '/@common/remote';
 
 import ControlBar from './ControlBar';
 
