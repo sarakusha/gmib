@@ -161,6 +161,18 @@ return sampleSource(waveUv);`,
 return sampleSource(mirrored);`,
   },
   {
+    value: 'wide-split-stack',
+    label: 'Сверхширокое: левая/правая столбиком',
+    source: `// gmib:output-size half-width double-height
+vec2 stackedUv = uv;
+if (uv.y < 0.5) {
+  stackedUv = vec2(uv.x * 0.5, uv.y * 2.0);
+} else {
+  stackedUv = vec2(0.5 + uv.x * 0.5, (uv.y - 0.5) * 2.0);
+}
+return sampleSource(stackedUv);`,
+  },
+  {
     value: 'edge',
     label: 'Контуры',
     source: `vec2 texel = 1.0 / u_sourceResolution;
@@ -411,7 +423,7 @@ const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) =
                   minRows={8}
                   margin="normal"
                   placeholder="return color;"
-                  helperText="Доступны uv, color, u_time, u_resolution, u_sourceResolution и sampleSource(uv)."
+                  helperText="Доступны uv, color, u_time, u_resolution, u_sourceResolution и sampleSource(uv). Для изменения пропорций результата можно добавить // gmib:output-size width height."
                   slotProps={{
                     input: {
                       sx: {

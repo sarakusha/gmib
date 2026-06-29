@@ -100,6 +100,37 @@ const getVideoSize = video => ({
   height: video.videoHeight || height || window.innerHeight,
 });
 
+const resolveSizeToken = (token, sourceSize) => {
+  if (token === 'width') return sourceSize.width;
+  if (token === 'height') return sourceSize.height;
+  if (token === 'half-width') return sourceSize.width / 2;
+  if (token === 'half-height') return sourceSize.height / 2;
+  if (token === 'double-width') return sourceSize.width * 2;
+  if (token === 'double-height') return sourceSize.height * 2;
+
+  const numericValue = Number(token);
+  return Number.isFinite(numericValue) && numericValue > 0 ? numericValue : undefined;
+};
+
+const getShaderOutputSize = (fragmentSource, sourceSize) => {
+  const sizeMatch = fragmentSource.match(
+    /gmib:output-size\s+([a-z-]+|\d+(?:\.\d+)?)\s+([a-z-]+|\d+(?:\.\d+)?)/i,
+  );
+  if (sizeMatch) {
+    const shaderWidth = resolveSizeToken(sizeMatch[1], sourceSize);
+    const shaderHeight = resolveSizeToken(sizeMatch[2], sourceSize);
+    if (shaderWidth && shaderHeight) return { width: shaderWidth, height: shaderHeight };
+  }
+
+  const aspectMatch = fragmentSource.match(/gmib:output-aspect\s+(\d+(?:\.\d+)?)/i);
+  if (aspectMatch) {
+    const aspect = Number(aspectMatch[1]);
+    if (Number.isFinite(aspect) && aspect > 0) return { width: aspect, height: 1 };
+  }
+
+  return sourceSize;
+};
+
 const getDrawRect = (fit, outputSize, sourceSize) => {
   const outputWidth = outputSize.width;
   const outputHeight = outputSize.height;
@@ -166,7 +197,8 @@ const createShaderRenderer = (video, canvas, fragmentSource, fit) => {
 
     resize();
     const sourceSize = getVideoSize(video);
-    const drawRect = getDrawRect(fit, { width: canvas.width, height: canvas.height }, sourceSize);
+    const shaderOutputSize = getShaderOutputSize(fragmentSource, sourceSize);
+    const drawRect = getDrawRect(fit, { width: canvas.width, height: canvas.height }, shaderOutputSize);
 
     gl.useProgram(program);
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
