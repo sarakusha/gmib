@@ -15,6 +15,7 @@ const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:videoOut`);
 const toOutputQuery = (mapping: PlayerMapping): string => {
   const query = new URLSearchParams();
   Object.entries(mapping).forEach(([name, value]) => {
+    if (value == null || value === '') return;
     query.set(name, typeof value === 'string' ? value : Number(value).toString());
   });
   return query.toString();

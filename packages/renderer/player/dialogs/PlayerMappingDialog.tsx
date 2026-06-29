@@ -47,6 +47,40 @@ const objectFitOptions: Array<{ value: ObjectFitMode; label: string }> = [
   { value: 'scale-down', label: 'Уменьшать только при необходимости' },
 ];
 
+const shaderPresets = [
+  {
+    value: '',
+    label: 'Без шейдера',
+    source: '',
+  },
+  {
+    value: 'grayscale',
+    label: 'Черно-белый',
+    source: `float luma = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+return vec4(vec3(luma), color.a);`,
+  },
+  {
+    value: 'soft-contrast',
+    label: 'Мягкий контраст',
+    source: `vec3 adjusted = smoothstep(0.05, 0.95, color.rgb);
+return vec4(adjusted, color.a);`,
+  },
+  {
+    value: 'vignette',
+    label: 'Виньетка',
+    source: `float distanceFromCenter = distance(uv, vec2(0.5));
+float vignette = smoothstep(0.75, 0.25, distanceFromCenter);
+return vec4(color.rgb * vignette, color.a);`,
+  },
+  {
+    value: 'scanlines',
+    label: 'Скан-линии',
+    source: `float line = sin(uv.y * u_sourceResolution.y * 3.14159265);
+float brightness = mix(0.82, 1.0, step(0.0, line));
+return vec4(color.rgb * brightness, color.a);`,
+  },
+];
+
 const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) => {
   const { displays = [] } = useDisplays();
   const { player } = usePlayer(playerId);
@@ -60,7 +94,7 @@ const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) =
     DefaultDisplays.Secondary,
   ];
   return (
-    <Dialog open={open && !!playerId} onClose={onClose} fullWidth maxWidth="xs">
+    <Dialog open={open && !!playerId} onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle>
         Окно вывода для <b>{player?.name}</b>
       </DialogTitle>
@@ -70,7 +104,11 @@ const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) =
           initialValues={
             // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
             (mapping
-              ? { ...mapping, objectFit: mapping.objectFit ?? 'cover' }
+              ? {
+                  ...mapping,
+                  objectFit: mapping.objectFit ?? 'cover',
+                  shader: mapping.shader ?? '',
+                }
               : {
                   name: `${player?.name} - Вывод`,
                   player: playerId ?? 0,
@@ -84,17 +122,23 @@ const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) =
                   transparent: false,
                   alwaysOnTop: true,
                   objectFit: 'cover',
+                  shader: '',
                 }) as MappingFormValues
           }
           onSubmit={async (newValues, { setSubmitting }) => {
             if (!playerId) throw new Error('Unknown player');
-            if (mapping) await updateMapping({ ...mapping, ...newValues, player: playerId });
-            else await createMapping({ ...newValues, player: playerId });
+            const nextMapping = {
+              ...newValues,
+              player: playerId,
+              shader: newValues.shader?.trim() || undefined,
+            };
+            if (mapping) await updateMapping({ ...mapping, ...nextMapping });
+            else await createMapping(nextMapping);
             setSubmitting(false);
             onClose();
           }}
         >
-          {({ values, handleBlur, handleChange }) => (
+          {({ values, handleBlur, handleChange, setFieldValue }) => (
             <Form id={formId}>
               <Field name="name" label="Название" component={FormikTextField} fullWidth />
               <FormControl fullWidth margin="normal">
@@ -236,6 +280,54 @@ const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) =
                     По умолчанию используется режим с заполнением области и обрезкой краев.
                   </FormHelperText>
                 </FormControl>
+                <FormControl fullWidth margin="normal">
+                  <InputLabel id="shader-preset-label">Шейдер</InputLabel>
+                  <Select
+                    labelId="shader-preset-label"
+                    id="shaderPreset"
+                    value={
+                      shaderPresets.find(item => item.source === (values.shader ?? ''))?.value ??
+                      'custom'
+                    }
+                    onBlur={handleBlur}
+                    onChange={event => {
+                      const preset = shaderPresets.find(item => item.value === event.target.value);
+                      void setFieldValue('shader', preset?.source ?? '');
+                    }}
+                    variant="standard"
+                  >
+                    {shaderPresets.map(option => (
+                      <MenuItem key={option.value || 'none'} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
+                    <MenuItem value="custom" disabled>
+                      Пользовательский
+                    </MenuItem>
+                  </Select>
+                  <FormHelperText>
+                    Можно выбрать заготовку и отредактировать GLSL-код ниже.
+                  </FormHelperText>
+                </FormControl>
+                <Field
+                  name="shader"
+                  label="Код шейдера"
+                  component={FormikTextField}
+                  fullWidth
+                  multiline
+                  minRows={8}
+                  margin="normal"
+                  placeholder="return color;"
+                  helperText="Доступны uv, color, u_time, u_resolution, u_sourceResolution и sampleSource(uv)."
+                  slotProps={{
+                    input: {
+                      sx: {
+                        fontFamily: 'monospace',
+                        fontSize: 13,
+                      },
+                    },
+                  }}
+                />
               </FormControl>
             </Form>
           )}

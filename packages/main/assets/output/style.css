@@ -11,3 +11,21 @@ video {
     object-fit: var(--object-fit, cover);
     user-select: none;
 }
+video, canvas {
+    width: 100vw;
+    height: 100vh;
+    display: block;
+}
+canvas {
+    display: none;
+}
+.shader-enabled video {
+    position: fixed;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+.shader-enabled canvas {
+    display: block;
+}
