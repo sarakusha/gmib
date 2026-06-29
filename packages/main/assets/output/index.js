@@ -3,6 +3,9 @@ const search = new URLSearchParams(window.location.search);
 // const outputId = +search.get('output_id');
 const width = +search.get('width');
 const height = +search.get('height');
+const left = +search.get('left');
+const top = +search.get('top');
+const kiosk = !!+search.get('kiosk');
 const objectFit = search.get('objectFit');
 const shader = search.get('shader')?.trim();
 const HIDE_CURSOR_DELAY = 1000;
@@ -22,6 +25,22 @@ const showCursor = () => {
   document.documentElement.classList.remove('cursor-hidden');
   clearTimeout(cursorTimer);
   cursorTimer = window.setTimeout(hideCursor, HIDE_CURSOR_DELAY);
+};
+
+const getOutputBounds = () => ({
+  left: kiosk && Number.isFinite(left) ? left : 0,
+  top: kiosk && Number.isFinite(top) ? top : 0,
+  width: width || window.innerWidth,
+  height: height || window.innerHeight,
+});
+
+const applyOutputBounds = element => {
+  if (!element) return;
+  const bounds = getOutputBounds();
+  element.style.left = `${bounds.left}px`;
+  element.style.top = `${bounds.top}px`;
+  element.style.width = `${bounds.width}px`;
+  element.style.height = `${bounds.height}px`;
 };
 
 const vertexShaderSource = `
@@ -184,8 +203,8 @@ const createShaderRenderer = (video, canvas, fragmentSource, fit) => {
   let frameId = 0;
 
   const resize = () => {
-    const nextWidth = width || window.innerWidth;
-    const nextHeight = height || window.innerHeight;
+    applyOutputBounds(canvas);
+    const { width: nextWidth, height: nextHeight } = getOutputBounds();
     if (canvas.width !== nextWidth) canvas.width = nextWidth;
     if (canvas.height !== nextHeight) canvas.height = nextHeight;
     gl.viewport(0, 0, canvas.width, canvas.height);
@@ -252,6 +271,7 @@ window.onload = () => {
     // videoElement.style=`width: ${width}px; height: ${height}px;`;
     videoElement.width = width;
     videoElement.height = height;
+    applyOutputBounds(videoElement);
     videoElement.style.setProperty(
       '--object-fit',
       allowedObjectFits.has(objectFit) ? objectFit : 'cover',
@@ -259,6 +279,7 @@ window.onload = () => {
     if (shader) {
       const canvasElement = document.querySelector('canvas');
       try {
+        applyOutputBounds(canvasElement);
         shaderRenderer = createShaderRenderer(
           videoElement,
           canvasElement,

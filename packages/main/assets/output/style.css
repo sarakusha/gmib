@@ -11,9 +11,9 @@ video {
     object-fit: var(--object-fit, cover);
     user-select: none;
 }
-video, canvas {
-    width: 100vw;
-    height: 100vh;
+video,
+canvas {
+    position: fixed;
     display: block;
 }
 canvas {
