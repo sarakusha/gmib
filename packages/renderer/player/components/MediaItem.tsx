@@ -19,7 +19,7 @@ import {
 
 import type { MediaInfo } from '/@common/mediaInfo';
 
-import { css, styled } from '@mui/material/styles';
+import { styled } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import dayjs from 'dayjs';
 import type { XYCoord } from 'dnd-core';
@@ -62,7 +62,10 @@ const ListItemHover = styled(ListItem)(({ theme }) => ({
       backgroundColor: 'transparent',
     },
   },
-  '&:hover ~ * svg, & ~ *:hover svg': {
+  '& .MuiListItemSecondaryAction-root svg': {
+    opacity: 0,
+  },
+  '&:hover .MuiListItemSecondaryAction-root svg, & .MuiListItemSecondaryAction-root:hover svg': {
     opacity: 1,
   },
 }));
@@ -275,12 +278,7 @@ const MediaItem = React.forwardRef<HTMLLIElement, MediaItemProps>((props, ref) =
               title={deleteTitle}
               tabIndex={-1}
             >
-              <DeleteCloseIcon
-                fontSize="inherit"
-                css={css`
-                  opacity: 0;
-                `}
-              />
+              <DeleteCloseIcon fontSize="inherit" />
             </IconButton>
           </ListItemSecondaryAction>
         )}
