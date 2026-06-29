@@ -11,6 +11,7 @@ import ShuffleIcon from '@mui/icons-material/Shuffle';
 import type { IconButtonProps } from '@mui/material';
 import { IconButton, Tooltip } from '@mui/material';
 import findIndex from 'lodash/findIndex';
+import { useSnackbar } from 'notistack';
 import React, { useState } from 'react';
 
 import useShiftAlert from '../../common/useShiftAlert';
@@ -35,9 +36,33 @@ type Props = {
   size?: IconButtonProps['size'];
 };
 
+const getDeleteErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'object' && error !== null) {
+    if ('message' in error && typeof error.message === 'string') return error.message;
+    if ('name' in error && typeof error.name === 'string') return error.name;
+    if ('data' in error) {
+      if (typeof error.data === 'string') return error.data;
+      if (typeof error.data === 'object' && error.data !== null && 'message' in error.data) {
+        const { message } = error.data;
+        if (typeof message === 'string') return message;
+      }
+    }
+    if ('error' in error && typeof error.error === 'string') return error.error;
+    if ('status' in error) return `HTTP ${String(error.status)}`;
+    const json = JSON.stringify(error);
+    if (json && json !== '{}') return json;
+    const keys = Object.keys(error);
+    if (keys.length > 0) return `Ошибка без сообщения, поля: ${keys.join(', ')}`;
+  }
+  if (typeof error === 'string' && error.length > 0) return error;
+  return `Неизвестная ошибка (${String(error)})`;
+};
+
 const PlaylistsToolbar: React.FC<Props> = ({ size }) => {
   const [create] = useCreatePlaylistMutation();
   const [remove] = useDeletePlaylistMutation();
+  const { closeSnackbar, enqueueSnackbar } = useSnackbar();
   const { data } = useGetPlaylistsQuery();
   const playlists = data ? selectPlaylists(data) : [];
   const dispatch = useDispatch();
@@ -109,14 +134,25 @@ const PlaylistsToolbar: React.FC<Props> = ({ size }) => {
           <IconButton
             size={size}
             color="inherit"
-            disabled={!current}
+            disabled={current == null}
             onClick={e => {
               if (!e.shiftKey) showAlert();
-              else if (current) {
+              else if (current != null) {
                 const index = findIndex(playlists, { id: current });
                 const near = index > 0 ? index - 1 : 1;
-                dispatch(setCurrentPlaylist(playlists[near]?.id));
-                void remove(current);
+                dispatch(setCurrentPlaylist(playlists[near]?.id ?? null));
+                void remove(current)
+                  .unwrap()
+                  .catch((error: unknown) => {
+                    dispatch(setCurrentPlaylist(current));
+                    const message = getDeleteErrorMessage(error);
+                    enqueueSnackbar(`Ошибка при удалении плейлиста: ${message}`, {
+                      variant: 'error',
+                      preventDuplicate: true,
+                      autoHideDuration: 5000,
+                      onClose: () => closeSnackbar(),
+                    });
+                  });
               }
             }}
           >
@@ -128,7 +164,7 @@ const PlaylistsToolbar: React.FC<Props> = ({ size }) => {
         <div>
           <IconButton
             color="inherit"
-            disabled={!current}
+            disabled={current == null}
             onClick={() => setOpenDialog(true)}
             size={size}
           >
@@ -141,7 +177,7 @@ const PlaylistsToolbar: React.FC<Props> = ({ size }) => {
           <IconButton
             size={size}
             color="inherit"
-            disabled={!current || empty}
+            disabled={current == null || empty}
             onClick={() => {
               dispatch(updatePlaylist(current, playlist => ({ ...playlist, items: [] })));
             }}
@@ -155,7 +191,7 @@ const PlaylistsToolbar: React.FC<Props> = ({ size }) => {
           <IconButton
             size={size}
             color="inherit"
-            disabled={!current || empty}
+            disabled={current == null || empty}
             onClick={() => {
               dispatch(
                 updatePlaylist(current, ({ items, ...playlist }) => ({

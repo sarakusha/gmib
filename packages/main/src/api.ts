@@ -91,6 +91,7 @@ import {
 import proxyMiddleware from './proxyMiddleware';
 import relaunch from './relaunch';
 import {
+  clearPlayersPlaylist,
   deleteExtraAddresses,
   deletePlayer,
   deleteScreen,
@@ -521,13 +522,28 @@ api.get('/playlist/:id', async (req, res, next) => {
   }
 });
 
-api.delete('/playlist/:id', (req, res, next) => {
-  const id = +req.params.id;
-  deletePlaylist(id).then(result => {
-    res.sendStatus(result.changes ? 204 : 404);
+api.delete('/playlist/:id', async (req, res) => {
+  let transaction = false;
+  try {
+    transaction = await beginTransaction();
+    const id = +req.params.id;
+    const players = await getPlaylistPlayers(id);
+    await clearPlayersPlaylist(id);
+    await deleteAllPlaylistItems(id);
+    const { changes } = await deletePlaylist(id);
+    transaction = await commitTransaction();
+    res.sendStatus(changes ? 204 : 404);
     const sourceId = req.headers['x-ni-source-id'];
     broadcast({ event: 'playlist', remote: req.ip, ...(sourceId && { sourceId: +sourceId }) });
-  }, next);
+    if (players.length > 0) {
+      broadcast({ event: 'player', remote: req.ip, ...(sourceId && { sourceId: +sourceId }) });
+    }
+  } catch (e) {
+    if (transaction) await rollback();
+    const message = e instanceof Error ? e.message : String(e);
+    debug(`error while delete playlist ${req.params.id}: ${message}`);
+    res.status(500).json({ message });
+  }
 });
 
 api.post('/playlist', async (req, res, next) => {

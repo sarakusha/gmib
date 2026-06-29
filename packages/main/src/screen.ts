@@ -297,6 +297,11 @@ export const updatePlayer = promisifyRun(
   }),
 );
 
+export const clearPlayersPlaylist = promisifyRun(
+  'UPDATE player SET playlistId = NULL, "current" = NULL WHERE playlistId = ?',
+  (playlistId: number) => playlistId,
+);
+
 export const updateShowPlayer = promisifyRun(
   'UPDATE player SET flags = flags & ? WHERE id = ?',
   (id: number) => [~PlayerFlags.Hidden, id],

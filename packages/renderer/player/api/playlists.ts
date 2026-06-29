@@ -12,7 +12,7 @@ import { setCurrentPlaylist } from '../store/currentSlice';
 import { selectCurrentPlaylist } from '../store/selectors';
 import { sourceId } from '../utils';
 
-import playerApi, { selectPlayer, selectPlayers } from './player';
+import playerApi, { playerAdapter, selectPlayer, selectPlayers } from './player';
 
 const adapter = createEntityAdapter<Playlist>({
   sortComparer: (a, b) =>
@@ -35,6 +35,13 @@ const playlistApi = createApi({
       query: () => 'playlist',
       transformResponse: (response: Playlist[]) =>
         adapter.addMany(adapter.getInitialState(), response),
+      providesTags: result =>
+        result
+          ? [
+              { type: 'playlist' as const, id: 'LIST' },
+              ...result.ids.map(id => ({ type: 'playlist' as const, id })),
+            ]
+          : [{ type: 'playlist' as const, id: 'LIST' }],
       async onQueryStarted(_, { queryFulfilled, getState, dispatch }) {
         const { data: playlistData } = await queryFulfilled;
         if (playlistData.ids.length > 0) {
@@ -141,12 +148,20 @@ const playlistApi = createApi({
         url: `playlist/${id}`,
         method: 'DELETE',
       }),
+      invalidatesTags: (_result, _error, id) => [
+        { type: 'playlist' as const, id: 'LIST' },
+        { type: 'playlist' as const, id },
+      ],
       onQueryStarted(id, { dispatch, queryFulfilled }) {
         const playerResult = dispatch(
           playerApi.util.updateQueryData('getPlayers', undefined, draft => {
             selectPlayers(draft).forEach(player => {
-              // eslint-disable-next-line no-param-reassign
-              if (player.playlistId === id) player.playlistId = null;
+              if (player.playlistId === id) {
+                playerAdapter.updateOne(draft, {
+                  id: player.id,
+                  changes: { playlistId: null, current: undefined },
+                });
+              }
             });
           }),
         );
