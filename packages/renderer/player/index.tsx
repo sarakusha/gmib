@@ -18,6 +18,7 @@ import theme from '../common/theme';
 import App from './components/App';
 import store from './store';
 import updatePlayer from './api/updatePlayer';
+import { setupMediaSessionActionHandlers } from './store/currentThunk';
 import { sourceId } from './utils';
 
 import { isRemoteSession } from '/@common/remote';
@@ -33,6 +34,7 @@ const root = createRoot(container);
 // Sentry.init({ dsn: 'https://fbd4024789d247fcb5eb2493d1aa28b6@o1412889.ingest.sentry.io/6752393' });
 
 window.setDispatch(store.dispatch.bind(store));
+setupMediaSessionActionHandlers(store.dispatch, store.getState);
 if (!isRemoteSession) {
   window.onUpdatePlaylist(() => {
     store.dispatch(updatePlayer(sourceId, player => player));

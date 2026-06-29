@@ -14,11 +14,57 @@ import {
 } from './currentSlice';
 import { startAppListening } from './listenerMiddleware';
 import { selectCurrent, selectDuration, selectPlaybackState } from './selectors';
+import type { AppDispatch, RootState } from './index';
 
 import { isRemoteSession } from '/@common/remote';
 
 const selectPlayersData = playerApi.endpoints.getPlayers.select();
 // const selectPlaylistsData = playlistApi.endpoints.getPlaylists.select();
+const DEFAULT_SEEK_OFFSET = 10;
+
+const getSeekPosition = (position: number | undefined, offset: number): number =>
+  Math.max(0, (position ?? 0) + offset);
+
+export const setupMediaSessionActionHandlers = (
+  dispatch: AppDispatch,
+  getState: () => RootState,
+): void => {
+  const mediaSession = navigator.mediaSession;
+  if (!mediaSession?.setActionHandler) return;
+
+  const setSeekHandler = (
+    action: MediaSessionAction,
+    handler: (details: MediaSessionActionDetails) => void,
+  ): void => {
+    try {
+      mediaSession.setActionHandler(action, handler);
+    } catch {
+      // Ignore unsupported media session actions in this browser.
+    }
+  };
+
+  setSeekHandler('play', () => {
+    dispatch(setPlaybackState('playing'));
+  });
+  setSeekHandler('pause', () => {
+    dispatch(setPlaybackState('paused'));
+  });
+  setSeekHandler('stop', () => {
+    dispatch(setPlaybackState('none'));
+  });
+  setSeekHandler('seekbackward', ({ seekOffset }) => {
+    const { position } = selectCurrent(getState());
+    window.mediaStream.seek?.(getSeekPosition(position, -(seekOffset ?? DEFAULT_SEEK_OFFSET)));
+  });
+  setSeekHandler('seekforward', ({ seekOffset }) => {
+    const { position } = selectCurrent(getState());
+    window.mediaStream.seek?.(getSeekPosition(position, seekOffset ?? DEFAULT_SEEK_OFFSET));
+  });
+  setSeekHandler('seekto', ({ seekTime }) => {
+    if (typeof seekTime !== 'number') return;
+    window.mediaStream.seek?.(seekTime);
+  });
+};
 
 startAppListening({
   matcher: isAnyOf(setPosition, setDuration, setPlaybackRate),
