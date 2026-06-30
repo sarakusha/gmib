@@ -10,7 +10,7 @@ import './config';
 import './screen';
 // import './nibus';
 import './mdns';
-import './tray';
+import { showLast } from './tray';
 import './linux';
 import './dialogs';
 import './express';
@@ -76,7 +76,7 @@ app.on('before-quit', persistLocalWindowState);
 /**
  * @see https://www.electronjs.org/docs/v14-x-y/api/app#event-activate-macos Event: 'activate'
  */
-app.on('activate', activateMainWindow);
+app.on('activate', showLast);
 
 /**
  */

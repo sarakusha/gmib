@@ -28,8 +28,10 @@ const getAllWindowParams = () =>
     'zIndex',
   );
 
-const showLast = () => {
-  const top = getAllWindowParams().at(-1);
+export const showLast = () => {
+  const top = getAllWindowParams()
+    .filter(param => !(isGmib(param) && param.host === 'localhost' && localConfig.get('localGmibHidden')))
+    .at(-1);
   top && findManagedWindow(top.id)?.show();
 };
 
@@ -113,10 +115,6 @@ void app.whenReady().then(() => {
   tray.appIcon.on('double-click', () => showAll());
   tray.appIcon.setToolTip(import.meta.env.VITE_APP_NAME);
   updateTray();
-});
-
-app.on('activate', () => {
-  showAll();
 });
 
 export default tray;
