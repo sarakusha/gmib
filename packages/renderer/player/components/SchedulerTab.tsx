@@ -109,7 +109,10 @@ const formatDateTime = (value?: string): [string, string] => {
   if (!value) return ['-', ''];
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return [value, ''];
-  return [date.toLocaleDateString('ru-RU'), date.toLocaleTimeString('ru-RU')];
+  return [date.toLocaleDateString('ru-RU'), date.toLocaleTimeString('ru-RU', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })];
 };
 
 // const getScheduleDescription = (job: PlayerSchedulerJob): string => {
