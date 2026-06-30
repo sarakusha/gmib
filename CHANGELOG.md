@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [5.0.0](https://github.com/sarakusha/gmib/compare/v4.12.0...v5.0.0) (2026-06-30)
+
+
+### Features
+
+* время без секунд ([d2f4522](https://github.com/sarakusha/gmib/commit/d2f452271dbb2649075f308705f12d136a9127c1))
+* уменьшен рпзмер диалога ([83e6082](https://github.com/sarakusha/gmib/commit/83e6082047c88db7e63eb95209052e1e8f8ba8bf))
+* add more output shader presets ([bb5b57a](https://github.com/sarakusha/gmib/commit/bb5b57a5d63d28e41c53fbeb0f91f8768506562e))
+* add player scheduler tab ([6b8cbcc](https://github.com/sarakusha/gmib/commit/6b8cbcc9d116f49fdd419de11c3dc0fe8e0ed6f6))
+* add shader support for player output mappings ([e10a88c](https://github.com/sarakusha/gmib/commit/e10a88c4af6d08966c609d9f369c6f29bc0fa162))
+* persist and run player scheduler in main process ([ca07273](https://github.com/sarakusha/gmib/commit/ca072732e41fc91e6a0537782ef4c345e1062130))
+* run scheduler jobs manually ([4e2a79e](https://github.com/sarakusha/gmib/commit/4e2a79ec0c82c6b24d769dfea0bb0d3636b4c690))
+* support shader output sizing for object fit ([0ca0df8](https://github.com/sarakusha/gmib/commit/0ca0df808301346ae4a0a38675fdb47046b32520))
+* wire PiP seek controls to media session ([f078c5c](https://github.com/sarakusha/gmib/commit/f078c5c7b03ee8009be62659e67de28d67177823))
+
+
+### Bug Fixes
+
+* clear player playlist references via entity adapter ([c6ca963](https://github.com/sarakusha/gmib/commit/c6ca963388403e476d4cf63f9dd2e678d547e124))
+* execute scheduled player actions through runtime IPC ([468ad1a](https://github.com/sarakusha/gmib/commit/468ad1a1c2a7c9c6d12b5c32e759324d74747b34))
+* preserve hidden gmib tab on macOS activation ([b011688](https://github.com/sarakusha/gmib/commit/b01168896e3fb8b5caa5b0682f646e8e0caa0c5c))
+* respect output area bounds for shader rendering ([521aea3](https://github.com/sarakusha/gmib/commit/521aea3bc81b115d4e1535e2b0362db544e01aef))
+* restart playlist from beginning when scheduler loads it ([ac5d2a5](https://github.com/sarakusha/gmib/commit/ac5d2a542947fe74232aa4fbb7e47a2b9f0b6f0c))
+* show weekday month names in scheduler editor ([e9146a4](https://github.com/sarakusha/gmib/commit/e9146a40277b4a0b9f5405b18c2ed767c58fba88))
+* stabilize scheduler cron accordion borders ([72d6362](https://github.com/sarakusha/gmib/commit/72d63627245c7a60161ab8c7ef7a184f24a4a35a))
+* start playback on next action ([dd14aab](https://github.com/sarakusha/gmib/commit/dd14aab392f585cfefae595a2ed6c60565f16f68))
+* sync player controls after scheduled actions ([8f01b78](https://github.com/sarakusha/gmib/commit/8f01b78382d8f37b13a9e3ba8e9a1331ee6246f4))
+
 ## [4.12.0](https://github.com/sarakusha/gmib/compare/v4.11.2...v4.12.0) (2026-06-29)
 
 
