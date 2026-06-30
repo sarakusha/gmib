@@ -149,7 +149,7 @@ const PlayerSettings: React.FC<{ id?: number }> = ({ id }) => {
             label="Автозапуск"
             /> */}
             <FormControl component="fieldset" margin="normal">
-              <FormLabel component="legend">Переходы между роликами</FormLabel>
+              <FormLabel component="legend">Переходы между роликами (только WebCodecs)</FormLabel>
               <FormGroup>
                 <FormControlLabel
                   name="disableFadeIn"
@@ -187,9 +187,8 @@ const PlayerSettings: React.FC<{ id?: number }> = ({ id }) => {
               <ListItemButton onClick={() => id && openPlayerMappingDialog(id, item.id)} dense>
                 <ListItemText
                   primary={`${item.name} (${item.objectFit})`}
-                  secondary={`${getDisplay(item.display)} (${item.left},${item.top}-${item.width}x${
-                    item.height
-                  })`}
+                  secondary={`${getDisplay(item.display)} (${item.left},${item.top}-${item.width}x${item.height
+                    })`}
                   slotProps={{
                     primary: noWrap,
                     secondary: noWrap,
