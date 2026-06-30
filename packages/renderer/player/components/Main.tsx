@@ -2,7 +2,6 @@ import TabContext from '@mui/lab/TabContext';
 import TabList from '@mui/lab/TabList';
 // import TabPanel from '@mui/lab/TabPanel';
 import Box from '@mui/material/Box';
-import Container from '@mui/material/Container';
 import Tab from '@mui/material/Tab';
 import React from 'react';
 
@@ -13,6 +12,7 @@ import { selectCurrentTab } from '../store/selectors';
 
 import MediaTab from './MediaTab';
 import PlaylistsTab from './PlaylistsTab';
+import SchedulerTab from './SchedulerTab';
 import SettingsTab from './SettingsTab';
 import TabPanel from './TabPanel';
 
@@ -46,7 +46,7 @@ const Main: React.FC<{ className?: string }> = ({ className }) => {
             <MediaTab />
           </TabPanel>
           <TabPanel value="scheduler">
-            <Container maxWidth="sm">В разработке...</Container>
+            <SchedulerTab />
           </TabPanel>
           <TabPanel value="settings">
             <SettingsTab />
