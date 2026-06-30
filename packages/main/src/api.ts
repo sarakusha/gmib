@@ -74,6 +74,12 @@ import {
   uniquePlayerMappingName,
   updatePlayerMapping,
 } from './playerMapping';
+import {
+  createSchedulerJob,
+  deleteSchedulerJob,
+  getSchedulerJobs,
+  updateSchedulerJob,
+} from './playerScheduler';
 import { getPlayerTitle } from './playerWindow';
 import {
   deleteAllPlaylistItems,
@@ -805,6 +811,33 @@ api.put('/player', async (req, res, next) => {
   } catch (e) {
     next(e);
   }
+});
+
+api.get('/scheduler', (req, res) => {
+  const playerId = typeof req.query.playerId === 'string' ? +req.query.playerId : undefined;
+  res.json(getSchedulerJobs(Number.isFinite(playerId) ? playerId : undefined));
+});
+
+api.post('/scheduler', (req, res) => {
+  const job = createSchedulerJob(req.body);
+  res.json(job);
+  broadcast({ event: 'schedulerJobs', data: [job.playerId], all: true });
+});
+
+api.put('/scheduler/:id', (req, res) => {
+  const job = updateSchedulerJob(req.params.id, req.body);
+  if (!job) {
+    res.sendStatus(404);
+    return;
+  }
+  res.json(job);
+  broadcast({ event: 'schedulerJobs', data: [job.playerId], all: true });
+});
+
+api.delete('/scheduler/:id', (req, res) => {
+  const deleted = deleteSchedulerJob(req.params.id);
+  res.sendStatus(deleted ? 204 : 404);
+  broadcast({ event: 'schedulerJobs', data: [0], all: true });
 });
 
 api.get('/display', (req, res) => {

@@ -18,6 +18,7 @@ import mappingApi from './mapping';
 import mediaApi from './media';
 import playerApi, { debouncedUpdatePlayer, playerAdapter, selectPlayer } from './player';
 import playlistApi, { selectPlaylistById } from './playlists';
+import schedulerApi from './scheduler';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:updatePlayer`);
 
@@ -190,6 +191,17 @@ export const socketMiddleware: Middleware = api => {
                 forceRefetch: true,
               }),
             );
+            break;
+          case 'schedulerJobs':
+            dispatch(schedulerApi.util.invalidateTags([{ type: 'scheduler', id: 'LIST' }]));
+            break;
+          case 'scheduler':
+            window.dispatchEvent(
+              new CustomEvent('player-scheduler', {
+                detail: data[1],
+              }),
+            );
+            dispatch(schedulerApi.util.invalidateTags([{ type: 'scheduler', id: 'LIST' }]));
             break;
           case 'mapping':
             void dispatch(

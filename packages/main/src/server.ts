@@ -23,6 +23,7 @@ type BroadcastOptions = {
   data?: unknown[];
   remote?: string;
   sourceId?: number;
+  all?: boolean;
 };
 
 const local = ['::1', '127.0.0.1', 'localhost'];
@@ -56,12 +57,18 @@ wss.on('connection', (ws: WebSocketEx) => {
   });
 });
 
-export const broadcast = ({ event, data = [0], remote, sourceId }: BroadcastOptions) => {
+export const broadcast = ({
+  event,
+  data = [0],
+  remote,
+  sourceId,
+  all = false,
+}: BroadcastOptions) => {
   wss.clients.forEach((ws: WebSocketEx) => {
     const remoteAddress = ws._socket?.remoteAddress;
     if (
       ws.readyState === WebSocket.OPEN &&
-      (!ipEqual(remoteAddress, remote) || (sourceId != null && sourceId !== ws.sourceId))
+      (all || !ipEqual(remoteAddress, remote) || (sourceId != null && sourceId !== ws.sourceId))
     ) {
       ws.send(JSON.stringify({ event, data }));
     }

@@ -24,7 +24,7 @@ import { styled } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import dayjs from 'dayjs';
 import type { XYCoord } from 'dnd-core';
-import type { CSSProperties } from 'react';
+// import type { CSSProperties } from 'react';
 import React from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 // import type { ListChildComponentProps } from 'react-window';
@@ -77,7 +77,7 @@ export type MediaItemProps = {
   id?: string;
   media: MediaInfo;
   onDelete?: (id: string) => void;
-  style?: CSSProperties;
+  // style?: CSSProperties;
   selected?: boolean;
   onSelect?: (md5: string, selected: boolean) => void;
   count?: number;
@@ -168,7 +168,7 @@ const uploadStatusText = (uploadProgress: MediaItemProps['uploadProgress']): str
 const MediaItem = React.forwardRef<HTMLLIElement, MediaItemProps>((props, ref) => {
   const {
     id,
-    style,
+    // style,
     onDelete,
     selected,
     onSelect,
@@ -242,7 +242,7 @@ const MediaItem = React.forwardRef<HTMLLIElement, MediaItemProps>((props, ref) =
       <ListItemHover
         title={title}
         ref={refInner}
-        style={style}
+        // style={style}
         dense
         onClick={e => {
           if (e.shiftKey) {

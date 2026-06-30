@@ -20,6 +20,7 @@ import './hid';
 // import './channels';
 import { activateMainWindow, createMainWindow, persistLocalWindowState } from './mainWindow';
 import { installWindowOpenHandler, toggleOutputWindowsVisibility } from './openHandler';
+import { startPlayerScheduler } from './playerScheduler';
 import { launchPlayers } from './playerWindow';
 
 import { fixDefault } from '/@common/helpers';
@@ -101,6 +102,9 @@ if (isDevRuntime) {
  */
 app
   .whenReady()
+  .then(() => {
+    startPlayerScheduler();
+  })
   .then(createMainWindow)
   .then(main => {
     installWindowOpenHandler(main.webContents);

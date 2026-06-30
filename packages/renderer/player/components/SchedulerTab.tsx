@@ -1,13 +1,17 @@
 import AddAlarmIcon from '@mui/icons-material/AddAlarm';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DeleteIcon from '@mui/icons-material/Delete';
+import ErrorIcon from '@mui/icons-material/Error';
 import EventRepeatIcon from '@mui/icons-material/EventRepeat';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import {
   Accordion,
   AccordionDetails,
   AccordionSummary,
   Box,
   Button,
-  ButtonGroup,
   Container,
   Dialog,
   DialogActions,
@@ -17,90 +21,65 @@ import {
   Grid,
   IconButton,
   InputLabel,
-  List,
-  ListItem,
-  ListItemSecondaryAction,
-  ListItemText,
   MenuItem,
   Select,
   Slider,
   Stack,
   Tab,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
   TextField,
   Tooltip,
   Typography,
 } from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import TabContext from '@mui/lab/TabContext';
 import TabList from '@mui/lab/TabList';
 import TabPanel from '@mui/lab/TabPanel';
 import React from 'react';
 
 import type { Playlist } from '/@common/playlist';
+import type {
+  CronMode,
+  CronPart,
+  PlayerSchedulerAction,
+  PlayerSchedulerJob,
+  PlayerSchedulerJobInput,
+  ScheduleKind,
+  SimpleCronMode,
+  SimpleCronPart,
+} from '/@common/scheduler';
+import {
+  cronToString,
+  defaultCron,
+  describeCron,
+  normalizeSelected,
+  partToCron,
+  simplePartToCron,
+} from '/@common/scheduler';
 
-import { usePlayer } from '../api/player';
 import { useGetPlaylists } from '../api/playlists';
-import updatePlayer, { playerNext } from '../api/updatePlayer';
-import { useDispatch } from '../store';
-import { setPlaybackState } from '../store/currentSlice';
+import {
+  useCreateSchedulerJobMutation,
+  useDeleteSchedulerJobMutation,
+  useGetSchedulerJobsQuery,
+  useUpdateSchedulerJobMutation,
+} from '../api/scheduler';
 import { sourceId } from '../utils';
 
 import Toolbar from './StyledToolbar';
+import Checkbox from "@mui/material/Checkbox";
+import { styled } from "@mui/material/styles";
 
-type ScheduleKind = 'once' | 'cron';
-type PlayerAction = 'load-playlist' | 'play' | 'stop' | 'next' | 'play-item';
-type CronMode = 'all' | 'every' | 'select';
-type SimpleCronMode = 'all' | 'select';
+type DialogValues = PlayerSchedulerJobInput;
 
-type CronPart = {
-  mode: CronMode;
-  every: number;
-  selected: number[];
-};
-
-type SimpleCronPart = {
-  mode: SimpleCronMode;
-  selected: number[];
-};
-
-type CronSchedule = {
-  minutes: CronPart;
-  hours: CronPart;
-  days: SimpleCronPart;
-  months: SimpleCronPart;
-  weekdays: SimpleCronPart;
-};
-
-type SchedulerJob = {
-  id: string;
-  kind: ScheduleKind;
-  name: string;
-  action: PlayerAction;
-  playlistId?: number;
-  itemNumber?: number;
-  runAt?: string;
-  cron?: CronSchedule;
-  enabled: boolean;
-  lastRunKey?: string;
-};
-
-type DialogValues = Omit<SchedulerJob, 'id' | 'enabled' | 'lastRunKey'>;
-
-const storageKey = 'gmib.player.scheduler.jobs';
-
-const defaultCron = (): CronSchedule => ({
-  minutes: { mode: 'every', every: 10, selected: [] },
-  hours: { mode: 'all', every: 1, selected: [] },
-  days: { mode: 'all', selected: [] },
-  months: { mode: 'all', selected: [] },
-  weekdays: { mode: 'all', selected: [] },
-});
-
-const actionLabels: Record<PlayerAction, string> = {
-  'load-playlist': 'Загрузить и воспроизвести плейлист',
-  play: 'Play',
-  stop: 'Stop',
-  next: 'Next',
+const actionLabels: Record<PlayerSchedulerAction, string> = {
+  'load-playlist': 'Загрузить и воспроизвести',
+  play: 'Начать воспроизведение',
+  stop: 'Остановить воспроизведение',
+  next: 'Следующий ролик',
   'play-item': 'Запустить ролик по номеру',
 };
 
@@ -111,51 +90,8 @@ const toDateTimeLocal = (date: Date): string =>
     date.getHours(),
   )}:${pad(date.getMinutes())}`;
 
-const createId = (): string =>
-  globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-
-const normalizeSelected = (selected: number[]): number[] =>
-  Array.from(new Set(selected)).sort((a, b) => a - b);
-
-const partToCron = (part: CronPart): string => {
-  if (part.mode === 'all') return '*';
-  if (part.mode === 'every') return `*/${part.every}`;
-  return normalizeSelected(part.selected).join(',') || '*';
-};
-
-const simplePartToCron = (part: SimpleCronPart): string =>
-  part.mode === 'all' ? '*' : normalizeSelected(part.selected).join(',') || '*';
-
-const cronToString = (cron: CronSchedule): string =>
-  [
-    partToCron(cron.minutes),
-    partToCron(cron.hours),
-    simplePartToCron(cron.days),
-    simplePartToCron(cron.months),
-    simplePartToCron(cron.weekdays),
-  ].join(' ');
-
-const matchesPart = (part: CronPart, value: number): boolean => {
-  if (part.mode === 'all') return true;
-  if (part.mode === 'every') return value % part.every === 0;
-  return part.selected.includes(value);
-};
-
-const matchesSimplePart = (part: SimpleCronPart, value: number): boolean =>
-  part.mode === 'all' || part.selected.includes(value);
-
-const matchesCron = (cron: CronSchedule, date: Date): boolean =>
-  matchesPart(cron.minutes, date.getMinutes()) &&
-  matchesPart(cron.hours, date.getHours()) &&
-  matchesSimplePart(cron.days, date.getDate()) &&
-  matchesSimplePart(cron.months, date.getMonth() + 1) &&
-  matchesSimplePart(cron.weekdays, date.getDay());
-
-const getMinuteKey = (date: Date): string =>
-  `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}-${date.getHours()}-${date.getMinutes()}`;
-
 const getActionName = (
-  job: Pick<SchedulerJob, 'action' | 'playlistId' | 'itemNumber'>,
+  job: Pick<PlayerSchedulerJobInput, 'action' | 'playlistId' | 'itemNumber'>,
   playlists: Playlist[],
 ): string => {
   if (job.action === 'load-playlist') {
@@ -168,48 +104,18 @@ const getActionName = (
   return actionLabels[job.action];
 };
 
-const describeCron = (cron: CronSchedule): string => {
-  const minutes =
-    cron.minutes.mode === 'all'
-      ? 'каждую минуту'
-      : cron.minutes.mode === 'every'
-        ? `каждые ${cron.minutes.every} мин.`
-        : `в ${normalizeSelected(cron.minutes.selected).join(', ')} мин.`;
-  const hours =
-    cron.hours.mode === 'all'
-      ? 'ежечасно'
-      : cron.hours.mode === 'every'
-        ? `каждые ${cron.hours.every} ч.`
-        : `в ${normalizeSelected(cron.hours.selected).join(', ')} ч.`;
-  const days =
-    cron.days.mode === 'all'
-      ? ''
-      : `, дни месяца: ${normalizeSelected(cron.days.selected).join(', ')}`;
-  const months =
-    cron.months.mode === 'all'
-      ? ''
-      : `, месяцы: ${normalizeSelected(cron.months.selected).join(', ')}`;
-  const weekdays =
-    cron.weekdays.mode === 'all'
-      ? ''
-      : `, дни недели: ${normalizeSelected(cron.weekdays.selected).join(', ')}`;
-  return `Повторять ${minutes}, ${hours}${days}${months}${weekdays}`;
+const formatDateTime = (value?: string): [string, string] => {
+  if (!value) return ['-', ''];
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return [value, ''];
+  return [date.toLocaleDateString('ru-RU'), date.toLocaleTimeString('ru-RU')];
 };
 
-const readJobs = (): SchedulerJob[] => {
-  try {
-    const raw = localStorage.getItem(storageKey);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as SchedulerJob[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-};
-
-const writeJobs = (jobs: SchedulerJob[]): void => {
-  localStorage.setItem(storageKey, JSON.stringify(jobs));
-};
+// const getScheduleDescription = (job: PlayerSchedulerJob): string => {
+//   if (job.kind === 'once')
+//     return job.runAt ? `Один раз: ${formatDateTime(job.runAt).join(' ')}` : '';
+//   return job.cron ? `${describeCron(job.cron)} (${cronToString(job.cron)})` : '';
+// };
 
 type CronPartEditorProps = {
   title: string;
@@ -237,7 +143,6 @@ const CronPartEditor: React.FC<CronPartEditorProps> = ({
   onChange,
 }) => {
   const values = Array.from({ length: max - min + 1 }, (_, index) => min + index);
-  const tab = value.mode;
   const toggle = (item: number) => {
     const selected = value.selected.includes(item)
       ? value.selected.filter(current => current !== item)
@@ -253,7 +158,7 @@ const CronPartEditor: React.FC<CronPartEditorProps> = ({
         </Stack>
       </AccordionSummary>
       <AccordionDetails>
-        <TabContext value={tab}>
+        <TabContext value={value.mode}>
           <TabList onChange={(_, next: CronMode) => onChange({ ...value, mode: next })}>
             <Tab label={allLabel} value="all" />
             <Tab label={everyLabel} value="every" />
@@ -373,35 +278,55 @@ type SchedulerDialogProps = {
   kind: ScheduleKind;
   open: boolean;
   playlists: Playlist[];
+  initialJob?: PlayerSchedulerJob;
   onClose: () => void;
   onSubmit: (values: DialogValues) => void;
 };
+
+const createInitialValues = (
+  kind: ScheduleKind,
+  initialJob?: PlayerSchedulerJob,
+): DialogValues => ({
+  id: initialJob?.id,
+  playerId: sourceId,
+  kind: initialJob?.kind ?? kind,
+  name: initialJob?.name ?? '',
+  action: initialJob?.action ?? 'play',
+  playlistId: initialJob?.playlistId,
+  itemNumber: initialJob?.itemNumber,
+  runAt: initialJob?.runAt ?? toDateTimeLocal(new Date(Date.now() + 60 * 60 * 1000)),
+  cron: initialJob?.cron ?? defaultCron(),
+  enabled: initialJob?.enabled ?? true,
+});
+
+const toJobInput = (job: PlayerSchedulerJob): PlayerSchedulerJobInput => ({
+  id: job.id,
+  playerId: job.playerId,
+  kind: job.kind,
+  name: job.name,
+  action: job.action,
+  playlistId: job.playlistId,
+  itemNumber: job.itemNumber,
+  runAt: job.runAt,
+  cron: job.cron,
+  enabled: job.enabled,
+});
 
 const SchedulerDialog: React.FC<SchedulerDialogProps> = ({
   kind,
   open,
   playlists,
+  initialJob,
   onClose,
   onSubmit,
 }) => {
-  const [values, setValues] = React.useState<DialogValues>(() => ({
-    kind,
-    name: '',
-    action: 'play',
-    runAt: toDateTimeLocal(new Date(Date.now() + 60 * 60 * 1000)),
-    cron: defaultCron(),
-  }));
+  const [values, setValues] = React.useState<DialogValues>(() =>
+    createInitialValues(kind, initialJob),
+  );
 
   React.useEffect(() => {
-    if (!open) return;
-    setValues({
-      kind,
-      name: '',
-      action: 'play',
-      runAt: toDateTimeLocal(new Date(Date.now() + 60 * 60 * 1000)),
-      cron: defaultCron(),
-    });
-  }, [kind, open]);
+    if (open) setValues(createInitialValues(kind, initialJob));
+  }, [initialJob, kind, open]);
 
   const generatedName = getActionName(values, playlists);
   const name = values.name || generatedName;
@@ -411,16 +336,22 @@ const SchedulerDialog: React.FC<SchedulerDialogProps> = ({
     name.trim().length > 0 &&
     (!needsPlaylist || values.playlistId != null) &&
     (!needsItemNumber || (values.itemNumber ?? 0) > 0) &&
-    (kind === 'cron' || Boolean(values.runAt));
+    (values.kind === 'cron' || Boolean(values.runAt));
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
-      <DialogTitle>{kind === 'once' ? 'Одиночное действие' : 'Повторяющееся действие'}</DialogTitle>
+      <DialogTitle>
+        {initialJob
+          ? 'Редактировать задание'
+          : values.kind === 'once'
+            ? 'Одиночное действие'
+            : 'Повторяющееся действие'}
+      </DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
           <FormControl fullWidth variant="standard">
             <InputLabel id="scheduler-action-label">Действие</InputLabel>
-            <Select<PlayerAction>
+            <Select<PlayerSchedulerAction>
               labelId="scheduler-action-label"
               value={values.action}
               onChange={event => {
@@ -488,7 +419,7 @@ const SchedulerDialog: React.FC<SchedulerDialogProps> = ({
             value={values.name}
             onChange={event => setValues(current => ({ ...current, name: event.target.value }))}
           />
-          {kind === 'once' ? (
+          {values.kind === 'once' ? (
             <TextField
               label="Время запуска"
               type="datetime-local"
@@ -591,7 +522,14 @@ const SchedulerDialog: React.FC<SchedulerDialogProps> = ({
         <Button
           variant="contained"
           disabled={!isValid}
-          onClick={() => onSubmit({ ...values, name: name.trim() })}
+          onClick={() =>
+            onSubmit({
+              ...values,
+              name: name.trim(),
+              cron: values.kind === 'cron' ? values.cron : undefined,
+              runAt: values.kind === 'once' ? values.runAt : undefined,
+            })
+          }
         >
           Ok
         </Button>
@@ -600,112 +538,47 @@ const SchedulerDialog: React.FC<SchedulerDialogProps> = ({
   );
 };
 
+const StatusIcon: React.FC<{ job: PlayerSchedulerJob }> = ({ job }) => {
+  if (job.lastStatus === 'success') return <CheckCircleIcon color="success" />;
+  if (job.lastStatus === 'error') return <ErrorIcon color="error" />;
+  return <RadioButtonUncheckedIcon color={job.enabled ? 'info' : 'disabled'} />;
+};
+
+const HoverTableRow = styled(TableRow)({
+  '& .MuiIconButton-root': { opacity: 0 },
+  '&:hover .MuiIconButton-root': { opacity: 1 },
+});
+
+const stopPropagation = (event: React.MouseEvent): void => { event.stopPropagation(); };
+const disabledRow = {
+  opacity: 0.5,
+} as const;
+
 const SchedulerTab: React.FC = () => {
-  const dispatch = useDispatch();
-  const { player } = usePlayer(sourceId);
   const { data: playlists = [] } = useGetPlaylists();
-  const [jobs, setJobs] = React.useState<SchedulerJob[]>(readJobs);
+  const { data: jobs = [] } = useGetSchedulerJobsQuery(sourceId, {
+    pollingInterval: 30000,
+  });
+  const [createJob] = useCreateSchedulerJobMutation();
+  const [updateJob] = useUpdateSchedulerJobMutation();
+  const [deleteJob] = useDeleteSchedulerJobMutation();
   const [dialogKind, setDialogKind] = React.useState<ScheduleKind | null>(null);
-  const jobsRef = React.useRef(jobs);
-  const playerRef = React.useRef(player);
-  const playlistsRef = React.useRef(playlists);
+  const [editingJob, setEditingJob] = React.useState<PlayerSchedulerJob | undefined>();
 
-  React.useEffect(() => {
-    jobsRef.current = jobs;
-    writeJobs(jobs);
-  }, [jobs]);
+  const openEdit = (job: PlayerSchedulerJob): void => {
+    setEditingJob(job);
+    setDialogKind(job.kind);
+  };
 
-  React.useEffect(() => {
-    playerRef.current = player;
-  }, [player]);
-
-  React.useEffect(() => {
-    playlistsRef.current = playlists;
-  }, [playlists]);
-
-  const runJob = React.useCallback(
-    (job: SchedulerJob) => {
-      switch (job.action) {
-        case 'load-playlist':
-          if (job.playlistId == null) return;
-          dispatch(
-            updatePlayer(sourceId, current => ({
-              ...current,
-              playlistId: job.playlistId,
-              current: undefined,
-              autoPlay: true,
-            })),
-          );
-          dispatch(setPlaybackState('playing'));
-          break;
-        case 'play':
-          dispatch(setPlaybackState('playing'));
-          break;
-        case 'stop':
-          dispatch(setPlaybackState('none'));
-          break;
-        case 'next':
-          dispatch(playerNext());
-          break;
-        case 'play-item': {
-          const playlist = playlistsRef.current.find(
-            item => item.id === playerRef.current?.playlistId,
-          );
-          const item = playlist?.items[(job.itemNumber ?? 1) - 1];
-          if (!item) return;
-          dispatch(
-            updatePlayer(sourceId, current => ({
-              ...current,
-              current: item.id,
-              autoPlay: true,
-            })),
-          );
-          dispatch(setPlaybackState('playing'));
-          break;
-        }
-        default:
-          break;
-      }
-    },
-    [dispatch],
-  );
-
-  React.useEffect(() => {
-    const timer = window.setInterval(() => {
-      const now = new Date();
-      const minuteKey = getMinuteKey(now);
-      let changed = false;
-      const nextJobs = jobsRef.current.map(job => {
-        if (!job.enabled) return job;
-        if (job.kind === 'once') {
-          if (!job.runAt || job.lastRunKey) return job;
-          if (new Date(job.runAt).getTime() > now.getTime()) return job;
-          runJob(job);
-          changed = true;
-          return { ...job, enabled: false, lastRunKey: minuteKey };
-        }
-        if (!job.cron || job.lastRunKey === minuteKey || !matchesCron(job.cron, now)) return job;
-        runJob(job);
-        changed = true;
-        return { ...job, lastRunKey: minuteKey };
-      });
-      if (changed) setJobs(nextJobs);
-    }, 1000);
-    return () => window.clearInterval(timer);
-  }, [runJob]);
-
-  const submitJob = (values: DialogValues) => {
-    setJobs(current => [
-      ...current,
-      {
-        ...values,
-        id: createId(),
-        enabled: true,
-        cron: values.kind === 'cron' ? values.cron : undefined,
-        runAt: values.kind === 'once' ? values.runAt : undefined,
-      },
-    ]);
+  const closeDialog = (): void => {
     setDialogKind(null);
+    setEditingJob(undefined);
+  };
+
+  const submitJob = (values: DialogValues): void => {
+    if (editingJob) void updateJob({ id: editingJob.id, job: values });
+    else void createJob(values);
+    closeDialog();
   };
 
   return (
@@ -737,46 +610,88 @@ const SchedulerTab: React.FC = () => {
       <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
         {jobs.length === 0 ? (
           <Typography color="text.secondary" sx={{ p: 2 }}>
-            Нет запланированных действий.
+            Нет запланированных заданий.
           </Typography>
         ) : (
-          <List>
-            {jobs.map(job => (
-              <ListItem key={job.id} divider>
-                <ListItemText
-                  primary={job.name}
-                  secondary={
-                    job.kind === 'once'
-                      ? `${job.runAt ?? ''}${job.enabled ? '' : ' - выполнено'}`
-                      : `${job.cron ? cronToString(job.cron) : ''} - ${
-                          job.cron ? describeCron(job.cron) : ''
-                        }`
-                  }
-                />
-                <ListItemSecondaryAction>
-                  <ButtonGroup size="small" variant="outlined">
-                    <Button
-                      onClick={() =>
-                        setJobs(current =>
-                          current.map(item =>
-                            item.id === job.id ? { ...item, enabled: !item.enabled } : item,
-                          ),
-                        )
-                      }
-                    >
-                      {job.enabled ? 'Вкл' : 'Выкл'}
-                    </Button>
-                    <IconButton
-                      edge="end"
-                      onClick={() => setJobs(current => current.filter(item => item.id !== job.id))}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </ButtonGroup>
-                </ListItemSecondaryAction>
-              </ListItem>
-            ))}
-          </List>
+          <Table stickyHeader size="small" sx={{
+            tableLayout: 'fixed',
+            width: '100%',
+          }}>
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ width: 100 }} align="center">Вкл/выкл</TableCell>
+                <TableCell>Имя</TableCell>
+                <TableCell sx={{ width: 150 }} align="center">Было</TableCell>
+                <TableCell sx={{ width: 100 }} align="center">Статус</TableCell>
+                <TableCell sx={{ width: 150 }} align="center">Далее</TableCell>
+                <TableCell sx={{ width: 60 }} />
+                <TableCell sx={{ width: 60 }} />
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {jobs.map(job => {
+                const [lastDate, lastTime] = formatDateTime(job.lastRunAt);
+                const [nextDate, nextTime] = formatDateTime(job.nextRunAt);
+                return (
+                  <HoverTableRow
+                    key={job.id}
+                    hover
+                    selected={editingJob?.id === job.id}
+                    onClick={() => openEdit(job)}
+                    sx={job.enabled ? { cursor: 'pointer' } : disabledRow}
+                  >
+                    <TableCell onClick={stopPropagation} align="center">
+                      <Checkbox checked={job.enabled} onChange={() => void updateJob({
+                        id: job.id,
+                        job: { ...toJobInput(job), enabled: !job.enabled }
+                      })} />
+                    </TableCell>
+                    <TableCell sx={{ width: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <Typography variant="body2">{job.name}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {job.action}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="center">
+                      <Typography variant="body2">{lastDate}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {lastTime}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="center">
+                      <Tooltip title={job.lastMessage ?? (job.enabled ? 'Ожидает' : 'Отключено')}>
+                        <span>
+                          <StatusIcon job={job} />
+                        </span>
+                      </Tooltip>
+                    </TableCell>
+                    <TableCell align="center">
+                      <Typography variant="body2">{nextDate}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {nextTime}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="right" onClick={stopPropagation}>
+                      <Tooltip title={job.enabled ? 'Запустить сейчас' : 'Включите задание, чтобы запустить'}>
+                        <div>
+                          <IconButton edge="end" disabled={!job.enabled} >
+                            <PlayArrowIcon />
+                          </IconButton>
+                        </div>
+                      </Tooltip>
+                    </TableCell>
+                    <TableCell align="right" onClick={stopPropagation}>
+                      <Tooltip title="Удалить задание">
+                        <IconButton edge="end" onClick={() => void deleteJob(job.id)}>
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </HoverTableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
         )}
       </Box>
       {dialogKind && (
@@ -784,7 +699,8 @@ const SchedulerTab: React.FC = () => {
           kind={dialogKind}
           open
           playlists={playlists}
-          onClose={() => setDialogKind(null)}
+          initialJob={editingJob}
+          onClose={closeDialog}
           onSubmit={submitJob}
         />
       )}
