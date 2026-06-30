@@ -261,6 +261,7 @@ type SimpleCronPartEditorProps = {
   allLabel: string;
   selectLabel: string;
   columns?: number;
+  formatValue?: (value: number) => React.ReactNode;
   onChange: (value: SimpleCronPart) => void;
 };
 
@@ -272,6 +273,7 @@ const SimpleCronPartEditor: React.FC<SimpleCronPartEditorProps> = ({
   allLabel,
   selectLabel,
   columns = 7,
+  formatValue = item => item,
   onChange,
 }) => {
   const values = Array.from({ length: max - min + 1 }, (_, index) => min + index);
@@ -309,7 +311,7 @@ const SimpleCronPartEditor: React.FC<SimpleCronPartEditorProps> = ({
                     onClick={() => toggle(item)}
                     sx={{ minWidth: 0 }}
                   >
-                    {item}
+                    {formatValue(item)}
                   </Button>
                 </Grid>
               ))}
@@ -358,6 +360,9 @@ const toJobInput = (job: PlayerSchedulerJob): PlayerSchedulerJobInput => ({
   cron: job.cron,
   enabled: job.enabled,
 });
+
+const weekdayNames = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+const monthNames = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
 
 const SchedulerDialog: React.FC<SchedulerDialogProps> = ({
   kind,
@@ -534,6 +539,7 @@ const SchedulerDialog: React.FC<SchedulerDialogProps> = ({
                   allLabel="Каждый месяц"
                   selectLabel="Выбрать"
                   columns={6}
+                  formatValue={value => monthNames[value - 1]}
                   onChange={months =>
                     setValues(current => ({
                       ...current,
@@ -549,6 +555,7 @@ const SchedulerDialog: React.FC<SchedulerDialogProps> = ({
                   allLabel="Каждый день недели"
                   selectLabel="Выбрать"
                   columns={7}
+                  formatValue={value => weekdayNames[value]}
                   onChange={weekdays =>
                     setValues(current => ({
                       ...current,
