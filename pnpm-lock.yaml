@@ -314,6 +314,9 @@ importers:
         specifier: ^5.0.0
         version: 5.0.0
     devDependencies:
+      '@cspell/dict-ru_ru':
+        specifier: ^2.3.2
+        version: 2.3.2
       '@emotion/babel-plugin':
         specifier: ^11.13.5
         version: 11.13.5
@@ -815,6 +818,9 @@ packages:
 
   '@cspell/dict-r@2.1.1':
     resolution: {integrity: sha512-71Ka+yKfG4ZHEMEmDxc6+blFkeTTvgKbKAbwiwQAuKl3zpqs1Y0vUtwW2N4b3LgmSPhV3ODVY0y4m5ofqDuKMw==}
+
+  '@cspell/dict-ru_ru@2.3.2':
+    resolution: {integrity: sha512-wYGINTRjfKycUrXAASgnoBjiLlhn7EE7H5B5MMbTwhiLijfWOhyRiNajGpn0aY5H4UDWnfch3kGnQ1zr/wKzaw==}
 
   '@cspell/dict-ruby@5.1.1':
     resolution: {integrity: sha512-LHrp84oEV6q1ZxPPyj4z+FdKyq1XAKYPtmGptrd+uwHbrF/Ns5+fy6gtSi7pS+uc0zk3JdO9w/tPK+8N1/7WUA==}
@@ -6303,6 +6309,8 @@ snapshots:
       '@cspell/dict-data-science': 2.0.14
 
   '@cspell/dict-r@2.1.1': {}
+
+  '@cspell/dict-ru_ru@2.3.2': {}
 
   '@cspell/dict-ruby@5.1.1': {}
 

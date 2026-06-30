@@ -74,6 +74,7 @@
     "external": "echo 'module.exports = [\"electron\", \"debug\"' > external.js && pnpm list --prod --depth=3 -p| grep node_modules | sed 's#^.*node_modules/\\(.*\\)$#, \"\\1\"#' | sort | uniq -u >> external.js && echo '];' >> external.js"
   },
   "devDependencies": {
+    "@cspell/dict-ru_ru": "^2.3.2",
     "@emotion/babel-plugin": "^11.13.5",
     "@emotion/react": "11.14.0",
     "@emotion/styled": "11.14.0",
