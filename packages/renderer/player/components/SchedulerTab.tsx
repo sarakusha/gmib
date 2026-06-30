@@ -77,6 +77,7 @@ type DialogValues = PlayerSchedulerJobInput;
 
 const actionLabels: Record<PlayerSchedulerAction, string> = {
   'load-playlist': 'Загрузить и воспроизвести',
+  'toggle-play': 'Переключить воспроизведение',
   play: 'Начать воспроизведение',
   stop: 'Остановить воспроизведение',
   next: 'Следующий ролик',

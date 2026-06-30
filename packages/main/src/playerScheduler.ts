@@ -6,8 +6,12 @@ import { getMinuteKey, getNextRunAt, matchesCron, normalizeSelected } from '/@co
 
 import { dbReady } from './db';
 import { getPlaylist, getPlaylistItems } from './playlist';
+import { openPlayer } from './playerWindow';
 import { getPlayer, updatePlayer } from './screen';
 import { broadcast } from './server';
+import { findPlayerWindow } from './windowStore';
+
+import type { Player } from '/@common/video';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:playerScheduler`);
 
@@ -163,6 +167,23 @@ const getNextItem = async (
   return items[(index + 1) % items.length]?.id;
 };
 
+const sendPlayerToRuntime = async (playerId: number): Promise<Player | undefined> => {
+  const player = await getPlayer(playerId);
+  if (!player) return undefined;
+  const win = findPlayerWindow(player.id);
+  if (win) win.webContents.send('player', player);
+  broadcast({ event: 'player', all: true });
+  return player;
+};
+
+const updatePlayerRuntime = async (player: Player, openHidden = false): Promise<void> => {
+  await updatePlayer(player);
+  const updatedPlayer = await sendPlayerToRuntime(player.id);
+  if (openHidden && !findPlayerWindow(player.id) && updatedPlayer) {
+    await openPlayer(player.id, { hidden: true });
+  }
+};
+
 const runJob = async (job: PlayerSchedulerJob): Promise<void> => {
   const player = await getPlayer(job.playerId);
   if (!player) throw new Error(`Плеер ${job.playerId} не найден`);
@@ -174,25 +195,41 @@ const runJob = async (job: PlayerSchedulerJob): Promise<void> => {
       if (!playlist) throw new Error(`Плейлист ${job.playlistId} не найден`);
       const items = await getPlaylistItems(job.playlistId);
       if (items.length === 0) throw new Error(`Плейлист "${playlist.name}" пуст`);
-      await updatePlayer({
-        ...player,
-        playlistId: job.playlistId,
-        current: undefined,
-        autoPlay: true,
-      });
+      await updatePlayerRuntime(
+        {
+          ...player,
+          playlistId: job.playlistId,
+          current: undefined,
+          autoPlay: true,
+        },
+        true,
+      );
       break;
     }
+    case 'toggle-play':
+      await updatePlayerRuntime({ ...player, autoPlay: !player.autoPlay }, !player.autoPlay);
+      break;
     case 'play':
-      await updatePlayer({ ...player, autoPlay: true });
+      await updatePlayerRuntime({ ...player, autoPlay: true }, true);
       break;
-    case 'stop':
-      await updatePlayer({ ...player, current: undefined, autoPlay: false });
-      break;
-    case 'next':
-      await updatePlayer({
+    case 'stop': {
+      await updatePlayerRuntime({
         ...player,
-        current: await getNextItem(player.playlistId, player.current),
+        current: undefined,
+        autoPlay: false,
       });
+      const win = findPlayerWindow(player.id);
+      if (win) win.webContents.send('stop', player.id);
+      break;
+    }
+    case 'next':
+      await updatePlayerRuntime(
+        {
+          ...player,
+          current: await getNextItem(player.playlistId, player.current),
+        },
+        true,
+      );
       break;
     case 'play-item': {
       const playlistId = player.playlistId;
@@ -205,13 +242,12 @@ const runJob = async (job: PlayerSchedulerJob): Promise<void> => {
           `В плейлисте "${playlist?.name ?? playlistId}" нет ролика ${job.itemNumber ?? 1}`,
         );
       }
-      await updatePlayer({ ...player, current: item.id, autoPlay: true });
+      await updatePlayerRuntime({ ...player, current: item.id, autoPlay: true }, true);
       break;
     }
     default:
       break;
   }
-  broadcast({ event: 'player', all: true });
 };
 
 const executeDueJobs = async (): Promise<void> => {

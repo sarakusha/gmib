@@ -1,5 +1,11 @@
 export type ScheduleKind = 'once' | 'cron';
-export type PlayerSchedulerAction = 'load-playlist' | 'play' | 'stop' | 'next' | 'play-item';
+export type PlayerSchedulerAction =
+  | 'load-playlist'
+  | 'toggle-play'
+  | 'play'
+  | 'stop'
+  | 'next'
+  | 'play-item';
 export type CronMode = 'all' | 'every' | 'select';
 export type SimpleCronMode = 'all' | 'select';
 export type SchedulerStatus = 'idle' | 'success' | 'error';
