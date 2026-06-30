@@ -66,6 +66,7 @@ import {
   useCreateSchedulerJobMutation,
   useDeleteSchedulerJobMutation,
   useGetSchedulerJobsQuery,
+  useRunSchedulerJobMutation,
   useUpdateSchedulerJobMutation,
 } from '../api/scheduler';
 import { sourceId } from '../utils';
@@ -615,6 +616,7 @@ const SchedulerTab: React.FC = () => {
   });
   const [createJob] = useCreateSchedulerJobMutation();
   const [updateJob] = useUpdateSchedulerJobMutation();
+  const [runJob, { isLoading: isRunPending }] = useRunSchedulerJobMutation();
   const [deleteJob] = useDeleteSchedulerJobMutation();
   const [dialogKind, setDialogKind] = React.useState<ScheduleKind | null>(null);
   const [editingJob, setEditingJob] = React.useState<PlayerSchedulerJob | undefined>();
@@ -728,7 +730,11 @@ const SchedulerTab: React.FC = () => {
                     <TableCell align="right" onClick={stopPropagation}>
                       <Tooltip title={job.enabled ? 'Запустить сейчас' : 'Включите задание, чтобы запустить'}>
                         <div>
-                          <IconButton edge="end" disabled={!job.enabled} >
+                          <IconButton
+                            edge="end"
+                            disabled={!job.enabled || isRunPending}
+                            onClick={() => void runJob(job.id)}
+                          >
                             <PlayArrowIcon />
                           </IconButton>
                         </div>

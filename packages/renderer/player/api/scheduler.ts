@@ -44,6 +44,16 @@ const schedulerApi = createApi({
         { type: 'scheduler' as const, id: 'LIST' },
       ],
     }),
+    runSchedulerJob: build.mutation<PlayerSchedulerJob, string>({
+      query: id => ({
+        url: `scheduler/${id}/run`,
+        method: 'POST',
+      }),
+      invalidatesTags: (_result, _error, id) => [
+        { type: 'scheduler' as const, id },
+        { type: 'scheduler' as const, id: 'LIST' },
+      ],
+    }),
     deleteSchedulerJob: build.mutation<void, string>({
       query: id => ({
         url: `scheduler/${id}`,
@@ -58,6 +68,7 @@ export const {
   useGetSchedulerJobsQuery,
   useCreateSchedulerJobMutation,
   useUpdateSchedulerJobMutation,
+  useRunSchedulerJobMutation,
   useDeleteSchedulerJobMutation,
 } = schedulerApi;
 

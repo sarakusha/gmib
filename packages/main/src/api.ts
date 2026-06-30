@@ -78,6 +78,7 @@ import {
   createSchedulerJob,
   deleteSchedulerJob,
   getSchedulerJobs,
+  runSchedulerJob,
   updateSchedulerJob,
 } from './playerScheduler';
 import { getPlayerTitle } from './playerWindow';
@@ -832,6 +833,19 @@ api.put('/scheduler/:id', (req, res) => {
   }
   res.json(job);
   broadcast({ event: 'schedulerJobs', data: [job.playerId], all: true });
+});
+
+api.post('/scheduler/:id/run', async (req, res, next) => {
+  try {
+    const job = await runSchedulerJob(req.params.id);
+    if (!job) {
+      res.sendStatus(404);
+      return;
+    }
+    res.json(job);
+  } catch (e) {
+    next(e);
+  }
 });
 
 api.delete('/scheduler/:id', (req, res) => {

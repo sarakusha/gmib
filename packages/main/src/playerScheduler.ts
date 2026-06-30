@@ -251,46 +251,63 @@ const runJob = async (job: PlayerSchedulerJob): Promise<void> => {
   }
 };
 
+const executeJob = async (
+  job: PlayerSchedulerJob,
+  options: { disableOnce: boolean },
+): Promise<PlayerSchedulerJob> => {
+  const now = new Date();
+  const lastRunAt = now.toISOString();
+  const lastRunKey = getMinuteKey(now);
+  try {
+    await runJob(job);
+    const nextJob = {
+      ...job,
+      lastRunAt,
+      lastRunKey,
+      lastStatus: 'success' as const,
+      lastMessage: `Задание "${job.name}" выполнено`,
+      ...(options.disableOnce && job.kind === 'once' ? { enabled: false } : {}),
+    };
+    setJobResult(job, nextJob);
+    notifyJobResult(nextJob);
+    return withNextRunAt(nextJob);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    debug(`error while run job ${job.name}: ${message}`);
+    const nextJob = {
+      ...job,
+      lastRunAt,
+      lastRunKey,
+      lastStatus: 'error' as const,
+      lastMessage: message,
+      ...(options.disableOnce && job.kind === 'once' ? { enabled: false } : {}),
+    };
+    setJobResult(job, nextJob);
+    notifyJobResult(nextJob);
+    return withNextRunAt(nextJob);
+  }
+};
+
+export const runSchedulerJob = async (id: string): Promise<PlayerSchedulerJob | undefined> => {
+  const job = getStoredJobs().find(item => item.id === id);
+  if (!job) return undefined;
+  return executeJob(job, { disableOnce: false });
+};
+
 const executeDueJobs = async (): Promise<void> => {
   const now = new Date();
   const minuteKey = getMinuteKey(now);
   const dueJobs = getStoredJobs().filter(job => {
     if (!job.enabled) return false;
     if (job.kind === 'once') {
-      if (!job.runAt || job.lastRunAt) return false;
+      if (!job.runAt) return false;
       return new Date(job.runAt).getTime() <= now.getTime();
     }
     return Boolean(job.cron && job.lastRunKey !== minuteKey && matchesCron(job.cron, now));
   });
 
   for (const job of dueJobs) {
-    const lastRunAt = now.toISOString();
-    try {
-      await runJob(job);
-      const nextJob = {
-        ...job,
-        lastRunAt,
-        lastRunKey: minuteKey,
-        lastStatus: 'success' as const,
-        lastMessage: `Задание "${job.name}" выполнено`,
-        ...(job.kind === 'once' ? { enabled: false } : {}),
-      };
-      setJobResult(job, nextJob);
-      notifyJobResult(nextJob);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      debug(`error while run job ${job.name}: ${message}`);
-      const nextJob = {
-        ...job,
-        lastRunAt,
-        lastRunKey: minuteKey,
-        lastStatus: 'error' as const,
-        lastMessage: message,
-        ...(job.kind === 'once' ? { enabled: false } : {}),
-      };
-      setJobResult(job, nextJob);
-      notifyJobResult(nextJob);
-    }
+    await executeJob(job, { disableOnce: true });
   }
 };
 

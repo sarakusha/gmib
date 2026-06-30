@@ -133,7 +133,7 @@ export const describeCron = (cron: CronSchedule): string => {
 export const getNextRunAt = (job: PlayerSchedulerJob, from = new Date()): string | undefined => {
   if (!job.enabled) return undefined;
   if (job.kind === 'once') {
-    if (!job.runAt || job.lastRunAt) return undefined;
+    if (!job.runAt) return undefined;
     const runAt = new Date(job.runAt);
     return Number.isNaN(runAt.getTime()) ? undefined : runAt.toISOString();
   }
