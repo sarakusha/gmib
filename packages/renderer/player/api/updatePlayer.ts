@@ -94,8 +94,10 @@ export const playerNext = (): AppThunk => (dispatch, getState) => {
     updatePlayer(sourceId, props => ({
       ...props,
       current: getNextItemFactory(getState)(props.playlistId, props.current),
+      autoPlay: true,
     })),
   );
+  dispatch(setPlaybackState('playing'));
 };
 export const playerStop = (): AppThunk => dispatch => {
   dispatch(

@@ -227,6 +227,7 @@ const runJob = async (job: PlayerSchedulerJob): Promise<void> => {
         {
           ...player,
           current: await getNextItem(player.playlistId, player.current),
+          autoPlay: true,
         },
         true,
       );
