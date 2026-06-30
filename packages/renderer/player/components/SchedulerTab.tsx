@@ -35,6 +35,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
+import type { Theme } from '@mui/material/styles';
 import TabContext from '@mui/lab/TabContext';
 import TabList from '@mui/lab/TabList';
 import TabPanel from '@mui/lab/TabPanel';
@@ -134,6 +135,29 @@ const formatRelativeDateTime = (value?: string): [string, string] => {
   ];
 };
 
+const accordionSx = {
+  boxShadow: 'none',
+  border: (theme: Theme) => `1px solid ${theme.palette.divider}`,
+  '&:before': {
+    display: 'none',
+  },
+  '&.MuiAccordion-root': {
+    margin: 0,
+  },
+  '&.MuiAccordion-root + .MuiAccordion-root': {
+    marginTop: '-1px',
+  },
+  '&.Mui-expanded': {
+    margin: 0,
+  },
+  '& .MuiAccordionSummary-root': {
+    minHeight: 40,
+  },
+  '& .MuiAccordionSummary-content': {
+    my: 1,
+  },
+};
+
 // const getScheduleDescription = (job: PlayerSchedulerJob): string => {
 //   if (job.kind === 'once')
 //     return job.runAt ? `Один раз: ${formatDateTime(job.runAt).join(' ')}` : '';
@@ -173,7 +197,7 @@ const CronPartEditor: React.FC<CronPartEditorProps> = ({
     onChange({ ...value, selected: normalizeSelected(selected) });
   };
   return (
-    <Accordion disableGutters>
+    <Accordion disableGutters square sx={accordionSx}>
       <AccordionSummary expandIcon={<ExpandMoreIcon />}>
         <Stack direction="row" sx={{ width: 1, pr: 2, justifyContent: 'space-between' }}>
           <Typography>{title}</Typography>
@@ -183,9 +207,9 @@ const CronPartEditor: React.FC<CronPartEditorProps> = ({
       <AccordionDetails>
         <TabContext value={value.mode}>
           <TabList onChange={(_, next: CronMode) => onChange({ ...value, mode: next })}>
-            <Tab label={allLabel} value="all" />
-            <Tab label={everyLabel} value="every" />
-            <Tab label={selectLabel} value="select" />
+            <Tab label={allLabel} value="all" sx={{ textTransform: 'none' }} />
+            <Tab label={everyLabel} value="every" sx={{ textTransform: 'none' }} />
+            <Tab label={selectLabel} value="select" sx={{ textTransform: 'none' }} />
           </TabList>
           <TabPanel value="all" sx={{ px: 0 }}>
             <Typography variant="body2">*</Typography>
@@ -258,7 +282,7 @@ const SimpleCronPartEditor: React.FC<SimpleCronPartEditorProps> = ({
     onChange({ ...value, selected: normalizeSelected(selected) });
   };
   return (
-    <Accordion disableGutters>
+    <Accordion disableGutters square sx={accordionSx}>
       <AccordionSummary expandIcon={<ExpandMoreIcon />}>
         <Stack direction="row" sx={{ width: 1, pr: 2, justifyContent: 'space-between' }}>
           <Typography>{title}</Typography>
@@ -454,7 +478,7 @@ const SchedulerDialog: React.FC<SchedulerDialogProps> = ({
             />
           ) : (
             values.cron && (
-              <Stack spacing={1}>
+              <Stack>
                 <CronPartEditor
                   title="Минуты"
                   value={values.cron.minutes}
@@ -462,7 +486,7 @@ const SchedulerDialog: React.FC<SchedulerDialogProps> = ({
                   max={59}
                   stepLabel="Интервал, минут"
                   allLabel="Каждую минуту"
-                  everyLabel="Каждые n-мин"
+                  everyLabel={`Каждые ${values.cron?.minutes?.every ?? 'N'}-мин`}
                   selectLabel="Выбрать"
                   onChange={minutes =>
                     setValues(current => ({
@@ -478,7 +502,7 @@ const SchedulerDialog: React.FC<SchedulerDialogProps> = ({
                   max={23}
                   stepLabel="Интервал, часов"
                   allLabel="Каждый час"
-                  everyLabel="Каждые n-ч"
+                  everyLabel={`Каждые ${values.cron?.hours?.every ?? 'N'}-час`}
                   selectLabel="Выбрать"
                   columns={8}
                   onChange={hours =>
