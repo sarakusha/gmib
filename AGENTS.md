@@ -6,9 +6,11 @@ gmib checks configuration files for its activation signature during startup. Be 
 will behave as not activated. Do not treat a sandboxed launch as a valid activation or licensing
 check unless the required config paths are explicitly available.
 
-## README Updates
+## User Documentation
 
-Keep `README.md` up to date when code changes add features, change existing behavior, or introduce details that matter to users or contributors. Add meaningful notes or comments there when they help explain the impact of the change.
+Keep `README.md` and the built-in help at `packages/renderer/gmib/components/Help/Help.mdx` up to date and synchronized when code changes add features, change existing behavior, or introduce details that matter to users or contributors. Add meaningful notes or comments there when they help explain the impact of the change.
+
+Do not add development artifacts such as build scripts, test commands, packaging details, or contributor-only workflow notes to `Help.mdx`; keep those in `README.md` or contributor documentation.
 
 ## Commit Messages
 
