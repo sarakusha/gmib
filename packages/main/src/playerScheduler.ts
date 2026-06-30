@@ -167,19 +167,30 @@ const getNextItem = async (
   return items[(index + 1) % items.length]?.id;
 };
 
-const sendPlayerToRuntime = async (playerId: number): Promise<Player | undefined> => {
+type PlayerRuntimeOptions = {
+  openHidden?: boolean;
+  restart?: boolean;
+};
+
+const sendPlayerToRuntime = async (
+  playerId: number,
+  options: Pick<PlayerRuntimeOptions, 'restart'> = {},
+): Promise<Player | undefined> => {
   const player = await getPlayer(playerId);
   if (!player) return undefined;
   const win = findPlayerWindow(player.id);
-  if (win) win.webContents.send('player', player);
+  if (win) win.webContents.send('player', player, { restart: options.restart });
   broadcast({ event: 'player', all: true });
   return player;
 };
 
-const updatePlayerRuntime = async (player: Player, openHidden = false): Promise<void> => {
+const updatePlayerRuntime = async (
+  player: Player,
+  options: PlayerRuntimeOptions = {},
+): Promise<void> => {
   await updatePlayer(player);
-  const updatedPlayer = await sendPlayerToRuntime(player.id);
-  if (openHidden && !findPlayerWindow(player.id) && updatedPlayer) {
+  const updatedPlayer = await sendPlayerToRuntime(player.id, options);
+  if (options.openHidden && !findPlayerWindow(player.id) && updatedPlayer) {
     await openPlayer(player.id, { hidden: true });
   }
 };
@@ -202,15 +213,18 @@ const runJob = async (job: PlayerSchedulerJob): Promise<void> => {
           current: undefined,
           autoPlay: true,
         },
-        true,
+        { openHidden: true, restart: true },
       );
       break;
     }
     case 'toggle-play':
-      await updatePlayerRuntime({ ...player, autoPlay: !player.autoPlay }, !player.autoPlay);
+      await updatePlayerRuntime(
+        { ...player, autoPlay: !player.autoPlay },
+        { openHidden: !player.autoPlay },
+      );
       break;
     case 'play':
-      await updatePlayerRuntime({ ...player, autoPlay: true }, true);
+      await updatePlayerRuntime({ ...player, autoPlay: true }, { openHidden: true });
       break;
     case 'stop': {
       await updatePlayerRuntime({
@@ -229,7 +243,7 @@ const runJob = async (job: PlayerSchedulerJob): Promise<void> => {
           current: await getNextItem(player.playlistId, player.current),
           autoPlay: true,
         },
-        true,
+        { openHidden: true },
       );
       break;
     case 'play-item': {
@@ -243,7 +257,10 @@ const runJob = async (job: PlayerSchedulerJob): Promise<void> => {
           `В плейлисте "${playlist?.name ?? playlistId}" нет ролика ${job.itemNumber ?? 1}`,
         );
       }
-      await updatePlayerRuntime({ ...player, current: item.id, autoPlay: true }, true);
+      await updatePlayerRuntime(
+        { ...player, current: item.id, autoPlay: true },
+        { openHidden: true },
+      );
       break;
     }
     default:

@@ -442,6 +442,15 @@ const seekDecoderSource = (position: number, reason: 'user' | 'recover' = 'user'
   ipcDispatch(setPosition(nextPosition));
 };
 
+const restartCurrentSource = (): void => {
+  debug('restart current source');
+  seek(0);
+  if (playbackState === 'playing') {
+    if (activeEngine === 'capture') void playSource();
+    else currentSource?.play();
+  }
+};
+
 const initializeDecoderStream = (): void => {
   if (videoStream) return;
   debug('initialize decoder engine');
@@ -655,7 +664,7 @@ const initialize = async () => {
   void update();
 };
 
-ipcRenderer.on('player', (_, value: Player) => {
+ipcRenderer.on('player', (_, value: Player, options?: { restart?: boolean }) => {
   void (async () => {
     player = value;
     playlist = player.playlistId
@@ -665,7 +674,8 @@ ipcRenderer.on('player', (_, value: Player) => {
     if (player.autoPlay !== (playbackState === 'playing')) {
       updatePlaybackState(player.autoPlay ? 'playing' : state);
     }
-    void update();
+    await update();
+    if (options?.restart) restartCurrentSource();
   })();
 });
 
