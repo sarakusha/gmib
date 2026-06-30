@@ -6,6 +6,10 @@ gmib checks configuration files for its activation signature during startup. Be 
 will behave as not activated. Do not treat a sandboxed launch as a valid activation or licensing
 check unless the required config paths are explicitly available.
 
+## README Updates
+
+Keep `README.md` up to date when code changes add features, change existing behavior, or introduce details that matter to users or contributors. Add meaningful notes or comments there when they help explain the impact of the change.
+
 ## Commit Messages
 
 Use Conventional Commits for all commit messages.
