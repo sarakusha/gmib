@@ -210,25 +210,25 @@ const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) =
             // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
             (mapping
               ? {
-                ...mapping,
-                objectFit: mapping.objectFit ?? 'cover',
-                shader: mapping.shader ?? '',
-              }
+                  ...mapping,
+                  objectFit: mapping.objectFit ?? 'cover',
+                  shader: mapping.shader ?? '',
+                }
               : {
-                name: `${player?.name} - Вывод`,
-                player: playerId ?? 0,
-                display: 0,
-                left: 0,
-                top: 0,
-                width: player?.width ?? 320,
-                height: player?.height ?? 240,
-                zOrder: 0,
-                kiosk: false,
-                transparent: false,
-                alwaysOnTop: true,
-                objectFit: 'cover',
-                shader: '',
-              }) as MappingFormValues
+                  name: `${player?.name} - Вывод`,
+                  player: playerId ?? 0,
+                  display: 0,
+                  left: 0,
+                  top: 0,
+                  width: player?.width ?? 320,
+                  height: player?.height ?? 240,
+                  zOrder: 0,
+                  kiosk: false,
+                  transparent: false,
+                  alwaysOnTop: true,
+                  objectFit: 'cover',
+                  shader: '',
+                }) as MappingFormValues
           }
           onSubmit={async (newValues, { setSubmitting }) => {
             if (!playerId) throw new Error('Unknown player');

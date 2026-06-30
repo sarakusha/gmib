@@ -187,8 +187,9 @@ const PlayerSettings: React.FC<{ id?: number }> = ({ id }) => {
               <ListItemButton onClick={() => id && openPlayerMappingDialog(id, item.id)} dense>
                 <ListItemText
                   primary={`${item.name} (${item.objectFit})`}
-                  secondary={`${getDisplay(item.display)} (${item.left},${item.top}-${item.width}x${item.height
-                    })`}
+                  secondary={`${getDisplay(item.display)} (${item.left},${item.top}-${item.width}x${
+                    item.height
+                  })`}
                   slotProps={{
                     primary: noWrap,
                     secondary: noWrap,

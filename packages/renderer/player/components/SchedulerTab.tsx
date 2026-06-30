@@ -72,8 +72,8 @@ import {
 import { sourceId } from '../utils';
 
 import Toolbar from './StyledToolbar';
-import Checkbox from "@mui/material/Checkbox";
-import { styled } from "@mui/material/styles";
+import Checkbox from '@mui/material/Checkbox';
+import { styled } from '@mui/material/styles';
 
 type DialogValues = PlayerSchedulerJobInput;
 
@@ -363,7 +363,20 @@ const toJobInput = (job: PlayerSchedulerJob): PlayerSchedulerJobInput => ({
 });
 
 const weekdayNames = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
-const monthNames = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
+const monthNames = [
+  'Янв',
+  'Фев',
+  'Мар',
+  'Апр',
+  'Май',
+  'Июн',
+  'Июл',
+  'Авг',
+  'Сен',
+  'Окт',
+  'Ноя',
+  'Дек',
+];
 
 const SchedulerDialog: React.FC<SchedulerDialogProps> = ({
   kind,
@@ -604,7 +617,9 @@ const HoverTableRow = styled(TableRow)({
   '&:hover .MuiIconButton-root': { opacity: 1 },
 });
 
-const stopPropagation = (event: React.MouseEvent): void => { event.stopPropagation(); };
+const stopPropagation = (event: React.MouseEvent): void => {
+  event.stopPropagation();
+};
 const disabledRow = {
   opacity: 0.5,
 } as const;
@@ -669,17 +684,29 @@ const SchedulerTab: React.FC = () => {
             Нет запланированных заданий.
           </Typography>
         ) : (
-          <Table stickyHeader size="small" sx={{
-            tableLayout: 'fixed',
-            width: '100%',
-          }}>
+          <Table
+            stickyHeader
+            size="small"
+            sx={{
+              tableLayout: 'fixed',
+              width: '100%',
+            }}
+          >
             <TableHead>
               <TableRow>
-                <TableCell sx={{ width: 100 }} align="center">Вкл/выкл</TableCell>
+                <TableCell sx={{ width: 100 }} align="center">
+                  Вкл/выкл
+                </TableCell>
                 <TableCell>Имя</TableCell>
-                <TableCell sx={{ width: 150 }} align="center">Было</TableCell>
-                <TableCell sx={{ width: 100 }} align="center">Статус</TableCell>
-                <TableCell sx={{ width: 150 }} align="center">Далее</TableCell>
+                <TableCell sx={{ width: 150 }} align="center">
+                  Было
+                </TableCell>
+                <TableCell sx={{ width: 100 }} align="center">
+                  Статус
+                </TableCell>
+                <TableCell sx={{ width: 150 }} align="center">
+                  Далее
+                </TableCell>
                 <TableCell sx={{ width: 60 }} />
                 <TableCell sx={{ width: 60 }} />
               </TableRow>
@@ -697,10 +724,15 @@ const SchedulerTab: React.FC = () => {
                     sx={job.enabled ? { cursor: 'pointer' } : disabledRow}
                   >
                     <TableCell onClick={stopPropagation} align="center">
-                      <Checkbox checked={job.enabled} onChange={() => void updateJob({
-                        id: job.id,
-                        job: { ...toJobInput(job), enabled: !job.enabled }
-                      })} />
+                      <Checkbox
+                        checked={job.enabled}
+                        onChange={() =>
+                          void updateJob({
+                            id: job.id,
+                            job: { ...toJobInput(job), enabled: !job.enabled },
+                          })
+                        }
+                      />
                     </TableCell>
                     <TableCell sx={{ width: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       <Typography variant="body2">{job.name}</Typography>
@@ -728,7 +760,11 @@ const SchedulerTab: React.FC = () => {
                       </Typography>
                     </TableCell>
                     <TableCell align="right" onClick={stopPropagation}>
-                      <Tooltip title={job.enabled ? 'Запустить сейчас' : 'Включите задание, чтобы запустить'}>
+                      <Tooltip
+                        title={
+                          job.enabled ? 'Запустить сейчас' : 'Включите задание, чтобы запустить'
+                        }
+                      >
                         <div>
                           <IconButton
                             edge="end"

@@ -30,7 +30,9 @@ const getAllWindowParams = () =>
 
 export const showLast = () => {
   const top = getAllWindowParams()
-    .filter(param => !(isGmib(param) && param.host === 'localhost' && localConfig.get('localGmibHidden')))
+    .filter(
+      param => !(isGmib(param) && param.host === 'localhost' && localConfig.get('localGmibHidden')),
+    )
     .at(-1);
   top && findManagedWindow(top.id)?.show();
 };
