@@ -11,7 +11,12 @@ import type { CandidateMessage, OfferMessage, RtcMessage, WithWebSocketKey } fro
 import type { Player } from '/@common/video';
 
 import Deferred from '/@common/Deferred';
-import { setCurrentPlaylistItem, setDuration, setPosition } from '/@player/store/currentSlice';
+import {
+  setCurrentPlaylistItem,
+  setDuration,
+  setPlaybackState,
+  setPosition,
+} from '/@player/store/currentSlice';
 
 import ipcDispatch from '../common/ipcDispatch';
 import VideoSource from './VideoSource';
@@ -39,6 +44,12 @@ const getMediaUri = (name?: string) =>
 
 const getPlaybackEngine = (): NonNullable<Player['playbackEngine']> =>
   player.playbackEngine ?? 'decoder';
+
+const updatePlaybackState = (next: MediaSessionPlaybackState): void => {
+  if (playbackState === next) return;
+  playbackState = next;
+  ipcDispatch(setPlaybackState(next));
+};
 
 type CaptureStreamVideo = HTMLVideoElement & {
   captureStream?: () => MediaStream;
@@ -639,7 +650,7 @@ const initialize = async () => {
   player = await ipcRenderer.invoke('getPlayer', sourceId);
   if (player?.playlistId) {
     playlist = await ipcRenderer.invoke('getPlaylist', player.playlistId);
-    if (player.autoPlay) playbackState = 'playing';
+    if (player.autoPlay) updatePlaybackState('playing');
   }
   void update();
 };
@@ -652,7 +663,7 @@ ipcRenderer.on('player', (_, value: Player) => {
       : undefined;
     const state: 'paused' | 'none' = playlist?.items.length ? 'paused' : 'none';
     if (player.autoPlay !== (playbackState === 'playing')) {
-      playbackState = player.autoPlay ? 'playing' : state;
+      updatePlaybackState(player.autoPlay ? 'playing' : state);
     }
     void update();
   })();
@@ -670,10 +681,8 @@ ipcRenderer.on('stop', () => {
     sourceVideo.currentTime = 0;
   }
   decoderPosition = 0;
-  if (playbackState !== 'none') {
-    playbackState = 'none';
-    void update();
-  }
+  updatePlaybackState('none');
+  void update();
   blankConsumers();
   ipcDispatch(setDuration(duration));
   ipcDispatch(setPosition(0));

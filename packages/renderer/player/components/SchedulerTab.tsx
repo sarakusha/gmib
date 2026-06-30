@@ -105,14 +105,33 @@ const getActionName = (
   return actionLabels[job.action];
 };
 
-const formatDateTime = (value?: string): [string, string] => {
+// const formatDateTime = (value?: string): [string, string] => {
+//   if (!value) return ['-', ''];
+//   const date = new Date(value);
+//   if (Number.isNaN(date.getTime())) return [value, ''];
+//   return [date.toLocaleDateString('ru-RU'), date.toLocaleTimeString('ru-RU', {
+//     hour: '2-digit',
+//     minute: '2-digit',
+//   })];
+// };
+
+const formatRelativeDateTime = (value?: string): [string, string] => {
   if (!value) return ['-', ''];
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return [value, ''];
-  return [date.toLocaleDateString('ru-RU'), date.toLocaleTimeString('ru-RU', {
-    hour: '2-digit',
-    minute: '2-digit',
-  })];
+  const now = new Date();
+  const current = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const target = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diffDays = Math.round((target.getTime() - current.getTime()) / (24 * 60 * 60 * 1000));
+  const dayLabel =
+    diffDays === -1 ? 'Вчера' : diffDays === 0 ? 'Сегодня' : diffDays === 1 ? 'Завтра' : undefined;
+  return [
+    dayLabel ?? date.toLocaleDateString('ru-RU'),
+    date.toLocaleTimeString('ru-RU', {
+      hour: '2-digit',
+      minute: '2-digit',
+    }),
+  ];
 };
 
 // const getScheduleDescription = (job: PlayerSchedulerJob): string => {
@@ -634,8 +653,8 @@ const SchedulerTab: React.FC = () => {
             </TableHead>
             <TableBody>
               {jobs.map(job => {
-                const [lastDate, lastTime] = formatDateTime(job.lastRunAt);
-                const [nextDate, nextTime] = formatDateTime(job.nextRunAt);
+                const [lastDate, lastTime] = formatRelativeDateTime(job.lastRunAt);
+                const [nextDate, nextTime] = formatRelativeDateTime(job.nextRunAt);
                 return (
                   <HoverTableRow
                     key={job.id}
