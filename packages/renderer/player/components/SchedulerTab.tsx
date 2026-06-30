@@ -391,7 +391,7 @@ const SchedulerDialog: React.FC<SchedulerDialogProps> = ({
     (values.kind === 'cron' || Boolean(values.runAt));
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle>
         {initialJob
           ? 'Редактировать задание'
