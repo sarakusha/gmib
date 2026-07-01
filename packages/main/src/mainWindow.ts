@@ -170,21 +170,13 @@ export const activateMainWindow = (): ManagedWindow => {
 
 export const getMainWindow = (): ManagedWindow | null => mainWindow;
 
-type TestWindowOptions = {
-  kiosk?: boolean;
-  preload?: string;
-};
-
-const isMacOS = process.platform === 'darwin';
-
 export function createTestWindow(
   width: number,
   height: number,
   x: number,
   y: number,
-  options?: TestWindowOptions,
+  preload?: string,
 ): BrowserWindow {
-  const { kiosk = false, preload } = options ?? {};
   // Все переопределяется в openHandler.ts Это не так!
   const window = new BrowserWindow({
     width,
@@ -194,7 +186,6 @@ export function createTestWindow(
     frame: false,
     // backgroundColor: '#000',
     focusable: false,
-    kiosk: kiosk && !isMacOS,
     fullscreenable: false,
     // simpleFullscreen: true,
     show: false,

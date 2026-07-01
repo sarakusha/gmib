@@ -12,7 +12,7 @@ export const impScreenProps = [
   'height',
   'moduleWidth',
   'moduleHeight',
-  'outputKiosk',
+  'outputTransparent',
   'zIndex',
 ] as const;
 

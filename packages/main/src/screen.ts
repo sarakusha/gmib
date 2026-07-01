@@ -20,7 +20,7 @@ const enum ScreenFlags {
   DownToTop = 1 << 0,
   RightToLeft = 1 << 1,
   UseKnob = 1 << 2,
-  OutputKiosk = 1 << 3,
+  OutputTransparent = 1 << 3,
 }
 
 const enum PlayerFlags {
@@ -46,7 +46,7 @@ const toScreen = (result: NullableOptional): Omit<Screen, 'addresses'> => {
     downToTop: Boolean(flags & ScreenFlags.DownToTop),
     rightToLeft: Boolean(flags & ScreenFlags.RightToLeft),
     useExternalKnob: Boolean(flags & ScreenFlags.UseKnob) && !brightnessFactor,
-    outputKiosk: Boolean(flags & ScreenFlags.OutputKiosk),
+    outputTransparent: Boolean(flags & ScreenFlags.OutputTransparent),
     ...props,
   };
 };
@@ -88,14 +88,14 @@ const screenEncoder = (screen: Omit<Screen, 'id' | 'addresses'>) => {
     display,
     brightness,
     useExternalKnob,
-    outputKiosk,
+    outputTransparent,
     zIndex,
   } = screen;
   const $flags =
     flag(downToTop, ScreenFlags.DownToTop) +
     flag(rightToLeft, ScreenFlags.RightToLeft) +
     flag(useExternalKnob && !brightnessFactor, ScreenFlags.UseKnob) +
-    flag(outputKiosk, ScreenFlags.OutputKiosk);
+    flag(outputTransparent, ScreenFlags.OutputTransparent);
 
   const res = {
     $name: name,

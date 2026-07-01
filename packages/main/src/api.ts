@@ -292,6 +292,11 @@ const hideCursorCSS = `html, body {
   user-select: none;
 }`;
 
+const transparentOutputCSS = `html, body {
+  background: transparent !important;
+  background-color: transparent !important;
+}`;
+
 const updateTest = async (scr: Screen, force = false) => {
   const primary = screen.getPrimaryDisplay();
   const displays = screen.getAllDisplays();
@@ -333,24 +338,15 @@ const updateTest = async (scr: Screen, force = false) => {
     '${resources}',
     process.resourcesPath,
   );
-  const windowBounds = scr.outputKiosk
-    ? {
-        x: display.bounds.x,
-        y: display.bounds.y,
-        width: display.bounds.width,
-        height: display.bounds.height,
-      }
-    : {
-        x: scr.left + display.bounds.x,
-        y: scr.top + display.bounds.y,
-        width: scr.width,
-        height: scr.height,
-      };
+  const windowBounds = {
+    x: scr.left + display.bounds.x,
+    y: scr.top + display.bounds.y,
+    width: scr.width,
+    height: scr.height,
+  };
   const testWindow =
     win ??
-    createTestWindow(windowBounds.width, windowBounds.height, windowBounds.x, windowBounds.y, {
-      kiosk: scr.outputKiosk,
-    });
+    createTestWindow(windowBounds.width, windowBounds.height, windowBounds.x, windowBounds.y);
   registerScreen(testWindow, scr);
   // screenWindows.set(id, [testWindow, scr]);
   const contents = testWindow.webContents;
@@ -360,7 +356,7 @@ const updateTest = async (scr: Screen, force = false) => {
     );
     setTimeout(() => contents.reload(), 5000).unref();
   });
-  testWindow.setKiosk(Boolean(scr.outputKiosk) && process.platform !== 'darwin');
+  testWindow.setKiosk(false);
   testWindow.setAlwaysOnTop(true, 'screen-saver');
   testWindow.setPosition(windowBounds.x, windowBounds.y);
   testWindow.setSize(windowBounds.width, windowBounds.height);
@@ -369,7 +365,13 @@ const updateTest = async (scr: Screen, force = false) => {
       contents.userAgent = `${contents.userAgent} ${page.userAgent} machineid/${mid}`;
     });
   if (needReload && url) {
-    void testWindow.loadURL(url).then(() => testWindow.webContents.insertCSS(hideCursorCSS));
+    void testWindow
+      .loadURL(url)
+      .then(() =>
+        testWindow.webContents.insertCSS(
+          scr.outputTransparent ? `${hideCursorCSS}\n${transparentOutputCSS}` : hideCursorCSS,
+        ),
+      );
   }
   if (isOutputWindowsHidden()) testWindow.hide();
   else {

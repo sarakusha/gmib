@@ -72,7 +72,7 @@ export type Screen = {
   test?: string;
   brightness?: number;
   useExternalKnob?: boolean;
-  outputKiosk?: boolean;
+  outputTransparent?: boolean;
   zIndex?: number;
 };
 

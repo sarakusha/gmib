@@ -169,7 +169,7 @@ const ScreenComponent: React.FC<Props> = ({
     brightnessFactor = 1,
     test,
     useExternalKnob = false,
-    outputKiosk = false,
+    outputTransparent = false,
     zIndex = 0,
   } = screen ?? {};
   const isActive = Boolean(test) && selected === scrId;
@@ -210,7 +210,7 @@ const ScreenComponent: React.FC<Props> = ({
               borderRight,
               brightnessFactor,
               useExternalKnob,
-              outputKiosk,
+              outputTransparent,
               zIndex,
             }}
             onSubmit={(newValues, { setSubmitting }) => {
@@ -404,12 +404,12 @@ const ScreenComponent: React.FC<Props> = ({
                     <FormControlLabel
                       control={
                         <Checkbox
-                          checked={!!values.outputKiosk}
+                          checked={!!values.outputTransparent}
                           onChange={handleChange}
-                          name="outputKiosk"
+                          name="outputTransparent"
                         />
                       }
-                      label="На весь экран"
+                      label="Прозрачность"
                     />
                     <Field
                       variant="standard"
