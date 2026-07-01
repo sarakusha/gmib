@@ -33,7 +33,9 @@ const sanitizeJob = (job: GmibSchedulerJob): GmibSchedulerJob => {
   return {
     ...storedJob,
     brightness:
-      typeof brightness === 'number' ? Math.round(Math.max(Math.min(brightness, 100), 0)) : undefined,
+      typeof brightness === 'number'
+        ? Math.round(Math.max(Math.min(brightness, 100), 0))
+        : undefined,
     cron: storedJob.cron
       ? {
           minutes: {
@@ -175,7 +177,10 @@ const runJob = async (job: GmibSchedulerJob): Promise<void> => {
     }
     case 'set-brightness':
       if (typeof job.brightness !== 'number') throw new Error('Яркость не задана');
-      await setConfig(current => ({ ...current, brightness: job.brightness ?? current.brightness }));
+      await setConfig(current => ({
+        ...current,
+        brightness: job.brightness ?? current.brightness,
+      }));
       break;
     case 'set-autobrightness':
       if (typeof job.enabledValue !== 'boolean') throw new Error('Состояние автояркости не задано');

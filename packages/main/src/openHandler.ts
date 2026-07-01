@@ -83,7 +83,9 @@ const broadcastOutputVisibility = (hidden: boolean): void => {
 };
 
 const broadcastPlayerOutputVisibility = (hidden: boolean, playerId?: number): void => {
-  const params = getPlayerParams().filter(player => playerId == null || player.playerId === playerId);
+  const params = getPlayerParams().filter(
+    player => playerId == null || player.playerId === playerId,
+  );
   params.forEach(({ id }) => {
     const window = findManagedWindow(id);
     if (!window?.isDestroyed()) window?.webContents.send('outputVisibility', hidden);

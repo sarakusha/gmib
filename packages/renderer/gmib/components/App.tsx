@@ -108,9 +108,11 @@ const App: React.FC = () => {
   useEffect(() => {
     const handler = (event: Event) => {
       const [result] =
-        (event as CustomEvent<
-          Array<{ name?: string; status?: 'idle' | 'success' | 'error'; message?: string }>
-        >).detail ?? [];
+        (
+          event as CustomEvent<
+            Array<{ name?: string; status?: 'idle' | 'success' | 'error'; message?: string }>
+          >
+        ).detail ?? [];
       if (!result) return;
       enqueueSnackbar(result.message ?? `Задание "${result.name ?? ''}" выполнено`, {
         variant: result.status === 'error' ? 'error' : 'success',
@@ -291,7 +293,10 @@ const App: React.FC = () => {
                 />
               </ListItemSecondaryAction>
             </Item>
-            <Item onClick={() => dispatch(setCurrentTab('scheduler'))} selected={tab === 'scheduler'}>
+            <Item
+              onClick={() => dispatch(setCurrentTab('scheduler'))}
+              selected={tab === 'scheduler'}
+            >
               <ListItemText primary="Планировщик" />
             </Item>
             <Item onClick={() => dispatch(setCurrentTab('log'))} selected={tab === 'log'}>
