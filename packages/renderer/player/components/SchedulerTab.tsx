@@ -18,6 +18,7 @@ import {
   DialogContent,
   DialogTitle,
   FormControl,
+  FormControlLabel,
   Grid,
   IconButton,
   InputLabel,
@@ -82,6 +83,8 @@ const actionLabels: Record<PlayerSchedulerAction, string> = {
   'toggle-play': 'Переключить воспроизведение',
   play: 'Начать воспроизведение',
   stop: 'Остановить воспроизведение',
+  'hide-output': 'Скрыть окно вывода',
+  'show-output': 'Показать окно вывода',
   next: 'Следующий ролик',
   'play-item': 'Запустить ролик по номеру',
 };
@@ -94,7 +97,10 @@ const toDateTimeLocal = (date: Date): string =>
   )}:${pad(date.getMinutes())}`;
 
 const getActionName = (
-  job: Pick<PlayerSchedulerJobInput, 'action' | 'playlistId' | 'itemNumber'>,
+  job: Pick<
+    PlayerSchedulerJobInput,
+    'action' | 'playlistId' | 'itemNumber' | 'hideOutputOnStop' | 'outputAll'
+  >,
   playlists: Playlist[],
 ): string => {
   if (job.action === 'load-playlist') {
@@ -103,6 +109,12 @@ const getActionName = (
   }
   if (job.action === 'play-item') {
     return `${actionLabels[job.action]}${job.itemNumber ? ` ${job.itemNumber}` : ''}`;
+  }
+  if (job.action === 'stop' && job.hideOutputOnStop) {
+    return `${actionLabels[job.action]} и скрыть окно вывода`;
+  }
+  if ((job.action === 'hide-output' || job.action === 'show-output') && job.outputAll) {
+    return `${actionLabels[job.action]}: все плееры`;
   }
   return actionLabels[job.action];
 };
@@ -344,6 +356,8 @@ const createInitialValues = (
   action: initialJob?.action ?? 'play',
   playlistId: initialJob?.playlistId,
   itemNumber: initialJob?.itemNumber,
+  hideOutputOnStop: initialJob?.hideOutputOnStop ?? false,
+  outputAll: initialJob?.outputAll ?? false,
   runAt: initialJob?.runAt ?? toDateTimeLocal(new Date(Date.now() + 60 * 60 * 1000)),
   cron: initialJob?.cron ?? defaultCron(),
   enabled: initialJob?.enabled ?? true,
@@ -357,6 +371,8 @@ const toJobInput = (job: PlayerSchedulerJob): PlayerSchedulerJobInput => ({
   action: job.action,
   playlistId: job.playlistId,
   itemNumber: job.itemNumber,
+  hideOutputOnStop: job.hideOutputOnStop,
+  outputAll: job.outputAll,
   runAt: job.runAt,
   cron: job.cron,
   enabled: job.enabled,
@@ -398,6 +414,8 @@ const SchedulerDialog: React.FC<SchedulerDialogProps> = ({
   const name = values.name || generatedName;
   const needsPlaylist = values.action === 'load-playlist';
   const needsItemNumber = values.action === 'play-item';
+  const canHideOutputOnStop = values.action === 'stop';
+  const canSelectAllOutputs = values.action === 'hide-output' || values.action === 'show-output';
   const isValid =
     name.trim().length > 0 &&
     (!needsPlaylist || values.playlistId != null) &&
@@ -428,6 +446,12 @@ const SchedulerDialog: React.FC<SchedulerDialogProps> = ({
                   name: '',
                   playlistId: action === 'load-playlist' ? current.playlistId : undefined,
                   itemNumber: action === 'play-item' ? (current.itemNumber ?? 1) : undefined,
+                  hideOutputOnStop:
+                    action === 'stop' ? (current.hideOutputOnStop ?? false) : undefined,
+                  outputAll:
+                    action === 'hide-output' || action === 'show-output'
+                      ? (current.outputAll ?? false)
+                      : undefined,
                 }));
               }}
             >
@@ -475,6 +499,40 @@ const SchedulerDialog: React.FC<SchedulerDialogProps> = ({
                   name: '',
                 }))
               }
+            />
+          )}
+          {canHideOutputOnStop && (
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={Boolean(values.hideOutputOnStop)}
+                  onChange={event =>
+                    setValues(current => ({
+                      ...current,
+                      hideOutputOnStop: event.target.checked,
+                      name: '',
+                    }))
+                  }
+                />
+              }
+              label="Скрыть окно вывода"
+            />
+          )}
+          {canSelectAllOutputs && (
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={Boolean(values.outputAll)}
+                  onChange={event =>
+                    setValues(current => ({
+                      ...current,
+                      outputAll: event.target.checked,
+                      name: '',
+                    }))
+                  }
+                />
+              }
+              label="Все"
             />
           )}
           <TextField
@@ -594,6 +652,8 @@ const SchedulerDialog: React.FC<SchedulerDialogProps> = ({
             onSubmit({
               ...values,
               name: name.trim(),
+              hideOutputOnStop: values.action === 'stop' ? values.hideOutputOnStop : undefined,
+              outputAll: canSelectAllOutputs ? values.outputAll : undefined,
               cron: values.kind === 'cron' ? values.cron : undefined,
               runAt: values.kind === 'once' ? values.runAt : undefined,
             })

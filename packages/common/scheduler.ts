@@ -4,6 +4,8 @@ export type PlayerSchedulerAction =
   | 'toggle-play'
   | 'play'
   | 'stop'
+  | 'hide-output'
+  | 'show-output'
   | 'next'
   | 'play-item';
 export type CronMode = 'all' | 'every' | 'select';
@@ -37,6 +39,8 @@ export type PlayerSchedulerJob = {
   action: PlayerSchedulerAction;
   playlistId?: number;
   itemNumber?: number;
+  hideOutputOnStop?: boolean;
+  outputAll?: boolean;
   runAt?: string;
   cron?: CronSchedule;
   enabled: boolean;

@@ -5,6 +5,7 @@ import type { PlayerSchedulerJob, PlayerSchedulerJobInput } from '/@common/sched
 import { getMinuteKey, getNextRunAt, matchesCron, normalizeSelected } from '/@common/scheduler';
 
 import { dbReady } from './db';
+import { setPlayerOutputWindowsVisibility } from './openHandler';
 import { getPlaylist, getPlaylistItems } from './playlist';
 import { openPlayer } from './playerWindow';
 import { getPlayer, updatePlayer } from './screen';
@@ -234,6 +235,15 @@ const runJob = async (job: PlayerSchedulerJob): Promise<void> => {
       });
       const win = findPlayerWindow(player.id);
       if (win) win.webContents.send('stop', player.id);
+      if (job.hideOutputOnStop) setPlayerOutputWindowsVisibility(false, player.id);
+      break;
+    }
+    case 'hide-output': {
+      setPlayerOutputWindowsVisibility(false, job.outputAll ? undefined : player.id);
+      break;
+    }
+    case 'show-output': {
+      setPlayerOutputWindowsVisibility(true, job.outputAll ? undefined : player.id);
       break;
     }
     case 'next':

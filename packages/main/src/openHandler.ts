@@ -10,7 +10,7 @@ import { DefaultDisplays } from '/@common/video';
 import getAllDisplays from './getAllDisplays';
 import { isOutputHidden, setOutputHidden } from './outputVisibility';
 import { wss } from './server';
-import { findManagedWindow, getAllScreenParams } from './windowStore';
+import { findManagedWindow, getAllScreenParams, getPlayerParams } from './windowStore';
 import { broadcastToTabbedWindows } from './tabbedWindow';
 
 type Handler = Parameters<WebContents['setWindowOpenHandler']>[0];
@@ -50,6 +50,16 @@ const isVideoOutputWindow = (window: BrowserWindow): boolean => {
   return isVideoOutputWindowUrl(window.webContents.getURL());
 };
 
+const getVideoOutputPlayer = (window: BrowserWindow): number | undefined => {
+  if (!isVideoOutputWindow(window)) return undefined;
+  try {
+    const player = Number(new URL(window.webContents.getURL()).searchParams.get('player'));
+    return Number.isInteger(player) ? player : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
 const getOutputWindows = (): BrowserWindow[] => {
   const videoOutputs = BrowserWindow.getAllWindows().filter(isVideoOutputWindow);
   const screenOutputs = getAllScreenParams()
@@ -59,12 +69,25 @@ const getOutputWindows = (): BrowserWindow[] => {
   return [...new Set([...videoOutputs, ...screenOutputs])];
 };
 
+const getPlayerOutputWindows = (playerId?: number): BrowserWindow[] =>
+  BrowserWindow.getAllWindows()
+    .filter(isVideoOutputWindow)
+    .filter(window => playerId == null || getVideoOutputPlayer(window) === playerId);
+
 const broadcastOutputVisibility = (hidden: boolean): void => {
   const message = JSON.stringify({ event: 'outputVisibility', hidden });
   wss.clients.forEach(ws => {
     if (ws.readyState === ws.OPEN) ws.send(message);
   });
   broadcastToTabbedWindows('outputVisibility', hidden);
+};
+
+const broadcastPlayerOutputVisibility = (hidden: boolean, playerId?: number): void => {
+  const params = getPlayerParams().filter(player => playerId == null || player.playerId === playerId);
+  params.forEach(({ id }) => {
+    const window = findManagedWindow(id);
+    if (!window?.isDestroyed()) window?.webContents.send('outputVisibility', hidden);
+  });
 };
 
 const hideCursorCSS = `
@@ -129,6 +152,23 @@ export const toggleOutputWindowsVisibility = (): boolean => {
   outputs.at(-1)?.focus();
   broadcastOutputVisibility(setOutputHidden(false));
   return true;
+};
+
+export const hideOutputWindows = (): boolean => {
+  const outputs = getOutputWindows();
+  outputs.forEach(window => window.hide());
+  broadcastOutputVisibility(setOutputHidden(true));
+  return true;
+};
+
+export const setPlayerOutputWindowsVisibility = (visible: boolean, playerId?: number): boolean => {
+  const outputs = getPlayerOutputWindows(playerId);
+  outputs.forEach(window => {
+    if (visible) window.showInactive();
+    else window.hide();
+  });
+  broadcastPlayerOutputVisibility(!visible, playerId);
+  return outputs.length > 0;
 };
 
 export const isOutputWindowsHidden = isOutputHidden;
