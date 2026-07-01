@@ -123,16 +123,26 @@ const getVideoOutputZOrder = (window: BrowserWindow): number => {
   }
 };
 
-const arrangeVideoOutputWindows = (): void => {
-  getPlayerOutputWindows()
+const getOutputWindowZIndex = (window: BrowserWindow): number => {
+  if (isVideoOutputWindow(window)) return getVideoOutputZIndex(window);
+  return getAllScreenParams().find(params => params.id === window.id)?.zIndex ?? 0;
+};
+
+const getOutputWindowZOrder = (window: BrowserWindow): number => {
+  if (isVideoOutputWindow(window)) return getVideoOutputZOrder(window);
+  return 0;
+};
+
+export const arrangeOutputWindows = (): void => {
+  getOutputWindows()
     .filter(window => !window.isDestroyed() && window.isVisible())
     .sort((a, b) => {
       const aTop = shouldKeepOnTop(a.webContents.getURL()) ? 1 : 0;
       const bTop = shouldKeepOnTop(b.webContents.getURL()) ? 1 : 0;
       return (
         aTop - bTop ||
-        getVideoOutputZIndex(a) - getVideoOutputZIndex(b) ||
-        getVideoOutputZOrder(a) - getVideoOutputZOrder(b) ||
+        getOutputWindowZIndex(a) - getOutputWindowZIndex(b) ||
+        getOutputWindowZOrder(a) - getOutputWindowZOrder(b) ||
         a.id - b.id
       );
     })
@@ -142,7 +152,7 @@ const arrangeVideoOutputWindows = (): void => {
 };
 
 const scheduleArrangeVideoOutputWindows = (): void => {
-  setTimeout(arrangeVideoOutputWindows, 0);
+  setTimeout(arrangeOutputWindows, 0);
 };
 
 export const configureOutputWindow = (window: BrowserWindow, url: string): void => {
@@ -197,7 +207,7 @@ export const toggleOutputWindowsVisibility = (): boolean => {
   outputs.forEach(window => {
     window.show();
   });
-  arrangeVideoOutputWindows();
+  arrangeOutputWindows();
   outputs.at(-1)?.focus();
   broadcastOutputVisibility(setOutputHidden(false));
   return true;
@@ -216,7 +226,7 @@ export const setPlayerOutputWindowsVisibility = (visible: boolean, playerId?: nu
     if (visible) window.showInactive();
     else window.hide();
   });
-  if (visible) arrangeVideoOutputWindows();
+  if (visible) arrangeOutputWindows();
   broadcastPlayerOutputVisibility(!visible, playerId);
   return outputs.length > 0;
 };

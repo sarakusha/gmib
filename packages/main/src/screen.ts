@@ -20,6 +20,7 @@ const enum ScreenFlags {
   DownToTop = 1 << 0,
   RightToLeft = 1 << 1,
   UseKnob = 1 << 2,
+  OutputKiosk = 1 << 3,
 }
 
 const enum PlayerFlags {
@@ -45,6 +46,7 @@ const toScreen = (result: NullableOptional): Omit<Screen, 'addresses'> => {
     downToTop: Boolean(flags & ScreenFlags.DownToTop),
     rightToLeft: Boolean(flags & ScreenFlags.RightToLeft),
     useExternalKnob: Boolean(flags & ScreenFlags.UseKnob) && !brightnessFactor,
+    outputKiosk: Boolean(flags & ScreenFlags.OutputKiosk),
     ...props,
   };
 };
@@ -86,11 +88,14 @@ const screenEncoder = (screen: Omit<Screen, 'id' | 'addresses'>) => {
     display,
     brightness,
     useExternalKnob,
+    outputKiosk,
+    zIndex,
   } = screen;
   const $flags =
     flag(downToTop, ScreenFlags.DownToTop) +
     flag(rightToLeft, ScreenFlags.RightToLeft) +
-    flag(useExternalKnob && !brightnessFactor, ScreenFlags.UseKnob);
+    flag(useExternalKnob && !brightnessFactor, ScreenFlags.UseKnob) +
+    flag(outputKiosk, ScreenFlags.OutputKiosk);
 
   const res = {
     $name: name,
@@ -109,6 +114,7 @@ const screenEncoder = (screen: Omit<Screen, 'id' | 'addresses'>) => {
     $flags,
     $test: test,
     $brightness: brightness,
+    $zIndex: zIndex ?? 0,
   };
   return res;
 };
@@ -324,9 +330,9 @@ export const uniquePlayerName = uniqueField('name', existsPlayerName);
 
 export const insertScreen = promisifyRun(
   `INSERT INTO screen (name, width, height, moduleWidth, moduleHeight, "left", top, flags, borderTop,
-                       borderBottom, borderLeft, borderRight, display, brightnessFactor, test)
+                       borderBottom, borderLeft, borderRight, display, zIndex, brightnessFactor, test)
    VALUES ($name, $width, $height, $moduleWidth, $moduleHeight, $left, $top, $flags, $borderTop,
-           $borderBottom, $borderLeft, $borderRight, $display, $brightnessFactor, $test)`,
+           $borderBottom, $borderLeft, $borderRight, $display, $zIndex, $brightnessFactor, $test)`,
   screenEncoder,
 );
 
@@ -345,6 +351,7 @@ export const updateScreen = promisifyRun(
        borderLeft=$borderLeft,
        borderRight=$borderRight,
        display=$display,
+       zIndex=$zIndex,
        brightnessFactor=$brightnessFactor,
        test=$test,
        brightness=$brightness

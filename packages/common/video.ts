@@ -72,6 +72,8 @@ export type Screen = {
   test?: string;
   brightness?: number;
   useExternalKnob?: boolean;
+  outputKiosk?: boolean;
+  zIndex?: number;
 };
 
 export type PlayerMapping = {

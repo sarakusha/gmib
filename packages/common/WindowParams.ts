@@ -12,6 +12,8 @@ export const impScreenProps = [
   'height',
   'moduleWidth',
   'moduleHeight',
+  'outputKiosk',
+  'zIndex',
 ] as const;
 
 export type WindowType = 'gmib' | 'player' | 'screen' | 'video';

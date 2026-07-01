@@ -213,11 +213,13 @@ function createTables(): void {
             brightnessFactor REAL DEFAULT 1,
             test TEXT,
             display INTEGER,
+            zIndex INTEGER DEFAULT 0,
             brightness INTEGER
         )`,
       err => err && debug(`error while create screen ${err}`),
     );
     void checkColumnExists('screen', 'brightness', 'INTEGER default 60');
+    void checkColumnExists('screen', 'zIndex', 'INTEGER DEFAULT 0');
     db.run(
       `CREATE TABLE IF NOT EXISTS address (
             address TEXT NOT NULL,

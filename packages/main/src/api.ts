@@ -49,7 +49,7 @@ import localConfig from './localConfig';
 import machineId from './machineId';
 import updateMenu from './mainMenu';
 import { createTestWindow } from './mainWindow';
-import { isOutputWindowsHidden } from './openHandler';
+import { arrangeOutputWindows, isOutputWindowsHidden } from './openHandler';
 import {
   deleteMedia,
   getAllMedia,
@@ -333,14 +333,24 @@ const updateTest = async (scr: Screen, force = false) => {
     '${resources}',
     process.resourcesPath,
   );
+  const windowBounds = scr.outputKiosk
+    ? {
+        x: display.bounds.x,
+        y: display.bounds.y,
+        width: display.bounds.width,
+        height: display.bounds.height,
+      }
+    : {
+        x: scr.left + display.bounds.x,
+        y: scr.top + display.bounds.y,
+        width: scr.width,
+        height: scr.height,
+      };
   const testWindow =
     win ??
-    createTestWindow(
-      scr.width,
-      scr.height,
-      scr.left + display.bounds.x,
-      scr.top + display.bounds.y,
-    );
+    createTestWindow(windowBounds.width, windowBounds.height, windowBounds.x, windowBounds.y, {
+      kiosk: scr.outputKiosk,
+    });
   registerScreen(testWindow, scr);
   // screenWindows.set(id, [testWindow, scr]);
   const contents = testWindow.webContents;
@@ -350,8 +360,10 @@ const updateTest = async (scr: Screen, force = false) => {
     );
     setTimeout(() => contents.reload(), 5000).unref();
   });
-  testWindow.setPosition(scr.left + display.bounds.x, scr.top + display.bounds.y);
-  testWindow.setSize(scr.width, scr.height);
+  testWindow.setKiosk(Boolean(scr.outputKiosk) && process.platform !== 'darwin');
+  testWindow.setAlwaysOnTop(true, 'screen-saver');
+  testWindow.setPosition(windowBounds.x, windowBounds.y);
+  testWindow.setSize(windowBounds.width, windowBounds.height);
   if (page.userAgent && !contents.userAgent.includes(page.userAgent))
     void machineId.then(mid => {
       contents.userAgent = `${contents.userAgent} ${page.userAgent} machineid/${mid}`;
@@ -360,7 +372,10 @@ const updateTest = async (scr: Screen, force = false) => {
     void testWindow.loadURL(url).then(() => testWindow.webContents.insertCSS(hideCursorCSS));
   }
   if (isOutputWindowsHidden()) testWindow.hide();
-  else testWindow.show();
+  else {
+    testWindow.show();
+    arrangeOutputWindows();
+  }
   // debug(`test: ${url}`);
 };
 

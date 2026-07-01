@@ -207,10 +207,12 @@ export const registerScreen = (browserWindow: BrowserWindow, scr: Screen) => {
     height,
     moduleWidth,
     moduleHeight,
+    outputKiosk,
+    zIndex,
   }: ScreenOptions = scr;
   const params: ScreenWindowParams = {
     id,
-    zIndex: 0,
+    zIndex: zIndex ?? 0,
     type: 'screen',
     screenId: scr.id,
     test,
@@ -222,6 +224,7 @@ export const registerScreen = (browserWindow: BrowserWindow, scr: Screen) => {
     height,
     moduleWidth,
     moduleHeight,
+    outputKiosk,
   };
   store.set(id, params);
   emitChange();

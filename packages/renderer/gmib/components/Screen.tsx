@@ -169,6 +169,8 @@ const ScreenComponent: React.FC<Props> = ({
     brightnessFactor = 1,
     test,
     useExternalKnob = false,
+    outputKiosk = false,
+    zIndex = 0,
   } = screen ?? {};
   const isActive = Boolean(test) && selected === scrId;
   React.useEffect(() => {
@@ -208,6 +210,8 @@ const ScreenComponent: React.FC<Props> = ({
               borderRight,
               brightnessFactor,
               useExternalKnob,
+              outputKiosk,
+              zIndex,
             }}
             onSubmit={(newValues, { setSubmitting }) => {
               // eslint-disable-next-line no-param-reassign
@@ -222,6 +226,7 @@ const ScreenComponent: React.FC<Props> = ({
                 if (props[key] < 4) errs[key] = 'Должно быть не меньше 4';
                 else if (props[key] % 2 !== 0) errs[key] = 'Должно быть четным';
               });
+              if (!Number.isInteger(Number(props.zIndex))) errs.zIndex = 'Должно быть целым числом';
               return errs;
             }}
             enableReinitialize
@@ -394,6 +399,26 @@ const ScreenComponent: React.FC<Props> = ({
                         </MenuItem>
                       )}
                     </Select>
+                  </FieldSet>
+                  <FieldSet legend="Окно вывода" disabled={readonly}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={!!values.outputKiosk}
+                          onChange={handleChange}
+                          name="outputKiosk"
+                        />
+                      }
+                      label="На весь экран"
+                    />
+                    <Field
+                      variant="standard"
+                      name="zIndex"
+                      label="zIndex"
+                      type="number"
+                      component={StyledFormikTextField}
+                      disabled={readonly}
+                    />
                   </FieldSet>
                 </Box>
                 <ChipInput

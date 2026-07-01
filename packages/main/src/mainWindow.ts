@@ -170,13 +170,21 @@ export const activateMainWindow = (): ManagedWindow => {
 
 export const getMainWindow = (): ManagedWindow | null => mainWindow;
 
+type TestWindowOptions = {
+  kiosk?: boolean;
+  preload?: string;
+};
+
+const isMacOS = process.platform === 'darwin';
+
 export function createTestWindow(
   width: number,
   height: number,
   x: number,
   y: number,
-  preload?: string,
+  options?: TestWindowOptions,
 ): BrowserWindow {
+  const { kiosk = false, preload } = options ?? {};
   // Все переопределяется в openHandler.ts Это не так!
   const window = new BrowserWindow({
     width,
@@ -186,8 +194,8 @@ export function createTestWindow(
     frame: false,
     // backgroundColor: '#000',
     focusable: false,
-    // fullscreen: true,
-    // kiosk: true,
+    kiosk: kiosk && !isMacOS,
+    fullscreenable: false,
     // simpleFullscreen: true,
     show: false,
     alwaysOnTop: true,
@@ -204,6 +212,12 @@ export function createTestWindow(
       webviewTag: false, // The webview tag is not recommended. Consider alternatives like iframe or Electron's BrowserView. https://www.electronjs.org/docs/latest/api/webview-tag#warning
       preload,
     },
+  });
+
+  window.setAlwaysOnTop(true, 'screen-saver');
+  window.on('show', () => {
+    window.setAlwaysOnTop(true, 'screen-saver');
+    window.moveTop();
   });
 
   if (isDevRuntime && preload) {
