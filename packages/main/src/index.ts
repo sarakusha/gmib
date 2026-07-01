@@ -20,6 +20,7 @@ import './hid';
 // import './channels';
 import { activateMainWindow, createMainWindow, persistLocalWindowState } from './mainWindow';
 import { installWindowOpenHandler, toggleOutputWindowsVisibility } from './openHandler';
+import { startGmibScheduler } from './gmibScheduler';
 import { startPlayerScheduler } from './playerScheduler';
 import { launchPlayers } from './playerWindow';
 
@@ -103,6 +104,7 @@ if (isDevRuntime) {
 app
   .whenReady()
   .then(() => {
+    startGmibScheduler();
     startPlayerScheduler();
   })
   .then(createMainWindow)

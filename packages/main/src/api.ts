@@ -1,6 +1,5 @@
 import crypto from 'crypto';
-import type { Display } from 'electron';
-import { BrowserWindow, app as electronApp, screen } from 'electron';
+import { BrowserWindow, app as electronApp } from 'electron';
 import fs from 'fs';
 import os from 'node:os';
 import path from 'path';
@@ -14,11 +13,11 @@ import formidable from 'formidable';
 import { nanoid } from 'nanoid';
 
 import type { MediaInfo } from '/@common/mediaInfo';
-import { asyncSerial, findById, notEmpty, replaceNull } from '/@common/helpers';
+import { asyncSerial, notEmpty, replaceNull } from '/@common/helpers';
 import type { CreatePlaylist, Playlist, PlaylistItem } from '/@common/playlist';
 
 import auth from './auth';
-import { port, testsDeferred } from './config';
+import { testsDeferred } from './config';
 import {
   beginTransaction,
   commitTransaction,
@@ -44,16 +43,17 @@ import {
 } from './ffmpeg';
 import getAllDisplays from './getAllDisplays';
 import getAnnounce from './getAnnounce';
+import {
+  createGmibSchedulerJob,
+  deleteGmibSchedulerJob,
+  getGmibSchedulerJobs,
+  runGmibSchedulerJob,
+  updateGmibSchedulerJob,
+} from './gmibScheduler';
 import { getSensors } from './history';
 import localConfig from './localConfig';
 import machineId from './machineId';
 import updateMenu from './mainMenu';
-import { createTestWindow } from './mainWindow';
-import {
-  arrangeOutputWindows,
-  configureOutputWindowInteractivity,
-  isOutputWindowsHidden,
-} from './openHandler';
 import {
   deleteMedia,
   getAllMedia,
@@ -124,19 +124,16 @@ import {
 } from './screen';
 
 import type { Screen } from '/@common/video';
-import { DefaultDisplays } from '/@common/video';
 
 import { setIncomingSecret } from './secret';
 import { broadcast } from './server';
+import { updateTest } from './screenOutput';
 import { checkForUpdatesNoInteractive, updateAndRestart } from './updater';
 import {
-  createSearchParams,
   findPlayerWindow,
   findScreenParams,
   findScreenWindow,
   getAllScreenParams,
-  isEqualOptions,
-  registerScreen,
 } from './windowStore';
 import './novastarApi';
 
@@ -289,101 +286,6 @@ const loadMedia = async (file: File, force = false): Promise<MediaInfo> => {
   await insertMedia(mediaInfo);
   unlink && fs.unlinkSync(file.filepath);
   return mediaInfo;
-};
-
-const hideCursorCSS = `html, body {
-  cursor: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=), none;
-  user-select: none;
-}`;
-
-const transparentOutputCSS = `html, body {
-  background: transparent !important;
-  background-color: transparent !important;
-}`;
-
-const updateTest = async (scr: Screen, force = false) => {
-  const primary = screen.getPrimaryDisplay();
-  const displays = screen.getAllDisplays();
-  // debug(`updateTest: ${scr.display}, ${typeof scr.display} ${typeof primary.id}`);
-
-  const { id } = scr;
-  const prev = findScreenParams(id);
-  const win = prev && BrowserWindow.fromId(prev.id);
-  let display: Display | undefined;
-  if (!scr.width || !scr.height) {
-    if (win) {
-      win.close();
-    }
-    return;
-  }
-  switch (scr.display) {
-    case DefaultDisplays.Primary:
-      display = primary;
-      break;
-    case DefaultDisplays.Secondary:
-      display = displays.find(item => item.id !== primary.id);
-      break;
-    default:
-      if (typeof scr.display === 'number') {
-        display = findById(displays, scr.display);
-      }
-      break;
-  }
-  const page = scr.test ? await getPage(scr.test) : undefined;
-  if (!display || !page) {
-    win?.hide();
-    return;
-  }
-
-  const needReload = force || !win || !prev || !isEqualOptions(scr, prev);
-  const params = createSearchParams(scr);
-  params.append('port', port.toString());
-  const url = (page.permanent ? `${page.url}?${params}` : page.url)?.replaceAll(
-    '${resources}',
-    process.resourcesPath,
-  );
-  const windowBounds = {
-    x: scr.left + display.bounds.x,
-    y: scr.top + display.bounds.y,
-    width: scr.width,
-    height: scr.height,
-  };
-  const testWindow =
-    win ??
-    createTestWindow(windowBounds.width, windowBounds.height, windowBounds.x, windowBounds.y);
-  configureOutputWindowInteractivity(testWindow);
-  registerScreen(testWindow, scr);
-  // screenWindows.set(id, [testWindow, scr]);
-  const contents = testWindow.webContents;
-  contents.on('did-fail-load', (event, errorCode, errorDescription) => {
-    debug(
-      `Loading error. url: ${url}, errorCode: ${errorCode}, errorDescription: ${errorDescription}`,
-    );
-    setTimeout(() => contents.reload(), 5000).unref();
-  });
-  testWindow.setKiosk(false);
-  testWindow.setAlwaysOnTop(true, 'screen-saver');
-  testWindow.setPosition(windowBounds.x, windowBounds.y);
-  testWindow.setSize(windowBounds.width, windowBounds.height);
-  if (page.userAgent && !contents.userAgent.includes(page.userAgent))
-    void machineId.then(mid => {
-      contents.userAgent = `${contents.userAgent} ${page.userAgent} machineid/${mid}`;
-    });
-  if (needReload && url) {
-    void testWindow
-      .loadURL(url)
-      .then(() =>
-        testWindow.webContents.insertCSS(
-          scr.outputTransparent ? `${hideCursorCSS}\n${transparentOutputCSS}` : hideCursorCSS,
-        ),
-      );
-  }
-  if (isOutputWindowsHidden()) testWindow.hide();
-  else {
-    testWindow.show();
-    arrangeOutputWindows();
-  }
-  // debug(`test: ${url}`);
 };
 
 void dbReady
@@ -874,6 +776,46 @@ api.delete('/scheduler/:id', (req, res) => {
   const deleted = deleteSchedulerJob(req.params.id);
   res.sendStatus(deleted ? 204 : 404);
   broadcast({ event: 'schedulerJobs', data: [0], all: true });
+});
+
+api.get('/gmib-scheduler', (_req, res) => {
+  res.json(getGmibSchedulerJobs());
+});
+
+api.post('/gmib-scheduler', (req, res) => {
+  const job = createGmibSchedulerJob(req.body);
+  res.json(job);
+  broadcast({ event: 'gmibSchedulerJobs', all: true });
+});
+
+api.put('/gmib-scheduler/:id', (req, res) => {
+  const job = updateGmibSchedulerJob(req.params.id, req.body);
+  if (!job) {
+    res.sendStatus(404);
+    return;
+  }
+  res.json(job);
+  broadcast({ event: 'gmibSchedulerJobs', all: true });
+});
+
+api.post('/gmib-scheduler/:id/run', async (req, res, next) => {
+  try {
+    const job = await runGmibSchedulerJob(req.params.id);
+    if (!job) {
+      res.sendStatus(404);
+      return;
+    }
+    res.json(job);
+    broadcast({ event: 'gmibSchedulerJobs', all: true });
+  } catch (e) {
+    next(e);
+  }
+});
+
+api.delete('/gmib-scheduler/:id', (req, res) => {
+  const deleted = deleteGmibSchedulerJob(req.params.id);
+  res.sendStatus(deleted ? 204 : 404);
+  broadcast({ event: 'gmibSchedulerJobs', all: true });
 });
 
 api.get('/display', (req, res) => {

@@ -79,6 +79,7 @@ const screenApi = createApi({
       query: () => 'screen',
       transformResponse: (response: Screen[]) =>
         adapter.addMany(adapter.getInitialState(), response),
+      providesTags: [{ type: 'screen', id: 'LIST' }],
     }),
     createScreen: build.mutation<Screen, string | undefined | void>({
       query: name => ({

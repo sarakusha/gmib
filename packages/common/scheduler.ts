@@ -8,6 +8,12 @@ export type PlayerSchedulerAction =
   | 'show-output'
   | 'next'
   | 'play-item';
+export type GmibSchedulerAction =
+  | 'show-test'
+  | 'hide-test'
+  | 'set-brightness'
+  | 'set-autobrightness'
+  | 'set-overheat-protection';
 export type CronMode = 'all' | 'every' | 'select';
 export type SimpleCronMode = 'all' | 'select';
 export type SchedulerStatus = 'idle' | 'success' | 'error';
@@ -31,16 +37,10 @@ export type CronSchedule = {
   weekdays: SimpleCronPart;
 };
 
-export type PlayerSchedulerJob = {
+export type SchedulerJobBase = {
   id: string;
-  playerId: number;
   kind: ScheduleKind;
   name: string;
-  action: PlayerSchedulerAction;
-  playlistId?: number;
-  itemNumber?: number;
-  hideOutputOnStop?: boolean;
-  outputAll?: boolean;
   runAt?: string;
   cron?: CronSchedule;
   enabled: boolean;
@@ -51,8 +51,32 @@ export type PlayerSchedulerJob = {
   nextRunAt?: string;
 };
 
+export type PlayerSchedulerJob = SchedulerJobBase & {
+  playerId: number;
+  action: PlayerSchedulerAction;
+  playlistId?: number;
+  itemNumber?: number;
+  hideOutputOnStop?: boolean;
+  outputAll?: boolean;
+};
+
 export type PlayerSchedulerJobInput = Omit<
   PlayerSchedulerJob,
+  'id' | 'lastRunAt' | 'lastRunKey' | 'lastStatus' | 'lastMessage' | 'nextRunAt'
+> & {
+  id?: string;
+};
+
+export type GmibSchedulerJob = SchedulerJobBase & {
+  action: GmibSchedulerAction;
+  screenId?: number;
+  testId?: string;
+  brightness?: number;
+  enabledValue?: boolean;
+};
+
+export type GmibSchedulerJobInput = Omit<
+  GmibSchedulerJob,
   'id' | 'lastRunAt' | 'lastRunKey' | 'lastStatus' | 'lastMessage' | 'nextRunAt'
 > & {
   id?: string;
@@ -134,7 +158,7 @@ export const describeCron = (cron: CronSchedule): string => {
   return `Повторять ${minutes}, ${hours}${days}${months}${weekdays}`;
 };
 
-export const getNextRunAt = (job: PlayerSchedulerJob, from = new Date()): string | undefined => {
+export const getNextRunAt = (job: SchedulerJobBase, from = new Date()): string | undefined => {
   if (!job.enabled) return undefined;
   if (job.kind === 'once') {
     if (!job.runAt) return undefined;

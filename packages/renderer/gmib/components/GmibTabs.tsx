@@ -20,6 +20,7 @@ import NovastarTabs from './NovastarTabs';
 import OverheatProtectionTab from './OverheatProtectionTab';
 // import PlaylistsTab from './PlaylistsTab';
 import Screens from './Screens';
+import SchedulerTab from './SchedulerTab';
 import type { Props as ChildProps } from './TabContainer';
 import TabContainer from './TabContainer';
 
@@ -77,6 +78,9 @@ const Tabs: React.FC = () => {
       </TabContainer>
       <TabContainer id="autobrightness" selected={tab === 'autobrightness'}>
         <Autobrightness />
+      </TabContainer>
+      <TabContainer id="scheduler" selected={tab === 'scheduler'}>
+        <SchedulerTab />
       </TabContainer>
       <TabContainer id="log" selected={tab === 'log'}>
         <Log />

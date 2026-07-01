@@ -12,6 +12,8 @@ import type { SetStateAction } from 'react';
 
 import baseQuery from '../../common/authBaseQuery';
 import createDebouncedAsyncThunk from '../../common/createDebouncedAsyncThunk';
+import schedulerApi from './scheduler';
+import screenApi from './screens';
 import type { AppDispatch, AppThunk, AppThunkConfig, RootState } from '../store';
 import { setBroadcastDetected, setCurrentDevice } from '../store/currentSlice';
 import { selectCurrentDeviceId } from '../store/selectors';
@@ -302,7 +304,11 @@ export const sse: Middleware = api => {
   evtSource.addEventListener('screen', e => {
     void (async () => {
       try {
-        const [screenId, key, value] = (e as CustomEvent<[ScreenId, keyof Screen, never]>).detail;
+        dispatch(screenApi.util.invalidateTags([{ type: 'screen', id: 'LIST' }]));
+        const detail = (e as CustomEvent<[ScreenId, keyof Screen, never] | undefined>).detail;
+        if (!detail) return;
+        const [screenId, key, value] = detail;
+        if (!screenId || typeof screenId !== 'object') return;
         await novastarReady();
         dispatch(
           novastarApi.util.updateQueryData('getNovastars', undefined, draft => {
@@ -317,6 +323,17 @@ export const sse: Middleware = api => {
         console.error(`error while parse args: ${(err as Error).message}`);
       }
     })();
+  });
+  evtSource.addEventListener('gmibSchedulerJobs', () => {
+    dispatch(schedulerApi.util.invalidateTags([{ type: 'gmibScheduler', id: 'LIST' }]));
+  });
+  evtSource.addEventListener('gmibScheduler', e => {
+    window.dispatchEvent(
+      new CustomEvent('gmib-scheduler', {
+        detail: (e as CustomEvent).detail,
+      }),
+    );
+    dispatch(schedulerApi.util.invalidateTags([{ type: 'gmibScheduler', id: 'LIST' }]));
   });
   evtSource.addEventListener('update', e => {
     void (async () => {

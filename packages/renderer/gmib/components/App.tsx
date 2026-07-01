@@ -105,6 +105,22 @@ const App: React.FC = () => {
       });
     }
   }, [broadcastDetected, closeSnackbar, dispatch, enqueueSnackbar]);
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const [result] =
+        (event as CustomEvent<
+          Array<{ name?: string; status?: 'idle' | 'success' | 'error'; message?: string }>
+        >).detail ?? [];
+      if (!result) return;
+      enqueueSnackbar(result.message ?? `Задание "${result.name ?? ''}" выполнено`, {
+        variant: result.status === 'error' ? 'error' : 'success',
+        preventDuplicate: true,
+        autoHideDuration: 3000,
+      });
+    };
+    window.addEventListener('gmib-scheduler', handler);
+    return () => window.removeEventListener('gmib-scheduler', handler);
+  }, [enqueueSnackbar]);
   const focused = useSelector(selectFocused);
   return (
     <>
@@ -274,6 +290,9 @@ const App: React.FC = () => {
                   }}
                 />
               </ListItemSecondaryAction>
+            </Item>
+            <Item onClick={() => dispatch(setCurrentTab('scheduler'))} selected={tab === 'scheduler'}>
+              <ListItemText primary="Планировщик" />
             </Item>
             <Item onClick={() => dispatch(setCurrentTab('log'))} selected={tab === 'log'}>
               <ListItemText primary="Журнал" />

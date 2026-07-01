@@ -7,10 +7,16 @@ import type { Health } from '/@common/helpers';
 import { addDevice } from './devicesSlice';
 // import { addNovastar, removeNovastar } from './novastarSlice';
 
-export type TabValues = 'devices' | 'screens' | 'autobrightness' | 'overheat' | 'log' | 'help';
+export type TabValues =
+  | 'devices'
+  | 'screens'
+  | 'autobrightness'
+  | 'scheduler'
+  | 'overheat'
+  | 'log'
+  | 'help';
 // | 'media'
 // | 'playlist'
-// | 'scheduler';
 
 export type Credentials = {
   identifier: string;

@@ -14,6 +14,8 @@ import localConfig from './localConfig';
 import Reader from './reader';
 import secret from './secret';
 
+import type { Config } from '/@common/config';
+
 // import { updateScreens } from './updateScreens';
 
 const reader = new Reader(200);
@@ -21,6 +23,13 @@ const reader = new Reader(200);
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:nibus`);
 
 export default { service } as const;
+
+export const updateConfigStore = (update: (current: Config) => Config): Config => {
+  const next = update(config.store);
+  config.store = next;
+  void service.server.broadcast('config', config.store);
+  return config.store;
+};
 
 let isClosing = false;
 let isClosed = false;
@@ -69,8 +78,7 @@ const quitHandler = (event: Event): void => {
   });
   service.server.on('client:config', (socket, store) => {
     try {
-      config.store = store as typeof config.store;
-      void service.server.broadcast('config', config.store);
+      updateConfigStore(() => store as typeof config.store);
     } catch (err) {
       debug(`Error while save config: ${(err as Error).message}`, true);
       void service.server.send(socket, 'config', config.store);

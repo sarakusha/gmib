@@ -230,8 +230,7 @@ export const updateBrightness = createDebouncedAsyncThunk<
 // };
 
 startAppListening({
-  actionCreator: setBrightness,
-  // matcher: isAnyOf(setBrightness, updateConfig),
+  matcher: isAnyOf(setBrightness, updateConfig),
   effect(_, { dispatch }) {
     void dispatch(updateBrightness());
   },
