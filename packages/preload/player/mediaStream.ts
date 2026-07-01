@@ -29,7 +29,7 @@ let currentItemId: string | undefined;
 let currentUri: string | undefined;
 let sourceVideo: HTMLVideoElement | undefined;
 let capturedStream: MediaStream | undefined;
-let captureGeneration = 0;
+// let captureGeneration = 0;
 const consumers = new Set<HTMLVideoElement>();
 
 const search = new URLSearchParams(window.location.search);
@@ -64,7 +64,7 @@ const getCaptureStream = (video: HTMLVideoElement): MediaStream => {
 };
 
 const createSourceVideo = (uri: string): HTMLVideoElement => {
-  debug(`create hidden source video: ${uri}`);
+  // debug(`create hidden source video: ${uri}`);
   const video = document.createElement('video');
   video.autoplay = false;
   video.muted = true;
@@ -101,16 +101,16 @@ const createSourceVideo = (uri: string): HTMLVideoElement => {
   video.load();
 
   capturedStream = getCaptureStream(video);
-  captureGeneration += 1;
-  const generation = captureGeneration;
+  // captureGeneration += 1;
+  // const generation = captureGeneration;
   const captured = capturedStream;
-  debug(`create capture stream #${generation}: ${captured.id}`);
-  captured.addEventListener('addtrack', event => {
-    debug(`capture stream #${generation} add ${event.track.kind} track: ${event.track.id}`);
+  // debug(`create capture stream #${generation}: ${captured.id}`);
+  captured.addEventListener('addtrack', _event => {
+    // debug(`capture stream #${generation} add ${event.track.kind} track: ${event.track.id}`);
     if (capturedStream === captured) refreshStreamTracks();
   });
-  captured.addEventListener('removetrack', event => {
-    debug(`capture stream #${generation} remove ${event.track.kind} track: ${event.track.id}`);
+  captured.addEventListener('removetrack', _event => {
+    // debug(`capture stream #${generation} remove ${event.track.kind} track: ${event.track.id}`);
     if (capturedStream === captured) refreshStreamTracks();
   });
   return video;
@@ -140,7 +140,7 @@ const syncConsumerPlayback = (): void => {
         );
       });
     } else {
-      debug(`pause stream consumer: ${video.id ?? '<unknown>'}`);
+      // debug(`pause stream consumer: ${video.id ?? '<unknown>'}`);
       video.pause();
     }
   });
@@ -163,7 +163,7 @@ const replaceStreamTracks = (captured: MediaStream): void => {
   let changed = false;
   stream.getTracks().forEach(track => {
     if (!nextTracks.includes(track)) {
-      debug(`remove ${track.kind} track from shared stream: ${track.id}`);
+      // debug(`remove ${track.kind} track from shared stream: ${track.id}`);
       stream.removeTrack(track);
       changed = true;
     }
@@ -172,18 +172,18 @@ const replaceStreamTracks = (captured: MediaStream): void => {
     // eslint-disable-next-line no-param-reassign
     track.enabled = shouldEnableTrack(track);
     if (!stream.getTracks().includes(track)) {
-      debug(`add ${track.kind} track to shared stream: ${track.id}`);
+      // debug(`add ${track.kind} track to shared stream: ${track.id}`);
       stream.addTrack(track);
       changed = true;
     }
   });
   if (changed) {
-    debug(
-      `shared stream tracks: ${stream
-        .getTracks()
-        .map(track => `${track.kind}:${track.id}:${track.enabled ? 'enabled' : 'disabled'}`)
-        .join(', ')}`,
-    );
+    // debug(
+    //   `shared stream tracks: ${stream
+    //     .getTracks()
+    //     .map(track => `${track.kind}:${track.id}:${track.enabled ? 'enabled' : 'disabled'}`)
+    //     .join(', ')}`,
+    // );
     replacePeerTracks();
   }
 };
@@ -206,17 +206,17 @@ const pauseSource = (): void => {
   syncConsumerPlayback();
 };
 
-const disposeSource = (reason: string): void => {
+const disposeSource = (_reason: string): void => {
   const video = sourceVideo;
   const captured = capturedStream;
   if (!video && !captured) return;
-  debug(`dispose source: ${reason}`);
+  // debug(`dispose source: ${reason}`);
   video?.pause();
   sourceVideo = undefined;
   capturedStream = undefined;
   replaceStreamTracks(new MediaStream());
   captured?.getTracks().forEach(track => {
-    debug(`stop captured ${track.kind} track: ${track.id}`);
+    // debug(`stop captured ${track.kind} track: ${track.id}`);
     track.stop();
   });
   if (video) {
@@ -227,7 +227,7 @@ const disposeSource = (reason: string): void => {
 };
 
 const clearSource = (): void => {
-  debug('clear source');
+  // debug('clear source');
   currentItemId = undefined;
   currentUri = undefined;
   disposeSource('clear source');
@@ -239,7 +239,7 @@ const playSource = async (): Promise<void> => {
   const video = sourceVideo;
   if (!video) return;
   try {
-    debug(`play source: ${currentUri ?? '<empty>'}`);
+    // debug(`play source: ${currentUri ?? '<empty>'}`);
     await video.play();
     syncConsumerPlayback();
   } catch (err) {
@@ -248,7 +248,7 @@ const playSource = async (): Promise<void> => {
 };
 
 const loadSource = async (uri: string, itemId?: string, mediaId?: string): Promise<void> => {
-  debug(`load source: ${uri}`);
+  // debug(`load source: ${uri}`);
   disposeSource('replace source');
   currentUri = uri;
   currentItemId = itemId;
@@ -309,7 +309,7 @@ const getActiveDuration = (): number =>
       : 0;
 
 const disposeDecoder = (): void => {
-  debug('dispose decoder engine');
+  // debug('dispose decoder engine');
   currentSource?.close();
   currentSource = undefined;
   nextSource?.close();
@@ -355,9 +355,9 @@ const handleDecoderSourceMessage = (source: VideoSource, data: DecoderSourceMess
   if (typeof data.seekStartTime === 'number') {
     // eslint-disable-next-line no-param-reassign
     source.options.startTime = data.seekStartTime;
-    debug(
-      `decoder source seek start time: ${data.seekStartTime}s: media=${source.options.mediaId ?? '<none>'}, current: ${source === currentSource ? 'yes' : 'no'}`,
-    );
+    // debug(
+    //   `decoder source seek start time: ${data.seekStartTime}s: media=${source.options.mediaId ?? '<none>'}, current: ${source === currentSource ? 'yes' : 'no'}`,
+    // );
     if (source === currentSource) {
       decoderPosition = data.seekStartTime;
       ipcDispatch(setPosition(decoderPosition));
@@ -365,9 +365,9 @@ const handleDecoderSourceMessage = (source: VideoSource, data: DecoderSourceMess
   }
   if (typeof data.timer === 'number' && source === currentSource) {
     decoderPosition = getDecoderSourcePosition(source, data.timer);
-    debug(
-      `decoder source timer: ${data.timer}s, position: ${decoderPosition}s: media=${source.options.mediaId ?? '<none>'}`,
-    );
+    // debug(
+    //   `decoder source timer: ${data.timer}s, position: ${decoderPosition}s: media=${source.options.mediaId ?? '<none>'}`,
+    // );
     ipcDispatch(
       setPosition(source.duration ? Math.min(source.duration, decoderPosition) : decoderPosition),
     );
@@ -413,9 +413,9 @@ const seekDecoderSource = (position: number, reason: 'user' | 'recover' = 'user'
   const { itemId, mediaId } = source.options;
   const nextPosition = clampSeekPosition(position, source.duration || decoderDuration);
   if (reason === 'user') decoderRecoveryAttempts.delete(getDecoderRecoveryKey(source));
-  debug(
-    `seek decoder source to ${nextPosition}s (${reason}): item=${itemId ?? '<none>'} media=${mediaId ?? '<none>'}`,
-  );
+  // debug(
+  //   `seek decoder source to ${nextPosition}s (${reason}): item=${itemId ?? '<none>'} media=${mediaId ?? '<none>'}`,
+  // );
   nextSource?.close();
   const recoverySource = new VideoSource(source.uri, {
     itemId,
@@ -435,15 +435,15 @@ const seekDecoderSource = (position: number, reason: 'user' | 'recover' = 'user'
   });
   nextSource = recoverySource;
   source.close();
-  debug(
-    `seek decoder source: closed previous source, added recovery source: position=${nextPosition}s item=${itemId ?? '<none>'} media=${mediaId ?? '<none>'}`,
-  );
+  // debug(
+  //   `seek decoder source: closed previous source, added recovery source: position=${nextPosition}s item=${itemId ?? '<none>'} media=${mediaId ?? '<none>'}`,
+  // );
   decoderPosition = nextPosition;
   ipcDispatch(setPosition(nextPosition));
 };
 
 const restartCurrentSource = (): void => {
-  debug('restart current source');
+  // debug('restart current source');
   seek(0);
   if (playbackState === 'playing') {
     if (activeEngine === 'capture') void playSource();
@@ -453,7 +453,7 @@ const restartCurrentSource = (): void => {
 
 const initializeDecoderStream = (): void => {
   if (videoStream) return;
-  debug('initialize decoder engine');
+  // debug('initialize decoder engine');
   replaceStreamTracks(new MediaStream());
   videoStream = mergeStreams<VideoFrame>();
   const trackGenerator = new MediaStreamTrackGenerator({ kind: 'video' });
@@ -627,7 +627,7 @@ const update = async (): Promise<void> => {
 
 export const attachStreamToVideo = (video: HTMLVideoElement): void => {
   if (video) {
-    debug(`attach shared stream to ${video.tagName.toLowerCase()}#${video.id || '<no-id>'}`);
+    // debug(`attach shared stream to ${video.tagName.toLowerCase()}#${video.id || '<no-id>'}`);
     // eslint-disable-next-line no-param-reassign
     video.srcObject = stream;
     consumers.add(video);
@@ -646,7 +646,7 @@ export const seek = (position: number): void => {
   if (activeEngine === 'capture') {
     if (!sourceVideo) return;
     const capturePosition = clampSeekPosition(nextPosition, sourceVideo.duration);
-    debug(`seek capture source to ${capturePosition}s: ${currentUri ?? '<empty>'}`);
+    // debug(`seek capture source to ${capturePosition}s: ${currentUri ?? '<empty>'}`);
     sourceVideo.currentTime = capturePosition;
     ipcDispatch(setPosition(sourceVideo.currentTime));
     return;
@@ -712,7 +712,7 @@ const replacePeerTracks = (): void => {
   peers.forEach(({ senders }) => {
     senders.forEach((sender, kind) => {
       const track = stream.getTracks().find(candidate => candidate.kind === kind) ?? null;
-      debug(`replace ${kind} peer track: ${track?.id ?? '<none>'}`);
+      // debug(`replace ${kind} peer track: ${track?.id ?? '<none>'}`);
       void sender.replaceTrack(track).catch(err => {
         debug(`error while replacing ${kind} track: ${(err as Error).message}`);
       });
@@ -749,13 +749,13 @@ ipcRenderer.on('socket', (_, { id, ...msg }: WithWebSocketKey<RtcMessage>) => {
           const pc = new RTCPeerConnection();
           const entry: PeerEntry = { pc, senders: new Map() };
           peers.set(id, entry);
-          debug(`create peer: ${id}`);
+          // debug(`create peer: ${id}`);
 
           pc.onconnectionstatechange = () => {
-            debug(`peer ${id} connection state: ${pc.connectionState}`);
+            // debug(`peer ${id} connection state: ${pc.connectionState}`);
             if (['closed', 'failed'].includes(pc.connectionState)) {
               peers.delete(id);
-              debug(`delete peer: ${id}`);
+              // debug(`delete peer: ${id}`);
             }
           };
 
