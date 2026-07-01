@@ -213,6 +213,7 @@ const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) =
                   ...mapping,
                   objectFit: mapping.objectFit ?? 'cover',
                   shader: mapping.shader ?? '',
+                  zIndex: mapping.zIndex ?? 0,
                 }
               : {
                   name: `${player?.name} - Вывод`,
@@ -223,6 +224,7 @@ const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) =
                   width: player?.width ?? 320,
                   height: player?.height ?? 240,
                   zOrder: 0,
+                  zIndex: 0,
                   kiosk: false,
                   transparent: false,
                   alwaysOnTop: true,
@@ -235,6 +237,7 @@ const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) =
             const nextMapping = {
               ...newValues,
               player: playerId,
+              zIndex: Number(newValues.zIndex) || 0,
               shader: newValues.shader?.trim() || undefined,
             };
             if (mapping) await updateMapping({ ...mapping, ...nextMapping });
@@ -325,6 +328,20 @@ const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) =
                   </Stack>
                 </FormControl>
               </Box>
+              <FormControl component="fieldset" sx={{ width: 1 }} margin="normal">
+                <FormLabel component="legend">Слой окна вывода</FormLabel>
+                <Field
+                  name="zIndex"
+                  label="zIndex"
+                  type="number"
+                  component={FormikTextField}
+                  inputProps={{ step: 1 }}
+                  fullWidth
+                />
+                <FormHelperText>
+                  Окна вывода с большим значением располагаются выше окон с меньшим значением.
+                </FormHelperText>
+              </FormControl>
               <FormControl component="fieldset" sx={{ width: 1 }} margin="normal">
                 <FormLabel component="legend">Окно</FormLabel>
                 <Stack

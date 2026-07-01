@@ -85,6 +85,7 @@ export type PlayerMapping = {
   display?: number;
   kiosk: boolean;
   zOrder: number;
+  zIndex?: number;
   shader?: string;
   transparent?: boolean;
   alwaysOnTop?: boolean;

@@ -107,6 +107,44 @@ const shouldKeepOnTop = (url: string) => {
   }
 };
 
+const getVideoOutputZIndex = (window: BrowserWindow): number => {
+  try {
+    return toNumber(new URL(window.webContents.getURL()).searchParams.get('zIndex'), 0);
+  } catch {
+    return 0;
+  }
+};
+
+const getVideoOutputZOrder = (window: BrowserWindow): number => {
+  try {
+    return toNumber(new URL(window.webContents.getURL()).searchParams.get('zOrder'), 0);
+  } catch {
+    return 0;
+  }
+};
+
+const arrangeVideoOutputWindows = (): void => {
+  getPlayerOutputWindows()
+    .filter(window => !window.isDestroyed() && window.isVisible())
+    .sort((a, b) => {
+      const aTop = shouldKeepOnTop(a.webContents.getURL()) ? 1 : 0;
+      const bTop = shouldKeepOnTop(b.webContents.getURL()) ? 1 : 0;
+      return (
+        aTop - bTop ||
+        getVideoOutputZIndex(a) - getVideoOutputZIndex(b) ||
+        getVideoOutputZOrder(a) - getVideoOutputZOrder(b) ||
+        a.id - b.id
+      );
+    })
+    .forEach(window => {
+      window.moveTop();
+    });
+};
+
+const scheduleArrangeVideoOutputWindows = (): void => {
+  setTimeout(arrangeVideoOutputWindows, 0);
+};
+
 export const configureOutputWindow = (window: BrowserWindow, url: string): void => {
   if (!isOutputWindowUrl(url)) return;
   const isVideoOutput = isVideoOutputWindowUrl(url);
@@ -115,6 +153,7 @@ export const configureOutputWindow = (window: BrowserWindow, url: string): void 
     if (window.isDestroyed()) return;
     window.setAlwaysOnTop(true, TOPMOST_LEVEL);
     window.moveTop();
+    scheduleArrangeVideoOutputWindows();
   };
 
   window.setParentWindow(null);
@@ -127,8 +166,17 @@ export const configureOutputWindow = (window: BrowserWindow, url: string): void 
     });
   }
   if (isOutputHidden()) window.hide();
-  else if (!window.isVisible()) window.showInactive();
-  if (!shouldKeepOnTop(url)) return;
+  else if (!window.isVisible()) {
+    window.showInactive();
+    if (isVideoOutput) scheduleArrangeVideoOutputWindows();
+  }
+  if (!shouldKeepOnTop(url)) {
+    if (isVideoOutput) {
+      window.on('show', scheduleArrangeVideoOutputWindows);
+      window.on('restore', scheduleArrangeVideoOutputWindows);
+    }
+    return;
+  }
 
   keepOnTop();
   window.on('show', keepOnTop);
@@ -149,6 +197,7 @@ export const toggleOutputWindowsVisibility = (): boolean => {
   outputs.forEach(window => {
     window.show();
   });
+  arrangeVideoOutputWindows();
   outputs.at(-1)?.focus();
   broadcastOutputVisibility(setOutputHidden(false));
   return true;
@@ -167,6 +216,7 @@ export const setPlayerOutputWindowsVisibility = (visible: boolean, playerId?: nu
     if (visible) window.showInactive();
     else window.hide();
   });
+  if (visible) arrangeVideoOutputWindows();
   broadcastPlayerOutputVisibility(!visible, playerId);
   return outputs.length > 0;
 };

@@ -26,6 +26,7 @@ const toPlayerMapping = (row: NullableOptional): PlayerMapping => {
     height: raw?.height as number | null,
     display: raw?.display as number | null,
     zOrder: (raw?.zOrder as number) ?? 0,
+    zIndex: (raw?.zIndex as number) ?? 0,
     shader: raw?.shader as string | null,
     objectFit: (raw?.objectFit as PlayerMapping['objectFit']) ?? 'cover',
     kiosk: Boolean(flags & MappingFlags.Kiosk),
@@ -49,6 +50,7 @@ const playerMappingEncoder = (props: WithRequiredProp<Partial<PlayerMapping>, 'p
   $height: props.height ?? null,
   $display: props.display ?? null,
   $zOrder: props.zOrder ?? 0,
+  $zIndex: props.zIndex ?? 0,
   $shader: props.shader ?? null,
   $objectFit: props.objectFit ?? 'cover',
   $flags:
@@ -58,8 +60,8 @@ const playerMappingEncoder = (props: WithRequiredProp<Partial<PlayerMapping>, 'p
 });
 
 export const insertPlayerMapping = promisifyRun(
-  `INSERT INTO playerMapping (name, player, left, top, width, height, display, zOrder, shader, objectFit, flags)
-  VALUES ($name, $player, $left, $top, $width, $height, $display, $zOrder, $shader, $objectFit, $flags)`,
+  `INSERT INTO playerMapping (name, player, left, top, width, height, display, zOrder, zIndex, shader, objectFit, flags)
+  VALUES ($name, $player, $left, $top, $width, $height, $display, $zOrder, $zIndex, $shader, $objectFit, $flags)`,
   playerMappingEncoder,
 );
 
@@ -91,6 +93,7 @@ export const updatePlayerMapping = promisifyRun(
       height=$height,
       display=$display,
       zOrder=$zOrder,
+      zIndex=$zIndex,
       shader=$shader,
       objectFit=$objectFit,
       flags=$flags

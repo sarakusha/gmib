@@ -173,6 +173,7 @@ function createTables(): void {
           shader TEXT,
           objectFit TEXT DEFAULT 'cover',
           zOrder INTEGER DEFAULT 0,
+          zIndex INTEGER DEFAULT 0,
           flags INTEGER DEFAULT 0,
           FOREIGN KEY (player)
             REFERENCES player (id) ON DELETE CASCADE
@@ -180,6 +181,7 @@ function createTables(): void {
       err => err && debug(`error while create playerMapping: ${err}`),
     );
     void checkColumnExists('playerMapping', 'objectFit', "TEXT DEFAULT 'cover'");
+    void checkColumnExists('playerMapping', 'zIndex', 'INTEGER DEFAULT 0');
     // db.run(
     //   `CREATE TABLE IF NOT EXISTS videoOutput (
     //     id INTEGER PRIMARY KEY,
