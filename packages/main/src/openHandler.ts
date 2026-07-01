@@ -155,6 +155,15 @@ const scheduleArrangeVideoOutputWindows = (): void => {
   setTimeout(arrangeOutputWindows, 0);
 };
 
+const interactiveConfigured = new WeakSet<BrowserWindow>();
+
+export const configureOutputWindowInteractivity = (window: BrowserWindow): void => {
+  window.setIgnoreMouseEvents(true, { forward: true });
+  if (interactiveConfigured.has(window)) return;
+  interactiveConfigured.add(window);
+  window.on('focus', scheduleArrangeVideoOutputWindows);
+};
+
 export const configureOutputWindow = (window: BrowserWindow, url: string): void => {
   if (!isOutputWindowUrl(url)) return;
   const isVideoOutput = isVideoOutputWindowUrl(url);
@@ -167,6 +176,7 @@ export const configureOutputWindow = (window: BrowserWindow, url: string): void 
   };
 
   window.setParentWindow(null);
+  configureOutputWindowInteractivity(window);
   if (isMacOS) window.setFullScreenable(false);
   if (isVideoOutput) {
     window.webContents.once('did-finish-load', () => {

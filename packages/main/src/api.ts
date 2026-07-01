@@ -49,7 +49,11 @@ import localConfig from './localConfig';
 import machineId from './machineId';
 import updateMenu from './mainMenu';
 import { createTestWindow } from './mainWindow';
-import { arrangeOutputWindows, isOutputWindowsHidden } from './openHandler';
+import {
+  arrangeOutputWindows,
+  configureOutputWindowInteractivity,
+  isOutputWindowsHidden,
+} from './openHandler';
 import {
   deleteMedia,
   getAllMedia,
@@ -347,6 +351,7 @@ const updateTest = async (scr: Screen, force = false) => {
   const testWindow =
     win ??
     createTestWindow(windowBounds.width, windowBounds.height, windowBounds.x, windowBounds.y);
+  configureOutputWindowInteractivity(testWindow);
   registerScreen(testWindow, scr);
   // screenWindows.set(id, [testWindow, scr]);
   const contents = testWindow.webContents;
