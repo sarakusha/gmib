@@ -1,3 +1,16 @@
+import AddAlarmIcon from '@mui/icons-material/AddAlarm';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ErrorIcon from '@mui/icons-material/Error';
+import EventRepeatIcon from '@mui/icons-material/EventRepeat';
+import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
+import { Button, Tooltip } from '@mui/material';
+import Checkbox from '@mui/material/Checkbox';
+import FormControl from '@mui/material/FormControl';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import InputLabel from '@mui/material/InputLabel';
+import MenuItem from '@mui/material/MenuItem';
+import Select, { type SelectChangeEvent } from '@mui/material/Select';
+import TextField from '@mui/material/TextField';
 import React from 'react';
 
 import type { Playlist } from '/@common/playlist';
@@ -7,20 +20,7 @@ import type {
   PlayerSchedulerJobInput,
   ScheduleKind,
 } from '/@common/scheduler';
-import { cronToString, defaultCron, describeCron } from '/@common/scheduler';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import ErrorIcon from '@mui/icons-material/Error';
-import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
-
-import Checkbox from '@mui/material/Checkbox';
-import {
-  FormControl,
-  FormControlLabel,
-  InputLabel,
-  MenuItem,
-  Select,
-  TextField,
-} from '@mui/material';
+import { defaultCron } from '/@common/scheduler';
 
 import { useGetPlaylists } from '../api/playlists';
 import {
@@ -32,10 +32,8 @@ import {
 } from '../api/scheduler';
 import { sourceId } from '../utils';
 
-import SchedulerTabCommon, {
-  formatRelativeDateTime,
-  type SchedulerTabLabels,
-} from '../../common/SchedulerTab';
+import SchedulerTabCommon, { type SchedulerTabLabels } from '../../common/SchedulerTab';
+import Toolbar from './StyledToolbar';
 
 type DialogValues = PlayerSchedulerJobInput;
 
@@ -50,7 +48,7 @@ const labels: SchedulerTabLabels = {
   emptyState: 'Нет запланированных заданий.',
   runNowTooltip: 'Запустить сейчас',
   deleteTooltip: 'Удалить задание',
-  enabledHeader: 'Вкл/выкл',
+  enabledHeader: 'Включено',
   nameHeader: 'Имя',
   lastRunHeader: 'Было',
   statusHeader: 'Статус',
@@ -75,10 +73,7 @@ const toDateTimeLocal = (date: Date): string =>
     date.getHours(),
   )}:${pad(date.getMinutes())}`;
 
-const createInitialValues = (
-  kind: ScheduleKind,
-  initialJob?: PlayerSchedulerJob,
-): DialogValues => ({
+const createInitialValues = (kind: ScheduleKind, initialJob?: PlayerSchedulerJob): DialogValues => ({
   id: initialJob?.id,
   playerId: sourceId,
   kind: initialJob?.kind ?? kind,
@@ -131,12 +126,6 @@ const getActionName = (
   return actionLabels[job.action];
 };
 
-const getScheduleDescription = (job: PlayerSchedulerJob): string => {
-  if (job.kind === 'once')
-    return job.runAt ? `Один раз: ${formatRelativeDateTime(job.runAt).join(' ')}` : '';
-  return job.cron ? `${describeCron(job.cron)} (${cronToString(job.cron)})` : '';
-};
-
 const normalizeActionChange = (
   current: DialogValues,
   nextAction: PlayerSchedulerAction,
@@ -175,7 +164,7 @@ const renderActionFields = ({
           <Select
             labelId="scheduler-playlist-label"
             value={values.playlistId ?? ''}
-            onChange={event =>
+            onChange={(event: SelectChangeEvent<number | string>) =>
               setValues(current => ({
                 ...current,
                 playlistId: Number(event.target.value),
@@ -199,7 +188,7 @@ const renderActionFields = ({
           fullWidth
           value={values.itemNumber ?? 1}
           slotProps={{ htmlInput: { min: 1 } }}
-          onChange={event =>
+          onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
             setValues(current => ({
               ...current,
               itemNumber: Math.max(1, Number(event.target.value) || 1),
@@ -213,7 +202,7 @@ const renderActionFields = ({
           control={
             <Checkbox
               checked={Boolean(values.hideOutputOnStop)}
-              onChange={event =>
+              onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
                 setValues(current => ({
                   ...current,
                   hideOutputOnStop: event.target.checked,
@@ -230,7 +219,7 @@ const renderActionFields = ({
           control={
             <Checkbox
               checked={Boolean(values.outputAll)}
-              onChange={event =>
+              onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
                 setValues(current => ({
                   ...current,
                   outputAll: event.target.checked,
@@ -271,20 +260,63 @@ const SchedulerTab: React.FC = () => {
   const [updateJob] = useUpdateSchedulerJobMutation();
   const [runJob, { isLoading: isRunPending }] = useRunSchedulerJobMutation();
   const [deleteJob] = useDeleteSchedulerJobMutation();
+  const [dialogKind, setDialogKind] = React.useState<ScheduleKind | null>(null);
+  const [editingJob, setEditingJob] = React.useState<PlayerSchedulerJob | undefined>();
+
+  const toolbar = (
+    <Toolbar>
+      <Tooltip title={labels.addOnceTooltip}>
+        <Button
+          color="inherit"
+          startIcon={<AddAlarmIcon />}
+          onClick={() => {
+            setEditingJob(undefined);
+            setDialogKind('once');
+          }}
+        >
+          {labels.addOnceButton}
+        </Button>
+      </Tooltip>
+      <Tooltip title={labels.addCronTooltip}>
+        <Button
+          color="inherit"
+          startIcon={<EventRepeatIcon />}
+          onClick={() => {
+            setEditingJob(undefined);
+            setDialogKind('cron');
+          }}
+        >
+          {labels.addCronButton}
+        </Button>
+      </Tooltip>
+    </Toolbar>
+  );
+
+  const openEdit = (job: PlayerSchedulerJob): void => {
+    setEditingJob(job);
+    setDialogKind(job.kind);
+  };
+
+  const closeDialog = (): void => {
+    setDialogKind(null);
+    setEditingJob(undefined);
+  };
 
   return (
     <SchedulerTabCommon<PlayerSchedulerJob, DialogValues, PlayerSchedulerAction, Playlist[]>
+      toolbar={toolbar}
       jobs={jobs}
       related={playlists}
       actionLabels={actionLabels}
       labels={labels}
       maxWidth="md"
       isRunPending={isRunPending}
+      dialogKind={dialogKind}
+      editingJob={editingJob}
       createInitialValues={createInitialValues}
       toJobInput={toJobInput}
       normalizeActionChange={normalizeActionChange}
       getActionName={getActionName}
-      getScheduleDescription={getScheduleDescription}
       renderActionFields={renderActionFields}
       isSubmitEnabled={isSubmitEnabled}
       onCreate={async job => {
@@ -293,6 +325,8 @@ const SchedulerTab: React.FC = () => {
       onUpdate={async (id, job) => {
         await updateJob({ id, job }).unwrap();
       }}
+      onEditJob={openEdit}
+      onCloseDialog={closeDialog}
       onDelete={async id => {
         await deleteJob(id).unwrap();
       }}
@@ -301,9 +335,7 @@ const SchedulerTab: React.FC = () => {
       }}
       renderStatusIcon={job => <StatusIcon job={job} />}
       getStatusTooltip={job => job.lastMessage ?? ''}
-      getRunTooltip={job =>
-        job.enabled ? 'Запустить сейчас' : 'Включите задание, чтобы запустить'
-      }
+      getRunTooltip={job => (job.enabled ? 'Запустить сейчас' : 'Включите задание, чтобы запустить')}
     />
   );
 };

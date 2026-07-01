@@ -1,8 +1,6 @@
 'use client';
 
-import AddAlarmIcon from '@mui/icons-material/AddAlarm';
 import DeleteIcon from '@mui/icons-material/Delete';
-import EventRepeatIcon from '@mui/icons-material/EventRepeat';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import Checkbox from '@mui/material/Checkbox';
@@ -33,7 +31,6 @@ import {
   TableHead,
   TableRow,
   TextField,
-  Toolbar,
   Tooltip,
   Typography,
 } from '@mui/material';
@@ -131,69 +128,69 @@ const CronPartEditor: React.FC<{
   columns = 10,
   onChange,
 }) => {
-  const values = Array.from({ length: max - min + 1 }, (_, index) => min + index);
-  const toggle = (item: number) => {
-    const selected = value.selected.includes(item)
-      ? value.selected.filter(current => current !== item)
-      : [...value.selected, item];
-    onChange({ ...value, selected: normalizeSelected(selected) });
+    const values = Array.from({ length: max - min + 1 }, (_, index) => min + index);
+    const toggle = (item: number) => {
+      const selected = value.selected.includes(item)
+        ? value.selected.filter(current => current !== item)
+        : [...value.selected, item];
+      onChange({ ...value, selected: normalizeSelected(selected) });
+    };
+    return (
+      <Accordion disableGutters square sx={accordionSx}>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Stack direction="row" sx={{ width: 1, pr: 2, justifyContent: 'space-between' }}>
+            <Typography>{title}</Typography>
+            <Typography color="text.secondary">{partToCron(value)}</Typography>
+          </Stack>
+        </AccordionSummary>
+        <AccordionDetails>
+          <TabContext value={value.mode}>
+            <TabList onChange={(_, next: CronMode) => onChange({ ...value, mode: next })}>
+              <Tab label={allLabel} value="all" sx={{ textTransform: 'none' }} />
+              <Tab label={everyLabel} value="every" sx={{ textTransform: 'none' }} />
+              <Tab label={selectLabel} value="select" sx={{ textTransform: 'none' }} />
+            </TabList>
+            <TabPanel value="all" sx={{ px: 0 }}>
+              <Typography variant="body2">*</Typography>
+            </TabPanel>
+            <TabPanel value="every" sx={{ px: 0 }}>
+              <Stack spacing={1}>
+                <Typography variant="body2">
+                  {stepLabel}: {value.every}
+                </Typography>
+                <Slider
+                  min={1}
+                  max={max}
+                  value={value.every}
+                  valueLabelDisplay="auto"
+                  onChange={(_, next) =>
+                    onChange({ ...value, every: Array.isArray(next) ? next[0] : next })
+                  }
+                />
+              </Stack>
+            </TabPanel>
+            <TabPanel value="select" sx={{ px: 0 }}>
+              <Grid container columns={columns} spacing={0.5}>
+                {values.map(item => (
+                  <Grid size={1} key={item}>
+                    <Button
+                      fullWidth
+                      size="small"
+                      variant={value.selected.includes(item) ? 'contained' : 'outlined'}
+                      onClick={() => toggle(item)}
+                      sx={{ minWidth: 0 }}
+                    >
+                      {item}
+                    </Button>
+                  </Grid>
+                ))}
+              </Grid>
+            </TabPanel>
+          </TabContext>
+        </AccordionDetails>
+      </Accordion>
+    );
   };
-  return (
-    <Accordion disableGutters square sx={accordionSx}>
-      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-        <Stack direction="row" sx={{ width: 1, pr: 2, justifyContent: 'space-between' }}>
-          <Typography>{title}</Typography>
-          <Typography color="text.secondary">{partToCron(value)}</Typography>
-        </Stack>
-      </AccordionSummary>
-      <AccordionDetails>
-        <TabContext value={value.mode}>
-          <TabList onChange={(_, next: CronMode) => onChange({ ...value, mode: next })}>
-            <Tab label={allLabel} value="all" sx={{ textTransform: 'none' }} />
-            <Tab label={everyLabel} value="every" sx={{ textTransform: 'none' }} />
-            <Tab label={selectLabel} value="select" sx={{ textTransform: 'none' }} />
-          </TabList>
-          <TabPanel value="all" sx={{ px: 0 }}>
-            <Typography variant="body2">*</Typography>
-          </TabPanel>
-          <TabPanel value="every" sx={{ px: 0 }}>
-            <Stack spacing={1}>
-              <Typography variant="body2">
-                {stepLabel}: {value.every}
-              </Typography>
-              <Slider
-                min={1}
-                max={max}
-                value={value.every}
-                valueLabelDisplay="auto"
-                onChange={(_, next) =>
-                  onChange({ ...value, every: Array.isArray(next) ? next[0] : next })
-                }
-              />
-            </Stack>
-          </TabPanel>
-          <TabPanel value="select" sx={{ px: 0 }}>
-            <Grid container columns={columns} spacing={0.5}>
-              {values.map(item => (
-                <Grid size={1} key={item}>
-                  <Button
-                    fullWidth
-                    size="small"
-                    variant={value.selected.includes(item) ? 'contained' : 'outlined'}
-                    onClick={() => toggle(item)}
-                    sx={{ minWidth: 0 }}
-                  >
-                    {item}
-                  </Button>
-                </Grid>
-              ))}
-            </Grid>
-          </TabPanel>
-        </TabContext>
-      </AccordionDetails>
-    </Accordion>
-  );
-};
 
 const SimpleCronPartEditor: React.FC<{
   title: string;
@@ -216,52 +213,52 @@ const SimpleCronPartEditor: React.FC<{
   formatValue = item => item,
   onChange,
 }) => {
-  const values = Array.from({ length: max - min + 1 }, (_, index) => min + index);
-  const toggle = (item: number) => {
-    const selected = value.selected.includes(item)
-      ? value.selected.filter(current => current !== item)
-      : [...value.selected, item];
-    onChange({ ...value, selected: normalizeSelected(selected) });
+    const values = Array.from({ length: max - min + 1 }, (_, index) => min + index);
+    const toggle = (item: number) => {
+      const selected = value.selected.includes(item)
+        ? value.selected.filter(current => current !== item)
+        : [...value.selected, item];
+      onChange({ ...value, selected: normalizeSelected(selected) });
+    };
+    return (
+      <Accordion disableGutters square sx={accordionSx}>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Stack direction="row" sx={{ width: 1, pr: 2, justifyContent: 'space-between' }}>
+            <Typography>{title}</Typography>
+            <Typography color="text.secondary">{simplePartToCron(value)}</Typography>
+          </Stack>
+        </AccordionSummary>
+        <AccordionDetails>
+          <TabContext value={value.mode}>
+            <TabList onChange={(_, next: SimpleCronMode) => onChange({ ...value, mode: next })}>
+              <Tab label={allLabel} value="all" />
+              <Tab label={selectLabel} value="select" />
+            </TabList>
+            <TabPanel value="all" sx={{ px: 0 }}>
+              <Typography variant="body2">*</Typography>
+            </TabPanel>
+            <TabPanel value="select" sx={{ px: 0 }}>
+              <Grid container columns={columns} spacing={0.5}>
+                {values.map(item => (
+                  <Grid size={1} key={item}>
+                    <Button
+                      fullWidth
+                      size="small"
+                      variant={value.selected.includes(item) ? 'contained' : 'outlined'}
+                      onClick={() => toggle(item)}
+                      sx={{ minWidth: 0 }}
+                    >
+                      {formatValue(item)}
+                    </Button>
+                  </Grid>
+                ))}
+              </Grid>
+            </TabPanel>
+          </TabContext>
+        </AccordionDetails>
+      </Accordion>
+    );
   };
-  return (
-    <Accordion disableGutters square sx={accordionSx}>
-      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-        <Stack direction="row" sx={{ width: 1, pr: 2, justifyContent: 'space-between' }}>
-          <Typography>{title}</Typography>
-          <Typography color="text.secondary">{simplePartToCron(value)}</Typography>
-        </Stack>
-      </AccordionSummary>
-      <AccordionDetails>
-        <TabContext value={value.mode}>
-          <TabList onChange={(_, next: SimpleCronMode) => onChange({ ...value, mode: next })}>
-            <Tab label={allLabel} value="all" />
-            <Tab label={selectLabel} value="select" />
-          </TabList>
-          <TabPanel value="all" sx={{ px: 0 }}>
-            <Typography variant="body2">*</Typography>
-          </TabPanel>
-          <TabPanel value="select" sx={{ px: 0 }}>
-            <Grid container columns={columns} spacing={0.5}>
-              {values.map(item => (
-                <Grid size={1} key={item}>
-                  <Button
-                    fullWidth
-                    size="small"
-                    variant={value.selected.includes(item) ? 'contained' : 'outlined'}
-                    onClick={() => toggle(item)}
-                    sx={{ minWidth: 0 }}
-                  >
-                    {formatValue(item)}
-                  </Button>
-                </Grid>
-              ))}
-            </Grid>
-          </TabPanel>
-        </TabContext>
-      </AccordionDetails>
-    </Accordion>
-  );
-};
 
 const HoverTableRow = styled(TableRow)({
   '& .MuiIconButton-root': { opacity: 0 },
@@ -305,17 +302,19 @@ export type SchedulerTabProps<
   TAction extends string,
   TRelated,
 > = {
+  toolbar?: React.ReactNode;
   jobs: TJob[];
   related: TRelated;
   actionLabels: Record<TAction, string>;
   labels: SchedulerTabLabels;
   maxWidth?: 'sm' | 'md' | 'lg';
   isRunPending: boolean;
+  dialogKind: ScheduleKind | null;
+  editingJob?: TJob;
   createInitialValues: (kind: ScheduleKind, initialJob?: TJob) => TValues;
   toJobInput: (job: TJob) => TValues;
   normalizeActionChange: (current: TValues, nextAction: TAction) => TValues;
   getActionName: (job: TValues | TJob, related: TRelated) => string;
-  getScheduleDescription: (job: TJob) => string;
   renderActionFields: (args: {
     values: TValues;
     setValues: React.Dispatch<React.SetStateAction<TValues>>;
@@ -325,6 +324,8 @@ export type SchedulerTabProps<
   isSubmitEnabled: (values: TValues) => boolean;
   onCreate: (job: TValues) => Promise<void>;
   onUpdate: (id: string, job: TValues) => Promise<void>;
+  onEditJob: (job: TJob) => void;
+  onCloseDialog: () => void;
   onDelete: (id: string) => Promise<void>;
   onRun: (id: string) => Promise<void>;
   renderStatusIcon: (job: TJob) => React.ReactNode;
@@ -572,39 +573,30 @@ const SchedulerTab = <
   actionLabels,
   labels,
   maxWidth = 'md',
+  toolbar,
   isRunPending,
+  dialogKind,
+  editingJob,
   createInitialValues,
   toJobInput,
   normalizeActionChange,
   getActionName,
-  getScheduleDescription,
   renderActionFields,
   isSubmitEnabled,
   onCreate,
   onUpdate,
+  onEditJob,
+  onCloseDialog,
   onDelete,
   onRun,
   renderStatusIcon,
   getStatusTooltip,
   getRunTooltip,
 }: SchedulerTabProps<TJob, TValues, TAction, TRelated>) => {
-  const [dialogKind, setDialogKind] = React.useState<ScheduleKind | null>(null);
-  const [editingJob, setEditingJob] = React.useState<TJob | undefined>();
-
-  const openEdit = (job: TJob): void => {
-    setEditingJob(job);
-    setDialogKind(job.kind);
-  };
-
-  const closeDialog = (): void => {
-    setDialogKind(null);
-    setEditingJob(undefined);
-  };
-
   const submitJob = async (values: TValues): Promise<void> => {
     if (editingJob) await onUpdate(editingJob.id, values);
     else await onCreate(values);
-    closeDialog();
+    onCloseDialog();
   };
 
   return (
@@ -613,27 +605,8 @@ const SchedulerTab = <
       disableGutters
       sx={{ height: 1, display: 'flex', flexDirection: 'column', gap: 1 }}
     >
-      <Toolbar>
-        <Tooltip title={labels.addOnceTooltip}>
-          <Button
-            color="inherit"
-            startIcon={<AddAlarmIcon />}
-            onClick={() => setDialogKind('once')}
-          >
-            {labels.addOnceButton}
-          </Button>
-        </Tooltip>
-        <Tooltip title={labels.addCronTooltip}>
-          <Button
-            color="inherit"
-            startIcon={<EventRepeatIcon />}
-            onClick={() => setDialogKind('cron')}
-          >
-            {labels.addCronButton}
-          </Button>
-        </Tooltip>
-      </Toolbar>
-      <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+      {toolbar}
+      <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
         {jobs.length === 0 ? (
           <Typography color="text.secondary" sx={{ p: 2 }}>
             {labels.emptyState}
@@ -642,24 +615,26 @@ const SchedulerTab = <
           <Table
             stickyHeader
             size="small"
+            padding="none"
             sx={{
               tableLayout: 'fixed',
               width: '100%',
+              minWidth: 640,
             }}
           >
             <TableHead>
               <TableRow>
-                <TableCell sx={{ width: 100 }} align="center">
+                <TableCell sx={{ width: 90 }} align="center">
                   {labels.enabledHeader}
                 </TableCell>
-                <TableCell>{labels.nameHeader}</TableCell>
-                <TableCell sx={{ width: 150 }} align="center">
+                <TableCell align="center">{labels.nameHeader}</TableCell>
+                <TableCell sx={{ width: 100 }} align="center">
                   {labels.lastRunHeader}
                 </TableCell>
-                <TableCell sx={{ width: 100 }} align="center">
+                <TableCell sx={{ width: 80 }} align="center">
                   {labels.statusHeader}
                 </TableCell>
-                <TableCell sx={{ width: 150 }} align="center">
+                <TableCell sx={{ width: 100 }} align="center">
                   {labels.nextRunHeader}
                 </TableCell>
                 <TableCell sx={{ width: 60 }} />
@@ -675,7 +650,7 @@ const SchedulerTab = <
                     key={job.id}
                     hover
                     selected={editingJob?.id === job.id}
-                    onClick={() => openEdit(job)}
+                    onClick={() => onEditJob(job)}
                     sx={job.enabled ? { cursor: 'pointer' } : { opacity: 0.5 }}
                   >
                     <TableCell onClick={stopPropagation} align="center">
@@ -692,9 +667,9 @@ const SchedulerTab = <
                     <TableCell sx={{ width: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       <Typography variant="body2">{job.name}</Typography>
                       <Typography variant="caption" color="text.secondary">
-                        {getActionName(job, related)}
-                        <br />
-                        {getScheduleDescription(job)}
+                        {job.action}
+                        {/* <br />
+                        {job.cron ?? } */}
                       </Typography>
                     </TableCell>
                     <TableCell align="center">
@@ -714,7 +689,7 @@ const SchedulerTab = <
                         {nextTime}
                       </Typography>
                     </TableCell>
-                    <TableCell align="right" onClick={stopPropagation}>
+                    <TableCell align="center" onClick={stopPropagation}>
                       <Tooltip title={getRunTooltip?.(job) ?? labels.runNowTooltip}>
                         <div>
                           <IconButton
@@ -727,7 +702,7 @@ const SchedulerTab = <
                         </div>
                       </Tooltip>
                     </TableCell>
-                    <TableCell align="right" onClick={stopPropagation}>
+                    <TableCell align="center" onClick={stopPropagation}>
                       <Tooltip title={labels.deleteTooltip}>
                         <IconButton edge="end" onClick={() => void onDelete(job.id)}>
                           <DeleteIcon />
@@ -754,7 +729,7 @@ const SchedulerTab = <
           getActionName={getActionName}
           renderActionFields={renderActionFields}
           isSubmitEnabled={isSubmitEnabled}
-          onClose={closeDialog}
+          onClose={onCloseDialog}
           onSubmit={submitJob}
         />
       )}

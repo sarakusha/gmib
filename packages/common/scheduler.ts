@@ -49,6 +49,7 @@ export type SchedulerJobBase = {
   lastStatus?: SchedulerStatus;
   lastMessage?: string;
   nextRunAt?: string;
+  action?: PlayerSchedulerAction | GmibSchedulerAction;
 };
 
 export type PlayerSchedulerJob = SchedulerJobBase & {

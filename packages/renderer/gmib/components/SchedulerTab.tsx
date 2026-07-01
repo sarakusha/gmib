@@ -1,3 +1,16 @@
+import AddAlarmIcon from '@mui/icons-material/AddAlarm';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ErrorIcon from '@mui/icons-material/Error';
+import EventRepeatIcon from '@mui/icons-material/EventRepeat';
+import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
+import { IconButton, Tooltip } from '@mui/material';
+import FormControl from '@mui/material/FormControl';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import InputLabel from '@mui/material/InputLabel';
+import MenuItem from '@mui/material/MenuItem';
+import Select, { type SelectChangeEvent } from '@mui/material/Select';
+import Switch from '@mui/material/Switch';
+import TextField from '@mui/material/TextField';
 import React from 'react';
 
 import type { Page } from '/@common/config';
@@ -7,21 +20,8 @@ import type {
   GmibSchedulerJobInput,
   ScheduleKind,
 } from '/@common/scheduler';
-import { cronToString, defaultCron, describeCron } from '/@common/scheduler';
+import { defaultCron } from '/@common/scheduler';
 import type { Screen } from '/@common/video';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import ErrorIcon from '@mui/icons-material/Error';
-import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
-
-import {
-  FormControl,
-  FormControlLabel,
-  InputLabel,
-  MenuItem,
-  Select,
-  Switch,
-  TextField,
-} from '@mui/material';
 
 import { usePages } from '../api/config';
 import {
@@ -32,11 +32,11 @@ import {
   useUpdateSchedulerJobMutation,
 } from '../api/scheduler';
 import { useScreens } from '../api/screens';
+import { useToolbar } from '../providers/ToolbarProvider';
+import { useSelector } from '../store';
+import { selectCurrentTab } from '../store/selectors';
 
-import SchedulerTabCommon, {
-  formatRelativeDateTime,
-  type SchedulerTabLabels,
-} from '../../common/SchedulerTab';
+import SchedulerTabCommon, { type SchedulerTabLabels } from '../../common/SchedulerTab';
 
 type DialogValues = GmibSchedulerJobInput;
 
@@ -51,7 +51,7 @@ const labels: SchedulerTabLabels = {
   emptyState: 'Нет запланированных заданий.',
   runNowTooltip: 'Запустить сейчас',
   deleteTooltip: 'Удалить задание',
-  enabledHeader: 'Вкл/выкл',
+  enabledHeader: 'Включено',
   nameHeader: 'Имя',
   lastRunHeader: 'Было',
   statusHeader: 'Статус',
@@ -123,12 +123,6 @@ const getActionName = (
   return actionLabels[job.action];
 };
 
-const getScheduleDescription = (job: GmibSchedulerJob): string => {
-  if (job.kind === 'once')
-    return job.runAt ? `Один раз: ${formatRelativeDateTime(job.runAt).join(' ')}` : '';
-  return job.cron ? `${describeCron(job.cron)} (${cronToString(job.cron)})` : '';
-};
-
 const normalizeActionChange = (
   current: DialogValues,
   nextAction: GmibSchedulerAction,
@@ -168,7 +162,7 @@ const renderActionFields = ({
           <Select
             labelId="gmib-scheduler-screen-label"
             value={values.screenId ?? ''}
-            onChange={event =>
+            onChange={(event: SelectChangeEvent<number | string>) =>
               setValues(current => ({
                 ...current,
                 screenId: Number(event.target.value),
@@ -189,7 +183,7 @@ const renderActionFields = ({
           <Select
             labelId="gmib-scheduler-test-label"
             value={values.testId ?? ''}
-            onChange={event =>
+            onChange={(event: SelectChangeEvent<string>) =>
               setValues(current => ({
                 ...current,
                 testId: event.target.value,
@@ -210,7 +204,7 @@ const renderActionFields = ({
           type="number"
           variant="standard"
           value={values.brightness ?? 50}
-          onChange={event =>
+          onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
             setValues(current => ({
               ...current,
               brightness: Math.max(Math.min(Number(event.target.value), 100), 0),
@@ -225,7 +219,7 @@ const renderActionFields = ({
           control={
             <Switch
               checked={Boolean(values.enabledValue)}
-              onChange={event =>
+              onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
                 setValues(current => ({
                   ...current,
                   enabledValue: event.target.checked,
@@ -267,25 +261,75 @@ const SchedulerTab: React.FC = () => {
   const [runJob, { isLoading: isRunPending }] = useRunSchedulerJobMutation();
   const [deleteJob] = useDeleteSchedulerJobMutation();
   const filteredPages = pages.filter(page => !page.hidden);
+  const [dialogKind, setDialogKind] = React.useState<ScheduleKind | null>(null);
+  const [editingJob, setEditingJob] = React.useState<GmibSchedulerJob | undefined>();
+  const tab = useSelector(selectCurrentTab);
+  const [, setToolbar] = useToolbar();
+
+  const toolbar = React.useMemo(
+    () => (
+      <>
+        <Tooltip title={labels.addOnceTooltip}>
+          <IconButton
+            color="inherit"
+            onClick={() => {
+              setEditingJob(undefined);
+              setDialogKind('once');
+            }}
+            size="large"
+          >
+            <AddAlarmIcon />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title={labels.addCronTooltip}>
+          <IconButton
+            color="inherit"
+            onClick={() => {
+              setEditingJob(undefined);
+              setDialogKind('cron');
+            }}
+            size="large"
+          >
+            <EventRepeatIcon />
+          </IconButton>
+        </Tooltip>
+      </>
+    ),
+    [],
+  );
+
+  React.useEffect(() => {
+    if (tab === 'scheduler') {
+      setToolbar(toolbar);
+      return () => setToolbar(null);
+    }
+    return undefined;
+  }, [setToolbar, tab, toolbar]);
+
+  const openEdit = (job: GmibSchedulerJob): void => {
+    setEditingJob(job);
+    setDialogKind(job.kind);
+  };
+
+  const closeDialog = (): void => {
+    setDialogKind(null);
+    setEditingJob(undefined);
+  };
 
   return (
-    <SchedulerTabCommon<
-      GmibSchedulerJob,
-      DialogValues,
-      GmibSchedulerAction,
-      { screens: Screen[]; pages: Page[] }
-    >
+    <SchedulerTabCommon<GmibSchedulerJob, DialogValues, GmibSchedulerAction, { screens: Screen[]; pages: Page[] }>
       jobs={jobs}
       related={{ screens, pages: filteredPages }}
       actionLabels={actionLabels}
       labels={labels}
       maxWidth="md"
       isRunPending={isRunPending}
+      dialogKind={dialogKind}
+      editingJob={editingJob}
       createInitialValues={createInitialValues}
       toJobInput={toJobInput}
       normalizeActionChange={normalizeActionChange}
       getActionName={getActionName}
-      getScheduleDescription={getScheduleDescription}
       renderActionFields={renderActionFields}
       isSubmitEnabled={isSubmitEnabled}
       onCreate={async job => {
@@ -294,6 +338,8 @@ const SchedulerTab: React.FC = () => {
       onUpdate={async (id, job) => {
         await updateJob({ id, job }).unwrap();
       }}
+      onEditJob={openEdit}
+      onCloseDialog={closeDialog}
       onDelete={async id => {
         await deleteJob(id).unwrap();
       }}
