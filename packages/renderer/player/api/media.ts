@@ -29,11 +29,11 @@ export type MediaTransferProgress =
   | { phase: 'failed'; error: unknown }
   | { phase: 'canceled' };
 
-const getUploadHeaders = async (url: string, body: FormData): Promise<Headers> => {
+const getUploadHeaders = async (url: string): Promise<Headers> => {
   const headers = new Headers();
   if (isRemoteSession) {
     const now = Date.now();
-    const signature = await window.identify.generateSignature('POST', url, now, body);
+    const signature = await window.identify.generateSignature('POST', url, now);
     const identifier = window.identify.getIdentifier();
     if (signature) {
       identifier && headers.set('x-ni-identifier', identifier);
@@ -48,6 +48,28 @@ const getUploadHeaders = async (url: string, body: FormData): Promise<Headers> =
   return headers;
 };
 
+const getUploadErrorMessage = (status: number, responseText: string): string => {
+  try {
+    const response = JSON.parse(responseText) as
+      | {
+          errors?: Array<{ filename?: string; message: string }>;
+          message?: string;
+          error?: string;
+          identifier?: string;
+        }
+      | undefined;
+    if (response?.errors?.[0]?.message) return response.errors[0].message;
+    if (response?.message) return response.message;
+    if (response?.error) return response.error;
+    if (status === 401 && response?.identifier) {
+      return 'Не удалось авторизоваться на удаленном компьютере';
+    }
+  } catch {
+    // Use the raw server response below.
+  }
+  return responseText || `HTTP ${status}`;
+};
+
 const xhrUpload = async (
   file: File,
   onProgress?: (progress: MediaUploadProgress) => void,
@@ -57,7 +79,7 @@ const xhrUpload = async (
   formData.append(file.name, file);
 
   const url = `${baseUrl}/media`;
-  const headers = await getUploadHeaders(url, formData);
+  const headers = await getUploadHeaders(url);
 
   return await new Promise<MediaInfo[]>((resolve, reject) => {
     if (signal?.aborted) {
@@ -97,16 +119,7 @@ const xhrUpload = async (
     xhr.onload = () => {
       cleanup();
       if (xhr.status < 200 || xhr.status >= 300) {
-        try {
-          const response = JSON.parse(xhr.responseText) as
-            | { errors?: Array<{ filename?: string; message: string }> }
-            | undefined;
-          const message =
-            response?.errors?.[0]?.message ?? (xhr.responseText || `HTTP ${xhr.status}`);
-          reject(new Error(message));
-        } catch {
-          reject(new Error(xhr.responseText || `HTTP ${xhr.status}`));
-        }
+        reject(new Error(getUploadErrorMessage(xhr.status, xhr.responseText)));
         return;
       }
       try {

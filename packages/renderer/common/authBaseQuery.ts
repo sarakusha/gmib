@@ -60,7 +60,8 @@ const makeSignedQueryArg = async (
     params,
   );
   const headers = new Headers(originalHeaders as Headers);
-  const signature = await window.identify.generateSignature(method, url, now, body);
+  const signatureBody = body instanceof FormData ? undefined : body;
+  const signature = await window.identify.generateSignature(method, url, now, signatureBody);
   if (signature) {
     if (!identifier) identifier = window.identify.getIdentifier();
     identifier && headers.set('x-ni-identifier', identifier);
