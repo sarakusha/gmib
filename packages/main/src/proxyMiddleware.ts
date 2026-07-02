@@ -1,4 +1,5 @@
 import { app, ipcMain } from 'electron';
+import { isIPv4 } from 'node:net';
 import os from 'node:os';
 
 import * as ciao from '@homebridge/ciao';
@@ -75,10 +76,34 @@ let isMaster = false;
 
 let ready = new Deferred();
 
+const getRemoteRank = (remote: bonjourHap.RemoteService): number => {
+  const value = remote.txt.rank ?? remote.txt.rang;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : -Infinity;
+};
+
+const getRemoteAddresses = (remote: bonjourHap.RemoteService): string[] =>
+  [remote.referer.address, ...(remote.addresses ?? [])].filter(
+    address => isIPv4(address) && !isLocalhost(address),
+  );
+
+const rememberRemoteGmib = (remote: bonjourHap.RemoteService): void => {
+  master.registerGmibAddresses(remote.fqdn, getRemoteAddresses(remote));
+};
+
+const forgetRemoteGmib = (remote: bonjourHap.RemoteService): void => {
+  master.unregisterGmibAddresses(remote.fqdn);
+};
+
 const selectStrongest = (
   remotes: bonjourHap.RemoteService[],
 ): bonjourHap.RemoteService | undefined =>
-  sortBy(remotes, remote => -Number(remote.txt.rank ?? remote.txt.rang))[0];
+  sortBy(
+    remotes.filter(
+      remote => getRemoteRank(remote) > -Infinity && !isLocalhost(remote.referer.address),
+    ),
+    remote => -getRemoteRank(remote),
+  )[0];
 
 const tryCreateMasterBrowser = () => {
   void service
@@ -86,9 +111,10 @@ const tryCreateMasterBrowser = () => {
     .then(delay100)
     .then(() => {
       const strongest = selectStrongest(browser.services);
-      if (strongest && Number(strongest.txt.rank ?? strongest.txt.rang) > rank) {
+      if (strongest && getRemoteRank(strongest) > rank) {
         void service.end();
 
+        rememberRemoteGmib(strongest);
         createProxy(strongest);
         isMaster = false;
         void master.close();
@@ -122,6 +148,7 @@ config.onDidChange('disableNet', (_newValue, oldValue) => {
 });
 
 const createProxy = (remote: bonjourHap.RemoteService) => {
+  rememberRemoteGmib(remote);
   const host = remote.referer.address;
   const { port } = remote;
   const { identifier } = remote.txt;
@@ -177,7 +204,7 @@ const createProxy = (remote: bonjourHap.RemoteService) => {
     host,
     port,
     identifier,
-    rank: Number(remote.txt.rank),
+    rank: getRemoteRank(remote),
     secret: (value: bigint) => {
       secret = Buffer.from(value.toString(16), 'hex');
     },
@@ -188,11 +215,12 @@ const createProxy = (remote: bonjourHap.RemoteService) => {
 browser.on('up', remote => {
   void (async () => {
     // debug(`UP ${remote.referer.address}`);
+    rememberRemoteGmib(remote);
     void waitWebContents().then(webContents =>
       setTimeout(() => webContents.send('reloadDevices'), 1000).unref(),
     );
     if (isLocalhost(remote.referer.address) || disableNet) return;
-    const remoteRang = Number(remote.txt.rank);
+    const remoteRang = getRemoteRank(remote);
     if (isMaster && remoteRang > rank) {
       await service.end();
       isMaster = false;
@@ -206,6 +234,7 @@ browser.on('up', remote => {
 });
 
 browser.on('down', remote => {
+  forgetRemoteGmib(remote);
   if (isMaster) return;
 
   if (browser.services.length === 0) {

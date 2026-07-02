@@ -71,9 +71,13 @@ class SafeScreenConfigurator extends ScreenConfigurator {
 class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
   #unknownPath = new Set<string>();
 
+  private gmibAddressSources = new Map<string, Set<string>>();
+
   private novastarControls = new Map<string, SafeScreenConfigurator>();
 
   private broadcastDetector: Socket | undefined;
+
+  private broadcastDetectionTimers = new Map<string, NodeJS.Timeout>();
 
   telemetry = memoize((address: string): NovastarTelemetry | undefined => {
     const controller = this.novastarControls.get(address);
@@ -108,6 +112,38 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
   private running = false;
 
   private sensors = new Map<string, number>();
+
+  registerGmibAddresses(source: string, addresses: string[]): void {
+    this.unregisterGmibAddresses(source);
+    addresses
+      .filter(address => reIPv4.test(address))
+      .forEach(address => {
+        const sources = this.gmibAddressSources.get(address) ?? new Set<string>();
+        sources.add(source);
+        this.gmibAddressSources.set(address, sources);
+      });
+  }
+
+  unregisterGmibAddresses(source: string): void {
+    this.gmibAddressSources.forEach((sources, address) => {
+      sources.delete(source);
+      if (sources.size === 0) this.gmibAddressSources.delete(address);
+    });
+  }
+
+  private isKnownGmibAddress(address: string): boolean {
+    return isLocalhost(address) || this.gmibAddressSources.has(address);
+  }
+
+  private emitBroadcastDetected(address: string): void {
+    if (this.isKnownGmibAddress(address) || this.broadcastDetectionTimers.has(address)) return;
+    const timeout = setTimeout(() => {
+      this.broadcastDetectionTimers.delete(address);
+      if (!this.isKnownGmibAddress(address)) this.emit('broadcastDetected', address);
+    }, 1500);
+    timeout.unref();
+    this.broadcastDetectionTimers.set(address, timeout);
+  }
 
   private openHandler = (address: string) => {
     const session = net.sessions[address];
@@ -281,7 +317,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
       });
       broadcastDetector.on('message', (msg, remote) => {
         // debug(`MULTICAST: ${msg}, ${JSON.stringify(remote)}`);
-        if (msg.toString().startsWith(REQ)) this.emit('broadcastDetected', remote.address);
+        if (msg.toString().startsWith(REQ)) this.emitBroadcastDetected(remote.address);
       });
       broadcastDetector.once('error', err => debug(`error while detector: ${err.message}`));
       this.broadcastDetector = broadcastDetector;
@@ -295,6 +331,8 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
         resolve();
       } else {
         this.broadcastDetector = undefined;
+        this.broadcastDetectionTimers.forEach(timer => clearTimeout(timer));
+        this.broadcastDetectionTimers.clear();
         broadcastDetector.close(() => {
           setTimeout(() => broadcastDetector.removeAllListeners(), 0);
           resolve();
