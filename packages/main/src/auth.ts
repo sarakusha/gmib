@@ -8,15 +8,23 @@ import localConfig from './localConfig';
 import secret, { getIncomingSecret } from './secret';
 
 // const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:auth`);
-const MAX_DIFFERENCE_IN_TIME = 5 * 60 * 1000;
+const MINUTE = 60 * 1000;
+const MAX_DIFFERENCE_IN_TIME = 5 * MINUTE;
+const MAX_MEDIA_UPLOAD_DIFFERENCE_IN_TIME = 6 * 60 * MINUTE;
 
 const authorization = `Bearer ${secret.toString('base64')}`;
 
-export const isAuthorized = async (req: Request) => {
+const getMaxDifferenceInTime = (req: Request): number =>
+  req.method.toUpperCase() === 'POST' && req.originalUrl.split('?')[0] === '/api/media'
+    ? MAX_MEDIA_UPLOAD_DIFFERENCE_IN_TIME
+    : MAX_DIFFERENCE_IN_TIME;
+
+export const isAuthorized = async (req: Request, receivedAt = Date.now()) => {
   if (req.headers.authorization === authorization) return true;
   const id = req.headers['x-ni-identifier'];
   const apiSecret = typeof id === 'string' ? await getIncomingSecret(id) : undefined;
   const timestamp = Number(req.headers['x-ni-timestamp']);
+  const maxDifferenceInTime = getMaxDifferenceInTime(req);
   const expectedSignature =
     apiSecret && generateSignature(apiSecret, req.method, req.originalUrl, timestamp, req.body);
   // debug(`id: ${id}`);
@@ -25,12 +33,13 @@ export const isAuthorized = async (req: Request) => {
   return Boolean(
     expectedSignature &&
     expectedSignature === req.headers['x-ni-signature'] &&
-    Math.abs(Date.now() - timestamp) < MAX_DIFFERENCE_IN_TIME,
+    Math.abs(receivedAt - timestamp) < maxDifferenceInTime,
   );
 };
 
 const auth = async (req: Request, res: Response, next: NextFunction) => {
-  if (await isAuthorized(req)) next();
+  const receivedAt = typeof res.locals.receivedAt === 'number' ? res.locals.receivedAt : undefined;
+  if (await isAuthorized(req, receivedAt)) next();
   else res.status(401).send({ identifier: localConfig.get('identifier') });
 };
 
