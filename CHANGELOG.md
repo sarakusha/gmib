@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [5.1.0](https://github.com/sarakusha/gmib/compare/v5.0.0...v5.1.0) (2026-07-02)
+
+
+### Features
+
+* add gmib scheduler ([ee717e6](https://github.com/sarakusha/gmib/commit/ee717e6e4eacf8eede6b5c9dba175e0eab044d70))
+* add output window z-index setting ([28c76eb](https://github.com/sarakusha/gmib/commit/28c76eb0ea4f27e92195ce5c1c44d0e4d73f1788))
+* add scheduled player output show action ([23a9c36](https://github.com/sarakusha/gmib/commit/23a9c36f917d4ac515d2d9692ecc8d750307c77d))
+* add transparency setting for test outputs ([71122fa](https://github.com/sarakusha/gmib/commit/71122fa9fa0728e98ab45161fdd95a3859525e50))
+* add transparent clock test output ([8f31030](https://github.com/sarakusha/gmib/commit/8f31030507b2c15583cb008d4b7a8472952c897d))
+* add z-index and fullscreen settings for test outputs ([c0ecea9](https://github.com/sarakusha/gmib/commit/c0ecea97d36cd7ed808d6ce5c55cf8394f6f8373))
+
+
+### Bug Fixes
+
+* cache discovered GMIB hosts for menu ([a63484e](https://github.com/sarakusha/gmib/commit/a63484ee1ddd23310e2c0f6fc7671c4fc743d128))
+* gate remote output layout features by version ([9d51c75](https://github.com/sarakusha/gmib/commit/9d51c75ac469d9dfc9e38725d2a9fb96ee868bc2))
+* gate remote player features by version ([ef646d3](https://github.com/sarakusha/gmib/commit/ef646d3b6fbf0b3172554d6378084fd606bbf382))
+* keep output window z-order on click ([d673318](https://github.com/sarakusha/gmib/commit/d673318fdc262e9f34744a0ca553c36c45fc034c))
+* preserve screen autobrightness factor ([a268a17](https://github.com/sarakusha/gmib/commit/a268a17e95de4e4b8be39873851955105bbe5a76))
+* remove inactive window dimming ([1d92e8e](https://github.com/sarakusha/gmib/commit/1d92e8ee644df97a06f35d0f56034052cdbe9d01))
+* **seek:** показать слайдер, но запретить перемотку ([2ccc16a](https://github.com/sarakusha/gmib/commit/2ccc16a2d2eb3e46d2e7891adc6469a2347149d4))
+* sign remote requests with query params ([be98c64](https://github.com/sarakusha/gmib/commit/be98c643c08460bdb1ce3bf22b654ed09fe8659f))
+* stabilize gmib master discovery over mdns ([6b7f284](https://github.com/sarakusha/gmib/commit/6b7f2842d48fb30ce9c2b81d81fabb46a167c0cc))
+
 ## [5.0.0](https://github.com/sarakusha/gmib/compare/v4.12.0...v5.0.0) (2026-06-30)
 
 
