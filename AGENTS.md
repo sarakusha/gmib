@@ -6,6 +6,14 @@ gmib checks configuration files for its activation signature during startup. Be 
 will behave as not activated. Do not treat a sandboxed launch as a valid activation or licensing
 check unless the required config paths are explicitly available.
 
+When you need to run Electron for manual verification, make sure it uses the real gmib user data
+directory, or activation-gated features will be hidden. The local activation values are stored by
+`electron-store` in `/Users/sarakusha/Library/Application Support/gmib/gmib-local.json` as the
+`announce` and `iv` fields. Do not copy those values into the repository or logs; pass the existing
+user data directory through to Electron instead, for example with
+`--user-data-dir="/Users/sarakusha/Library/Application Support/gmib"` when using a launch command
+that would otherwise isolate Electron from the normal app config.
+
 ## User Documentation
 
 Keep `README.md` and the built-in help at `packages/renderer/gmib/components/Help/Help.mdx` up to date and synchronized when code changes add features, change existing behavior, or introduce details that matter to users or contributors. Add meaningful notes or comments there when they help explain the impact of the change.
