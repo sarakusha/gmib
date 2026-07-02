@@ -41,13 +41,9 @@ onmessage = async (event: MessageEvent<unknown>) => {
     cancel = false;
     const ebml = new EbmlDecoder();
     const chunkGenerator = new VideoChunkGenerator({ startTime: d.startTime });
-    void chunkGenerator.config
-      .then(config => {
-        postMessage({ debug: `decoder video config: ${JSON.stringify(config)}` });
-      })
-      .catch(err => {
-        postMessage({ debug: `decoder video config error: ${(err as Error).message}` });
-      });
+    void chunkGenerator.config.catch(err => {
+      postMessage({ debug: `decoder video config error: ${(err as Error).message}` });
+    });
     const frameGenerator = new VideoFrameGenerator(chunkGenerator.config, 20);
     fade = new FadeTransform(d.fade);
     const valve = new ReducingValve(d.closed);
@@ -76,7 +72,6 @@ onmessage = async (event: MessageEvent<unknown>) => {
         }
         const { value: frame, done } = await reader.read();
         if (done) {
-          postMessage({ debug: 'decoder stream done' });
           postMessage({ done: true });
           return;
         }
@@ -96,7 +91,6 @@ onmessage = async (event: MessageEvent<unknown>) => {
       close();
     }
   } else if ('play' in data && d.play) {
-    postMessage({ state: 'playing...', noop: play === noop });
     play();
   } else if ('pause' in data && d.pause) {
     pause();
