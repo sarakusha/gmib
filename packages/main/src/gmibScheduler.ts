@@ -1,134 +1,52 @@
 import debugFactory from 'debug';
-import Store from 'electron-store';
 
 import type { Config } from '/@common/config';
 import { DEFAULT_OVERHEAD_PROTECTION } from '/@common/config';
 import type { GmibSchedulerJob, GmibSchedulerJobInput } from '/@common/scheduler';
-import { getMinuteKey, getNextRunAt, matchesCron, normalizeSelected } from '/@common/scheduler';
+import { getMinuteKey, getNextRunAt, matchesCron } from '/@common/scheduler';
 
 import { dbReady } from './db';
 import { getPage } from './page';
+import {
+  createStoredSchedulerJob,
+  deleteStoredSchedulerJob,
+  getStoredGmibSchedulerJob,
+  getStoredGmibSchedulerJobs,
+  updateStoredSchedulerJob,
+  updateStoredSchedulerJobResult,
+} from './schedulerStore';
 import { getScreen, updateScreen } from './screen';
 import { updateTest } from './screenOutput';
 import { broadcast } from './server';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:gmibScheduler`);
 
-type SchedulerStore = {
-  jobs: GmibSchedulerJob[];
-};
-
-const store = new Store<SchedulerStore>({
-  name: `${import.meta.env.VITE_APP_NAME}-gmib-scheduler`,
-  defaults: {
-    jobs: [],
-  },
-  watch: true,
-});
-
-const createId = (): string => crypto.randomUUID();
-
-const sanitizeJob = (job: GmibSchedulerJob): GmibSchedulerJob => {
-  const { nextRunAt: _, brightness, ...storedJob } = job;
-  return {
-    ...storedJob,
-    brightness:
-      typeof brightness === 'number'
-        ? Math.round(Math.max(Math.min(brightness, 100), 0))
-        : undefined,
-    cron: storedJob.cron
-      ? {
-          minutes: {
-            ...storedJob.cron.minutes,
-            selected: normalizeSelected(storedJob.cron.minutes.selected),
-          },
-          hours: {
-            ...storedJob.cron.hours,
-            selected: normalizeSelected(storedJob.cron.hours.selected),
-          },
-          days: {
-            ...storedJob.cron.days,
-            selected: normalizeSelected(storedJob.cron.days.selected),
-          },
-          months: {
-            ...storedJob.cron.months,
-            selected: normalizeSelected(storedJob.cron.months.selected),
-          },
-          weekdays: {
-            ...storedJob.cron.weekdays,
-            selected: normalizeSelected(storedJob.cron.weekdays.selected),
-          },
-        }
-      : undefined,
-  };
-};
-
 const withNextRunAt = (job: GmibSchedulerJob): GmibSchedulerJob => ({
   ...job,
   nextRunAt: getNextRunAt(job),
 });
 
-const getStoredJobs = (): GmibSchedulerJob[] => store.get('jobs', []);
+export const getGmibSchedulerJobs = async (): Promise<GmibSchedulerJob[]> =>
+  (await getStoredGmibSchedulerJobs()).map(withNextRunAt);
 
-const setStoredJobs = (jobs: GmibSchedulerJob[]): void => {
-  store.set('jobs', jobs.map(sanitizeJob));
-};
-
-export const getGmibSchedulerJobs = (): GmibSchedulerJob[] => getStoredJobs().map(withNextRunAt);
-
-export const createGmibSchedulerJob = (input: GmibSchedulerJobInput): GmibSchedulerJob => {
-  const job = sanitizeJob({
-    ...input,
-    id: input.id ?? createId(),
-    enabled: input.enabled,
-    lastStatus: 'idle',
-  });
-  setStoredJobs([...getStoredJobs(), job]);
-  return withNextRunAt(job);
-};
+export const createGmibSchedulerJob = async (
+  input: GmibSchedulerJobInput,
+): Promise<GmibSchedulerJob> => withNextRunAt(await createStoredSchedulerJob('gmib', input));
 
 export const updateGmibSchedulerJob = (
   id: string,
   input: GmibSchedulerJobInput,
-): GmibSchedulerJob | undefined => {
-  let updated: GmibSchedulerJob | undefined;
-  setStoredJobs(
-    getStoredJobs().map(job => {
-      if (job.id !== id) return job;
-      const scheduleChanged =
-        input.kind !== job.kind ||
-        input.runAt !== job.runAt ||
-        JSON.stringify(input.cron) !== JSON.stringify(job.cron);
-      updated = sanitizeJob({
-        ...job,
-        ...input,
-        id,
-        lastRunAt: scheduleChanged ? undefined : job.lastRunAt,
-        lastRunKey: scheduleChanged ? undefined : job.lastRunKey,
-        lastStatus: scheduleChanged ? 'idle' : job.lastStatus,
-        lastMessage: scheduleChanged ? undefined : job.lastMessage,
-      });
-      return updated;
-    }),
-  );
-  return updated && withNextRunAt(updated);
-};
+): Promise<GmibSchedulerJob | undefined> =>
+  updateStoredSchedulerJob('gmib', id, input).then(job => job && withNextRunAt(job));
 
-export const deleteGmibSchedulerJob = (id: string): boolean => {
-  const jobs = getStoredJobs();
-  const nextJobs = jobs.filter(job => job.id !== id);
-  if (nextJobs.length === jobs.length) return false;
-  setStoredJobs(nextJobs);
-  return true;
-};
+export const deleteGmibSchedulerJob = (id: string): Promise<boolean> =>
+  deleteStoredSchedulerJob('gmib', id);
 
 const setJobResult = (
   job: GmibSchedulerJob,
   result: Pick<GmibSchedulerJob, 'lastRunAt' | 'lastRunKey' | 'lastStatus' | 'lastMessage'> &
     Partial<Pick<GmibSchedulerJob, 'enabled'>>,
-): void => {
-  setStoredJobs(getStoredJobs().map(item => (item.id === job.id ? { ...item, ...result } : item)));
-};
+): Promise<void> => updateStoredSchedulerJobResult('gmib', job, result);
 
 const notifyJobResult = (job: GmibSchedulerJob): void => {
   broadcast({
@@ -220,7 +138,7 @@ const executeJob = async (
       lastMessage: `Задание "${job.name}" выполнено`,
       ...(options.disableOnce && job.kind === 'once' ? { enabled: false } : {}),
     };
-    setJobResult(job, nextJob);
+    await setJobResult(job, nextJob);
     notifyJobResult(nextJob);
     return withNextRunAt(nextJob);
   } catch (error) {
@@ -234,14 +152,14 @@ const executeJob = async (
       lastMessage: message,
       ...(options.disableOnce && job.kind === 'once' ? { enabled: false } : {}),
     };
-    setJobResult(job, nextJob);
+    await setJobResult(job, nextJob);
     notifyJobResult(nextJob);
     return withNextRunAt(nextJob);
   }
 };
 
 export const runGmibSchedulerJob = async (id: string): Promise<GmibSchedulerJob | undefined> => {
-  const job = getStoredJobs().find(item => item.id === id);
+  const job = await getStoredGmibSchedulerJob(id);
   if (!job) return undefined;
   return executeJob(job, { disableOnce: false });
 };
@@ -249,7 +167,7 @@ export const runGmibSchedulerJob = async (id: string): Promise<GmibSchedulerJob 
 const executeDueJobs = async (): Promise<void> => {
   const now = new Date();
   const minuteKey = getMinuteKey(now);
-  const dueJobs = getStoredJobs().filter(job => {
+  const dueJobs = (await getStoredGmibSchedulerJobs()).filter(job => {
     if (!job.enabled) return false;
     if (job.kind === 'once') {
       if (!job.runAt) return false;
@@ -267,7 +185,6 @@ let timer: NodeJS.Timeout | undefined;
 
 export const startGmibScheduler = (): void => {
   if (timer) return;
-  debug(`scheduler store: ${store.path}`);
   void dbReady.then(() => {
     timer = setInterval(() => {
       void executeDueJobs();

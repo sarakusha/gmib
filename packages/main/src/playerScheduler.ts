@@ -1,13 +1,20 @@
 import debugFactory from 'debug';
-import Store from 'electron-store';
 
 import type { PlayerSchedulerJob, PlayerSchedulerJobInput } from '/@common/scheduler';
-import { getMinuteKey, getNextRunAt, matchesCron, normalizeSelected } from '/@common/scheduler';
+import { getMinuteKey, getNextRunAt, matchesCron } from '/@common/scheduler';
 
 import { dbReady } from './db';
 import { setPlayerOutputWindowsVisibility } from './openHandler';
 import { getPlaylist, getPlaylistItems } from './playlist';
 import { openPlayer } from './playerWindow';
+import {
+  createStoredSchedulerJob,
+  deleteStoredSchedulerJob,
+  getStoredPlayerSchedulerJob,
+  getStoredPlayerSchedulerJobs,
+  updateStoredSchedulerJob,
+  updateStoredSchedulerJobResult,
+} from './schedulerStore';
 import { getPlayer, updatePlayer } from './screen';
 import { broadcast } from './server';
 import { findPlayerWindow } from './windowStore';
@@ -16,129 +23,32 @@ import type { Player } from '/@common/video';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:playerScheduler`);
 
-type SchedulerStore = {
-  jobs: PlayerSchedulerJob[];
-};
-
-const store = new Store<SchedulerStore>({
-  name: `${import.meta.env.VITE_APP_NAME}-player-scheduler`,
-  defaults: {
-    jobs: [],
-  },
-  watch: true,
-});
-
-const createId = (): string => crypto.randomUUID();
-
-const sanitizeJob = (job: PlayerSchedulerJob): PlayerSchedulerJob => {
-  const { nextRunAt: _, ...storedJob } = job;
-  return {
-    ...storedJob,
-    cron: storedJob.cron
-      ? {
-          minutes: {
-            ...storedJob.cron.minutes,
-            selected: normalizeSelected(storedJob.cron.minutes.selected),
-          },
-          hours: {
-            ...storedJob.cron.hours,
-            selected: normalizeSelected(storedJob.cron.hours.selected),
-          },
-          days: {
-            ...storedJob.cron.days,
-            selected: normalizeSelected(storedJob.cron.days.selected),
-          },
-          months: {
-            ...storedJob.cron.months,
-            selected: normalizeSelected(storedJob.cron.months.selected),
-          },
-          weekdays: {
-            ...storedJob.cron.weekdays,
-            selected: normalizeSelected(storedJob.cron.weekdays.selected),
-          },
-        }
-      : undefined,
-  };
-};
-
 const withNextRunAt = (job: PlayerSchedulerJob): PlayerSchedulerJob => ({
   ...job,
   nextRunAt: getNextRunAt(job),
 });
 
-const getStoredJobs = (): PlayerSchedulerJob[] => store.get('jobs', []);
+export const getSchedulerJobs = async (playerId?: number): Promise<PlayerSchedulerJob[]> =>
+  (await getStoredPlayerSchedulerJobs(playerId)).map(withNextRunAt);
 
-const setStoredJobs = (jobs: PlayerSchedulerJob[]): void => {
-  store.set('jobs', jobs.map(sanitizeJob));
-};
-
-export const getSchedulerJobs = (playerId?: number): PlayerSchedulerJob[] =>
-  getStoredJobs()
-    .filter(job => playerId == null || job.playerId === playerId)
-    .map(withNextRunAt);
-
-export const createSchedulerJob = (input: PlayerSchedulerJobInput): PlayerSchedulerJob => {
-  const job = sanitizeJob({
-    ...input,
-    id: input.id ?? createId(),
-    enabled: input.enabled,
-    lastStatus: 'idle',
-  });
-  setStoredJobs([...getStoredJobs(), job]);
-  return withNextRunAt(job);
-};
+export const createSchedulerJob = async (
+  input: PlayerSchedulerJobInput,
+): Promise<PlayerSchedulerJob> => withNextRunAt(await createStoredSchedulerJob('player', input));
 
 export const updateSchedulerJob = (
   id: string,
   input: PlayerSchedulerJobInput,
-): PlayerSchedulerJob | undefined => {
-  let updated: PlayerSchedulerJob | undefined;
-  setStoredJobs(
-    getStoredJobs().map(job => {
-      if (job.id !== id) return job;
-      const scheduleChanged =
-        input.kind !== job.kind ||
-        input.runAt !== job.runAt ||
-        JSON.stringify(input.cron) !== JSON.stringify(job.cron);
-      updated = sanitizeJob({
-        ...job,
-        ...input,
-        id,
-        lastRunAt: scheduleChanged ? undefined : job.lastRunAt,
-        lastRunKey: scheduleChanged ? undefined : job.lastRunKey,
-        lastStatus: scheduleChanged ? 'idle' : job.lastStatus,
-        lastMessage: scheduleChanged ? undefined : job.lastMessage,
-      });
-      return updated;
-    }),
-  );
-  return updated && withNextRunAt(updated);
-};
+): Promise<PlayerSchedulerJob | undefined> =>
+  updateStoredSchedulerJob('player', id, input).then(job => job && withNextRunAt(job));
 
-export const deleteSchedulerJob = (id: string): boolean => {
-  const jobs = getStoredJobs();
-  const nextJobs = jobs.filter(job => job.id !== id);
-  if (nextJobs.length === jobs.length) return false;
-  setStoredJobs(nextJobs);
-  return true;
-};
+export const deleteSchedulerJob = (id: string): Promise<boolean> =>
+  deleteStoredSchedulerJob('player', id);
 
 const setJobResult = (
   job: PlayerSchedulerJob,
   result: Pick<PlayerSchedulerJob, 'lastRunAt' | 'lastRunKey' | 'lastStatus' | 'lastMessage'> &
     Partial<Pick<PlayerSchedulerJob, 'enabled'>>,
-): void => {
-  setStoredJobs(
-    getStoredJobs().map(item =>
-      item.id === job.id
-        ? {
-            ...item,
-            ...result,
-          }
-        : item,
-    ),
-  );
-};
+): Promise<void> => updateStoredSchedulerJobResult('player', job, result);
 
 const notifyJobResult = (job: PlayerSchedulerJob): void => {
   broadcast({
@@ -295,7 +205,7 @@ const executeJob = async (
       lastMessage: `Задание "${job.name}" выполнено`,
       ...(options.disableOnce && job.kind === 'once' ? { enabled: false } : {}),
     };
-    setJobResult(job, nextJob);
+    await setJobResult(job, nextJob);
     notifyJobResult(nextJob);
     return withNextRunAt(nextJob);
   } catch (error) {
@@ -309,14 +219,14 @@ const executeJob = async (
       lastMessage: message,
       ...(options.disableOnce && job.kind === 'once' ? { enabled: false } : {}),
     };
-    setJobResult(job, nextJob);
+    await setJobResult(job, nextJob);
     notifyJobResult(nextJob);
     return withNextRunAt(nextJob);
   }
 };
 
 export const runSchedulerJob = async (id: string): Promise<PlayerSchedulerJob | undefined> => {
-  const job = getStoredJobs().find(item => item.id === id);
+  const job = await getStoredPlayerSchedulerJob(id);
   if (!job) return undefined;
   return executeJob(job, { disableOnce: false });
 };
@@ -324,7 +234,7 @@ export const runSchedulerJob = async (id: string): Promise<PlayerSchedulerJob | 
 const executeDueJobs = async (): Promise<void> => {
   const now = new Date();
   const minuteKey = getMinuteKey(now);
-  const dueJobs = getStoredJobs().filter(job => {
+  const dueJobs = (await getStoredPlayerSchedulerJobs()).filter(job => {
     if (!job.enabled) return false;
     if (job.kind === 'once') {
       if (!job.runAt) return false;
@@ -342,7 +252,6 @@ let timer: NodeJS.Timeout | undefined;
 
 export const startPlayerScheduler = (): void => {
   if (timer) return;
-  debug(`scheduler store: ${store.path}`);
   void dbReady.then(() => {
     timer = setInterval(() => {
       void executeDueJobs();

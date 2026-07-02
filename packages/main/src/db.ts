@@ -272,6 +272,42 @@ function createTables(): void {
         )`,
       err => {
         if (err) debug(`error while create player ${err}`);
+      },
+    );
+    db.run(
+      `CREATE TABLE IF NOT EXISTS schedulerJob (
+        id TEXT PRIMARY KEY NOT NULL,
+        scope TEXT NOT NULL,
+        kind TEXT NOT NULL,
+        name TEXT NOT NULL,
+        runAt TEXT,
+        cron TEXT,
+        enabled INTEGER NOT NULL DEFAULT 1,
+        lastRunAt TEXT,
+        lastRunKey TEXT,
+        lastStatus TEXT,
+        lastMessage TEXT,
+        action TEXT NOT NULL,
+        playerId INTEGER,
+        playlistId INTEGER,
+        itemNumber INTEGER,
+        hideOutputOnStop INTEGER,
+        outputAll INTEGER,
+        screenId INTEGER,
+        testId TEXT,
+        brightness INTEGER,
+        enabledValue INTEGER,
+        FOREIGN KEY (playerId)
+          REFERENCES player (id) ON DELETE CASCADE,
+        FOREIGN KEY (playlistId)
+          REFERENCES playlist (id) ON DELETE SET NULL,
+        FOREIGN KEY (screenId)
+          REFERENCES screen (id) ON DELETE CASCADE,
+        FOREIGN KEY (testId)
+          REFERENCES page (id) ON DELETE SET NULL
+      )`,
+      err => {
+        if (err) debug(`error while create schedulerJob: ${err}`);
         else
           setTimeout(() => {
             dbDeferred.resolve();

@@ -738,25 +738,37 @@ api.put('/player', async (req, res, next) => {
   }
 });
 
-api.get('/scheduler', (req, res) => {
-  const playerId = typeof req.query.playerId === 'string' ? +req.query.playerId : undefined;
-  res.json(getSchedulerJobs(Number.isFinite(playerId) ? playerId : undefined));
-});
-
-api.post('/scheduler', (req, res) => {
-  const job = createSchedulerJob(req.body);
-  res.json(job);
-  broadcast({ event: 'schedulerJobs', data: [job.playerId], all: true });
-});
-
-api.put('/scheduler/:id', (req, res) => {
-  const job = updateSchedulerJob(req.params.id, req.body);
-  if (!job) {
-    res.sendStatus(404);
-    return;
+api.get('/scheduler', async (req, res, next) => {
+  try {
+    const playerId = typeof req.query.playerId === 'string' ? +req.query.playerId : undefined;
+    res.json(await getSchedulerJobs(Number.isFinite(playerId) ? playerId : undefined));
+  } catch (e) {
+    next(e);
   }
-  res.json(job);
-  broadcast({ event: 'schedulerJobs', data: [job.playerId], all: true });
+});
+
+api.post('/scheduler', async (req, res, next) => {
+  try {
+    const job = await createSchedulerJob(req.body);
+    res.json(job);
+    broadcast({ event: 'schedulerJobs', data: [job.playerId], all: true });
+  } catch (e) {
+    next(e);
+  }
+});
+
+api.put('/scheduler/:id', async (req, res, next) => {
+  try {
+    const job = await updateSchedulerJob(req.params.id, req.body);
+    if (!job) {
+      res.sendStatus(404);
+      return;
+    }
+    res.json(job);
+    broadcast({ event: 'schedulerJobs', data: [job.playerId], all: true });
+  } catch (e) {
+    next(e);
+  }
 });
 
 api.post('/scheduler/:id/run', async (req, res, next) => {
@@ -772,30 +784,46 @@ api.post('/scheduler/:id/run', async (req, res, next) => {
   }
 });
 
-api.delete('/scheduler/:id', (req, res) => {
-  const deleted = deleteSchedulerJob(req.params.id);
-  res.sendStatus(deleted ? 204 : 404);
-  broadcast({ event: 'schedulerJobs', data: [0], all: true });
-});
-
-api.get('/gmib-scheduler', (_req, res) => {
-  res.json(getGmibSchedulerJobs());
-});
-
-api.post('/gmib-scheduler', (req, res) => {
-  const job = createGmibSchedulerJob(req.body);
-  res.json(job);
-  broadcast({ event: 'gmibSchedulerJobs', all: true });
-});
-
-api.put('/gmib-scheduler/:id', (req, res) => {
-  const job = updateGmibSchedulerJob(req.params.id, req.body);
-  if (!job) {
-    res.sendStatus(404);
-    return;
+api.delete('/scheduler/:id', async (req, res, next) => {
+  try {
+    const deleted = await deleteSchedulerJob(req.params.id);
+    res.sendStatus(deleted ? 204 : 404);
+    broadcast({ event: 'schedulerJobs', data: [0], all: true });
+  } catch (e) {
+    next(e);
   }
-  res.json(job);
-  broadcast({ event: 'gmibSchedulerJobs', all: true });
+});
+
+api.get('/gmib-scheduler', async (_req, res, next) => {
+  try {
+    res.json(await getGmibSchedulerJobs());
+  } catch (e) {
+    next(e);
+  }
+});
+
+api.post('/gmib-scheduler', async (req, res, next) => {
+  try {
+    const job = await createGmibSchedulerJob(req.body);
+    res.json(job);
+    broadcast({ event: 'gmibSchedulerJobs', all: true });
+  } catch (e) {
+    next(e);
+  }
+});
+
+api.put('/gmib-scheduler/:id', async (req, res, next) => {
+  try {
+    const job = await updateGmibSchedulerJob(req.params.id, req.body);
+    if (!job) {
+      res.sendStatus(404);
+      return;
+    }
+    res.json(job);
+    broadcast({ event: 'gmibSchedulerJobs', all: true });
+  } catch (e) {
+    next(e);
+  }
 });
 
 api.post('/gmib-scheduler/:id/run', async (req, res, next) => {
@@ -812,10 +840,14 @@ api.post('/gmib-scheduler/:id/run', async (req, res, next) => {
   }
 });
 
-api.delete('/gmib-scheduler/:id', (req, res) => {
-  const deleted = deleteGmibSchedulerJob(req.params.id);
-  res.sendStatus(deleted ? 204 : 404);
-  broadcast({ event: 'gmibSchedulerJobs', all: true });
+api.delete('/gmib-scheduler/:id', async (req, res, next) => {
+  try {
+    const deleted = await deleteGmibSchedulerJob(req.params.id);
+    res.sendStatus(deleted ? 204 : 404);
+    broadcast({ event: 'gmibSchedulerJobs', all: true });
+  } catch (e) {
+    next(e);
+  }
 });
 
 api.get('/display', (req, res) => {
