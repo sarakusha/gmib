@@ -497,6 +497,68 @@ pnpm run typecheck
 GitHub Actions workflow `Windows Prerelease`: он публикует отдельный prerelease
 `v<текущая версия>-alpha.<run>.<attempt>` с Win x64 артефактами.
 
+## Проверочные Windows-сборки
+
+Для проверки изменений до релиза используется отдельная ветка `prerelease` и ручной GitHub Actions
+workflow `Windows Prerelease`. Он собирает только Windows x64, временно задает версию вида
+`<текущая версия>-alpha.<run>.<attempt>` внутри runner, публикует GitHub prerelease и не изменяет
+`package.json`, `CHANGELOG.md` или обычный draft release.
+
+После выпуска обычного релиза синхронизируйте локальный `main` и подготовьте ветку `prerelease`:
+
+```bash
+git switch main
+git pull --ff-only origin main
+git switch prerelease 2>/dev/null || git switch -c prerelease
+git merge --ff-only main
+git push -u origin prerelease
+```
+
+Если ветка `prerelease` содержит старые экспериментальные коммиты, которые не должны сохраняться,
+пересоздайте ее от текущего `main` и обновите удаленную ветку:
+
+```bash
+git switch main
+git pull --ff-only origin main
+git switch -C prerelease main
+git push -u origin prerelease --force-with-lease
+```
+
+Дальше вносите изменения и пушьте их только в `prerelease`:
+
+```bash
+git switch prerelease
+git add <files>
+git commit -m "fix: describe the change"
+git push
+```
+
+Запустите проверочную сборку вручную: GitHub -> Actions -> `Windows Prerelease` -> `Run workflow`,
+выберите branch `prerelease` и label `alpha`. После завершения скачайте установщик из созданного
+GitHub prerelease и проверьте поведение на Windows. Если нужны дополнительные исправления, повторите
+цикл `commit` -> `push` -> `Windows Prerelease`; каждый запуск получит отдельный prerelease-тег.
+
+Когда проверочная ветка готова к выпуску, перенесите ее в `main`, подготовьте релизную версию и
+запушьте `main`:
+
+```bash
+git switch main
+git pull --ff-only origin main
+git merge --ff-only prerelease
+pnpm run version:patch
+git push --follow-tags origin main
+```
+
+Для minor/major релиза используйте соответствующий режим `commit-and-tag-version`, например:
+
+```bash
+pnpm exec commit-and-tag-version -r minor
+pnpm exec commit-and-tag-version -r major
+```
+
+Пуш в `main` запускает основной CI и `draft_release`, который собирает релизные артефакты для
+выбранной версии.
+
 > При запуске из изолированного окружения учитывайте, что GMIB проверяет конфигурационные файлы с
 > подписью активации при старте. Если нужные пути конфигурации недоступны, приложение будет вести
 > себя как неактивированное; такой запуск не является корректной проверкой лицензии.
