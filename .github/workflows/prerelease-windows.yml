@@ -1,0 +1,182 @@
+name: Windows Prerelease
+
+on:
+  workflow_dispatch:
+    inputs:
+      label:
+        description: 'Prerelease label'
+        default: alpha
+        required: false
+        type: choice
+        options:
+          - alpha
+          - beta
+          - rc
+
+concurrency:
+  group: windows-prerelease-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+defaults:
+  run:
+    shell: 'bash'
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+        with:
+          run_install: false
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - name: Prepare prerelease version
+        id: prerelease
+        env:
+          PRERELEASE_LABEL: ${{ inputs.label || 'alpha' }}
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+
+          const packagePath = 'package.json';
+          const pkg = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+          const baseVersion = pkg.version.replace(/-.+$/, '');
+          const label = process.env.PRERELEASE_LABEL;
+          const version = `${baseVersion}-${label}.${process.env.GITHUB_RUN_NUMBER}.${process.env.GITHUB_RUN_ATTEMPT}`;
+
+          pkg.version = version;
+          fs.writeFileSync(packagePath, `${JSON.stringify(pkg, null, 2)}\n`);
+
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `base_version=${baseVersion}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `version=${version}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `tag=v${version}\n`);
+          NODE
+
+      - name: Write .env.local from secrets
+        env:
+          VITE_ANNOUNCE_PROXY: ${{ secrets.VITE_ANNOUNCE_PROXY }}
+          VITE_ANNOUNCE_PATH: ${{ secrets.VITE_ANNOUNCE_PATH }}
+          VITE_ANNOUNCE_WINDOW: ${{ secrets.VITE_ANNOUNCE_WINDOW }}
+          VITE_ANNOUNCE_BIND: ${{ secrets.VITE_ANNOUNCE_BIND }}
+          VITE_ANNOUNCE_HOST: ${{ secrets.VITE_ANNOUNCE_HOST }}
+          VITE_ANNOUNCE_NOVASTAR: ${{ secrets.VITE_ANNOUNCE_NOVASTAR }}
+          VITE_ANNOUNCE_DATE: ${{ secrets.VITE_ANNOUNCE_DATE }}
+          VITE_LICENSE_SERVER: ${{ secrets.VITE_LICENSE_SERVER }}
+        run: |
+          : "${VITE_ANNOUNCE_PROXY:?missing secret VITE_ANNOUNCE_PROXY}"
+          : "${VITE_ANNOUNCE_PATH:?missing secret VITE_ANNOUNCE_PATH}"
+          : "${VITE_ANNOUNCE_WINDOW:?missing secret VITE_ANNOUNCE_WINDOW}"
+          : "${VITE_ANNOUNCE_BIND:?missing secret VITE_ANNOUNCE_BIND}"
+          : "${VITE_ANNOUNCE_HOST:?missing secret VITE_ANNOUNCE_HOST}"
+          : "${VITE_ANNOUNCE_NOVASTAR:?missing secret VITE_ANNOUNCE_NOVASTAR}"
+          : "${VITE_ANNOUNCE_DATE:?missing secret VITE_ANNOUNCE_DATE}"
+          : "${VITE_LICENSE_SERVER:?missing secret VITE_LICENSE_SERVER}"
+          {
+            printf '%s\n' "VITE_ANNOUNCE_PROXY=$VITE_ANNOUNCE_PROXY"
+            printf '%s\n' "VITE_ANNOUNCE_PATH=$VITE_ANNOUNCE_PATH"
+            printf '%s\n' "VITE_ANNOUNCE_WINDOW=$VITE_ANNOUNCE_WINDOW"
+            printf '%s\n' "VITE_ANNOUNCE_BIND=$VITE_ANNOUNCE_BIND"
+            printf '%s\n' "VITE_ANNOUNCE_HOST=$VITE_ANNOUNCE_HOST"
+            printf '%s\n' "VITE_ANNOUNCE_NOVASTAR=$VITE_ANNOUNCE_NOVASTAR"
+            printf '%s\n' "VITE_ANNOUNCE_DATE=$VITE_ANNOUNCE_DATE"
+            printf '%s\n' "VITE_LICENSE_SERVER=$VITE_LICENSE_SERVER"
+          } > .env.local
+
+      - run: pnpm install --frozen-lockfile
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+
+      - name: Download FFmpeg for Windows
+        run: |
+          mkdir -p ffmpeg/win32-x64
+          curl --fail --location --retry 5 \
+            https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.7z \
+            --output ffmpeg/win32-x64/ffmpeg.7z
+          7z x ffmpeg/win32-x64/ffmpeg.7z -offmpeg/win32-x64/extracted
+          mv ffmpeg/win32-x64/extracted/ffmpeg-*-essentials_build/bin/ffmpeg.exe ffmpeg/win32-x64/
+          mv ffmpeg/win32-x64/extracted/ffmpeg-*-essentials_build/bin/ffprobe.exe ffmpeg/win32-x64/
+
+      - run: pnpm run build
+
+      - name: Compile Windows artifacts
+        uses: nick-fields/retry@v4
+        with:
+          timeout_minutes: 30
+          max_attempts: 6
+          retry_wait_seconds: 15
+          retry_on: error
+          shell: 'bash'
+          command:
+            pnpm exec electron-builder --config .electron-builder.config.js -w --x64 --publish never
+
+      - name: Create GitHub prerelease
+        uses: actions/github-script@v9
+        env:
+          RELEASE_TAG: ${{ steps.prerelease.outputs.tag }}
+          RELEASE_VERSION: ${{ steps.prerelease.outputs.version }}
+          BASE_VERSION: ${{ steps.prerelease.outputs.base_version }}
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            const { owner, repo } = context.repo;
+            const tagName = process.env.RELEASE_TAG;
+            const version = process.env.RELEASE_VERSION;
+
+            const release = (
+              await github.rest.repos.createRelease({
+                owner,
+                repo,
+                tag_name: tagName,
+                target_commitish: context.sha,
+                name: `gmib ${version}`,
+                body: [
+                  `Temporary Windows prerelease for testing.`,
+                  ``,
+                  `Base version: ${process.env.BASE_VERSION}`,
+                  `Commit: ${context.sha}`,
+                ].join('\n'),
+                draft: false,
+                prerelease: true,
+              })
+            ).data;
+
+            const distDir = path.join(process.env.GITHUB_WORKSPACE, 'dist');
+            const expectedAssets = [
+              `gmib-setup-${version}.exe`,
+              `gmib-setup-${version}.exe.blockmap`,
+              'latest.yml',
+            ];
+
+            for (const assetName of expectedAssets) {
+              const assetPath = path.join(distDir, assetName);
+              const data = fs.readFileSync(assetPath);
+
+              await github.rest.repos.uploadReleaseAsset({
+                owner,
+                repo,
+                release_id: release.id,
+                name: assetName,
+                data,
+                headers: {
+                  'content-type': 'application/octet-stream',
+                  'content-length': data.length,
+                },
+              });
+
+              core.notice(`Uploaded ${assetName}`);
+            }
