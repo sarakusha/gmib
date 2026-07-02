@@ -18,7 +18,9 @@ type AlwaysOnTopLevel = Parameters<BrowserWindow['setAlwaysOnTop']>[1];
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:window`);
 const TOPMOST_LEVEL: AlwaysOnTopLevel = 'screen-saver';
+const OUTPUT_Z_ORDER_REFRESH_INTERVAL_MS = 30_000;
 
+const isWindows = process.platform === 'win32';
 const isMacOS = process.platform === 'darwin';
 
 const toNumber = <T extends number | undefined>(
@@ -152,6 +154,25 @@ export const arrangeOutputWindows = (): void => {
       window.moveTop();
     });
 };
+
+const refreshOutputWindowsZOrder = (): void => {
+  getOutputWindows()
+    .filter(window => !window.isDestroyed() && window.isVisible())
+    .forEach(window => {
+      if (shouldKeepOnTop(window.webContents.getURL())) {
+        window.setAlwaysOnTop(true, TOPMOST_LEVEL);
+      }
+    });
+  arrangeOutputWindows();
+};
+
+if (isWindows) {
+  const outputZOrderRefreshTimer = setInterval(
+    refreshOutputWindowsZOrder,
+    OUTPUT_Z_ORDER_REFRESH_INTERVAL_MS,
+  );
+  outputZOrderRefreshTimer.unref();
+}
 
 const scheduleArrangeVideoOutputWindows = (): void => {
   setTimeout(arrangeOutputWindows, 0);
