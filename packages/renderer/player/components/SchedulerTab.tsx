@@ -35,6 +35,9 @@ import { sourceId } from '../utils';
 import SchedulerTabCommon, { type SchedulerTabLabels } from '../../common/SchedulerTab';
 import Toolbar from './StyledToolbar';
 
+import { supportsFeature } from '/@common/capabilities';
+import { isRemoteSession, version } from '/@common/remote';
+
 type DialogValues = PlayerSchedulerJobInput;
 
 const labels: SchedulerTabLabels = {
@@ -73,7 +76,10 @@ const toDateTimeLocal = (date: Date): string =>
     date.getHours(),
   )}:${pad(date.getMinutes())}`;
 
-const createInitialValues = (kind: ScheduleKind, initialJob?: PlayerSchedulerJob): DialogValues => ({
+const createInitialValues = (
+  kind: ScheduleKind,
+  initialJob?: PlayerSchedulerJob,
+): DialogValues => ({
   id: initialJob?.id,
   playerId: sourceId,
   kind: initialJob?.kind ?? kind,
@@ -252,8 +258,10 @@ const StatusIcon: React.FC<{ job: PlayerSchedulerJob }> = ({ job }) => {
 };
 
 const SchedulerTab: React.FC = () => {
+  const isSchedulerSupported = supportsFeature('playerScheduler', version, isRemoteSession);
   const { data: playlists = [] } = useGetPlaylists();
   const { data: jobs = [] } = useGetSchedulerJobsQuery(sourceId, {
+    skip: !isSchedulerSupported,
     pollingInterval: 30000,
   });
   const [createJob] = useCreateSchedulerJobMutation();
@@ -302,6 +310,8 @@ const SchedulerTab: React.FC = () => {
     setEditingJob(undefined);
   };
 
+  if (!isSchedulerSupported) return null;
+
   return (
     <SchedulerTabCommon<PlayerSchedulerJob, DialogValues, PlayerSchedulerAction, Playlist[]>
       toolbar={toolbar}
@@ -335,7 +345,9 @@ const SchedulerTab: React.FC = () => {
       }}
       renderStatusIcon={job => <StatusIcon job={job} />}
       getStatusTooltip={job => job.lastMessage ?? ''}
-      getRunTooltip={job => (job.enabled ? 'Запустить сейчас' : 'Включите задание, чтобы запустить')}
+      getRunTooltip={job =>
+        job.enabled ? 'Запустить сейчас' : 'Включите задание, чтобы запустить'
+      }
     />
   );
 };

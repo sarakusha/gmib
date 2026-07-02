@@ -30,6 +30,8 @@ import usePlayerMappingDialog from '../hooks/usePlayerMappingDialog';
 import { useDispatch } from '../store';
 import { toHexId } from '../utils';
 
+import { supportsFeature } from '/@common/capabilities';
+import { isRemoteSession, version } from '/@common/remote';
 import { DefaultDisplays, getDisplayLabel } from '/@common/video';
 
 const keys = ['width', 'height'] as const;
@@ -48,6 +50,7 @@ const PlayerSettings: React.FC<{ id?: number }> = ({ id }) => {
     playbackEngine = 'decoder',
   } = player ?? {};
   const dispatch = useDispatch();
+  const isPlaybackEngineSupported = supportsFeature('playerEngine', version, isRemoteSession);
   const { mappings = [] } = usePlayerMappings();
   const { displays = [] } = useDisplays();
   const filtered = mappings.filter(item => item.player === id);
@@ -80,7 +83,15 @@ const PlayerSettings: React.FC<{ id?: number }> = ({ id }) => {
           playbackEngine,
         }}
         onSubmit={(values, { setSubmitting }) => {
-          id && dispatch(updatePlayer(id, prev => ({ ...prev, ...values })));
+          const { playbackEngine: nextPlaybackEngine, ...commonValues } = values;
+          id &&
+            dispatch(
+              updatePlayer(id, prev => ({
+                ...prev,
+                ...commonValues,
+                ...(isPlaybackEngineSupported && { playbackEngine: nextPlaybackEngine }),
+              })),
+            );
           setSubmitting(false);
         }}
         validate={props => {
@@ -103,18 +114,20 @@ const PlayerSettings: React.FC<{ id?: number }> = ({ id }) => {
               variant="standard"
               fullWidth
             />
-            <FormControl component="fieldset" margin="normal" fullWidth>
-              <FormLabel component="legend">Движок воспроизведения</FormLabel>
-              <Select
-                name="playbackEngine"
-                value={values.playbackEngine}
-                onChange={handleChange}
-                variant="standard"
-              >
-                <MenuItem value="decoder">WebCodecs decoder (video only, recommended)</MenuItem>
-                <MenuItem value="capture">HTMLVideo captureStream</MenuItem>
-              </Select>
-            </FormControl>
+            {isPlaybackEngineSupported && (
+              <FormControl component="fieldset" margin="normal" fullWidth>
+                <FormLabel component="legend">Движок воспроизведения</FormLabel>
+                <Select
+                  name="playbackEngine"
+                  value={values.playbackEngine}
+                  onChange={handleChange}
+                  variant="standard"
+                >
+                  <MenuItem value="decoder">WebCodecs decoder (video only, recommended)</MenuItem>
+                  <MenuItem value="capture">HTMLVideo captureStream</MenuItem>
+                </Select>
+              </FormControl>
+            )}
             <FormControl component="fieldset" margin="normal" fullWidth>
               <FormLabel component="legend">Предпочтительный размер в пикселях</FormLabel>
               <Stack

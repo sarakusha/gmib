@@ -44,6 +44,9 @@ import {
   selectSessionVersion,
 } from '../store/selectors';
 
+import { supportsFeature } from '/@common/capabilities';
+import { isRemoteSession } from '/@common/remote';
+
 import AppBar from './AppBar';
 import Devices from './Devices';
 import Drawer from './Drawer';
@@ -88,6 +91,7 @@ const App: React.FC = () => {
   const links = useSelector(selectLinks);
   const hasLink = links.length > 0;
   const version = useSelector(selectSessionVersion);
+  const isSchedulerSupported = supportsFeature('gmibScheduler', version, isRemoteSession);
   useEffect(() => {
     if (broadcastDetected) {
       enqueueSnackbar(`Обнаружена рассылка с адреса ${broadcastDetected}!`, {
@@ -123,6 +127,9 @@ const App: React.FC = () => {
     window.addEventListener('gmib-scheduler', handler);
     return () => window.removeEventListener('gmib-scheduler', handler);
   }, [enqueueSnackbar]);
+  useEffect(() => {
+    if (tab === 'scheduler' && !isSchedulerSupported) dispatch(setCurrentTab('help'));
+  }, [dispatch, isSchedulerSupported, tab]);
   const focused = useSelector(selectFocused);
   return (
     <>
@@ -293,12 +300,14 @@ const App: React.FC = () => {
                 />
               </ListItemSecondaryAction>
             </Item>
-            <Item
-              onClick={() => dispatch(setCurrentTab('scheduler'))}
-              selected={tab === 'scheduler'}
-            >
-              <ListItemText primary="Планировщик" />
-            </Item>
+            {isSchedulerSupported && (
+              <Item
+                onClick={() => dispatch(setCurrentTab('scheduler'))}
+                selected={tab === 'scheduler'}
+              >
+                <ListItemText primary="Планировщик" />
+              </Item>
+            )}
             <Item onClick={() => dispatch(setCurrentTab('log'))} selected={tab === 'log'}>
               <ListItemText primary="Журнал" />
             </Item>

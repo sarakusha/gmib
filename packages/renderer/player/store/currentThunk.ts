@@ -16,7 +16,8 @@ import { startAppListening } from './listenerMiddleware';
 import { selectCurrent, selectDuration, selectPlaybackState } from './selectors';
 import type { AppDispatch, RootState } from './index';
 
-import { isRemoteSession } from '/@common/remote';
+import { supportsFeature } from '/@common/capabilities';
+import { isRemoteSession, version } from '/@common/remote';
 
 const selectPlayersData = playerApi.endpoints.getPlayers.select();
 // const selectPlaylistsData = playlistApi.endpoints.getPlaylists.select();
@@ -52,18 +53,20 @@ export const setupMediaSessionActionHandlers = (
   setSeekHandler('stop', () => {
     dispatch(setPlaybackState('none'));
   });
-  setSeekHandler('seekbackward', ({ seekOffset }) => {
-    const { position } = selectCurrent(getState());
-    window.mediaStream.seek?.(getSeekPosition(position, -(seekOffset ?? DEFAULT_SEEK_OFFSET)));
-  });
-  setSeekHandler('seekforward', ({ seekOffset }) => {
-    const { position } = selectCurrent(getState());
-    window.mediaStream.seek?.(getSeekPosition(position, seekOffset ?? DEFAULT_SEEK_OFFSET));
-  });
-  setSeekHandler('seekto', ({ seekTime }) => {
-    if (typeof seekTime !== 'number') return;
-    window.mediaStream.seek?.(seekTime);
-  });
+  if (supportsFeature('playerSeek', version, isRemoteSession)) {
+    setSeekHandler('seekbackward', ({ seekOffset }) => {
+      const { position } = selectCurrent(getState());
+      window.mediaStream.seek?.(getSeekPosition(position, -(seekOffset ?? DEFAULT_SEEK_OFFSET)));
+    });
+    setSeekHandler('seekforward', ({ seekOffset }) => {
+      const { position } = selectCurrent(getState());
+      window.mediaStream.seek?.(getSeekPosition(position, seekOffset ?? DEFAULT_SEEK_OFFSET));
+    });
+    setSeekHandler('seekto', ({ seekTime }) => {
+      if (typeof seekTime !== 'number') return;
+      window.mediaStream.seek?.(seekTime);
+    });
+  }
 };
 
 startAppListening({

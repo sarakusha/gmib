@@ -9,7 +9,11 @@ import {
   selectCurrentTab,
   selectDeviceById,
   selectDeviceIds,
+  selectSessionVersion,
 } from '../store/selectors';
+
+import { supportsFeature } from '/@common/capabilities';
+import { isRemoteSession } from '/@common/remote';
 
 import Autobrightness from './Autobrightness';
 import DeviceTabs from './DeviceTabs';
@@ -32,6 +36,8 @@ const Tabs: React.FC = () => {
   const currentDeviceId = useSelector(selectCurrentDeviceId) as DeviceId;
   const currentDevice = useSelector(state => selectDeviceById(state, currentDeviceId));
   const { novastar: currentNovastar } = useNovastar(currentDeviceId); // useSelector(state => selectNovastarByPath(state, currentDeviceId));
+  const version = useSelector(selectSessionVersion);
+  const isSchedulerSupported = supportsFeature('gmibScheduler', version, isRemoteSession);
   if (currentDevice) {
     const curChild = devChildren.find(({ props }) => props.id === currentDeviceId);
     /**
@@ -79,9 +85,11 @@ const Tabs: React.FC = () => {
       <TabContainer id="autobrightness" selected={tab === 'autobrightness'}>
         <Autobrightness />
       </TabContainer>
-      <TabContainer id="scheduler" selected={tab === 'scheduler'}>
-        <SchedulerTab />
-      </TabContainer>
+      {isSchedulerSupported && (
+        <TabContainer id="scheduler" selected={tab === 'scheduler'}>
+          <SchedulerTab />
+        </TabContainer>
+      )}
       <TabContainer id="log" selected={tab === 'log'}>
         <Log />
       </TabContainer>

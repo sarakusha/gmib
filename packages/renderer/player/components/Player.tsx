@@ -10,9 +10,10 @@ import { useDispatch, useSelector } from '../store';
 import { setPosition } from '../store/currentSlice';
 import { selectCurrent, selectOutputHidden, selectPosition } from '../store/selectors';
 
+import { supportsFeature } from '/@common/capabilities';
 import type { MediaInfo } from '/@common/mediaInfo';
+import { isRemoteSession, version } from '/@common/remote';
 import type { ObjectFitMode } from '/@common/video';
-// import { isRemoteSession } from '/@common/remote';
 
 import ControlBar from './ControlBar';
 
@@ -30,6 +31,7 @@ const Player: React.FC<Props> = ({ className, playerId = 0 }) => {
   const position = useSelector(selectPosition);
   const dispatch = useDispatch();
   const outputHidden = useSelector(selectOutputHidden);
+  const isSeekSupported = supportsFeature('playerSeek', version, isRemoteSession);
   const { width = 320, height = 240 } = player ?? {};
   const previewObjectFit: ObjectFitMode =
     mappings.find(item => item.player === playerId)?.objectFit ?? 'cover';
@@ -111,6 +113,7 @@ const Player: React.FC<Props> = ({ className, playerId = 0 }) => {
           className="control-bar"
           duration={duration}
           position={position}
+          seek={isSeekSupported}
           sx={{
             backgroundColor: 'rgba(0,0,0,0.4)',
             color: 'white',

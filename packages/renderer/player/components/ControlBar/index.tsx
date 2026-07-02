@@ -13,12 +13,13 @@ import TimeDisplay from './TimeDisplay';
 type Props = {
   duration?: number;
   position?: number;
+  seek?: boolean;
   sx?: SxProps<Theme>;
   className?: string;
 };
 
 const ControlBar = React.forwardRef<HTMLDivElement, Props>(
-  ({ duration, position = 0, sx, className }, ref) => (
+  ({ duration, position = 0, seek = true, sx, className }, ref) => (
     <Stack
       direction="row"
       spacing={1}
@@ -41,7 +42,7 @@ const ControlBar = React.forwardRef<HTMLDivElement, Props>(
           <TimeDisplay seconds={duration} nogap />
 */}
       </div>
-      <ProgressControl duration={duration} position={position} />
+      {seek && <ProgressControl duration={duration} position={position} />}
       <TimeDisplay
         prefix={duration ? '-' : ''}
         seconds={duration ? Math.ceil(duration - position) : NaN}

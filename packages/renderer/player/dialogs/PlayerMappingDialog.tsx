@@ -25,6 +25,9 @@ import {
 import { usePlayer } from '../api/player';
 import { toHexId } from '../utils';
 
+import { supportsFeature } from '/@common/capabilities';
+import { isRemoteSession, version } from '/@common/remote';
+
 type Props = {
   id?: number | null;
   playerId?: number | null;
@@ -192,6 +195,7 @@ const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) =
   const { mapping } = usePlayerMapping(id);
   const [updateMapping] = useUpdateMappingMutation();
   const [createMapping] = useCreateMappingMutation();
+  const isShaderSupported = supportsFeature('playerShaders', version, isRemoteSession);
   const validDisplays = [
     ...displays.map(display => display.id),
     DefaultDisplays.None,
@@ -234,14 +238,18 @@ const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) =
           }
           onSubmit={async (newValues, { setSubmitting }) => {
             if (!playerId) throw new Error('Unknown player');
+            const { shader, ...commonValues } = newValues;
             const nextMapping = {
-              ...newValues,
+              ...commonValues,
               player: playerId,
               zIndex: Number(newValues.zIndex) || 0,
-              shader: newValues.shader?.trim() || undefined,
+              ...(isShaderSupported && { shader: shader?.trim() || undefined }),
             };
-            if (mapping) await updateMapping({ ...mapping, ...nextMapping });
-            else await createMapping(nextMapping);
+            if (mapping) {
+              const payload = { ...mapping, ...nextMapping };
+              if (!isShaderSupported) delete payload.shader;
+              await updateMapping(payload);
+            } else await createMapping(nextMapping);
             setSubmitting(false);
             onClose();
           }}
@@ -402,55 +410,61 @@ const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) =
                     По умолчанию используется режим с заполнением области и обрезкой краев.
                   </FormHelperText>
                 </FormControl>
-                <FormControl fullWidth margin="normal">
-                  <InputLabel id="shader-preset-label">Шейдер</InputLabel>
-                  <Select
-                    labelId="shader-preset-label"
-                    id="shaderPreset"
-                    value={
-                      shaderPresets.find(item => item.source === (values.shader ?? ''))?.value ??
-                      'custom'
-                    }
-                    onBlur={handleBlur}
-                    onChange={event => {
-                      const preset = shaderPresets.find(item => item.value === event.target.value);
-                      void setFieldValue('shader', preset?.source ?? '');
-                    }}
-                    variant="standard"
-                  >
-                    {shaderPresets.map(option => (
-                      <MenuItem key={option.value || 'none'} value={option.value}>
-                        {option.label}
-                      </MenuItem>
-                    ))}
-                    <MenuItem value="custom" disabled>
-                      Пользовательский
-                    </MenuItem>
-                  </Select>
-                  <FormHelperText>
-                    Можно выбрать заготовку и отредактировать GLSL-код ниже.
-                  </FormHelperText>
-                </FormControl>
-                <Field
-                  name="shader"
-                  label="Код шейдера"
-                  component={FormikTextField}
-                  variant="outlined"
-                  fullWidth
-                  multiline
-                  minRows={8}
-                  margin="normal"
-                  placeholder="return color;"
-                  helperText="Доступны uv, color, u_time, u_resolution, u_sourceResolution и sampleSource(uv). Для изменения пропорций результата можно добавить // gmib:output-size width height."
-                  slotProps={{
-                    input: {
-                      sx: {
-                        fontFamily: 'monospace',
-                        fontSize: 13,
-                      },
-                    },
-                  }}
-                />
+                {isShaderSupported && (
+                  <>
+                    <FormControl fullWidth margin="normal">
+                      <InputLabel id="shader-preset-label">Шейдер</InputLabel>
+                      <Select
+                        labelId="shader-preset-label"
+                        id="shaderPreset"
+                        value={
+                          shaderPresets.find(item => item.source === (values.shader ?? ''))
+                            ?.value ?? 'custom'
+                        }
+                        onBlur={handleBlur}
+                        onChange={event => {
+                          const preset = shaderPresets.find(
+                            item => item.value === event.target.value,
+                          );
+                          void setFieldValue('shader', preset?.source ?? '');
+                        }}
+                        variant="standard"
+                      >
+                        {shaderPresets.map(option => (
+                          <MenuItem key={option.value || 'none'} value={option.value}>
+                            {option.label}
+                          </MenuItem>
+                        ))}
+                        <MenuItem value="custom" disabled>
+                          Пользовательский
+                        </MenuItem>
+                      </Select>
+                      <FormHelperText>
+                        Можно выбрать заготовку и отредактировать GLSL-код ниже.
+                      </FormHelperText>
+                    </FormControl>
+                    <Field
+                      name="shader"
+                      label="Код шейдера"
+                      component={FormikTextField}
+                      variant="outlined"
+                      fullWidth
+                      multiline
+                      minRows={8}
+                      margin="normal"
+                      placeholder="return color;"
+                      helperText="Доступны uv, color, u_time, u_resolution, u_sourceResolution и sampleSource(uv). Для изменения пропорций результата можно добавить // gmib:output-size width height."
+                      slotProps={{
+                        input: {
+                          sx: {
+                            fontFamily: 'monospace',
+                            fontSize: 13,
+                          },
+                        },
+                      }}
+                    />
+                  </>
+                )}
               </FormControl>
             </Form>
           )}

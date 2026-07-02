@@ -10,6 +10,9 @@ import { setCurrentTab, tabNames, tabs } from '../store/currentSlice';
 import type { TabNames } from '../store/currentSlice';
 import { selectCurrentTab } from '../store/selectors';
 
+import { supportsFeature } from '/@common/capabilities';
+import { isRemoteSession, version } from '/@common/remote';
+
 import MediaTab from './MediaTab';
 import PlaylistsTab from './PlaylistsTab';
 import SchedulerTab from './SchedulerTab';
@@ -19,9 +22,17 @@ import TabPanel from './TabPanel';
 const Main: React.FC<{ className?: string }> = ({ className }) => {
   const value = useSelector(selectCurrentTab);
   const dispatch = useDispatch();
+  const isSchedulerSupported = supportsFeature('playerScheduler', version, isRemoteSession);
+  const visibleTabNames = React.useMemo(
+    () => tabNames.filter(name => name !== 'scheduler' || isSchedulerSupported),
+    [isSchedulerSupported],
+  );
   const handleChange = (event: React.SyntheticEvent, newValue: TabNames) => {
     dispatch(setCurrentTab(newValue));
   };
+  React.useEffect(() => {
+    if (value === 'scheduler' && !isSchedulerSupported) dispatch(setCurrentTab('player'));
+  }, [dispatch, isSchedulerSupported, value]);
   return (
     <TabContext value={value}>
       <Box sx={{ width: 1, height: 1, display: 'flex', flexDirection: 'column' }}>
@@ -33,7 +44,7 @@ const Main: React.FC<{ className?: string }> = ({ className }) => {
           }}
         >
           <TabList onChange={handleChange} aria-label="panels" centered>
-            {tabNames.map(name => (
+            {visibleTabNames.map(name => (
               <Tab label={tabs[name]} key={name} value={name} />
             ))}
           </TabList>
@@ -45,9 +56,11 @@ const Main: React.FC<{ className?: string }> = ({ className }) => {
           <TabPanel value="media">
             <MediaTab />
           </TabPanel>
-          <TabPanel value="scheduler">
-            <SchedulerTab />
-          </TabPanel>
+          {isSchedulerSupported && (
+            <TabPanel value="scheduler">
+              <SchedulerTab />
+            </TabPanel>
+          )}
           <TabPanel value="settings">
             <SettingsTab />
           </TabPanel>

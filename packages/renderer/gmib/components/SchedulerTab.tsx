@@ -34,9 +34,12 @@ import {
 import { useScreens } from '../api/screens';
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useSelector } from '../store';
-import { selectCurrentTab } from '../store/selectors';
+import { selectCurrentTab, selectSessionVersion } from '../store/selectors';
 
 import SchedulerTabCommon, { type SchedulerTabLabels } from '../../common/SchedulerTab';
+
+import { supportsFeature } from '/@common/capabilities';
+import { isRemoteSession } from '/@common/remote';
 
 type DialogValues = GmibSchedulerJobInput;
 
@@ -253,7 +256,11 @@ const StatusIcon: React.FC<{ job: GmibSchedulerJob }> = ({ job }) => {
 };
 
 const SchedulerTab: React.FC = () => {
-  const { data: jobs = [] } = useGetSchedulerJobsQuery();
+  const version = useSelector(selectSessionVersion);
+  const isSchedulerSupported = supportsFeature('gmibScheduler', version, isRemoteSession);
+  const { data: jobs = [] } = useGetSchedulerJobsQuery(undefined, {
+    skip: !isSchedulerSupported,
+  });
   const { screens = [] } = useScreens();
   const { pages = [] } = usePages();
   const [createJob] = useCreateSchedulerJobMutation();
@@ -316,8 +323,15 @@ const SchedulerTab: React.FC = () => {
     setEditingJob(undefined);
   };
 
+  if (!isSchedulerSupported) return null;
+
   return (
-    <SchedulerTabCommon<GmibSchedulerJob, DialogValues, GmibSchedulerAction, { screens: Screen[]; pages: Page[] }>
+    <SchedulerTabCommon<
+      GmibSchedulerJob,
+      DialogValues,
+      GmibSchedulerAction,
+      { screens: Screen[]; pages: Page[] }
+    >
       jobs={jobs}
       related={{ screens, pages: filteredPages }}
       actionLabels={actionLabels}

@@ -87,11 +87,16 @@ export const openPlayer = async (
   }
   if (!browserWindow) {
     if (!player) return undefined;
-    const query = `source_id=${id}&host=${host}&port=${nibusPort}`;
+    const query = new URLSearchParams({
+      source_id: `${id}`,
+      host,
+      port: `${nibusPort}`,
+    });
+    if (info?.version) query.set('version', info.version);
     const url =
       isDevRuntime && import.meta.env.VITE_DEV_SERVER_URL
-        ? `${import.meta.env.VITE_DEV_SERVER_URL}player.html?${query}`
-        : `http://localhost:${nibusPort + 1}/player.html?${query}`;
+        ? `${import.meta.env.VITE_DEV_SERVER_URL}player.html?${query.toString()}`
+        : `http://localhost:${nibusPort + 1}/player.html?${query.toString()}`;
     const title = getPlayerTitle(player);
     browserWindow = createTabbedWindow(
       isRemote ? `${info?.name ?? host}:${title}` : title,

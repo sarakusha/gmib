@@ -2,6 +2,7 @@ const query = window && new URLSearchParams(window.location.search);
 export const port = +(query?.get('port') ?? 9001);
 export const host = query?.get('host') ?? 'localhost';
 export const sourceId = +(query?.get('source_id') ?? 0);
+export const version = query?.get('version') ?? undefined;
 export const isRemoteSession = host !== 'localhost';
 
 export const getUrl = (path: string): string =>
