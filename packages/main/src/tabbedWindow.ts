@@ -170,15 +170,12 @@ class TabbedWindow {
   activate(id: number) {
     const tab = this.tabs.find(item => item.id === id);
     if (!tab || tab.destroyed) return;
-    const prev = this.activeTab();
-    if (prev && prev.id !== id) prev.window.webContents.send('focus', false);
     tab.hidden = false;
     this.activeId = id;
     this.window.contentView.addChildView(tab.view);
     this.window.show();
     this.window.focus();
     tab.view.webContents.focus();
-    tab.window.webContents.send('focus', true);
     this.render();
     this.layout();
     emitChange();

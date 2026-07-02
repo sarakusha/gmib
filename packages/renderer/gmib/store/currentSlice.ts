@@ -32,7 +32,6 @@ export interface CurrentState {
   broadcastDetected?: string;
   isActivateDialogOpen: boolean;
   invalidState: boolean;
-  focused: boolean;
   outputHidden: boolean;
   tabChangedTimestamp?: number;
   // playlist: number | undefined;
@@ -46,7 +45,6 @@ const initialState: CurrentState = {
   isRemoteDialogOpen: false,
   isActivateDialogOpen: false,
   invalidState: false,
-  focused: true,
   outputHidden: false,
   // isLoggedIn: true, // isRemoteSession ? !!window.identify.getSecret() : true,
   // playlist: undefined,
@@ -98,9 +96,6 @@ const currentSlice = createSlice({
     },
     setInvalidState(state, { payload: invalid }: PayloadAction<boolean>) {
       state.invalidState = invalid;
-    },
-    setFocused(state, { payload: focused }: PayloadAction<boolean>) {
-      state.focused = focused;
     },
     setOutputHidden(state, { payload: outputHidden }: PayloadAction<boolean>) {
       state.outputHidden = outputHidden;
@@ -164,7 +159,6 @@ export const {
   setAuthRequired,
   setBroadcastDetected,
   setInvalidState,
-  setFocused,
   setOutputHidden,
 } = currentSlice.actions;
 

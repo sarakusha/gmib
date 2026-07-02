@@ -34,7 +34,6 @@ import {
   selectAutobrightness,
   selectBroadcastDetected,
   selectCurrentTab,
-  selectFocused,
   selectIsClosed,
   selectIsOnline,
   selectIsRemoteDialogOpen,
@@ -130,7 +129,6 @@ const App: React.FC = () => {
   useEffect(() => {
     if (tab === 'scheduler' && !isSchedulerSupported) dispatch(setCurrentTab('help'));
   }, [dispatch, isSchedulerSupported, tab]);
-  const focused = useSelector(selectFocused);
   return (
     <>
       <Backdrop
@@ -138,7 +136,7 @@ const App: React.FC = () => {
           zIndex: theme => theme.zIndex.drawer + 10,
           color: '#fff',
         }}
-        open={!online || loading || !focused}
+        open={!online || loading}
       >
         {sessionClosed ? (
           <HighlightOffIcon fontSize="large" />

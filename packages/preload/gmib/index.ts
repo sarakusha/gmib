@@ -22,7 +22,7 @@ import './hid';
 import expandTypes from '/@common/expandTypes';
 import { hashCode } from '/@common/helpers';
 import type { GmibWindowParams } from '/@common/WindowParams';
-import { setFocused, setOutputHidden } from '/@renderer/store/currentSlice';
+import { setOutputHidden } from '/@renderer/store/currentSlice';
 
 /**
  * The "Main World" is the JavaScript context that your main renderer code runs in.
@@ -102,10 +102,6 @@ if (document.readyState === 'loading') {
   // DOM готов!
   void onReady();
 }
-
-ipcRenderer.on('focus', (_, focused: boolean) => {
-  ipcDispatch(setFocused(focused));
-});
 
 ipcRenderer.on('outputVisibility', (_, hidden: boolean) => {
   ipcDispatch(setOutputHidden(hidden));

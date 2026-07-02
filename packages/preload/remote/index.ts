@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge } from 'electron';
 
 import debugFactory from 'debug';
 
@@ -10,7 +10,7 @@ import type { AnswerMessage, CandidateMessage, RequestMessage, RtcMessage } from
 import Deferred from '/@common/Deferred';
 import expandTypes from '/@common/expandTypes';
 import { host, port, sourceId } from '/@common/remote';
-import { setFocused, setOutputHidden } from '/@player/store/currentSlice';
+import { setOutputHidden } from '/@player/store/currentSlice';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:remote`);
 
@@ -124,7 +124,3 @@ ws.onopen = () => {
   };
   connect();
 };
-
-ipcRenderer.on('focus', (_, focused: boolean) => {
-  ipcDispatch(setFocused(focused));
-});

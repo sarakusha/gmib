@@ -14,7 +14,7 @@ import { seek, updateSrcObject } from './mediaStream';
 // import * as nodeCrypto from './nodeCrypto';
 
 import './videoOuts';
-import { setFocused, setOutputHidden } from '/@player/store/currentSlice';
+import { setOutputHidden } from '/@player/store/currentSlice';
 
 const search = new URLSearchParams(window.location.search);
 const sourceId = +(search.get('source_id') ?? 1);
@@ -35,10 +35,6 @@ contextBridge.exposeInMainWorld('socket', {
 contextBridge.exposeInMainWorld('onUpdatePlaylist', (callback: () => void) =>
   ipcRenderer.on('updatePlaylist', callback),
 );
-
-ipcRenderer.on('focus', (_, focused: boolean) => {
-  ipcDispatch(setFocused(focused));
-});
 
 ipcRenderer.on('outputVisibility', (_, hidden: boolean) => {
   ipcDispatch(setOutputHidden(hidden));

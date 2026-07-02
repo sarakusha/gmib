@@ -1,14 +1,10 @@
-import { Backdrop, Box } from '@mui/material';
+import { Box } from '@mui/material';
 import { useSnackbar } from 'notistack';
 import React from 'react';
-
-import { useSelector } from '../store';
-import { selectFocused } from '../store/selectors';
 
 import Main from './Main';
 
 const App: React.FC = () => {
-  const focused = useSelector(selectFocused);
   const { enqueueSnackbar } = useSnackbar();
   React.useEffect(() => {
     const handler = (event: Event) => {
@@ -40,13 +36,6 @@ const App: React.FC = () => {
           width: 1,
         }}
       >
-        <Backdrop
-          sx={{
-            zIndex: theme => theme.zIndex.drawer + 20,
-            color: '#fff',
-          }}
-          open={!focused}
-        />
         <Main />
       </Box>
     </Box>

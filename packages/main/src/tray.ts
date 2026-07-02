@@ -45,7 +45,6 @@ const showAll = () => {
     const win = findManagedWindow(id);
     if (win) {
       win.show();
-      setTimeout(() => win.webContents.send('focus', false), 100);
     }
   });
   setTimeout(() => {
