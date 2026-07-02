@@ -1,16 +1,20 @@
 export type FeatureName =
   | 'gmibScheduler'
   | 'playerEngine'
+  | 'playerObjectFit'
   | 'playerScheduler'
   | 'playerSeek'
-  | 'playerShaders';
+  | 'playerShaders'
+  | 'windowZIndex';
 
 const minimumVersions: Record<FeatureName, string> = {
-  gmibScheduler: '5.0.0',
+  gmibScheduler: '5.0.1',
   playerEngine: '4.11.0',
+  playerObjectFit: '4.11.1',
   playerScheduler: '5.0.0',
   playerSeek: '4.12.0',
   playerShaders: '5.0.0',
+  windowZIndex: '5.0.1',
 };
 
 const parseVersion = (version?: string): number[] | undefined => {

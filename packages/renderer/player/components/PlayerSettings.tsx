@@ -51,6 +51,7 @@ const PlayerSettings: React.FC<{ id?: number }> = ({ id }) => {
   } = player ?? {};
   const dispatch = useDispatch();
   const isPlaybackEngineSupported = supportsFeature('playerEngine', version, isRemoteSession);
+  const isObjectFitSupported = supportsFeature('playerObjectFit', version, isRemoteSession);
   const { mappings = [] } = usePlayerMappings();
   const { displays = [] } = useDisplays();
   const filtered = mappings.filter(item => item.player === id);
@@ -199,7 +200,11 @@ const PlayerSettings: React.FC<{ id?: number }> = ({ id }) => {
             <Collapse key={item.id}>
               <ListItemButton onClick={() => id && openPlayerMappingDialog(id, item.id)} dense>
                 <ListItemText
-                  primary={`${item.name} (${item.objectFit})`}
+                  primary={
+                    isObjectFitSupported && item.objectFit
+                      ? `${item.name} (${item.objectFit})`
+                      : item.name
+                  }
                   secondary={`${getDisplay(item.display)} (${item.left},${item.top}-${item.width}x${
                     item.height
                   })`}

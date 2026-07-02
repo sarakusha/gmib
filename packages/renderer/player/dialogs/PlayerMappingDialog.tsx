@@ -195,7 +195,9 @@ const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) =
   const { mapping } = usePlayerMapping(id);
   const [updateMapping] = useUpdateMappingMutation();
   const [createMapping] = useCreateMappingMutation();
+  const isObjectFitSupported = supportsFeature('playerObjectFit', version, isRemoteSession);
   const isShaderSupported = supportsFeature('playerShaders', version, isRemoteSession);
+  const isZIndexSupported = supportsFeature('windowZIndex', version, isRemoteSession);
   const validDisplays = [
     ...displays.map(display => display.id),
     DefaultDisplays.None,
@@ -238,16 +240,19 @@ const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) =
           }
           onSubmit={async (newValues, { setSubmitting }) => {
             if (!playerId) throw new Error('Unknown player');
-            const { shader, ...commonValues } = newValues;
+            const { objectFit, shader, zIndex, ...commonValues } = newValues;
             const nextMapping = {
               ...commonValues,
               player: playerId,
-              zIndex: Number(newValues.zIndex) || 0,
+              ...(isObjectFitSupported && { objectFit }),
               ...(isShaderSupported && { shader: shader?.trim() || undefined }),
+              ...(isZIndexSupported && { zIndex: Number(zIndex) || 0 }),
             };
             if (mapping) {
               const payload = { ...mapping, ...nextMapping };
+              if (!isObjectFitSupported) delete payload.objectFit;
               if (!isShaderSupported) delete payload.shader;
+              if (!isZIndexSupported) delete payload.zIndex;
               await updateMapping(payload);
             } else await createMapping(nextMapping);
             setSubmitting(false);
@@ -336,20 +341,22 @@ const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) =
                   </Stack>
                 </FormControl>
               </Box>
-              <FormControl component="fieldset" sx={{ width: 1 }} margin="normal">
-                <FormLabel component="legend">Слой окна вывода</FormLabel>
-                <Field
-                  name="zIndex"
-                  label="zIndex"
-                  type="number"
-                  component={FormikTextField}
-                  inputProps={{ step: 1 }}
-                  fullWidth
-                />
-                <FormHelperText>
-                  Окна вывода с большим значением располагаются выше окон с меньшим значением.
-                </FormHelperText>
-              </FormControl>
+              {isZIndexSupported && (
+                <FormControl component="fieldset" sx={{ width: 1 }} margin="normal">
+                  <FormLabel component="legend">Слой окна вывода</FormLabel>
+                  <Field
+                    name="zIndex"
+                    label="zIndex"
+                    type="number"
+                    component={FormikTextField}
+                    inputProps={{ step: 1 }}
+                    fullWidth
+                  />
+                  <FormHelperText>
+                    Окна вывода с большим значением располагаются выше окон с меньшим значением.
+                  </FormHelperText>
+                </FormControl>
+              )}
               <FormControl component="fieldset" sx={{ width: 1 }} margin="normal">
                 <FormLabel component="legend">Окно</FormLabel>
                 <Stack
@@ -389,27 +396,29 @@ const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) =
                   На Windows рекомендуется выбрать один из режимов <i>На весь экран</i> или{' '}
                   <i>Прозрачность</i>.
                 </FormHelperText>
-                <FormControl fullWidth margin="normal">
-                  <InputLabel id="object-fit-label">Режим масштабирования</InputLabel>
-                  <Select
-                    labelId="object-fit-label"
-                    id="objectFit"
-                    name="objectFit"
-                    value={values.objectFit ?? 'cover'}
-                    onBlur={handleBlur}
-                    onChange={handleChange}
-                    variant="standard"
-                  >
-                    {objectFitOptions.map(option => (
-                      <MenuItem key={option.value} value={option.value}>
-                        {option.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  <FormHelperText>
-                    По умолчанию используется режим с заполнением области и обрезкой краев.
-                  </FormHelperText>
-                </FormControl>
+                {isObjectFitSupported && (
+                  <FormControl fullWidth margin="normal">
+                    <InputLabel id="object-fit-label">Режим масштабирования</InputLabel>
+                    <Select
+                      labelId="object-fit-label"
+                      id="objectFit"
+                      name="objectFit"
+                      value={values.objectFit ?? 'cover'}
+                      onBlur={handleBlur}
+                      onChange={handleChange}
+                      variant="standard"
+                    >
+                      {objectFitOptions.map(option => (
+                        <MenuItem key={option.value} value={option.value}>
+                          {option.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    <FormHelperText>
+                      По умолчанию используется режим с заполнением области и обрезкой краев.
+                    </FormHelperText>
+                  </FormControl>
+                )}
                 {isShaderSupported && (
                   <>
                     <FormControl fullWidth margin="normal">

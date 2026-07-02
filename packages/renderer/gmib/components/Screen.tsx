@@ -23,11 +23,13 @@ import { useDisplays } from '../../common/displays';
 import { updateScreen, useScreen } from '../api/screens';
 import { useDispatch, useSelector } from '../store';
 import { setInvalidState } from '../store/currentSlice';
-import { selectOutputHidden } from '../store/selectors';
+import { selectOutputHidden, selectSessionVersion } from '../store/selectors';
 
+import { supportsFeature } from '/@common/capabilities';
 import { DefaultDisplays } from '/@common/video';
 import { reAddress } from '/@common/config';
 import { reIPv4, toHexId } from '/@common/helpers';
+import { isRemoteSession } from '/@common/remote';
 
 import Accordion from './Accordion';
 import AccordionSummary from './AccordionSummary';
@@ -119,6 +121,8 @@ const ScreenComponent: React.FC<Props> = ({
 }) => {
   const dispatch = useDispatch();
   const outputHidden = useSelector(selectOutputHidden);
+  const version = useSelector(selectSessionVersion);
+  const isZIndexSupported = supportsFeature('windowZIndex', version, isRemoteSession);
   const { screen } = useScreen(scrId);
   const { displays = [] } = useDisplays();
   const addAddress = useCallback(
@@ -214,9 +218,18 @@ const ScreenComponent: React.FC<Props> = ({
               zIndex,
             }}
             onSubmit={(newValues, { setSubmitting }) => {
-              // eslint-disable-next-line no-param-reassign
-              if (newValues.brightnessFactor) newValues.useExternalKnob = false;
-              dispatch(updateScreen(scrId, prev => ({ ...prev, ...newValues })));
+              const { zIndex: nextZIndex, ...commonValues } = newValues;
+              if (commonValues.brightnessFactor) commonValues.useExternalKnob = false;
+              dispatch(
+                updateScreen(scrId, prev => {
+                  const { zIndex: _prevZIndex, ...prevCommonValues } = prev;
+                  return {
+                    ...prevCommonValues,
+                    ...commonValues,
+                    ...(isZIndexSupported && { zIndex: nextZIndex }),
+                  };
+                }),
+              );
               setSubmitting(false);
             }}
             validate={props => {
@@ -226,7 +239,8 @@ const ScreenComponent: React.FC<Props> = ({
                 if (props[key] < 4) errs[key] = 'Должно быть не меньше 4';
                 else if (props[key] % 2 !== 0) errs[key] = 'Должно быть четным';
               });
-              if (!Number.isInteger(Number(props.zIndex))) errs.zIndex = 'Должно быть целым числом';
+              if (isZIndexSupported && !Number.isInteger(Number(props.zIndex)))
+                errs.zIndex = 'Должно быть целым числом';
               return errs;
             }}
             enableReinitialize
@@ -400,8 +414,9 @@ const ScreenComponent: React.FC<Props> = ({
                       )}
                     </Select>
                   </FieldSet>
-                  <FieldSet legend="Окно вывода" disabled={readonly}>
-                    {/* <FormControlLabel
+                  {isZIndexSupported && (
+                    <FieldSet legend="Окно вывода" disabled={readonly}>
+                      {/* <FormControlLabel
                       control={
                         <Checkbox
                           checked={!!values.outputTransparent}
@@ -411,15 +426,16 @@ const ScreenComponent: React.FC<Props> = ({
                       }
                       label="Прозрачность"
                     /> */}
-                    <Field
-                      variant="standard"
-                      name="zIndex"
-                      label="zIndex"
-                      type="number"
-                      component={StyledFormikTextField}
-                      disabled={readonly}
-                    />
-                  </FieldSet>
+                      <Field
+                        variant="standard"
+                        name="zIndex"
+                        label="zIndex"
+                        type="number"
+                        component={StyledFormikTextField}
+                        disabled={readonly}
+                      />
+                    </FieldSet>
+                  )}
                 </Box>
                 <ChipInput
                   label="Адреса минихостов"
