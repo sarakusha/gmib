@@ -42,7 +42,7 @@ const ControlBar = React.forwardRef<HTMLDivElement, Props>(
           <TimeDisplay seconds={duration} nogap />
 */}
       </div>
-      {seek && <ProgressControl duration={duration} position={position} />}
+      <ProgressControl duration={duration} position={position} seekDisabled={!seek} />
       <TimeDisplay
         prefix={duration ? '-' : ''}
         seconds={duration ? Math.ceil(duration - position) : NaN}

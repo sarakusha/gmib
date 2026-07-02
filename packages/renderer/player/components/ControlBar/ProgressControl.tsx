@@ -7,6 +7,7 @@ import { formatTime } from '../../utils';
 type Props = {
   duration?: number;
   position?: number;
+  seekDisabled?: boolean;
 };
 
 const SEEK_END_GUARD = 0.1;
@@ -19,7 +20,7 @@ const Slider = styled(MuiSlider)({
   '& .MuiSlider-thumb': {
     width: 8,
     height: 8,
-    transition: '0.3s cubic-bezier(.47,1.64,.41,.8)',
+    // transition: '0.3s cubic-bezier(.47,1.64,.41,.8)',
     '&:before': {
       boxShadow: '0 2px 12px 0 rgba(0,0,0,0.4)',
     },
@@ -36,7 +37,7 @@ const Slider = styled(MuiSlider)({
   },
 });
 
-const ProgressControl: React.FC<Props> = ({ duration, position }) => {
+const ProgressControl: React.FC<Props> = ({ duration, position, seekDisabled }) => {
   const [value, setValue] = React.useState<number | null>(null);
   const pendingSeekRef = React.useRef<number | null>(null);
   const settleTimeoutRef = React.useRef<number | null>(null);
@@ -92,7 +93,7 @@ const ProgressControl: React.FC<Props> = ({ duration, position }) => {
       value={sliderValue}
       min={0}
       max={max}
-      disabled={!duration}
+      disabled={seekDisabled || !duration}
       onChange={changeHandler}
       onChangeCommitted={commitHandler}
       valueLabelDisplay="auto"
