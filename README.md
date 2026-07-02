@@ -492,7 +492,10 @@ pnpm run typecheck
 
 Для сборки установочных пакетов используются `electron-builder` и скрипты `dist`/`release` из
 `package.json`. Полная сборка с включенными `ffmpeg`/`ffprobe` ожидает подготовленные бинарные файлы
-в каталоге `ffmpeg/<platform>-<arch>`; для их загрузки есть команда `pnpm run download-ffmpeg`.
+в каталоге `ffmpeg/<platform>-<arch>`; для их загрузки есть команда `pnpm run download-ffmpeg`. Для
+проверки Windows-сборки без изменения релизной версии и `CHANGELOG.md` можно вручную запустить
+GitHub Actions workflow `Windows Prerelease`: он публикует отдельный prerelease
+`v<текущая версия>-alpha.<run>.<attempt>` с Win x64 артефактами.
 
 > При запуске из изолированного окружения учитывайте, что GMIB проверяет конфигурационные файлы с
 > подписью активации при старте. Если нужные пути конфигурации недоступны, приложение будет вести
