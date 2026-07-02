@@ -12,8 +12,12 @@ interface WebSocketEx extends WebSocket {
   sourceId?: number;
 }
 
+const MINUTE = 60 * 1000;
+const REQUEST_TIMEOUT_MS = 30 * MINUTE;
+
 export const app = express();
 const server = createServer(app);
+server.requestTimeout = REQUEST_TIMEOUT_MS;
 export const wss = new WebSocketServer({ server });
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:server`);
