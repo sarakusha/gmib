@@ -13,7 +13,8 @@ interface WebSocketEx extends WebSocket {
 }
 
 const MINUTE = 60 * 1000;
-const REQUEST_TIMEOUT_MS = 30 * MINUTE;
+const HOUR = 60 * MINUTE;
+const REQUEST_TIMEOUT_MS = 6 * HOUR;
 
 export const app = express();
 const server = createServer(app);

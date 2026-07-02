@@ -9,8 +9,9 @@ import secret, { getIncomingSecret } from './secret';
 
 // const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:auth`);
 const MINUTE = 60 * 1000;
+const HOUR = 60 * MINUTE;
 const MAX_DIFFERENCE_IN_TIME = 5 * MINUTE;
-const MAX_MEDIA_UPLOAD_DIFFERENCE_IN_TIME = 6 * 60 * MINUTE;
+const MAX_MEDIA_UPLOAD_DIFFERENCE_IN_TIME = 6 * HOUR;
 
 const authorization = `Bearer ${secret.toString('base64')}`;
 
