@@ -20,7 +20,7 @@ import checkForUpdates from './updater';
 // import type { WindowParams } from './windowStore';
 import store, { findManagedWindow, getAllGmibParams, onWindowStoreChange } from './windowStore';
 import authRequest from './authRequest';
-import mdnsBrowser, { pickRemoteService } from './mdns';
+import { getRemoteHosts, onRemoteServicesChanged } from './mdns';
 import { createAppWindow, getMainWindow } from './mainWindow';
 import {
   activateNextTabbedWindow,
@@ -169,7 +169,7 @@ const remoteMenu = (params?: WindowParams): AppMenuItem | undefined => {
   const remotes = uniqBy(
     [
       getLocalRemote(),
-      ...mdnsBrowser.services.map(pickRemoteService).filter(notEmpty),
+      ...getRemoteHosts(),
       ...sortBy(localConfig.get('hosts'), ['name', 'address']),
     ],
     'address',
@@ -640,8 +640,7 @@ localConfig.onDidChange('autostart', (autostart = false) => {
 
 localConfig.onDidChange('hosts', updateMenu);
 localConfig.onDidChange('autostart', updateMenu);
-mdnsBrowser.on('up', updateMenu);
-mdnsBrowser.on('down', updateMenu);
+onRemoteServicesChanged(updateMenu);
 onTabbedWindowChange(updateMenu);
 onWindowStoreChange(updateMenu);
 
