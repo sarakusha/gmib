@@ -401,7 +401,7 @@ const ScreenComponent: React.FC<Props> = ({
                     </Select>
                   </FieldSet>
                   <FieldSet legend="Окно вывода" disabled={readonly}>
-                    <FormControlLabel
+                    {/* <FormControlLabel
                       control={
                         <Checkbox
                           checked={!!values.outputTransparent}
@@ -410,7 +410,7 @@ const ScreenComponent: React.FC<Props> = ({
                         />
                       }
                       label="Прозрачность"
-                    />
+                    /> */}
                     <Field
                       variant="standard"
                       name="zIndex"

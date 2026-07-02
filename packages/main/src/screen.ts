@@ -47,6 +47,7 @@ const toScreen = (result: NullableOptional): Omit<Screen, 'addresses'> => {
     rightToLeft: Boolean(flags & ScreenFlags.RightToLeft),
     useExternalKnob: Boolean(flags & ScreenFlags.UseKnob) && !brightnessFactor,
     outputTransparent: Boolean(flags & ScreenFlags.OutputTransparent),
+    brightnessFactor,
     ...props,
   };
 };
