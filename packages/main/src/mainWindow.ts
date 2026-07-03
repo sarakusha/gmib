@@ -8,7 +8,7 @@ import localConfig from './localConfig';
 import type { CloseEvent, ManagedWindow } from './managedWindow';
 import relaunch, { needRestart } from './relaunch';
 import { createTabbedWindow, getTabbedWindowItems } from './tabbedWindow';
-import store, { getAllGmibParams, getAllScreenParams, registerGmib } from './windowStore';
+import store, { getAllScreenParams, registerGmib } from './windowStore';
 
 import Deferred from '/@common/Deferred';
 import { isGmib, isPlayer } from '/@common/WindowParams';
@@ -127,8 +127,6 @@ export const createAppWindow = (
     if (isLocal) {
       getAllScreenParams().forEach(({ id }) => BrowserWindow.fromId(id)?.close());
       mainWindow = null;
-    } else if (getAllGmibParams().length - 1 === 1 && mainWindow && !mainWindow.isVisible()) {
-      setTimeout(() => mainWindow?.close(), 100);
     }
   });
   return browserWindow;
