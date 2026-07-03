@@ -569,6 +569,30 @@ pnpm exec commit-and-tag-version -r major
 Пуш в `main` запускает основной CI и `draft_release`, который собирает релизные артефакты для
 выбранной версии.
 
+## Перенос prerelease в main
+
+`git merge --ff-only prerelease` работает только когда текущий `main` является прямым предком
+`prerelease`. Если Git сообщает `Diverging branches can't be fast-forwarded`, значит в `main` и
+`prerelease` есть разные коммиты после общего предка. Такое может случиться, например, если похожее
+изменение было сделано в обеих ветках отдельными коммитами.
+
+Для опубликованной ветки `prerelease` предпочтительно не переписывать историю, а сделать обычный
+merge в `main`:
+
+```bash
+git switch main
+git fetch origin
+git merge --no-ff prerelease
+pnpm run test
+git push origin main
+```
+
+Перед merge полезно посмотреть различия:
+
+```bash
+git log --left-right --cherry-pick --oneline main...prerelease
+```
+
 > При запуске из изолированного окружения учитывайте, что GMIB проверяет конфигурационные файлы с
 > подписью активации при старте. Если нужные пути конфигурации недоступны, приложение будет вести
 > себя как неактивированное; такой запуск не является корректной проверкой лицензии.
