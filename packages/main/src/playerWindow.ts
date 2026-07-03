@@ -15,7 +15,6 @@ import relaunch, { needRestart } from './relaunch';
 import { getPlayer, getPlayers, isPlayerActive, updateShowPlayer } from './screen';
 import { createTabbedWindow } from './tabbedWindow';
 import {
-  findManagedWindow,
   findPlayerWindow,
   getAllGmibParams,
   registerPlayer,
@@ -64,6 +63,41 @@ const confirmClose = (hasVisibleParent?: boolean) =>
     title: 'Закрыть плеер',
     detail: 'В данный момент продолжается воспроизведение',
   });
+
+const confirmCloseRemoteOutput = (player?: Player) =>
+  dialog.showMessageBox({
+    message: 'Закрыть окно вывода удаленного плеера?',
+    type: 'question',
+    buttons: ['Закрыть вывод', 'Оставить'],
+    defaultId: 1,
+    cancelId: 1,
+    title: 'Закрыть вывод удаленного плеера',
+    detail: `Плеер ${player?.name ?? (player ? `player#${player.id}` : '')} остановлен.`,
+  });
+
+const isStopped = (player: Player): boolean => !player.autoPlay && !player.current;
+
+const closeRemoteOutputIfStopped = async (
+  playerId: number,
+  gmibParams: GmibWindowParams,
+): Promise<void> => {
+  const { host, nibusPort } = gmibParams;
+  const res = await authRequest({ host, port: nibusPort + 1, api: `/player/${playerId}` });
+  if (!res?.ok) return;
+
+  const remotePlayer = (await res.json()) as Player;
+  if (!isStopped(remotePlayer)) return;
+
+  const { response } = await confirmCloseRemoteOutput(remotePlayer);
+  if (response !== 0) return;
+
+  await authRequest({
+    api: `/player/${playerId}/output`,
+    host,
+    port: nibusPort + 1,
+    method: 'DELETE',
+  });
+};
 
 export const openPlayer = async (
   id: number,
@@ -124,6 +158,7 @@ export const openPlayer = async (
     // });
     // browserWindow.webContents.setLayoutZoomLevelLimits(0, 0);
     // browserWindow.show();
+    let remoteCloseInProgress = false;
     browserWindow.webContents.on('render-process-gone', (event, details) => {
       debug(`<<<<CRASH>>>> player process gone: ${details.reason} (${details.exitCode})`);
       if (
@@ -137,7 +172,22 @@ export const openPlayer = async (
     });
     browserWindow.on('close', event => {
       const closeEvent = event as CloseEvent;
-      if (!isRemote && !needRestart() && !isQuitting) {
+      if (isRemote && !isQuitting) {
+        if (remoteCloseInProgress) return;
+        remoteCloseInProgress = true;
+        closeEvent.preventDefault();
+        void closeRemoteOutputIfStopped(id, gmibParams)
+          .catch(err => {
+            debug(
+              `error while close remote player output: ${
+                err instanceof Error ? err.message : String(err)
+              }`,
+            );
+          })
+          .finally(() => {
+            browserWindow?.close();
+          });
+      } else if (!needRestart() && !isQuitting) {
         closeEvent.preventDefault();
         browserWindow?.hide();
         if (!localConfig.get('autostart')) {
@@ -149,11 +199,6 @@ export const openPlayer = async (
             isQuitting = true;
             browserWindow?.close();
           });
-        }
-      } else if (isRemote || !gmibParams.autostart) {
-        const parent = findManagedWindow(gmibParams.id);
-        if (parent && !parent.isVisible()) {
-          setTimeout(() => parent.close(), 100);
         }
       }
     });

@@ -48,6 +48,9 @@ const Player: React.FC<Props> = ({ className, playerId = 0 }) => {
   React.useEffect(() => {
     if (stopped) {
       dispatch(setPosition(0));
+      if (isRemoteSession) window.mediaStream.clearSrcObject?.('video#player');
+    } else if (isRemoteSession) {
+      window.mediaStream.updateSrcObject('video#player');
     }
   }, [dispatch, stopped]);
   // const isCaptureEngine = player?.playbackEngine === 'capture';

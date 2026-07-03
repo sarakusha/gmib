@@ -85,6 +85,12 @@ const getPlayerOutputWindows = (playerId?: number): BrowserWindow[] =>
     .filter(isVideoOutputWindow)
     .filter(window => playerId == null || getVideoOutputPlayer(window) === playerId);
 
+export const closePlayerOutputWindows = (playerId?: number): boolean => {
+  const outputs = getPlayerOutputWindows(playerId);
+  outputs.forEach(window => window.close());
+  return outputs.length > 0;
+};
+
 const broadcastOutputVisibility = (hidden: boolean): void => {
   const message = JSON.stringify({ event: 'outputVisibility', hidden });
   wss.clients.forEach(ws => {
