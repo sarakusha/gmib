@@ -86,6 +86,7 @@ import {
   updateSchedulerJob,
 } from './playerScheduler';
 import { getPlayerTitle } from './playerWindow';
+import { closePlayerOutputWindows } from './openHandler';
 import {
   deleteAllPlaylistItems,
   deletePlaylist,
@@ -906,6 +907,11 @@ api.put('/player/:id/stop', (req, res) => {
   const win = findPlayerWindow(+req.params.id);
   if (win) win.webContents.send('stop', +req.params.id);
   res.end();
+});
+
+api.delete('/player/:id/output', (req, res) => {
+  const closed = closePlayerOutputWindows(+req.params.id);
+  res.sendStatus(closed ? 204 : 404);
 });
 
 api.get('/handshake/:id', async (req, res) => {

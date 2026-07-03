@@ -1,4 +1,4 @@
-import type { BrowserWindowConstructorOptions, WebContents } from 'electron';
+import type { BrowserWindowConstructorOptions, Rectangle, WebContents } from 'electron';
 import { app, BrowserWindow, ipcMain } from 'electron';
 
 import type { Display as DisplayType } from '@nibus/core';
@@ -15,10 +15,21 @@ import { broadcastToTabbedWindows } from './tabbedWindow';
 
 type Handler = Parameters<WebContents['setWindowOpenHandler']>[0];
 type AlwaysOnTopLevel = Parameters<BrowserWindow['setAlwaysOnTop']>[1];
+type OutputWindowBounds = Pick<Rectangle, 'x' | 'y'> & Partial<Pick<Rectangle, 'width' | 'height'>>;
+type OutputWindowConfig = {
+  alwaysOnTop: boolean;
+  bounds: OutputWindowBounds;
+  isVideoOutput: boolean;
+  kiosk: boolean;
+  transparent: boolean;
+  useNativeKiosk: boolean;
+};
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:window`);
 const TOPMOST_LEVEL: AlwaysOnTopLevel = 'screen-saver';
+const OUTPUT_Z_ORDER_REFRESH_INTERVAL_MS = 30_000;
 
+const isWindows = process.platform === 'win32';
 const isMacOS = process.platform === 'darwin';
 
 const toNumber = <T extends number | undefined>(
@@ -74,6 +85,12 @@ const getPlayerOutputWindows = (playerId?: number): BrowserWindow[] =>
     .filter(isVideoOutputWindow)
     .filter(window => playerId == null || getVideoOutputPlayer(window) === playerId);
 
+export const closePlayerOutputWindows = (playerId?: number): boolean => {
+  const outputs = getPlayerOutputWindows(playerId);
+  outputs.forEach(window => window.close());
+  return outputs.length > 0;
+};
+
 const broadcastOutputVisibility = (hidden: boolean): void => {
   const message = JSON.stringify({ event: 'outputVisibility', hidden });
   wss.clients.forEach(ws => {
@@ -107,6 +124,65 @@ const shouldKeepOnTop = (url: string) => {
   } catch {
     return true;
   }
+};
+
+const hasCompleteBounds = (bounds: OutputWindowBounds): bounds is Rectangle =>
+  Number.isFinite(bounds.width) && Number.isFinite(bounds.height);
+
+const getOutputWindowConfig = (url: string): OutputWindowConfig | undefined => {
+  const parsedUrl = new URL(url);
+  const { searchParams } = parsedUrl;
+  if (!isOutputWindowUrl(url)) return undefined;
+
+  const displays = getAllDisplays();
+  const displayParam = searchParams.get('display');
+  const displayId = toNumber(displayParam);
+  const x = toNumber(searchParams.get('left'), 0);
+  const y = toNumber(searchParams.get('top'), 0);
+  const width = toNumber(searchParams.get('width'));
+  const height = toNumber(searchParams.get('height'));
+  const kiosk = !!toNumber(searchParams.get('kiosk'), 0);
+  const transparent = !!toNumber(searchParams.get('transparent'), 0);
+  const isVideoOutput = parsedUrl.pathname === '/output/index.html';
+  const alwaysOnTop = isVideoOutput || !!toNumber(searchParams.get('alwaysOnTop'), 1);
+  let display: DisplayType | undefined;
+  switch (displayId) {
+    case DefaultDisplays.Primary:
+      display = find(displays, { primary: true });
+      break;
+    case DefaultDisplays.Secondary:
+      display = find(displays, { primary: false });
+      break;
+    default:
+      if (Number.isInteger(displayId)) {
+        display = find(displays, { id: displayId });
+      }
+  }
+  if (!display) return undefined;
+
+  const useNativeKiosk = kiosk && !isMacOS;
+  const bounds = kiosk
+    ? {
+        x: display.bounds.x,
+        y: display.bounds.y,
+        width: display.bounds.width,
+        height: display.bounds.height,
+      }
+    : {
+        x: x + display.bounds.x,
+        y: y + display.bounds.y,
+        width,
+        height,
+      };
+
+  return {
+    alwaysOnTop,
+    bounds,
+    isVideoOutput,
+    kiosk,
+    transparent,
+    useNativeKiosk,
+  };
 };
 
 const getVideoOutputZIndex = (window: BrowserWindow): number => {
@@ -153,6 +229,25 @@ export const arrangeOutputWindows = (): void => {
     });
 };
 
+const refreshOutputWindowsZOrder = (): void => {
+  getOutputWindows()
+    .filter(window => !window.isDestroyed() && window.isVisible())
+    .forEach(window => {
+      if (shouldKeepOnTop(window.webContents.getURL())) {
+        window.setAlwaysOnTop(true, TOPMOST_LEVEL);
+      }
+    });
+  arrangeOutputWindows();
+};
+
+if (isWindows) {
+  const outputZOrderRefreshTimer = setInterval(
+    refreshOutputWindowsZOrder,
+    OUTPUT_Z_ORDER_REFRESH_INTERVAL_MS,
+  );
+  outputZOrderRefreshTimer.unref();
+}
+
 const scheduleArrangeVideoOutputWindows = (): void => {
   setTimeout(arrangeOutputWindows, 0);
 };
@@ -160,7 +255,7 @@ const scheduleArrangeVideoOutputWindows = (): void => {
 const interactiveConfigured = new WeakSet<BrowserWindow>();
 
 export const configureOutputWindowInteractivity = (window: BrowserWindow): void => {
-  window.setIgnoreMouseEvents(true, { forward: true });
+  window.setIgnoreMouseEvents(false);
   if (interactiveConfigured.has(window)) return;
   interactiveConfigured.add(window);
   window.on('focus', scheduleArrangeVideoOutputWindows);
@@ -168,7 +263,9 @@ export const configureOutputWindowInteractivity = (window: BrowserWindow): void 
 
 export const configureOutputWindow = (window: BrowserWindow, url: string): void => {
   if (!isOutputWindowUrl(url)) return;
-  const isVideoOutput = isVideoOutputWindowUrl(url);
+  const config = getOutputWindowConfig(url);
+  if (!config) return;
+  const { bounds, isVideoOutput, useNativeKiosk } = config;
 
   const keepOnTop = () => {
     if (window.isDestroyed()) return;
@@ -180,6 +277,14 @@ export const configureOutputWindow = (window: BrowserWindow, url: string): void 
   window.setParentWindow(null);
   configureOutputWindowInteractivity(window);
   if (isMacOS) window.setFullScreenable(false);
+  if (useNativeKiosk) {
+    window.setFocusable(true);
+    window.setBounds(bounds, false);
+    window.setFullScreen(true);
+    window.setKiosk(true);
+  } else if (hasCompleteBounds(bounds)) {
+    window.setContentBounds(bounds, false);
+  }
   if (isVideoOutput) {
     window.webContents.once('did-finish-load', () => {
       window.webContents.insertCSS(hideCursorCSS).catch(err => {
@@ -253,61 +358,24 @@ export const installWindowOpenHandler = (contents: WebContents): void => {
 };
 
 const openHandler: Handler = ({ url }) => {
-  const parsedUrl = new URL(url);
-  const { searchParams } = parsedUrl;
   // if (pathname !== '/output/index.html') return { action: 'deny' };
-  const displays = getAllDisplays();
   // debug(`OPEN-HANDLER: ${JSON.stringify({ url, displays })}`);
   // console.log({ displays });
-  const displayParam = searchParams.get('display');
-  const displayId = toNumber(displayParam);
-  const x = toNumber(searchParams.get('left'), 0);
-  const y = toNumber(searchParams.get('top'), 0);
-  const width = toNumber(searchParams.get('width'));
-  const height = toNumber(searchParams.get('height'));
-  const kiosk = !!toNumber(searchParams.get('kiosk'), 0);
-  const transparent = !!toNumber(searchParams.get('transparent'), 0);
-  const isVideoOutput = parsedUrl.pathname === '/output/index.html';
-  const alwaysOnTop = isVideoOutput || !!toNumber(searchParams.get('alwaysOnTop'), 1);
-  let display: DisplayType | undefined;
-  switch (displayId) {
-    case DefaultDisplays.Primary:
-      display = find(displays, { primary: true });
-      break;
-    case DefaultDisplays.Secondary:
-      display = find(displays, { primary: false });
-      break;
-    default:
-      if (Number.isInteger(displayId)) {
-        display = find(displays, { id: displayId });
-      }
-  }
-  if (!display) {
+  const config = getOutputWindowConfig(url);
+  if (!config) {
     debug(`${url} open denied`);
     return { action: 'deny' };
   }
-  const useNativeKiosk = kiosk && !isMacOS;
-  const windowBounds = kiosk
-    ? {
-        x: display.bounds.x,
-        y: display.bounds.y,
-        width: display.bounds.width,
-        height: display.bounds.height,
-      }
-    : {
-        x: x + display.bounds.x,
-        y: y + display.bounds.y,
-        width,
-        height,
-      };
+  const { alwaysOnTop, bounds, isVideoOutput, transparent, useNativeKiosk } = config;
   const overrideBrowserWindowOptions: BrowserWindowConstructorOptions = {
-    ...windowBounds,
+    ...bounds,
     frame: false,
+    useContentSize: !useNativeKiosk,
     backgroundColor: transparent ? undefined : '#000',
-    focusable: isMacOS && isVideoOutput,
-    // fullscreen: kiosk,
+    focusable: useNativeKiosk || (isMacOS && isVideoOutput),
+    fullscreen: useNativeKiosk,
     // simpleFullscreen: true,
-    fullscreenable: false,
+    fullscreenable: useNativeKiosk,
     kiosk: useNativeKiosk,
     transparent,
     show: false,
@@ -315,6 +383,7 @@ const openHandler: Handler = ({ url }) => {
     skipTaskbar: true,
     hasShadow: false,
     roundedCorners: false,
+    ...(isWindows && { thickFrame: false }),
     resizable: false,
     movable: false,
     minimizable: false,

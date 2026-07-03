@@ -4,6 +4,7 @@ assets
 resources
 build
 *.mdx
+README.md
 node_modules
 .pnpm-store
 .mypy_cache

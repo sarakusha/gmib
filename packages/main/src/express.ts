@@ -39,6 +39,12 @@ app.use(
 app.use(cors({ origin: '*', exposedHeaders: ['x-ni-identifier', 'x-from'] }));
 !isDevRuntime && app.use(preventLoadSourceMap);
 
+app.use((_, res, next) => {
+  const locals = res.locals as { receivedAt?: number };
+  locals.receivedAt = Date.now();
+  next();
+});
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 

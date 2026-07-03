@@ -19,16 +19,25 @@ let videoSelector: string;
 
 const updateSrcObject = (selector: string) => {
   videoSelector = selector;
-  const video = document.querySelector(selector) as HTMLVideoElement;
+  const video = document.querySelector<HTMLVideoElement>(selector);
   if (video)
     void deferred.promise.then(stream => {
       video.srcObject = stream;
     });
 };
 
+const clearSrcObject = (selector = videoSelector) => {
+  const video = document.querySelector<HTMLVideoElement>(selector);
+  if (!video) return;
+  video.pause();
+  video.srcObject = null;
+  video.removeAttribute('src');
+  video.load();
+};
+
 contextBridge.exposeInMainWorld('log', log.log.bind(log));
 contextBridge.exposeInMainWorld('setDispatch', setDispatch);
-contextBridge.exposeInMainWorld('mediaStream', { updateSrcObject });
+contextBridge.exposeInMainWorld('mediaStream', { clearSrcObject, updateSrcObject });
 // contextBridge.exposeInMainWorld('server', {
 //   host,
 //   port,

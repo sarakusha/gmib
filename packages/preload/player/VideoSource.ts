@@ -33,6 +33,8 @@ type DecoderMessage = {
   };
 };
 
+const shouldLogDecoderDebug = (message: string): boolean => /(?:error|warn|fail)/i.test(message);
+
 export default class VideoSource {
   #closed = false;
 
@@ -140,7 +142,7 @@ export default class VideoSource {
       const payload: unknown = ev.data;
       if (!payload || typeof payload !== 'object') return;
       const data = payload as DecoderMessage;
-      if (data.debug) debug(`${sourceLabel}: ${data.debug}`);
+      if (data.debug && shouldLogDecoderDebug(data.debug)) debug(`${sourceLabel}: ${data.debug}`);
       if (data.frame) {
         if (streamController && !this.#closed && (streamController.desiredSize ?? 0) > 0) {
           streamController.enqueue(data.frame);
