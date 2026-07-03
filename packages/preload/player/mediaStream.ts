@@ -707,6 +707,8 @@ const trackKinds = ['video', 'audio'] as const;
 type TrackKind = (typeof trackKinds)[number];
 
 const peers = new Map<string, PeerEntry>();
+const PREVIEW_MAX_BITRATE = 1_500_000;
+const PREVIEW_MAX_FRAMERATE = 15;
 
 const replacePeerTracks = (): void => {
   peers.forEach(({ senders }) => {
@@ -730,9 +732,11 @@ const addTrackSender = (pc: RTCPeerConnection, kind: TrackKind): RTCRtpSender =>
     const params = sender.getParameters();
     if (!params.encodings || params.encodings.length === 0) setTimeout(updateParams, 10);
     else {
-      // params.encodings[0].maxBitrate = 128000;
-      // params.encodings[0].maxFramerate = 1;
-      void sender.setParameters(params);
+      params.encodings[0].maxBitrate = PREVIEW_MAX_BITRATE;
+      if (kind === 'video') params.encodings[0].maxFramerate = PREVIEW_MAX_FRAMERATE;
+      void sender.setParameters(params).catch(err => {
+        debug(`error while setting ${kind} preview encoding params: ${(err as Error).message}`);
+      });
     }
   };
   updateParams();
@@ -746,6 +750,15 @@ ipcRenderer.on('socket', (_, { id, ...msg }: WithWebSocketKey<RtcMessage>) => {
     switch (msg.event) {
       case 'request':
         try {
+          const prev = peers.get(id);
+          if (
+            prev &&
+            !['closed', 'disconnected', 'failed'].includes(prev.pc.connectionState)
+          ) {
+            return;
+          }
+          prev?.pc.close();
+
           const pc = new RTCPeerConnection();
           const entry: PeerEntry = { pc, senders: new Map() };
           peers.set(id, entry);
@@ -753,8 +766,9 @@ ipcRenderer.on('socket', (_, { id, ...msg }: WithWebSocketKey<RtcMessage>) => {
 
           pc.onconnectionstatechange = () => {
             // debug(`peer ${id} connection state: ${pc.connectionState}`);
-            if (['closed', 'failed'].includes(pc.connectionState)) {
+            if (['closed', 'disconnected', 'failed'].includes(pc.connectionState)) {
               peers.delete(id);
+              pc.close();
               // debug(`delete peer: ${id}`);
             }
           };
