@@ -249,7 +249,7 @@ const scheduleArrangeVideoOutputWindows = (): void => {
 const interactiveConfigured = new WeakSet<BrowserWindow>();
 
 export const configureOutputWindowInteractivity = (window: BrowserWindow): void => {
-  window.setIgnoreMouseEvents(true, { forward: true });
+  window.setIgnoreMouseEvents(false);
   if (interactiveConfigured.has(window)) return;
   interactiveConfigured.add(window);
   window.on('focus', scheduleArrangeVideoOutputWindows);
