@@ -68,7 +68,9 @@ export const update = async () => {
   const mappings: PlayerMapping[] = await ipcRenderer.invoke('getPlayerMappings', sourceId);
   const ids = mappings.map(({ id }) => id);
   [...videoOuts].forEach(([id, entry]) => {
-    if (!ids.includes(id)) {
+    if (entry.window.closed) {
+      videoOuts.delete(id);
+    } else if (!ids.includes(id)) {
       entry.window.close();
       videoOuts.delete(id);
     }

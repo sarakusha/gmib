@@ -213,6 +213,7 @@ export const openPlayer = async (
       }
     });
     browserWindow.on('show', () => {
+      browserWindow?.webContents.send('updateVideoOuts');
       void updateShowPlayer(id);
     });
     if (!hidden)
@@ -223,6 +224,7 @@ export const openPlayer = async (
   } else {
     browserWindow.show();
     browserWindow.focus();
+    browserWindow.webContents.send('updateVideoOuts');
   }
   return browserWindow;
 };
