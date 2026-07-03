@@ -555,8 +555,25 @@ GitHub prerelease и проверьте поведение на Windows. Есл�
 git switch main
 git pull --ff-only origin main
 git merge --ff-only prerelease
+for tag in $(git tag -l 'v*-alpha*'); do git tag -d "$tag"; done
 pnpm run version:patch
 git push --follow-tags origin main
+```
+
+Локальные prerelease-теги вида `v5.1.0-alpha...` нужно удалить перед запуском
+`commit-and-tag-version`: иначе генератор changelog возьмет последний alpha-тег как предыдущую
+версию и не включит более ранние коммиты из `prerelease` в обычный релиз. Удаление локальных
+alpha-тегов не удаляет опубликованные GitHub prerelease.
+
+Если `version:patch` уже был выполнен до удаления alpha-тегов, а release commit и тег еще не
+запушены, пересоздайте release commit:
+
+```bash
+VERSION="$(node -p "require('./package.json').version")"
+git tag -d "v${VERSION}"
+git reset --hard HEAD~1
+for tag in $(git tag -l 'v*-alpha*'); do git tag -d "$tag"; done
+pnpm run version:patch
 ```
 
 Для minor/major релиза используйте соответствующий режим `commit-and-tag-version`, например:
