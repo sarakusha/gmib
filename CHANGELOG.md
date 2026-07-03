@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [5.1.1](https://github.com/sarakusha/gmib/compare/v5.1.0...v5.1.1) (2026-07-03)
+
+
+### Bug Fixes
+
+* allow long remote media uploads ([86337c2](https://github.com/sarakusha/gmib/commit/86337c2d4b5b870f432a5823f18727a9f397873f))
+* allow six hour media uploads ([c54ff09](https://github.com/sarakusha/gmib/commit/c54ff0984bde52a7fa789aa61fd158b9f1fabbb9))
+* correct Windows player output fullscreen sizing ([5307795](https://github.com/sarakusha/gmib/commit/5307795aa77df0458cc8f3e444aab3ae5bac1646))
+* detect stopped remote player from tab state ([422ba40](https://github.com/sarakusha/gmib/commit/422ba405becf5c6f18d71a3ed7b6282e10af0765))
+* extend HTTP request timeout for media uploads ([b54efbc](https://github.com/sarakusha/gmib/commit/b54efbc7331c327d7e6048b4a4f01175561a1529))
+* gate remote output close by capability ([2dd5547](https://github.com/sarakusha/gmib/commit/2dd55471e4ce48acf591ecdaf87a5c0c5f3de6b8))
+* handle stopped remote player close ([c80aa6f](https://github.com/sarakusha/gmib/commit/c80aa6fd30d2beb82ccab31e0af4565f615fce27))
+* keep app open while tabs remain ([a94b312](https://github.com/sarakusha/gmib/commit/a94b3122c57bb7c21e14d91a9703694dbc88674c))
+* keep player output cursor hidden ([09e6806](https://github.com/sarakusha/gmib/commit/09e680672df1b2141b4aa9a3ed8ac9af0555bf22))
+* let output windows hide cursor ([2d46a81](https://github.com/sarakusha/gmib/commit/2d46a8183ef50d3441ee28c50122170b8e9b08b3))
+* reduce decoder log noise ([f399bae](https://github.com/sarakusha/gmib/commit/f399bae281d9828fca1c3e3ec15ca7b8cb1002cf))
+* refresh output window z-order on Windows ([0835ae1](https://github.com/sarakusha/gmib/commit/0835ae1f688335520119af4f1d4241e296dde4f5))
+* reopen player output after external close ([b79b3e9](https://github.com/sarakusha/gmib/commit/b79b3e9949d36f5cfcadc6450821182bc8d29e5b))
+* sign remote media uploads without multipart body ([b8b3b62](https://github.com/sarakusha/gmib/commit/b8b3b62f0be517335ba09e396a63c513b35a151f))
+
 ## [5.1.0](https://github.com/sarakusha/gmib/compare/v5.0.0...v5.1.0) (2026-07-02)
 
 
