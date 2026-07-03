@@ -15,11 +15,7 @@ import { installWindowOpenHandler } from './openHandler';
 import relaunch, { needRestart } from './relaunch';
 import { getPlayer, getPlayers, isPlayerActive, updateShowPlayer } from './screen';
 import { createTabbedWindow } from './tabbedWindow';
-import {
-  findPlayerWindow,
-  getAllGmibParams,
-  registerPlayer,
-} from './windowStore';
+import { findPlayerWindow, getAllGmibParams, registerPlayer } from './windowStore';
 
 import type { GmibWindowParams } from '/@common/WindowParams';
 
