@@ -76,20 +76,29 @@ const confirmCloseRemoteOutput = (player?: Player) =>
     detail: `Плеер ${player?.name ?? (player ? `player#${player.id}` : '')} остановлен.`,
   });
 
-const isStopped = (player: Player): boolean => !player.autoPlay && !player.current;
+const getPlaybackState = async (
+  browserWindow: ManagedWindow,
+): Promise<MediaSessionPlaybackState | undefined> => {
+  const state = (await browserWindow.webContents.executeJavaScript(
+    'navigator.mediaSession?.playbackState',
+    true,
+  )) as unknown;
+  return typeof state === 'string' ? (state as MediaSessionPlaybackState) : undefined;
+};
 
 const closeRemoteOutputIfStopped = async (
+  browserWindow: ManagedWindow,
   playerId: number,
   gmibParams: GmibWindowParams,
 ): Promise<void> => {
   const { host, nibusPort } = gmibParams;
   if (!supportsFeature('remotePlayerOutputClose', gmibParams.info?.version, true)) return;
 
-  const res = await authRequest({ host, port: nibusPort + 1, api: `/player/${playerId}` });
-  if (!res?.ok) return;
+  const playbackState = await getPlaybackState(browserWindow);
+  if (playbackState !== 'none') return;
 
-  const remotePlayer = (await res.json()) as Player;
-  if (!isStopped(remotePlayer)) return;
+  const res = await authRequest({ host, port: nibusPort + 1, api: `/player/${playerId}` });
+  const remotePlayer = res?.ok ? ((await res.json()) as Player) : undefined;
 
   const { response } = await confirmCloseRemoteOutput(remotePlayer);
   if (response !== 0) return;
@@ -179,7 +188,9 @@ export const openPlayer = async (
         if (remoteCloseInProgress) return;
         remoteCloseInProgress = true;
         closeEvent.preventDefault();
-        void closeRemoteOutputIfStopped(id, gmibParams)
+        const currentWindow = browserWindow;
+        if (!currentWindow) return;
+        void closeRemoteOutputIfStopped(currentWindow, id, gmibParams)
           .catch(err => {
             debug(
               `error while close remote player output: ${
