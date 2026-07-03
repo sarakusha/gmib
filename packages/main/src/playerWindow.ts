@@ -3,6 +3,7 @@ import path from 'path';
 
 import debugFactory from 'debug';
 
+import { supportsFeature } from '/@common/capabilities';
 import type { Player } from '/@common/video';
 
 import authRequest from './authRequest';
@@ -82,6 +83,8 @@ const closeRemoteOutputIfStopped = async (
   gmibParams: GmibWindowParams,
 ): Promise<void> => {
   const { host, nibusPort } = gmibParams;
+  if (!supportsFeature('remotePlayerOutputClose', gmibParams.info?.version, true)) return;
+
   const res = await authRequest({ host, port: nibusPort + 1, api: `/player/${playerId}` });
   if (!res?.ok) return;
 
