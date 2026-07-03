@@ -8,23 +8,15 @@ const top = +search.get('top');
 const kiosk = !!+search.get('kiosk');
 const objectFit = search.get('objectFit');
 const shader = search.get('shader')?.trim();
-const HIDE_CURSOR_DELAY = 1000;
 const allowedObjectFits = new Set(['fill', 'contain', 'cover', 'none', 'scale-down']);
 
 // document.body.requestPointerLock();
 
 let port;
-let cursorTimer = 0;
 let shaderRenderer;
 
 const hideCursor = () => {
   document.documentElement.classList.add('cursor-hidden');
-};
-
-const showCursor = () => {
-  document.documentElement.classList.remove('cursor-hidden');
-  clearTimeout(cursorTimer);
-  cursorTimer = window.setTimeout(hideCursor, HIDE_CURSOR_DELAY);
 };
 
 const getOutputBounds = () => ({
@@ -262,9 +254,9 @@ window.onmessage = ev => {
 };
 
 window.onload = () => {
-  document.addEventListener('mousemove', showCursor);
+  document.addEventListener('mousemove', hideCursor);
   document.addEventListener('mouseleave', hideCursor);
-  showCursor();
+  hideCursor();
 
   const videoElement = document.querySelector('video');
   if (videoElement) {
