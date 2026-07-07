@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [5.1.2](https://github.com/sarakusha/gmib/compare/v5.1.1...v5.1.2) (2026-07-07)
+
+
+### Bug Fixes
+
+* build linux x64 release on Ubuntu 22.04 ([f8c1457](https://github.com/sarakusha/gmib/commit/f8c145780fe95fb0f28146a61dbc8c52cb13e624))
+
 ## [5.1.1](https://github.com/sarakusha/gmib/compare/v5.1.0...v5.1.1) (2026-07-03)
 
 
