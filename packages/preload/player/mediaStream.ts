@@ -751,10 +751,7 @@ ipcRenderer.on('socket', (_, { id, ...msg }: WithWebSocketKey<RtcMessage>) => {
       case 'request':
         try {
           const prev = peers.get(id);
-          if (
-            prev &&
-            !['closed', 'disconnected', 'failed'].includes(prev.pc.connectionState)
-          ) {
+          if (prev && !['closed', 'disconnected', 'failed'].includes(prev.pc.connectionState)) {
             return;
           }
           prev?.pc.close();

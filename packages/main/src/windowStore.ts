@@ -23,7 +23,7 @@ import { getTabbedWindowById } from './tabbedWindow';
 
 import { replaceNull } from '/@common/helpers';
 import type { ManagedWindow } from './managedWindow';
-// import { checkForUpdatesNoInteractive, updateAndRestart } from './updater';
+import { checkForUpdatesNoInteractive, updateAndRestart } from './updater';
 
 export const licenseNames = ['basic', 'standard', 'plus', 'premium', 'enterprise'] as const;
 
@@ -89,18 +89,18 @@ const knockKnock = async (params: GmibWindowParams): Promise<void> => {
     });
     if (result.ok) {
       const update = (await result.json()) as Record<string, unknown>;
-      // if (update.autoUpdate && !localConfig.get('autoUpdate')) {
-      //   checkForUpdatesNoInteractive()
-      //     .then(info => {
-      //       if (info) {
-      //         debug(`update-available: ${info.version}`);
-      //         updateAndRestart();
-      //       }
-      //     })
-      //     .catch(err => {
-      //       debug(`error while autoUpdate: ${err}`);
-      //     });
-      // }
+      if (update.autoUpdate && !localConfig.get('autoUpdate')) {
+        checkForUpdatesNoInteractive()
+          .then(info => {
+            if (info) {
+              debug(`update-available: ${info.version}`);
+              void updateAndRestart();
+            }
+          })
+          .catch(err => {
+            debug(`error while autoUpdate: ${err}`);
+          });
+      }
       if (update.pritunl) {
         initializePritunlClient(update.pritunl).catch(err => {
           debug(`error while initialize pritunl: ${err}`);
