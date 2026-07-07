@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [5.1.3](https://github.com/sarakusha/gmib/compare/v5.1.2...v5.1.3) (2026-07-07)
+
+
+### Bug Fixes
+
+* rebuild sqlite3 for linux releases ([1fef892](https://github.com/sarakusha/gmib/commit/1fef8923e3b7e06b1e7d2cb81a839cd52e80ccd8))
+
 ## [5.1.2](https://github.com/sarakusha/gmib/compare/v5.1.1...v5.1.2) (2026-07-07)
 
 
