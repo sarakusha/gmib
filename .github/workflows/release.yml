@@ -279,11 +279,13 @@ jobs:
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
 
-      - name: Rebuild sqlite3 from source for Linux
+      - name: Build sqlite3 from source for Linux
         if:
           ${{ steps.platform_check.outputs.selected == 'true' && matrix.platform == 'linux' &&
           steps.release_check.outputs.skip_build != 'true' }}
-        run: pnpm rebuild sqlite3
+        run: |
+          rm -f node_modules/sqlite3/build/Release/node_sqlite3.node
+          pnpm exec node-gyp rebuild --directory node_modules/sqlite3
         env:
           npm_config_build_from_source: true
 
