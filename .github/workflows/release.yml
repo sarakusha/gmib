@@ -122,7 +122,7 @@ jobs:
               - --arm64
           - platform: linux
             arch: x64
-            os: ubuntu-24.04
+            os: ubuntu-22.04
             builder_config: .electron-builder-light.config.js
             target_args:
               - -l
