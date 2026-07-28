@@ -147,6 +147,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
 
   private openHandler = (address: string) => {
     const session = net.sessions[address];
+    debug(`open ${address}, session: ${session ? 'found' : 'missing'}`);
     if (!session) return;
     if (this.novastarControls.has(address)) {
       this.emit('change', address, { connected: true });
@@ -160,6 +161,20 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
       }, 30000).unref();
     }
   };
+
+  private openNetDevice(address: string): void {
+    const session = net.open(address);
+    const fullAddress = address.includes(':') ? address : `${address}:5200`;
+    let handled = false;
+    const handleOpen = () => {
+      if (handled) return;
+      handled = true;
+      session.connection.off('open', handleOpen);
+      this.openHandler(fullAddress);
+    };
+    session.connection.once('open', handleOpen);
+    setTimeout(handleOpen, 1000).unref();
+  }
 
   private disconnectHandler = (address: string) => {
     this.emit('change', address, { connected: false });
@@ -353,7 +368,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
         ).filter(address => reIPv4.test(address));
         hardAddresses.forEach(address => {
           if (!this.novastarControls.has(`${address}:5200`)) {
-            net.open(address);
+            this.openNetDevice(address);
           }
         });
         const addresses = await findNetDevices(dest);
@@ -361,7 +376,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
         this.openBroadcastDetector();
         addresses.forEach(address => {
           if (!this.novastarControls.has(address) && !hardAddresses.includes(address)) {
-            net.open(address);
+            this.openNetDevice(address);
           }
         });
       } finally {
@@ -393,10 +408,22 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
     return true;
   }
 
-  getAll = (): Promise<Novastar[]> =>
-    Promise.all(
-      [...this.novastarControls.keys()].map(address => this.getNovastar(address, true)),
-    ).then(results => results.filter(notEmpty));
+  getAll = (): Promise<Novastar[]> => {
+    debug(`getAll: ${[...this.novastarControls.keys()].join(', ')}`);
+    return Promise.all(
+      [...this.novastarControls.entries()].map(async ([address, controller]) => {
+        const novastar = await this.getNovastar(address, true);
+        return (
+          novastar ?? {
+            path: address,
+            isBusy: controller.isBusy,
+            connected: true,
+            isSerial: controller.isSerial,
+          }
+        );
+      }),
+    );
+  };
 
   /**
    * Connect to shared serial connection

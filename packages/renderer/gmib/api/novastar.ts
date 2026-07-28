@@ -8,7 +8,7 @@ import type { CabinetInfo } from '/@common/helpers';
 import { NovastarSelector } from '/@common/helpers';
 import { host, port } from '/@common/remote';
 
-import type { SetStateAction } from 'react';
+import { type SetStateAction, useEffect, useState } from 'react';
 
 import baseQuery from '../../common/authBaseQuery';
 import createDebouncedAsyncThunk from '../../common/createDebouncedAsyncThunk';
@@ -30,11 +30,28 @@ let novastarEnabled = false;
 
 export const hasNovastar = () => novastarEnabled;
 
-void window.initializeNovastar().then(value => {
+const initializeNovastar = window.initializeNovastar().then(value => {
   if (value !== novastarEnabled) {
     novastarEnabled = value;
   }
+  return value;
 });
+
+const useNovastarEnabled = (): boolean => {
+  const [enabled, setEnabled] = useState(novastarEnabled);
+
+  useEffect(() => {
+    let active = true;
+    void initializeNovastar.then(value => {
+      if (active) setEnabled(value);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  return enabled;
+};
 
 // window.config.get('announce').then(announce => {
 //   console.log('ANNOUNCE', announce);
@@ -184,32 +201,38 @@ export const updateNovastarScreens = <K extends keyof Screen, S extends number>(
   };
 };
 
-export const useNovastarIds = () =>
-  novastarApi.useGetNovastarsQuery(undefined, {
-    skip: !novastarEnabled,
+export const useNovastarIds = () => {
+  const enabled = useNovastarEnabled();
+  return novastarApi.useGetNovastarsQuery(undefined, {
+    skip: !enabled,
     selectFromResult: ({ data, ...other }) => ({
       ids: data && selectNovastarIds(data),
       ...other,
     }),
   });
+};
 
-export const useNovastars = () =>
-  novastarApi.useGetNovastarsQuery(undefined, {
-    skip: !novastarEnabled,
+export const useNovastars = () => {
+  const enabled = useNovastarEnabled();
+  return novastarApi.useGetNovastarsQuery(undefined, {
+    skip: !enabled,
     selectFromResult: ({ data, ...other }) => ({
       novastars: data && selectNovastars(data),
       ...other,
     }),
   });
+};
 
-export const useNovastar = (path?: string) =>
-  novastarApi.useGetNovastarsQuery(undefined, {
+export const useNovastar = (path?: string) => {
+  const enabled = useNovastarEnabled();
+  return novastarApi.useGetNovastarsQuery(undefined, {
     selectFromResult: ({ data, ...other }) => ({
       novastar: data && path ? selectNovastar(data, path) : undefined,
       ...other,
     }),
-    skip: !path || !novastarEnabled,
+    skip: !path || !enabled,
   });
+};
 
 export const { useReloadMutation, useStartTelemetryMutation, useCancelTelemetryMutation } =
   novastarApi;

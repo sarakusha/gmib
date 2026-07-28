@@ -112,6 +112,7 @@ const tryCreateMasterBrowser = () => {
     .then(() => {
       const strongest = selectStrongest(browser.services);
       if (strongest && getRemoteRank(strongest) > rank) {
+        debug(`select proxy master ${strongest.referer.address}:${strongest.port}`);
         void service.end();
 
         rememberRemoteGmib(strongest);
@@ -120,7 +121,7 @@ const tryCreateMasterBrowser = () => {
         void master.close();
         // debug(`close MBR: ${rank}`);
       } else {
-        // debug(`MBR ${rank}`);
+        debug(`select local master ${rank}`);
         isMaster = true;
         try {
           master.open();
@@ -214,7 +215,7 @@ const createProxy = (remote: bonjourHap.RemoteService) => {
 
 browser.on('up', remote => {
   void (async () => {
-    // debug(`UP ${remote.referer.address}`);
+    debug(`master service up ${remote.referer.address}:${remote.port}`);
     rememberRemoteGmib(remote);
     void waitWebContents().then(webContents =>
       setTimeout(() => webContents.send('reloadDevices'), 1000).unref(),
@@ -234,6 +235,7 @@ browser.on('up', remote => {
 });
 
 browser.on('down', remote => {
+  debug(`master service down ${remote.referer.address}:${remote.port}`);
   forgetRemoteGmib(remote);
   if (isMaster) return;
 

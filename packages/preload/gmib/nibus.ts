@@ -96,7 +96,7 @@ session.on('log', line => {
 
 const addForeign = new Promise<boolean>(resolve => {
   ipcRenderer.once('gmib-params', (_, params: GmibWindowParams) => {
-    resolve(Boolean(params.useProxy));
+    resolve(Boolean(Reflect.get(params, import.meta.env.VITE_ANNOUNCE_NOVASTAR)));
   });
 });
 

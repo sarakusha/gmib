@@ -136,7 +136,6 @@ import {
   findScreenWindow,
   getAllScreenParams,
 } from './windowStore';
-import './novastarApi';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:api`);
 
@@ -312,7 +311,11 @@ if (!localConfig.get('unsafeMode')) {
 }
 
 void getAnnounce().then(announce => {
-  if (announce && typeof announce === 'object' && 'useProxy' in announce) {
+  if (
+    announce &&
+    typeof announce === 'object' &&
+    Boolean(announce[import.meta.env.VITE_ANNOUNCE_NOVASTAR])
+  ) {
     api.use(proxyMiddleware);
     void import(import.meta.env.VITE_ANNOUNCE_PROXY).then(({ default: API }) => {
       api.use(import.meta.env.VITE_ANNOUNCE_PATH, API);

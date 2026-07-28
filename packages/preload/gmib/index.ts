@@ -120,7 +120,10 @@ ipcRenderer
 
 contextBridge.exposeInMainWorld(
   'initializeNovastar',
-  (): Promise<boolean> => gmibParams.then(({ useProxy }) => Boolean(useProxy)),
+  (): Promise<boolean> =>
+    gmibParams.then(params =>
+      Boolean(Reflect.get(params, import.meta.env.VITE_ANNOUNCE_NOVASTAR)),
+    ),
 );
 
 contextBridge.exposeInMainWorld('mediaSource', expandTypes(mediaSource));

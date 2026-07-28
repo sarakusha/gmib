@@ -106,7 +106,6 @@ const close = () => {
   events.forEach(event => master.off(event, makeHandler.cache.get(event)));
 };
 
-master.on('close', close);
 app.once('will-quit', close);
 
 wss.once('close', () => {

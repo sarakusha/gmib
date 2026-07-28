@@ -42,7 +42,6 @@ export type GmibWindowParams = CommonWindowParams & {
   plan?: string;
   renew?: string;
   key?: string;
-  useProxy?: boolean;
   info?: Partial<Host>;
   machineId?: string;
   autostart?: boolean;
