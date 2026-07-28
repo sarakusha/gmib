@@ -10,6 +10,7 @@ overrides:
   # "@nibus/detection": file:.yalc/@nibus/detection
   # '@nibus/mibs': file:.yalc/@nibus/mibs
   # "@nibus/service": file:.yalc/@nibus/service
+  # "@novastar/screen": file:.yalc/@novastar/screen
   # "@sarakusha/material-ui-chip-input": "file:.yalc/@sarakusha/material-ui-chip-input"
 
 peerDependencyRules:
@@ -43,3 +44,4 @@ minimumReleaseAgeExclude:
   - "@nibus/*"
   - "@sarakusha/ebml@0.0.8"
   - "@sarakusha/material-ui-chip-input"
+  - "@novastar/screen"
