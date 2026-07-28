@@ -13,10 +13,9 @@ debugFactory.log = log.log.bind(log);
 
 const updateDebugger = () => {
   const logLevel = config.get('logLevel');
-  const ns =
-    import.meta.env.VITE_DEBUG && logLevel === 'none'
-      ? `${import.meta.env.VITE_DEBUG},-novastar:encoder,-novastar:decoder`
-      : import.meta.env.VITE_DEBUG;
+  const exclusions = ['-novastar:net'];
+  if (logLevel === 'none') exclusions.push('-novastar:encoder', '-novastar:decoder');
+  const ns = import.meta.env.VITE_DEBUG && `${import.meta.env.VITE_DEBUG},${exclusions.join(',')}`;
   if (ns) {
     debugFactory.enable(ns);
   }

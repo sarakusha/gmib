@@ -176,6 +176,11 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
     setTimeout(handleOpen, 1000).unref();
   }
 
+  private hasNetDevice(address: string): boolean {
+    const fullAddress = address.includes(':') ? address : `${address}:5200`;
+    return this.novastarControls.has(fullAddress) || net.sessions[fullAddress] != null;
+  }
+
   private disconnectHandler = (address: string) => {
     this.emit('change', address, { connected: false });
   };
@@ -367,7 +372,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
           await asyncSerial(screens, screen => getAddressesForScreen(screen.id)),
         ).filter(address => reIPv4.test(address));
         hardAddresses.forEach(address => {
-          if (!this.novastarControls.has(`${address}:5200`)) {
+          if (!this.hasNetDevice(address)) {
             this.openNetDevice(address);
           }
         });
@@ -375,7 +380,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
         // debug(`found: ${addresses.join(', ')}`);
         this.openBroadcastDetector();
         addresses.forEach(address => {
-          if (!this.novastarControls.has(address) && !hardAddresses.includes(address)) {
+          if (!this.hasNetDevice(address) && !hardAddresses.includes(address)) {
             this.openNetDevice(address);
           }
         });
