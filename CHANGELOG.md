@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [5.1.4](https://github.com/sarakusha/gmib/compare/v5.1.3...v5.1.4) (2026-07-28)
+
+
+### Features
+
+* update @novastar/screen ([4cf0ca2](https://github.com/sarakusha/gmib/commit/4cf0ca29aa321662260b9c116cc8ffe6ee6be858))
+
+
+### Bug Fixes
+
+* force sqlite3 node-gyp rebuild on linux ([6a5b2d9](https://github.com/sarakusha/gmib/commit/6a5b2d9e2c6fec855df2d0b4f363b17965d7310a))
+* resolve sqlite3 bundled node-gyp ([3ca1d5b](https://github.com/sarakusha/gmib/commit/3ca1d5bfbf2dcbb836a4af1f74c52f4bc3808be9))
+* restore licensed Novastar device discovery ([7de53e7](https://github.com/sarakusha/gmib/commit/7de53e7686e736eab0e8ac226aa5d1e964dce354))
+* stabilize remote player preview stream ([59dc19a](https://github.com/sarakusha/gmib/commit/59dc19a854cf747690dd1e6aa525c557a4e3d43a))
+* trigger licensed auto updates from server flag ([eafb4ea](https://github.com/sarakusha/gmib/commit/eafb4ea49cd46c16edf60336ed25539f39b4412e))
+
 ## [5.1.3](https://github.com/sarakusha/gmib/compare/v5.1.2...v5.1.3) (2026-07-07)
 
 
