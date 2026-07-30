@@ -22,6 +22,7 @@ import Log from './Log';
 // import MediaTab from './MediaTab';
 import NovastarTabs from './NovastarTabs';
 import OverheatProtectionTab from './OverheatProtectionTab';
+import Plugins from './Plugins';
 // import PlaylistsTab from './PlaylistsTab';
 import Screens from './Screens';
 import SchedulerTab from './SchedulerTab';
@@ -96,6 +97,11 @@ const Tabs: React.FC = () => {
       <TabContainer id="overheat" selected={tab === 'overheat'}>
         <OverheatProtectionTab />
       </TabContainer>
+      {!isRemoteSession && (
+        <TabContainer id="plugins" selected={tab === 'plugins'} unmount>
+          <Plugins />
+        </TabContainer>
+      )}
       <TabContainer id="help" selected={tab === 'help'}>
         <Help />
       </TabContainer>

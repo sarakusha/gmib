@@ -16,6 +16,7 @@ import * as dialogs from './dialogs';
 import * as nibus from './nibus';
 // import * as output from './output';
 import * as mediaSource from './mediaSource';
+import * as plugins from './plugins';
 
 import './hid';
 
@@ -121,9 +122,8 @@ ipcRenderer
 contextBridge.exposeInMainWorld(
   'initializeNovastar',
   (): Promise<boolean> =>
-    gmibParams.then(params =>
-      Boolean(Reflect.get(params, import.meta.env.VITE_ANNOUNCE_NOVASTAR)),
-    ),
+    gmibParams.then(params => Boolean(Reflect.get(params, import.meta.env.VITE_ANNOUNCE_NOVASTAR))),
 );
 
 contextBridge.exposeInMainWorld('mediaSource', expandTypes(mediaSource));
+contextBridge.exposeInMainWorld('plugins', expandTypes(plugins));

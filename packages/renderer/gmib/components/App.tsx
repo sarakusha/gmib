@@ -4,6 +4,7 @@ import HighlightOffIcon from '@mui/icons-material/HighlightOff';
 import MenuIcon from '@mui/icons-material/Menu';
 import SearchIcon from '@mui/icons-material/Search';
 import SettingsEthernetIcon from '@mui/icons-material/SettingsEthernet';
+import ExtensionOutlinedIcon from '@mui/icons-material/ExtensionOutlined';
 import {
   Backdrop,
   Box,
@@ -304,6 +305,12 @@ const App: React.FC = () => {
                 selected={tab === 'scheduler'}
               >
                 <ListItemText primary="Планировщик" />
+              </Item>
+            )}
+            {!isRemoteSession && (
+              <Item onClick={() => dispatch(setCurrentTab('plugins'))} selected={tab === 'plugins'}>
+                <ExtensionOutlinedIcon sx={{ mr: 2 }} />
+                <ListItemText primary="Плагины" />
               </Item>
             )}
             <Item onClick={() => dispatch(setCurrentTab('log'))} selected={tab === 'log'}>

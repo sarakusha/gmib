@@ -15,4 +15,5 @@ interface Window {
     readonly identify: { readonly getSecret: () => string | undefined; readonly setSecret: (apiSecret: bigint | null, identifier?: string | undefined) => void; readonly getIdentifier: () => string | undefined; readonly generateSignature: (method: string, uri: string, timestamp: number, body?: unknown) => Promise<string | undefined>; readonly initialized: Promise<boolean>; };
     readonly initializeNovastar: () => Promise<boolean>;
     readonly mediaSource: { readonly close: (screenId: number) => void; readonly play: _.DebouncedFunc<(screenId: number) => Promise<void>>; };
+    readonly plugins: { readonly list: () => Promise<import("../common/plugins").PluginStatus[]>; readonly install: () => Promise<import("../common/plugins").PluginInstallResult>; readonly setEnabled: (id: string, enabled: boolean) => Promise<import("../common/plugins").PluginStatus>; readonly uninstall: (id: string) => Promise<boolean>; readonly openControl: (id: string) => Promise<void>; readonly restart: () => Promise<void>; };
 }

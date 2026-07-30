@@ -13,6 +13,7 @@ export type TabValues =
   | 'autobrightness'
   | 'scheduler'
   | 'overheat'
+  | 'plugins'
   | 'log'
   | 'help';
 // | 'media'

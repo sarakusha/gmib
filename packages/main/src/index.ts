@@ -13,6 +13,7 @@ import './mdns';
 import { showLast } from './tray';
 import './linux';
 import './dialogs';
+import './pluginsIpc';
 import './express';
 import './ipc';
 import './rtc';
@@ -23,6 +24,7 @@ import { installWindowOpenHandler, toggleOutputWindowsVisibility } from './openH
 import { startGmibScheduler } from './gmibScheduler';
 import { startPlayerScheduler } from './playerScheduler';
 import { launchPlayers } from './playerWindow';
+import { startPlugins } from './pluginHost';
 
 import { fixDefault } from '/@common/helpers';
 
@@ -103,6 +105,11 @@ if (isDevRuntime) {
  */
 app
   .whenReady()
+  .then(() =>
+    startPlugins().catch(error => {
+      debug(`Failed to start plugins: ${error instanceof Error ? error.message : String(error)}`);
+    }),
+  )
   .then(() => {
     startGmibScheduler();
     startPlayerScheduler();

@@ -10,6 +10,7 @@ import bodyParser from 'body-parser';
 import api, { mediaRoot } from './api';
 import { dbReady } from './db';
 import { app } from './server';
+import { localPluginApiHandler, pluginStaticHandler } from './pluginHost';
 
 import preventLoadSourceMap from '/@common/preventLoadSourceMap';
 
@@ -47,6 +48,9 @@ app.use((_, res, next) => {
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
+
+app.use('/plugins/:pluginId/api', localPluginApiHandler);
+app.use('/plugins/:pluginId', pluginStaticHandler);
 
 if (!isDevRuntime) {
   const root = path.join(__dirname, '../../renderer/dist');

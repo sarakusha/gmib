@@ -101,6 +101,7 @@ import {
   updatePlaylist,
 } from './playlist';
 import proxyMiddleware from './proxyMiddleware';
+import { authenticatedPluginApiHandler } from './pluginHost';
 import relaunch from './relaunch';
 import {
   clearPlayersPlaylist,
@@ -309,6 +310,8 @@ if (!localConfig.get('unsafeMode')) {
     }),
   );
 }
+
+api.use('/plugins/:pluginId', authenticatedPluginApiHandler);
 
 void getAnnounce().then(announce => {
   if (
