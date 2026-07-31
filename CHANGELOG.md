@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [5.2.0](https://github.com/sarakusha/gmib/compare/v5.1.4...v5.2.0) (2026-07-31)
+
+
+### Features
+
+* add installable plugin system ([f656642](https://github.com/sarakusha/gmib/commit/f6566423715597ab89416ca051514a7b7157cd2b))
+
+
+### Bug Fixes
+
+* **parking:** letter-spacing ([7874f3d](https://github.com/sarakusha/gmib/commit/7874f3ddb22b60d3746f1a985222de88517354c3))
+* reduce Novastar discovery log noise ([aa67022](https://github.com/sarakusha/gmib/commit/aa67022e1296674650107cb8b45c6a8e01fd5e1d))
+
 ## [5.1.4](https://github.com/sarakusha/gmib/compare/v5.1.3...v5.1.4) (2026-07-28)
 
 
