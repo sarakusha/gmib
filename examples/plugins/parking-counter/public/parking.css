@@ -1,7 +1,6 @@
 :root {
   color-scheme: dark;
-  font-family:
-    Inter, Roboto, Arial, sans-serif;
+  font-family: Inter, Roboto, Arial, sans-serif;
   background: #07140f;
   color: #f6fff9;
 }
@@ -30,31 +29,29 @@ body {
   grid-template-rows: auto 1fr auto;
   place-items: center;
   padding: 5vh 5vw;
-  background:
-    radial-gradient(circle at 50% 45%, rgb(25 107 68 / 28%), transparent 45%),
-    #07140f;
+  background: radial-gradient(circle at 50% 45%, rgb(25 107 68 / 28%), transparent 45%), #07140f;
 }
 
 .eyebrow {
   color: #82eaae;
-  font-size: clamp(24px, 4vw, 80px);
+  font-size: clamp(14px, 4vw, 80px);
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
 .count {
-  font-size: clamp(180px, 52vw, 920px);
+  font-size: clamp(80px, 52vw, 920px);
   font-variant-numeric: tabular-nums;
   font-weight: 800;
-  letter-spacing: -0.06em;
+  /* letter-spacing: -0.06em; */
   line-height: 0.8;
   text-shadow: 0 0 0.22em rgb(65 239 137 / 24%);
 }
 
 .caption {
   color: #d9f9e6;
-  font-size: clamp(30px, 6vw, 110px);
+  font-size: clamp(14px, 6vw, 110px);
   font-weight: 500;
 }
 
