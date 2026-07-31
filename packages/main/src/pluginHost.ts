@@ -670,7 +670,9 @@ const installExtractedPlugin = async (
   if (targetExists) {
     await fs.promises
       .rm(backup, { recursive: true, force: true })
-      .catch(error => debug(`Failed to remove plugin backup ${backup}: ${(error as Error).message}`));
+      .catch(error =>
+        debug(`Failed to remove plugin backup ${backup}: ${(error as Error).message}`),
+      );
   }
   return { updated: targetExists };
 };
