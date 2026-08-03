@@ -438,6 +438,10 @@ API. npm-зависимости backend-модуля следует заране
 агентов-разработчиков и полные типы Plugin API 1.0 находятся в
 [`examples/plugins/AGENTS.md`](examples/plugins/AGENTS.md).
 
+Пример [`examples/plugins/shader-screensavers`](examples/plugins/shader-screensavers) содержит четыре
+адаптивные WebGL-заставки для подложки или полноэкранного показа с управлением цветом, прозрачностью,
+скоростью и масштабом.
+
 ## Журнал
 
 В журнал записывается различная отладочная информация.
