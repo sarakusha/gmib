@@ -86,7 +86,6 @@ export type PlayerMapping = {
   top: number;
   display?: number;
   kiosk: boolean;
-  zOrder: number;
   zIndex?: number;
   shader?: string;
   transparent?: boolean;

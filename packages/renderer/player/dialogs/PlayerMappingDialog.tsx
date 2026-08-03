@@ -229,7 +229,6 @@ const PlayerMappingDialog: React.FC<Props> = ({ playerId, open, onClose, id }) =
                   top: 0,
                   width: player?.width ?? 320,
                   height: player?.height ?? 240,
-                  zOrder: 0,
                   zIndex: 0,
                   kiosk: false,
                   transparent: false,

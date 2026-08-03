@@ -198,22 +198,9 @@ const getVideoOutputZIndex = (window: BrowserWindow): number => {
   }
 };
 
-const getVideoOutputZOrder = (window: BrowserWindow): number => {
-  try {
-    return toNumber(new URL(getOutputWindowUrl(window)).searchParams.get('zOrder'), 0);
-  } catch {
-    return 0;
-  }
-};
-
 const getOutputWindowZIndex = (window: BrowserWindow): number => {
   if (isVideoOutputWindow(window)) return getVideoOutputZIndex(window);
   return getAllScreenParams().find(params => params.id === window.id)?.zIndex ?? 0;
-};
-
-const getOutputWindowZOrder = (window: BrowserWindow): number => {
-  if (isVideoOutputWindow(window)) return getVideoOutputZOrder(window);
-  return 0;
 };
 
 export const arrangeOutputWindows = (): void => {
@@ -225,13 +212,11 @@ export const arrangeOutputWindows = (): void => {
           alwaysOnTop: shouldKeepOnTop(getOutputWindowUrl(a)),
           id: a.id,
           zIndex: getOutputWindowZIndex(a),
-          zOrder: getOutputWindowZOrder(a),
         },
         {
           alwaysOnTop: shouldKeepOnTop(getOutputWindowUrl(b)),
           id: b.id,
           zIndex: getOutputWindowZIndex(b),
-          zOrder: getOutputWindowZOrder(b),
         },
       ),
     )
@@ -240,7 +225,7 @@ export const arrangeOutputWindows = (): void => {
     });
 };
 
-const refreshOutputWindowsZOrder = (): void => {
+const refreshOutputWindowStack = (): void => {
   getOutputWindows()
     .filter(window => !window.isDestroyed() && window.isVisible())
     .forEach(window => {
@@ -252,11 +237,11 @@ const refreshOutputWindowsZOrder = (): void => {
 };
 
 if (isWindows) {
-  const outputZOrderRefreshTimer = setInterval(
-    refreshOutputWindowsZOrder,
+  const outputStackRefreshTimer = setInterval(
+    refreshOutputWindowStack,
     OUTPUT_Z_ORDER_REFRESH_INTERVAL_MS,
   );
-  outputZOrderRefreshTimer.unref();
+  outputStackRefreshTimer.unref();
 }
 
 const scheduleArrangeOutputWindows = (): void => {

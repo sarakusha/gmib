@@ -70,6 +70,22 @@ const checkColumnExists = async (
   }
 };
 
+const ensurePlayerMappingZIndex = async (): Promise<void> => {
+  await checkColumnExists('playerMapping', 'zIndex', 'INTEGER DEFAULT 0');
+
+  try {
+    const columns = (await asyncAll('PRAGMA table_info(playerMapping)')) as ColumnDefinition[];
+    if (!columns.some(item => item.name === 'zOrder')) return;
+
+    // zOrder was the former name. Preserve its last meaningful value and leave
+    // one layer parameter in the schema, API and output-window URL.
+    await asyncRun('UPDATE playerMapping SET zIndex = zOrder WHERE zIndex = 0 AND zOrder != 0');
+    await asyncRun('ALTER TABLE playerMapping DROP COLUMN zOrder');
+  } catch (err) {
+    debug(`error while migrate playerMapping.zOrder to zIndex: ${err}`);
+  }
+};
+
 function createTables(): void {
   db.serialize(() => {
     db.run(
@@ -172,7 +188,6 @@ function createTables(): void {
           height INTEGER,
           shader TEXT,
           objectFit TEXT DEFAULT 'cover',
-          zOrder INTEGER DEFAULT 0,
           zIndex INTEGER DEFAULT 0,
           flags INTEGER DEFAULT 0,
           FOREIGN KEY (player)
@@ -181,7 +196,7 @@ function createTables(): void {
       err => err && debug(`error while create playerMapping: ${err}`),
     );
     void checkColumnExists('playerMapping', 'objectFit', "TEXT DEFAULT 'cover'");
-    void checkColumnExists('playerMapping', 'zIndex', 'INTEGER DEFAULT 0');
+    void ensurePlayerMappingZIndex();
     // db.run(
     //   `CREATE TABLE IF NOT EXISTS videoOutput (
     //     id INTEGER PRIMARY KEY,
