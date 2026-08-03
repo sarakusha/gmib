@@ -20,7 +20,7 @@ import type {
   GmibSchedulerJobInput,
   ScheduleKind,
 } from '/@common/scheduler';
-import { defaultCron } from '/@common/scheduler';
+import { defaultCron, normalizeCronSchedule } from '/@common/scheduler';
 import type { Screen } from '/@common/video';
 
 import { usePages } from '../api/config';
@@ -74,7 +74,7 @@ const pad = (value: number): string => String(value).padStart(2, '0');
 const toDateTimeLocal = (date: Date): string =>
   `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(
     date.getHours(),
-  )}:${pad(date.getMinutes())}`;
+  )}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 
 const createInitialValues = (kind: ScheduleKind, initialJob?: GmibSchedulerJob): DialogValues => ({
   kind,
@@ -85,8 +85,9 @@ const createInitialValues = (kind: ScheduleKind, initialJob?: GmibSchedulerJob):
   brightness: initialJob?.brightness ?? 50,
   enabledValue: initialJob?.enabledValue ?? true,
   runAt: initialJob?.runAt ?? toDateTimeLocal(new Date(Date.now() + 60 * 60 * 1000)),
-  cron: initialJob?.cron ?? defaultCron(),
+  cron: initialJob?.cron ? normalizeCronSchedule(initialJob.cron) : defaultCron(),
   enabled: initialJob?.enabled ?? true,
+  priority: initialJob?.priority ?? 0,
 });
 
 const toJobInput = (job: GmibSchedulerJob): DialogValues => ({
@@ -101,6 +102,7 @@ const toJobInput = (job: GmibSchedulerJob): DialogValues => ({
   runAt: job.runAt,
   cron: job.cron,
   enabled: job.enabled,
+  priority: job.priority ?? 0,
 });
 
 const getActionName = (
@@ -258,6 +260,11 @@ const StatusIcon: React.FC<{ job: GmibSchedulerJob }> = ({ job }) => {
 const SchedulerTab: React.FC = () => {
   const version = useSelector(selectSessionVersion);
   const isSchedulerSupported = supportsFeature('gmibScheduler', version, isRemoteSession);
+  const supportsSecondsAndPriority = supportsFeature(
+    'schedulerSecondsAndPriority',
+    version,
+    isRemoteSession,
+  );
   const { data: jobs = [] } = useGetSchedulerJobsQuery(undefined, {
     skip: !isSchedulerSupported,
   });
@@ -337,6 +344,7 @@ const SchedulerTab: React.FC = () => {
       actionLabels={actionLabels}
       labels={labels}
       maxWidth="md"
+      supportsSecondsAndPriority={supportsSecondsAndPriority}
       isRunPending={isRunPending}
       dialogKind={dialogKind}
       editingJob={editingJob}

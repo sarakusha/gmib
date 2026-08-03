@@ -30,6 +30,7 @@ export type SimpleCronPart = {
 };
 
 export type CronSchedule = {
+  seconds: CronPart;
   minutes: CronPart;
   hours: CronPart;
   days: SimpleCronPart;
@@ -44,6 +45,7 @@ export type SchedulerJobBase = {
   runAt?: string;
   cron?: CronSchedule;
   enabled: boolean;
+  priority: number;
   lastRunAt?: string;
   lastRunKey?: string;
   lastStatus?: SchedulerStatus;
@@ -87,11 +89,18 @@ export const normalizeSelected = (selected: number[]): number[] =>
   Array.from(new Set(selected)).sort((a, b) => a - b);
 
 export const defaultCron = (): CronSchedule => ({
+  seconds: { mode: 'select', every: 1, selected: [0] },
   minutes: { mode: 'every', every: 10, selected: [] },
   hours: { mode: 'all', every: 1, selected: [] },
   days: { mode: 'all', selected: [] },
   months: { mode: 'all', selected: [] },
   weekdays: { mode: 'all', selected: [] },
+});
+
+export const normalizeCronSchedule = (cron?: Partial<CronSchedule>): CronSchedule => ({
+  ...defaultCron(),
+  ...cron,
+  seconds: cron?.seconds ?? defaultCron().seconds,
 });
 
 export const partToCron = (part: CronPart): string => {
@@ -105,6 +114,7 @@ export const simplePartToCron = (part: SimpleCronPart): string =>
 
 export const cronToString = (cron: CronSchedule): string =>
   [
+    partToCron(cron.seconds),
     partToCron(cron.minutes),
     partToCron(cron.hours),
     simplePartToCron(cron.days),
@@ -122,16 +132,30 @@ const matchesSimplePart = (part: SimpleCronPart, value: number): boolean =>
   part.mode === 'all' || part.selected.includes(value);
 
 export const matchesCron = (cron: CronSchedule, date: Date): boolean =>
+  matchesPart(cron.seconds, date.getSeconds()) &&
   matchesPart(cron.minutes, date.getMinutes()) &&
   matchesPart(cron.hours, date.getHours()) &&
   matchesSimplePart(cron.days, date.getDate()) &&
   matchesSimplePart(cron.months, date.getMonth() + 1) &&
   matchesSimplePart(cron.weekdays, date.getDay());
 
-export const getMinuteKey = (date: Date): string =>
-  `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}-${date.getHours()}-${date.getMinutes()}`;
+const matchesCronMinute = (cron: CronSchedule, date: Date): boolean =>
+  matchesPart(cron.minutes, date.getMinutes()) &&
+  matchesPart(cron.hours, date.getHours()) &&
+  matchesSimplePart(cron.days, date.getDate()) &&
+  matchesSimplePart(cron.months, date.getMonth() + 1) &&
+  matchesSimplePart(cron.weekdays, date.getDay());
+
+export const getRunKey = (date: Date): string =>
+  `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}-${date.getHours()}-${date.getMinutes()}-${date.getSeconds()}`;
 
 export const describeCron = (cron: CronSchedule): string => {
+  const seconds =
+    cron.seconds.mode === 'all'
+      ? 'каждую секунду'
+      : cron.seconds.mode === 'every'
+        ? `каждые ${cron.seconds.every} сек.`
+        : `в ${normalizeSelected(cron.seconds.selected).join(', ')} сек.`;
   const minutes =
     cron.minutes.mode === 'all'
       ? 'каждую минуту'
@@ -156,7 +180,7 @@ export const describeCron = (cron: CronSchedule): string => {
     cron.weekdays.mode === 'all'
       ? ''
       : `, дни недели: ${normalizeSelected(cron.weekdays.selected).join(', ')}`;
-  return `Повторять ${minutes}, ${hours}${days}${months}${weekdays}`;
+  return `Повторять ${seconds}, ${minutes}, ${hours}${days}${months}${weekdays}`;
 };
 
 export const getNextRunAt = (job: SchedulerJobBase, from = new Date()): string | undefined => {
@@ -167,11 +191,17 @@ export const getNextRunAt = (job: SchedulerJobBase, from = new Date()): string |
     return Number.isNaN(runAt.getTime()) ? undefined : runAt.toISOString();
   }
   if (!job.cron) return undefined;
-  const next = new Date(from);
-  next.setSeconds(0, 0);
-  next.setMinutes(next.getMinutes() + 1);
+  const next = new Date(from.getTime() + 1000);
+  next.setMilliseconds(0);
   for (let i = 0; i < 60 * 24 * 366; i += 1) {
-    if (matchesCron(job.cron, next)) return next.toISOString();
+    const firstSecond = i === 0 ? next.getSeconds() : 0;
+    if (matchesCronMinute(job.cron, next)) {
+      for (let second = firstSecond; second < 60; second += 1) {
+        next.setSeconds(second);
+        if (matchesPart(job.cron.seconds, second)) return next.toISOString();
+      }
+    }
+    next.setSeconds(0);
     next.setMinutes(next.getMinutes() + 1);
   }
   return undefined;

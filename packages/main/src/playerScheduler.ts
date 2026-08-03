@@ -1,9 +1,8 @@
 import debugFactory from 'debug';
 
 import type { PlayerSchedulerJob, PlayerSchedulerJobInput } from '/@common/scheduler';
-import { getMinuteKey, getNextRunAt, matchesCron } from '/@common/scheduler';
+import { getNextRunAt, getRunKey } from '/@common/scheduler';
 
-import { dbReady } from './db';
 import { setPlayerOutputWindowsVisibility } from './openHandler';
 import { getPlaylist, getPlaylistItems } from './playlist';
 import { openPlayer } from './playerWindow';
@@ -16,6 +15,7 @@ import {
   updateStoredSchedulerJobResult,
 } from './schedulerStore';
 import { getPlayer, updatePlayer } from './screen';
+import { enqueueSchedulerJob } from './schedulerQueue';
 import { broadcast } from './server';
 import { findPlayerWindow } from './windowStore';
 
@@ -188,13 +188,13 @@ const runJob = async (job: PlayerSchedulerJob): Promise<void> => {
   }
 };
 
-const executeJob = async (
+export const executePlayerSchedulerJob = async (
   job: PlayerSchedulerJob,
   options: { disableOnce: boolean },
 ): Promise<PlayerSchedulerJob> => {
   const now = new Date();
   const lastRunAt = now.toISOString();
-  const lastRunKey = getMinuteKey(now);
+  const lastRunKey = getRunKey(now);
   try {
     await runJob(job);
     const nextJob = {
@@ -228,34 +228,5 @@ const executeJob = async (
 export const runSchedulerJob = async (id: string): Promise<PlayerSchedulerJob | undefined> => {
   const job = await getStoredPlayerSchedulerJob(id);
   if (!job) return undefined;
-  return executeJob(job, { disableOnce: false });
-};
-
-const executeDueJobs = async (): Promise<void> => {
-  const now = new Date();
-  const minuteKey = getMinuteKey(now);
-  const dueJobs = (await getStoredPlayerSchedulerJobs()).filter(job => {
-    if (!job.enabled) return false;
-    if (job.kind === 'once') {
-      if (!job.runAt) return false;
-      return new Date(job.runAt).getTime() <= now.getTime();
-    }
-    return Boolean(job.cron && job.lastRunKey !== minuteKey && matchesCron(job.cron, now));
-  });
-
-  for (const job of dueJobs) {
-    await executeJob(job, { disableOnce: true });
-  }
-};
-
-let timer: NodeJS.Timeout | undefined;
-
-export const startPlayerScheduler = (): void => {
-  if (timer) return;
-  void dbReady.then(() => {
-    timer = setInterval(() => {
-      void executeDueJobs();
-    }, 1000);
-    void executeDueJobs();
-  });
+  return enqueueSchedulerJob(() => executePlayerSchedulerJob(job, { disableOnce: false }));
 };

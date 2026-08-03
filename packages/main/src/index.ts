@@ -21,8 +21,7 @@ import './hid';
 // import './channels';
 import { activateMainWindow, createMainWindow, persistLocalWindowState } from './mainWindow';
 import { installWindowOpenHandler, toggleOutputWindowsVisibility } from './openHandler';
-import { startGmibScheduler } from './gmibScheduler';
-import { startPlayerScheduler } from './playerScheduler';
+import { startScheduler } from './scheduler';
 import { launchPlayers } from './playerWindow';
 import { startPlugins } from './pluginHost';
 
@@ -111,8 +110,7 @@ app
     }),
   )
   .then(() => {
-    startGmibScheduler();
-    startPlayerScheduler();
+    startScheduler();
   })
   .then(createMainWindow)
   .then(main => {

@@ -298,6 +298,7 @@ function createTables(): void {
         runAt TEXT,
         cron TEXT,
         enabled INTEGER NOT NULL DEFAULT 1,
+        priority INTEGER NOT NULL DEFAULT 0,
         lastRunAt TEXT,
         lastRunKey TEXT,
         lastStatus TEXT,
@@ -323,10 +324,11 @@ function createTables(): void {
       )`,
       err => {
         if (err) debug(`error while create schedulerJob: ${err}`);
-        else
-          setTimeout(() => {
-            dbDeferred.resolve();
-          }, 100);
+        else {
+          void checkColumnExists('schedulerJob', 'priority', 'INTEGER NOT NULL DEFAULT 0').then(
+            () => dbDeferred.resolve(),
+          );
+        }
       },
     );
     db.all('SELECT typeof(current) as current_type FROM player LIMIT 1', (_, rows) => {

@@ -26,6 +26,7 @@ type SchedulerJobRow = {
   runAt?: string;
   cron?: string;
   enabled: number;
+  priority: number;
   lastRunAt?: string;
   lastRunKey?: string;
   lastStatus?: SchedulerStatus;
@@ -47,7 +48,14 @@ const createId = (): string => crypto.randomUUID();
 const parseCron = (value?: string): CronSchedule | undefined => {
   if (!value) return undefined;
   try {
-    return JSON.parse(value) as CronSchedule;
+    const cron = JSON.parse(value) as Partial<CronSchedule>;
+    if (!cron.minutes || !cron.hours || !cron.days || !cron.months || !cron.weekdays) {
+      return undefined;
+    }
+    return {
+      ...cron,
+      seconds: cron.seconds ?? { mode: 'select', every: 1, selected: [0] },
+    } as CronSchedule;
   } catch {
     return undefined;
   }
@@ -56,6 +64,10 @@ const parseCron = (value?: string): CronSchedule | undefined => {
 const sanitizeCron = (cron: CronSchedule | undefined): CronSchedule | undefined =>
   cron
     ? {
+        seconds: {
+          ...(cron.seconds ?? { mode: 'select', every: 1, selected: [0] }),
+          selected: normalizeSelected(cron.seconds?.selected ?? [0]),
+        },
         minutes: {
           ...cron.minutes,
           selected: normalizeSelected(cron.minutes.selected),
@@ -83,6 +95,7 @@ const sanitizeJob = <T extends StoredSchedulerJob>(job: T): T => {
   const { nextRunAt: _, ...storedJob } = job;
   const nextJob = {
     ...storedJob,
+    priority: Number.isFinite(storedJob.priority) ? Math.trunc(storedJob.priority) : 0,
     cron: sanitizeCron(storedJob.cron),
   };
 
@@ -108,6 +121,7 @@ const toSchedulerJob = (result: NullableOptional): StoredSchedulerJob => {
     runAt: row.runAt,
     cron: parseCron(row.cron),
     enabled: Boolean(row.enabled),
+    priority: row.priority ?? 0,
     lastRunAt: row.lastRunAt,
     lastRunKey: row.lastRunKey,
     lastStatus: row.lastStatus,
@@ -143,6 +157,7 @@ const encodeSchedulerJob = (scope: SchedulerScope, job: StoredSchedulerJob) => (
   $runAt: job.runAt ?? null,
   $cron: job.cron ? JSON.stringify(job.cron) : null,
   $enabled: job.enabled ? 1 : 0,
+  $priority: job.priority,
   $lastRunAt: job.lastRunAt ?? null,
   $lastRunKey: job.lastRunKey ?? null,
   $lastStatus: job.lastStatus ?? null,
@@ -186,6 +201,7 @@ const insertSchedulerJob = promisifyRun(
     runAt,
     cron,
     enabled,
+    priority,
     lastRunAt,
     lastRunKey,
     lastStatus,
@@ -208,6 +224,7 @@ const insertSchedulerJob = promisifyRun(
     $runAt,
     $cron,
     $enabled,
+    $priority,
     $lastRunAt,
     $lastRunKey,
     $lastStatus,
@@ -233,6 +250,7 @@ const updateSchedulerJobRow = promisifyRun(
       runAt = $runAt,
       cron = $cron,
       enabled = $enabled,
+      priority = $priority,
       lastRunAt = $lastRunAt,
       lastRunKey = $lastRunKey,
       lastStatus = $lastStatus,

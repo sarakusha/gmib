@@ -3,9 +3,8 @@ import debugFactory from 'debug';
 import type { Config } from '/@common/config';
 import { DEFAULT_OVERHEAD_PROTECTION } from '/@common/config';
 import type { GmibSchedulerJob, GmibSchedulerJobInput } from '/@common/scheduler';
-import { getMinuteKey, getNextRunAt, matchesCron } from '/@common/scheduler';
+import { getNextRunAt, getRunKey } from '/@common/scheduler';
 
-import { dbReady } from './db';
 import { getPage } from './page';
 import {
   createStoredSchedulerJob,
@@ -16,6 +15,7 @@ import {
   updateStoredSchedulerJobResult,
 } from './schedulerStore';
 import { getScreen, updateScreen } from './screen';
+import { enqueueSchedulerJob } from './schedulerQueue';
 import { updateTest } from './screenOutput';
 import { broadcast } from './server';
 
@@ -121,13 +121,13 @@ const runJob = async (job: GmibSchedulerJob): Promise<void> => {
   }
 };
 
-const executeJob = async (
+export const executeGmibSchedulerJob = async (
   job: GmibSchedulerJob,
   options: { disableOnce: boolean },
 ): Promise<GmibSchedulerJob> => {
   const now = new Date();
   const lastRunAt = now.toISOString();
-  const lastRunKey = getMinuteKey(now);
+  const lastRunKey = getRunKey(now);
   try {
     await runJob(job);
     const nextJob = {
@@ -161,34 +161,5 @@ const executeJob = async (
 export const runGmibSchedulerJob = async (id: string): Promise<GmibSchedulerJob | undefined> => {
   const job = await getStoredGmibSchedulerJob(id);
   if (!job) return undefined;
-  return executeJob(job, { disableOnce: false });
-};
-
-const executeDueJobs = async (): Promise<void> => {
-  const now = new Date();
-  const minuteKey = getMinuteKey(now);
-  const dueJobs = (await getStoredGmibSchedulerJobs()).filter(job => {
-    if (!job.enabled) return false;
-    if (job.kind === 'once') {
-      if (!job.runAt) return false;
-      return new Date(job.runAt).getTime() <= now.getTime();
-    }
-    return Boolean(job.cron && job.lastRunKey !== minuteKey && matchesCron(job.cron, now));
-  });
-
-  for (const job of dueJobs) {
-    await executeJob(job, { disableOnce: true });
-  }
-};
-
-let timer: NodeJS.Timeout | undefined;
-
-export const startGmibScheduler = (): void => {
-  if (timer) return;
-  void dbReady.then(() => {
-    timer = setInterval(() => {
-      void executeDueJobs();
-    }, 1000);
-    void executeDueJobs();
-  });
+  return enqueueSchedulerJob(() => executeGmibSchedulerJob(job, { disableOnce: false }));
 };

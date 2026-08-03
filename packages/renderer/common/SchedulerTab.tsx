@@ -83,7 +83,7 @@ const pad = (value: number): string => String(value).padStart(2, '0');
 const toDateTimeLocal = (date: Date): string =>
   `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(
     date.getHours(),
-  )}:${pad(date.getMinutes())}`;
+  )}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 
 export const formatRelativeDateTime = (value?: string): [string, string] => {
   if (!value) return ['-', ''];
@@ -97,7 +97,11 @@ export const formatRelativeDateTime = (value?: string): [string, string] => {
     diffDays === -1 ? 'Вчера' : diffDays === 0 ? 'Сегодня' : diffDays === 1 ? 'Завтра' : undefined;
   return [
     dayLabel ?? date.toLocaleDateString('ru-RU'),
-    date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+    date.toLocaleTimeString('ru-RU', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    }),
   ];
 };
 
@@ -295,6 +299,7 @@ export type SchedulerDialogValues = {
   runAt?: string;
   cron?: CronSchedule;
   enabled: boolean;
+  priority: number;
 };
 
 export type SchedulerTabLabels = {
@@ -327,6 +332,7 @@ export type SchedulerTabProps<
   actionLabels: Record<TAction, string>;
   labels: SchedulerTabLabels;
   maxWidth?: 'sm' | 'md' | 'lg';
+  supportsSecondsAndPriority?: boolean;
   isRunPending: boolean;
   dialogKind: ScheduleKind | null;
   editingJob?: TJob;
@@ -369,6 +375,7 @@ const SchedulerDialog = <
   getActionName,
   renderActionFields,
   isSubmitEnabled,
+  supportsSecondsAndPriority,
   onClose,
   onSubmit,
 }: {
@@ -388,6 +395,7 @@ const SchedulerDialog = <
     related: TRelated;
   }) => React.ReactNode;
   isSubmitEnabled: (values: TValues) => boolean;
+  supportsSecondsAndPriority: boolean;
   onClose: () => void;
   onSubmit: (job: TValues) => Promise<void>;
 }) => {
@@ -434,6 +442,23 @@ const SchedulerDialog = <
             value={values.name}
             onChange={event => setValues(current => ({ ...current, name: event.target.value }))}
           />
+          {supportsSecondsAndPriority && (
+            <TextField
+              label="Приоритет"
+              type="number"
+              variant="standard"
+              fullWidth
+              value={values.priority}
+              onChange={event =>
+                setValues(current => ({
+                  ...current,
+                  priority: Math.trunc(Number(event.target.value)),
+                }))
+              }
+              slotProps={{ htmlInput: { step: 1 } }}
+              helperText="Чем больше число, тем раньше запускается задание"
+            />
+          )}
           {values.kind === 'once' ? (
             <TextField
               label="Время запуска"
@@ -442,11 +467,29 @@ const SchedulerDialog = <
               fullWidth
               value={values.runAt ?? toDateTimeLocal(new Date(Date.now() + 60 * 60 * 1000))}
               onChange={event => setValues(current => ({ ...current, runAt: event.target.value }))}
-              slotProps={{ inputLabel: { shrink: true } }}
+              slotProps={{ inputLabel: { shrink: true }, htmlInput: { step: 1 } }}
             />
           ) : (
             values.cron && (
               <Stack>
+                {supportsSecondsAndPriority && (
+                  <CronPartEditor
+                    title="Секунды"
+                    value={values.cron.seconds}
+                    min={0}
+                    max={59}
+                    stepLabel="Интервал, секунд"
+                    allLabel="Каждую секунду"
+                    everyLabel={`Каждые ${values.cron.seconds.every}-сек`}
+                    selectLabel="Выбрать"
+                    onChange={seconds =>
+                      setValues(current => ({
+                        ...current,
+                        cron: { ...(current.cron ?? defaultCron()), seconds },
+                      }))
+                    }
+                  />
+                )}
                 <CronPartEditor
                   title="Минуты"
                   value={values.cron.minutes}
@@ -592,6 +635,7 @@ const SchedulerTab = <
   actionLabels,
   labels,
   maxWidth = 'md',
+  supportsSecondsAndPriority = true,
   toolbar,
   isRunPending,
   dialogKind,
@@ -661,6 +705,11 @@ const SchedulerTab = <
                   {labels.enabledHeader}
                 </TableCell>
                 <TableCell align="center">{labels.nameHeader}</TableCell>
+                {supportsSecondsAndPriority && (
+                  <TableCell sx={{ width: 90 }} align="center">
+                    Приоритет
+                  </TableCell>
+                )}
                 <TableCell sx={{ width: 100 }} align="center">
                   {labels.lastRunHeader}
                 </TableCell>
@@ -705,6 +754,9 @@ const SchedulerTab = <
                         {job.cron ?? } */}
                       </Typography>
                     </TableCell>
+                    {supportsSecondsAndPriority && (
+                      <TableCell align="center">{job.priority}</TableCell>
+                    )}
                     <TableCell align="center">
                       <Typography variant="body2">{lastDate}</Typography>
                       <Typography variant="caption" color="text.secondary">
@@ -765,6 +817,7 @@ const SchedulerTab = <
           getActionName={getActionName}
           renderActionFields={renderActionFields}
           isSubmitEnabled={isSubmitEnabled}
+          supportsSecondsAndPriority={supportsSecondsAndPriority}
           onClose={onCloseDialog}
           onSubmit={submitJob}
         />

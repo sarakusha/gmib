@@ -20,7 +20,7 @@ import type {
   PlayerSchedulerJobInput,
   ScheduleKind,
 } from '/@common/scheduler';
-import { defaultCron } from '/@common/scheduler';
+import { defaultCron, normalizeCronSchedule } from '/@common/scheduler';
 
 import { useGetPlaylists } from '../api/playlists';
 import {
@@ -74,7 +74,7 @@ const pad = (value: number): string => String(value).padStart(2, '0');
 const toDateTimeLocal = (date: Date): string =>
   `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(
     date.getHours(),
-  )}:${pad(date.getMinutes())}`;
+  )}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 
 const createInitialValues = (
   kind: ScheduleKind,
@@ -90,8 +90,9 @@ const createInitialValues = (
   hideOutputOnStop: initialJob?.hideOutputOnStop ?? false,
   outputAll: initialJob?.outputAll ?? false,
   runAt: initialJob?.runAt ?? toDateTimeLocal(new Date(Date.now() + 60 * 60 * 1000)),
-  cron: initialJob?.cron ?? defaultCron(),
+  cron: initialJob?.cron ? normalizeCronSchedule(initialJob.cron) : defaultCron(),
   enabled: initialJob?.enabled ?? true,
+  priority: initialJob?.priority ?? 0,
 });
 
 const toJobInput = (job: PlayerSchedulerJob): DialogValues => ({
@@ -107,6 +108,7 @@ const toJobInput = (job: PlayerSchedulerJob): DialogValues => ({
   runAt: job.runAt,
   cron: job.cron,
   enabled: job.enabled,
+  priority: job.priority ?? 0,
 });
 
 const getActionName = (
@@ -259,6 +261,11 @@ const StatusIcon: React.FC<{ job: PlayerSchedulerJob }> = ({ job }) => {
 
 const SchedulerTab: React.FC = () => {
   const isSchedulerSupported = supportsFeature('playerScheduler', version, isRemoteSession);
+  const supportsSecondsAndPriority = supportsFeature(
+    'schedulerSecondsAndPriority',
+    version,
+    isRemoteSession,
+  );
   const { data: playlists = [] } = useGetPlaylists();
   const { data: jobs = [] } = useGetSchedulerJobsQuery(sourceId, {
     skip: !isSchedulerSupported,
@@ -320,6 +327,7 @@ const SchedulerTab: React.FC = () => {
       actionLabels={actionLabels}
       labels={labels}
       maxWidth="md"
+      supportsSecondsAndPriority={supportsSecondsAndPriority}
       isRunPending={isRunPending}
       dialogKind={dialogKind}
       editingJob={editingJob}

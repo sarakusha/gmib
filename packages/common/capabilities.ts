@@ -6,6 +6,7 @@ export type FeatureName =
   | 'playerSeek'
   | 'playerShaders'
   | 'remotePlayerOutputClose'
+  | 'schedulerSecondsAndPriority'
   | 'windowZIndex';
 
 const minimumVersions: Record<FeatureName, string> = {
@@ -16,6 +17,7 @@ const minimumVersions: Record<FeatureName, string> = {
   playerSeek: '4.12.0',
   playerShaders: '5.0.0',
   remotePlayerOutputClose: '5.1.1',
+  schedulerSecondsAndPriority: '5.3.0',
   windowZIndex: '5.0.1',
 };
 
