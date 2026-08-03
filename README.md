@@ -431,8 +431,10 @@ Plugin API версии 1 предоставляет backend-модулю сле
 
 Разрешение из `permissions` обязательно должно быть объявлено до использования соответствующего
 API. npm-зависимости backend-модуля следует заранее собрать в `main.cjs`: установка плагина не
-запускает `npm install`. Полный пример находится в
-[`examples/plugins/parking-counter`](examples/plugins/parking-counter).
+запускает `npm install`. Полный базовый пример находится в
+[`examples/plugins/parking-counter`](examples/plugins/parking-counter). Пример портретного табло
+320×480 с прозрачным фоном, настраиваемой композицией и чередованием фирменной графики находится в
+[`examples/plugins/yoshka-esh`](examples/plugins/yoshka-esh).
 
 ## Журнал
 
