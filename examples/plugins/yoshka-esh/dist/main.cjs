@@ -9,7 +9,7 @@ const defaults = Object.freeze({
   captionSize: 24,
   bottomMode: 'ornament',
   switchInterval: 8,
-  testBackground: false,
+  backgroundOpacity: 0,
 });
 
 const numberInRange = (value, fallback, min, max) => {
@@ -35,10 +35,12 @@ const normalizeState = value => {
     captionSize: numberInRange(state.captionSize, defaults.captionSize, 12, 48),
     bottomMode,
     switchInterval: numberInRange(state.switchInterval, defaults.switchInterval, 2, 120),
-    testBackground:
-      typeof state.testBackground === 'boolean'
-        ? state.testBackground
-        : defaults.testBackground,
+    backgroundOpacity: numberInRange(
+      state.backgroundOpacity,
+      state.testBackground === true ? 100 : defaults.backgroundOpacity,
+      0,
+      100,
+    ),
   };
 };
 

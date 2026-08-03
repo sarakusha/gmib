@@ -30,6 +30,7 @@ input {
 .display {
   --counter-size: 56.25cqw;
   --caption-size: 7.5cqw;
+  --background-opacity: 0;
   position: relative;
   /* Block-size containment collapses the standalone gmib output's percentage height. */
   container-type: inline-size;
@@ -38,13 +39,9 @@ input {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: transparent;
+  background: rgb(0 0 0 / var(--background-opacity));
   color: #fff;
   transition: background-color 180ms ease;
-}
-
-.display.test-background {
-  background: #252422;
 }
 
 .display-sign,
@@ -81,6 +78,12 @@ input {
   letter-spacing: 0;
   line-height: 0.77;
   text-align: center;
+  -webkit-text-stroke: 0.018em rgb(0 0 0 / 88%);
+  paint-order: stroke fill;
+  text-shadow:
+    0 0 0.045em rgb(0 0 0 / 95%),
+    0 0.025em 0.09em rgb(0 0 0 / 90%),
+    0 0.08em 0.18em rgb(0 0 0 / 62%);
 }
 
 .display.compact-digits .display-count {
@@ -95,6 +98,12 @@ input {
   letter-spacing: 0.01em;
   line-height: 1;
   text-align: center;
+  -webkit-text-stroke: 0.035em rgb(0 0 0 / 88%);
+  paint-order: stroke fill;
+  text-shadow:
+    0 0 0.06em rgb(0 0 0 / 95%),
+    0 0.06em 0.14em rgb(0 0 0 / 90%),
+    0 0.12em 0.24em rgb(0 0 0 / 68%);
 }
 
 .display-caption[hidden] {
@@ -388,6 +397,13 @@ legend {
 output {
   color: #aaa7a1;
   font-variant-numeric: tabular-nums;
+}
+
+.field-note {
+  margin: 10px 0 0;
+  color: #8f8c87;
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 input[type='range'] {

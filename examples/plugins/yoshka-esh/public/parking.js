@@ -48,9 +48,9 @@ const renderDisplay = display => {
   sign.style.width = `${(state.parkingSize / 3.2).toFixed(3)}%`;
   display.style.setProperty('--counter-size', `${(fittedCounterSize / 3.2).toFixed(3)}cqw`);
   display.style.setProperty('--caption-size', `${(state.captionSize / 3.2).toFixed(3)}cqw`);
+  display.style.setProperty('--background-opacity', (state.backgroundOpacity / 100).toFixed(2));
   display.classList.toggle('compact-digits', state.compactDigits);
   caption.hidden = !state.captionVisible;
-  display.classList.toggle('test-background', state.testBackground);
   setBrandState(display, state.bottomMode);
 };
 
@@ -68,8 +68,9 @@ const renderForm = () => {
   settingsForm.querySelector('[data-interval-field]').hidden = state.bottomMode !== 'alternate';
   settingsForm.querySelectorAll('[data-output-for]').forEach(output => {
     const value = state[output.dataset.outputFor];
-    output.textContent =
-      output.dataset.outputFor === 'switchInterval' ? `${value} с` : `${value} px`;
+    if (output.dataset.outputFor === 'switchInterval') output.textContent = `${value} с`;
+    else if (output.dataset.outputFor === 'backgroundOpacity') output.textContent = `${value}%`;
+    else output.textContent = `${value} px`;
   });
 };
 
@@ -95,7 +96,7 @@ const formState = () => {
     captionSize: Number(data.get('captionSize')),
     bottomMode: data.get('bottomMode'),
     switchInterval: Number(data.get('switchInterval')),
-    testBackground: data.has('testBackground'),
+    backgroundOpacity: Number(data.get('backgroundOpacity')),
   };
 };
 

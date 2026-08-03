@@ -127,14 +127,12 @@
               </fieldset>
 
               <fieldset>
-                <legend>Проверка</legend>
-                <label class="switch-field">
-                  <span
-                    ><strong>Чёрный фон</strong
-                    ><small>Только для проверки прозрачного табло</small></span
-                  >
-                  <input name="testBackground" type="checkbox" />
+                <legend>Фон</legend>
+                <label class="range-field">
+                  <span>Непрозрачность <output data-output-for="backgroundOpacity"></output></span>
+                  <input name="backgroundOpacity" type="range" min="0" max="100" step="1" />
                 </label>
+                <p class="field-note">0% — полностью прозрачный, 100% — непрозрачный чёрный.</p>
               </fieldset>
             </div>
           </div>
