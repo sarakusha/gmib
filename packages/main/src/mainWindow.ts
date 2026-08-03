@@ -206,7 +206,6 @@ export function createTestWindow(
   window.setAlwaysOnTop(true, 'screen-saver');
   window.on('show', () => {
     window.setAlwaysOnTop(true, 'screen-saver');
-    window.moveTop();
   });
 
   if (isDevRuntime && preload) {
@@ -215,9 +214,6 @@ export function createTestWindow(
     });
   }
 
-  window.once('ready-to-show', () => {
-    window.show();
-  });
   let saveBlocker = 0;
   window.on('show', () => {
     if (!powerSaveBlocker.isStarted(saveBlocker)) {

@@ -9,6 +9,7 @@ import { DefaultDisplays } from '/@common/video';
 
 import getAllDisplays from './getAllDisplays';
 import { isOutputHidden, setOutputHidden } from './outputVisibility';
+import { compareOutputWindowOrder } from './outputWindowOrder';
 import { wss } from './server';
 import { findManagedWindow, getAllScreenParams, getPlayerParams } from './windowStore';
 import { broadcastToTabbedWindows } from './tabbedWindow';
@@ -31,6 +32,10 @@ const OUTPUT_Z_ORDER_REFRESH_INTERVAL_MS = 30_000;
 
 const isWindows = process.platform === 'win32';
 const isMacOS = process.platform === 'darwin';
+const configuredOutputUrls = new WeakMap<BrowserWindow, string>();
+
+const getOutputWindowUrl = (window: BrowserWindow): string =>
+  configuredOutputUrls.get(window) ?? window.webContents.getURL();
 
 const toNumber = <T extends number | undefined>(
   value: string | null,
@@ -58,13 +63,13 @@ const isVideoOutputWindowUrl = (url: string) => {
 
 const isVideoOutputWindow = (window: BrowserWindow): boolean => {
   if (window.isDestroyed()) return false;
-  return isVideoOutputWindowUrl(window.webContents.getURL());
+  return isVideoOutputWindowUrl(getOutputWindowUrl(window));
 };
 
 const getVideoOutputPlayer = (window: BrowserWindow): number | undefined => {
   if (!isVideoOutputWindow(window)) return undefined;
   try {
-    const player = Number(new URL(window.webContents.getURL()).searchParams.get('player'));
+    const player = Number(new URL(getOutputWindowUrl(window)).searchParams.get('player'));
     return Number.isInteger(player) ? player : undefined;
   } catch {
     return undefined;
@@ -187,7 +192,7 @@ const getOutputWindowConfig = (url: string): OutputWindowConfig | undefined => {
 
 const getVideoOutputZIndex = (window: BrowserWindow): number => {
   try {
-    return toNumber(new URL(window.webContents.getURL()).searchParams.get('zIndex'), 0);
+    return toNumber(new URL(getOutputWindowUrl(window)).searchParams.get('zIndex'), 0);
   } catch {
     return 0;
   }
@@ -195,7 +200,7 @@ const getVideoOutputZIndex = (window: BrowserWindow): number => {
 
 const getVideoOutputZOrder = (window: BrowserWindow): number => {
   try {
-    return toNumber(new URL(window.webContents.getURL()).searchParams.get('zOrder'), 0);
+    return toNumber(new URL(getOutputWindowUrl(window)).searchParams.get('zOrder'), 0);
   } catch {
     return 0;
   }
@@ -214,16 +219,22 @@ const getOutputWindowZOrder = (window: BrowserWindow): number => {
 export const arrangeOutputWindows = (): void => {
   getOutputWindows()
     .filter(window => !window.isDestroyed() && window.isVisible())
-    .sort((a, b) => {
-      const aTop = shouldKeepOnTop(a.webContents.getURL()) ? 1 : 0;
-      const bTop = shouldKeepOnTop(b.webContents.getURL()) ? 1 : 0;
-      return (
-        aTop - bTop ||
-        getOutputWindowZIndex(a) - getOutputWindowZIndex(b) ||
-        getOutputWindowZOrder(a) - getOutputWindowZOrder(b) ||
-        a.id - b.id
-      );
-    })
+    .sort((a, b) =>
+      compareOutputWindowOrder(
+        {
+          alwaysOnTop: shouldKeepOnTop(getOutputWindowUrl(a)),
+          id: a.id,
+          zIndex: getOutputWindowZIndex(a),
+          zOrder: getOutputWindowZOrder(a),
+        },
+        {
+          alwaysOnTop: shouldKeepOnTop(getOutputWindowUrl(b)),
+          id: b.id,
+          zIndex: getOutputWindowZIndex(b),
+          zOrder: getOutputWindowZOrder(b),
+        },
+      ),
+    )
     .forEach(window => {
       window.moveTop();
     });
@@ -233,7 +244,7 @@ const refreshOutputWindowsZOrder = (): void => {
   getOutputWindows()
     .filter(window => !window.isDestroyed() && window.isVisible())
     .forEach(window => {
-      if (shouldKeepOnTop(window.webContents.getURL())) {
+      if (shouldKeepOnTop(getOutputWindowUrl(window))) {
         window.setAlwaysOnTop(true, TOPMOST_LEVEL);
       }
     });
@@ -248,7 +259,7 @@ if (isWindows) {
   outputZOrderRefreshTimer.unref();
 }
 
-const scheduleArrangeVideoOutputWindows = (): void => {
+const scheduleArrangeOutputWindows = (): void => {
   setTimeout(arrangeOutputWindows, 0);
 };
 
@@ -258,20 +269,22 @@ export const configureOutputWindowInteractivity = (window: BrowserWindow): void 
   window.setIgnoreMouseEvents(false);
   if (interactiveConfigured.has(window)) return;
   interactiveConfigured.add(window);
-  window.on('focus', scheduleArrangeVideoOutputWindows);
+  window.on('focus', scheduleArrangeOutputWindows);
+  window.on('show', scheduleArrangeOutputWindows);
+  window.on('restore', scheduleArrangeOutputWindows);
 };
 
 export const configureOutputWindow = (window: BrowserWindow, url: string): void => {
   if (!isOutputWindowUrl(url)) return;
   const config = getOutputWindowConfig(url);
   if (!config) return;
+  configuredOutputUrls.set(window, url);
   const { bounds, isVideoOutput, useNativeKiosk } = config;
 
   const keepOnTop = () => {
     if (window.isDestroyed()) return;
     window.setAlwaysOnTop(true, TOPMOST_LEVEL);
-    window.moveTop();
-    scheduleArrangeVideoOutputWindows();
+    scheduleArrangeOutputWindows();
   };
 
   window.setParentWindow(null);
@@ -290,18 +303,14 @@ export const configureOutputWindow = (window: BrowserWindow, url: string): void 
       window.webContents.insertCSS(hideCursorCSS).catch(err => {
         debug(`error while insert cursor css: ${(err as Error).message}`);
       });
+      scheduleArrangeOutputWindows();
     });
   }
   if (isOutputHidden()) window.hide();
   else if (!window.isVisible()) {
     window.showInactive();
-    if (isVideoOutput) scheduleArrangeVideoOutputWindows();
   }
   if (!shouldKeepOnTop(url)) {
-    if (isVideoOutput) {
-      window.on('show', scheduleArrangeVideoOutputWindows);
-      window.on('restore', scheduleArrangeVideoOutputWindows);
-    }
     return;
   }
 
