@@ -35,7 +35,12 @@ const transparentOutputCSS = `html, body {
   background-color: transparent !important;
 }`;
 
-export const updateTest = async (scr: Screen, force = false): Promise<void> => {
+const isLoadAborted = (error: unknown): boolean =>
+  error instanceof Error && error.message.includes('ERR_ABORTED');
+
+const pendingUpdates = new Map<number, Promise<void>>();
+
+const updateTestImpl = async (scr: Screen, force = false): Promise<void> => {
   const primary = screen.getPrimaryDisplay();
   const displays = screen.getAllDisplays();
   const { id } = scr;
@@ -78,18 +83,24 @@ export const updateTest = async (scr: Screen, force = false): Promise<void> => {
     width: scr.width,
     height: scr.height,
   };
+  const isNewWindow = !win;
   const testWindow =
     win ??
     createTestWindow(windowBounds.width, windowBounds.height, windowBounds.x, windowBounds.y);
   configureOutputWindowInteractivity(testWindow);
   registerScreen(testWindow, scr);
   const contents = testWindow.webContents;
-  contents.on('did-fail-load', (event, errorCode, errorDescription) => {
-    debug(
-      `Loading error. url: ${url}, errorCode: ${errorCode}, errorDescription: ${errorDescription}`,
-    );
-    setTimeout(() => contents.reload(), 5000).unref();
-  });
+  if (isNewWindow) {
+    contents.on('did-fail-load', (event, errorCode, errorDescription) => {
+      if (errorCode === -3 || testWindow.isDestroyed() || contents.isDestroyed()) return;
+      debug(
+        `Loading error. url: ${contents.getURL()}, errorCode: ${errorCode}, errorDescription: ${errorDescription}`,
+      );
+      setTimeout(() => {
+        if (!testWindow.isDestroyed() && !contents.isDestroyed()) contents.reload();
+      }, 5000).unref();
+    });
+  }
   testWindow.setKiosk(false);
   testWindow.setAlwaysOnTop(true, 'screen-saver');
   testWindow.setPosition(windowBounds.x, windowBounds.y);
@@ -106,11 +117,32 @@ export const updateTest = async (scr: Screen, force = false): Promise<void> => {
         testWindow.webContents.insertCSS(
           scr.outputTransparent ? `${hideCursorCSS}\n${transparentOutputCSS}` : hideCursorCSS,
         ),
-      );
+      )
+      .catch(error => {
+        if (isLoadAborted(error) || testWindow.isDestroyed() || contents.isDestroyed()) return;
+        debug(
+          `Loading error. url: ${url}, error: ${error instanceof Error ? error.message : error}`,
+        );
+      });
   }
   if (isOutputWindowsHidden()) testWindow.hide();
   else {
     testWindow.show();
     arrangeOutputWindows();
   }
+};
+
+export const updateTest = (scr: Screen, force = false): Promise<void> => {
+  const previous = pendingUpdates.get(scr.id) ?? Promise.resolve();
+  const current = previous.catch(() => undefined).then(() => updateTestImpl(scr, force));
+  pendingUpdates.set(scr.id, current);
+  void current.then(
+    () => {
+      if (pendingUpdates.get(scr.id) === current) pendingUpdates.delete(scr.id);
+    },
+    () => {
+      if (pendingUpdates.get(scr.id) === current) pendingUpdates.delete(scr.id);
+    },
+  );
+  return current;
 };
