@@ -4,6 +4,7 @@ const defaults = Object.freeze({
   spaces: 32,
   parkingSize: 154,
   counterSize: 180,
+  textShadow: 45,
   compactDigits: false,
   captionVisible: false,
   captionSize: 24,
@@ -26,6 +27,7 @@ const normalizeState = value => {
     spaces: numberInRange(state.spaces, defaults.spaces, 0, 9999),
     parkingSize: numberInRange(state.parkingSize, defaults.parkingSize, 64, 240),
     counterSize: numberInRange(state.counterSize, defaults.counterSize, 72, 240),
+    textShadow: numberInRange(state.textShadow, defaults.textShadow, 0, 100),
     compactDigits:
       typeof state.compactDigits === 'boolean' ? state.compactDigits : defaults.compactDigits,
     captionVisible:

@@ -49,6 +49,12 @@ const renderDisplay = display => {
   display.style.setProperty('--counter-size', `${(fittedCounterSize / 3.2).toFixed(3)}cqw`);
   display.style.setProperty('--caption-size', `${(state.captionSize / 3.2).toFixed(3)}cqw`);
   display.style.setProperty('--background-opacity', (state.backgroundOpacity / 100).toFixed(2));
+  const textShadowLevel = state.textShadow / 100;
+  const textShadow =
+    textShadowLevel <= 0.45 ? textShadowLevel : 0.45 + (textShadowLevel - 0.45) * 1.4;
+  display.style.setProperty('--text-stroke-opacity', (textShadow * 0.38).toFixed(3));
+  display.style.setProperty('--text-edge-opacity', (textShadow * 0.62).toFixed(3));
+  display.style.setProperty('--text-shadow-opacity', (textShadow * 0.4).toFixed(3));
   display.classList.toggle('compact-digits', state.compactDigits);
   caption.hidden = !state.captionVisible;
   setBrandState(display, state.bottomMode);
@@ -69,7 +75,8 @@ const renderForm = () => {
   settingsForm.querySelectorAll('[data-output-for]').forEach(output => {
     const value = state[output.dataset.outputFor];
     if (output.dataset.outputFor === 'switchInterval') output.textContent = `${value} с`;
-    else if (output.dataset.outputFor === 'backgroundOpacity') output.textContent = `${value}%`;
+    else if (['backgroundOpacity', 'textShadow'].includes(output.dataset.outputFor))
+      output.textContent = `${value}%`;
     else output.textContent = `${value} px`;
   });
 };
@@ -91,6 +98,7 @@ const formState = () => {
     spaces: Number(data.get('spaces')),
     parkingSize: Number(data.get('parkingSize')),
     counterSize: Number(data.get('counterSize')),
+    textShadow: Number(data.get('textShadow')),
     compactDigits: data.has('compactDigits'),
     captionVisible: data.has('captionVisible'),
     captionSize: Number(data.get('captionSize')),
