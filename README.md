@@ -434,7 +434,9 @@ API. npm-зависимости backend-модуля следует заране
 запускает `npm install`. Полный базовый пример находится в
 [`examples/plugins/parking-counter`](examples/plugins/parking-counter). Пример портретного табло
 320×480 с прозрачным фоном, настраиваемой композицией и чередованием фирменной графики находится в
-[`examples/plugins/yoshka-esh`](examples/plugins/yoshka-esh).
+[`examples/plugins/yoshka-esh`](examples/plugins/yoshka-esh). Самодостаточная инструкция для
+агентов-разработчиков и полные типы Plugin API 1.0 находятся в
+[`examples/plugins/AGENTS.md`](examples/plugins/AGENTS.md).
 
 ## Журнал
 
