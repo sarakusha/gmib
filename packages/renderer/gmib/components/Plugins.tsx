@@ -1,9 +1,13 @@
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlineOutlined';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExtensionOutlinedIcon from '@mui/icons-material/ExtensionOutlined';
 import LaunchIcon from '@mui/icons-material/Launch';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
   Alert,
   Box,
   Button,
@@ -208,34 +212,59 @@ const Plugins: React.FC = () => {
         </Alert>
       )}
 
-      <Stack direction="row" sx={{ mb: 1, alignItems: 'center' }}>
-        <Typography variant="h6" sx={{ flex: 1 }}>
-          Официальные плагины
-        </Typography>
-        <Button
-          size="small"
-          startIcon={<RefreshIcon />}
-          onClick={() => void loadCatalog()}
-          disabled={catalogLoading || busyId !== undefined}
-        >
-          Обновить каталог
-        </Button>
-      </Stack>
-      {catalogError ? (
-        <Alert
-          severity="warning"
-          sx={{ mb: 3 }}
-          action={
-            <Button color="inherit" size="small" onClick={() => void loadCatalog()}>
-              Повторить
-            </Button>
-          }
-        >
-          {catalogError}
-        </Alert>
-      ) : (
-        <Paper variant="outlined" sx={{ mb: 3 }}>
+      <Accordion
+        disableGutters
+        elevation={0}
+        sx={{
+          mb: 3,
+          border: 1,
+          borderColor: 'divider',
+          borderRadius: 1,
+          '&:before': { display: 'none' },
+        }}
+      >
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="h6">Официальные плагины</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Расширения из проверенного каталога gmib
+            </Typography>
+          </Box>
           {catalogLoading ? (
+            <CircularProgress size={20} sx={{ mr: 1 }} />
+          ) : catalogError ? (
+            <Chip size="small" color="warning" label="Ошибка загрузки" sx={{ mr: 1 }} />
+          ) : (
+            <Chip size="small" label={catalog.length} sx={{ mr: 1 }} />
+          )}
+        </AccordionSummary>
+        <AccordionDetails sx={{ p: 0, borderTop: 1, borderColor: 'divider' }}>
+          <Stack direction="row" sx={{ px: 2, py: 1, alignItems: 'center' }}>
+            <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
+              Доступны установка и обновление совместимых версий
+            </Typography>
+            <Button
+              size="small"
+              startIcon={<RefreshIcon />}
+              onClick={() => void loadCatalog()}
+              disabled={catalogLoading || busyId !== undefined}
+            >
+              Обновить каталог
+            </Button>
+          </Stack>
+          {catalogError ? (
+            <Alert
+              severity="warning"
+              sx={{ mx: 2, mb: 2 }}
+              action={
+                <Button color="inherit" size="small" onClick={() => void loadCatalog()}>
+                  Повторить
+                </Button>
+              }
+            >
+              {catalogError}
+            </Alert>
+          ) : catalogLoading ? (
             <Stack sx={{ p: 4, alignItems: 'center' }}>
               <CircularProgress />
             </Stack>
@@ -245,7 +274,7 @@ const Plugins: React.FC = () => {
             </Typography>
           ) : (
             <List disablePadding>
-              {catalog.map((entry, index) => {
+              {catalog.map(entry => {
                 const { manifest } = entry;
                 const installed = plugins.find(plugin => plugin.manifest.id === manifest.id);
                 const updateAvailable = Boolean(
@@ -255,7 +284,7 @@ const Plugins: React.FC = () => {
                 const busy = busyId === `catalog:${manifest.id}`;
                 return (
                   <React.Fragment key={manifest.id}>
-                    {index > 0 && <Divider />}
+                    <Divider />
                     <ListItem
                       alignItems="flex-start"
                       secondaryAction={
@@ -302,8 +331,8 @@ const Plugins: React.FC = () => {
               })}
             </List>
           )}
-        </Paper>
-      )}
+        </AccordionDetails>
+      </Accordion>
 
       <Typography variant="h6" sx={{ mb: 1 }}>
         Установленные плагины
