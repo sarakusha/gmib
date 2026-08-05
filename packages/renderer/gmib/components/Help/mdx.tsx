@@ -65,10 +65,15 @@ const mdx: MDXComponents = {
       {...props}
       sx={{
         fontFamily: 'Monospace',
-        bgcolor: 'text.primary',
-        color: 'background.paper',
-        p: 1,
-        borderRadius: 1,
+        fontSize: '0.875em',
+        fontWeight: 500,
+        bgcolor: 'action.hover',
+        color: 'text.primary',
+        border: 1,
+        borderColor: 'divider',
+        borderRadius: 0.5,
+        px: 0.5,
+        py: 0.125,
       }}
     />
     // </Typography>
