@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module';
 import fs from 'node:fs';
 import path from 'node:path';
+import { isDeepStrictEqual } from 'node:util';
 
 import type { Request, RequestHandler, Response } from 'express';
 import express from 'express';
@@ -670,25 +671,24 @@ const installExtractedPlugin = async (
   if (targetExists) {
     await fs.promises
       .rm(backup, { recursive: true, force: true })
-      .catch(error => debug(`Failed to remove plugin backup ${backup}: ${(error as Error).message}`));
+      .catch(error =>
+        debug(`Failed to remove plugin backup ${backup}: ${(error as Error).message}`),
+      );
   }
   return { updated: targetExists };
 };
 
-export const installPluginFromDialog = async (): Promise<PluginInstallResult> => {
-  const options: Electron.OpenDialogOptions = {
-    title: 'Установить плагин gmib',
-    filters: [{ name: 'Плагины gmib', extensions: ['gmib-plugin', 'zip'] }],
-    properties: ['openFile'],
-  };
-  const result = await dialog.showOpenDialog(options);
-  const [archivePath] = result.filePaths;
-  if (result.canceled || !archivePath) return { status: 'cancelled' };
-
+export const installPluginFromArchive = async (
+  archivePath: string,
+  expectedManifest?: PluginManifest,
+): Promise<PluginInstallResult> => {
   const staging = path.join(rootDirectory(), STAGING_DIRECTORY, nanoid());
   await fs.promises.mkdir(path.dirname(staging), { recursive: true });
   try {
     const manifest = await extractPluginArchive(archivePath, staging);
+    if (expectedManifest && !isDeepStrictEqual(manifest, expectedManifest)) {
+      throw new Error('Манифест скачанного плагина не совпадает с официальным каталогом');
+    }
     await validatePluginFiles(staging, manifest);
     const current = (await scanInstalled()).find(item => item.manifest.id === manifest.id);
     const permissionText =
@@ -717,6 +717,18 @@ export const installPluginFromDialog = async (): Promise<PluginInstallResult> =>
   } finally {
     await fs.promises.rm(staging, { recursive: true, force: true });
   }
+};
+
+export const installPluginFromDialog = async (): Promise<PluginInstallResult> => {
+  const options: Electron.OpenDialogOptions = {
+    title: 'Установить плагин gmib',
+    filters: [{ name: 'Плагины gmib', extensions: ['gmib-plugin', 'zip'] }],
+    properties: ['openFile'],
+  };
+  const result = await dialog.showOpenDialog(options);
+  const [archivePath] = result.filePaths;
+  if (result.canceled || !archivePath) return { status: 'cancelled' };
+  return installPluginFromArchive(archivePath);
 };
 
 export const setPluginEnabled = async (id: string, enabled: boolean): Promise<PluginStatus> => {
