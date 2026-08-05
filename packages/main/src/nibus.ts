@@ -27,12 +27,18 @@ export default { service } as const;
 export const updateConfigStore = (update: (current: Config) => Config): Config => {
   const next = update(config.store);
   config.store = next;
-  void service.server.broadcast('config', config.store);
+  void service.server.broadcast('config', config.store).catch(handleNibusMessageError);
   return config.store;
 };
 
 let isClosing = false;
 let isClosed = false;
+
+const handleNibusMessageError = (error: unknown): void => {
+  if (!isClosing && !isClosed) {
+    debug(`error while send nibus message: ${error instanceof Error ? error.message : String(error)}`);
+  }
+};
 
 const closeNibus = async (): Promise<void> => {
   if (isClosed) return;
@@ -66,29 +72,32 @@ const quitHandler = (event: Event): void => {
     const file = log.transports.file.getFile().path;
     if (fs.existsSync(file)) {
       setTimeout(() => {
-        void reader.read(file).then(lines =>
-          lines.forEach(line => {
-            void service.server.send(socket, 'log', line);
-          }),
-        );
+        void reader
+          .read(file)
+          .then(lines => {
+            lines.forEach(line => {
+              void service.server.send(socket, 'log', line).catch(handleNibusMessageError);
+            });
+          })
+          .catch(handleNibusMessageError);
       }, 3000);
     }
-    void service?.server.send(socket, 'config', config.store);
-    void service?.server.send(socket, 'displays', getAllDisplays());
+    void service.server.send(socket, 'config', config.store).catch(handleNibusMessageError);
+    void service.server.send(socket, 'displays', getAllDisplays()).catch(handleNibusMessageError);
   });
   service.server.on('client:config', (socket, store) => {
     try {
       updateConfigStore(() => store as typeof config.store);
     } catch (err) {
       debug(`Error while save config: ${(err as Error).message}`, true);
-      void service.server.send(socket, 'config', config.store);
+      void service.server.send(socket, 'config', config.store).catch(handleNibusMessageError);
     }
   });
   service.server.on('client:getBrightnessHistory', (socket, dt) => {
     if (dt != null)
-      void getBrightnessHistoryOn(dt).then(rows =>
-        service.server.send(socket, 'brightnessHistory', rows),
-      );
+      void getBrightnessHistoryOn(dt)
+        .then(rows => service.server.send(socket, 'brightnessHistory', rows))
+        .catch(handleNibusMessageError);
   });
   debug('Starting local NIBUS...');
   await service.start(secret.toString('base64'));
@@ -102,13 +111,13 @@ let lastHealth: number | undefined;
 localConfig.onDidChange('health', health => {
   if (health && health.timestamp !== lastHealth) {
     lastHealth = health.timestamp;
-    void service?.server.broadcast('health', health);
+    void service.server.broadcast('health', health).catch(handleNibusMessageError);
   }
 });
 
 const tail = new Tail(log.transports.file.getFile().path);
 tail.on('line', line => {
-  void service.server.broadcast('log', line);
+  void service.server.broadcast('log', line).catch(handleNibusMessageError);
 });
 
 // TODO: Screens
