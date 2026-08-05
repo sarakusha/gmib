@@ -1,10 +1,15 @@
 import { ipcRenderer } from 'electron';
 
-import type { PluginInstallResult, PluginStatus } from '/@common/plugins';
+import type { PluginCatalogEntry, PluginInstallResult, PluginStatus } from '/@common/plugins';
 
 export const list = (): Promise<PluginStatus[]> => ipcRenderer.invoke('plugins:list');
 
+export const catalog = (): Promise<PluginCatalogEntry[]> => ipcRenderer.invoke('plugins:catalog');
+
 export const install = (): Promise<PluginInstallResult> => ipcRenderer.invoke('plugins:install');
+
+export const installOfficial = (id: string): Promise<PluginInstallResult> =>
+  ipcRenderer.invoke('plugins:installOfficial', id);
 
 export const setEnabled = (id: string, enabled: boolean): Promise<PluginStatus> =>
   ipcRenderer.invoke('plugins:setEnabled', id, enabled);

@@ -7,11 +7,14 @@ import {
   setPluginEnabled,
   uninstallPlugin,
 } from './pluginHost';
+import { installOfficialPlugin, listOfficialPlugins } from './pluginCatalog';
 import relaunch from './relaunch';
 
 void app.whenReady().then(() => {
   ipcMain.handle('plugins:list', () => listPlugins());
+  ipcMain.handle('plugins:catalog', () => listOfficialPlugins());
   ipcMain.handle('plugins:install', () => installPluginFromDialog());
+  ipcMain.handle('plugins:installOfficial', (_, id: string) => installOfficialPlugin(id));
   ipcMain.handle('plugins:setEnabled', (_, id: string, enabled: boolean) =>
     setPluginEnabled(id, enabled),
   );

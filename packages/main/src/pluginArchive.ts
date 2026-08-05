@@ -7,7 +7,7 @@ import type { PluginManifest } from '/@common/plugins';
 
 import { parsePluginManifest } from './pluginManifest';
 
-const MAX_ARCHIVE_SIZE = 50 * 1024 * 1024;
+export const MAX_PLUGIN_ARCHIVE_SIZE = 50 * 1024 * 1024;
 const MAX_EXTRACTED_SIZE = 200 * 1024 * 1024;
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 const MAX_FILES = 2_000;
@@ -43,7 +43,7 @@ export const extractPluginArchive = async (
 ): Promise<PluginManifest> => {
   const archiveStats = await fs.promises.stat(archivePath);
   if (!archiveStats.isFile()) throw new Error('Выбранный путь не является файлом');
-  if (archiveStats.size > MAX_ARCHIVE_SIZE) {
+  if (archiveStats.size > MAX_PLUGIN_ARCHIVE_SIZE) {
     throw new Error('Размер архива плагина превышает 50 МБ');
   }
 
