@@ -15,8 +15,18 @@ const electronBinaryByPlatform = {
 const electronBinary = electronBinaryByPlatform[process.platform] || electronBinaryByPlatform.linux;
 
 if (!existsSync(electronBinary)) {
-  console.warn(`Skipping Electron vendor update: missing ${electronBinary}`);
-  process.exit(0);
+  const installResult = spawnSync(process.execPath, [path.join(electronPackageDir, 'install.js')], {
+    stdio: 'inherit',
+  });
+
+  if (installResult.error) {
+    throw installResult.error;
+  }
+
+  if (installResult.status !== 0 || !existsSync(electronBinary)) {
+    console.error(`Electron installation did not create ${electronBinary}`);
+    process.exit(installResult.status || 1);
+  }
 }
 
 const result = spawnSync(electronBinary, [path.join(__dirname, 'update-electron-vendors.js')], {

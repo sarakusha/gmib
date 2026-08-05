@@ -16,7 +16,7 @@ import { Chart as HighchartsReact } from '@highcharts/react';
 import debugFactory from 'debug';
 import sortBy from 'lodash/sortBy';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import SunCalc from 'suncalc';
+import * as SunCalc from 'suncalc';
 
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useDispatch, useSelector } from '../store';

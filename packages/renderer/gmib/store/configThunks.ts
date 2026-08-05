@@ -1,7 +1,7 @@
 import { createAsyncThunk, isAnyOf } from '@reduxjs/toolkit';
 import flatten from 'lodash/flatten';
 import sortBy from 'lodash/sortBy';
-import SunCalc from 'suncalc';
+import * as SunCalc from 'suncalc';
 
 import createDebouncedAsyncThunk from '../../common/createDebouncedAsyncThunk';
 import novastarApi, { selectNovastarIds, selectSerials } from '../api/novastar';
