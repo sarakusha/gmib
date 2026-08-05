@@ -36,6 +36,25 @@ export type PluginStatus = {
   error?: string;
 };
 
+export type PluginCatalogPublisher = {
+  id: string;
+  name: string;
+  verified: boolean;
+};
+
+export type PluginCatalogRelease = {
+  url: string;
+  sha256: string;
+  size: number;
+};
+
+export type PluginCatalogEntry = {
+  manifest: PluginManifest;
+  publisher: PluginCatalogPublisher;
+  repository: string;
+  release: PluginCatalogRelease;
+};
+
 export type PluginInstallResult =
   | {
       status: 'cancelled';
