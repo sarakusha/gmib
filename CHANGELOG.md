@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [5.3.0](https://github.com/sarakusha/gmib/compare/v5.2.0...v5.3.0) (2026-08-05)
+
+### Features
+
+* add adjustable background opacity to yoshka esh ([b64622c](https://github.com/sarakusha/gmib/commit/b64622ca60d8c683738c316e9021109f9bbeb4b0))
+* add adjustable text shadow to yoshka esh ([912df80](https://github.com/sarakusha/gmib/commit/912df8042d151ff75d5afa9e1a120f93d63ff48b))
+* **plugins:** add official plugin catalog ([8372fb5](https://github.com/sarakusha/gmib/commit/8372fb54131f04f9e0090955c397a31a07ee09b3))
+* **plugins:** add shader screensavers example ([eec59c6](https://github.com/sarakusha/gmib/commit/eec59c65b2f00a942b45baa105ad0031472822c3))
+* **plugins:** collapse official catalog by default ([471e000](https://github.com/sarakusha/gmib/commit/471e0001f179f3f2f731f7e7b50697508bc1641c))
+* refine Yoshka Esh parking controls and branding ([969eb91](https://github.com/sarakusha/gmib/commit/969eb9179218768b7ba853a4de4c411c2e12291a))
+* unify schedulers with seconds and priorities ([ee35c0b](https://github.com/sarakusha/gmib/commit/ee35c0bfd05370de694180fd5ebbe3acd5c75a53))
+
+### Bug Fixes
+
+* preserve output z-index on window creation ([0312c05](https://github.com/sarakusha/gmib/commit/0312c0557e572b7e893d52f32f26fb2763c9ffdb))
+* serialize test output loads ([fe24f32](https://github.com/sarakusha/gmib/commit/fe24f32b33038b2bd8fbe1f2b4c39df53eca2b1b))
+* suppress NiBUS sends during shutdown ([f96c096](https://github.com/sarakusha/gmib/commit/f96c096e8b92cd52d4d5420bda4dc4eda1691403))
+* unify output layer parameter as zIndex ([5d207f6](https://github.com/sarakusha/gmib/commit/5d207f6efa4c0d6699c2668802a0f1c86cc07fb3))
+* wait for active database queries during shutdown ([34dc5b0](https://github.com/sarakusha/gmib/commit/34dc5b05efc0d3427452dda760aca2bbc29ccac1))
 ## [5.2.0](https://github.com/sarakusha/gmib/compare/v5.1.4...v5.2.0) (2026-07-31)
 
 
