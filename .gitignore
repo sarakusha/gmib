@@ -80,4 +80,3 @@ stats.html
 .pnpm-store/
 scripts/merge-releases.sh
 *.gmib-plugin
-examples/plugins/yoshka-esh/public/yoshka-esh-gastrofest.mp4
