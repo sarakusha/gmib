@@ -2,9 +2,6 @@ overrides:
   react: $react
   ws: $ws
   prettier: $prettier
-  "@emotion/react": "11.14.0"
-  "@emotion/styled": "11.14.0"
-  "@emotion/cache": "11.14.0"
   # "@sarakusha/ebml": "link:../ebml"
   # '@nibus/core': file:.yalc/@nibus/core
   # "@nibus/detection": file:.yalc/@nibus/detection
