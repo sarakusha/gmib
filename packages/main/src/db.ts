@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { app } from 'electron';
+import { app, type Event } from 'electron';
 import path from 'path';
 import { promisify } from 'util';
 
 import dayjs from 'dayjs';
 import debugFactory from 'debug';
 import log from 'electron-log';
-import { Database } from 'sqlite3';
+import { Database, type Statement } from 'sqlite3';
 
 import type { NullableOptional } from '/@common/helpers';
 import Deferred from '/@common/Deferred';
@@ -22,6 +22,11 @@ const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:db`);
 const dbPath = path.join(app.getPath('userData'), 'db.sqlite3');
 
 const db = new Database(dbPath, createTables);
+const pendingOperations = new Set<Promise<unknown>>();
+
+let closePromise: Promise<void> | undefined;
+let isQuitting = false;
+let isClosed = false;
 
 db.exec('PRAGMA foreign_keys = ON');
 
@@ -39,6 +44,55 @@ const DATETIME_FORMAT = 'YYYY-MM-DD HH:mm:ss.SSS';
 const dbDeferred = new Deferred();
 
 export const dbReady = dbDeferred.promise;
+
+const finalizeStatement = (statement: Statement): Promise<void> =>
+  new Promise(resolve => {
+    statement.finalize(error => {
+      if (error) debug(`error while finalize database statement: ${error.message}`);
+      resolve();
+    });
+  });
+
+const trackOperation = <T>(operation: Promise<T>): Promise<T> => {
+  pendingOperations.add(operation);
+  void operation.then(
+    () => pendingOperations.delete(operation),
+    () => pendingOperations.delete(operation),
+  );
+  return operation;
+};
+
+const useStatement = <T>(statement: Statement, operation: Promise<T>): Promise<T> =>
+  trackOperation(operation.finally(() => finalizeStatement(statement)));
+
+const closeDatabaseImpl = async (): Promise<void> => {
+  while (pendingOperations.size > 0) {
+    await Promise.allSettled([...pendingOperations]);
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    db.close(error => {
+      if (error) reject(error);
+      else resolve();
+    });
+  });
+};
+
+export const closeDatabase = (): Promise<void> => (closePromise ??= closeDatabaseImpl());
+
+const quitHandler = (event: Event): void => {
+  if (isClosed || isQuitting) return;
+  event.preventDefault();
+  isQuitting = true;
+  void closeDatabase()
+    .catch(error => debug(`error while close database: ${error}`))
+    .finally(() => {
+      isClosed = true;
+      app.quit();
+    });
+};
+
+app.on('before-quit', quitHandler);
 
 export const formatDate = (date?: string): string => dayjs(date).format(DATETIME_FORMAT);
 
@@ -358,28 +412,17 @@ export const flag = (condition: boolean | undefined, value: number): number =>
 
 type Decoder<T> = (result: NullableOptional) => T;
 
-const lazy = <F extends () => any>(creator: F): (() => ReturnType<F>) => {
-  let res: ReturnType<F>;
-  let processed = false;
-  return () => {
-    if (processed) return res;
-    res = creator();
-    processed = true;
-    return res;
-  };
-};
-
 export const promisifyGet = <P extends (...params: any[]) => any, R>(
   sql: string,
   encoder: P,
   decoder: Decoder<R>,
 ): ((...params: Parameters<P>) => Promise<R | undefined>) => {
-  const fn = lazy(() => {
+  return (...params) => {
     const statement = db.prepare(sql);
-    return promisify(statement.get.bind(statement));
-  });
-  return (...params) =>
-    fn()(encoder(...params)).then(result => (decoder ? result && decoder(result) : result) as R);
+    return useStatement(statement, promisify(statement.get.bind(statement))(encoder(...params))).then(
+      result => (decoder ? result && decoder(result) : result) as R,
+    );
+  };
 };
 
 export const promisifyAll = <P extends (...args: any[]) => any, R>(
@@ -387,28 +430,30 @@ export const promisifyAll = <P extends (...args: any[]) => any, R>(
   encoder: P,
   decoder?: Decoder<R>,
 ): ((...params: Parameters<P>) => Promise<R[]>) => {
-  const fn = lazy(() => {
+  return (...params) => {
     const statement = db.prepare(sql);
-    return promisify(statement.all.bind(statement));
-  });
-  return (...params) =>
-    fn()(encoder(...params)).then(
+    return useStatement(statement, promisify(statement.all.bind(statement))(encoder(...params))).then(
       result => (decoder ? (result as NullableOptional).map(decoder) : result) as R[],
     );
+  };
 };
 
 export const promisifyRun = <P extends (...args: any[]) => any>(
   sql: string,
   encoder?: P,
 ): ((...params: Parameters<P>) => Promise<{ changes: number; lastID: number }>) => {
-  const statement = lazy(() => db.prepare(sql));
-  return (...params) =>
-    new Promise((resolve, reject) => {
-      statement().run(encoder ? encoder(...params) : params, function callback(err) {
-        if (err) reject(err);
-        else resolve({ lastID: this.lastID, changes: this.changes });
-      });
-    });
+  return (...params) => {
+    const statement = db.prepare(sql);
+    return useStatement(
+      statement,
+      new Promise((resolve, reject) => {
+        statement.run(encoder ? encoder(...params) : params, function callback(err) {
+          if (err) reject(err);
+          else resolve({ lastID: this.lastID, changes: this.changes });
+        });
+      }),
+    );
+  };
 };
 
 export const uniqueField =
