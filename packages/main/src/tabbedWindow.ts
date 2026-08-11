@@ -209,6 +209,7 @@ class TabbedWindow {
     if (this.activeId === id) {
       this.activeId = this.tabs.find(item => !item.hidden && item.id !== id)?.id;
       if (this.activeId) this.activate(this.activeId);
+      else this.window.hide();
     }
     this.render();
     emitChange();
