@@ -19,6 +19,7 @@ import NovastarLoader from './NovastarLoader';
 import { getAddressesForScreen, getScreens } from './screen';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:master`);
+const BROADCAST_DETECTION_DELAY_MS = 10000;
 
 const getLocalAddresses = (): string[] =>
   Object.values(networkInterfaces())
@@ -139,8 +140,11 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
     if (this.isKnownGmibAddress(address) || this.broadcastDetectionTimers.has(address)) return;
     const timeout = setTimeout(() => {
       this.broadcastDetectionTimers.delete(address);
-      if (!this.isKnownGmibAddress(address)) this.emit('broadcastDetected', address);
-    }, 1500);
+      if (!this.isKnownGmibAddress(address)) {
+        debug(`external NovaStar broadcast detected: ${address}`);
+        this.emit('broadcastDetected', address);
+      }
+    }, BROADCAST_DETECTION_DELAY_MS);
     timeout.unref();
     this.broadcastDetectionTimers.set(address, timeout);
   }
@@ -324,6 +328,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
 
   openBroadcastDetector() {
     void this.closeBroadcastDetector().then(() => {
+      if (!this.running) return;
       const broadcastDetector = dgram.createSocket('udp4');
       broadcastDetector.bind(UDP_PORT, () => {
         // debug(`listen on ${UDP_PORT}`);
@@ -365,18 +370,23 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
     if (this.running) return false;
     this.running = true;
     const updateDevices = async () => {
+      if (!this.running) return;
       try {
         await this.closeBroadcastDetector();
+        if (!this.running) return;
         const screens = await getScreens();
+        if (!this.running) return;
         const hardAddresses = flatten(
           await asyncSerial(screens, screen => getAddressesForScreen(screen.id)),
         ).filter(address => reIPv4.test(address));
+        if (!this.running) return;
         hardAddresses.forEach(address => {
           if (!this.hasNetDevice(address)) {
             this.openNetDevice(address);
           }
         });
         const addresses = await findNetDevices(dest);
+        if (!this.running) return;
         // debug(`found: ${addresses.join(', ')}`);
         this.openBroadcastDetector();
         addresses.forEach(address => {
@@ -385,9 +395,11 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
           }
         });
       } finally {
-        this.finder = setTimeout(() => {
-          void updateDevices();
-        }, interval);
+        if (this.running) {
+          this.finder = setTimeout(() => {
+            void updateDevices();
+          }, interval);
+        }
       }
     };
 
@@ -405,9 +417,12 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
     if (!this.running) return false;
     this.running = false;
     clearTimeout(this.finder);
+    net.off('open', this.openHandler);
+    net.off('disconnect', this.disconnectHandler);
+    net.off('close', this.closeHandler);
     [...this.novastarControls.values()].forEach(control => control.session.close());
     this.novastarControls.clear();
-    void this.closeBroadcastDetector();
+    await this.closeBroadcastDetector();
     await delay(0);
     this.emit('close');
     return true;

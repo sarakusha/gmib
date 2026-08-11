@@ -30,7 +30,7 @@ import SearchDialog from '../dialogs/SearchDialog';
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useDispatch, useSelector } from '../store';
 import { setAutobrightness, setProtectionProp } from '../store/configSlice';
-import { setCurrentTab, setRemoteDialogOpen } from '../store/currentSlice';
+import { setBroadcastDetected, setCurrentTab, setRemoteDialogOpen } from '../store/currentSlice';
 import {
   selectAutobrightness,
   selectBroadcastDetected,
@@ -94,19 +94,20 @@ const App: React.FC = () => {
   const isSchedulerSupported = supportsFeature('gmibScheduler', version, isRemoteSession);
   useEffect(() => {
     if (broadcastDetected) {
-      enqueueSnackbar(`Обнаружена рассылка с адреса ${broadcastDetected}!`, {
-        variant: 'warning',
-        persist: true,
-        // onClose: () => {
-        //   dispatch(setBroadcastDetected());
-        // },
-
-        action: key => (
-          <IconButton onClick={() => closeSnackbar(key)} size="small">
-            <CloseIcon fontSize="inherit" />
-          </IconButton>
-        ),
-      });
+      enqueueSnackbar(
+        `Обнаружена рассылка NovaStar с адреса ${broadcastDetected}. Возможно, запущена NovaLCT: ` +
+          'она занимает порт обнаружения, поэтому GMIB не сможет найти устройства NovaStar.',
+        {
+          variant: 'warning',
+          persist: true,
+          action: key => (
+            <IconButton onClick={() => closeSnackbar(key)} size="small">
+              <CloseIcon fontSize="inherit" />
+            </IconButton>
+          ),
+        },
+      );
+      dispatch(setBroadcastDetected());
     }
   }, [broadcastDetected, closeSnackbar, dispatch, enqueueSnackbar]);
   useEffect(() => {

@@ -39,9 +39,12 @@ const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:proxy`);
 
 let masterProxy: Proxy | undefined;
 
-const delay100 = () =>
+const MASTER_ELECTION_SETTLE_MS = 3000;
+const MASTER_BROWSER_REFRESH_MS = 5000;
+
+const delay = (timeout: number) =>
   new Promise<void>(resolve => {
-    setTimeout(resolve, 100);
+    setTimeout(resolve, timeout);
   });
 
 const rank = Math.random();
@@ -68,9 +71,24 @@ const disableNet = config.get('disableNet');
 
 const bonjour = bonjourHap();
 
+let serviceActive = false;
+
+const stopMasterService = async (): Promise<void> => {
+  if (!serviceActive) return;
+  serviceActive = false;
+  await service.end();
+};
+
+const advertiseMasterService = async (): Promise<void> => {
+  await service.advertise();
+  serviceActive = true;
+};
+
 const browser = bonjour.find({ type: 'novastar' }, () => {
   clearTimeout(timeout);
 });
+const browserUpdateTimer = setInterval(() => browser.update(), MASTER_BROWSER_REFRESH_MS);
+browserUpdateTimer.unref();
 
 let isMaster = false;
 
@@ -105,15 +123,21 @@ const selectStrongest = (
     remote => -getRemoteRank(remote),
   )[0];
 
+let election: Promise<void> | undefined;
+
 const tryCreateMasterBrowser = () => {
-  void service
-    .advertise()
-    .then(delay100)
+  if (election) return;
+  browser.update();
+  election = advertiseMasterService()
+    .then(async () => {
+      await delay(MASTER_ELECTION_SETTLE_MS);
+    })
     .then(() => {
+      if (!serviceActive) return;
       const strongest = selectStrongest(browser.services);
       if (strongest && getRemoteRank(strongest) > rank) {
         debug(`select proxy master ${strongest.referer.address}:${strongest.port}`);
-        void service.end();
+        void stopMasterService();
 
         rememberRemoteGmib(strongest);
         createProxy(strongest);
@@ -131,6 +155,13 @@ const tryCreateMasterBrowser = () => {
         }
       }
       ready.resolve();
+    })
+    .catch(err => {
+      debug(`master election error: ${(err as Error).message}`);
+      void stopMasterService();
+    })
+    .finally(() => {
+      election = undefined;
     });
 };
 
@@ -222,8 +253,8 @@ browser.on('up', remote => {
     );
     if (isLocalhost(remote.referer.address) || disableNet) return;
     const remoteRang = getRemoteRank(remote);
-    if (isMaster && remoteRang > rank) {
-      await service.end();
+    if (remoteRang > rank && serviceActive) {
+      await stopMasterService();
       isMaster = false;
       await master.close();
       // debug(`close MBR: ${rank}`);
@@ -256,11 +287,14 @@ let isClosing = false;
 app.on('before-quit', () => {
   if (isClosing) return;
   isClosing = true;
+  clearInterval(browserUpdateTimer);
   try {
     void master.close();
+    serviceActive = false;
     void service.destroy().catch(err => {
       debug(`error while destroy service: ${(err as Error).message}`);
     });
+    bonjour.destroy();
   } catch (err) {
     debug(`error while close: ${(err as Error).message}`);
   }
