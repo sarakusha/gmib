@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [5.3.7](https://github.com/sarakusha/gmib/compare/v5.3.6...v5.3.7) (2026-08-11)
+
+### Bug Fixes
+
+* replace bonjour-hap with bonjour-service ([4cf2472](https://github.com/sarakusha/gmib/commit/4cf247262b6c02ee8b7f54efba6a43b46f68297e))
 ## [5.3.6](https://github.com/sarakusha/gmib/compare/v5.3.5...v5.3.6) (2026-08-11)
 
 ### Bug Fixes
