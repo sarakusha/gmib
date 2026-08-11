@@ -8,16 +8,14 @@ import type { RemoteHost } from '/@common/helpers';
 import { notEmpty } from '/@common/helpers';
 
 import localConfig from './localConfig';
+import bonjour from './bonjour';
 import { getMainWindow, waitWebContents } from './mainWindow';
 import master from './MasterBrowser';
 import { areSameRemoteHost } from './remoteHost';
 
-import bonjourHap from 'bonjour-hap';
 import type { RemoteService } from 'bonjour-hap';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:mdns`);
-
-const bonjour = bonjourHap();
 
 const mdnsBrowser = bonjour.find({ type: 'nibus' });
 
@@ -128,7 +126,6 @@ app.once('ready', () => {
 app.once('quit', () => {
   clearInterval(updateTimer);
   mdnsBrowser.stop();
-  bonjour.destroy();
 });
 
 export default mdnsBrowser;

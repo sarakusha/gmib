@@ -1,6 +1,7 @@
 type ExternalBroadcastDetectionOptions = {
   readonly delay: number;
   readonly isKnownAddress: (address: string) => boolean;
+  readonly confirmExternalAddress?: (address: string) => Promise<boolean>;
   readonly onDetected: (address: string) => void;
 };
 
@@ -18,14 +19,25 @@ export default class ExternalBroadcastDetection {
     }
     if (this.detected.has(address) || this.pending.has(address)) return;
 
-    const timeout = setTimeout(() => {
-      this.pending.delete(address);
-      if (this.options.isKnownAddress(address)) return;
-      this.detected.add(address);
-      this.options.onDetected(address);
-    }, this.options.delay);
+    const timeout = setTimeout(() => void this.confirm(address, timeout), this.options.delay);
     timeout.unref();
     this.pending.set(address, timeout);
+  }
+
+  private async confirm(address: string, timeout: NodeJS.Timeout): Promise<void> {
+    if (this.pending.get(address) !== timeout) return;
+    if (this.options.isKnownAddress(address)) {
+      this.pending.delete(address);
+      return;
+    }
+
+    const isExternal = (await this.options.confirmExternalAddress?.(address)) ?? true;
+    if (this.pending.get(address) !== timeout) return;
+    this.pending.delete(address);
+    if (this.options.isKnownAddress(address)) return;
+
+    this.detected.add(address);
+    if (isExternal) this.options.onDetected(address);
   }
 
   markKnown(address: string): void {

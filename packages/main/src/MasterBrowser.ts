@@ -17,6 +17,7 @@ import { TypedEmitter } from 'tiny-typed-emitter';
 
 import NovastarLoader from './NovastarLoader';
 import ExternalBroadcastDetection from './externalBroadcastDetection';
+import { probeGmibAddress } from './remoteGmib';
 import { getAddressesForScreen, getScreens } from './screen';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:master`);
@@ -82,6 +83,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
   private externalBroadcastDetection = new ExternalBroadcastDetection({
     delay: BROADCAST_DETECTION_DELAY_MS,
     isKnownAddress: address => this.isKnownGmibAddress(address),
+    confirmExternalAddress: async address => !(await probeGmibAddress(address)),
     onDetected: address => {
       debug(`external NovaStar broadcast detected: ${address}`);
       this.emit('broadcastDetected', address);

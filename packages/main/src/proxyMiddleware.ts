@@ -9,6 +9,7 @@ import { createProxyMiddleware } from 'http-proxy-middleware';
 import type { RequestHandler } from 'http-proxy-middleware';
 
 import master, { isLocalhost } from './MasterBrowser';
+import bonjour from './bonjour';
 import config, { port as currentPort } from './config';
 import localConfig from './localConfig';
 import {
@@ -27,7 +28,7 @@ import Deferred from '/@common/Deferred';
 import relaunch from './relaunch';
 import { getOutgoingSecret } from './secret';
 
-import bonjourHap from 'bonjour-hap';
+import type bonjourHap from 'bonjour-hap';
 
 type ProxyOptions = {
   readonly host: string;
@@ -88,8 +89,6 @@ service.on('name-change', name => {
 let timeout: NodeJS.Timeout | undefined;
 
 const disableNet = config.get('disableNet');
-
-const bonjour = bonjourHap();
 
 let serviceActive = false;
 let serviceRole: MasterElectionRole = 'candidate';
@@ -355,7 +354,6 @@ app.on('before-quit', () => {
     void service.destroy().catch(err => {
       debug(`error while destroy service: ${(err as Error).message}`);
     });
-    bonjour.destroy();
   } catch (err) {
     debug(`error while close: ${(err as Error).message}`);
   }
