@@ -1,9 +1,3 @@
-packages:
-  - '.'
-  - '../nibus/packages/*'
-
-linkWorkspacePackages: true
-
 overrides:
   react: $react
   ws: $ws
