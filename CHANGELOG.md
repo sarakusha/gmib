@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [5.3.4](https://github.com/sarakusha/gmib/compare/v5.3.3...v5.3.4) (2026-08-11)
+
+### Bug Fixes
+
+* guide Windows mDNS firewall setup ([2ddaf64](https://github.com/sarakusha/gmib/commit/2ddaf64e71e19b2b0b656e679cfe0aae714bff49))
 ## [5.3.3](https://github.com/sarakusha/gmib/compare/v5.3.2...v5.3.3) (2026-08-11)
 
 ### Bug Fixes
