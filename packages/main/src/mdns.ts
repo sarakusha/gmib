@@ -10,6 +10,7 @@ import { notEmpty } from '/@common/helpers';
 import localConfig from './localConfig';
 import { getMainWindow, waitWebContents } from './mainWindow';
 import master from './MasterBrowser';
+import { areSameRemoteHost } from './remoteHost';
 
 import bonjourHap from 'bonjour-hap';
 import type { RemoteService } from 'bonjour-hap';
@@ -83,9 +84,12 @@ const serviceUp = (svc: RemoteService): void => {
   rememberGmibService(svc);
   const remote = pickRemoteService(svc);
   if (remote) {
+    const previous = remoteHosts.get(svc.fqdn);
     remoteHosts.set(svc.fqdn, remote);
     getMainWindow()?.webContents.send('serviceUp', remote);
-    debug(`serviceUp ${JSON.stringify(remote)}`);
+    if (!previous || !areSameRemoteHost(previous, remote)) {
+      debug(`serviceUp ${JSON.stringify(remote)}`);
+    }
   }
   emitRemoteServicesChanged();
 };
