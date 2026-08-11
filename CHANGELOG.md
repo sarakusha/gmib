@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [5.3.3](https://github.com/sarakusha/gmib/compare/v5.3.2...v5.3.3) (2026-08-11)
+
+### Bug Fixes
+
+* share Windows mDNS browser socket ([29c27f1](https://github.com/sarakusha/gmib/commit/29c27f103a6bc40b9e607a754d50077ff2a5341e))
 ## [5.3.2](https://github.com/sarakusha/gmib/compare/v5.3.1...v5.3.2) (2026-08-11)
 
 ### Bug Fixes
