@@ -1,7 +1,7 @@
 import { app, type Event } from 'electron';
 import fs from 'fs';
 
-import service from '@nibus/service';
+import { NibusService } from '@nibus/service';
 import debugFactory from 'debug';
 import log from 'electron-log';
 import { Tail } from 'tail';
@@ -13,6 +13,7 @@ import { getBrightnessHistoryOn } from './history';
 import localConfig from './localConfig';
 import Reader from './reader';
 import secret from './secret';
+import { getGmibServiceHostname, getGmibServiceName } from './serviceIdentity';
 
 import type { Config } from '/@common/config';
 
@@ -21,6 +22,10 @@ import type { Config } from '/@common/config';
 const reader = new Reader(200);
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:nibus`);
+const identifier = localConfig.get('identifier');
+const discoveryName = getGmibServiceName(identifier);
+const discoveryHostname = getGmibServiceHostname(identifier);
+const service = new NibusService({ name: discoveryName, hostname: discoveryHostname });
 
 export default { service } as const;
 
@@ -99,7 +104,7 @@ const quitHandler = (event: Event): void => {
         .then(rows => service.server.send(socket, 'brightnessHistory', rows))
         .catch(handleNibusMessageError);
   });
-  debug('Starting local NIBUS...');
+  debug(`Starting local NIBUS as ${discoveryName} (${discoveryHostname})...`);
   await service.start(secret.toString('base64'));
   // sendStatusToWindow(`NiBUS started. Detection file: ${detectionPath}`);
 })().catch(e => {

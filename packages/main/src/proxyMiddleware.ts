@@ -1,6 +1,5 @@
 import { app, ipcMain } from 'electron';
 import { isIPv4 } from 'node:net';
-import os from 'node:os';
 
 import * as ciao from '@homebridge/ciao';
 import debugFactory from 'debug';
@@ -20,6 +19,7 @@ import {
   shouldYieldMasterRole,
 } from './masterElection';
 import { waitWebContents } from './mainWindow';
+import { getGmibServiceHostname, getNovastarServiceName } from './serviceIdentity';
 
 import generateSignature from '/@common/generateSignature';
 import Deferred from '/@common/Deferred';
@@ -75,8 +75,8 @@ const masterServiceTxt = {
 };
 const responder = ciao.getResponder();
 const service = responder.createService({
-  name: `Novastar Master Browser (${os.hostname().replace(/\.local\.?$/, '')})`,
-  hostname: 'gmib.local',
+  name: getNovastarServiceName(identifier),
+  hostname: getGmibServiceHostname(identifier),
   type: 'novastar',
   port: currentPort,
   txt: candidateServiceTxt,
