@@ -8,11 +8,17 @@ import express from 'express';
 import type { Request, Response } from 'express';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import type { RequestHandler } from 'http-proxy-middleware';
-import sortBy from 'lodash/sortBy';
 
 import master, { isLocalhost } from './MasterBrowser';
 import config, { port as currentPort } from './config';
 import localConfig from './localConfig';
+import {
+  compareMasterElectionPeers,
+  type MasterElectionPeer,
+  type MasterElectionRole,
+  parseMasterElectionPeer,
+  shouldYieldMasterRole,
+} from './masterElection';
 import { waitWebContents } from './mainWindow';
 
 import generateSignature from '/@common/generateSignature';
@@ -48,18 +54,32 @@ const delay = (timeout: number) =>
   });
 
 const rank = Math.random();
+const identifier = localConfig.get('identifier');
+const commonServiceTxt = {
+  candidateRank: rank.toString(),
+  identifier,
+  version: import.meta.env.VITE_APP_VERSION,
+};
+const candidateServiceTxt = {
+  ...commonServiceTxt,
+  role: 'candidate',
+  // Older GMIB versions only understand rank/rang. A candidate must never displace their master.
+  rang: '-1',
+  rank: '-1',
+};
+const masterServiceTxt = {
+  ...commonServiceTxt,
+  role: 'master',
+  rang: rank.toString(),
+  rank: rank.toString(),
+};
 const responder = ciao.getResponder();
 const service = responder.createService({
   name: `Novastar Master Browser (${os.hostname().replace(/\.local\.?$/, '')})`,
   hostname: 'gmib.local',
   type: 'novastar',
   port: currentPort,
-  txt: {
-    rang: rank.toString(), // TODO: typo (backward compatibility), should be removed in the future.
-    rank: rank.toString(),
-    identifier: localConfig.get('identifier'),
-    version: import.meta.env.VITE_APP_VERSION,
-  },
+  txt: candidateServiceTxt,
 });
 service.on('name-change', name => {
   debug(`service name changed: ${name}`);
@@ -72,6 +92,7 @@ const disableNet = config.get('disableNet');
 const bonjour = bonjourHap();
 
 let serviceActive = false;
+let serviceRole: MasterElectionRole = 'candidate';
 
 const stopMasterService = async (): Promise<void> => {
   if (!serviceActive) return;
@@ -80,13 +101,18 @@ const stopMasterService = async (): Promise<void> => {
 };
 
 const advertiseMasterService = async (): Promise<void> => {
+  serviceRole = 'candidate';
+  service.updateTxt(candidateServiceTxt, true);
   await service.advertise();
   serviceActive = true;
 };
 
-const browser = bonjour.find({ type: 'novastar' }, () => {
-  clearTimeout(timeout);
-});
+const promoteMasterService = (): void => {
+  serviceRole = 'master';
+  service.updateTxt(masterServiceTxt);
+};
+
+const browser = bonjour.find({ type: 'novastar' });
 const browserUpdateTimer = setInterval(() => browser.update(), MASTER_BROWSER_REFRESH_MS);
 browserUpdateTimer.unref();
 
@@ -94,11 +120,10 @@ let isMaster = false;
 
 let ready = new Deferred();
 
-const getRemoteRank = (remote: bonjourHap.RemoteService): number => {
-  const value = remote.txt.rank ?? remote.txt.rang;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : -Infinity;
-};
+const getRemotePeer = (remote: bonjourHap.RemoteService): MasterElectionPeer =>
+  parseMasterElectionPeer(remote.txt);
+
+const getLocalPeer = (): MasterElectionPeer => ({ role: serviceRole, rank, identifier });
 
 const getRemoteAddresses = (remote: bonjourHap.RemoteService): string[] =>
   [remote.referer.address, ...(remote.addresses ?? [])].filter(
@@ -115,13 +140,13 @@ const forgetRemoteGmib = (remote: bonjourHap.RemoteService): void => {
 
 const selectStrongest = (
   remotes: bonjourHap.RemoteService[],
+  role: MasterElectionRole = 'master',
 ): bonjourHap.RemoteService | undefined =>
-  sortBy(
-    remotes.filter(
-      remote => getRemoteRank(remote) > -Infinity && !isLocalhost(remote.referer.address),
-    ),
-    remote => -getRemoteRank(remote),
-  )[0];
+  remotes
+    .filter(remote => getRemotePeer(remote).role === role && !isLocalhost(remote.referer.address))
+    .sort((left, right) =>
+      compareMasterElectionPeers(getRemotePeer(right), getRemotePeer(left)),
+    )[0];
 
 let election: Promise<void> | undefined;
 
@@ -132,29 +157,34 @@ const tryCreateMasterBrowser = () => {
     .then(async () => {
       await delay(MASTER_ELECTION_SETTLE_MS);
     })
-    .then(() => {
+    .then(async () => {
       if (!serviceActive) return;
-      const strongest = selectStrongest(browser.services);
-      if (strongest && getRemoteRank(strongest) > rank) {
-        debug(`select proxy master ${strongest.referer.address}:${strongest.port}`);
-        void stopMasterService();
+      const strongestMaster = selectStrongest(browser.services);
+      const strongestCandidate = selectStrongest(browser.services, 'candidate');
+      const strongest = strongestMaster ?? strongestCandidate;
+      if (strongest && shouldYieldMasterRole(getLocalPeer(), getRemotePeer(strongest))) {
+        debug(
+          `yield to ${getRemotePeer(strongest).role} ${strongest.referer.address}:${strongest.port}`,
+        );
+        await stopMasterService();
 
         rememberRemoteGmib(strongest);
-        createProxy(strongest);
+        if (getRemotePeer(strongest).role === 'master') createProxy(strongest);
         isMaster = false;
-        void master.close();
+        await master.close();
         // debug(`close MBR: ${rank}`);
       } else {
         debug(`select local master ${rank}`);
         isMaster = true;
+        promoteMasterService();
         try {
           master.open();
           masterProxy = undefined;
         } catch (err) {
           debug(`error while master open: ${err}`);
         }
+        ready.resolve();
       }
-      ready.resolve();
     })
     .catch(err => {
       debug(`master election error: ${(err as Error).message}`);
@@ -163,6 +193,19 @@ const tryCreateMasterBrowser = () => {
     .finally(() => {
       election = undefined;
     });
+};
+
+const retryMasterElection = (): void => {
+  const currentElection = election;
+  if (!currentElection) {
+    tryCreateMasterBrowser();
+    return;
+  }
+  void currentElection.finally(() => {
+    if (!isMaster && !masterProxy && !selectStrongest(browser.services)) {
+      tryCreateMasterBrowser();
+    }
+  });
 };
 
 if (!disableNet) {
@@ -236,7 +279,7 @@ const createProxy = (remote: bonjourHap.RemoteService) => {
     host,
     port,
     identifier,
-    rank: getRemoteRank(remote),
+    rank: getRemotePeer(remote).rank,
     secret: (value: bigint) => {
       secret = Buffer.from(value.toString(16), 'hex');
     },
@@ -244,41 +287,59 @@ const createProxy = (remote: bonjourHap.RemoteService) => {
   ready.resolve();
 };
 
-browser.on('up', remote => {
+const handleRemoteService = (remote: bonjourHap.RemoteService, updated = false): void => {
   void (async () => {
-    debug(`master service up ${remote.referer.address}:${remote.port}`);
-    rememberRemoteGmib(remote);
-    void waitWebContents().then(webContents =>
-      setTimeout(() => webContents.send('reloadDevices'), 1000).unref(),
+    const remotePeer = getRemotePeer(remote);
+    debug(
+      `master service ${updated ? 'update' : 'up'} ${remote.referer.address}:${remote.port} ` +
+        `(${remotePeer.role})`,
     );
+    rememberRemoteGmib(remote);
+    if (!updated) {
+      void waitWebContents().then(webContents =>
+        setTimeout(() => webContents.send('reloadDevices'), 1000).unref(),
+      );
+    }
     if (isLocalhost(remote.referer.address) || disableNet) return;
-    const remoteRang = getRemoteRank(remote);
-    if (remoteRang > rank && serviceActive) {
+    if (remotePeer.role === 'master') clearTimeout(timeout);
+    if (serviceActive && shouldYieldMasterRole(getLocalPeer(), remotePeer)) {
       await stopMasterService();
       isMaster = false;
       await master.close();
       // debug(`close MBR: ${rank}`);
     }
-    if (!isMaster && (!masterProxy || masterProxy.rank < remoteRang)) {
+    const currentProxyPeer: MasterElectionPeer | undefined = masterProxy && {
+      role: 'master',
+      rank: masterProxy.rank,
+      identifier: masterProxy.identifier,
+    };
+    if (
+      !isMaster &&
+      remotePeer.role === 'master' &&
+      (!currentProxyPeer || compareMasterElectionPeers(remotePeer, currentProxyPeer) > 0)
+    ) {
       createProxy(remote);
     }
   })();
-});
+};
+
+browser.on('up', remote => handleRemoteService(remote));
+browser.on('update', remote => handleRemoteService(remote, true));
 
 browser.on('down', remote => {
   debug(`master service down ${remote.referer.address}:${remote.port}`);
   forgetRemoteGmib(remote);
   if (isMaster) return;
 
-  if (browser.services.length === 0) {
-    tryCreateMasterBrowser();
-  } else if (masterProxy && remote.referer.address === masterProxy.host) {
+  if (masterProxy && remote.referer.address === masterProxy.host) {
     const strongest = selectStrongest(browser.services);
     if (strongest) {
       createProxy(strongest);
     } else {
-      tryCreateMasterBrowser();
+      retryMasterElection();
     }
+  } else if (!masterProxy && !selectStrongest(browser.services)) {
+    retryMasterElection();
   }
 });
 

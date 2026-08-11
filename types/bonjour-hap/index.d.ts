@@ -29,10 +29,13 @@ declare namespace bonjour {
     start(): void;
     update(): void;
     stop(): void;
-    on(event: 'up' | 'down', listener: (service: RemoteService) => void): this;
-    once(event: 'up' | 'down', listener: (service: RemoteService) => void): this;
-    removeListener(event: 'up' | 'down', listener: (service: RemoteService) => void): this;
-    removeAllListeners(event?: 'up' | 'down'): this;
+    on(event: 'up' | 'down' | 'update', listener: (service: RemoteService) => void): this;
+    once(event: 'up' | 'down' | 'update', listener: (service: RemoteService) => void): this;
+    removeListener(
+      event: 'up' | 'down' | 'update',
+      listener: (service: RemoteService) => void,
+    ): this;
+    removeAllListeners(event?: 'up' | 'down' | 'update'): this;
   }
   interface BrowserOptions {
     type?: string;
