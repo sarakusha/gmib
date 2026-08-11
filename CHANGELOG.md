@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [5.3.1](https://github.com/sarakusha/gmib/compare/v5.3.0...v5.3.1) (2026-08-11)
+
+### Bug Fixes
+
+* hide empty tabbed window after closing player ([be1b4b8](https://github.com/sarakusha/gmib/commit/be1b4b8e5fc9e51596a8671d8aa34652e562f2c4))
+* preserve incumbent Novastar master ([676e2bd](https://github.com/sarakusha/gmib/commit/676e2bdd843383b2eae727db30654594870013ca))
+* stop Novastar discovery after master handoff ([9562dee](https://github.com/sarakusha/gmib/commit/9562dee6ab1505aea9edc7e62c34353b404aef01))
+* suppress duplicate serviceUp logs ([61fbcaa](https://github.com/sarakusha/gmib/commit/61fbcaa460bcb634cdf1b7c4e371aca7089a2e8c))
 ## [5.3.0](https://github.com/sarakusha/gmib/compare/v5.2.0...v5.3.0) (2026-08-05)
 
 ### Features
