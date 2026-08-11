@@ -8,10 +8,8 @@ import {
 
 describe('GMIB service identity', () => {
   it('creates a stable unique DNS hostname from the GMIB identifier', () => {
-    expect(getGmibServiceHostname('device_1234')).toBe('gmib-device1234');
-    expect(getGmibServiceHostname('second-device')).not.toBe(
-      getGmibServiceHostname('device_1234'),
-    );
+    expect(getGmibServiceHostname('device_1234')).toBe('gmib-device1234.local');
+    expect(getGmibServiceHostname('second-device')).not.toBe(getGmibServiceHostname('device_1234'));
   });
 
   it('creates a DNS-safe unique service instance name', () => {

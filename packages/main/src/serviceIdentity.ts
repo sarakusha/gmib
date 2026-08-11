@@ -5,7 +5,7 @@ const normalizeIdentifier = (identifier: string): string =>
     .slice(0, 24) || 'unknown';
 
 export const getGmibServiceHostname = (identifier: string): string =>
-  `gmib-${normalizeIdentifier(identifier)}`;
+  `gmib-${normalizeIdentifier(identifier)}.local`;
 
 export const getGmibServiceName = (identifier: string): string =>
   `gmib-${normalizeIdentifier(identifier)}`;

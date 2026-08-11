@@ -53,6 +53,8 @@ declare namespace bonjour {
     protocol?: 'udp' | 'tcp';
     txt?: { [key: string]: string };
     probe?: boolean;
+    restrictedAddresses?: string[];
+    disabledIpv6?: boolean;
   }
 
   interface BaseService {
@@ -77,6 +79,7 @@ declare namespace bonjour {
     stop(cb?: () => void): void;
     start(): void;
     updateTxt(txt: Record<string, string>, silent?: boolean): void;
+    destroy(): void;
   }
   interface BonjourOptions {
     type?: 'udp4' | 'udp6';
@@ -87,6 +90,7 @@ declare namespace bonjour {
     ttl?: number;
     loopback?: boolean;
     reuseAddr?: boolean;
+    bind?: string | false;
   }
   interface Bonjour {
     (opts?: BonjourOptions): Bonjour;
@@ -94,6 +98,6 @@ declare namespace bonjour {
     unpublishAll(cb?: () => void): void;
     find(options: BrowserOptions, onUp?: (service: RemoteService) => void): Browser;
     findOne(options: BrowserOptions, cb?: (service: RemoteService) => void): Browser;
-    destroy(): void;
+    destroy(cb?: () => void): void;
   }
 }

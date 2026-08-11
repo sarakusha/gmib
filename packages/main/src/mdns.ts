@@ -104,11 +104,7 @@ const serviceDown = (svc: RemoteService): void => {
 };
 
 export const onRemoteServiceUpdate = (listener: (svc: RemoteService) => void): void => {
-  (
-    mdnsBrowser as typeof mdnsBrowser & {
-      on(event: 'update', updateListener: (svc: RemoteService) => void): typeof mdnsBrowser;
-    }
-  ).on('update', listener);
+  mdnsBrowser.on('update', listener);
 };
 
 app.once('ready', () => {

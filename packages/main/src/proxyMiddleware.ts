@@ -73,7 +73,7 @@ const masterServiceTxt = {
   rang: rank.toString(),
   rank: rank.toString(),
 };
-let service: bonjourHap.Service | undefined;
+let service: ReturnType<typeof bonjour.publish> | undefined;
 
 let timeout: NodeJS.Timeout | undefined;
 
@@ -89,22 +89,23 @@ const stopMasterService = async (): Promise<void> => {
   await new Promise<void>(resolve => currentService.stop(resolve));
 };
 
-const advertiseMasterService = async (): Promise<void> => {
+const advertiseMasterService = (): void => {
   serviceRole = 'candidate';
   if (service) {
     service.updateTxt(candidateServiceTxt, true);
     service.start();
   } else {
-    service = bonjour.publish({
+    const nextService = bonjour.publish({
       name: getNovastarServiceName(identifier),
       host: getGmibServiceHostname(identifier),
       type: 'novastar',
       port: currentPort,
       txt: candidateServiceTxt,
     });
-    service.on('error', (err: Error) =>
+    nextService.on('error', (err: Error) =>
       debug(`error while publish master service: ${err.message}`),
     );
+    service = nextService;
   }
   serviceActive = true;
 };
@@ -155,10 +156,9 @@ let election: Promise<void> | undefined;
 const tryCreateMasterBrowser = () => {
   if (election) return;
   browser.update();
-  election = advertiseMasterService()
-    .then(async () => {
-      await delay(MASTER_ELECTION_SETTLE_MS);
-    })
+  election = Promise.resolve()
+    .then(advertiseMasterService)
+    .then(() => delay(MASTER_ELECTION_SETTLE_MS))
     .then(async () => {
       if (!serviceActive) return;
       const strongestMaster = selectStrongest(browser.services);

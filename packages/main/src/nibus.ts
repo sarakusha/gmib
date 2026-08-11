@@ -140,7 +140,9 @@ const quitHandler = (event: Event): void => {
     },
   });
   discoveryService.on('up', () => debug('service is published'));
-  discoveryService.on('error', err => debug(`error while publish service: ${err.message}`));
+  discoveryService.on('error', (err: Error) =>
+    debug(`error while publish service: ${err.message}`),
+  );
   // sendStatusToWindow(`NiBUS started. Detection file: ${detectionPath}`);
 })().catch(e => {
   debug(`Error while nibus starting: ${(e as Error).stack}`);
