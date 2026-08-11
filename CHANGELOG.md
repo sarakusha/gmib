@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [5.3.5](https://github.com/sarakusha/gmib/compare/v5.3.4...v5.3.5) (2026-08-11)
+
+### Bug Fixes
+
+* use a single mDNS responder for discovery ([e07235a](https://github.com/sarakusha/gmib/commit/e07235ae6154e1e1f30cd8c3f79975f5762b4b67))
 ## [5.3.4](https://github.com/sarakusha/gmib/compare/v5.3.3...v5.3.4) (2026-08-11)
 
 ### Bug Fixes
