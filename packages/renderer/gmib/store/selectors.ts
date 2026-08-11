@@ -67,6 +67,8 @@ export const selectCurrentHealth = (state: RootState): Health | undefined =>
   selectCurrent(state).health;
 export const selectAuthRequired = (state: RootState) => selectCurrent(state).authRequired;
 export const selectBroadcastDetected = (state: RootState) => selectCurrent(state).broadcastDetected;
+export const selectGmibDiscoveryBlocked = (state: RootState) =>
+  selectCurrent(state).gmibDiscoveryBlocked;
 export const selectInvalidState = (state: RootState) => selectCurrent(state).invalidState;
 export const selectOutputHidden = (state: RootState): boolean => selectCurrent(state).outputHidden;
 export const selectTabChangedTimestamp = (state: RootState) =>

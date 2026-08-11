@@ -89,6 +89,7 @@ const events = [
   'cabinet',
   'telemetry',
   'broadcastDetected',
+  'gmibDiscoveryBlocked',
 ] as const;
 
 const makeHandler = memoize((event: string) => (...args: unknown[]) => {

@@ -43,6 +43,7 @@ interface MasterBrowserEvents {
   open: () => void;
   close: () => void;
   broadcastDetected: (address?: string) => void;
+  gmibDiscoveryBlocked: (address: string) => void;
 }
 
 type Options = {
@@ -87,6 +88,10 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
     onDetected: address => {
       debug(`external NovaStar broadcast detected: ${address}`);
       this.emit('broadcastDetected', address);
+    },
+    onSuppressed: address => {
+      debug(`GMIB ${address} responds to HTTP but was not discovered over mDNS`);
+      if (process.platform === 'win32') this.emit('gmibDiscoveryBlocked', address);
     },
   });
 

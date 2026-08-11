@@ -8,6 +8,7 @@ import ExtensionOutlinedIcon from '@mui/icons-material/ExtensionOutlined';
 import {
   Backdrop,
   Box,
+  Button,
   Divider,
   IconButton,
   List,
@@ -30,11 +31,17 @@ import SearchDialog from '../dialogs/SearchDialog';
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useDispatch, useSelector } from '../store';
 import { setAutobrightness, setProtectionProp } from '../store/configSlice';
-import { setBroadcastDetected, setCurrentTab, setRemoteDialogOpen } from '../store/currentSlice';
+import {
+  setBroadcastDetected,
+  setCurrentTab,
+  setGmibDiscoveryBlocked,
+  setRemoteDialogOpen,
+} from '../store/currentSlice';
 import {
   selectAutobrightness,
   selectBroadcastDetected,
   selectCurrentTab,
+  selectGmibDiscoveryBlocked,
   selectIsClosed,
   selectIsOnline,
   selectIsRemoteDialogOpen,
@@ -70,6 +77,9 @@ const Item = styled(ListItemButton)(({ theme }) => ({
 
 const Offset = styled('div')(({ theme }) => theme.mixins.toolbar);
 
+const WINDOWS_MDNS_RULES = `New-NetFirewallRule -DisplayName "GMIB mDNS UDP In" -Direction Inbound -Action Allow -Protocol UDP -LocalPort 5353 -Profile Any
+New-NetFirewallRule -DisplayName "GMIB mDNS UDP Out" -Direction Outbound -Action Allow -Protocol UDP -RemotePort 5353 -Profile Any`;
+
 const App: React.FC = () => {
   const [open, setOpen] = useState(true);
   const handleDrawerOpen = useCallback(() => setOpen(true), []);
@@ -87,6 +97,7 @@ const App: React.FC = () => {
   const isRemoteDialogOpen = useSelector(selectIsRemoteDialogOpen);
   const { enabled: protectionEnabled = false } = useSelector(selectOverheatProtection) ?? {};
   const broadcastDetected = useSelector(selectBroadcastDetected);
+  const gmibDiscoveryBlocked = useSelector(selectGmibDiscoveryBlocked);
   const { closeSnackbar, enqueueSnackbar } = useSnackbar();
   const links = useSelector(selectLinks);
   const hasLink = links.length > 0;
@@ -110,6 +121,34 @@ const App: React.FC = () => {
       dispatch(setBroadcastDetected());
     }
   }, [broadcastDetected, closeSnackbar, dispatch, enqueueSnackbar]);
+  useEffect(() => {
+    if (gmibDiscoveryBlocked) {
+      enqueueSnackbar(
+        `GMIB по адресу ${gmibDiscoveryBlocked} отвечает, но не обнаружен через mDNS. ` +
+          'Откройте PowerShell от имени администратора, разрешите входящий и исходящий ' +
+          'UDP-порт 5353, затем перезапустите GMIB.',
+        {
+          variant: 'warning',
+          persist: true,
+          action: key => (
+            <>
+              <Button
+                color="inherit"
+                onClick={() => void navigator.clipboard.writeText(WINDOWS_MDNS_RULES)}
+                size="small"
+              >
+                Копировать команды
+              </Button>
+              <IconButton onClick={() => closeSnackbar(key)} size="small">
+                <CloseIcon fontSize="inherit" />
+              </IconButton>
+            </>
+          ),
+        },
+      );
+      dispatch(setGmibDiscoveryBlocked());
+    }
+  }, [closeSnackbar, dispatch, enqueueSnackbar, gmibDiscoveryBlocked]);
   useEffect(() => {
     const handler = (event: Event) => {
       const [result] =

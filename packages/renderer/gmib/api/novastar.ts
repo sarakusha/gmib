@@ -15,7 +15,11 @@ import createDebouncedAsyncThunk from '../../common/createDebouncedAsyncThunk';
 import schedulerApi from './scheduler';
 import screenApi from './screens';
 import type { AppDispatch, AppThunk, AppThunkConfig, RootState } from '../store';
-import { setBroadcastDetected, setCurrentDevice } from '../store/currentSlice';
+import {
+  setBroadcastDetected,
+  setCurrentDevice,
+  setGmibDiscoveryBlocked,
+} from '../store/currentSlice';
 import { selectCurrentDeviceId } from '../store/selectors';
 import { pushSensorValue } from '../store/sensorsSlice';
 import {
@@ -401,6 +405,14 @@ export const sse: Middleware = api => {
     try {
       const [address] = (e as CustomEvent<[string]>).detail;
       dispatch(setBroadcastDetected(address));
+    } catch (err) {
+      console.error(`error while parse args: ${(err as Error).message}`);
+    }
+  });
+  evtSource.addEventListener('gmibDiscoveryBlocked', e => {
+    try {
+      const [address] = (e as CustomEvent<[string]>).detail;
+      dispatch(setGmibDiscoveryBlocked(address));
     } catch (err) {
       console.error(`error while parse args: ${(err as Error).message}`);
     }

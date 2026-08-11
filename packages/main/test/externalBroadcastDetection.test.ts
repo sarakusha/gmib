@@ -61,12 +61,14 @@ describe('ExternalBroadcastDetection', () => {
 
   it('suppresses a confirmed GMIB address when mDNS registration is delayed', async () => {
     const onDetected = vi.fn();
+    const onSuppressed = vi.fn();
     const confirmExternalAddress = vi.fn().mockResolvedValue(false);
     const detection = new ExternalBroadcastDetection({
       delay: 10_000,
       isKnownAddress: () => false,
       confirmExternalAddress,
       onDetected,
+      onSuppressed,
     });
 
     detection.observe('192.168.0.48');
@@ -76,5 +78,7 @@ describe('ExternalBroadcastDetection', () => {
 
     expect(confirmExternalAddress).toHaveBeenCalledOnce();
     expect(onDetected).not.toHaveBeenCalled();
+    expect(onSuppressed).toHaveBeenCalledOnce();
+    expect(onSuppressed).toHaveBeenCalledWith('192.168.0.48');
   });
 });

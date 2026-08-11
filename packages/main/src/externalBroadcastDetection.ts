@@ -3,6 +3,7 @@ type ExternalBroadcastDetectionOptions = {
   readonly isKnownAddress: (address: string) => boolean;
   readonly confirmExternalAddress?: (address: string) => Promise<boolean>;
   readonly onDetected: (address: string) => void;
+  readonly onSuppressed?: (address: string) => void;
 };
 
 export default class ExternalBroadcastDetection {
@@ -38,6 +39,7 @@ export default class ExternalBroadcastDetection {
 
     this.detected.add(address);
     if (isExternal) this.options.onDetected(address);
+    else this.options.onSuppressed?.(address);
   }
 
   markKnown(address: string): void {

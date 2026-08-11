@@ -8,14 +8,7 @@ import { addDevice } from './devicesSlice';
 // import { addNovastar, removeNovastar } from './novastarSlice';
 
 export type TabValues =
-  | 'devices'
-  | 'screens'
-  | 'autobrightness'
-  | 'scheduler'
-  | 'overheat'
-  | 'plugins'
-  | 'log'
-  | 'help';
+  'devices' | 'screens' | 'autobrightness' | 'scheduler' | 'overheat' | 'plugins' | 'log' | 'help';
 // | 'media'
 // | 'playlist'
 
@@ -31,6 +24,7 @@ export interface CurrentState {
   isRemoteDialogOpen: boolean;
   authRequired?: Credentials;
   broadcastDetected?: string;
+  gmibDiscoveryBlocked?: string;
   isActivateDialogOpen: boolean;
   invalidState: boolean;
   outputHidden: boolean;
@@ -94,6 +88,9 @@ const currentSlice = createSlice({
       } else {
         state.broadcastDetected = address;
       }
+    },
+    setGmibDiscoveryBlocked(state, { payload: address }: PayloadAction<string | undefined>) {
+      state.gmibDiscoveryBlocked = address;
     },
     setInvalidState(state, { payload: invalid }: PayloadAction<boolean>) {
       state.invalidState = invalid;
@@ -159,6 +156,7 @@ export const {
   // setLoggedIn,
   setAuthRequired,
   setBroadcastDetected,
+  setGmibDiscoveryBlocked,
   setInvalidState,
   setOutputHidden,
 } = currentSlice.actions;
