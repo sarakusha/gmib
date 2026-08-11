@@ -134,6 +134,21 @@ const shouldKeepOnTop = (url: string) => {
 const hasCompleteBounds = (bounds: OutputWindowBounds): bounds is Rectangle =>
   Number.isFinite(bounds.width) && Number.isFinite(bounds.height);
 
+const applyOutputWindowPlacement = (
+  window: BrowserWindow,
+  config: OutputWindowConfig,
+): void => {
+  const { bounds, useNativeKiosk } = config;
+  if (useNativeKiosk) {
+    window.setFocusable(true);
+    window.setBounds(bounds, false);
+    window.setFullScreen(true);
+    window.setKiosk(true);
+  } else if (hasCompleteBounds(bounds)) {
+    window.setContentBounds(bounds, false);
+  }
+};
+
 const getOutputWindowConfig = (url: string): OutputWindowConfig | undefined => {
   const parsedUrl = new URL(url);
   const { searchParams } = parsedUrl;
@@ -264,7 +279,7 @@ export const configureOutputWindow = (window: BrowserWindow, url: string): void 
   const config = getOutputWindowConfig(url);
   if (!config) return;
   configuredOutputUrls.set(window, url);
-  const { bounds, isVideoOutput, useNativeKiosk } = config;
+  const { isVideoOutput } = config;
 
   const keepOnTop = () => {
     if (window.isDestroyed()) return;
@@ -275,14 +290,7 @@ export const configureOutputWindow = (window: BrowserWindow, url: string): void 
   window.setParentWindow(null);
   configureOutputWindowInteractivity(window);
   if (isMacOS) window.setFullScreenable(false);
-  if (useNativeKiosk) {
-    window.setFocusable(true);
-    window.setBounds(bounds, false);
-    window.setFullScreen(true);
-    window.setKiosk(true);
-  } else if (hasCompleteBounds(bounds)) {
-    window.setContentBounds(bounds, false);
-  }
+  applyOutputWindowPlacement(window, config);
   if (isVideoOutput) {
     window.webContents.once('did-finish-load', () => {
       window.webContents.insertCSS(hideCursorCSS).catch(err => {
@@ -302,6 +310,32 @@ export const configureOutputWindow = (window: BrowserWindow, url: string): void 
   keepOnTop();
   window.on('show', keepOnTop);
   window.on('restore', keepOnTop);
+};
+
+export const refreshPlayerOutputWindows = (): void => {
+  getPlayerOutputWindows().forEach(window => {
+    if (window.isDestroyed()) return;
+    const url = getOutputWindowUrl(window);
+    const config = getOutputWindowConfig(url);
+    if (!config) {
+      window.hide();
+      return;
+    }
+
+    configuredOutputUrls.set(window, url);
+    applyOutputWindowPlacement(window, config);
+    if (isOutputHidden()) window.hide();
+    else window.showInactive();
+    if (config.alwaysOnTop) window.setAlwaysOnTop(true, TOPMOST_LEVEL);
+  });
+
+  getPlayerParams().forEach(({ id }) => {
+    const playerWindow = findManagedWindow(id);
+    if (playerWindow && !playerWindow.isDestroyed()) {
+      playerWindow.webContents.send('updateVideoOuts');
+    }
+  });
+  arrangeOutputWindows();
 };
 
 export const toggleOutputWindowsVisibility = (): boolean => {

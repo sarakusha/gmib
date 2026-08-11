@@ -745,7 +745,7 @@ const addTrackSender = (pc: RTCPeerConnection, kind: TrackKind): RTCRtpSender =>
 
 ipcRenderer.on('socket', (_, { id, ...msg }: WithWebSocketKey<RtcMessage>) => {
   void (async () => {
-    if (msg.event === 'outputVisibility') return;
+    if (msg.event === 'outputVisibility' || msg.event === 'displayTopologyChanged') return;
     if (msg.sourceId !== sourceId) return;
     switch (msg.event) {
       case 'request':

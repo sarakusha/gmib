@@ -58,17 +58,22 @@ const createStream = async (sourceId?: string): Promise<MediaStream | undefined>
 const getVideo = (screenId: number): HTMLVideoElement | null =>
   document.querySelector(`video#screen-${screenId}`);
 
+const activeScreens = new Set<number>();
+
 const playLocal = debounce(async (screenId: number): Promise<void> => {
+  if (!activeScreens.has(screenId)) return;
   const sourceId = await getMediaSourceId(screenId);
   const stream = await createStream(sourceId);
   const video = getVideo(screenId);
-  if (stream && video) {
+  if (stream && video && activeScreens.has(screenId)) {
     video.srcObject = stream;
     video.onloadedmetadata = () => video.play();
+  } else {
+    stream?.getTracks().forEach(track => track.stop());
   }
 }, 250);
 
-export const close = (screenId: number) => {
+const stopPreview = (screenId: number): void => {
   const video = getVideo(screenId);
   if (video && video.srcObject instanceof MediaStream) {
     const stream = video.srcObject;
@@ -78,6 +83,11 @@ export const close = (screenId: number) => {
       track.stop();
     });
   }
+};
+
+export const close = (screenId: number): void => {
+  activeScreens.delete(screenId);
+  stopPreview(screenId);
 };
 
 let ws: WebSocket;
@@ -116,8 +126,16 @@ const playRemote = debounce((screenId: number) => {
     sourceId: screenId,
     sourceType: 'screen',
   };
+  let requestTimeout = 0;
+
+  const requestOffer = () => {
+    if (!activeScreens.has(screenId)) return;
+    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(request));
+    requestTimeout = window.setTimeout(requestOffer, 3000);
+  };
 
   const connect = async () => {
+    if (!activeScreens.has(screenId)) return;
     // console.log('CONNECT');
     pc.onicecandidate = e => {
       const { candidate } = e;
@@ -147,6 +165,7 @@ const playRemote = debounce((screenId: number) => {
       if (['disconnected', 'failed'].includes(pc.connectionState)) {
         debug('try reconnect');
 
+        window.clearTimeout(requestTimeout);
         pc.close();
         pc = new RTCPeerConnection();
         setTimeout(() => {
@@ -157,7 +176,7 @@ const playRemote = debounce((screenId: number) => {
     // console.log('WAIT CONNECT');
     await openSocket();
     // console.log('SEND REQUEST');
-    ws.send(JSON.stringify(request));
+    requestOffer();
   };
 
   ws.onmessage = async ev => {
@@ -172,7 +191,8 @@ const playRemote = debounce((screenId: number) => {
           }
           break;
         case 'offer':
-          if (msg.sourceId === screenId) {
+          if (msg.sourceId === screenId && activeScreens.has(screenId)) {
+            window.clearTimeout(requestTimeout);
             await pc.setRemoteDescription(msg.desc);
             const answer: AnswerMessage = {
               event: 'answer',
@@ -184,6 +204,13 @@ const playRemote = debounce((screenId: number) => {
             // console.log('ANSWER');
             ws.send(JSON.stringify(answer));
           }
+          break;
+        case 'displayTopologyChanged':
+          if (!activeScreens.has(screenId)) break;
+          window.clearTimeout(requestTimeout);
+          pc.close();
+          pc = new RTCPeerConnection();
+          void connect();
           break;
         case 'outputVisibility':
           ipcDispatch(setOutputHidden(msg.hidden));
@@ -206,7 +233,7 @@ if (!isRemoteSession) {
     void (async () => {
       // console.log({ socket: msg });
       // if (msg.sourceId !== sourceId) return;
-      if (msg.event === 'outputVisibility') return;
+      if (msg.event === 'outputVisibility' || msg.event === 'displayTopologyChanged') return;
       const stream = await createStream(await getMediaSourceId(msg.sourceId));
       if (!stream) return;
       switch (msg.event) {
@@ -281,4 +308,16 @@ if (!isRemoteSession) {
   });
 }
 
-export const play = isRemoteSession ? playRemote : playLocal;
+ipcRenderer.on('displayTopologyChanged', () => {
+  if (isRemoteSession) return;
+  activeScreens.forEach(screenId => {
+    stopPreview(screenId);
+    void playLocal(screenId);
+  });
+});
+
+export const play = (screenId: number): void => {
+  activeScreens.add(screenId);
+  if (isRemoteSession) playRemote(screenId);
+  else void playLocal(screenId);
+};

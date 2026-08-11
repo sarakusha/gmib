@@ -31,12 +31,17 @@ export type OutputVisibilityMessage = {
   hidden: boolean;
 };
 
+export type DisplayTopologyChangedMessage = {
+  event: 'displayTopologyChanged';
+};
+
 export type RtcMessage =
   | CandidateMessage
   | OfferMessage
   | AnswerMessage
   | RequestMessage
-  | OutputVisibilityMessage;
+  | OutputVisibilityMessage
+  | DisplayTopologyChangedMessage;
 
 export type WithWebSocketKey<T extends RtcMessage> = T & {
   id: string;

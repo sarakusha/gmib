@@ -17,6 +17,7 @@ import './pluginsIpc';
 import './express';
 import './ipc';
 import './rtc';
+import './displayTopology';
 import './hid';
 // import './channels';
 import { activateMainWindow, createMainWindow, persistLocalWindowState } from './mainWindow';
