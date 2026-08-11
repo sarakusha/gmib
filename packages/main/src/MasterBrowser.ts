@@ -16,6 +16,7 @@ import memoize from 'lodash/memoize';
 import { TypedEmitter } from 'tiny-typed-emitter';
 
 import NovastarLoader from './NovastarLoader';
+import ExternalBroadcastDetection from './externalBroadcastDetection';
 import { getAddressesForScreen, getScreens } from './screen';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:master`);
@@ -78,7 +79,14 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
 
   private broadcastDetector: Socket | undefined;
 
-  private broadcastDetectionTimers = new Map<string, NodeJS.Timeout>();
+  private externalBroadcastDetection = new ExternalBroadcastDetection({
+    delay: BROADCAST_DETECTION_DELAY_MS,
+    isKnownAddress: address => this.isKnownGmibAddress(address),
+    onDetected: address => {
+      debug(`external NovaStar broadcast detected: ${address}`);
+      this.emit('broadcastDetected', address);
+    },
+  });
 
   telemetry = memoize((address: string): NovastarTelemetry | undefined => {
     const controller = this.novastarControls.get(address);
@@ -122,6 +130,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
         const sources = this.gmibAddressSources.get(address) ?? new Set<string>();
         sources.add(source);
         this.gmibAddressSources.set(address, sources);
+        this.externalBroadcastDetection.markKnown(address);
       });
   }
 
@@ -137,16 +146,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
   }
 
   private emitBroadcastDetected(address: string): void {
-    if (this.isKnownGmibAddress(address) || this.broadcastDetectionTimers.has(address)) return;
-    const timeout = setTimeout(() => {
-      this.broadcastDetectionTimers.delete(address);
-      if (!this.isKnownGmibAddress(address)) {
-        debug(`external NovaStar broadcast detected: ${address}`);
-        this.emit('broadcastDetected', address);
-      }
-    }, BROADCAST_DETECTION_DELAY_MS);
-    timeout.unref();
-    this.broadcastDetectionTimers.set(address, timeout);
+    this.externalBroadcastDetection.observe(address);
   }
 
   private openHandler = (address: string) => {
@@ -356,8 +356,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
         resolve();
       } else {
         this.broadcastDetector = undefined;
-        this.broadcastDetectionTimers.forEach(timer => clearTimeout(timer));
-        this.broadcastDetectionTimers.clear();
+        this.externalBroadcastDetection.clearPending();
         broadcastDetector.close(() => {
           setTimeout(() => broadcastDetector.removeAllListeners(), 0);
           resolve();
@@ -423,6 +422,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
     [...this.novastarControls.values()].forEach(control => control.session.close());
     this.novastarControls.clear();
     await this.closeBroadcastDetector();
+    this.externalBroadcastDetection.reset();
     await delay(0);
     this.emit('close');
     return true;
