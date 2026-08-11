@@ -1,5 +1,6 @@
 import { app, type Event } from 'electron';
 import fs from 'fs';
+import os from 'node:os';
 
 import { NibusService } from '@nibus/service';
 import debugFactory from 'debug';
@@ -8,6 +9,7 @@ import { Tail } from 'tail';
 import tcpPortUsed from 'tcp-port-used';
 
 import config from './config';
+import bonjour from './bonjour';
 import getAllDisplays from './getAllDisplays';
 import { getBrightnessHistoryOn } from './history';
 import localConfig from './localConfig';
@@ -25,7 +27,13 @@ const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:nibus`);
 const identifier = localConfig.get('identifier');
 const discoveryName = getGmibServiceName(identifier);
 const discoveryHostname = getGmibServiceHostname(identifier);
-const service = new NibusService({ name: discoveryName, hostname: discoveryHostname });
+const service = new NibusService({
+  name: discoveryName,
+  hostname: discoveryHostname,
+  discovery: false,
+});
+
+let discoveryService: ReturnType<typeof bonjour.publish> | undefined;
 
 export default { service } as const;
 
@@ -41,7 +49,9 @@ let isClosed = false;
 
 const handleNibusMessageError = (error: unknown): void => {
   if (!isClosing && !isClosed) {
-    debug(`error while send nibus message: ${error instanceof Error ? error.message : String(error)}`);
+    debug(
+      `error while send nibus message: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 };
 
@@ -49,7 +59,17 @@ const closeNibus = async (): Promise<void> => {
   if (isClosed) return;
   if (!service) return;
   try {
-    await service.stop();
+    await Promise.all([
+      service.stop(),
+      new Promise<void>(resolve => {
+        if (!discoveryService) {
+          resolve();
+          return;
+        }
+        discoveryService.stop(resolve);
+        discoveryService = undefined;
+      }),
+    ]);
     isClosed = true;
     // service = undefined;
   } catch (e) {
@@ -106,6 +126,21 @@ const quitHandler = (event: Event): void => {
   });
   debug(`Starting local NIBUS as ${discoveryName} (${discoveryHostname})...`);
   await service.start(secret.toString('base64'));
+  discoveryService = bonjour.publish({
+    name: discoveryName,
+    host: discoveryHostname,
+    type: 'nibus',
+    port: service.port,
+    txt: {
+      version: import.meta.env.VITE_APP_VERSION,
+      original: os.hostname(),
+      platform: os.platform(),
+      arch: os.arch(),
+      osVersion: os.version(),
+    },
+  });
+  discoveryService.on('up', () => debug('service is published'));
+  discoveryService.on('error', err => debug(`error while publish service: ${err.message}`));
   // sendStatusToWindow(`NiBUS started. Detection file: ${detectionPath}`);
 })().catch(e => {
   debug(`Error while nibus starting: ${(e as Error).stack}`);

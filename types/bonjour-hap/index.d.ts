@@ -76,6 +76,7 @@ declare namespace bonjour {
 
     stop(cb?: () => void): void;
     start(): void;
+    updateTxt(txt: Record<string, string>, silent?: boolean): void;
   }
   interface BonjourOptions {
     type?: 'udp4' | 'udp6';

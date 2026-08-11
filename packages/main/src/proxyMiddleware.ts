@@ -1,7 +1,6 @@
 import { app, ipcMain } from 'electron';
 import { isIPv4 } from 'node:net';
 
-import * as ciao from '@homebridge/ciao';
 import debugFactory from 'debug';
 import express from 'express';
 import type { Request, Response } from 'express';
@@ -74,17 +73,7 @@ const masterServiceTxt = {
   rang: rank.toString(),
   rank: rank.toString(),
 };
-const responder = ciao.getResponder();
-const service = responder.createService({
-  name: getNovastarServiceName(identifier),
-  hostname: getGmibServiceHostname(identifier),
-  type: 'novastar',
-  port: currentPort,
-  txt: candidateServiceTxt,
-});
-service.on('name-change', name => {
-  debug(`service name changed: ${name}`);
-});
+let service: bonjourHap.Service | undefined;
 
 let timeout: NodeJS.Timeout | undefined;
 
@@ -94,21 +83,35 @@ let serviceActive = false;
 let serviceRole: MasterElectionRole = 'candidate';
 
 const stopMasterService = async (): Promise<void> => {
-  if (!serviceActive) return;
+  const currentService = service;
+  if (!serviceActive || !currentService) return;
   serviceActive = false;
-  await service.end();
+  await new Promise<void>(resolve => currentService.stop(resolve));
 };
 
 const advertiseMasterService = async (): Promise<void> => {
   serviceRole = 'candidate';
-  service.updateTxt(candidateServiceTxt, true);
-  await service.advertise();
+  if (service) {
+    service.updateTxt(candidateServiceTxt, true);
+    service.start();
+  } else {
+    service = bonjour.publish({
+      name: getNovastarServiceName(identifier),
+      host: getGmibServiceHostname(identifier),
+      type: 'novastar',
+      port: currentPort,
+      txt: candidateServiceTxt,
+    });
+    service.on('error', (err: Error) =>
+      debug(`error while publish master service: ${err.message}`),
+    );
+  }
   serviceActive = true;
 };
 
 const promoteMasterService = (): void => {
   serviceRole = 'master';
-  service.updateTxt(masterServiceTxt);
+  service?.updateTxt(masterServiceTxt);
 };
 
 const browser = bonjour.find({ type: 'novastar' });
@@ -217,7 +220,7 @@ if (!disableNet) {
 config.onDidChange('disableNet', (_newValue, oldValue) => {
   if (oldValue != null && import.meta.env.PROD) {
     debug('relaunch...');
-    void responder.shutdown().finally(relaunch);
+    relaunch();
   }
 });
 
@@ -351,9 +354,6 @@ app.on('before-quit', () => {
   try {
     void master.close();
     serviceActive = false;
-    void service.destroy().catch(err => {
-      debug(`error while destroy service: ${(err as Error).message}`);
-    });
   } catch (err) {
     debug(`error while close: ${(err as Error).message}`);
   }
