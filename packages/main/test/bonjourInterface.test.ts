@@ -2,7 +2,7 @@ import type { NetworkInterfaceInfo } from 'node:os';
 
 import { describe, expect, it } from 'vitest';
 
-import { selectWindowsMdnsInterfaces } from '../src/bonjourInterface';
+import { selectBonjourAddressRecords, selectWindowsMdnsInterfaces } from '../src/bonjourInterface';
 
 const ipv4 = (
   address: string,
@@ -43,5 +43,19 @@ describe('Windows mDNS interface selection', () => {
         Loopback: [ipv4('127.0.0.1', '255.0.0.0', true)],
       }),
     ).toEqual([]);
+  });
+
+  it('publishes only the IPv4 address belonging to the responder', () => {
+    const ptr = { type: 'PTR', data: 'gmib._nibus._tcp.local' };
+    const selected = selectBonjourAddressRecords(
+      [
+        ptr,
+        { type: 'A', data: '192.168.0.48' },
+        { type: 'A', data: '10.8.0.2' },
+        { type: 'AAAA', data: 'fe80::1' },
+      ],
+      '192.168.0.48',
+    );
+    expect(selected).toEqual([ptr, { type: 'A', data: '192.168.0.48' }]);
   });
 });

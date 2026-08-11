@@ -19,7 +19,6 @@
       //      "/@/*": [
       //        "./src/*"
       //      ],
-      "bonjour-hap": ["../../types/bonjour-hap"],
       "iput": ["../../types/iput"],
       "imask": ["../../types/imask"],
       "react-imask": ["../../types/react-imask"],

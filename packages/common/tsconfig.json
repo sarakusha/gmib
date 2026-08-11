@@ -16,7 +16,6 @@
     // Only include `@types` packages that we need to import.
     "types": [],
     "paths": {
-      "bonjour-hap": ["../../types/bonjour-hap"],
       "mp4box": ["../../types/mp4box"]
     },
     "lib": ["ESNext", "dom", "dom.iterable"]

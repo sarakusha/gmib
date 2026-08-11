@@ -1,13 +1,54 @@
 import { app } from 'electron';
 import { EventEmitter } from 'node:events';
+import type { RemoteInfo } from 'node:dgram';
 
-import bonjourHap from 'bonjour-hap';
+import BonjourService from 'bonjour-service';
+import debugFactory from 'debug';
 
-import { getBonjourInterfaces } from './bonjourInterface';
-import { createSystemBonjour, isSystemBonjourAvailable } from './systemBonjour';
+import { getBonjourInterfaces, selectBonjourAddressRecords } from './bonjourInterface';
+
+const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:bonjour`);
+
+export type ServiceOptions = {
+  name: string;
+  host?: string;
+  port: number;
+  type: string;
+  subtypes?: string[];
+  protocol?: 'tcp' | 'udp';
+  txt?: Record<string, string>;
+  probe?: boolean;
+  disabledIpv6?: boolean;
+};
+
+export type BrowserOptions = {
+  type?: string;
+  subtypes?: string[];
+  protocol?: string;
+  txt?: Record<string, string>;
+};
+
+export type RemoteService = {
+  name: string;
+  fqdn: string;
+  host: string;
+  port: number;
+  type: string;
+  protocol: string;
+  subtypes: string[];
+  txt: Record<string, string>;
+  referer: RemoteInfo;
+  rawTxt: Buffer;
+  addresses: string[];
+};
+
+type BonjourTransportOptions = Partial<BonjourService.ServiceConfig> & {
+  interface?: string;
+  bind?: string | false;
+};
 
 type Responder = {
-  instance: bonjourHap.Bonjour;
+  instance: BonjourService;
   address?: string;
 };
 
@@ -16,31 +57,46 @@ type AdvertisementEvents = {
   error: [error: Error];
 };
 
+const restrictServiceAddress = (service: BonjourService.Service, address?: string): void => {
+  if (!address) return;
+  const records = service.records.bind(service);
+  const restrictedService = service;
+  restrictedService.records = () => selectBonjourAddressRecords(records(), address);
+};
+
 class CombinedAdvertisement extends EventEmitter<AdvertisementEvents> {
-  readonly #advertisements: bonjourHap.Service[];
+  readonly #advertisements: BonjourService.Service[];
   #announced = false;
 
-  constructor(responders: Responder[], options: bonjourHap.ServiceOptions) {
+  constructor(responders: Responder[], options: ServiceOptions) {
     super();
     this.#advertisements = responders.map(({ instance, address }) => {
       const advertisement = instance.publish({
-        ...options,
+        name: options.name,
+        host: options.host,
+        type: options.type,
+        port: options.port,
+        protocol: options.protocol,
+        subtypes: options.subtypes,
+        txt: options.txt,
         probe: address ? false : options.probe,
-        restrictedAddresses: address ? [address] : options.restrictedAddresses,
-        disabledIpv6: address ? true : options.disabledIpv6,
+        disableIPv6: address ? true : options.disabledIpv6,
       });
+      restrictServiceAddress(advertisement, address);
       advertisement.on('up', () => {
         if (this.#announced) return;
         this.#announced = true;
         this.emit('up');
       });
-      advertisement.on('error', error => this.emit('error', error));
+      advertisement.on('error', error => this.emit('error', error as Error));
       return advertisement;
     });
   }
 
   start(): void {
-    this.#advertisements.forEach(advertisement => advertisement.start());
+    this.#advertisements.forEach(advertisement => {
+      advertisement.start();
+    });
   }
 
   stop(callback?: () => void): void {
@@ -58,42 +114,72 @@ class CombinedAdvertisement extends EventEmitter<AdvertisementEvents> {
   }
 
   destroy(): void {
-    this.#advertisements.forEach(advertisement => advertisement.destroy());
+    this.stop();
     this.removeAllListeners();
   }
 
   updateTxt(txt: Record<string, string>, silent?: boolean): void {
-    this.#advertisements.forEach(advertisement => advertisement.updateTxt(txt, silent));
+    void silent;
+    this.#advertisements.forEach(advertisement => {
+      const currentAdvertisement = advertisement;
+      const restart = currentAdvertisement.published || currentAdvertisement.activated;
+      const update = (): void => {
+        currentAdvertisement.txt = txt;
+        if (restart) currentAdvertisement.start();
+      };
+      if (restart) currentAdvertisement.stop(update);
+      else update();
+    });
   }
 }
 
 type BrowserEvents = {
-  up: [service: bonjourHap.RemoteService];
-  down: [service: bonjourHap.RemoteService];
-  update: [service: bonjourHap.RemoteService];
+  up: [service: RemoteService];
+  down: [service: RemoteService];
+  update: [service: RemoteService];
+};
+
+const normalizeRemoteService = (service: BonjourService.Service): RemoteService | undefined => {
+  if (!service.referer) return undefined;
+  return {
+    name: service.name,
+    fqdn: service.fqdn,
+    host: service.host,
+    port: service.port,
+    type: service.type,
+    protocol: service.protocol,
+    subtypes: service.subtypes ?? [],
+    txt: service.txt ?? {},
+    referer: service.referer,
+    rawTxt: Buffer.alloc(0),
+    addresses: service.addresses ?? [],
+  };
 };
 
 class CombinedBrowser extends EventEmitter<BrowserEvents> {
-  readonly #browsers: bonjourHap.Browser[];
-  readonly #servicesByBrowser = new Map<
-    bonjourHap.Browser,
-    Map<string, bonjourHap.RemoteService>
-  >();
+  readonly #browsers: BonjourService.Browser[];
+  readonly #servicesByBrowser = new Map<BonjourService.Browser, Map<string, RemoteService>>();
 
-  constructor(responders: Responder[], options: bonjourHap.BrowserOptions) {
+  constructor(responders: Responder[], options: BrowserOptions) {
     super();
     this.#browsers = responders.map(({ instance }) => {
-      const browser = instance.find(options);
+      const browser = instance.find({
+        type: options.type ?? 'services',
+        protocol: options.protocol as 'tcp' | 'udp' | undefined,
+        subtypes: options.subtypes,
+        txt: options.txt,
+      });
       this.#servicesByBrowser.set(browser, new Map());
       browser.on('up', service => this.#remember(browser, service, 'up'));
-      browser.on('update', service => this.#remember(browser, service, 'update'));
+      browser.on('txt-update', service => this.#remember(browser, service, 'update'));
+      browser.on('srv-update', service => this.#remember(browser, service, 'update'));
       browser.on('down', service => this.#forget(browser, service));
       return browser;
     });
   }
 
-  get services(): bonjourHap.RemoteService[] {
-    const services = new Map<string, bonjourHap.RemoteService>();
+  get services(): RemoteService[] {
+    const services = new Map<string, RemoteService>();
     this.#servicesByBrowser.forEach(byName => {
       byName.forEach((service, fqdn) => services.set(fqdn, service));
     });
@@ -114,47 +200,55 @@ class CombinedBrowser extends EventEmitter<BrowserEvents> {
   }
 
   #remember(
-    browser: bonjourHap.Browser,
-    service: bonjourHap.RemoteService,
+    browser: BonjourService.Browser,
+    discovered: BonjourService.Service,
     event: 'up' | 'update',
   ): void {
+    const service = normalizeRemoteService(discovered);
+    if (!service) return;
     const wasKnown = this.services.some(current => current.fqdn === service.fqdn);
     this.#servicesByBrowser.get(browser)?.set(service.fqdn, service);
     this.emit(wasKnown ? 'update' : event, service);
   }
 
-  #forget(browser: bonjourHap.Browser, service: bonjourHap.RemoteService): void {
+  #forget(browser: BonjourService.Browser, discovered: BonjourService.Service): void {
+    const service = normalizeRemoteService(discovered);
+    if (!service) return;
     this.#servicesByBrowser.get(browser)?.delete(service.fqdn);
     const replacement = this.services.find(current => current.fqdn === service.fqdn);
     this.emit(replacement ? 'update' : 'down', replacement ?? service);
   }
 }
 
-const createEmbeddedBonjour = () => {
-  const interfaces = getBonjourInterfaces();
-  const responders: Responder[] =
-    interfaces.length > 0
-      ? interfaces.map(address => ({
-          instance: bonjourHap({ interface: address, bind: '0.0.0.0' }),
-          address,
-        }))
-      : [{ instance: bonjourHap() }];
-  return {
-    publish: (options: bonjourHap.ServiceOptions) => new CombinedAdvertisement(responders, options),
-    find: (options: bonjourHap.BrowserOptions) => new CombinedBrowser(responders, options),
-    destroy: (callback?: () => void) => {
-      let remaining = responders.length;
-      responders.forEach(({ instance }) => {
-        instance.destroy(() => {
-          remaining -= 1;
-          if (remaining === 0) callback?.();
-        });
-      });
-    },
-  };
-};
+const interfaces = getBonjourInterfaces();
+const responders: Responder[] =
+  interfaces.length > 0
+    ? interfaces.map(address => ({
+        instance: new BonjourService(
+          { interface: address, bind: '0.0.0.0' } as BonjourTransportOptions,
+          (error: Error) => debug(`mDNS error on ${address}: ${error.message}`),
+        ),
+        address,
+      }))
+    : [
+        {
+          instance: new BonjourService({}, (error: Error) => debug(`mDNS error: ${error.message}`)),
+        },
+      ];
 
-const bonjour = isSystemBonjourAvailable() ? createSystemBonjour() : createEmbeddedBonjour();
+const bonjour = {
+  publish: (options: ServiceOptions) => new CombinedAdvertisement(responders, options),
+  find: (options: BrowserOptions) => new CombinedBrowser(responders, options),
+  destroy: (callback?: () => void) => {
+    let remaining = responders.length;
+    responders.forEach(({ instance }) => {
+      instance.destroy(() => {
+        remaining -= 1;
+        if (remaining === 0) callback?.();
+      });
+    });
+  },
+};
 
 app.once('will-quit', () => bonjour.destroy());
 

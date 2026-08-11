@@ -2,7 +2,6 @@
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "paths": {
-      "bonjour-hap": ["../../types/bonjour-hap"],
       "/@renderer/store/*": ["../../renderer/gmib/store/*"],
       "/@common/*": ["../../common/*"]
     }

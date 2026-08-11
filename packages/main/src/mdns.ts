@@ -8,12 +8,10 @@ import type { RemoteHost } from '/@common/helpers';
 import { notEmpty } from '/@common/helpers';
 
 import localConfig from './localConfig';
-import bonjour from './bonjour';
+import bonjour, { type RemoteService } from './bonjour';
 import { getMainWindow, waitWebContents } from './mainWindow';
 import master from './MasterBrowser';
 import { areSameRemoteHost } from './remoteHost';
-
-import type { RemoteService } from 'bonjour-hap';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:mdns`);
 
@@ -70,7 +68,7 @@ export const pickRemoteService = (svc: RemoteService): RemoteHost | undefined =>
     port,
     platform: txt?.platform,
     arch: txt?.arch,
-    osVersion: txt?.osversion,
+    osVersion: txt?.osVersion ?? txt?.osversion,
   };
 };
 

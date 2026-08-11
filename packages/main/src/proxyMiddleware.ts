@@ -8,7 +8,7 @@ import { createProxyMiddleware } from 'http-proxy-middleware';
 import type { RequestHandler } from 'http-proxy-middleware';
 
 import master, { isLocalhost } from './MasterBrowser';
-import bonjour from './bonjour';
+import bonjour, { type RemoteService } from './bonjour';
 import config, { port as currentPort } from './config';
 import localConfig from './localConfig';
 import {
@@ -26,8 +26,6 @@ import Deferred from '/@common/Deferred';
 
 import relaunch from './relaunch';
 import { getOutgoingSecret } from './secret';
-
-import type bonjourHap from 'bonjour-hap';
 
 type ProxyOptions = {
   readonly host: string;
@@ -123,28 +121,28 @@ let isMaster = false;
 
 let ready = new Deferred();
 
-const getRemotePeer = (remote: bonjourHap.RemoteService): MasterElectionPeer =>
+const getRemotePeer = (remote: RemoteService): MasterElectionPeer =>
   parseMasterElectionPeer(remote.txt);
 
 const getLocalPeer = (): MasterElectionPeer => ({ role: serviceRole, rank, identifier });
 
-const getRemoteAddresses = (remote: bonjourHap.RemoteService): string[] =>
+const getRemoteAddresses = (remote: RemoteService): string[] =>
   [remote.referer.address, ...(remote.addresses ?? [])].filter(
     address => isIPv4(address) && !isLocalhost(address),
   );
 
-const rememberRemoteGmib = (remote: bonjourHap.RemoteService): void => {
+const rememberRemoteGmib = (remote: RemoteService): void => {
   master.registerGmibAddresses(remote.fqdn, getRemoteAddresses(remote));
 };
 
-const forgetRemoteGmib = (remote: bonjourHap.RemoteService): void => {
+const forgetRemoteGmib = (remote: RemoteService): void => {
   master.unregisterGmibAddresses(remote.fqdn);
 };
 
 const selectStrongest = (
-  remotes: bonjourHap.RemoteService[],
+  remotes: RemoteService[],
   role: MasterElectionRole = 'master',
-): bonjourHap.RemoteService | undefined =>
+): RemoteService | undefined =>
   remotes
     .filter(remote => getRemotePeer(remote).role === role && !isLocalhost(remote.referer.address))
     .sort((left, right) =>
@@ -224,7 +222,7 @@ config.onDidChange('disableNet', (_newValue, oldValue) => {
   }
 });
 
-const createProxy = (remote: bonjourHap.RemoteService) => {
+const createProxy = (remote: RemoteService) => {
   rememberRemoteGmib(remote);
   const host = remote.referer.address;
   const { port } = remote;
@@ -289,7 +287,7 @@ const createProxy = (remote: bonjourHap.RemoteService) => {
   ready.resolve();
 };
 
-const handleRemoteService = (remote: bonjourHap.RemoteService, updated = false): void => {
+const handleRemoteService = (remote: RemoteService, updated = false): void => {
   void (async () => {
     const remotePeer = getRemotePeer(remote);
     debug(
