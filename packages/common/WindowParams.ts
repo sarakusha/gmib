@@ -24,10 +24,7 @@ export const gmibVariables = ['autostart'] satisfies Array<keyof GmibWindowParam
 type GmibVariables = (typeof gmibVariables)[number];
 
 export type WindowParams =
-  | GmibWindowParams
-  | PlayerWindowParams
-  | ScreenWindowParams
-  | VideoWindowParams;
+  GmibWindowParams | PlayerWindowParams | ScreenWindowParams | VideoWindowParams;
 
 export type CommonWindowParams = {
   type: WindowType;

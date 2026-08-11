@@ -90,10 +90,10 @@ export const getRemoteCredentials = async (url: string): Promise<Credentials | u
 
 void app.whenReady().then(() => {
   ipcMain.handle('getRemoteCredentials', (_, url) => getRemoteCredentials(url));
-  ipcMain.handle(
-    'getLocalCredentials',
-    (): Credentials => ({ identifier: localConfig.get('identifier'), apiSecret: secret }),
-  );
+  ipcMain.handle('getLocalCredentials', (): Credentials => ({
+    identifier: localConfig.get('identifier'),
+    apiSecret: secret,
+  }));
   ipcMain.on('setRemoteSecret', (_, id: string, apiSecret: bigint | null) => {
     if (apiSecret) void setOutgoingSecret(id, apiSecret);
   });

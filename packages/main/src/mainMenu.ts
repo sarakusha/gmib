@@ -174,29 +174,27 @@ const remoteMenu = (params?: WindowParams): AppMenuItem | undefined => {
     ],
     'address',
   );
-  const links = remotes.map(
-    ({ address, port, name }): MenuItemConstructorOptions => ({
-      label: name ? `${name} (${address})` : address,
-      type: 'checkbox',
-      checked: focused ? findGmib(address)?.id === focused : false,
-      click: () => {
-        if (address === 'localhost') localConfig.set('localGmibHidden', false);
-        const gmib = findGmib(address);
-        if (gmib) {
-          const window = findManagedWindow(gmib.id);
-          if (window) {
-            window.show();
-            window.focus();
-            return;
-          }
+  const links = remotes.map(({ address, port, name }): MenuItemConstructorOptions => ({
+    label: name ? `${name} (${address})` : address,
+    type: 'checkbox',
+    checked: focused ? findGmib(address)?.id === focused : false,
+    click: () => {
+      if (address === 'localhost') localConfig.set('localGmibHidden', false);
+      const gmib = findGmib(address);
+      if (gmib) {
+        const window = findManagedWindow(gmib.id);
+        if (window) {
+          window.show();
+          window.focus();
+          return;
         }
-        const window = createAppWindow(port, address, name);
-        // registerGmib(window, { host: address, nibusPort: +port });
-        window.show();
-        window.focus();
-      },
-    }),
-  );
+      }
+      const window = createAppWindow(port, address, name);
+      // registerGmib(window, { host: address, nibusPort: +port });
+      window.show();
+      window.focus();
+    },
+  }));
   return {
     label: 'GMIB',
     submenu: [

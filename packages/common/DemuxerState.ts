@@ -1,8 +1,2 @@
 export type DemuxerState =
-  | 'prefetch'
-  | 'ready'
-  | 'playing'
-  | 'paused'
-  | 'finished'
-  | 'cancelled'
-  | 'error';
+  'prefetch' | 'ready' | 'playing' | 'paused' | 'finished' | 'cancelled' | 'error';

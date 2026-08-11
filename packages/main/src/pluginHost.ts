@@ -344,8 +344,7 @@ class PluginStorage {
     let result: T | undefined;
     await this.enqueue(async () => {
       const current = (key in this.data ? structuredClone(this.data[key]) : undefined) as
-        | T
-        | undefined;
+        T | undefined;
       result = structuredClone(updater(current));
       JSON.stringify(result);
       this.data[key] = result;

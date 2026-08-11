@@ -25,9 +25,7 @@ export type MediaUploadProgress = {
 };
 
 export type MediaTransferProgress =
-  | MediaUploadProgress
-  | { phase: 'failed'; error: unknown }
-  | { phase: 'canceled' };
+  MediaUploadProgress | { phase: 'failed'; error: unknown } | { phase: 'canceled' };
 
 const getUploadHeaders = async (url: string): Promise<Headers> => {
   const headers = new Headers();

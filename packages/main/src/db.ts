@@ -419,9 +419,10 @@ export const promisifyGet = <P extends (...params: any[]) => any, R>(
 ): ((...params: Parameters<P>) => Promise<R | undefined>) => {
   return (...params) => {
     const statement = db.prepare(sql);
-    return useStatement(statement, promisify(statement.get.bind(statement))(encoder(...params))).then(
-      result => (decoder ? result && decoder(result) : result) as R,
-    );
+    return useStatement(
+      statement,
+      promisify(statement.get.bind(statement))(encoder(...params)),
+    ).then(result => (decoder ? result && decoder(result) : result) as R);
   };
 };
 
@@ -432,9 +433,10 @@ export const promisifyAll = <P extends (...args: any[]) => any, R>(
 ): ((...params: Parameters<P>) => Promise<R[]>) => {
   return (...params) => {
     const statement = db.prepare(sql);
-    return useStatement(statement, promisify(statement.all.bind(statement))(encoder(...params))).then(
-      result => (decoder ? (result as NullableOptional).map(decoder) : result) as R[],
-    );
+    return useStatement(
+      statement,
+      promisify(statement.all.bind(statement))(encoder(...params)),
+    ).then(result => (decoder ? (result as NullableOptional).map(decoder) : result) as R[]);
   };
 };
 

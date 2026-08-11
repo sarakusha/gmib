@@ -119,10 +119,8 @@ ipcRenderer
 //   gmibParams.then(({ plan, renew, key }) => ({ plan, renew, key })),
 // );
 
-contextBridge.exposeInMainWorld(
-  'initializeNovastar',
-  (): Promise<boolean> =>
-    gmibParams.then(params => Boolean(Reflect.get(params, import.meta.env.VITE_ANNOUNCE_NOVASTAR))),
+contextBridge.exposeInMainWorld('initializeNovastar', (): Promise<boolean> =>
+  gmibParams.then(params => Boolean(Reflect.get(params, import.meta.env.VITE_ANNOUNCE_NOVASTAR))),
 );
 
 contextBridge.exposeInMainWorld('mediaSource', expandTypes(mediaSource));

@@ -9,11 +9,7 @@ export type PlayerSchedulerAction =
   | 'next'
   | 'play-item';
 export type GmibSchedulerAction =
-  | 'show-test'
-  | 'hide-test'
-  | 'set-brightness'
-  | 'set-autobrightness'
-  | 'set-overheat-protection';
+  'show-test' | 'hide-test' | 'set-brightness' | 'set-autobrightness' | 'set-overheat-protection';
 export type CronMode = 'all' | 'every' | 'select';
 export type SimpleCronMode = 'all' | 'select';
 export type SchedulerStatus = 'idle' | 'success' | 'error';

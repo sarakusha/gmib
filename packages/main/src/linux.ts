@@ -204,8 +204,7 @@ export const initializePritunlClient = async ({
       return;
     }
     const links = (await pritunlFetch({ path: `/key/${orgId}/${userId}` })) as
-      | { uri_url?: string }
-      | undefined;
+      { uri_url?: string } | undefined;
     const uriUrl = links?.uri_url;
     if (!uriUrl) {
       setTimeout(

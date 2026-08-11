@@ -134,10 +134,7 @@ const shouldKeepOnTop = (url: string) => {
 const hasCompleteBounds = (bounds: OutputWindowBounds): bounds is Rectangle =>
   Number.isFinite(bounds.width) && Number.isFinite(bounds.height);
 
-const applyOutputWindowPlacement = (
-  window: BrowserWindow,
-  config: OutputWindowConfig,
-): void => {
+const applyOutputWindowPlacement = (window: BrowserWindow, config: OutputWindowConfig): void => {
   const { bounds, useNativeKiosk } = config;
   if (useNativeKiosk) {
     window.setFocusable(true);
