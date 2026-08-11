@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [5.3.6](https://github.com/sarakusha/gmib/compare/v5.3.5...v5.3.6) (2026-08-11)
+
+### Bug Fixes
+
+* use system Bonjour for discovery on Windows ([c1f0d60](https://github.com/sarakusha/gmib/commit/c1f0d6024d91c2053a8a99e291f58021360dcdc8))
 ## [5.3.5](https://github.com/sarakusha/gmib/compare/v5.3.4...v5.3.5) (2026-08-11)
 
 ### Bug Fixes
