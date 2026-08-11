@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [5.3.2](https://github.com/sarakusha/gmib/compare/v5.3.1...v5.3.2) (2026-08-11)
+
+### Bug Fixes
+
+* deduplicate external NovaStar detection ([d5ec40d](https://github.com/sarakusha/gmib/commit/d5ec40dffd4920c701301e892136ae203eda30c8))
+* install published nibus packages for release ([4d57ee1](https://github.com/sarakusha/gmib/commit/4d57ee1c54f1e7eb3768c393163fe05026632cd0))
+* restore outputs after display reconnect ([58ddc69](https://github.com/sarakusha/gmib/commit/58ddc69dff9e1441b7b73021340a5dbd05516486))
+* use unique DNS-SD identities for local services ([ec714d4](https://github.com/sarakusha/gmib/commit/ec714d4dccc22eb0dc3de04bd78cacb29fbf2689))
 ## [5.3.1](https://github.com/sarakusha/gmib/compare/v5.3.0...v5.3.1) (2026-08-11)
 
 ### Bug Fixes
