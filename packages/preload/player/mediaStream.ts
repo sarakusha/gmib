@@ -20,6 +20,7 @@ import {
 
 import ipcDispatch from '../common/ipcDispatch';
 import VideoSource from './VideoSource';
+import { resolvePlaybackEngine, shouldFallbackAfterDecoderError } from './playbackEngine';
 
 let playlist: Playlist | undefined;
 let player: Player;
@@ -39,11 +40,13 @@ const stream = new MediaStream();
 const streamReady = new Deferred<void>();
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:mediastream`);
 
+let linuxPreferSoftwareDecoding = false;
+
 const getMediaUri = (name?: string) =>
   name && new URL(getUrl(`/public/${name}`), window.location.href).href;
 
 const getPlaybackEngine = (): NonNullable<Player['playbackEngine']> =>
-  player.playbackEngine ?? 'decoder';
+  resolvePlaybackEngine(player.playbackEngine);
 
 const updatePlaybackState = (next: MediaSessionPlaybackState): void => {
   if (playbackState === next) return;
@@ -287,6 +290,9 @@ type DecoderSourceMessage = {
   recoverableError?: {
     message?: string;
   };
+  err?: {
+    message?: string;
+  };
 };
 
 const getDecoderRecoveryKey = (source: VideoSource): string =>
@@ -324,7 +330,20 @@ const disposeDecoder = (): void => {
 };
 
 const recoverDecoderSource = (source: VideoSource, reason?: string): void => {
-  if (source !== currentSource || !videoStream || source.closed) return;
+  if (source !== currentSource || !videoStream) return;
+  if (shouldFallbackAfterDecoderError() && !linuxPreferSoftwareDecoding) {
+    linuxPreferSoftwareDecoding = true;
+    void ipcRenderer
+      .invoke('setLocalConfig', 'linuxPreferSoftwareDecoding', true)
+      .catch((err: unknown) => {
+        debug(`failed to persist Linux software decoder preference: ${(err as Error).message}`);
+      });
+    debug(
+      `WebCodecs decoder failed; enabling Linux software decoding and restarting source: ${reason ?? 'unknown error'}`,
+    );
+    seekDecoderSource(decoderPosition, 'recover');
+    return;
+  }
   const key = getDecoderRecoveryKey(source);
   const attempts = (decoderRecoveryAttempts.get(key) ?? 0) + 1;
   decoderRecoveryAttempts.set(key, attempts);
@@ -374,6 +393,9 @@ const handleDecoderSourceMessage = (source: VideoSource, data: DecoderSourceMess
   }
   if (data.recoverableError && source === currentSource) {
     recoverDecoderSource(source, data.recoverableError.message);
+  }
+  if (data.err && source === currentSource) {
+    recoverDecoderSource(source, data.err.message);
   }
 };
 
@@ -427,6 +449,7 @@ const seekDecoderSource = (position: number, reason: 'user' | 'recover' = 'user'
       duration: 0,
     },
     mediaId,
+    preferSoftwareDecoding: linuxPreferSoftwareDecoding,
     onMessage: ({ data }: { data: unknown }) => {
       if (data && typeof data === 'object') {
         handleDecoderSourceMessage(recoverySource, data);
@@ -521,6 +544,7 @@ const updateDecoder = async (): Promise<void> => {
           duration: 500,
         },
         mediaId: nextItem.md5,
+        preferSoftwareDecoding: linuxPreferSoftwareDecoding,
         onMessage: ({ data }: { data: unknown }) => {
           if (data && typeof data === 'object') {
             handleDecoderSourceMessage(preloadedSource, data);
@@ -547,6 +571,7 @@ const updateDecoder = async (): Promise<void> => {
           duration: 500,
         },
         mediaId: currentItem.md5,
+        preferSoftwareDecoding: linuxPreferSoftwareDecoding,
         onMessage: ({ data }: { data: unknown }) => {
           if (data && typeof data === 'object') {
             handleDecoderSourceMessage(videoSource, data);
@@ -656,6 +681,11 @@ export const seek = (position: number): void => {
 
 const initialize = async () => {
   streamReady.resolve();
+  if (shouldFallbackAfterDecoderError()) {
+    linuxPreferSoftwareDecoding = Boolean(
+      await ipcRenderer.invoke('getLocalConfig', 'linuxPreferSoftwareDecoding'),
+    );
+  }
   player = await ipcRenderer.invoke('getPlayer', sourceId);
   if (player?.playlistId) {
     playlist = await ipcRenderer.invoke('getPlaylist', player.playlistId);

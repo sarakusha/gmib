@@ -224,6 +224,26 @@ const remoteMenu = (params?: WindowParams): AppMenuItem | undefined => {
         },
         checked: gmibParams.autostart,
       },
+      ...(gmibParams.info?.platform === 'linux'
+        ? [
+            {
+              label: 'Точное позиционирование окон (X11)',
+              sublabel: 'Требует перезапуска GMIB',
+              type: 'checkbox' as const,
+              checked: gmibParams.exactWindowPlacement,
+              click: () => {
+                const value = !gmibParams.exactWindowPlacement;
+                void authRequest({
+                  api: '/exactWindowPlacement',
+                  method: 'POST',
+                  host: gmibParams.host,
+                  port: gmibParams.nibusPort + 1,
+                  body: { value },
+                });
+              },
+            },
+          ]
+        : []),
       {
         label: 'Изменить список ...',
         click: () => {
@@ -488,6 +508,20 @@ const template = async (params?: WindowParams): Promise<MenuItemConstructorOptio
             toggleOutputWindowsVisibility();
           },
         },
+        ...(process.platform === 'linux'
+          ? [
+              {
+                label: 'WebCodecs: программное декодирование',
+                sublabel: 'Отключите, если аппаратное декодирование работает стабильно',
+                type: 'checkbox' as const,
+                checked: localConfig.get('linuxPreferSoftwareDecoding'),
+                click: () => {
+                  const value = !localConfig.get('linuxPreferSoftwareDecoding');
+                  localConfig.set('linuxPreferSoftwareDecoding', value);
+                },
+              },
+            ]
+          : []),
         {
           type: 'separator',
         },
@@ -625,6 +659,7 @@ localConfig.onDidChange('autostart', (autostart = false) => {
 
 localConfig.onDidChange('hosts', updateMenu);
 localConfig.onDidChange('autostart', updateMenu);
+localConfig.onDidChange('linuxPreferSoftwareDecoding', updateMenu);
 onRemoteServicesChanged(updateMenu);
 onTabbedWindowChange(updateMenu);
 onWindowStoreChange(updateMenu);

@@ -16,6 +16,7 @@ export type VideoSourceOptions = {
   onMessage?: VideoSourceMessageHandler;
   mediaId?: string;
   startTime?: number;
+  preferSoftwareDecoding?: boolean;
 };
 
 type DecoderMessage = {
@@ -121,6 +122,7 @@ export default class VideoSource {
         uri,
         closed,
         startTime: options.startTime,
+        preferSoftwareDecoding: options.preferSoftwareDecoding,
         ...(options.fade && { fade: options.fade }),
       });
     };

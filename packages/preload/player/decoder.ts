@@ -8,6 +8,8 @@ import ReducingValve from '@sarakusha/ebml/ReducingValve';
 import VideoChunkGenerator from '@sarakusha/ebml/VideoChunkGenerator';
 import VideoFrameGenerator from '@sarakusha/ebml/VideoFrameGenerator';
 
+import { getLinuxDecoderConfig } from './playbackEngine';
+
 let controller: AbortController | undefined;
 let readable: ReadableStream<VideoFrame> | undefined;
 const noop = () => {};
@@ -31,6 +33,7 @@ onmessage = async (event: MessageEvent<unknown>) => {
     fade?: FadeOptions;
     closed?: boolean;
     startTime?: number;
+    preferSoftwareDecoding?: boolean;
     play?: boolean;
     pause?: boolean;
     close?: boolean;
@@ -44,7 +47,14 @@ onmessage = async (event: MessageEvent<unknown>) => {
     void chunkGenerator.config.catch(err => {
       postMessage({ debug: `decoder video config error: ${(err as Error).message}` });
     });
-    const frameGenerator = new VideoFrameGenerator(chunkGenerator.config, 20);
+    const decoderConfig = chunkGenerator.config.then(config =>
+      getLinuxDecoderConfig(
+        config,
+        /Linux/i.test(navigator.userAgent) ? 'linux' : 'win32',
+        Boolean(d.preferSoftwareDecoding),
+      ),
+    );
+    const frameGenerator = new VideoFrameGenerator(decoderConfig, 20);
     fade = new FadeTransform(d.fade);
     const valve = new ReducingValve(d.closed);
     play = valve.open;

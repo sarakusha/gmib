@@ -25,6 +25,8 @@ const localConfigSchema: Schema<LocalConfig> = {
     default: [],
   },
   autostart: { type: 'boolean', default: false },
+  exactWindowPlacement: { type: 'boolean', default: false },
+  linuxPreferSoftwareDecoding: { type: 'boolean', default: false },
   localGmibHidden: { type: 'boolean', default: false },
   localPlayerTabs: {
     type: 'array',

@@ -297,6 +297,8 @@ export type Health = {
 export type LocalConfig = {
   hosts: CustomHost[];
   autostart: boolean;
+  exactWindowPlacement: boolean;
+  linuxPreferSoftwareDecoding: boolean;
   health: Health;
   localGmibHidden: boolean;
   localPlayerTabs?: number[];
