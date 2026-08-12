@@ -985,6 +985,7 @@ api.get('/announce', async (req, res) => {
     iv,
     key: await machineId,
     autostart: localConfig.get('autostart'),
+    exactWindowPlacement: localConfig.get('exactWindowPlacement'),
     info: {
       name: os.hostname().replace(/\.local\.?$/, ''),
       version: import.meta.env.VITE_APP_VERSION,
@@ -1057,6 +1058,13 @@ api.post('/autostart', (req, res) => {
   const { value } = req.body;
   localConfig.set('autostart', !!value);
   res.end();
+});
+
+api.post('/exactWindowPlacement', (req, res) => {
+  const { value } = req.body;
+  localConfig.set('exactWindowPlacement', !!value);
+  res.end();
+  setTimeout(relaunch, 100);
 });
 
 api.post('/relaunch', (req, res) => {

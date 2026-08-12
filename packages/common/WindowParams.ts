@@ -20,7 +20,9 @@ export type WindowType = 'gmib' | 'player' | 'screen' | 'video';
 
 export type ScreenOptions = Readonly<Pick<Screen, (typeof impScreenProps)[number]>>;
 
-export const gmibVariables = ['autostart'] satisfies Array<keyof GmibWindowParams>;
+export const gmibVariables = ['autostart', 'exactWindowPlacement'] satisfies Array<
+  keyof GmibWindowParams
+>;
 type GmibVariables = (typeof gmibVariables)[number];
 
 export type WindowParams =
@@ -42,6 +44,7 @@ export type GmibWindowParams = CommonWindowParams & {
   info?: Partial<Host>;
   machineId?: string;
   autostart?: boolean;
+  exactWindowPlacement?: boolean;
   update: (update: Partial<Pick<GmibWindowParams, GmibVariables>>) => GmibWindowParams;
   // localConfig: LocalConfig;
   // esLocalConfig: EventSource;
