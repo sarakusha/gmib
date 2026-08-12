@@ -1,10 +1,22 @@
 import { execFile } from 'child_process';
 import { app, type RelaunchOptions } from 'electron';
 
-const options: RelaunchOptions = {
-  args: process.argv.slice(1).concat(['--relaunch']),
+import localConfig from './localConfig';
+
+export const buildRelaunchOptions = (
+  args: readonly string[] = process.argv.slice(1),
+  exactWindowPlacement = localConfig.get('exactWindowPlacement'),
+): RelaunchOptions => ({
+  args: [
+    ...args.filter(
+      arg =>
+        exactWindowPlacement ||
+        (arg !== '--ozone-platform' && !arg.startsWith('--ozone-platform=')),
+    ),
+    '--relaunch',
+  ],
   execPath: process.execPath,
-};
+});
 
 let restart = false;
 
@@ -16,6 +28,7 @@ export const needRestart = (val?: true) => {
 export default () => {
   if (import.meta.env.PROD) {
     needRestart(true);
+    const options = buildRelaunchOptions();
     // Fix for .AppImage
     const AppImage = process.env.APPIMAGE;
     if (app.isPackaged && AppImage) {
