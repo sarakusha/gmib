@@ -12,6 +12,7 @@ import sortBy from 'lodash/sortBy';
 
 import localConfig from './localConfig';
 import { linuxAutostart } from './linux';
+import relaunch from './relaunch';
 import { updateTray } from './tray';
 import { openPlayer } from './playerWindow';
 import { hasPlayers, insertPlayer, uniquePlayerName } from './screen';
@@ -224,26 +225,6 @@ const remoteMenu = (params?: WindowParams): AppMenuItem | undefined => {
         },
         checked: gmibParams.autostart,
       },
-      ...(gmibParams.info?.platform === 'linux'
-        ? [
-            {
-              label: 'Точное позиционирование окон (X11)',
-              sublabel: 'Требует перезапуска GMIB',
-              type: 'checkbox' as const,
-              checked: gmibParams.exactWindowPlacement,
-              click: () => {
-                const value = !gmibParams.exactWindowPlacement;
-                void authRequest({
-                  api: '/exactWindowPlacement',
-                  method: 'POST',
-                  host: gmibParams.host,
-                  port: gmibParams.nibusPort + 1,
-                  body: { value },
-                });
-              },
-            },
-          ]
-        : []),
       {
         label: 'Изменить список ...',
         click: () => {
@@ -511,6 +492,23 @@ const template = async (params?: WindowParams): Promise<MenuItemConstructorOptio
         ...(process.platform === 'linux'
           ? [
               {
+                label: 'Точное позиционирование окон (X11)',
+                sublabel: 'Требует перезапуска GMIB',
+                type: 'checkbox' as const,
+                checked: localConfig.get('exactWindowPlacement'),
+                click: () => {
+                  const value = !localConfig.get('exactWindowPlacement');
+                  localConfig.set('exactWindowPlacement', value);
+                  setTimeout(() => {
+                    relaunch();
+                  }, 100);
+                },
+              },
+            ]
+          : []),
+        ...(process.platform === 'linux'
+          ? [
+              {
                 label: 'WebCodecs: программное декодирование',
                 sublabel: 'Отключите, если аппаратное декодирование работает стабильно',
                 type: 'checkbox' as const,
@@ -659,6 +657,7 @@ localConfig.onDidChange('autostart', (autostart = false) => {
 
 localConfig.onDidChange('hosts', updateMenu);
 localConfig.onDidChange('autostart', updateMenu);
+localConfig.onDidChange('exactWindowPlacement', updateMenu);
 localConfig.onDidChange('linuxPreferSoftwareDecoding', updateMenu);
 onRemoteServicesChanged(updateMenu);
 onTabbedWindowChange(updateMenu);
