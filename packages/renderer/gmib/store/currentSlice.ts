@@ -16,6 +16,10 @@ export type Credentials = {
   identifier: string;
   host?: string;
 };
+export type GmibDiscoveryBlocked = {
+  address: string;
+  commands: string;
+};
 export interface CurrentState {
   tab: TabValues | undefined;
   device: string | undefined;
@@ -24,7 +28,7 @@ export interface CurrentState {
   isRemoteDialogOpen: boolean;
   authRequired?: Credentials;
   broadcastDetected?: string;
-  gmibDiscoveryBlocked?: string;
+  gmibDiscoveryBlocked?: GmibDiscoveryBlocked;
   isActivateDialogOpen: boolean;
   invalidState: boolean;
   outputHidden: boolean;
@@ -89,8 +93,11 @@ const currentSlice = createSlice({
         state.broadcastDetected = address;
       }
     },
-    setGmibDiscoveryBlocked(state, { payload: address }: PayloadAction<string | undefined>) {
-      state.gmibDiscoveryBlocked = address;
+    setGmibDiscoveryBlocked(
+      state,
+      { payload: warning }: PayloadAction<GmibDiscoveryBlocked | undefined>,
+    ) {
+      state.gmibDiscoveryBlocked = warning;
     },
     setInvalidState(state, { payload: invalid }: PayloadAction<boolean>) {
       state.invalidState = invalid;

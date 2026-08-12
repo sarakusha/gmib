@@ -36,6 +36,10 @@ allowBuilds:
   sqlite3: true
   usb: true
   utf-8-validate: true
+
+patchedDependencies:
+  bonjour-service@1.4.4: patches/bonjour-service@1.4.4.patch
+
 minimumReleaseAgeExclude:
   - vite@8.0.13
   - "@nibus/*"

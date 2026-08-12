@@ -44,7 +44,7 @@ const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:proxy`);
 let masterProxy: Proxy | undefined;
 
 const MASTER_ELECTION_SETTLE_MS = 3000;
-const MASTER_BROWSER_REFRESH_MS = 5000;
+const MASTER_BROWSER_REFRESH_MS = 30000;
 
 const delay = (timeout: number) =>
   new Promise<void>(resolve => {
@@ -90,8 +90,8 @@ const stopMasterService = async (): Promise<void> => {
 const advertiseMasterService = (): void => {
   serviceRole = 'candidate';
   if (service) {
-    service.updateTxt(candidateServiceTxt, true);
-    service.start();
+    service.updateTxt(candidateServiceTxt);
+    if (!serviceActive) service.start();
   } else {
     const nextService = bonjour.publish({
       name: getNovastarServiceName(identifier),
@@ -100,9 +100,6 @@ const advertiseMasterService = (): void => {
       port: currentPort,
       txt: candidateServiceTxt,
     });
-    nextService.on('error', (err: Error) =>
-      debug(`error while publish master service: ${err.message}`),
-    );
     service = nextService;
   }
   serviceActive = true;

@@ -411,8 +411,8 @@ export const sse: Middleware = api => {
   });
   evtSource.addEventListener('gmibDiscoveryBlocked', e => {
     try {
-      const [address] = (e as CustomEvent<[string]>).detail;
-      dispatch(setGmibDiscoveryBlocked(address));
+      const [warning] = (e as CustomEvent<[{ address: string; commands: string }]>).detail;
+      dispatch(setGmibDiscoveryBlocked(warning));
     } catch (err) {
       console.error(`error while parse args: ${(err as Error).message}`);
     }

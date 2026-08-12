@@ -6,6 +6,7 @@ import BonjourService from 'bonjour-service';
 import debugFactory from 'debug';
 
 import { getBonjourInterfaces, selectBonjourAddressRecords } from './bonjourInterface';
+import { updateAdvertisementTxt } from './bonjourAdvertisement';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:bonjour`);
 
@@ -54,7 +55,6 @@ type Responder = {
 
 type AdvertisementEvents = {
   up: [];
-  error: [error: Error];
 };
 
 const restrictServiceAddress = (service: BonjourService.Service, address?: string): void => {
@@ -88,7 +88,6 @@ class CombinedAdvertisement extends EventEmitter<AdvertisementEvents> {
         this.#announced = true;
         this.emit('up');
       });
-      advertisement.on('error', error => this.emit('error', error as Error));
       return advertisement;
     });
   }
@@ -118,18 +117,8 @@ class CombinedAdvertisement extends EventEmitter<AdvertisementEvents> {
     this.removeAllListeners();
   }
 
-  updateTxt(txt: Record<string, string>, silent?: boolean): void {
-    void silent;
-    this.#advertisements.forEach(advertisement => {
-      const currentAdvertisement = advertisement;
-      const restart = currentAdvertisement.published || currentAdvertisement.activated;
-      const update = (): void => {
-        currentAdvertisement.txt = txt;
-        if (restart) currentAdvertisement.start();
-      };
-      if (restart) currentAdvertisement.stop(update);
-      else update();
-    });
+  updateTxt(txt: Record<string, string>): void {
+    this.#advertisements.forEach(advertisement => updateAdvertisementTxt(advertisement, txt));
   }
 }
 
@@ -196,7 +185,10 @@ class CombinedBrowser extends EventEmitter<BrowserEvents> {
   }
 
   update(): void {
-    this.#browsers.forEach(browser => browser.update());
+    this.#browsers.forEach(browser => {
+      browser.expire();
+      browser.update();
+    });
   }
 
   #remember(

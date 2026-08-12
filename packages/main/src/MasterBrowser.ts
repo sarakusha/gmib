@@ -19,6 +19,10 @@ import NovastarLoader from './NovastarLoader';
 import ExternalBroadcastDetection from './externalBroadcastDetection';
 import { probeGmibAddress } from './remoteGmib';
 import { getAddressesForScreen, getScreens } from './screen';
+import {
+  createWindowsMdnsFirewallCommands,
+  type WindowsMdnsFirewallWarning,
+} from './windowsFirewall';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:master`);
 const BROADCAST_DETECTION_DELAY_MS = 10000;
@@ -43,7 +47,7 @@ interface MasterBrowserEvents {
   open: () => void;
   close: () => void;
   broadcastDetected: (address?: string) => void;
-  gmibDiscoveryBlocked: (address: string) => void;
+  gmibDiscoveryBlocked: (warning: WindowsMdnsFirewallWarning) => void;
 }
 
 type Options = {
@@ -91,7 +95,12 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
     },
     onSuppressed: address => {
       debug(`GMIB ${address} responds to HTTP but was not discovered over mDNS`);
-      if (process.platform === 'win32') this.emit('gmibDiscoveryBlocked', address);
+      if (process.platform === 'win32') {
+        this.emit('gmibDiscoveryBlocked', {
+          address,
+          commands: createWindowsMdnsFirewallCommands(process.execPath),
+        });
+      }
     },
   });
 

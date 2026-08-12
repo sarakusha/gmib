@@ -1,0 +1,26 @@
+diff --git a/dist/lib/browser.js b/dist/lib/browser.js
+index d911589..5bfc20a 100644
+--- a/dist/lib/browser.js
++++ b/dist/lib/browser.js
+@@ -65,6 +65,8 @@ class Browser extends events_1.EventEmitter {
+                 matches.forEach((service) => {
+                     const existingService = self._services.find((s) => (0, dns_equal_1.default)(s.fqdn, service.fqdn));
+                     if (existingService) {
++                        existingService.lastSeen = service.lastSeen;
++                        existingService.ttl = service.ttl;
+                         self.updateServiceSrv(existingService, service);
+                         self.updateServiceTxt(existingService, service);
+                         return;
+diff --git a/dist/lib/service.js b/dist/lib/service.js
+index d49e32b..7d4b2f7 100644
+--- a/dist/lib/service.js
++++ b/dist/lib/service.js
+@@ -69,7 +69,7 @@ class Service extends events_1.EventEmitter {
+         return {
+             name: `${service.type}${TLD}`,
+             type: 'PTR',
+-            ttl: 28800,
++            ttl: 120,
+             data: service.fqdn
+         };
+     }
