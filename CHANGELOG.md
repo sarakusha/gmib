@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [5.4.0](https://github.com/sarakusha/gmib/compare/v5.3.7...v5.4.0) (2026-08-12)
+
+### Features
+
+* add Linux X11 exact window placement mode ([02c9e27](https://github.com/sarakusha/gmib/commit/02c9e270d8bb445094063ffe636f3f42a83a03bb))
+
+### Bug Fixes
+
+* advertise Bonjour services on all macOS interfaces ([b0c0b33](https://github.com/sarakusha/gmib/commit/b0c0b33de1173ba2bcd7c57c688151ada76cd3e9))
+* enable Linux WebCodecs software fallback with manual toggle ([bc1437a](https://github.com/sarakusha/gmib/commit/bc1437a790835cdbc0a42f3ea1463f78ee2779d3))
+* harden mDNS discovery and firewall guidance ([8d2b605](https://github.com/sarakusha/gmib/commit/8d2b60586fadc41919eb4493df06d236a7c03a79))
 ## [5.3.7](https://github.com/sarakusha/gmib/compare/v5.3.6...v5.3.7) (2026-08-11)
 
 ### Bug Fixes
