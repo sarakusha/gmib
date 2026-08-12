@@ -2,7 +2,7 @@ import type { NetworkInterfaceInfo } from 'node:os';
 
 import { describe, expect, it } from 'vitest';
 
-import { selectBonjourAddressRecords, selectWindowsMdnsInterfaces } from '../src/bonjourInterface';
+import { selectBonjourAddressRecords, selectMdnsInterfaces } from '../src/bonjourInterface';
 
 const ipv4 = (
   address: string,
@@ -17,10 +17,10 @@ const ipv4 = (
   cidr: `${address}/24`,
 });
 
-describe('Windows mDNS interface selection', () => {
+describe('mDNS interface selection', () => {
   it('selects the active LAN address', () => {
     expect(
-      selectWindowsMdnsInterfaces({
+      selectMdnsInterfaces({
         WiFi: [ipv4('192.168.0.48')],
         Loopback: [ipv4('127.0.0.1', '255.0.0.0', true)],
       }),
@@ -29,7 +29,7 @@ describe('Windows mDNS interface selection', () => {
 
   it('selects every active IPv4 interface', () => {
     expect(
-      selectWindowsMdnsInterfaces({
+      selectMdnsInterfaces({
         VPN: [ipv4('10.8.1.3', '255.255.255.255')],
         Ethernet: [ipv4('169.254.4.2', '255.255.0.0')],
         WiFi: [ipv4('192.168.0.140')],
@@ -39,7 +39,7 @@ describe('Windows mDNS interface selection', () => {
 
   it('returns undefined without an external IPv4 address', () => {
     expect(
-      selectWindowsMdnsInterfaces({
+      selectMdnsInterfaces({
         Loopback: [ipv4('127.0.0.1', '255.0.0.0', true)],
       }),
     ).toEqual([]);

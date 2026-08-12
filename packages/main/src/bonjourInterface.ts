@@ -9,7 +9,7 @@ type AddressRecord = {
 
 const isIPv4 = (info: NetworkInterfaceInfo): boolean => info.family === 'IPv4' && !info.internal;
 
-export const selectWindowsMdnsInterfaces = (
+export const selectMdnsInterfaces = (
   interfaces: NetworkInterfaces = os.networkInterfaces(),
 ): string[] =>
   Array.from(
@@ -22,7 +22,7 @@ export const selectWindowsMdnsInterfaces = (
   );
 
 export const getBonjourInterfaces = (): string[] =>
-  process.platform === 'win32' ? selectWindowsMdnsInterfaces() : [];
+  process.platform === 'win32' || process.platform === 'darwin' ? selectMdnsInterfaces() : [];
 
 export const selectBonjourAddressRecords = <Record extends AddressRecord>(
   records: Record[],
