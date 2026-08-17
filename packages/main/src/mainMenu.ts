@@ -84,7 +84,7 @@ const playerSubmenu = async (params: GmibWindowParams): Promise<MenuItemConstruc
     }));
   } catch (error) {
     console.error('error while fetch players', error);
-    return playerSubmenu(params);
+    return [];
   }
 };
 
@@ -96,13 +96,25 @@ const getFocusedManagedWindow = () => {
   return isTabbedBrowserWindow(focused) ? getActiveTabbedWindow() : focused;
 };
 
+let lastMenuGmibHost: string | undefined;
+
 const getMenuParams = (): WindowParams | undefined => {
   const focused = getFocusedManagedWindow();
   const focusedParams = focused ? store.get(focused.id) : undefined;
-  if (focusedParams) return focusedParams;
-
   const active = getActiveTabbedWindow();
-  return active ? store.get(active.id) : undefined;
+  const params = focusedParams ?? (active ? store.get(active.id) : undefined);
+  const gmibParams = getGmibParams(params);
+  if (gmibParams) {
+    lastMenuGmibHost = gmibParams.host;
+    return params;
+  }
+
+  const gmibWindows = getAllGmibParams();
+  return (
+    gmibWindows.find(({ host }) => host === lastMenuGmibHost) ??
+    gmibWindows.find(({ host }) => host === 'localhost') ??
+    gmibWindows[0]
+  );
 };
 
 const toggleFocusedDevTools = (): void => {
