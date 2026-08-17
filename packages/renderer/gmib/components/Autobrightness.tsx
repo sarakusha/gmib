@@ -155,7 +155,7 @@ const highChartsOptions: Highcharts.Options = {
     {
       type: 'solidgauge',
       name: 'illuminance',
-      data: [10000],
+      data: [null],
       dataLabels: {
         format: `<div class="labelWrapper">
              <div class="value">{y}</div>
