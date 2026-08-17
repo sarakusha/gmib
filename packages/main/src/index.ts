@@ -22,6 +22,7 @@ import './hid';
 // import './channels';
 import { activateMainWindow, createMainWindow, persistLocalWindowState } from './mainWindow';
 import { installWindowOpenHandler, toggleOutputWindowsVisibility } from './openHandler';
+import outputVisibilityAccelerator from './outputVisibilityAccelerator';
 import { startScheduler } from './scheduler';
 import { launchPlayers } from './playerWindow';
 import { startPlugins } from './pluginHost';
@@ -117,8 +118,8 @@ app
   .then(main => {
     installWindowOpenHandler(main.webContents);
     void launchPlayers();
-    if (!globalShortcut.register('CommandOrControl+Alt+H', toggleOutputWindowsVisibility)) {
-      debug('Failed to register output window hotkey CommandOrControl+Alt+H');
+    if (!globalShortcut.register(outputVisibilityAccelerator, toggleOutputWindowsVisibility)) {
+      debug(`Failed to register output window hotkey ${outputVisibilityAccelerator}`);
     }
   })
   .then(() => {

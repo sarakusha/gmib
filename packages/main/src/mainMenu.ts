@@ -35,6 +35,7 @@ import {
   toggleActiveTabbedDevTools,
 } from './tabbedWindow';
 import { toggleOutputWindowsVisibility } from './openHandler';
+import outputVisibilityAccelerator from './outputVisibilityAccelerator';
 
 import type { GmibWindowParams, WindowParams } from '/@common/WindowParams';
 import { isGmib, isPlayer } from '/@common/WindowParams';
@@ -496,7 +497,7 @@ const template = async (params?: WindowParams): Promise<MenuItemConstructorOptio
         },
         {
           label: 'Показать или скрыть окно вывода',
-          accelerator: 'CommandOrControl+Alt+H',
+          accelerator: outputVisibilityAccelerator,
           click: () => {
             toggleOutputWindowsVisibility();
           },
