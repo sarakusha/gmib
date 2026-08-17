@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [5.4.1](https://github.com/sarakusha/gmib/compare/v5.4.0...v5.4.1) (2026-08-17)
+
+### Features
+
+* перенос в меню Вид ([6229862](https://github.com/sarakusha/gmib/commit/622986214b71075dce50c5a25684ad4d8dc51931))
+* add player output visibility toggle ([2bb9af5](https://github.com/sarakusha/gmib/commit/2bb9af522a22116ffd1cb06087777366dc52b58e))
+
+### Bug Fixes
+
+* avoid macOS output visibility shortcut conflict ([ddd0acd](https://github.com/sarakusha/gmib/commit/ddd0acd104125e476eb199664e3d17419907a35b))
+* preserve application menu after closing player ([849483f](https://github.com/sarakusha/gmib/commit/849483f3d6dd79d03b6add4977a21f9d6460d95d))
+* recover stalled remote player preview ([d374042](https://github.com/sarakusha/gmib/commit/d3740425526bdfafd15bb166539462a1a184cc74))
+* relaunch X11 ([5150426](https://github.com/sarakusha/gmib/commit/51504265e088b836c0a7ec2909ed6b483935ba19))
+* restore autobrightness chart defaults ([6c1be58](https://github.com/sarakusha/gmib/commit/6c1be581d0e649082d9703ae986fb104ecb84a3e))
+* restore Highcharts v12 palette ([0b7503b](https://github.com/sarakusha/gmib/commit/0b7503ba7b82d179d761ee5da75b7de36468bfa8))
+* use raw GitHub plugin catalog ([330083b](https://github.com/sarakusha/gmib/commit/330083b5dbb62352b292145f74f0f0c1e866b2ea))
 ## [5.4.0](https://github.com/sarakusha/gmib/compare/v5.3.7...v5.4.0) (2026-08-12)
 
 ### Features
