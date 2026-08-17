@@ -12,7 +12,12 @@ vi.mock('../src/pluginHost', () => ({
   listPlugins: pluginHostMocks.listPlugins,
 }));
 
-import { installOfficialPlugin, parsePluginCatalog } from '../src/pluginCatalog';
+import {
+  installOfficialPlugin,
+  listOfficialPlugins,
+  OFFICIAL_PLUGIN_CATALOG_URL,
+  parsePluginCatalog,
+} from '../src/pluginCatalog';
 
 const catalogEntry = (id: string, gmibApi = '^1.0.0') => ({
   manifest: {
@@ -85,6 +90,25 @@ describe('installOfficialPlugin', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it('includes the catalog URL in network errors', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValueOnce(new Error('fetch failed')));
+
+    await expect(listOfficialPlugins()).rejects.toThrow(OFFICIAL_PLUGIN_CATALOG_URL);
+  });
+
+  it('includes the release URL in download errors', async () => {
+    const entry = catalogEntry('unavailable');
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(new Response(JSON.stringify(catalog(entry))))
+        .mockRejectedValueOnce(new Error('fetch failed')),
+    );
+
+    await expect(installOfficialPlugin('unavailable')).rejects.toThrow(entry.release.url);
   });
 
   it('verifies a downloaded archive before passing it to the installer', async () => {

@@ -19,7 +19,8 @@ import { MAX_PLUGIN_ARCHIVE_SIZE } from './pluginArchive';
 import { installPluginFromArchive, listPlugins } from './pluginHost';
 import { parsePluginManifest } from './pluginManifest';
 
-export const OFFICIAL_PLUGIN_CATALOG_URL = 'https://sarakusha.github.io/gmib-plugins/index.json';
+export const OFFICIAL_PLUGIN_CATALOG_URL =
+  'https://raw.githubusercontent.com/sarakusha/gmib-plugins/main/catalog.json';
 const OFFICIAL_PLUGIN_REPOSITORY_URL = 'https://github.com/sarakusha/gmib-plugins';
 const OFFICIAL_PLUGIN_RELEASE_PREFIX = `${OFFICIAL_PLUGIN_REPOSITORY_URL}/releases/download/`;
 
@@ -140,12 +141,23 @@ export const parsePluginCatalog = (value: unknown): PluginCatalogEntry[] => {
 };
 
 const downloadBuffer = async (entry: PluginCatalogEntry): Promise<Buffer> => {
-  const response = await fetch(entry.release.url, {
-    redirect: 'follow',
-    signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT),
-  });
+  let response: Response;
+  try {
+    response = await fetch(entry.release.url, {
+      redirect: 'follow',
+      signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT),
+    });
+  } catch (error) {
+    throw new Error(
+      `Не удалось скачать плагин по адресу ${entry.release.url}: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
   if (!response.ok) {
-    throw new Error(`Не удалось скачать плагин: HTTP ${response.status}`);
+    throw new Error(
+      `Не удалось скачать плагин по адресу ${entry.release.url}: HTTP ${response.status}`,
+    );
   }
   const contentLength = Number(response.headers.get('content-length'));
   if (Number.isFinite(contentLength) && contentLength > MAX_PLUGIN_ARCHIVE_SIZE) {
@@ -202,7 +214,7 @@ export const listOfficialPlugins = async (): Promise<PluginCatalogEntry[]> => {
       return cachedCatalog;
     }
     throw new Error(
-      `Не удалось загрузить официальный каталог плагинов: ${
+      `Не удалось загрузить официальный каталог плагинов (${OFFICIAL_PLUGIN_CATALOG_URL}): ${
         error instanceof Error ? error.message : String(error)
       }`,
     );
