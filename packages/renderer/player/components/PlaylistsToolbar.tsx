@@ -31,6 +31,7 @@ import { selectCurrentPlaylist } from '../store/selectors';
 import { shuffleItems, sourceId } from '../utils';
 
 import Toolbar from './StyledToolbar';
+import OutputVisibilityButton from './OutputVisibilityButton';
 
 type Props = {
   size?: IconButtonProps['size'];
@@ -128,6 +129,11 @@ const PlaylistsToolbar: React.FC<Props> = ({ size }) => {
             <OndemandVideoIcon fontSize="inherit" />
           </IconButton>
         </div>
+      </Tooltip>
+      <Tooltip title="Скрыть или показать окно вывода">
+        <span>
+          <OutputVisibilityButton size={size} />
+        </span>
       </Tooltip>
       <Tooltip title="Удалить плейлист">
         <div>

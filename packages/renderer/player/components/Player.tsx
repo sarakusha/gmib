@@ -1,4 +1,4 @@
-import TvOffIcon from '@mui/icons-material/TvOff';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import { Box } from '@mui/material';
 import React from 'react';
 
@@ -93,7 +93,7 @@ const Player: React.FC<Props> = ({ className, playerId = 0 }) => {
           {current?.filename}
         </video>
         {outputHidden && (
-          <TvOffIcon
+          <VisibilityOffIcon
             aria-label="Вывод отключен"
             sx={{
               position: 'absolute',

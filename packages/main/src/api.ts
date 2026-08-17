@@ -86,7 +86,7 @@ import {
   updateSchedulerJob,
 } from './playerScheduler';
 import { getPlayerTitle } from './playerWindow';
-import { closePlayerOutputWindows } from './openHandler';
+import { closePlayerOutputWindows, setPlayerOutputWindowsVisibility } from './openHandler';
 import {
   deleteAllPlaylistItems,
   deletePlaylist,
@@ -913,6 +913,13 @@ api.put('/player/:id/stop', (req, res) => {
   const win = findPlayerWindow(+req.params.id);
   if (win) win.webContents.send('stop', +req.params.id);
   res.end();
+});
+
+api.put('/player/:id/output', (req, res) => {
+  const { visible } = req.body as { visible?: unknown };
+  if (typeof visible !== 'boolean') return res.sendStatus(400);
+  setPlayerOutputWindowsVisibility(visible, +req.params.id);
+  return res.sendStatus(204);
 });
 
 api.delete('/player/:id/output', (req, res) => {

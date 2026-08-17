@@ -104,6 +104,13 @@ const playerApi = createApi({
         method: 'PUT',
       }),
     }),
+    setPlayerOutputVisibility: build.mutation<void, boolean>({
+      query: visible => ({
+        url: `/player/${sourceId}/output`,
+        method: 'PUT',
+        body: { visible },
+      }),
+    }),
   }),
 });
 
@@ -130,6 +137,7 @@ export const {
   useUpdatePlayerMutation,
   useCreatePlayerMutation,
   useDeletePlayerMutation,
+  useSetPlayerOutputVisibilityMutation,
 } = playerApi;
 
 export const debouncedUpdatePlayer = createDebouncedAsyncThunk<void, Player, AppThunkConfig>(
