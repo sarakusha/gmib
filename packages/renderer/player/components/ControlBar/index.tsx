@@ -7,6 +7,7 @@ import NextTrack from './NextTrack';
 import PictureInPicture from './PictureInPicture';
 import PlayToggle from './PlayToggle';
 import ProgressControl from './ProgressControl';
+import ReconnectPreview from './ReconnectPreview';
 import Stop from './Stop';
 import TimeDisplay from './TimeDisplay';
 
@@ -47,6 +48,7 @@ const ControlBar = React.forwardRef<HTMLDivElement, Props>(
         prefix={duration ? '-' : ''}
         seconds={duration ? Math.ceil(duration - position) : NaN}
       />
+      <ReconnectPreview />
       <PictureInPicture />
     </Stack>
   ),

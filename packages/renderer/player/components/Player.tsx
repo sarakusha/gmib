@@ -17,6 +17,9 @@ import type { ObjectFitMode } from '/@common/video';
 
 import ControlBar from './ControlBar';
 
+const PREVIEW_STALL_TIMEOUT = 12_000;
+const PREVIEW_STALL_CHECK_INTERVAL = 3_000;
+
 type Props = {
   className?: string;
   playerId?: number;
@@ -53,6 +56,40 @@ const Player: React.FC<Props> = ({ className, playerId = 0 }) => {
       window.mediaStream.updateSrcObject('video#player');
     }
   }, [dispatch, stopped]);
+  React.useEffect(() => {
+    const reconnect = window.mediaStream.reconnect;
+    const video = document.querySelector<HTMLVideoElement>('video#player');
+    if (
+      !isRemoteSession ||
+      playbackState !== 'playing' ||
+      !reconnect ||
+      !video?.requestVideoFrameCallback
+    ) {
+      return undefined;
+    }
+
+    let lastFrameAt = performance.now();
+    let frameCallback = 0;
+    const onFrame: VideoFrameRequestCallback = () => {
+      lastFrameAt = performance.now();
+      frameCallback = video.requestVideoFrameCallback(onFrame);
+    };
+    frameCallback = video.requestVideoFrameCallback(onFrame);
+    const watchdog = window.setInterval(() => {
+      const now = performance.now();
+      if (document.hidden) {
+        lastFrameAt = now;
+      } else if (now - lastFrameAt >= PREVIEW_STALL_TIMEOUT) {
+        lastFrameAt = now;
+        reconnect();
+      }
+    }, PREVIEW_STALL_CHECK_INTERVAL);
+
+    return () => {
+      video.cancelVideoFrameCallback(frameCallback);
+      window.clearInterval(watchdog);
+    };
+  }, [playbackState]);
   // const isCaptureEngine = player?.playbackEngine === 'capture';
   // const onTimeUpdate = React.useCallback<React.ReactEventHandler<HTMLVideoElement>>(
   //   e => {
