@@ -12,7 +12,8 @@ BOOTSTRAP_URL=""
 BOOTSTRAP_TLS_PIN=""
 SSH_KEY_FILE=""
 OUTPUT_ISO=""
-TARGET_DISK="/dev/nvme0n1"
+TARGET_SELECTOR="largest"
+TARGET_VALUE=""
 ADMIN_USER="admin"
 KIOSK_USER="gmib"
 HOSTNAME="gmib-kiosk"
@@ -32,13 +33,16 @@ Required:
   --output PATH               Output ISO path.
 
 Optional:
-  --target-disk PATH          Disk erased by Autoinstall. Default: /dev/nvme0n1.
+  --target-disk PATH          Select the installation disk by Linux device path.
+  --target-model GLOB         Select the installation disk by udev model glob.
+  --target-serial GLOB        Select the installation disk by udev serial glob.
   --admin-user USER           SSH administrator. Default: admin.
   --kiosk-user USER           Unprivileged GMIB account. Default: gmib.
   --hostname HOSTNAME         Temporary hostname. Default: gmib-kiosk.
   -h, --help                  Show this help.
 
-The generated installer erases the selected disk without confirmation and powers
+By default, the installer selects the largest disk that is not the installation
+media. The generated installer erases that disk without confirmation and powers
 off when complete. Remove the USB drive before the first boot.
 EOF
 }
@@ -78,7 +82,30 @@ while (($# > 0)); do
       shift 2
       ;;
     --target-disk)
-      TARGET_DISK="${2:-}"
+      if [[ "$TARGET_SELECTOR" != largest ]]; then
+        echo "Use only one target disk selector." >&2
+        exit 2
+      fi
+      TARGET_SELECTOR="path"
+      TARGET_VALUE="${2:-}"
+      shift 2
+      ;;
+    --target-model)
+      if [[ "$TARGET_SELECTOR" != largest ]]; then
+        echo "Use only one target disk selector." >&2
+        exit 2
+      fi
+      TARGET_SELECTOR="model"
+      TARGET_VALUE="${2:-}"
+      shift 2
+      ;;
+    --target-serial)
+      if [[ "$TARGET_SELECTOR" != largest ]]; then
+        echo "Use only one target disk selector." >&2
+        exit 2
+      fi
+      TARGET_SELECTOR="serial"
+      TARGET_VALUE="${2:-}"
       shift 2
       ;;
     --admin-user)
@@ -152,10 +179,25 @@ if [[ "$BOOTSTRAP_TLS_PIN" != sha256//* ]] || [[ "$BOOTSTRAP_TLS_PIN" =~ [[:spac
   echo "Invalid --bootstrap-tls-pin." >&2
   exit 1
 fi
-if [[ ! "$TARGET_DISK" =~ ^/dev/[a-zA-Z0-9._-]+$ ]]; then
-  echo "Invalid --target-disk path." >&2
-  exit 1
-fi
+case "$TARGET_SELECTOR" in
+  largest)
+    storage_match="        size: largest"
+    ;;
+  path)
+    if [[ ! "$TARGET_VALUE" =~ ^/dev/[a-zA-Z0-9._-]+$ ]]; then
+      echo "Invalid --target-disk path." >&2
+      exit 1
+    fi
+    storage_match="        path: '$TARGET_VALUE'"
+    ;;
+  model | serial)
+    if [[ -z "$TARGET_VALUE" ]] || [[ "$TARGET_VALUE" =~ [[:space:]\'] ]]; then
+      echo "The target $TARGET_SELECTOR glob must not contain whitespace or single quotes." >&2
+      exit 1
+    fi
+    storage_match="        $TARGET_SELECTOR: '$TARGET_VALUE'"
+    ;;
+esac
 if [[ ! "$ADMIN_USER" =~ ^[a-z_][a-z0-9_-]*$ ]] ||
   [[ ! "$KIOSK_USER" =~ ^[a-z_][a-z0-9_-]*$ ]]; then
   echo "Invalid Linux user name." >&2
@@ -237,7 +279,7 @@ autoinstall:
     layout:
       name: direct
       match:
-        path: '$TARGET_DISK'
+$storage_match
   packages:
     - ca-certificates
     - curl

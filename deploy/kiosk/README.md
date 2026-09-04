@@ -93,7 +93,6 @@ deploy/kiosk/build-autoinstall-iso.sh \
   --bootstrap-url https://bootstrap.example.com/v1/enroll/pritunl \
   --bootstrap-tls-pin 'sha256//BASE64_SPKI_HASH' \
   --ssh-authorized-key id_ed25519.pub \
-  --target-disk /dev/nvme0n1 \
   --output gmib-kiosk-24.04.iso
 ```
 
@@ -103,8 +102,11 @@ payload file also has an entry in `/gmib-installer/SHA256SUMS` on the ISO.
 ## Installation
 
 Writing this ISO to USB and booting it starts an unattended install that **erases the selected target
-disk without confirmation**. The HIPER NUG test system uses `/dev/nvme0n1`; verify every hardware
-revision before reusing that rule.
+disk without confirmation**. By default, Autoinstall selects the largest disk that is not the
+installation medium. This works for a player with one internal SATA, NVMe, or eMMC disk and does not
+depend on its reported capacity being accurate. Do not use the default image on a computer with
+multiple internal disks: build that batch with `--target-disk`, `--target-model`, or
+`--target-serial` instead.
 
 The installer powers the computer off when complete. Remove the USB drive, power it on, and enter a
 one-time enrollment code on the provisioning screen. After the VPN connects, the machine reboots and
