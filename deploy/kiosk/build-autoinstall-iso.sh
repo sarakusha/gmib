@@ -300,7 +300,9 @@ if ! grep -Eq 'Ubuntu-Server 24\.04(\.[0-9]+)* LTS.*amd64' "$work_dir/iso-info";
   echo "The base image is not an Ubuntu Server 24.04 amd64 ISO." >&2
   exit 1
 fi
-sed -E -i '/^[[:space:]]*linux[[:space:]]/ { /[[:space:]]autoinstall([[:space:]]|$)/! s/[[:space:]]---([[:space:]]*)$/ autoinstall ---\1/; }' "$work_dir/grub.cfg"
+sed -E '/^[[:space:]]*linux[[:space:]]/ { /[[:space:]]autoinstall([[:space:]]|$)/! s/[[:space:]]---([[:space:]]*)$/ autoinstall ---\1/; }' \
+  "$work_dir/grub.cfg" >"$work_dir/grub.cfg.patched"
+mv "$work_dir/grub.cfg.patched" "$work_dir/grub.cfg"
 if ! grep -Eq '^[[:space:]]*linux[[:space:]].*[[:space:]]autoinstall([[:space:]]|$)' "$work_dir/grub.cfg"; then
   echo "Could not add the autoinstall kernel argument to GRUB." >&2
   exit 1
