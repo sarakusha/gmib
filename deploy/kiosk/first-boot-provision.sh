@@ -25,13 +25,13 @@ fi
 source "$CONFIG_FILE"
 
 : "${BOOTSTRAP_URL:?BOOTSTRAP_URL is required in $CONFIG_FILE}"
-: "${BOOTSTRAP_TLS_PIN:?BOOTSTRAP_TLS_PIN is required in $CONFIG_FILE}"
+BOOTSTRAP_TLS_PIN="${BOOTSTRAP_TLS_PIN:-}"
 
 if [[ "$BOOTSTRAP_URL" != https://* ]]; then
   echo "BOOTSTRAP_URL must use HTTPS." >&2
   exit 1
 fi
-if [[ "$BOOTSTRAP_TLS_PIN" != sha256//* ]]; then
+if [[ -n "$BOOTSTRAP_TLS_PIN" && "$BOOTSTRAP_TLS_PIN" != sha256//* ]]; then
   echo "BOOTSTRAP_TLS_PIN must be a curl sha256 public-key pin." >&2
   exit 1
 fi
@@ -143,14 +143,18 @@ while true; do
   )"
 
   echo "Получаю персональный VPN-профиль..."
+  curl_args=(
+    --fail
+    --silent
+    --show-error
+    --connect-timeout 10
+    --max-time 60
+  )
+  if [[ -n "$BOOTSTRAP_TLS_PIN" ]]; then
+    curl_args+=(--pinnedpubkey "$BOOTSTRAP_TLS_PIN")
+  fi
   if ! printf '%s' "$request_body" |
-    curl \
-      --fail \
-      --silent \
-      --show-error \
-      --connect-timeout 10 \
-      --max-time 60 \
-      --pinnedpubkey "$BOOTSTRAP_TLS_PIN" \
+    curl "${curl_args[@]}" \
       --header 'Content-Type: application/json' \
       --data-binary @- \
       --output "$PROFILE_ARCHIVE" \

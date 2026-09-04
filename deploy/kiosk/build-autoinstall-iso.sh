@@ -28,11 +28,11 @@ Required:
   --appimage PATH             Release gmib x86_64 AppImage.
   --pritunl-deb PATH          Pinned amd64 pritunl-client Debian package.
   --bootstrap-url URL         HTTPS endpoint returning a Pritunl profile tar.
-  --bootstrap-tls-pin PIN     curl public-key pin, formatted sha256//BASE64.
   --ssh-authorized-key PATH   Public SSH key for the admin account.
   --output PATH               Output ISO path.
 
 Optional:
+  --bootstrap-tls-pin PIN     curl public-key pin, formatted sha256//BASE64.
   --target-disk PATH          Select the installation disk by Linux device path.
   --target-model GLOB         Select the installation disk by udev model glob.
   --target-serial GLOB        Select the installation disk by udev serial glob.
@@ -140,7 +140,7 @@ for command in awk dpkg-deb file xorriso sha256sum openssl sed; do
 done
 
 for value_name in BASE_ISO BASE_ISO_SHA256 APPIMAGE PRITUNL_DEB BOOTSTRAP_URL \
-  BOOTSTRAP_TLS_PIN SSH_KEY_FILE OUTPUT_ISO; do
+  SSH_KEY_FILE OUTPUT_ISO; do
   if [[ -z "${!value_name}" ]]; then
     echo "Missing required option for $value_name" >&2
     usage >&2
@@ -175,7 +175,8 @@ if [[ "$BOOTSTRAP_URL" != https://* ]] || [[ "$BOOTSTRAP_URL" =~ [[:space:]\'] ]
   echo "--bootstrap-url must be an HTTPS URL without whitespace or single quotes." >&2
   exit 1
 fi
-if [[ "$BOOTSTRAP_TLS_PIN" != sha256//* ]] || [[ "$BOOTSTRAP_TLS_PIN" =~ [[:space:]\'] ]]; then
+if [[ -n "$BOOTSTRAP_TLS_PIN" ]] &&
+  { [[ "$BOOTSTRAP_TLS_PIN" != sha256//* ]] || [[ "$BOOTSTRAP_TLS_PIN" =~ [[:space:]\'] ]]; }; then
   echo "Invalid --bootstrap-tls-pin." >&2
   exit 1
 fi

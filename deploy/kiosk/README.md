@@ -87,17 +87,20 @@ sudo apt-get install xorriso
 
 deploy/kiosk/build-autoinstall-iso.sh \
   --base-iso ubuntu-24.04.4-live-server-amd64.iso \
-  --base-iso-sha256 eebf1e8df31b1e3e5cdb20d5468f6478f1f896dc0848c993aa35d7ea811d0948 \
+  --base-iso-sha256 e907d92eeec9df64163a7e454cbc8d7755e8ddc7ed42f99dbc80c40f1a138433 \
   --appimage gmib-x86_64.AppImage \
   --pritunl-deb pritunl-client_amd64.deb \
-  --bootstrap-url https://bootstrap.example.com/v1/enroll/pritunl \
-  --bootstrap-tls-pin 'sha256//BASE64_SPKI_HASH' \
+  --bootstrap-url https://app.nata-info.ru/api/vpn/enroll/gmib \
   --ssh-authorized-key id_ed25519.pub \
   --output gmib-kiosk-24.04.iso
 ```
 
 The build verifies the Ubuntu ISO checksum and writes `gmib-kiosk-24.04.iso.sha256`. Every embedded
 payload file also has an entry in `/gmib-installer/SHA256SUMS` on the ISO.
+
+Normal public-CA HTTPS validation is used by default. `--bootstrap-tls-pin` can add a curl SPKI pin
+when the endpoint has a deliberately stable TLS private key. Do not pin an ordinary rotating
+Let's Encrypt key: an installer kept in storage would stop enrolling after certificate renewal.
 
 ## Installation
 
