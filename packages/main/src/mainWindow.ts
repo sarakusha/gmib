@@ -4,6 +4,7 @@ import { join } from 'path';
 
 import debugFactory from 'debug';
 
+import kioskMode from './kioskMode';
 import localConfig from './localConfig';
 import type { CloseEvent, ManagedWindow } from './managedWindow';
 import relaunch, { needRestart } from './relaunch';
@@ -77,7 +78,7 @@ export const createAppWindow = (
   );
   if (isLocal) {
     browserWindow.once('ready-to-show', () => {
-      if (!localConfig.get('autostart') && !localConfig.get('localGmibHidden')) {
+      if (!kioskMode && !localConfig.get('autostart') && !localConfig.get('localGmibHidden')) {
         browserWindow.show();
         // The window may freeze from time to time at startup on Windows
         setTimeout(() => browserWindow.show(), 100);
@@ -113,7 +114,7 @@ export const createAppWindow = (
     }
   });
   void registerGmib(browserWindow, { host: address, nibusPort });
-  if (isLocal && localConfig.get('localGmibHidden')) browserWindow.hide();
+  if (isLocal && (kioskMode || localConfig.get('localGmibHidden'))) browserWindow.hide();
   browserWindow.on('close', event => {
     const closeEvent = event as CloseEvent;
     if (isLocal && !isQuitting && !needRestart()) {
@@ -133,7 +134,7 @@ export const createAppWindow = (
 };
 
 export const createMainWindow = (): ManagedWindow => {
-  if (!hasPersistedLocalTabs()) localConfig.set('localGmibHidden', false);
+  if (!kioskMode && !hasPersistedLocalTabs()) localConfig.set('localGmibHidden', false);
   if (!mainWindow) {
     const browserWindow = (mainWindow = createAppWindow());
     // browserWindow.on('close', event => {
@@ -159,8 +160,12 @@ export const createMainWindow = (): ManagedWindow => {
 };
 
 export const activateMainWindow = (): ManagedWindow => {
-  localConfig.set('localGmibHidden', false);
   const browserWindow = createMainWindow();
+  if (kioskMode) {
+    browserWindow.hide();
+    return browserWindow;
+  }
+  localConfig.set('localGmibHidden', false);
   browserWindow.show();
   browserWindow.focus();
   return browserWindow;

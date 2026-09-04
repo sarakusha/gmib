@@ -5,6 +5,7 @@ import path from 'path';
 
 import sortBy from 'lodash/sortBy';
 
+import kioskMode from './kioskMode';
 import localConfig from './localConfig';
 import { needRestart } from './relaunch';
 import { getActiveTabbedWindow, isTabbedBrowserWindow } from './tabbedWindow';
@@ -29,6 +30,7 @@ const getAllWindowParams = () =>
   );
 
 export const showLast = () => {
+  if (kioskMode) return;
   const top = getAllWindowParams()
     .filter(
       param => !(isGmib(param) && param.host === 'localhost' && localConfig.get('localGmibHidden')),
@@ -107,6 +109,7 @@ export const updateTray = (): void => {
 const assets = path.resolve(__dirname, '../../renderer/assets');
 
 void app.whenReady().then(() => {
+  if (kioskMode) return;
   let icon = path.join(assets, 'icon16x16.png');
   if (process.platform === 'win32') icon = path.join(assets, 'icon.ico');
   else if (process.platform === 'linux' && os.version().indexOf('astra') !== -1)

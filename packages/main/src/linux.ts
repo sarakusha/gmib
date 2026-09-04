@@ -10,6 +10,7 @@ import { nanoid } from 'nanoid';
 import { asyncSerial, delay } from '/@common/helpers';
 
 import localConfig from './localConfig';
+import kioskMode from './kioskMode';
 import { hasExplicitOzonePlatform, shouldUseX11 } from './linuxDisplayServer';
 import pritunlFetch from './pritunlFetch';
 
@@ -25,7 +26,13 @@ const envPath = path.join(appDir, 'vpn.env');
 const pritunlClient = '/usr/bin/pritunl-client';
 
 if (process.platform === 'linux') {
-  if (shouldUseX11(localConfig.get('exactWindowPlacement')) && !hasExplicitOzonePlatform()) {
+  if (kioskMode && !hasExplicitOzonePlatform()) {
+    app.commandLine.appendSwitch('ozone-platform', 'wayland');
+  } else if (
+    !kioskMode &&
+    shouldUseX11(localConfig.get('exactWindowPlacement')) &&
+    !hasExplicitOzonePlatform()
+  ) {
     // Wayland does not let applications place ordinary windows at absolute screen coordinates.
     // XWayland is required for pixel-exact player mappings, including areas occupied by GNOME panels.
     app.commandLine.appendSwitch('ozone-platform', 'x11');

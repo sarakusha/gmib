@@ -20,6 +20,7 @@ import './rtc';
 import './displayTopology';
 import './hid';
 // import './channels';
+import kioskMode from './kioskMode';
 import { activateMainWindow, createMainWindow, persistLocalWindowState } from './mainWindow';
 import { installWindowOpenHandler, toggleOutputWindowsVisibility } from './openHandler';
 import outputVisibilityAccelerator from './outputVisibilityAccelerator';
@@ -80,7 +81,7 @@ app.on('before-quit', persistLocalWindowState);
 /**
  * @see https://www.electronjs.org/docs/v14-x-y/api/app#event-activate-macos Event: 'activate'
  */
-app.on('activate', showLast);
+if (!kioskMode) app.on('activate', showLast);
 
 /**
  */
@@ -118,7 +119,10 @@ app
   .then(main => {
     installWindowOpenHandler(main.webContents);
     void launchPlayers();
-    if (!globalShortcut.register(outputVisibilityAccelerator, toggleOutputWindowsVisibility)) {
+    if (
+      !kioskMode &&
+      !globalShortcut.register(outputVisibilityAccelerator, toggleOutputWindowsVisibility)
+    ) {
       debug(`Failed to register output window hotkey ${outputVisibilityAccelerator}`);
     }
   })
