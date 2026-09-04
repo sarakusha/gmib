@@ -132,7 +132,7 @@ while (($# > 0)); do
   esac
 done
 
-for command in dpkg-deb file xorriso sha256sum openssl sed; do
+for command in awk dpkg-deb file xorriso sha256sum openssl sed; do
   if ! command -v "$command" >/dev/null 2>&1; then
     echo "Missing required command: $command" >&2
     exit 1
@@ -208,10 +208,11 @@ if [[ ! "$HOSTNAME" =~ ^[a-zA-Z0-9][a-zA-Z0-9-]{0,62}$ ]]; then
   exit 1
 fi
 
-printf '%s  %s\n' "${BASE_ISO_SHA256,,}" "$BASE_ISO" | sha256sum --check --status || {
+actual_base_iso_sha256="$(sha256sum "$BASE_ISO" | awk '{print tolower($1)}')"
+if [[ "$actual_base_iso_sha256" != "${BASE_ISO_SHA256,,}" ]]; then
   echo "Ubuntu ISO checksum mismatch." >&2
   exit 1
-}
+fi
 
 ssh_key="$(tr -d '\r\n' <"$SSH_KEY_FILE")"
 if [[ ! "$ssh_key" =~ ^(ssh-(ed25519|rsa)|ecdsa-sha2-nistp(256|384|521))[[:space:]] ]]; then
