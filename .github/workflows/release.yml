@@ -398,6 +398,17 @@ jobs:
             join(matrix.target_args, ' ') }} --publish never
           # GH_TOKEN: ${{ github.token }}
 
+      - name: Upload manual Linux build
+        if: >-
+          ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run && matrix.platform ==
+          'linux' && steps.release_check.outputs.skip_build != 'true' }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: gmib-linux-${{ matrix.arch }}-${{ github.run_number }}
+          path: dist/*.AppImage
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Verify macOS code signature
         if:
           ${{ steps.platform_check.outputs.selected == 'true' && matrix.platform == 'macos' &&
