@@ -1,0 +1,23 @@
+[Unit]
+Description=GMIB first-boot VPN provisioning
+After=network-online.target pritunl-client.service systemd-user-sessions.service
+Wants=network-online.target pritunl-client.service
+Conflicts=getty@tty1.service
+Before=gmib-cage@tty1.service
+ConditionPathExists=!/var/lib/gmib-provision/complete
+
+[Service]
+Type=idle
+ExecStart=/usr/local/sbin/gmib-first-boot-provision
+Restart=on-failure
+RestartSec=3
+StandardInput=tty
+StandardOutput=tty
+StandardError=tty
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=yes
+
+[Install]
+WantedBy=multi-user.target
