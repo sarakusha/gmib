@@ -99,6 +99,7 @@ systemctl start pritunl-client.service
 clear
 echo "GMIB — первичная настройка"
 echo "Идентификатор устройства: $device_id"
+echo "Раскладка клавиатуры: US (латиница)"
 echo
 
 if resume_profile; then
@@ -122,8 +123,7 @@ while true; do
   fi
 
   echo "Получите одноразовый код для этого идентификатора в панели развёртывания."
-  read -r -s -p "Код: " enrollment_code
-  echo
+  read -r -p "Код: " enrollment_code
 
   if [[ ! "$enrollment_code" =~ ^[A-Za-z0-9-]{4,20}$ ]]; then
     echo "Код должен содержать 4–20 латинских букв, цифр или дефисов."
