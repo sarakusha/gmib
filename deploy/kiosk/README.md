@@ -10,6 +10,8 @@ and starts the profile, erases the downloaded archive, and reboots into the GMIB
 image and installed computer never contain the bootstrap API key.
 Normal kiosk boots hide kernel and systemd status messages while retaining them in `journalctl`.
 The Ubuntu installer remains verbose so installation failures are visible.
+The installed system uses Ubuntu's `ffmpeg` package and provides `/usr/bin/ffmpeg` and
+`/usr/bin/ffprobe` for GMIB media conversion and inspection.
 
 If the Pritunl organization is attached to multiple VPN servers, provisioning enables only the
 profile whose name ends in `(main)`. Other imported profiles are disabled because running `main`

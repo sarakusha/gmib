@@ -319,6 +319,7 @@ $storage_match
   packages:
     - ca-certificates
     - curl
+    - ffmpeg
     - jq
     - openssh-server
   late-commands:

@@ -43,10 +43,15 @@ apt-get update
 apt-get install -y \
   ca-certificates \
   curl \
+  ffmpeg \
   jq \
   locales \
   openssh-server \
   "$PAYLOAD_DIR/pritunl-client.deb"
+
+# GMIB invokes the system tools for media inspection and conversion.
+command -v ffmpeg >/dev/null
+command -v ffprobe >/dev/null
 
 sed -i 's/^# *ru_RU.UTF-8 UTF-8/ru_RU.UTF-8 UTF-8/' /etc/locale.gen
 locale-gen ru_RU.UTF-8
