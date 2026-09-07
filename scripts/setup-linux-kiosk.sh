@@ -82,9 +82,29 @@ apt-get install -y \
   ffmpeg \
   gcc \
   libc6-dev \
+  libasound2t64 \
+  libatk-bridge2.0-0t64 \
+  libatk1.0-0t64 \
+  libatspi2.0-0t64 \
+  libcairo2 \
+  libcups2t64 \
+  libdbus-1-3 \
+  libdrm2 \
   libfuse2t64 \
+  libgbm1 \
   libgl1-mesa-dri \
+  libgtk-3-0t64 \
+  libnspr4 \
+  libnss3 \
+  libpango-1.0-0 \
   libseat1 \
+  libx11-xcb1 \
+  libxcb1 \
+  libxcomposite1 \
+  libxdamage1 \
+  libxfixes3 \
+  libxkbcommon0 \
+  libxrandr2 \
   mesa-utils \
   seatd \
   vainfo
