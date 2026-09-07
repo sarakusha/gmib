@@ -44,8 +44,12 @@ apt-get install -y \
   ca-certificates \
   curl \
   jq \
+  locales \
   openssh-server \
   "$PAYLOAD_DIR/pritunl-client.deb"
+
+sed -i 's/^# *ru_RU.UTF-8 UTF-8/ru_RU.UTF-8 UTF-8/' /etc/locale.gen
+locale-gen ru_RU.UTF-8
 
 install -d -m 0755 /opt/gmib
 install -m 0755 "$PAYLOAD_DIR/gmib.AppImage" /opt/gmib/gmib.AppImage
