@@ -9,6 +9,11 @@ enrollment code. It exchanges the code for a device-specific Pritunl profile ove
 and starts the profile, erases the downloaded archive, and reboots into the GMIB Cage kiosk. The
 image and installed computer never contain the bootstrap API key.
 
+If the Pritunl organization is attached to multiple VPN servers, provisioning enables only the
+profile whose name ends in `(main)`. Other imported profiles are disabled because running `main`
+and `mikrotik` together creates overlapping routes. Publish all required remote networks as routes
+of the primary Pritunl server instead.
+
 See [`README.ru.md`](README.ru.md) for the Russian build and installation guide.
 
 ## Security model

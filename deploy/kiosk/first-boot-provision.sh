@@ -6,6 +6,7 @@ STATE_DIR="/var/lib/gmib-provision"
 COMPLETE_FILE="$STATE_DIR/complete"
 PROFILE_ID_FILE="$STATE_DIR/profile-id"
 PROFILE_ARCHIVE=""
+PRIMARY_PROFILE_SUFFIX="${PRIMARY_PROFILE_SUFFIX:- (main)}"
 
 cleanup() {
   if [[ -n "$PROFILE_ARCHIVE" && -f "$PROFILE_ARCHIVE" ]]; then
@@ -186,14 +187,32 @@ while true; do
     echo
     continue
   fi
-  after_ids="$(pritunl-client list --json | jq -r '.[].id' | sort)"
-  profile_id="$(comm -13 <(printf '%s\n' "$before_ids") <(printf '%s\n' "$after_ids") | head -n 1)"
+  profiles_json="$(pritunl-client list --json)"
+  after_ids="$(jq -r '.[].id' <<<"$profiles_json" | sort)"
+  mapfile -t new_profile_ids < <(
+    comm -13 <(printf '%s\n' "$before_ids") <(printf '%s\n' "$after_ids")
+  )
+  profile_id=""
+  for new_profile_id in "${new_profile_ids[@]}"; do
+    profile_name="$(
+      jq -r --arg id "$new_profile_id" '.[] | select(.id == $id) | .name' <<<"$profiles_json"
+    )"
+    if [[ "$profile_name" == *"$PRIMARY_PROFILE_SUFFIX" ]]; then
+      profile_id="$new_profile_id"
+      continue
+    fi
+
+    # An organization can be attached to several servers. Starting all profiles creates
+    # overlapping routes (for example main and mikrotik) and breaks return traffic.
+    pritunl-client disable "$new_profile_id" || true
+    pritunl-client stop "$new_profile_id" || true
+  done
 
   cleanup
   PROFILE_ARCHIVE=""
 
   if [[ -z "$profile_id" ]]; then
-    echo "Не удалось определить импортированный VPN-профиль."
+    echo "В архиве нет основного VPN-профиля с окончанием '$PRIMARY_PROFILE_SUFFIX'."
     echo
     continue
   fi
