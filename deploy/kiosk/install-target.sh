@@ -64,6 +64,22 @@ install -m 0644 "$PAYLOAD_DIR/provision.conf" /etc/gmib/provision.conf
 install -m 0755 "$PAYLOAD_DIR/first-boot-provision.sh" /usr/local/sbin/gmib-first-boot-provision
 install -m 0644 "$PAYLOAD_DIR/gmib-provision.service" /etc/systemd/system/gmib-provision.service
 
+# Keep the kiosk boot clean while retaining diagnostics in journalctl. The Ubuntu installer itself
+# remains verbose so installation failures are still visible.
+grub_config=/etc/default/grub
+if [[ -f "$grub_config" ]]; then
+  grub_args="$(sed -n 's/^GRUB_CMDLINE_LINUX_DEFAULT="\(.*\)"$/\1/p' "$grub_config")"
+  for argument in quiet loglevel=3 systemd.show_status=false rd.systemd.show_status=false \
+    udev.log_level=3 vt.global_cursor_default=0; do
+    if [[ " $grub_args " != *" $argument "* ]]; then
+      grub_args="${grub_args:+$grub_args }$argument"
+    fi
+  done
+  sed -i "s|^GRUB_CMDLINE_LINUX_DEFAULT=.*|GRUB_CMDLINE_LINUX_DEFAULT=\"$grub_args\"|" \
+    "$grub_config"
+  update-grub
+fi
+
 install -d -m 0750 /etc/sudoers.d
 printf '%s ALL=(ALL:ALL) NOPASSWD: ALL\n' "$ADMIN_USER" >/etc/sudoers.d/90-gmib-admin
 chmod 0440 /etc/sudoers.d/90-gmib-admin

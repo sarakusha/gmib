@@ -142,6 +142,8 @@ Environment="XDG_SESSION_TYPE=wayland"
 Environment="XDG_CURRENT_DESKTOP=wlroots"
 Environment="NO_AT_BRIDGE=1"
 Environment="LD_PRELOAD=/usr/local/lib/gmib-hide-cursor.so"
+Environment="TERM=linux"
+ExecStartPre=/usr/bin/clear
 ExecStart=/usr/bin/cage -- ${GMIB_EXECUTABLE} --no-sandbox --kiosk-mode --ozone-platform=wayland
 Restart=always
 RestartSec=2

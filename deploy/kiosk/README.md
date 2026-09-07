@@ -8,6 +8,8 @@ On the first boot, `gmib-provision.service` owns `tty1` and asks the operator fo
 enrollment code. It exchanges the code for a device-specific Pritunl profile over HTTPS, imports
 and starts the profile, erases the downloaded archive, and reboots into the GMIB Cage kiosk. The
 image and installed computer never contain the bootstrap API key.
+Normal kiosk boots hide kernel and systemd status messages while retaining them in `journalctl`.
+The Ubuntu installer remains verbose so installation failures are visible.
 
 If the Pritunl organization is attached to multiple VPN servers, provisioning enables only the
 profile whose name ends in `(main)`. Other imported profiles are disabled because running `main`

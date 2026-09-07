@@ -170,9 +170,17 @@ while true; do
   fi
   unset enrollment_code request_body
 
-  if ! tar -tf "$PROFILE_ARCHIVE" >/dev/null 2>&1 ||
-    tar -tf "$PROFILE_ARCHIVE" | grep -Eq '(^/|(^|/)\.\.(/|$))'; then
-    echo "API вернул некорректный архив профиля."
+  archive_is_safe=false
+  if tar -tf "$PROFILE_ARCHIVE" >/dev/null 2>&1 &&
+    ! tar -tf "$PROFILE_ARCHIVE" | grep -Eq '(^/|(^|/)\.\.(/|$))'; then
+    archive_is_safe=true
+  elif grep -aq '^client$' "$PROFILE_ARCHIVE" && grep -aq '^<ca>$' "$PROFILE_ARCHIVE"; then
+    # New enrollment endpoints return one server-specific OpenVPN profile. Keep accepting the
+    # historical multi-profile tar archive so already deployed app-server versions remain usable.
+    archive_is_safe=true
+  fi
+  if [[ "$archive_is_safe" != true ]]; then
+    echo "API вернул некорректный VPN-профиль."
     cleanup
     PROFILE_ARCHIVE=""
     echo
@@ -193,11 +201,14 @@ while true; do
     comm -13 <(printf '%s\n' "$before_ids") <(printf '%s\n' "$after_ids")
   )
   profile_id=""
+  if ((${#new_profile_ids[@]} == 1)); then
+    profile_id="${new_profile_ids[0]}"
+  fi
   for new_profile_id in "${new_profile_ids[@]}"; do
     profile_name="$(
       jq -r --arg id "$new_profile_id" '.[] | select(.id == $id) | .name' <<<"$profiles_json"
     )"
-    if [[ "$profile_name" == *"$PRIMARY_PROFILE_SUFFIX" ]]; then
+    if ((${#new_profile_ids[@]} == 1)) || [[ "$profile_name" == *"$PRIMARY_PROFILE_SUFFIX" ]]; then
       profile_id="$new_profile_id"
       continue
     fi
