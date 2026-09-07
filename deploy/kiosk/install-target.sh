@@ -16,6 +16,7 @@ fi
 
 for required_file in \
   gmib.AppImage \
+  image-release \
   pritunl-client.deb \
   provision.conf \
   first-boot-provision.sh \
@@ -58,6 +59,7 @@ install -m 0755 "$PAYLOAD_DIR/setup-linux-kiosk.sh" /usr/local/libexec/gmib-kios
   --no-start
 
 install -d -m 0755 /etc/gmib
+install -m 0644 "$PAYLOAD_DIR/image-release" /etc/gmib/image-release
 install -m 0644 "$PAYLOAD_DIR/provision.conf" /etc/gmib/provision.conf
 install -m 0755 "$PAYLOAD_DIR/first-boot-provision.sh" /usr/local/sbin/gmib-first-boot-provision
 install -m 0644 "$PAYLOAD_DIR/gmib-provision.service" /etc/systemd/system/gmib-provision.service

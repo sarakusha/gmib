@@ -7,6 +7,7 @@ REPO_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
 BASE_ISO=""
 BASE_ISO_SHA256=""
 APPIMAGE=""
+GMIB_VERSION=""
 PRITUNL_DEB=""
 BOOTSTRAP_URL=""
 BOOTSTRAP_TLS_PIN=""
@@ -26,6 +27,7 @@ Required:
   --base-iso PATH             Ubuntu 24.04 live-server amd64 ISO.
   --base-iso-sha256 SHA256    Expected SHA-256 of the Ubuntu ISO.
   --appimage PATH             Release gmib x86_64 AppImage.
+  --gmib-version VERSION      GMIB version embedded in the image name and metadata.
   --pritunl-deb PATH          Pinned amd64 pritunl-client Debian package.
   --bootstrap-url URL         HTTPS endpoint returning a Pritunl profile tar.
   --ssh-authorized-key PATH   Public SSH key for the admin account.
@@ -59,6 +61,10 @@ while (($# > 0)); do
       ;;
     --appimage)
       APPIMAGE="${2:-}"
+      shift 2
+      ;;
+    --gmib-version)
+      GMIB_VERSION="${2:-}"
       shift 2
       ;;
     --pritunl-deb)
@@ -139,7 +145,7 @@ for command in awk dpkg-deb file xorriso sha256sum openssl sed; do
   fi
 done
 
-for value_name in BASE_ISO BASE_ISO_SHA256 APPIMAGE PRITUNL_DEB BOOTSTRAP_URL \
+for value_name in BASE_ISO BASE_ISO_SHA256 APPIMAGE GMIB_VERSION PRITUNL_DEB BOOTSTRAP_URL \
   SSH_KEY_FILE OUTPUT_ISO; do
   if [[ -z "${!value_name}" ]]; then
     echo "Missing required option for $value_name" >&2
@@ -147,6 +153,10 @@ for value_name in BASE_ISO BASE_ISO_SHA256 APPIMAGE PRITUNL_DEB BOOTSTRAP_URL \
     exit 1
   fi
 done
+if [[ ! "$GMIB_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+  echo "--gmib-version must be a semantic version such as 5.4.1." >&2
+  exit 1
+fi
 
 for input_file in "$BASE_ISO" "$APPIMAGE" "$PRITUNL_DEB" "$SSH_KEY_FILE"; do
   if [[ ! -f "$input_file" ]]; then
@@ -231,6 +241,22 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+xorriso -osirrox on -indev "$BASE_ISO" -extract /.disk/info "$work_dir/iso-info" >/dev/null 2>&1
+if ! grep -Eq 'Ubuntu-Server 24\.04(\.[0-9]+)* LTS.*amd64' "$work_dir/iso-info"; then
+  echo "The base image is not an Ubuntu Server 24.04 amd64 ISO." >&2
+  exit 1
+fi
+ubuntu_version="$(sed -nE 's/^Ubuntu-Server ([0-9]+\.[0-9]+(\.[0-9]+)?) LTS.*$/\1/p' "$work_dir/iso-info")"
+if [[ -z "$ubuntu_version" ]]; then
+  echo "Could not determine the Ubuntu version from the base ISO." >&2
+  exit 1
+fi
+expected_output_name="gmib-kiosk-${GMIB_VERSION}-ubuntu-${ubuntu_version}-amd64.iso"
+if [[ "$(basename "$OUTPUT_ISO")" != "$expected_output_name" ]]; then
+  echo "Output filename must be: $expected_output_name" >&2
+  exit 1
+fi
+
 payload_dir="$work_dir/gmib-installer"
 install -d -m 0755 "$payload_dir"
 install -m 0755 "$APPIMAGE" "$payload_dir/gmib.AppImage"
@@ -240,6 +266,14 @@ install -m 0644 "$SCRIPT_DIR/gmib-provision.service" "$payload_dir/"
 install -m 0755 "$SCRIPT_DIR/install-target.sh" "$payload_dir/"
 install -m 0755 "$REPO_ROOT/scripts/setup-linux-kiosk.sh" "$payload_dir/"
 install -m 0644 "$REPO_ROOT/scripts/gmib-hide-cursor.c" "$payload_dir/"
+
+cat >"$payload_dir/image-release" <<EOF
+GMIB_VERSION='$GMIB_VERSION'
+UBUNTU_VERSION='$ubuntu_version'
+IMAGE_NAME='$expected_output_name'
+ARCHITECTURE='amd64'
+EOF
+chmod 0644 "$payload_dir/image-release"
 
 cat >"$payload_dir/provision.conf" <<EOF
 BOOTSTRAP_URL='$BOOTSTRAP_URL'
@@ -297,11 +331,6 @@ EOF
 printf '%s\n' 'instance-id: gmib-kiosk-installer' >"$work_dir/meta-data"
 
 xorriso -osirrox on -indev "$BASE_ISO" -extract /boot/grub/grub.cfg "$work_dir/grub.cfg" >/dev/null 2>&1
-xorriso -osirrox on -indev "$BASE_ISO" -extract /.disk/info "$work_dir/iso-info" >/dev/null 2>&1
-if ! grep -Eq 'Ubuntu-Server 24\.04(\.[0-9]+)* LTS.*amd64' "$work_dir/iso-info"; then
-  echo "The base image is not an Ubuntu Server 24.04 amd64 ISO." >&2
-  exit 1
-fi
 sed -E '/^[[:space:]]*linux[[:space:]]/ { /[[:space:]]autoinstall([[:space:]]|$)/! s/[[:space:]]---([[:space:]]*)$/ autoinstall ---\1/; }' \
   "$work_dir/grub.cfg" >"$work_dir/grub.cfg.patched"
 mv "$work_dir/grub.cfg.patched" "$work_dir/grub.cfg"
@@ -318,6 +347,7 @@ manifest="$payload_dir/SHA256SUMS"
     gmib-hide-cursor.c \
     gmib-provision.service \
     gmib.AppImage \
+    image-release \
     install-target.sh \
     pritunl-client.deb \
     provision.conf \
@@ -334,6 +364,9 @@ xorriso \
   -volid GMIB_KIOSK_2404 \
   -boot_image any replay
 
-sha256sum "$OUTPUT_ISO" >"$OUTPUT_ISO.sha256"
+(
+  cd "$(dirname "$OUTPUT_ISO")"
+  sha256sum "$(basename "$OUTPUT_ISO")"
+) >"$OUTPUT_ISO.sha256"
 echo "Created $OUTPUT_ISO"
 echo "Checksum: $OUTPUT_ISO.sha256"

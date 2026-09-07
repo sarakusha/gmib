@@ -44,15 +44,18 @@ deploy/kiosk/build-autoinstall-iso.sh \
   --base-iso /Users/sarakusha/Downloads/ubuntu-24.04.4-live-server-amd64-2.iso \
   --base-iso-sha256 e907d92eeec9df64163a7e454cbc8d7755e8ddc7ed42f99dbc80c40f1a138433 \
   --appimage /private/tmp/gmib-release-33874705959/gmib-x86_64.AppImage \
+  --gmib-version 5.4.1 \
   --pritunl-deb /private/tmp/pritunl-client_1.3.4729.52-0ubuntu1~noble_amd64.deb \
   --bootstrap-url https://app.nata-info.ru/api/vpn/enroll/gmib \
   --ssh-authorized-key /Users/sarakusha/.ssh/id_ed25519.pub \
-  --output /Users/sarakusha/Downloads/gmib-kiosk-24.04.4.iso
+  --output /Users/sarakusha/Downloads/gmib-kiosk-5.4.1-ubuntu-24.04.4-amd64.iso
 ```
 
 Пути к AppImage и `.deb` меняются при выпуске новых версий. Выходной файл не должен существовать до
 запуска сборки. Скрипт проверит архитектуру входных файлов и контрольную сумму Ubuntu, а рядом с ISO
-создаст файл `.sha256`.
+создаст файл `.sha256`. Имя формируется по правилу
+`gmib-kiosk-<версия GMIB>-ubuntu-<версия Ubuntu>-amd64.iso`; версии также записываются внутрь
+установленной системы в `/etc/gmib/image-release`.
 
 В образ записываются только публичный URL enrollment-сервиса и публичный SSH-ключ. Pritunl API
 Token, API Secret и общий VPN-профиль туда не попадают. Для обычного сертификата Let's Encrypt
@@ -135,3 +138,21 @@ npm run enrollment:create -- gmib 10 60
 Создавайте новый образ после выпуска нового GMIB AppImage, обновления Pritunl Client, изменения
 скриптов из этой папки или смены базового Ubuntu ISO. Постоянно пересобирать образ из-за обновления
 `app-server` не требуется, пока URL и контракт `/api/vpn/enroll/gmib` остаются совместимыми.
+
+## Публикация на app-server
+
+ISO значительно больше допустимого размера одного файла GitHub Releases, поэтому AppImage продолжает
+загружаться с GitHub, а готовые kiosk-образы хранятся на `app.nata-info.ru`. После сборки
+опубликуйте образ командой:
+
+```bash
+deploy/kiosk/publish-image.sh \
+  --iso /Users/sarakusha/Downloads/gmib-kiosk-5.4.1-ubuntu-24.04.4-amd64.iso
+```
+
+Скрипт повторно проверяет SHA-256, оставляет на сервере не менее 2 ГБ свободного места, загружает
+ISO сначала во временное имя и только после завершения делает его доступным. Каталог образов
+открывается по адресу `https://app.nata-info.ru/gmib/kiosk`.
+
+Один образ занимает примерно 3,3 ГБ. На текущем сервере нужно хранить не более двух актуальных
+образов либо заранее расширить диск. Старые файлы автоматически не удаляются.

@@ -94,10 +94,11 @@ deploy/kiosk/build-autoinstall-iso.sh \
   --base-iso ubuntu-24.04.4-live-server-amd64.iso \
   --base-iso-sha256 e907d92eeec9df64163a7e454cbc8d7755e8ddc7ed42f99dbc80c40f1a138433 \
   --appimage gmib-x86_64.AppImage \
+  --gmib-version 5.4.1 \
   --pritunl-deb pritunl-client_amd64.deb \
   --bootstrap-url https://app.nata-info.ru/api/vpn/enroll/gmib \
   --ssh-authorized-key id_ed25519.pub \
-  --output gmib-kiosk-24.04.iso
+  --output gmib-kiosk-5.4.1-ubuntu-24.04.4-amd64.iso
 ```
 
 The build verifies the Ubuntu ISO checksum and writes `gmib-kiosk-24.04.iso.sha256`. Every embedded
@@ -119,3 +120,16 @@ multiple internal disks: build that batch with `--target-disk`, `--target-model`
 The installer powers the computer off when complete. Remove the USB drive, power it on, and enter a
 one-time enrollment code on the provisioning screen. After the VPN connects, the machine reboots and
 starts the GMIB kiosk automatically.
+
+## Publishing
+
+Publish the versioned ISO and its checksum to app-server with:
+
+```bash
+deploy/kiosk/publish-image.sh \
+  --iso gmib-kiosk-5.4.1-ubuntu-24.04.4-amd64.iso
+```
+
+The public catalog is `https://app.nata-info.ru/gmib/kiosk`. The publisher validates the checksum,
+uploads atomically, and refuses an upload that would leave less than 2 GiB free on the server. It
+does not delete older releases automatically.
