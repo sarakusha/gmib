@@ -75,6 +75,35 @@ Token, API Secret и общий VPN-профиль туда не попадаю�
 
 ## Одноразовые коды
 
+### Добавление организации
+
+Организацию сначала создают в административной панели Pritunl. Скрипты `app-server` не создают
+организации, а связывают уже существующую организацию с продуктом.
+
+После создания организации подключитесь к серверу и получите её ID:
+
+```bash
+ssh user@app.nata-info.ru
+cd ~/src/app-server
+nvm use
+npm run enrollment:organizations
+```
+
+Команда выводит только названия и ID организаций, не выводя API Token или Secret. Затем привяжите
+продукты к нужному ID. Одна организация может обслуживать несколько продуктов:
+
+```bash
+npm run enrollment:configure-product -- gmib <PRITUNL_ORGANIZATION_ID>
+npm run enrollment:configure-product -- ggs <PRITUNL_ORGANIZATION_ID>
+pm2 restart app-server --update-env
+pm2 save
+```
+
+Например, сейчас и `gmib`, и `ggs` привязаны к организации `mcd`. Клиенты различаются по префиксам
+`gmib-...` и `ggs-...`, а одноразовые коды всегда относятся только к одному продукту.
+
+### Создание кодов
+
 Коды создаются на `app-server` отдельно для каждого продукта. Например, десять кодов GMIB на 60
 минут:
 
