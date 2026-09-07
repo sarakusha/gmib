@@ -139,4 +139,10 @@ deploy/kiosk/publish-image.sh \
 
 The public catalog is `https://app.nata-info.ru/gmib/kiosk`. The publisher validates the checksum,
 uploads atomically, and refuses an upload that would leave less than 2 GiB free on the server. It
-does not delete older releases automatically.
+removes superseded files only after the new image and manifest have been published successfully.
+App-server discovers manifests and streams versioned files at request time, so publishing another
+image does not require rebuilding or restarting the application.
+
+When images are built on app-server to avoid a slow multi-gigabyte upload, keep the verified official
+Ubuntu ISO in a private build directory. It can be reused for later GMIB and GGS builds; only replace
+it when the chosen Ubuntu release changes, and always retain its expected SHA-256 check.
