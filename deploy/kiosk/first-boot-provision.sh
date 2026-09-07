@@ -13,7 +13,9 @@ cleanup() {
   fi
   unset enrollment_code request_body
 }
-trap cleanup EXIT INT TERM
+trap cleanup EXIT
+trap 'cleanup; exit 130' INT
+trap 'cleanup; exit 143' TERM
 
 if [[ ! -r "$CONFIG_FILE" ]]; then
   echo "Cannot read $CONFIG_FILE" >&2
