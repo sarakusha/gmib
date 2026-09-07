@@ -5,21 +5,23 @@ contains the GMIB AppImage and a pinned Pritunl Client package. Installation era
 selected disk, installs the Cage service, and powers the computer off.
 
 On the first boot, `gmib-provision.service` owns `tty1` and asks the operator for a short one-time
-enrollment code. It exchanges the code for a device-specific Pritunl profile over pinned HTTPS,
-imports and starts the profile, erases the downloaded archive, and reboots into the GMIB Cage
-kiosk. The image and installed computer never contain the bootstrap API key.
+enrollment code. It exchanges the code for a device-specific Pritunl profile over HTTPS, imports
+and starts the profile, erases the downloaded archive, and reboots into the GMIB Cage kiosk. The
+image and installed computer never contain the bootstrap API key.
+
+See [`README.ru.md`](README.ru.md) for the Russian build and installation guide.
 
 ## Security model
 
 - Do not encrypt a permanent API key with a short shared password. Anyone with the ISO can copy the
   ciphertext and brute-force that password offline.
-- Put only the bootstrap URL, its TLS public-key pin, and an SSH public key in the image. None of
-  these values are secret.
+- Put only the bootstrap URL, an optional TLS public-key pin, and an SSH public key in the image.
+  None of these values are secret.
 - Use single-use enrollment codes with at least 40 random bits (for example, eight unambiguous
   Base32 characters), a 10-minute lifetime, and limits of five attempts per code, device, and source
   address.
-- Bind a code to the device ID shown on its screen before giving the code to the installer. Redeem it
-  atomically so simultaneous requests cannot both succeed.
+- Scope each code to its product. The server atomically binds it to the first device that redeems
+  it, so simultaneous requests cannot both succeed.
 - Generate a separate Pritunl identity for every device. A shared fleet VPN profile turns one stolen
   player into a fleet-wide credential leak.
 - Keep the imported VPN identity in `/var/lib/pritunl-client`; it is required for reconnecting. The
@@ -31,10 +33,11 @@ configuration and cannot use sudo.
 
 ## Bootstrap API contract
 
-The image sends an HTTPS request whose server public key must match the configured curl pin:
+The image sends this HTTPS request. When an optional curl pin is configured, the server public key
+must also match it:
 
 ```http
-POST /v1/enroll/pritunl HTTP/1.1
+POST /api/vpn/enroll/gmib HTTP/1.1
 Content-Type: application/json
 
 {
@@ -80,10 +83,12 @@ deploy/kiosk/download-pritunl-client-deb.sh dist
 Set `PRITUNL_CLIENT_VERSION` to an exact APT version when reproducing an older image. The helper
 writes the package SHA-256 next to the Debian file.
 
-Then build the installation ISO on Linux with `xorriso` installed:
+Then build the installation ISO on Linux or macOS. On Ubuntu install `xorriso`; on macOS install
+`xorriso`, `dpkg`, GNU coreutils, and OpenSSL 3 with Homebrew:
 
 ```bash
 sudo apt-get install xorriso
+# or: brew install xorriso dpkg coreutils openssl@3
 
 deploy/kiosk/build-autoinstall-iso.sh \
   --base-iso ubuntu-24.04.4-live-server-amd64.iso \
