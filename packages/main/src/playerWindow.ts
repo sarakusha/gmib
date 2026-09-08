@@ -12,6 +12,7 @@ import localConfig from './localConfig';
 import main, { activateMainWindow } from './mainWindow';
 import type { CloseEvent, ManagedWindow } from './managedWindow';
 import { installWindowOpenHandler } from './openHandler';
+import { getBackgroundAutoplayPlayers } from './playerStartup';
 import relaunch, { needRestart } from './relaunch';
 import { getPlayer, getPlayers, isPlayerActive, updateShowPlayer } from './screen';
 import { createTabbedWindow } from './tabbedWindow';
@@ -241,9 +242,8 @@ export const launchPlayers = async () => {
     if (restored.every(window => window === undefined) && localConfig.get('localGmibHidden')) {
       activateMainWindow();
     }
-    return;
   }
-  players.forEach(player => {
-    if (player.playlistId && player.autoPlay) void openPlayer(player.id, { hidden: true });
+  getBackgroundAutoplayPlayers(players, localPlayerTabs).forEach(player => {
+    void openPlayer(player.id, { hidden: true });
   });
 };

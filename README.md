@@ -111,8 +111,9 @@ sudo scripts/setup-linux-kiosk.sh --user "$USER"
 systemctl status gmib-cage@tty1.service
 ```
 
-Скрипт устанавливает минимальный Wayland/Mesa runtime, выдаёт пользователю доступ к DRM и serial
-устройствам, скрывает аппаратный курсор Cage и создаёт перезапускаемый systemd-сервис на `tty1`.
+Скрипт устанавливает минимальный Wayland/Mesa runtime, выдаёт пользователю доступ к DRM, serial и
+поддерживаемым FTDI USB-устройствам (`0403:6001` и `0403:6015`), скрывает аппаратный курсор Cage и
+создаёт перезапускаемый systemd-сервис на `tty1`.
 Для проверки без немедленного запуска используйте `--no-start`. Другой AppImage или распакованный
 бинарный файл можно указать через `--executable /absolute/path`.
 

@@ -12,6 +12,8 @@ Normal kiosk boots hide kernel and systemd status messages while retaining them 
 The Ubuntu installer remains verbose so installation failures are visible.
 The installed system uses Ubuntu's `ffmpeg` package and provides `/usr/bin/ffmpeg` and
 `/usr/bin/ffprobe` for GMIB media conversion and inspection.
+The installer also grants the kiosk user access to serial ports and direct `libusb` access to the
+supported FTDI adapters `0403:6001` and `0403:6015` through `udev` rules.
 
 If the Pritunl organization is attached to multiple VPN servers, provisioning enables only the
 profile whose name ends in `(main)`. Other imported profiles are disabled because running `main`

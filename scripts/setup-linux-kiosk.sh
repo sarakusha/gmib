@@ -109,7 +109,18 @@ apt-get install -y \
   seatd \
   vainfo
 
-usermod -aG video,render,dialout "$KIOSK_USER"
+getent group plugdev >/dev/null || groupadd --system plugdev
+usermod -aG video,render,dialout,plugdev "$KIOSK_USER"
+
+# NiBUS uses both the serial device and libusb for some adapters. Membership in dialout grants
+# access to /dev/ttyUSB*, while these rules grant the kiosk process write access to the underlying
+# USB device nodes required by libusb.
+install -m 0644 /dev/stdin /etc/udev/rules.d/100-gmib.rules <<'EOF'
+SUBSYSTEM=="usb", ATTR{idVendor}=="0403", ATTR{idProduct}=="6001", GROUP="plugdev", MODE="0660"
+SUBSYSTEM=="usb", ATTR{idVendor}=="0403", ATTR{idProduct}=="6015", GROUP="plugdev", MODE="0660"
+EOF
+udevadm control --reload-rules
+udevadm trigger --subsystem-match=usb --attr-match=idVendor=0403
 
 install -d -m 0755 /usr/local/lib
 cc -shared -fPIC -O2 -Wall -Wextra \
@@ -135,7 +146,7 @@ After=getty@%i.service
 [Service]
 Type=simple
 User=${KIOSK_USER}
-SupplementaryGroups=video render dialout
+SupplementaryGroups=video render dialout plugdev
 Environment="XDG_RUNTIME_DIR=/run/user/${KIOSK_UID}"
 Environment="DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/${KIOSK_UID}/bus"
 Environment="XDG_SESSION_TYPE=wayland"
