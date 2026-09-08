@@ -150,7 +150,8 @@ jq -n \
   --arg publishedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   --argjson size "$size_bytes" \
   '{filename: $filename, product: $product, productVersion: $productVersion,
-    architecture: $architecture, size: $size, sha256: $sha256, publishedAt: $publishedAt}' \
+    ubuntuVersion: $ubuntuVersion, architecture: $architecture, size: $size,
+    sha256: $sha256, publishedAt: $publishedAt}' \
   >"$manifest"
 
 # Preserve the field consumed by the existing dynamic GMIB catalog.
