@@ -53,12 +53,12 @@ Mac и использовать при сборке ISO.
 deploy/kiosk/build-autoinstall-iso.sh \
   --base-iso /Users/sarakusha/Downloads/ubuntu-24.04.4-live-server-amd64-2.iso \
   --base-iso-sha256 e907d92eeec9df64163a7e454cbc8d7755e8ddc7ed42f99dbc80c40f1a138433 \
-  --appimage /private/tmp/gmib-release-33874705959/gmib-x86_64.AppImage \
-  --gmib-version 5.4.1 \
+  --appimage /private/tmp/gmib-release/gmib-x86_64.AppImage \
+  --gmib-version 5.4.2 \
   --pritunl-deb /private/tmp/pritunl-client_1.3.4729.52-0ubuntu1~noble_amd64.deb \
   --bootstrap-url https://app.nata-info.ru/api/vpn/enroll/gmib \
   --ssh-authorized-key /Users/sarakusha/.ssh/id_ed25519.pub \
-  --output /Users/sarakusha/Downloads/gmib-kiosk-5.4.1-ubuntu-24.04.4-amd64.iso
+  --output /Users/sarakusha/Downloads/gmib-kiosk-5.4.2-ubuntu-24.04.4-amd64.iso
 ```
 
 Пути к AppImage и `.deb` меняются при выпуске новых версий. Выходной файл не должен существовать до
@@ -71,6 +71,57 @@ deploy/kiosk/build-autoinstall-iso.sh \
 Token, API Secret и общий VPN-профиль туда не попадают. Для обычного сертификата Let's Encrypt
 параметр `--bootstrap-tls-pin` не нужен: используется стандартная проверка HTTPS, которая не
 ломается при плановой смене сертификата.
+
+### Сборка непосредственно на app-server
+
+Это предпочтительный способ при медленном исходящем канале: сервер самостоятельно скачивает только
+AppImage размером около 150 МБ, а проверенный Ubuntu ISO используется повторно. Один раз установите
+`git`, `jq` и `xorriso`, клонируйте репозиторий и сохраните базовые входные файлы в закрытом каталоге:
+
+```bash
+sudo apt-get install -y git jq xorriso
+mkdir -p /home/user/appliance-build/input /home/user/appliance-build/output
+git clone https://github.com/sarakusha/gmib.git /home/user/appliance-build/gmib-repo
+```
+
+Для каждой новой версии выполните на сервере:
+
+```bash
+GMIB_VERSION=5.4.2
+BUILD_ROOT=/home/user/appliance-build
+GMIB_REPO=$BUILD_ROOT/gmib-repo
+APPIMAGE=$BUILD_ROOT/input/gmib-$GMIB_VERSION-x86_64.AppImage
+
+git -C "$GMIB_REPO" fetch --tags origin
+git -C "$GMIB_REPO" checkout --detach "v$GMIB_VERSION"
+
+APPIMAGE_URL=https://github.com/sarakusha/gmib/releases/download/v$GMIB_VERSION/gmib-x86_64.AppImage
+APPIMAGE_SHA256=$(curl -fsSL \
+  "https://api.github.com/repos/sarakusha/gmib/releases/tags/v$GMIB_VERSION" | \
+  jq -er '.assets[] | select(.name == "gmib-x86_64.AppImage") | .digest | sub("^sha256:"; "")')
+curl -fL --retry 3 "$APPIMAGE_URL" -o "$APPIMAGE.part"
+printf '%s  %s\n' "$APPIMAGE_SHA256" "$APPIMAGE.part" | sha256sum -c -
+mv "$APPIMAGE.part" "$APPIMAGE"
+
+"$GMIB_REPO/deploy/kiosk/build-autoinstall-iso.sh" \
+  --base-iso "$BUILD_ROOT/input/ubuntu-24.04.4-live-server-amd64.iso" \
+  --base-iso-sha256 e907d92eeec9df64163a7e454cbc8d7755e8ddc7ed42f99dbc80c40f1a138433 \
+  --appimage "$APPIMAGE" \
+  --gmib-version "$GMIB_VERSION" \
+  --pritunl-deb "$BUILD_ROOT/input/pritunl-client.deb" \
+  --bootstrap-url https://app.nata-info.ru/api/vpn/enroll/gmib \
+  --ssh-authorized-key "$BUILD_ROOT/input/id_ed25519.pub" \
+  --output "$BUILD_ROOT/output/gmib-kiosk-$GMIB_VERSION-ubuntu-24.04.4-amd64.iso"
+
+"$GMIB_REPO/deploy/kiosk/publish-image.sh" --local \
+  --iso "$BUILD_ROOT/output/gmib-kiosk-$GMIB_VERSION-ubuntu-24.04.4-amd64.iso"
+```
+
+Перед сборкой должно быть не менее 6 ГБ свободного места: около 3,5 ГБ для нового ISO и 2 ГБ
+резерва после публикации. Режим `--local` не копирует многогигабайтный файл по SSH: он проверяет
+checksum, атомарно перемещает ISO в `app-server/public/downloads/gmib-kiosk`, публикует manifest
+последним и только затем удаляет предыдущую версию. Если места меньше, сначала освободите его или
+временно снимите старый GMIB-kiosk с публикации; Ubuntu ISO удалять не нужно.
 
 ## Запись и установка
 
@@ -139,7 +190,7 @@ nvm хранит глобальные пакеты отдельно для ка�
 ```bash
 cd ~/src/app-server
 nvm use
-npm run enrollment:create -- gmib 10 60
+npm run enrollment:create -- gmib 10 0
 ```
 
 Первое устройство, использовавшее код, атомарно привязывает его к своему hardware ID. Повторное
@@ -161,7 +212,7 @@ ISO значительно больше допустимого размера о
 
 ```bash
 deploy/kiosk/publish-image.sh \
-  --iso /Users/sarakusha/Downloads/gmib-kiosk-5.4.1-ubuntu-24.04.4-amd64.iso
+  --iso /Users/sarakusha/Downloads/gmib-kiosk-5.4.2-ubuntu-24.04.4-amd64.iso
 ```
 
 Скрипт также публикует GGS-образ по имени `ggs-<версия>-ubuntu-<версия>-amd64.iso`. Загрузка идёт во

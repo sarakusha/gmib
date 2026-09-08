@@ -6,6 +6,7 @@ SERVER="user@app.nata-info.ru"
 PRODUCT="auto"
 REMOTE_DIR=""
 PUBLIC_BASE_URL=""
+LOCAL=false
 
 usage() {
   cat <<'EOF'
@@ -19,6 +20,8 @@ Optional:
   --product PRODUCT      auto, gmib-kiosk, or ggs. Default: auto from filename.
   --remote-dir PATH      App-server public download directory.
   --public-base-url URL  Public URL matching the remote directory.
+  --local                Publish on this host without SSH or rsync. The ISO and
+                         destination must be on the same filesystem.
   -h, --help             Show this help.
 
 The ISO name must match:
@@ -53,6 +56,10 @@ while (($# > 0)); do
       PUBLIC_BASE_URL="${2:-}"
       shift 2
       ;;
+    --local)
+      LOCAL=true
+      shift
+      ;;
     -h | --help)
       usage
       exit 0
@@ -65,7 +72,11 @@ while (($# > 0)); do
   esac
 done
 
-for command in awk jq rsync sha256sum ssh stat; do
+required_commands=(awk jq sha256sum stat)
+if [[ "$LOCAL" == false ]]; then
+  required_commands+=(rsync ssh)
+fi
+for command in "${required_commands[@]}"; do
   if ! command -v "$command" >/dev/null 2>&1; then
     echo "Missing required command: $command" >&2
     exit 1
@@ -75,7 +86,7 @@ if [[ ! -f "$ISO" || ! -f "$ISO.sha256" ]]; then
   echo "The ISO and its adjacent .sha256 file are required." >&2
   exit 1
 fi
-if [[ ! "$SERVER" =~ ^[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+$ ]] ||
+if { [[ "$LOCAL" == false ]] && [[ ! "$SERVER" =~ ^[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+$ ]]; } ||
   [[ ! "$PRODUCT" =~ ^(auto|gmib-kiosk|ggs)$ ]]; then
   echo "Invalid server or product." >&2
   exit 1
@@ -150,30 +161,61 @@ if [[ "$PRODUCT" == gmib-kiosk ]]; then
   mv "$temporary_manifest" "$manifest"
 fi
 
-# All interpolated values are restricted to the safe character sets validated above.
-# shellcheck disable=SC2029
-ssh "$SERVER" "mkdir -p '$REMOTE_DIR'"
-# shellcheck disable=SC2029
-available_kib="$(ssh "$SERVER" "df -Pk '$REMOTE_DIR' | awk 'NR == 2 { print \$4 }'")"
-required_kib="$(((size_bytes + 1023) / 1024 + 2 * 1024 * 1024))"
-if [[ ! "$available_kib" =~ ^[0-9]+$ ]] || ((available_kib < required_kib)); then
-  echo "The server must have enough room for the ISO plus 2 GiB of free space." >&2
-  exit 1
-fi
+remote_retention_find="find '$REMOTE_DIR' -maxdepth 1 -type f \
+  \( -name '$PRODUCT-*.iso' -o -name '$PRODUCT-*.iso.sha256' -o \
+     -name '$PRODUCT-*.iso.json' -o -name '$PRODUCT-*.iso.part' -o \
+     -name '$PRODUCT-*.iso.sha256.part' -o -name '$PRODUCT-*.iso.json.part' \) \
+  ! -name '$filename' ! -name '$filename.sha256' ! -name '$filename.json' -delete"
 
-rsync --partial --progress "$ISO" "$SERVER:$REMOTE_DIR/$filename.part"
-rsync "$sidecar" "$SERVER:$REMOTE_DIR/$filename.sha256.part"
-rsync "$manifest" "$SERVER:$REMOTE_DIR/$filename.json.part"
-# shellcheck disable=SC2029
-ssh "$SERVER" \
-  "mv '$REMOTE_DIR/$filename.part' '$REMOTE_DIR/$filename' &&
-   mv '$REMOTE_DIR/$filename.sha256.part' '$REMOTE_DIR/$filename.sha256' &&
-   mv '$REMOTE_DIR/$filename.json.part' '$REMOTE_DIR/$filename.json' &&
-   find '$REMOTE_DIR' -maxdepth 1 -type f \
-     \( -name '$PRODUCT-*.iso' -o -name '$PRODUCT-*.iso.sha256' -o \
-        -name '$PRODUCT-*.iso.json' -o -name '$PRODUCT-*.iso.part' -o \
-        -name '$PRODUCT-*.iso.sha256.part' -o -name '$PRODUCT-*.iso.json.part' \) \
-     ! -name '$filename' ! -name '$filename.sha256' ! -name '$filename.json' -delete"
+if [[ "$LOCAL" == true ]]; then
+  if [[ "$(uname -s)" != Linux ]]; then
+    echo "--local publication is supported only on Linux." >&2
+    exit 1
+  fi
+  mkdir -p "$REMOTE_DIR"
+  if [[ "$(stat -c %d "$ISO")" != "$(stat -c %d "$REMOTE_DIR")" ]]; then
+    echo "With --local, the ISO and destination must be on the same filesystem." >&2
+    exit 1
+  fi
+  available_kib="$(df -Pk "$REMOTE_DIR" | awk 'NR == 2 { print $4 }')"
+  if [[ ! "$available_kib" =~ ^[0-9]+$ ]] || ((available_kib < 2 * 1024 * 1024)); then
+    echo "The server must retain at least 2 GiB of free space after the ISO build." >&2
+    exit 1
+  fi
+
+  mv "$ISO" "$REMOTE_DIR/$filename.part"
+  mv "$sidecar" "$REMOTE_DIR/$filename.sha256.part"
+  mv "$manifest" "$REMOTE_DIR/$filename.json.part"
+  mv "$REMOTE_DIR/$filename.part" "$REMOTE_DIR/$filename"
+  mv "$REMOTE_DIR/$filename.sha256.part" "$REMOTE_DIR/$filename.sha256"
+  mv "$REMOTE_DIR/$filename.json.part" "$REMOTE_DIR/$filename.json"
+  find "$REMOTE_DIR" -maxdepth 1 -type f \
+    \( -name "$PRODUCT-*.iso" -o -name "$PRODUCT-*.iso.sha256" -o \
+       -name "$PRODUCT-*.iso.json" -o -name "$PRODUCT-*.iso.part" -o \
+       -name "$PRODUCT-*.iso.sha256.part" -o -name "$PRODUCT-*.iso.json.part" \) \
+    ! -name "$filename" ! -name "$filename.sha256" ! -name "$filename.json" -delete
+else
+  # All interpolated values are restricted to the safe character sets validated above.
+  # shellcheck disable=SC2029
+  ssh "$SERVER" "mkdir -p '$REMOTE_DIR'"
+  # shellcheck disable=SC2029
+  available_kib="$(ssh "$SERVER" "df -Pk '$REMOTE_DIR' | awk 'NR == 2 { print \$4 }'")"
+  required_kib="$(((size_bytes + 1023) / 1024 + 2 * 1024 * 1024))"
+  if [[ ! "$available_kib" =~ ^[0-9]+$ ]] || ((available_kib < required_kib)); then
+    echo "The server must have enough room for the ISO plus 2 GiB of free space." >&2
+    exit 1
+  fi
+
+  rsync --partial --progress "$ISO" "$SERVER:$REMOTE_DIR/$filename.part"
+  rsync "$sidecar" "$SERVER:$REMOTE_DIR/$filename.sha256.part"
+  rsync "$manifest" "$SERVER:$REMOTE_DIR/$filename.json.part"
+  # shellcheck disable=SC2029
+  ssh "$SERVER" \
+    "mv '$REMOTE_DIR/$filename.part' '$REMOTE_DIR/$filename' &&
+     mv '$REMOTE_DIR/$filename.sha256.part' '$REMOTE_DIR/$filename.sha256' &&
+     mv '$REMOTE_DIR/$filename.json.part' '$REMOTE_DIR/$filename.json' &&
+     $remote_retention_find"
+fi
 
 echo "Published $PUBLIC_BASE_URL/$filename"
 echo "Catalog: $PUBLIC_BASE_URL/$filename.json"

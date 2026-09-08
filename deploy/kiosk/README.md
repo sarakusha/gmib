@@ -103,15 +103,28 @@ deploy/kiosk/build-autoinstall-iso.sh \
   --base-iso ubuntu-24.04.4-live-server-amd64.iso \
   --base-iso-sha256 e907d92eeec9df64163a7e454cbc8d7755e8ddc7ed42f99dbc80c40f1a138433 \
   --appimage gmib-x86_64.AppImage \
-  --gmib-version 5.4.1 \
+  --gmib-version 5.4.2 \
   --pritunl-deb pritunl-client_amd64.deb \
   --bootstrap-url https://app.nata-info.ru/api/vpn/enroll/gmib \
   --ssh-authorized-key id_ed25519.pub \
-  --output gmib-kiosk-5.4.1-ubuntu-24.04.4-amd64.iso
+  --output gmib-kiosk-5.4.2-ubuntu-24.04.4-amd64.iso
 ```
 
 The build verifies the Ubuntu ISO checksum and writes `gmib-kiosk-24.04.iso.sha256`. Every embedded
 payload file also has an entry in `/gmib-installer/SHA256SUMS` on the ISO.
+
+### Building directly on app-server
+
+For a slow upload link, build on app-server and reuse the verified Ubuntu ISO kept in
+`/home/user/appliance-build/input`. Check out the matching GMIB tag, download the approximately
+150 MB AppImage directly from its GitHub release, and verify the asset digest returned by the GitHub
+API before invoking `build-autoinstall-iso.sh`. The complete, copyable command sequence is documented
+in [`README.ru.md`](README.ru.md#сборка-непосредственно-на-app-server).
+
+Keep at least 6 GiB free before starting: approximately 3.5 GiB for the new ISO and 2 GiB of reserve.
+After the build, run `publish-image.sh --local --iso PATH`. Local publication requires the build and
+download directories to use the same Linux filesystem; it atomically moves the ISO instead of
+uploading another copy. Keep the cached Ubuntu ISO for subsequent GMIB and GGS builds.
 
 Normal public-CA HTTPS validation is used by default. `--bootstrap-tls-pin` can add a curl SPKI pin
 when the endpoint has a deliberately stable TLS private key. Do not pin an ordinary rotating
@@ -136,7 +149,7 @@ Publish the versioned ISO and its checksum to app-server with:
 
 ```bash
 deploy/kiosk/publish-image.sh \
-  --iso gmib-kiosk-5.4.1-ubuntu-24.04.4-amd64.iso
+  --iso gmib-kiosk-5.4.2-ubuntu-24.04.4-amd64.iso
 ```
 
 The public catalog is `https://app.nata-info.ru/gmib/kiosk`. The publisher validates the checksum,
