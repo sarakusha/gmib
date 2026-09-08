@@ -567,11 +567,27 @@ jobs:
                 }
 
                 const data = await getAssetBytes(asset);
-                files.push({
+                const file = {
                   url: asset.name,
                   sha512: crypto.createHash('sha512').update(data).digest('base64'),
                   size: asset.size,
-                });
+                };
+
+                if (asset.name.endsWith('.AppImage')) {
+                  if (data.length < 4) {
+                    throw new Error(`Cannot read embedded block map size from ${asset.name}`);
+                  }
+
+                  const blockMapSize = data.readUInt32BE(data.length - 4);
+
+                  if (blockMapSize <= 0 || blockMapSize + 4 > data.length) {
+                    throw new Error(`Invalid embedded block map size in ${asset.name}: ${blockMapSize}`);
+                  }
+
+                  file.blockMapSize = blockMapSize;
+                }
+
+                files.push(file);
               }
 
               const primaryFile = files[0];
@@ -582,6 +598,9 @@ jobs:
                   `  - url: ${file.url}`,
                   `    sha512: ${file.sha512}`,
                   `    size: ${file.size}`,
+                  ...(file.blockMapSize == null
+                    ? []
+                    : [`    blockMapSize: ${file.blockMapSize}`]),
                 ]),
                 `path: ${primaryFile.url}`,
                 `sha512: ${primaryFile.sha512}`,
