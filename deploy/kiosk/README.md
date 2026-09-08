@@ -20,6 +20,21 @@ of the primary Pritunl server instead.
 
 See [`README.ru.md`](README.ru.md) for the Russian build and installation guide.
 
+## Quick server release
+
+On the prepared app-server, the normal release is deliberately short:
+
+```bash
+cd /home/user/appliance-build/gmib-repo
+git pull --ff-only
+deploy/kiosk/build-and-publish-on-server.sh --replace-current
+```
+
+The flag is required only on a small disk. It permits the script to unpublish the previous GMIB
+kiosk image when there is not enough room to build both versions side by side. It never removes the
+cached Ubuntu ISO or a GGS image. The one-time server preparation and input filenames are documented
+in [`README.ru.md`](README.ru.md#быстрый-выпуск-образа-на-app-server).
+
 ## Security model
 
 - Do not encrypt a permanent API key with a short shared password. Anyone with the ISO can copy the
@@ -116,15 +131,16 @@ payload file also has an entry in `/gmib-installer/SHA256SUMS` on the ISO.
 ### Building directly on app-server
 
 For a slow upload link, build on app-server and reuse the verified Ubuntu ISO kept in
-`/home/user/appliance-build/input`. Check out the matching GMIB tag, download the approximately
-150 MB AppImage directly from its GitHub release, and verify the asset digest returned by the GitHub
-API before invoking `build-autoinstall-iso.sh`. The complete, copyable command sequence is documented
-in [`README.ru.md`](README.ru.md#сборка-непосредственно-на-app-server).
+`/home/user/appliance-build/input`. The server script downloads only the approximately 150 MB
+AppImage and verifies the asset digest returned by the GitHub API.
 
 Keep at least 6 GiB free before starting: approximately 3.5 GiB for the new ISO and 2 GiB of reserve.
-After the build, run `publish-image.sh --local --iso PATH`. Local publication requires the build and
-download directories to use the same Linux filesystem; it atomically moves the ISO instead of
-uploading another copy. Keep the cached Ubuntu ISO for subsequent GMIB and GGS builds.
+After the one-time setup, update the server clone and run
+`deploy/kiosk/build-and-publish-on-server.sh`. It reads the version from `package.json`, downloads and
+verifies the matching release AppImage, builds the ISO, publishes it locally, and checks HTTP Range.
+Use `--replace-current` explicitly on a small disk; that mode unpublishes only the old GMIB kiosk
+image when there is not enough room for both versions. Keep the cached Ubuntu ISO for subsequent
+GMIB and GGS builds.
 
 Normal public-CA HTTPS validation is used by default. `--bootstrap-tls-pin` can add a curl SPKI pin
 when the endpoint has a deliberately stable TLS private key. Do not pin an ordinary rotating
