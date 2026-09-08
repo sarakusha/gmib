@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [5.4.2](https://github.com/sarakusha/gmib/compare/v5.4.1...v5.4.2) (2026-09-08)
+
+### Features
+
+* add Cage kiosk service installer ([1be7276](https://github.com/sarakusha/gmib/commit/1be7276689c67f0a0cde41921de5cce948ad333e))
+* add experimental Linux kiosk mode ([ea21983](https://github.com/sarakusha/gmib/commit/ea21983220678c22ea258f5cbb479b64719693f7))
+* add kiosk autoinstall image tooling ([a9dfc42](https://github.com/sarakusha/gmib/commit/a9dfc4215d5d901245c049fed3022bfff7d57777))
+* clean up kiosk boot and VPN enrollment ([abaa724](https://github.com/sarakusha/gmib/commit/abaa7248a974a5867b85f0b2fbd09534e20d17d6))
+* install system ffmpeg in kiosk image ([e24dadd](https://github.com/sarakusha/gmib/commit/e24dadd565e506283713053d0bb84e888aac2ff9))
+* retain latest appliance images ([d4aabb8](https://github.com/sarakusha/gmib/commit/d4aabb8a8426c97a403e71ad9c20fc13e127a8ec))
+* version and publish kiosk images ([d78e26a](https://github.com/sarakusha/gmib/commit/d78e26a2778b96da97b937a5ae55edcc5c4951a3))
+
+### Bug Fixes
+
+* allow rotating TLS certificates for enrollment ([1128c18](https://github.com/sarakusha/gmib/commit/1128c187b105e0d76796f44f7c599d698d9a92d0))
+* install Electron runtime for kiosk ([5375531](https://github.com/sarakusha/gmib/commit/5375531d3aedeca9e54e009b3527409bd959dc15))
+* install Russian locale for kiosk SSH ([940943f](https://github.com/sarakusha/gmib/commit/940943f88555c7cc0de58c96df42cbddcd6865da))
+* make autoinstall ISO builder portable ([0e14c25](https://github.com/sarakusha/gmib/commit/0e14c25985c5ad40dde6d6e6966f3295936e4318))
+* prevent overlapping kiosk VPN routes ([67f7694](https://github.com/sarakusha/gmib/commit/67f76944b0e07bdd756b781a4e85cd3b433e1461))
+* select kiosk install disk by policy ([90e1db2](https://github.com/sarakusha/gmib/commit/90e1db2bbf8c7c75e24174038a5d3be6e1087d74))
+* show enrollment code input ([a2179e7](https://github.com/sarakusha/gmib/commit/a2179e746179881f62ac0ad6b3eca463c05eee92))
+* support portable ISO checksum validation ([10c2bf6](https://github.com/sarakusha/gmib/commit/10c2bf6601f1c0482b26a6ed7d88b6890d4b2800))
+* terminate provisioning cleanly ([97b10c6](https://github.com/sarakusha/gmib/commit/97b10c61d65f8fb0de9aabf44f127e78ece4c562))
 ## [5.4.1](https://github.com/sarakusha/gmib/compare/v5.4.0...v5.4.1) (2026-08-17)
 
 ### Features
