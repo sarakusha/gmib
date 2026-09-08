@@ -9,7 +9,7 @@ import screenApi, { selectScreens, updateMinihosts } from '../api/screens';
 import Address, { AddressType } from '@nibus/core/Address';
 import { MCDVI_TYPE, MINIHOST_TYPE } from '@nibus/core/common';
 
-import { setAutobrightness } from './configSlice';
+import { setAutobrightness, updateConfig } from './configSlice';
 import { setCurrentDevice, setCurrentTab } from './currentSlice';
 import {
   addDevice,
@@ -37,7 +37,6 @@ import { addDetected, setOnline } from './sessionSlice';
 import type { AppThunk, AppThunkConfig } from '.';
 
 import { isRemoteSession } from '/@common/remote';
-import type { FinderOptions } from '/@common/helpers';
 import { asyncSerial, delay } from '/@common/helpers';
 
 // const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:config`);
@@ -198,50 +197,51 @@ startAppListening({
 // if (!isRemoteSession) {
 const TILUX_TYPE = 0x0043;
 const waitTilux = new Set<DeviceId>();
+const searchedTilux = new Set<DeviceId>();
+
+const findTilux = (owners: DeviceId[]): void => {
+  const pending = owners.filter(id => !searchedTilux.has(id) && !waitTilux.has(id));
+  if (pending.length === 0) return;
+
+  pending.forEach(id => {
+    searchedTilux.add(id);
+    waitTilux.add(id);
+  });
+  void window.nibus
+    .findDevices({ owners: pending, type: TILUX_TYPE })
+    .catch(() => pending.forEach(id => searchedTilux.delete(id)))
+    .finally(() => pending.forEach(id => waitTilux.delete(id)));
+};
+
 startAppListening({
   actionCreator: addDevice,
   effect: ({ payload: { mib, id } }, { getState }) => {
     if (mib.startsWith('siolynx')) {
-      const autoBrightness = selectAutobrightness(getState());
-      if (autoBrightness) {
-        const options: FinderOptions = {
-          owners: [id],
-          type: TILUX_TYPE,
-        };
-        setTimeout(() => {
-          waitTilux.add(id);
-          void window.nibus.findDevices(options).then(() => {
-            waitTilux.delete(id);
-          });
-        }, 10000);
-      }
+      setTimeout(() => {
+        if (selectAutobrightness(getState())) findTilux([id]);
+      }, 10000);
     }
   },
 });
 
 startAppListening({
-  actionCreator: setAutobrightness,
-  effect: ({ payload: autoBrightness }, { getState }) => {
-    if (autoBrightness) {
-      const owners = selectLinks(getState())
-        .filter(({ mib }) => mib.startsWith('siolynx'))
-        .map(({ id }) => id);
-      owners.forEach(id => waitTilux.add(id));
-      const options: FinderOptions = {
-        owners,
-        type: TILUX_TYPE,
-      };
-      void window.nibus.findDevices(options).then(() => {
-        owners.forEach(id => waitTilux.delete(id));
-      });
+  matcher: isAnyOf(setAutobrightness, updateConfig),
+  effect: (_, { getState }) => {
+    if (!selectAutobrightness(getState())) {
+      searchedTilux.clear();
+      return;
     }
+    const owners = selectLinks(getState())
+      .filter(({ mib }) => mib.startsWith('siolynx'))
+      .map(({ id }) => id);
+    findTilux(owners);
   },
 });
 
 startAppListening({
   actionCreator: addDetected,
   effect: ({ payload }, { getState }) => {
-    if (waitTilux && payload.owner && payload.type === TILUX_TYPE && waitTilux.has(payload.owner)) {
+    if (payload.owner && payload.type === TILUX_TYPE && waitTilux.has(payload.owner)) {
       const devices = selectDevicesByAddress(getState(), payload.address);
       if (devices.length === 0) {
         window.nibus.createDevice(payload.owner, payload.address, 'ti_lux_2_3');

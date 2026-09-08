@@ -1,0 +1,82 @@
+diff --git a/build/session/NibusSession.cjs b/build/session/NibusSession.cjs
+index 478d76ce1578ed9f2e982fba684464f8e1895a17..cecd71fec0ce4733f9809b9e7218e3a30d647bdf 100644
+--- a/build/session/NibusSession.cjs
++++ b/build/session/NibusSession.cjs
+@@ -226,6 +226,7 @@ var NibusSession = class extends tiny_typed_emitter.TypedEmitter {
+ 		const { description } = connection;
+ 		const descriptions = Array.isArray(description.select) ? description.select : [description];
+ 		const baseCategory = Array.isArray(description.select) ? description.category : null;
++		let sarpRetryDelay = 5e3;
+ 		const tryFind = () => {
+ 			if (connection.isClosed) return;
+ 			descriptions.reduce(async (acc, desc) => {
+@@ -260,8 +261,11 @@ var NibusSession = class extends tiny_typed_emitter.TypedEmitter {
+ 							}
+ 							return true;
+ 						} catch (e) {
+-							debug$1(`SARP error: ${require_common.toMessage(e)}, ${JSON.stringify(connection.description)}`);
+-							if (!connection.isClosed && descriptions.length === 1) setTimeout(() => tryFind(), 5e3);
++							debug$1(`SARP error: ${require_common.toMessage(e)}, ${JSON.stringify(connection.description)}; retry in ${sarpRetryDelay / 1e3}s`);
++							if (!connection.isClosed && descriptions.length === 1) {
++								setTimeout(() => tryFind(), sarpRetryDelay);
++								sarpRetryDelay = Math.min(sarpRetryDelay * 2, 3e5);
++							}
+ 						}
+ 						return false;
+ 					}
+diff --git a/build/session/NibusSession.mjs b/build/session/NibusSession.mjs
+index fc9bc12f3e9376f9db17944e3d9982310dd36d7e..618a8fa945d3cbe26cc2c0cf5b87b4373261bf99 100644
+--- a/build/session/NibusSession.mjs
++++ b/build/session/NibusSession.mjs
+@@ -222,6 +222,7 @@ var NibusSession = class extends TypedEmitter {
+ 		const { description } = connection;
+ 		const descriptions = Array.isArray(description.select) ? description.select : [description];
+ 		const baseCategory = Array.isArray(description.select) ? description.category : null;
++		let sarpRetryDelay = 5e3;
+ 		const tryFind = () => {
+ 			if (connection.isClosed) return;
+ 			descriptions.reduce(async (acc, desc) => {
+@@ -256,8 +257,11 @@ var NibusSession = class extends TypedEmitter {
+ 							}
+ 							return true;
+ 						} catch (e) {
+-							debug(`SARP error: ${toMessage(e)}, ${JSON.stringify(connection.description)}`);
+-							if (!connection.isClosed && descriptions.length === 1) setTimeout(() => tryFind(), 5e3);
++							debug(`SARP error: ${toMessage(e)}, ${JSON.stringify(connection.description)}; retry in ${sarpRetryDelay / 1e3}s`);
++							if (!connection.isClosed && descriptions.length === 1) {
++								setTimeout(() => tryFind(), sarpRetryDelay);
++								sarpRetryDelay = Math.min(sarpRetryDelay * 2, 3e5);
++							}
+ 						}
+ 						return false;
+ 					}
+diff --git a/src/session/NibusSession.ts b/src/session/NibusSession.ts
+index e624157f20837d45cb9a96ad35ec3836c7dff6af..014665a4f9336b37ceeec892ec5d16dac5f8f430 100644
+--- a/src/session/NibusSession.ts
++++ b/src/session/NibusSession.ts
+@@ -309,6 +309,7 @@ export class NibusSession extends TypedEmitter<NibusSessionEvents> implements IN
+     const { description } = connection;
+     const descriptions = Array.isArray(description.select) ? description.select : [description];
+     const baseCategory = Array.isArray(description.select) ? description.category : null;
++    let sarpRetryDelay = 5000;
+     const tryFind = (): void => {
+       if (connection.isClosed) return;
+       descriptions
+@@ -349,9 +350,14 @@ export class NibusSession extends TypedEmitter<NibusSessionEvents> implements IN
+                 }
+                 return true;
+               } catch (e) {
+-                debug(`SARP error: ${toMessage(e)}, ${JSON.stringify(connection.description)}`);
+-                if (!connection.isClosed && descriptions.length === 1)
+-                  setTimeout(() => tryFind(), 5000);
++                debug(
++                  `SARP error: ${toMessage(e)}, ${JSON.stringify(connection.description)}; ` +
++                    `retry in ${sarpRetryDelay / 1000}s`
++                );
++                if (!connection.isClosed && descriptions.length === 1) {
++                  setTimeout(() => tryFind(), sarpRetryDelay);
++                  sarpRetryDelay = Math.min(sarpRetryDelay * 2, 300000);
++                }
+               }
+               return false;
+             }
