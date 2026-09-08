@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [5.4.4](https://github.com/sarakusha/gmib/compare/v5.4.3...v5.4.4) (2026-09-08)
+
+### Bug Fixes
+
+* include AppImage block map size in update metadata ([bd262b9](https://github.com/sarakusha/gmib/commit/bd262b971cda78eabab41c76c34c520ca33ac305))
+* retry light sensor discovery and back off SARP detection ([d98e3e1](https://github.com/sarakusha/gmib/commit/d98e3e129c716309c67a26edd810575352514348))
 ## [5.4.3](https://github.com/sarakusha/gmib/compare/v5.4.2...v5.4.3) (2026-09-08)
 
 ### Features
