@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [5.4.3](https://github.com/sarakusha/gmib/compare/v5.4.2...v5.4.3) (2026-09-08)
+
+### Features
+
+* automate server kiosk image builds ([17e5ec9](https://github.com/sarakusha/gmib/commit/17e5ec93bcd4e115e12c1cdaf6c98080cbdb1875))
+* publish kiosk images locally on server ([cf0592b](https://github.com/sarakusha/gmib/commit/cf0592bdc1bb5f4cce269ada708e28888805c44f))
+
+### Bug Fixes
+
+* include Ubuntu version in kiosk manifests ([87eb87f](https://github.com/sarakusha/gmib/commit/87eb87fd2623ba410a6fa774336fd2fff71742ba))
+* restore all autoplay players on startup ([87a808a](https://github.com/sarakusha/gmib/commit/87a808a306485baf0900ad08eea431bb0affe8b0))
 ## [5.4.2](https://github.com/sarakusha/gmib/compare/v5.4.1...v5.4.2) (2026-09-08)
 
 ### Features
