@@ -1,15 +1,20 @@
 import type { FunctionInterpolation } from '@emotion/react';
 import type { SelectProps } from '@mui/material';
-import { Box, Paper, Table, TableBody, TableRow } from '@mui/material';
+import { Box, Button, Paper, Table, TableBody, TableRow, TextField } from '@mui/material';
 import type { Theme } from '@mui/material/styles';
 import { css, styled } from '@mui/material/styles';
 import { ChipTypeEnum } from '@novastar/native/ChipType';
 import { DviSelectModeEnum } from '@novastar/native/DviSelectMode';
 import type { BrightnessRGBV } from '@novastar/screen';
 import { getScreenLocation } from '@novastar/screen/getScreenLocation';
+import debounce from 'lodash/debounce';
 import React, { useCallback, useEffect } from 'react';
 
-import { updateNovastarScreens } from '../api/novastar';
+import {
+  updateNovastarScreens,
+  useLoginTaurusMutation,
+  useSetBrightnessMutation,
+} from '../api/novastar';
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useDispatch, useSelector } from '../store';
 
@@ -55,6 +60,18 @@ const NameCell = styled(TableCell)(
 );
 
 const screenName = (index = 0) => `${index}`;
+
+const getTaurusLoginError = (error: unknown): string => {
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'data' in error &&
+    typeof error.data === 'string'
+  ) {
+    return error.data;
+  }
+  return 'Не удалось войти в Taurus';
+};
 
 const NovastarDeviceTab: React.FC<{ device: Novastar | undefined; selected?: boolean }> = ({
   device,
@@ -105,8 +122,158 @@ const NovastarDeviceTab: React.FC<{ device: Novastar | undefined; selected?: boo
     [path, dispatch],
   );
   const [currentScreen, setCurrentScreen] = React.useState<string | undefined>(screenName());
+  const [password, setPassword] = React.useState('');
+  const [loginTaurus, { isLoading: isLoggingIn }] = useLoginTaurusMutation();
+  const [loginError, setLoginError] = React.useState<string>();
+  const [taurusBrightness, setTaurusBrightness] = React.useState(100);
+  const [taurusBrightnessDirty, setTaurusBrightnessDirty] = React.useState(false);
+  const pendingTaurusBrightness = React.useRef<number | undefined>(undefined);
+  const [setBrightness, { isLoading: isSettingBrightness }] = useSetBrightnessMutation();
+  const setTaurusBrightnessDebounced = React.useMemo(
+    () =>
+      debounce(
+        (nextPath: string, value: number) => {
+          void setBrightness({ path: nextPath, screen: -1, value })
+            .unwrap()
+            .then(() => {
+              if (pendingTaurusBrightness.current === value) {
+                setTaurusBrightnessDirty(false);
+              }
+            })
+            .catch(() => undefined);
+        },
+        200,
+        { maxWait: 1000 },
+      ),
+    [setBrightness],
+  );
+  useEffect(
+    () => () => {
+      setTaurusBrightnessDebounced.cancel();
+    },
+    [setTaurusBrightnessDebounced],
+  );
+  useEffect(() => {
+    if (!taurusBrightnessDirty && device?.taurus?.brightness !== undefined) {
+      setTaurusBrightness(device.taurus.brightness);
+    }
+  }, [device?.taurus?.brightness, taurusBrightnessDirty]);
+  const taurusBrightnessChanged = useCallback(
+    (_name: string, value: unknown) => {
+      if (!path) return;
+      const brightness = minmax(100, Number(value));
+      pendingTaurusBrightness.current = brightness;
+      setTaurusBrightness(brightness);
+      setTaurusBrightnessDirty(true);
+      setTaurusBrightnessDebounced(path, brightness);
+    },
+    [path, setTaurusBrightnessDebounced],
+  );
 
-  if (!device || !device.info) return null;
+  if (!device) return null;
+  if (device.taurus) {
+    const { taurus } = device;
+    return (
+      <Box sx={{ p: 1, width: 1, fontSize: 'body1.fontSize', display: active ? 'block' : 'none' }}>
+        <Paper>
+          <StyledAccordionList
+            name="taurus"
+            title={`${taurus.productName} — ${taurus.aliasName}`}
+            component={Table}
+            expanded
+          >
+            <TableBody>
+              <TableRow>
+                <NameCell>Серийный номер</NameCell>
+                <ValueCell align="right">{taurus.serialNumber}</ValueCell>
+              </TableRow>
+              <TableRow>
+                <NameCell>Идентификатор привязки</NameCell>
+                <ValueCell align="right">{device.path}</ValueCell>
+              </TableRow>
+              <TableRow>
+                <NameCell>Текущий адрес</NameCell>
+                <ValueCell align="right">
+                  {taurus.address}:{taurus.port}
+                </ValueCell>
+              </TableRow>
+              <TableRow>
+                <NameCell>Платформа</NameCell>
+                <ValueCell align="right">{taurus.platform}</ValueCell>
+              </TableRow>
+              <TableRow>
+                <NameCell>Холст</NameCell>
+                <ValueCell align="right">
+                  {taurus.width}x{taurus.height}
+                </ValueCell>
+              </TableRow>
+              <TableRow>
+                <NameCell>Яркость</NameCell>
+                {taurus.authenticated ? (
+                  <EditCell
+                    name="taurusBrightness"
+                    type="number"
+                    value={taurusBrightness}
+                    min={0}
+                    max={100}
+                    step={1}
+                    unit="%"
+                    align="right"
+                    dirty={taurusBrightnessDirty}
+                    disabled={isSettingBrightness}
+                    onChangeProperty={taurusBrightnessChanged}
+                  />
+                ) : (
+                  <ValueCell align="right">
+                    {taurus.brightness === undefined ? '—' : `${taurus.brightness}%`}
+                  </ValueCell>
+                )}
+              </TableRow>
+              <TableRow>
+                <NameCell>Освещённость</NameCell>
+                <ValueCell align="right">
+                  {taurus.illuminance === undefined ? '—' : `${taurus.illuminance} лк`}
+                </ValueCell>
+              </TableRow>
+              <TableRow>
+                <NameCell>Авторизация</NameCell>
+                <ValueCell align="right">{taurus.authenticated ? 'Да' : 'Нет'}</ValueCell>
+              </TableRow>
+            </TableBody>
+          </StyledAccordionList>
+          {taurus.passwordRequired && (
+            <Box
+              component="form"
+              sx={{ p: 2, display: 'flex', gap: 1, alignItems: 'flex-start' }}
+              onSubmit={event => {
+                event.preventDefault();
+                setLoginError(undefined);
+                void loginTaurus({ path: device.path, password })
+                  .unwrap()
+                  .then(() => setPassword(''))
+                  .catch(error => setLoginError(getTaurusLoginError(error)));
+              }}
+            >
+              <TextField
+                label="Пароль Taurus"
+                type="password"
+                size="small"
+                value={password}
+                error={Boolean(loginError)}
+                helperText={loginError ?? device.error ?? ' '}
+                onChange={event => setPassword(event.target.value)}
+                autoComplete="current-password"
+              />
+              <Button type="submit" variant="contained" disabled={!password || isLoggingIn}>
+                Войти
+              </Button>
+            </Box>
+          )}
+        </Paper>
+      </Box>
+    );
+  }
+  if (!device.info) return null;
   const { screens = [], info } = device;
   const locations = screens
     .map(({ info: screenInfo }) => screenInfo && getScreenLocation(screenInfo))

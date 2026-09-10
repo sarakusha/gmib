@@ -63,6 +63,11 @@ const localConfigSchema: Schema<LocalConfig> = {
   pritunlUserId: { type: 'string' },
   knock: { type: 'string' },
   autoUpdate: { type: 'boolean', default: false },
+  taurusPasswords: {
+    type: 'object',
+    additionalProperties: { type: 'string' },
+    default: {},
+  },
 };
 
 const localConfig = new Store<LocalConfig>({

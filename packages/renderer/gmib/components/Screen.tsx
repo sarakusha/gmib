@@ -44,7 +44,8 @@ declare global {
 
 // import type { Screen } from '/@common/video';
 
-const onBeforeAddress = (value: string): boolean => reAddress.test(value) || reIPv4.test(value);
+const onBeforeAddress = (value: string): boolean =>
+  reAddress.test(value) || reIPv4.test(value) || /^taurus:(?:\*|[A-Za-z0-9_-]+)$/.test(value);
 
 const FieldSet = styled(FormFieldSet)(({ theme }) => ({
   padding: theme.spacing(1),
@@ -438,13 +439,13 @@ const ScreenComponent: React.FC<Props> = ({
                   )}
                 </Box>
                 <ChipInput
-                  label="Адреса минихостов"
+                  label="Адреса минихостов и Taurus"
                   value={values.addresses}
                   onBeforeAdd={onBeforeAddress}
                   onAdd={addAddress}
                   onDelete={removeAddress}
                   // alwaysShowPlaceholder
-                  placeholder="address+X,Y:WxH"
+                  placeholder="address+X,Y:WxH или taurus:<SN>; taurus:* — все"
                   fullWidth
                   disabled={readonly}
                 />

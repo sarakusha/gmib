@@ -1,5 +1,5 @@
 import { Container, Paper, Tab, Tabs } from '@mui/material';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import FixedHeadLayout from '../../common/FixedHeadLayout';
 
@@ -26,6 +26,10 @@ type TabsType = 'props' | 'telemetry';
 
 const NovastarTabs: React.FC<{ device: Novastar | undefined }> = ({ device }) => {
   const [value, setValue] = useState<TabsType>('props');
+  const isTaurus = Boolean(device?.taurus);
+  useEffect(() => {
+    if (isTaurus) setValue('props');
+  }, [isTaurus]);
   return (
     <FixedHeadLayout className="yu6ODejliBoLEEgGBmOEe rlXINR-cZo5bnISD5TaUT">
       <Paper square>
@@ -37,12 +41,12 @@ const NovastarTabs: React.FC<{ device: Novastar | undefined }> = ({ device }) =>
           variant="fullWidth"
         >
           <Tab label="Свойства" value="props" />
-          <Tab label="Телеметрия" value="telemetry" />
+          <Tab label="Телеметрия" value="telemetry" disabled={isTaurus} />
         </Tabs>
       </Paper>
       <Container>
         <NovastarDeviceTab device={device} selected={value === 'props'} />
-        <NovastarTelemetryTab device={device} selected={value === 'telemetry'} />
+        {!isTaurus && <NovastarTelemetryTab device={device} selected={value === 'telemetry'} />}
       </Container>
     </FixedHeadLayout>
   );

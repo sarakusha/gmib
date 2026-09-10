@@ -56,6 +56,9 @@ importers:
       '@novastar/serial':
         specifier: 2.2.1
         version: 2.2.1(debug@4.4.3)(iconv-lite@0.6.3)
+      '@novastar/taurus':
+        specifier: 0.1.0
+        version: 0.1.0(debug@4.4.3)(iconv-lite@0.6.3)
       '@reduxjs/toolkit':
         specifier: ^2.12.0
         version: 2.12.0(react-redux@9.3.0(@types/react@19.2.18)(react@19.2.8)(redux@5.0.1))(react@19.2.8)
@@ -1368,6 +1371,9 @@ packages:
     resolution: {integrity: sha512-7iAPuNVqsKlIoeibVhQs2lOSa254tJDDTxw/DxQMS7+c39orIymRs+SK1DnKSXtPHLJ2Uxalh8FSuMz+FpjNqA==}
     peerDependencies:
       debug: ^4.3.3
+
+  '@novastar/taurus@0.1.0':
+    resolution: {integrity: sha512-MDMdgNrXrShwMILnbSWWVDkBURPNXqiIYAs5t2Dl99tCvXSIlaNfqIzZDkivlO4CN/cwaepBhoJpbigV13e7tA==}
 
   '@oxc-project/types@0.142.0':
     resolution: {integrity: sha512-7W+2q5AKQVU36fkaryontrHn3YDt1RyUYXatw9i5H8ocYe2sPKSFB6eS8WNPeRKiN1qAWWZUPm7gwFzJGrccqQ==}
@@ -6793,6 +6799,14 @@ snapshots:
       - buffer
       - iconv-lite
       - supports-color
+
+  '@novastar/taurus@0.1.0(debug@4.4.3)(iconv-lite@0.6.3)':
+    dependencies:
+      typed-struct: 2.7.3(debug@4.4.3)(iconv-lite@0.6.3)
+    transitivePeerDependencies:
+      - buffer
+      - debug
+      - iconv-lite
 
   '@oxc-project/types@0.142.0': {}
 

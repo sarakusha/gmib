@@ -311,6 +311,7 @@ export type LocalConfig = {
   pritunlUserId?: string;
   knock?: string;
   autoUpdate: boolean;
+  taurusPasswords?: Record<string, string>;
 };
 
 export type Modules = IModuleInfo<Minihost2Info | Minihost3Info>[];

@@ -270,8 +270,8 @@ const Devices: React.FC = () => {
                 </Wrapper>
               </ListItemIcon>
               <ListItemText
-                primary={card.info?.name}
-                secondary={card.path}
+                primary={card.info?.name ?? card.taurus?.aliasName ?? 'NovaStar'}
+                secondary={card.taurus ? `${card.taurus.address}:${card.taurus.port}` : card.path}
                 slotProps={{
                   primary: noWrap,
                   secondary: noWrap,

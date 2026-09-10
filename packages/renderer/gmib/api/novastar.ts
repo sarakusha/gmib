@@ -118,6 +118,13 @@ const novastarApi = createApi({
         body: { path },
       }),
     }),
+    loginTaurus: build.mutation<void, { path: string; password: string }>({
+      query: body => ({
+        url: 'novastar/taurus/login',
+        method: 'POST',
+        body,
+      }),
+    }),
     startTelemetry: build.mutation<void, { path: string; selectors?: NovastarSelector[] }>({
       query: ({
         path,
@@ -238,8 +245,13 @@ export const useNovastar = (path?: string) => {
   });
 };
 
-export const { useReloadMutation, useStartTelemetryMutation, useCancelTelemetryMutation } =
-  novastarApi;
+export const {
+  useReloadMutation,
+  useLoginTaurusMutation,
+  useSetBrightnessMutation,
+  useStartTelemetryMutation,
+  useCancelTelemetryMutation,
+} = novastarApi;
 
 export const sse: Middleware = api => {
   const { getState, dispatch } = api as MiddlewareAPI<AppDispatch, RootState>;

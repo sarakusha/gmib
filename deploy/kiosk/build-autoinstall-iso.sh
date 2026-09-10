@@ -297,6 +297,14 @@ autoinstall:
   network:
     version: 2
     ethernets:
+      taurus-rndis:
+        match:
+          driver: rndis_host
+        dhcp4: true
+        dhcp4-overrides:
+          use-routes: false
+          use-dns: false
+        optional: true
       wired:
         match:
           name: "e*"

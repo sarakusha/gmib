@@ -11,7 +11,7 @@ export type ExtendedProps = {
 
 const StyledInput = extendStyled(Input, { align: 'left', dirty: false })(({ align, dirty }) => ({
   '&.MuiInput-root': {
-    fontWight: dirty ? 'bold' : 'normal',
+    fontWeight: dirty ? 'bold' : 'normal',
     fontSize: 'inherit',
   },
   '& input': {

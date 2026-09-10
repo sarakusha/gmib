@@ -73,6 +73,20 @@ api.post('/reload', async (req, res) => {
   // else res.json(device);
 });
 
+api.post('/taurus/login', async (req, res) => {
+  const { path, password } = req.body as { path?: string; password?: string };
+  if (!path || typeof password !== 'string') {
+    res.status(400).send('Taurus path and password are required');
+    return;
+  }
+  try {
+    await master.loginTaurus(path, password);
+    res.end();
+  } catch (error) {
+    res.status(401).send((error as Error).message);
+  }
+});
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Methods = FilterNames<typeof master, (arg: ScreenId, value: any) => Promise<void>>;
 

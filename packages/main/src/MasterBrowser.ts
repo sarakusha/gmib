@@ -1,4 +1,11 @@
-import type { Novastar, Screen, ScreenId } from '/@common/novastar';
+import {
+  getTaurusPath,
+  isTaurusPath,
+  type Novastar,
+  type Screen,
+  type ScreenId,
+  TAURUS_ALL_PATH,
+} from '/@common/novastar';
 import { asyncSerial, delay, notEmpty, reIPv4 } from '/@common/helpers';
 import type { CabinetInfo, NovastarTelemetry } from '/@common/helpers';
 
@@ -12,6 +19,12 @@ import flatten from 'lodash/flatten';
 import { Connection, series } from '@novastar/codec';
 import { findNetDevices, MULTICAST_ADDRESS, net, REQ, UDP_PORT } from '@novastar/net';
 import { ScreenConfigurator } from '@novastar/screen';
+import {
+  discoverTaurusPlayers,
+  TaurusClient,
+  type TaurusPlayerInfo,
+  TaurusResponseError,
+} from '@novastar/taurus';
 import memoize from 'lodash/memoize';
 import { TypedEmitter } from 'tiny-typed-emitter';
 
@@ -19,6 +32,7 @@ import NovastarLoader from './NovastarLoader';
 import ExternalBroadcastDetection from './externalBroadcastDetection';
 import { probeGmibAddress } from './remoteGmib';
 import { getAddressesForScreen, getScreens } from './screen';
+import localConfig from './localConfig';
 import {
   createWindowsMdnsFirewallCommands,
   type WindowsMdnsFirewallWarning,
@@ -76,12 +90,24 @@ class SafeScreenConfigurator extends ScreenConfigurator {
   timeout: NodeJS.Timeout | undefined;
 }
 
+type TaurusControl = {
+  info: TaurusPlayerInfo;
+  client?: TaurusClient;
+  connecting?: Promise<void>;
+  loginFailed?: boolean;
+  brightness?: number;
+  illuminance?: number;
+  timeout?: NodeJS.Timeout;
+};
+
 class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
   #unknownPath = new Set<string>();
 
   private gmibAddressSources = new Map<string, Set<string>>();
 
   private novastarControls = new Map<string, SafeScreenConfigurator>();
+
+  private taurusControls = new Map<string, TaurusControl>();
 
   private broadcastDetector: Socket | undefined;
 
@@ -169,6 +195,10 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
     const session = net.sessions[address];
     debug(`open ${address}, session: ${session ? 'found' : 'missing'}`);
     if (!session) return;
+    if (address.endsWith(':5200') && this.hasTaurusHost(address.slice(0, -5))) {
+      session.close();
+      return;
+    }
     if (this.novastarControls.has(address)) {
       this.emit('change', address, { connected: true });
     } else {
@@ -199,6 +229,10 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
   private hasNetDevice(address: string): boolean {
     const fullAddress = address.includes(':') ? address : `${address}:5200`;
     return this.novastarControls.has(fullAddress) || net.sessions[fullAddress] != null;
+  }
+
+  private hasTaurusHost(address: string): boolean {
+    return [...this.taurusControls.values()].some(control => control.info.address === address);
   }
 
   private disconnectHandler = (address: string) => {
@@ -283,6 +317,21 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
   }
 
   async reload(address: string, first = false): Promise<void> {
+    const taurus = this.taurusControls.get(address);
+    if (taurus) {
+      if (taurus.client) {
+        this.emit('change', address, { isBusy: true });
+        try {
+          await this.updateTaurusState(address);
+        } finally {
+          this.emit('change', address, { isBusy: false });
+        }
+      } else {
+        taurus.loginFailed = false;
+        await this.connectTaurus(address).catch(() => undefined);
+      }
+      return;
+    }
     const controller = this.novastarControls.get(address);
     if (!controller) return;
     this.emit('change', address, { isBusy: true });
@@ -314,6 +363,26 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
   }
 
   async setBrightness(screenId: ScreenId, percent: number) {
+    const taurusEntries =
+      screenId.path === TAURUS_ALL_PATH
+        ? [...this.taurusControls.entries()]
+        : isTaurusPath(screenId.path)
+          ? [...this.taurusControls.entries()].filter(([path]) => path === screenId.path)
+          : [...this.taurusControls.entries()].filter(
+              ([, control]) => control.info.address === screenId.path.split(':', 1)[0],
+            );
+    if (screenId.screen === -1 && (isTaurusPath(screenId.path) || taurusEntries.length > 0)) {
+      await Promise.all(
+        taurusEntries.map(async ([path]) => {
+          const control = this.taurusControls.get(path);
+          if (!control?.client) return;
+          await control.client.setBrightness(percent);
+          control.brightness = percent;
+          this.emit('change', path, { taurus: this.getTaurusState(control) });
+        }),
+      );
+      return;
+    }
     const controller = this.novastarControls.get(screenId.path);
     // debug('setBrightness: %d [%s]', percent, screenId.path);
     if (!controller) {
@@ -340,6 +409,164 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
         })();
       }, 1000);
     }
+  }
+
+  private getTaurusState(control: TaurusControl): NonNullable<Novastar['taurus']> {
+    const { info } = control;
+    const hasPassword = Boolean(
+      localConfig.get('taurusPasswords')?.[info.sn] ?? process.env.NOVASTAR_TAURUS_PASSWORD,
+    );
+    return {
+      address: info.address,
+      port: info.tcpPort,
+      aliasName: info.aliasName,
+      productName: info.productName,
+      serialNumber: info.sn,
+      platform: info.platform,
+      width: info.width,
+      height: info.height,
+      authenticated: Boolean(control.client),
+      passwordRequired: !control.client && (Boolean(control.loginFailed) || !hasPassword),
+      brightness: control.brightness,
+      illuminance: control.illuminance,
+    };
+  }
+
+  private addTaurus(info: TaurusPlayerInfo): void {
+    const path = getTaurusPath(info.sn);
+    const legacyPath = `${info.address}:5200`;
+    if (this.novastarControls.has(legacyPath) || net.sessions[legacyPath]) {
+      net.close(legacyPath);
+    }
+    const current = this.taurusControls.get(path);
+    if (current) {
+      current.info = info;
+      this.emit('change', path, { connected: true, taurus: this.getTaurusState(current) });
+      if (!current.client && !current.connecting && !current.loginFailed) {
+        void this.connectTaurus(path).catch(() => undefined);
+      }
+      return;
+    }
+    const control: TaurusControl = { info };
+    this.taurusControls.set(path, control);
+    this.emit('add', {
+      path,
+      isBusy: false,
+      connected: true,
+      taurus: this.getTaurusState(control),
+    });
+    void this.connectTaurus(path).catch(() => undefined);
+  }
+
+  private async connectTaurus(path: string, passwordOverride?: string): Promise<void> {
+    const control = this.taurusControls.get(path);
+    if (!control) throw new Error(`Unknown Taurus player: ${path}`);
+    if (control.connecting) return control.connecting;
+    const password =
+      passwordOverride ??
+      localConfig.get('taurusPasswords')?.[control.info.sn] ??
+      process.env.NOVASTAR_TAURUS_PASSWORD;
+    if (!password) {
+      this.emit('change', path, {
+        isBusy: false,
+        error: 'Требуется пароль Taurus',
+        taurus: this.getTaurusState(control),
+      });
+      return;
+    }
+
+    const connecting = (async () => {
+      this.emit('change', path, { isBusy: true, error: undefined });
+      control.client?.close();
+      control.client = undefined;
+      let client: TaurusClient | undefined;
+      try {
+        client = await TaurusClient.connect({
+          host: control.info.address,
+          port: control.info.tcpPort,
+          privacy: control.info.privacy,
+        });
+        const result = await client.login({ sn: control.info.sn, password });
+        if (!result.logined) throw new Error('Taurus login was rejected');
+        control.client = client;
+        control.loginFailed = false;
+        if (passwordOverride) {
+          localConfig.set('taurusPasswords', {
+            ...localConfig.get('taurusPasswords'),
+            [control.info.sn]: passwordOverride,
+          });
+        }
+        this.emit('change', path, {
+          connected: true,
+          isBusy: false,
+          error: undefined,
+          taurus: this.getTaurusState(control),
+        });
+        await this.updateTaurusState(path);
+      } catch (error) {
+        client?.close();
+        control.loginFailed = error instanceof TaurusResponseError;
+        this.emit('change', path, {
+          connected: control.loginFailed,
+          isBusy: false,
+          error: (error as Error).message,
+          taurus: this.getTaurusState(control),
+        });
+        throw error;
+      }
+    })();
+    control.connecting = connecting;
+    try {
+      await connecting;
+    } finally {
+      control.connecting = undefined;
+    }
+  }
+
+  private async updateTaurusState(path: string): Promise<void> {
+    const control = this.taurusControls.get(path);
+    if (!control?.client) return;
+    clearTimeout(control.timeout);
+    const [brightness, illuminance] = await Promise.allSettled([
+      control.client.getBrightness(),
+      control.client.getEnvironmentBrightness(),
+    ]);
+    if (brightness.status === 'rejected' && illuminance.status === 'rejected') {
+      control.client.close();
+      control.client = undefined;
+      this.emit('change', path, {
+        connected: false,
+        error:
+          brightness.reason instanceof Error
+            ? brightness.reason.message
+            : String(brightness.reason),
+        taurus: this.getTaurusState(control),
+      });
+      if (!control.loginFailed && this.running) {
+        control.timeout = setTimeout(() => {
+          void this.connectTaurus(path).catch(() => undefined);
+        }, 1000);
+        control.timeout.unref();
+      }
+      return;
+    }
+    if (brightness.status === 'fulfilled') control.brightness = brightness.value.ratio;
+    if (illuminance.status === 'fulfilled') {
+      control.illuminance = illuminance.value;
+      this.emit('illuminance', path, illuminance.value);
+    }
+    const taurus = this.getTaurusState(control);
+    this.emit('change', path, { connected: true, error: undefined, taurus });
+    control.timeout = setTimeout(() => void this.updateTaurusState(path), 30000);
+    control.timeout.unref();
+  }
+
+  async loginTaurus(path: string, password: string): Promise<void> {
+    if (!password) throw new Error('Taurus password is empty');
+    const control = this.taurusControls.get(path);
+    if (!control) throw new Error(`Unknown Taurus player: ${path}`);
+    control.loginFailed = false;
+    await this.connectTaurus(path, password);
   }
 
   openBroadcastDetector() {
@@ -400,15 +627,21 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
             this.openNetDevice(address);
           }
         });
-        const addresses = await findNetDevices(dest);
+        const [addresses, taurusPlayers] = await Promise.all([
+          findNetDevices(dest),
+          discoverTaurusPlayers(dest),
+        ]);
         if (!this.running) return;
         // debug(`found: ${addresses.join(', ')}`);
         this.openBroadcastDetector();
+        const taurusAddresses = new Set(taurusPlayers.map(player => player.address));
         addresses.forEach(address => {
+          if (taurusAddresses.has(address)) return;
           if (!this.hasNetDevice(address) && !hardAddresses.includes(address)) {
             this.openNetDevice(address);
           }
         });
+        taurusPlayers.forEach(player => this.addTaurus(player));
       } finally {
         if (this.running) {
           this.finder = setTimeout(() => {
@@ -437,6 +670,11 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
     net.off('close', this.closeHandler);
     [...this.novastarControls.values()].forEach(control => control.session.close());
     this.novastarControls.clear();
+    [...this.taurusControls.values()].forEach(control => {
+      clearTimeout(control.timeout);
+      control.client?.close();
+    });
+    this.taurusControls.clear();
     await this.closeBroadcastDetector();
     this.externalBroadcastDetection.reset();
     await delay(0);
@@ -445,8 +683,8 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
   }
 
   getAll = (): Promise<Novastar[]> => {
-    debug(`getAll: ${[...this.novastarControls.keys()].join(', ')}`);
-    return Promise.all(
+    debug(`getAll: ${[...this.novastarControls.keys(), ...this.taurusControls.keys()].join(', ')}`);
+    const controllers = Promise.all(
       [...this.novastarControls.entries()].map(async ([address, controller]) => {
         const novastar = await this.getNovastar(address, true);
         return (
@@ -459,6 +697,15 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
         );
       }),
     );
+    return controllers.then(items => [
+      ...items,
+      ...[...this.taurusControls.entries()].map(([path, control]) => ({
+        path,
+        isBusy: Boolean(control.connecting),
+        connected: true,
+        taurus: this.getTaurusState(control),
+      })),
+    ]);
   };
 
   /**

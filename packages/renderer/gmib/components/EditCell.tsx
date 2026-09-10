@@ -25,8 +25,8 @@ type Props = {
 
 const EndAdornment = styled(InputAdornment)({
   '&.MuiInputAdornment-positionEnd': {
-    marginLeft: 0,
-    marginRight: -20,
+    marginLeft: 4,
+    marginRight: 0,
   },
 });
 

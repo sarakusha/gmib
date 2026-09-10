@@ -49,6 +49,9 @@ import Highcharts from './Highcharts';
 import type { SeriesSolidgaugeOptions } from './Highcharts';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:autobrightness`);
+const MAX_ILLUMINANCE = 65535;
+const illuminanceScale = (value: number): number =>
+  Math.log1p(Math.max(0, value)) / Math.log1p(MAX_ILLUMINANCE);
 const setItem =
   (index: number, value?: number) =>
   (array: (number | undefined)[]): (number | undefined)[] => {
@@ -132,12 +135,16 @@ const highChartsOptions: Highcharts.Options = {
     minorTickInterval: undefined,
 
     tickWidth: 1,
+    min: 0,
+    max: 1,
+    tickPositions: [0, 10, 100, 1000, 10000, MAX_ILLUMINANCE].map(illuminanceScale),
     labels: {
       y: 0,
+      formatter() {
+        const lux = Math.expm1(Number(this.value) * Math.log1p(MAX_ILLUMINANCE));
+        return Math.round(lux).toLocaleString('ru-RU');
+      },
     },
-    type: 'logarithmic',
-    min: 1,
-    max: 65535,
     lineColor: '#ccd6eb',
     tickColor: '#ccd6eb',
   },
@@ -158,7 +165,7 @@ const highChartsOptions: Highcharts.Options = {
       data: [null],
       dataLabels: {
         format: `<div class="labelWrapper">
-             <div class="value">{y}</div>
+             <div class="value">{point.custom.illuminance}</div>
              <div class="unit">Lux</div>
              </div>`,
       },
@@ -311,10 +318,18 @@ const Autobrightness: React.FC = () => {
   }, [setToolbar, tab]);
   useEffect(() => {
     setOptions(prev => {
-      const value = { ...prev };
-      const [first] = (value.series as SeriesSolidgaugeOptions[]) ?? [];
-      if (first !== undefined) first.data = [illuminance ?? null];
-      return value;
+      const series = [...((prev.series as SeriesSolidgaugeOptions[]) ?? [])];
+      const [first] = series;
+      if (first !== undefined) {
+        series[0] = {
+          ...first,
+          data:
+            illuminance === undefined
+              ? [null]
+              : [{ y: illuminanceScale(illuminance), custom: { illuminance } }],
+        };
+      }
+      return { ...prev, series };
     });
   }, [illuminance]);
   const [lux, setLux] = useState<(number | undefined)[]>([]);
