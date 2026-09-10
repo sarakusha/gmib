@@ -156,6 +156,9 @@ export default class VideoSource {
         close(true);
       }
       if (typeof data.duration === 'number') this.#duration = data.duration;
+      // Let the owner replace this source while it is still usable. In particular,
+      // decoder recovery needs to attach the replacement before this stream closes.
+      onMessage(ev);
       if (data.err) {
         debug(
           `${sourceLabel}: decoder error, ending source: ${data.err.message ?? 'unknown error'}`,
@@ -170,7 +173,6 @@ export default class VideoSource {
         streamController = undefined;
         close(true);
       }
-      onMessage(ev);
     };
 
     this.decoder = decoder;

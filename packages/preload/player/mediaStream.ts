@@ -21,6 +21,7 @@ import {
 import ipcDispatch from '../common/ipcDispatch';
 import VideoSource from './VideoSource';
 import { resolvePlaybackEngine, shouldFallbackAfterDecoderError } from './playbackEngine';
+import PlaybackWatchdog from './playbackWatchdog';
 
 let playlist: Playlist | undefined;
 let player: Player;
@@ -39,6 +40,10 @@ const sourceId = +(search.get('source_id') ?? 1);
 const stream = new MediaStream();
 const streamReady = new Deferred<void>();
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:mediastream`);
+const PLAYBACK_STALL_CHECK_INTERVAL = 5_000;
+const playbackWatchdog = new PlaybackWatchdog();
+
+let playbackRecoveryInProgress = false;
 
 let linuxPreferSoftwareDecoding = false;
 
@@ -51,6 +56,7 @@ const getPlaybackEngine = (): NonNullable<Player['playbackEngine']> =>
 const updatePlaybackState = (next: MediaSessionPlaybackState): void => {
   if (playbackState === next) return;
   playbackState = next;
+  playbackWatchdog.setActive(next === 'playing');
   ipcDispatch(setPlaybackState(next));
 };
 
@@ -96,6 +102,7 @@ const createSourceVideo = (uri: string): HTMLVideoElement => {
   video.addEventListener('error', () => {
     const message = video.error?.message || `media error code ${video.error?.code ?? 'unknown'}`;
     debug(`source video error: ${message}`);
+    if (video === sourceVideo) requestPlaybackRecovery(`source video error: ${message}`);
   });
 
   (document.body ?? document.documentElement).append(video);
@@ -284,6 +291,7 @@ const SEEK_END_GUARD = 0.1;
 const decoderRecoveryAttempts = new Map<string, number>();
 
 type DecoderSourceMessage = {
+  frame?: VideoFrame;
   duration?: number;
   seekStartTime?: number;
   timer?: number;
@@ -330,7 +338,7 @@ const disposeDecoder = (): void => {
 };
 
 const recoverDecoderSource = (source: VideoSource, reason?: string): void => {
-  if (source !== currentSource || !videoStream) return;
+  if (source !== currentSource || !videoStream || source.closed) return;
   if (shouldFallbackAfterDecoderError() && !linuxPreferSoftwareDecoding) {
     linuxPreferSoftwareDecoding = true;
     void ipcRenderer
@@ -367,6 +375,9 @@ const recoverDecoderSource = (source: VideoSource, reason?: string): void => {
 };
 
 const handleDecoderSourceMessage = (source: VideoSource, data: DecoderSourceMessage): void => {
+  if (data.frame && source === currentSource && playbackState === 'playing') {
+    playbackWatchdog.defer();
+  }
   if (typeof data.duration === 'number' && source === currentSource) {
     decoderDuration = data.duration;
     ipcDispatch(setDuration(data.duration));
@@ -554,7 +565,7 @@ const updateDecoder = async (): Promise<void> => {
       nextSource = preloadedSource;
     }
   }
-  if (!currentSource?.closed && current !== currentSource?.options.itemId) {
+  if (!currentSource || currentSource.closed || current !== currentSource.options.itemId) {
     if (nextSource && nextSource.options.itemId === current && playlist.items.length > 1) {
       currentSource?.close();
       return;
@@ -649,6 +660,64 @@ const update = async (): Promise<void> => {
   if (engine === 'capture') await updateCapture();
   else await updateDecoder();
 };
+
+const getPlaybackPosition = (): number | undefined => {
+  if (activeEngine === 'decoder') return undefined;
+  return sourceVideo?.currentTime;
+};
+
+const recoverPlayback = async (reason: string): Promise<void> => {
+  if (
+    playbackState !== 'playing' ||
+    !player?.autoPlay ||
+    !playlist?.items.length ||
+    playbackRecoveryInProgress
+  ) {
+    return;
+  }
+
+  playbackRecoveryInProgress = true;
+  playbackWatchdog.defer();
+  debug(
+    `recover stalled playback: engine=${activeEngine ?? '<none>'} position=${getPlaybackPosition() ?? '<unknown>'} reason=${reason}`,
+  );
+  try {
+    if (activeEngine === 'capture') {
+      const currentItem =
+        playlist.items.find(item => item.id === player.current) ?? playlist.items[0];
+      const media: MediaInfo = await ipcRenderer.invoke('getMedia', currentItem.md5);
+      const uri = getMediaUri(media?.filename);
+      if (uri) await loadSource(uri, currentItem.id, currentItem.md5);
+      return;
+    }
+
+    if (activeEngine === 'decoder' && currentSource && !currentSource.closed) {
+      seekDecoderSource(decoderPosition, 'recover');
+      return;
+    }
+
+    currentSource?.close();
+    currentSource = undefined;
+    nextSource?.close();
+    nextSource = undefined;
+    await update();
+  } catch (err) {
+    debug(`error while recovering playback: ${(err as Error).message}`);
+  } finally {
+    playbackRecoveryInProgress = false;
+  }
+};
+
+function requestPlaybackRecovery(reason: string): void {
+  void recoverPlayback(reason);
+}
+
+window.setInterval(() => {
+  const active = Boolean(playbackState === 'playing' && player?.autoPlay && playlist?.items.length);
+  if (playbackWatchdog.observe(active, getPlaybackPosition())) {
+    requestPlaybackRecovery('playback position did not advance');
+  }
+}, PLAYBACK_STALL_CHECK_INTERVAL);
 
 export const attachStreamToVideo = (video: HTMLVideoElement): void => {
   if (video) {
