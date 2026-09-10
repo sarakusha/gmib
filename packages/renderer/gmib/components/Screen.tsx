@@ -29,6 +29,7 @@ import { supportsFeature } from '/@common/capabilities';
 import { DefaultDisplays } from '/@common/video';
 import { reAddress } from '/@common/config';
 import { reIPv4, toHexId } from '/@common/helpers';
+import { TAURUS_MIN_SERIAL_SUFFIX_LENGTH } from '/@common/novastar';
 import { isRemoteSession } from '/@common/remote';
 
 import Accordion from './Accordion';
@@ -44,8 +45,15 @@ declare global {
 
 // import type { Screen } from '/@common/video';
 
+const taurusAddressPattern = new RegExp(
+  `^taurus:[A-Za-z0-9_-]{${TAURUS_MIN_SERIAL_SUFFIX_LENGTH},}$`,
+);
+
 const onBeforeAddress = (value: string): boolean =>
-  reAddress.test(value) || reIPv4.test(value) || /^taurus:(?:\*|[A-Za-z0-9_-]+)$/.test(value);
+  reAddress.test(value) ||
+  reIPv4.test(value) ||
+  value === 'taurus:*' ||
+  taurusAddressPattern.test(value);
 
 const FieldSet = styled(FormFieldSet)(({ theme }) => ({
   padding: theme.spacing(1),
@@ -445,7 +453,7 @@ const ScreenComponent: React.FC<Props> = ({
                   onAdd={addAddress}
                   onDelete={removeAddress}
                   // alwaysShowPlaceholder
-                  placeholder="address+X,Y:WxH или taurus:<SN>; taurus:* — все"
+                  placeholder="address+X,Y:WxH или taurus:<последние 4+ символа SN>"
                   fullWidth
                   disabled={readonly}
                 />

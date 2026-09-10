@@ -1,4 +1,5 @@
 import {
+  getMatchingTaurusSerials,
   getTaurusPath,
   isTaurusPath,
   type Novastar,
@@ -363,15 +364,29 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
   }
 
   async setBrightness(screenId: ScreenId, percent: number) {
+    const allTaurusEntries = [...this.taurusControls.entries()];
+    const matchingSerials = new Set(
+      getMatchingTaurusSerials(
+        screenId.path,
+        allTaurusEntries.map(([, control]) => control.info.sn),
+      ),
+    );
     const taurusEntries =
       screenId.path === TAURUS_ALL_PATH
-        ? [...this.taurusControls.entries()]
+        ? allTaurusEntries
         : isTaurusPath(screenId.path)
-          ? [...this.taurusControls.entries()].filter(([path]) => path === screenId.path)
-          : [...this.taurusControls.entries()].filter(
+          ? allTaurusEntries.filter(([, control]) => matchingSerials.has(control.info.sn))
+          : allTaurusEntries.filter(
               ([, control]) => control.info.address === screenId.path.split(':', 1)[0],
             );
     if (screenId.screen === -1 && (isTaurusPath(screenId.path) || taurusEntries.length > 0)) {
+      if (screenId.path !== TAURUS_ALL_PATH && taurusEntries.length > 1) {
+        throw new Error(
+          `Неоднозначный серийный номер Taurus ${screenId.path}: ${taurusEntries
+            .map(([, control]) => control.info.sn)
+            .join(', ')}`,
+        );
+      }
       await Promise.all(
         taurusEntries.map(async ([path]) => {
           const control = this.taurusControls.get(path);
