@@ -124,8 +124,10 @@ const NovastarTelemetryTab: React.FC<{ device: Novastar | undefined; selected?: 
               }) => {
                 const info: Record<string, unknown> = {};
                 if (isTaurus) {
-                  info.P = port;
-                  info.RC = card;
+                  // Taurus addresses cards from zero, while NovaLCT/NCP presents them from one.
+                  // Keep protocol indices in CabinetInfo and convert only the visible labels.
+                  info.P = port + 1;
+                  info.RC = card + 1;
                   if (selectors.has(NovastarSelector.Temperature) && temperature != null)
                     info.t = temperature;
                   if (selectors.has(NovastarSelector.Voltage) && voltage != null)
