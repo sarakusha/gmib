@@ -481,6 +481,29 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
     void this.connectTaurus(path).catch(() => undefined);
   }
 
+  private handleTaurusDisconnect(
+    path: string,
+    client: TaurusClient,
+    error = 'Taurus connection closed',
+  ): void {
+    const control = this.taurusControls.get(path);
+    if (!control) return;
+    if (control.client !== client) return;
+    control.client = undefined;
+    this.emit('change', path, {
+      connected: false,
+      error,
+      taurus: this.getTaurusState(control),
+    });
+    clearTimeout(control.timeout);
+    if (!control.loginFailed && this.running) {
+      control.timeout = setTimeout(() => {
+        void this.connectTaurus(path).catch(() => undefined);
+      }, 1000);
+      control.timeout.unref();
+    }
+  }
+
   private async connectTaurus(path: string, passwordOverride?: string): Promise<void> {
     const control = this.taurusControls.get(path);
     if (!control) throw new Error(`Unknown Taurus player: ${path}`);
@@ -511,7 +534,11 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
         });
         const result = await client.login({ sn: control.info.sn, password });
         if (!result.logined) throw new Error('Taurus login was rejected');
-        control.client = client;
+        const connectedClient = client;
+        control.client = connectedClient;
+        connectedClient.connection.stream.once('close', () => {
+          this.handleTaurusDisconnect(path, connectedClient);
+        });
         control.loginFailed = false;
         if (passwordOverride) {
           localConfig.set('taurusPasswords', {
@@ -549,30 +576,22 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
   private async updateTaurusState(path: string): Promise<void> {
     const control = this.taurusControls.get(path);
     if (!control?.client) return;
+    const { client } = control;
     clearTimeout(control.timeout);
     const [brightness, illuminance] = await Promise.allSettled([
-      control.client.getBrightness(),
-      control.client.getEnvironmentBrightness(),
+      client.getBrightness(),
+      client.getEnvironmentBrightness(),
     ]);
     if (brightness.status === 'rejected' && illuminance.status === 'rejected') {
-      control.client.close();
-      control.client = undefined;
-      this.emit('change', path, {
-        connected: false,
-        error:
-          brightness.reason instanceof Error
-            ? brightness.reason.message
-            : String(brightness.reason),
-        taurus: this.getTaurusState(control),
-      });
-      if (!control.loginFailed && this.running) {
-        control.timeout = setTimeout(() => {
-          void this.connectTaurus(path).catch(() => undefined);
-        }, 1000);
-        control.timeout.unref();
-      }
+      client.close();
+      this.handleTaurusDisconnect(
+        path,
+        client,
+        brightness.reason instanceof Error ? brightness.reason.message : String(brightness.reason),
+      );
       return;
     }
+    if (control.client !== client) return;
     if (brightness.status === 'fulfilled') control.brightness = brightness.value.ratio;
     if (illuminance.status === 'fulfilled') {
       control.illuminance = illuminance.value;
