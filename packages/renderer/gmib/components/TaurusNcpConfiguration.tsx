@@ -1,5 +1,6 @@
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import MemoryIcon from '@mui/icons-material/Memory';
+import SystemUpdateAltIcon from '@mui/icons-material/SystemUpdateAlt';
 import {
   Alert,
   Box,
@@ -24,6 +25,7 @@ import { useSnackbar } from 'notistack';
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
+  useApplyTaurusFirmwareMutation,
   useApplyTaurusNcpConfigurationMutation,
   useInspectTaurusNcpConfigurationMutation,
 } from '../api/novastar';
@@ -51,14 +53,20 @@ const TaurusNcpConfiguration: React.FC<{ path: string; disabled?: boolean }> = (
   const [cabinetIndex, setCabinetIndex] = useState(0);
   const [selectedTargets, setSelectedTargets] = useState<Set<string>>(new Set());
   const [confirmed, setConfirmed] = useState(false);
+  const [firmwareConfirmed, setFirmwareConfirmed] = useState(false);
   const [inspect, inspectionState] = useInspectTaurusNcpConfigurationMutation();
   const [apply, applyState] = useApplyTaurusNcpConfigurationMutation();
+  const [applyFirmware, firmwareState] = useApplyTaurusFirmwareMutation();
   const inspection = inspectionState.data;
   const resetInspection = inspectionState.reset;
   const previousPath = useRef<string | undefined>(undefined);
-  const busy = disabled || inspectionState.isLoading || applyState.isLoading;
+  const busy =
+    disabled || inspectionState.isLoading || applyState.isLoading || firmwareState.isLoading;
   const cabinet = inspection?.cabinets[cabinetIndex];
-  const operationError = errorMessage(inspectionState.error) ?? errorMessage(applyState.error);
+  const operationError =
+    errorMessage(inspectionState.error) ??
+    errorMessage(applyState.error) ??
+    errorMessage(firmwareState.error);
 
   useEffect(() => {
     if (previousPath.current === path) return;
@@ -67,6 +75,7 @@ const TaurusNcpConfiguration: React.FC<{ path: string; disabled?: boolean }> = (
     setCabinetIndex(0);
     setSelectedTargets(new Set());
     setConfirmed(false);
+    setFirmwareConfirmed(false);
     resetInspection();
   }, [path, resetInspection]);
 
@@ -89,12 +98,10 @@ const TaurusNcpConfiguration: React.FC<{ path: string; disabled?: boolean }> = (
     setFilename(selectedFile);
     setCabinetIndex(0);
     setConfirmed(false);
+    setFirmwareConfirmed(false);
     void inspect({ path, filename: selectedFile })
       .unwrap()
-      .then(result => {
-        const first = result.targets[0];
-        setSelectedTargets(new Set(first ? [targetKey(first.port, first.receivingCard)] : []));
-      })
+      .then(() => setSelectedTargets(new Set()))
       .catch(() => setSelectedTargets(new Set()));
   }, [inspect, path]);
 
@@ -137,6 +144,85 @@ const TaurusNcpConfiguration: React.FC<{ path: string; disabled?: boolean }> = (
     selected,
   ]);
 
+  const firmware = cabinet?.firmware;
+  const availableTargets = useMemo(
+    () =>
+      inspection?.targets.filter(
+        target => target.version?.modelId !== undefined && !target.version.error,
+      ) ?? [],
+    [inspection],
+  );
+  const incompatibleFirmwareTargets = useMemo(
+    () =>
+      firmware
+        ? selected.filter(
+            target =>
+              target.version?.modelId === undefined ||
+              target.version.error !== undefined ||
+              target.version.modelId !== firmware.modelId,
+          )
+        : [],
+    [firmware, selected],
+  );
+
+  const applyFirmwareUpdate = useCallback(() => {
+    if (
+      !inspection ||
+      !filename ||
+      !firmware ||
+      !selected.length ||
+      incompatibleFirmwareTargets.length ||
+      !firmwareConfirmed
+    ) {
+      return;
+    }
+    const targets = selected
+      .map(
+        target =>
+          `порт ${target.port + 1}, карта ${target.receivingCard + 1} (${target.x}, ${target.y})`,
+      )
+      .join('\n');
+    if (
+      !window.confirm(
+        `Прошить ${firmware.filename}\n` +
+          `Модель: ${firmware.model ?? 'не указана'}, ID ${firmware.modelId}\n` +
+          `Выбранные карты:\n${targets}\n\nНе отключайте питание до завершения операции.`,
+      )
+    ) {
+      return;
+    }
+    void applyFirmware({
+      path,
+      filename,
+      cabinetIndex,
+      targets: selected.map(target => ({
+        port: target.port,
+        receivingCard: target.receivingCard,
+      })),
+    })
+      .unwrap()
+      .then(result => {
+        enqueueSnackbar(`Firmware принимающих карт обновлён: ${result.completed}/${result.total}`, {
+          variant: 'success',
+        });
+        setFirmwareConfirmed(false);
+        void inspect({ path, filename });
+      })
+      .catch(() => undefined);
+  }, [
+    applyFirmware,
+    cabinetIndex,
+    enqueueSnackbar,
+    filename,
+    firmware,
+    firmwareConfirmed,
+    incompatibleFirmwareTargets.length,
+    inspect,
+    inspection,
+    path,
+    selected,
+  ]);
+
   return (
     <Stack spacing={2}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -162,7 +248,11 @@ const TaurusNcpConfiguration: React.FC<{ path: string; disabled?: boolean }> = (
                 labelId="ncp-cabinet-label"
                 label="Конфигурация"
                 value={cabinetIndex}
-                onChange={event => setCabinetIndex(Number(event.target.value))}
+                onChange={event => {
+                  setCabinetIndex(Number(event.target.value));
+                  setConfirmed(false);
+                  setFirmwareConfirmed(false);
+                }}
               >
                 {inspection.cabinets.map(item => (
                   <MenuItem value={item.index} key={item.index}>
@@ -178,29 +268,48 @@ const TaurusNcpConfiguration: React.FC<{ path: string; disabled?: boolean }> = (
             {cabinet.icType ? `, ${cabinet.icType}` : ''}
             {cabinet.refreshRate ? `, ${cabinet.refreshRate} Гц` : ''}
           </Typography>
-          {cabinet.firmwareFile && (
-            <Typography variant="body2" color="text.secondary">
-              В пакете есть firmware: {cabinet.firmwareFile}
-            </Typography>
+          {firmware && (
+            <Alert severity="info">
+              Firmware: {firmware.filename}
+              {firmware.version ? `; версия манифеста пакета ${firmware.version}` : ''}; модель{' '}
+              {firmware.model ?? 'не указана'}, ID {firmware.modelId ?? 'не указан'}.
+              {firmware.files.length > 0 && (
+                <Box component="span" sx={{ display: 'block', mt: 0.5 }}>
+                  {firmware.files.map(file => (
+                    <Typography
+                      component="span"
+                      variant="body2"
+                      key={file.filename}
+                      sx={{ display: 'block' }}
+                    >
+                      {file.label}: {file.filename}
+                      {file.version ? `; Version в манифесте: ${file.version}` : ''}
+                    </Typography>
+                  ))}
+                </Box>
+              )}
+            </Alert>
           )}
 
           <Box>
             <FormControlLabel
               control={
                 <Checkbox
-                  checked={selected.length === inspection.targets.length && selected.length > 0}
-                  indeterminate={selected.length > 0 && selected.length < inspection.targets.length}
-                  onChange={event =>
+                  checked={selected.length === availableTargets.length && selected.length > 0}
+                  indeterminate={selected.length > 0 && selected.length < availableTargets.length}
+                  onChange={event => {
                     setSelectedTargets(
                       new Set(
                         event.target.checked
-                          ? inspection.targets.map(target =>
+                          ? availableTargets.map(target =>
                               targetKey(target.port, target.receivingCard),
                             )
                           : [],
                       ),
-                    )
-                  }
+                    );
+                    setConfirmed(false);
+                    setFirmwareConfirmed(false);
+                  }}
                 />
               }
               label="Выбрать все принимающие карты"
@@ -212,6 +321,9 @@ const TaurusNcpConfiguration: React.FC<{ path: string; disabled?: boolean }> = (
                   <TableCell>Порт</TableCell>
                   <TableCell>Карта</TableCell>
                   <TableCell>Область</TableCell>
+                  <TableCell>Модель ID</TableCell>
+                  <TableCell>FPGA</TableCell>
+                  <TableCell>MCU</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -221,12 +333,17 @@ const TaurusNcpConfiguration: React.FC<{ path: string; disabled?: boolean }> = (
                     <TableRow key={key}>
                       <TableCell padding="checkbox">
                         <Checkbox
+                          disabled={
+                            target.version?.modelId === undefined || Boolean(target.version.error)
+                          }
                           checked={selectedTargets.has(key)}
                           onChange={event =>
                             setSelectedTargets(previous => {
                               const next = new Set(previous);
                               if (event.target.checked) next.add(key);
                               else next.delete(key);
+                              setConfirmed(false);
+                              setFirmwareConfirmed(false);
                               return next;
                             })
                           }
@@ -237,6 +354,11 @@ const TaurusNcpConfiguration: React.FC<{ path: string; disabled?: boolean }> = (
                       <TableCell>
                         {target.width}×{target.height} @ {target.x}, {target.y}
                       </TableCell>
+                      <TableCell>
+                        {target.version?.error ? 'недоступна' : (target.version?.modelId ?? '—')}
+                      </TableCell>
+                      <TableCell>{target.version?.fpgaVersion ?? '—'}</TableCell>
+                      <TableCell>{target.version?.mcuVersion ?? '—'}</TableCell>
                     </TableRow>
                   );
                 })}
@@ -252,7 +374,26 @@ const TaurusNcpConfiguration: React.FC<{ path: string; disabled?: boolean }> = (
             }
             label="Я проверил модель кабинета и выбранные принимающие карты"
           />
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+          {firmware && (
+            <>
+              {incompatibleFirmwareTargets.length > 0 && (
+                <Alert severity="warning">
+                  Прошивка заблокирована: модель одной или нескольких выбранных карт не совпадает
+                  с firmware.
+                </Alert>
+              )}
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={firmwareConfirmed}
+                    onChange={event => setFirmwareConfirmed(event.target.checked)}
+                  />
+                }
+                label="Я проверил модель карт и обеспечил стабильное питание на время прошивки"
+              />
+            </>
+          )}
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
             <Button
               variant="contained"
               color="warning"
@@ -262,6 +403,22 @@ const TaurusNcpConfiguration: React.FC<{ path: string; disabled?: boolean }> = (
             >
               Применить NCP
             </Button>
+            {firmware && (
+              <Button
+                variant="contained"
+                color="error"
+                startIcon={<SystemUpdateAltIcon />}
+                disabled={
+                  busy ||
+                  !selected.length ||
+                  incompatibleFirmwareTargets.length > 0 ||
+                  !firmwareConfirmed
+                }
+                onClick={applyFirmwareUpdate}
+              >
+                Прошить firmware
+              </Button>
+            )}
           </Box>
         </>
       )}

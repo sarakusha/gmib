@@ -9,6 +9,7 @@ import {
 } from '/@common/novastar';
 import { asyncSerial, delay, notEmpty, reIPv4 } from '/@common/helpers';
 import type { CabinetInfo, NovastarTelemetry } from '/@common/helpers';
+import type { TaurusFirmwareApplyResult, TaurusNcpTarget } from '/@common/taurusConfiguration';
 
 import debugFactory from 'debug';
 
@@ -16,6 +17,7 @@ import { createHash } from 'crypto';
 import { connect } from 'net';
 import dgram, { type Socket } from 'dgram';
 import { networkInterfaces } from 'os';
+import pathModule from 'node:path';
 import flatten from 'lodash/flatten';
 
 import { Connection, series } from '@novastar/codec';
@@ -39,7 +41,16 @@ import TaurusTelemetryLoader from './TaurusTelemetryLoader';
 import ExternalBroadcastDetection from './externalBroadcastDetection';
 import { probeGmibAddress } from './remoteGmib';
 import { getAddressesForScreen, getScreens } from './screen';
-import { getTaurusNcpTargets, inspectTaurusNcp, validateTaurusNcpFilename } from './taurusNcp';
+import {
+  getTaurusNcpTargets,
+  inspectTaurusNcp,
+  loadTaurusNcpFirmware,
+  validateTaurusNcpFilename,
+} from './taurusNcp';
+import {
+  applyTaurusReceivingCardFirmware,
+  readTaurusReceivingCardVersions,
+} from './taurusFirmware';
 import { inspectTaurusScr, writeAndVerifyTaurusConfiguration } from './taurusScr';
 import localConfig from './localConfig';
 import {
@@ -619,9 +630,15 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
     await this.connectTaurus(path, password);
   }
 
-  private getTaurusClient(path: string): { control: TaurusControl; client: TaurusClient } {
+  private async getTaurusClient(
+    path: string,
+  ): Promise<{ control: TaurusControl; client: TaurusClient }> {
     const control = this.taurusControls.get(path);
     if (!control) throw new Error(`Unknown Taurus player: ${path}`);
+    if (!control.client && !control.loginFailed) {
+      if (control.connecting) await control.connecting;
+      else await this.connectTaurus(path);
+    }
     if (!control.client) throw new Error('Taurus authentication is required');
     return { control, client: control.client };
   }
@@ -649,7 +666,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
   }
 
   async getTaurusScreenConfiguration(path: string) {
-    const { control, client } = this.getTaurusClient(path);
+    const { control, client } = await this.getTaurusClient(path);
     return {
       current: await client.getLedScreenConfiguration(),
       backupAvailable: Boolean(this.getTaurusConfigurationBackup(control)),
@@ -662,12 +679,27 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
   }
 
   async inspectTaurusNcpConfiguration(path: string, filename: string) {
-    const { client } = this.getTaurusClient(path);
-    return inspectTaurusNcp(filename, await client.getLedScreenConfiguration());
+    const { client } = await this.getTaurusClient(path);
+    const inspection = await inspectTaurusNcp(filename, await client.getLedScreenConfiguration());
+    const versions = new Map(
+      (
+        await readTaurusReceivingCardVersions(
+          client,
+          inspection.targets.map(({ port, receivingCard }) => ({ port, receivingCard })),
+        )
+      ).map(version => [`${version.port}:${version.receivingCard}`, version]),
+    );
+    return {
+      ...inspection,
+      targets: inspection.targets.map(target => ({
+        ...target,
+        version: versions.get(`${target.port}:${target.receivingCard}`),
+      })),
+    };
   }
 
   async applyTaurusScreenConfiguration(path: string, filename: string) {
-    const { control, client } = this.getTaurusClient(path);
+    const { control, client } = await this.getTaurusClient(path);
     if (control.configurationBusy) throw new Error('Taurus configuration write is already running');
     control.configurationBusy = true;
     try {
@@ -711,7 +743,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
   }
 
   async restoreTaurusScreenConfiguration(path: string) {
-    const { control, client } = this.getTaurusClient(path);
+    const { control, client } = await this.getTaurusClient(path);
     if (control.configurationBusy) throw new Error('Taurus configuration write is already running');
     const backup = this.getTaurusConfigurationBackup(control);
     if (!backup) throw new Error('No Taurus screen configuration backup is available');
@@ -751,7 +783,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
     cabinetIndex: number,
     requestedTargets: Array<{ port: number; receivingCard: number }>,
   ) {
-    const { control, client } = this.getTaurusClient(path);
+    const { control, client } = await this.getTaurusClient(path);
     if (control.configurationBusy) throw new Error('Taurus configuration write is already running');
     if (!Number.isInteger(cabinetIndex) || cabinetIndex < 0) {
       throw new RangeError('Invalid NCP cabinet index');
@@ -827,6 +859,93 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
         }
       }
       throw new Error('Taurus receiving-card configuration timed out');
+    } catch (error) {
+      this.emit('change', path, {
+        isBusy: false,
+        error: (error as Error).message,
+        taurus: this.getTaurusState(control),
+      });
+      throw error;
+    } finally {
+      control.configurationBusy = false;
+    }
+  }
+
+  async applyTaurusFirmware(
+    path: string,
+    filename: string,
+    cabinetIndex: number,
+    requestedTargets: Array<Pick<TaurusNcpTarget, 'port' | 'receivingCard'>>,
+  ): Promise<TaurusFirmwareApplyResult> {
+    const { control, client } = await this.getTaurusClient(path);
+    if (control.configurationBusy) throw new Error('Taurus configuration write is already running');
+    if (!Number.isInteger(cabinetIndex) || cabinetIndex < 0) {
+      throw new RangeError('Invalid NCP cabinet index');
+    }
+    validateTaurusNcpFilename(filename);
+    if (!requestedTargets.length) throw new RangeError('Select at least one receiving card');
+    control.configurationBusy = true;
+    this.emit('change', path, { isBusy: true, error: undefined });
+    try {
+      const topology = await client.getLedScreenConfiguration();
+      const availableTargets = new Set(
+        getTaurusNcpTargets(topology).map(target => `${target.port}:${target.receivingCard}`),
+      );
+      const uniqueTargets = [
+        ...new Map(
+          requestedTargets.map(target => [`${target.port}:${target.receivingCard}`, target]),
+        ).values(),
+      ];
+      uniqueTargets.forEach(target => {
+        if (!availableTargets.has(`${target.port}:${target.receivingCard}`)) {
+          throw new RangeError(
+            `Receiving card ${target.receivingCard + 1} on port ${target.port + 1} is not configured`,
+          );
+        }
+      });
+
+      const firmware = await loadTaurusNcpFirmware(filename, cabinetIndex);
+      if (pathModule.extname(firmware.info.filename).toLowerCase() !== '.zip') {
+        throw new TypeError('Receiving-card firmware must be a ZIP archive');
+      }
+      const before = await readTaurusReceivingCardVersions(client, uniqueTargets);
+      before.forEach(target => {
+        const label = `Receiving card ${target.receivingCard + 1} on port ${target.port + 1}`;
+        if (target.error || target.modelId === undefined) {
+          throw new Error(`${label} did not return its model information`);
+        }
+        if (target.modelId !== firmware.info.modelId) {
+          throw new RangeError(
+            `${label} has model ID ${target.modelId}, firmware requires ${firmware.info.modelId}`,
+          );
+        }
+      });
+
+      const md5 = createHash('md5').update(firmware.data).digest('hex');
+      const safeName =
+        pathModule
+          .basename(firmware.info.filename, pathModule.extname(firmware.info.filename))
+          .replace(/[^a-z\d._-]+/gi, '-')
+          .replace(/^-+|-+$/g, '') || 'receiving-card-firmware';
+      const ftpPath = `/sdcard/gmib/${safeName}-${md5.slice(0, 12)}.zip`;
+      const devicePath = `/mnt${ftpPath}`;
+      await uploadTaurusFile({
+        host: control.info.address,
+        port: control.info.ftpPort ?? TAURUS_FTP_PORT,
+        password: await client.getFtpPassword(),
+        remotePath: ftpPath,
+        data: firmware.data,
+      });
+      await applyTaurusReceivingCardFirmware(client, devicePath, uniqueTargets);
+      await delay(2);
+      const versions = await readTaurusReceivingCardVersions(client, uniqueTargets);
+      this.emit('change', path, {
+        connected: true,
+        isBusy: false,
+        error: undefined,
+        taurus: this.getTaurusState(control),
+      });
+      return { completed: uniqueTargets.length, total: uniqueTargets.length, versions };
     } catch (error) {
       this.emit('change', path, {
         isBusy: false,

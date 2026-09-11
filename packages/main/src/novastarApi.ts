@@ -2,7 +2,10 @@
 import express, { type Request, type Response } from 'express';
 
 import type { ScreenId } from '/@common/novastar';
-import type { TaurusNcpApplyRequest } from '/@common/taurusConfiguration';
+import type {
+  TaurusFirmwareApplyRequest,
+  TaurusNcpApplyRequest,
+} from '/@common/taurusConfiguration';
 import type { FilterNames } from '/@common/helpers';
 
 import master from './MasterBrowser';
@@ -167,6 +170,25 @@ api.post('/taurus/ncp/apply', async (req, res) => {
   }
   try {
     res.json(await master.applyTaurusNcpConfiguration(path, filename, cabinetIndex, targets));
+  } catch (error) {
+    res.status(500).send((error as Error).message);
+  }
+});
+
+api.post('/taurus/ncp/firmware/apply', async (req, res) => {
+  const { path, filename, cabinetIndex, targets } = req.body as Partial<TaurusFirmwareApplyRequest>;
+  if (
+    !path ||
+    !filename ||
+    typeof cabinetIndex !== 'number' ||
+    !Array.isArray(targets) ||
+    !targets.length
+  ) {
+    res.status(400).send('Taurus path, NCP firmware and receiving-card targets are required');
+    return;
+  }
+  try {
+    res.json(await master.applyTaurusFirmware(path, filename, cabinetIndex, targets));
   } catch (error) {
     res.status(500).send((error as Error).message);
   }

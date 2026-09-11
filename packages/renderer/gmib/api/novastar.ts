@@ -6,6 +6,8 @@ import debugFactory from 'debug';
 import type { Novastar, Screen, ScreenId } from '/@common/novastar';
 import type {
   TaurusConfigurationState,
+  TaurusFirmwareApplyRequest,
+  TaurusFirmwareApplyResult,
   TaurusNcpApplyRequest,
   TaurusNcpApplyResult,
   TaurusNcpInspection,
@@ -185,6 +187,13 @@ const novastarApi = createApi({
         body,
       }),
     }),
+    applyTaurusFirmware: build.mutation<TaurusFirmwareApplyResult, TaurusFirmwareApplyRequest>({
+      query: body => ({
+        url: 'novastar/taurus/ncp/firmware/apply',
+        method: 'POST',
+        body,
+      }),
+    }),
     startTelemetry: build.mutation<void, { path: string; selectors?: NovastarSelector[] }>({
       query: ({
         path,
@@ -306,6 +315,7 @@ export const useNovastar = (path?: string) => {
 };
 
 export const {
+  useApplyTaurusFirmwareMutation,
   useApplyTaurusNcpConfigurationMutation,
   useApplyTaurusScreenConfigurationMutation,
   useReloadMutation,

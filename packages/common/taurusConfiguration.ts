@@ -55,6 +55,29 @@ export type TaurusNcpCabinetInfo = {
   scanType?: number;
   binarySize: number;
   parameterCount: number;
+  firmware?: TaurusReceivingCardFirmwareInfo;
+};
+
+export type TaurusReceivingCardFirmwareFile = {
+  label: string;
+  filename: string;
+  version?: string;
+  remark?: string;
+};
+
+export type TaurusReceivingCardFirmwareInfo = {
+  filename: string;
+  version?: string;
+  model?: string;
+  modelId?: number;
+  files: TaurusReceivingCardFirmwareFile[];
+};
+
+export type TaurusReceivingCardVersionInfo = {
+  modelId?: number;
+  fpgaVersion?: string;
+  mcuVersion?: string;
+  error?: string;
 };
 
 export type TaurusNcpTarget = {
@@ -65,6 +88,7 @@ export type TaurusNcpTarget = {
   y: number;
   width: number;
   height: number;
+  version?: TaurusReceivingCardVersionInfo;
 };
 
 export type TaurusNcpInspection = {
@@ -87,4 +111,12 @@ export type TaurusNcpApplyResult = {
   completed: number;
   total: number;
   progress?: number;
+};
+
+export type TaurusFirmwareApplyRequest = TaurusNcpApplyRequest;
+
+export type TaurusFirmwareApplyResult = {
+  completed: number;
+  total: number;
+  versions: Array<Pick<TaurusNcpTarget, 'port' | 'receivingCard'> & TaurusReceivingCardVersionInfo>;
 };
