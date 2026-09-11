@@ -20,7 +20,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useSnackbar } from 'notistack';
-import React, { memo, useCallback, useEffect, useState } from 'react';
+import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
 
 import {
   useApplyTaurusScreenConfigurationMutation,
@@ -111,10 +111,13 @@ const TaurusConfigurationTab: React.FC<{
   const [restore, restoreState] = useRestoreTaurusScreenConfigurationMutation();
   const inspection = inspectionState.data;
   const resetInspection = inspectionState.reset;
+  const previousPath = useRef<string | undefined>(undefined);
   const busy =
     isFetching || inspectionState.isLoading || applyState.isLoading || restoreState.isLoading;
 
   useEffect(() => {
+    if (previousPath.current === path) return;
+    previousPath.current = path;
     setFilename('');
     setConfirmed(false);
     resetInspection();

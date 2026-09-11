@@ -21,7 +21,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useSnackbar } from 'notistack';
-import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   useApplyTaurusNcpConfigurationMutation,
@@ -52,11 +52,14 @@ const TaurusNcpConfiguration: React.FC<{ path: string }> = ({ path }) => {
   const [apply, applyState] = useApplyTaurusNcpConfigurationMutation();
   const inspection = inspectionState.data;
   const resetInspection = inspectionState.reset;
+  const previousPath = useRef<string | undefined>(undefined);
   const busy = inspectionState.isLoading || applyState.isLoading;
   const cabinet = inspection?.cabinets[cabinetIndex];
   const operationError = errorMessage(inspectionState.error) ?? errorMessage(applyState.error);
 
   useEffect(() => {
+    if (previousPath.current === path) return;
+    previousPath.current = path;
     setFilename('');
     setCabinetIndex(0);
     setSelectedTargets(new Set());
