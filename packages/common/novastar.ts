@@ -2,6 +2,8 @@ import type { ChipTypeEnum } from '@novastar/native/ChipType';
 import type { TestModeEnum } from '@novastar/native/TestMode';
 import type { BrightnessRGBV, DeviceInfo, LEDDisplayInfo } from '@novastar/screen';
 
+import type { TaurusFirmwareProgress } from './taurusConfiguration';
+
 export type ScreenId = {
   path: string;
   screen: number;
@@ -66,5 +68,6 @@ export type Novastar = {
     passwordRequired: boolean;
     brightness?: number;
     illuminance?: number;
+    firmwareProgress?: TaurusFirmwareProgress;
   };
 };

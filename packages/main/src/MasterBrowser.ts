@@ -9,7 +9,11 @@ import {
 } from '/@common/novastar';
 import { asyncSerial, delay, notEmpty, reIPv4 } from '/@common/helpers';
 import type { CabinetInfo, NovastarTelemetry } from '/@common/helpers';
-import type { TaurusFirmwareApplyResult, TaurusNcpTarget } from '/@common/taurusConfiguration';
+import type {
+  TaurusFirmwareApplyResult,
+  TaurusFirmwareProgress,
+  TaurusNcpTarget,
+} from '/@common/taurusConfiguration';
 
 import debugFactory from 'debug';
 
@@ -119,6 +123,7 @@ type TaurusControl = {
   loginFailed?: boolean;
   brightness?: number;
   illuminance?: number;
+  firmwareProgress?: TaurusFirmwareProgress;
   timeout?: NodeJS.Timeout;
 };
 
@@ -468,6 +473,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
       passwordRequired: !control.client && (Boolean(control.loginFailed) || !hasPassword),
       brightness: control.brightness,
       illuminance: control.illuminance,
+      firmwareProgress: control.firmwareProgress,
     };
   }
 
@@ -936,9 +942,13 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
         remotePath: ftpPath,
         data: firmware.data,
       });
-      await applyTaurusReceivingCardFirmware(client, devicePath, uniqueTargets);
+      await applyTaurusReceivingCardFirmware(client, devicePath, uniqueTargets, progress => {
+        control.firmwareProgress = progress;
+        this.emit('change', path, { taurus: this.getTaurusState(control) });
+      });
       await delay(2);
       const versions = await readTaurusReceivingCardVersions(client, uniqueTargets);
+      control.firmwareProgress = undefined;
       this.emit('change', path, {
         connected: true,
         isBusy: false,
@@ -947,6 +957,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
       });
       return { completed: uniqueTargets.length, total: uniqueTargets.length, versions };
     } catch (error) {
+      control.firmwareProgress = undefined;
       this.emit('change', path, {
         isBusy: false,
         error: (error as Error).message,

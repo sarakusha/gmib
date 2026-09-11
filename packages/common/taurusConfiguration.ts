@@ -115,6 +115,18 @@ export type TaurusNcpApplyResult = {
 
 export type TaurusFirmwareApplyRequest = TaurusNcpApplyRequest;
 
+export type TaurusFirmwareProgress = {
+  totalTargets: number;
+  targetIndex: number;
+  port: number;
+  receivingCard: number;
+  totalFiles: number;
+  fileIndex: number;
+  fileLabel: string;
+  fileProgress: number;
+  overallProgress: number;
+};
+
 export type TaurusFirmwareApplyResult = {
   completed: number;
   total: number;

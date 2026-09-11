@@ -262,7 +262,11 @@ const TaurusConfigurationTab: React.FC<{
         </Box>
 
         <Divider />
-        <TaurusNcpConfiguration path={path} disabled={!authenticated} />
+        <TaurusNcpConfiguration
+          path={path}
+          disabled={!authenticated}
+          firmwareProgress={device?.taurus?.firmwareProgress}
+        />
       </Stack>
     </Paper>
   );

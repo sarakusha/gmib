@@ -1,6 +1,10 @@
 import type { TaurusClient } from '@novastar/taurus';
 
-import type { TaurusNcpTarget, TaurusReceivingCardVersionInfo } from '/@common/taurusConfiguration';
+import type {
+  TaurusFirmwareProgress,
+  TaurusNcpTarget,
+  TaurusReceivingCardVersionInfo,
+} from '/@common/taurusConfiguration';
 import { NovastarSelector } from '/@common/helpers';
 
 import { readTaurusReceivingCards } from './TaurusTelemetryLoader';
@@ -15,8 +19,29 @@ type RawVersionInfo = {
 
 type RawVersionResponse = { receiveCardList?: unknown };
 
+type RawFirmwareProgress = {
+  totalLists?: unknown;
+  listIndex?: unknown;
+  portIndex?: unknown;
+  connectedIndex?: unknown;
+  totalFiles?: unknown;
+  fileIndex?: unknown;
+  fileLabel?: unknown;
+  fileProcess?: unknown;
+};
+
 const optionalNumber = (value: unknown): number | undefined =>
   typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : undefined;
+
+const progressNumber = (value: unknown, fallback = 0): number => optionalNumber(value) ?? fallback;
+
+const clampPercent = (value: number): number => Math.min(100, Math.max(0, value));
+
+const wait = (milliseconds: number): Promise<void> =>
+  new Promise(resolve => {
+    const timeout = setTimeout(resolve, milliseconds);
+    timeout.unref();
+  });
 
 const versionInfo = (result: RawVersionInfo): TaurusReceivingCardVersionInfo => ({
   modelId: optionalNumber(result.modelId),
@@ -99,26 +124,81 @@ export const readTaurusReceivingCardVersions = async (
   return result;
 };
 
+export const readTaurusFirmwareProgress = async (
+  client: TaurusClient,
+): Promise<TaurusFirmwareProgress | undefined> => {
+  const result = await client.connection.requestJson<RawFirmwareProgress>({
+    what: 46,
+    type: 3,
+    action: 5,
+  });
+  const totalTargets = progressNumber(result.totalLists);
+  if (!totalTargets) return undefined;
+  const targetIndex = progressNumber(result.listIndex);
+  const totalFiles = progressNumber(result.totalFiles);
+  const fileIndex = progressNumber(result.fileIndex);
+  const fileProgress = clampPercent(progressNumber(result.fileProcess));
+  const targetProgress = totalFiles ? (fileIndex + fileProgress / 100) / totalFiles : 0;
+  return {
+    totalTargets,
+    targetIndex,
+    port: progressNumber(result.portIndex),
+    receivingCard: progressNumber(result.connectedIndex),
+    totalFiles,
+    fileIndex,
+    fileLabel: typeof result.fileLabel === 'string' ? result.fileLabel : '',
+    fileProgress,
+    overallProgress: clampPercent(((targetIndex + targetProgress) / totalTargets) * 100),
+  };
+};
+
 export const applyTaurusReceivingCardFirmware = async (
   client: TaurusClient,
   devicePath: string,
   targets: Address[],
+  onProgress?: (progress: TaurusFirmwareProgress) => void,
 ): Promise<void> => {
   const connection = client.connection as typeof client.connection & { timeout: number };
   const previousTimeout = connection.timeout;
   // ScreenService applies every file in the archive and restarts MCU/FPGA for every target.
   connection.timeout = Math.max(previousTimeout, 180_000 + targets.length * 120_000);
+  let completed = false;
+  let operationError: Error | undefined;
   try {
-    await connection.requestJson(
-      { what: 46, type: 1, action: 8 },
-      {
-        updateList: targets.map(target => ({
-          filePath: devicePath,
-          portIndex: target.port,
-          connectedIndex: target.receivingCard,
-        })),
-      },
-    );
+    const operation = connection
+      .requestJson(
+        { what: 46, type: 1, action: 8 },
+        {
+          updateList: targets.map(target => ({
+            filePath: devicePath,
+            portIndex: target.port,
+            connectedIndex: target.receivingCard,
+          })),
+        },
+      )
+      .then(
+        () => {
+          completed = true;
+        },
+        error => {
+          operationError = error instanceof Error ? error : new Error(String(error));
+          completed = true;
+        },
+      );
+    // request() captures the long timeout synchronously; progress queries keep the normal timeout.
+    connection.timeout = previousTimeout;
+    while (!completed) {
+      await wait(500);
+      if (completed) break;
+      try {
+        const progress = await readTaurusFirmwareProgress(client);
+        if (progress) onProgress?.(progress);
+      } catch {
+        // A missed progress sample must not abort the firmware operation itself.
+      }
+    }
+    await operation;
+    if (operationError) throw operationError;
   } finally {
     connection.timeout = previousTimeout;
   }

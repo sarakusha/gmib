@@ -5,6 +5,7 @@ import type { TaurusClient } from '@novastar/taurus';
 
 import {
   applyTaurusReceivingCardFirmware,
+  readTaurusFirmwareProgress,
   readTaurusReceivingCardVersion,
 } from '../src/taurusFirmware';
 import { inspectTaurusFirmwareArchive } from '../src/taurusNcp';
@@ -130,5 +131,32 @@ describe('Taurus receiving-card firmware', () => {
       },
     );
     expect(connection.timeout).toBe(5_000);
+  });
+
+  it('reads per-file and overall firmware progress', async () => {
+    const requestJson = vi.fn().mockResolvedValue({
+      totalLists: 2,
+      listIndex: 1,
+      portIndex: 0,
+      connectedIndex: 3,
+      totalFiles: 5,
+      fileIndex: 2,
+      fileLabel: 'FPGA',
+      fileProcess: 40,
+    });
+    const client = { connection: { requestJson } } as unknown as TaurusClient;
+
+    await expect(readTaurusFirmwareProgress(client)).resolves.toEqual({
+      totalTargets: 2,
+      targetIndex: 1,
+      port: 0,
+      receivingCard: 3,
+      totalFiles: 5,
+      fileIndex: 2,
+      fileLabel: 'FPGA',
+      fileProgress: 40,
+      overallProgress: 74,
+    });
+    expect(requestJson).toHaveBeenCalledWith({ what: 46, type: 3, action: 5 });
   });
 });

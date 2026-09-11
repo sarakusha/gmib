@@ -11,6 +11,7 @@ import {
   FormControlLabel,
   IconButton,
   InputLabel,
+  LinearProgress,
   MenuItem,
   Select,
   Stack,
@@ -32,6 +33,8 @@ import {
 
 import FilenameEllipsis from './FilenameEllipsis';
 
+import type { TaurusFirmwareProgress } from '/@common/taurusConfiguration';
+
 const errorMessage = (error: unknown): string | undefined => {
   if (!error) return undefined;
   if (typeof error === 'object' && error !== null && 'data' in error) {
@@ -44,10 +47,11 @@ const errorMessage = (error: unknown): string | undefined => {
 
 const targetKey = (port: number, receivingCard: number): string => `${port}:${receivingCard}`;
 
-const TaurusNcpConfiguration: React.FC<{ path: string; disabled?: boolean }> = ({
-  path,
-  disabled = false,
-}) => {
+const TaurusNcpConfiguration: React.FC<{
+  path: string;
+  disabled?: boolean;
+  firmwareProgress?: TaurusFirmwareProgress;
+}> = ({ path, disabled = false, firmwareProgress }) => {
   const { enqueueSnackbar } = useSnackbar();
   const [filename, setFilename] = useState('');
   const [cabinetIndex, setCabinetIndex] = useState(0);
@@ -237,7 +241,20 @@ const TaurusNcpConfiguration: React.FC<{ path: string; disabled?: boolean }> = (
       </Box>
 
       {operationError && <Alert severity="error">{operationError}</Alert>}
-      {busy && <CircularProgress size={28} />}
+      {busy && !firmwareState.isLoading && <CircularProgress size={28} />}
+      {firmwareState.isLoading && (
+        <Stack spacing={0.5}>
+          <LinearProgress
+            variant={firmwareProgress ? 'determinate' : 'indeterminate'}
+            value={firmwareProgress?.overallProgress}
+          />
+          <Typography variant="body2">
+            {firmwareProgress
+              ? `Порт ${firmwareProgress.port + 1}, карта ${firmwareProgress.receivingCard + 1}: ${firmwareProgress.fileLabel || 'подготовка'}, файл ${Math.min(firmwareProgress.fileIndex + 1, firmwareProgress.totalFiles || 1)}/${firmwareProgress.totalFiles || '—'}, ${firmwareProgress.fileProgress}% (всего ${Math.round(firmwareProgress.overallProgress)}%)`
+              : 'Подготовка firmware…'}
+          </Typography>
+        </Stack>
+      )}
 
       {inspection && cabinet && (
         <>
@@ -378,8 +395,8 @@ const TaurusNcpConfiguration: React.FC<{ path: string; disabled?: boolean }> = (
             <>
               {incompatibleFirmwareTargets.length > 0 && (
                 <Alert severity="warning">
-                  Прошивка заблокирована: модель одной или нескольких выбранных карт не совпадает
-                  с firmware.
+                  Прошивка заблокирована: модель одной или нескольких выбранных карт не совпадает с
+                  firmware.
                 </Alert>
               )}
               <FormControlLabel
