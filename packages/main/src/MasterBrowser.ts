@@ -48,6 +48,7 @@ import {
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:master`);
 const BROADCAST_DETECTION_DELAY_MS = 10000;
+const TAURUS_HEARTBEAT_INTERVAL_MS = 10_000;
 
 const getLocalAddresses = (): string[] =>
   Object.values(networkInterfaces())
@@ -599,7 +600,10 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
     }
     const taurus = this.getTaurusState(control);
     this.emit('change', path, { connected: true, error: undefined, taurus });
-    control.timeout = setTimeout(() => void this.updateTaurusState(path), 30000);
+    control.timeout = setTimeout(
+      () => void this.updateTaurusState(path),
+      TAURUS_HEARTBEAT_INTERVAL_MS,
+    );
     control.timeout.unref();
   }
 
