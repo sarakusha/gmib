@@ -42,7 +42,10 @@ const errorMessage = (error: unknown): string | undefined => {
 
 const targetKey = (port: number, receivingCard: number): string => `${port}:${receivingCard}`;
 
-const TaurusNcpConfiguration: React.FC<{ path: string }> = ({ path }) => {
+const TaurusNcpConfiguration: React.FC<{ path: string; disabled?: boolean }> = ({
+  path,
+  disabled = false,
+}) => {
   const { enqueueSnackbar } = useSnackbar();
   const [filename, setFilename] = useState('');
   const [cabinetIndex, setCabinetIndex] = useState(0);
@@ -53,7 +56,7 @@ const TaurusNcpConfiguration: React.FC<{ path: string }> = ({ path }) => {
   const inspection = inspectionState.data;
   const resetInspection = inspectionState.reset;
   const previousPath = useRef<string | undefined>(undefined);
-  const busy = inspectionState.isLoading || applyState.isLoading;
+  const busy = disabled || inspectionState.isLoading || applyState.isLoading;
   const cabinet = inspection?.cabinets[cabinetIndex];
   const operationError = errorMessage(inspectionState.error) ?? errorMessage(applyState.error);
 

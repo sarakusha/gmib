@@ -255,7 +255,7 @@ const Devices: React.FC = () => {
               selected={card.path === current}
               data-id={card.path}
               onClick={clickHandler}
-              disabled={!card.connected}
+              disabled={!card.connected && !card.taurus}
             >
               <ListItemIcon>
                 <Wrapper>

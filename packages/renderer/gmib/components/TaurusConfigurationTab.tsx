@@ -102,6 +102,7 @@ const TaurusConfigurationTab: React.FC<{
 }> = ({ device, selected = false }) => {
   const path = device?.path ?? '';
   const authenticated = Boolean(device?.taurus?.authenticated);
+  const passwordRequired = Boolean(device?.taurus?.passwordRequired);
   const { enqueueSnackbar } = useSnackbar();
   const [filename, setFilename] = useState('');
   const [confirmed, setConfirmed] = useState(false);
@@ -119,7 +120,11 @@ const TaurusConfigurationTab: React.FC<{
   const resetInspection = inspectionState.reset;
   const previousPath = useRef<string | undefined>(undefined);
   const busy =
-    isFetching || inspectionState.isLoading || applyState.isLoading || restoreState.isLoading;
+    !authenticated ||
+    isFetching ||
+    inspectionState.isLoading ||
+    applyState.isLoading ||
+    restoreState.isLoading;
 
   useEffect(() => {
     if (previousPath.current === path) return;
@@ -172,7 +177,7 @@ const TaurusConfigurationTab: React.FC<{
   }, [enqueueSnackbar, path, restore]);
 
   if (!selected) return null;
-  if (!authenticated) {
+  if (!authenticated && passwordRequired) {
     return <Alert severity="info">Сначала войдите в Taurus на вкладке «Свойства».</Alert>;
   }
 
@@ -186,6 +191,7 @@ const TaurusConfigurationTab: React.FC<{
   return (
     <Paper sx={{ p: 2 }}>
       <Stack spacing={2}>
+        {!authenticated && <Alert severity="info">Переподключение к Taurus…</Alert>}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <FilenameEllipsis
             filename={filename}
@@ -256,7 +262,7 @@ const TaurusConfigurationTab: React.FC<{
         </Box>
 
         <Divider />
-        <TaurusNcpConfiguration path={path} />
+        <TaurusNcpConfiguration path={path} disabled={!authenticated} />
       </Stack>
     </Paper>
   );
