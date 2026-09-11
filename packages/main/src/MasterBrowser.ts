@@ -39,7 +39,7 @@ import ExternalBroadcastDetection from './externalBroadcastDetection';
 import { probeGmibAddress } from './remoteGmib';
 import { getAddressesForScreen, getScreens } from './screen';
 import { getTaurusNcpTargets, inspectTaurusNcp, validateTaurusNcpFilename } from './taurusNcp';
-import { inspectTaurusScr, verifyTaurusConfiguration } from './taurusScr';
+import { inspectTaurusScr, writeAndVerifyTaurusConfiguration } from './taurusScr';
 import localConfig from './localConfig';
 import {
   createWindowsMdnsFirewallCommands,
@@ -654,9 +654,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
         this.setTaurusConfigurationBackup(control, current);
       }
       this.emit('change', path, { isBusy: true, error: undefined });
-      await client.setLedScreenConfiguration(inspection.target);
-      const actual = await client.getLedScreenConfiguration();
-      verifyTaurusConfiguration(inspection.target, actual);
+      const actual = await writeAndVerifyTaurusConfiguration(client, inspection.target);
       const width = Math.max(...actual.screens.map(screen => screen.offset.x + screen.size.width));
       const height = Math.max(
         ...actual.screens.map(screen => screen.offset.y + screen.size.height),
@@ -693,9 +691,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
     control.configurationBusy = true;
     this.emit('change', path, { isBusy: true, error: undefined });
     try {
-      await client.setLedScreenConfiguration(backup);
-      const actual = await client.getLedScreenConfiguration();
-      verifyTaurusConfiguration(backup, actual);
+      const actual = await writeAndVerifyTaurusConfiguration(client, backup);
       this.setTaurusConfigurationBackup(control, undefined);
       const width = Math.max(...actual.screens.map(screen => screen.offset.x + screen.size.width));
       const height = Math.max(

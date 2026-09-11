@@ -2,7 +2,11 @@ import path from 'node:path';
 
 import type { LEDDisplayInfo, ScrConfig } from '@novastar/screen';
 import { loadScreenConfig } from '@novastar/screen';
-import type { TaurusLedScreenConfiguration, TaurusReceivingCardRegion } from '@novastar/taurus';
+import type {
+  TaurusClient,
+  TaurusLedScreenConfiguration,
+  TaurusReceivingCardRegion,
+} from '@novastar/taurus';
 
 import type { TaurusScreenSize, TaurusScrInspection } from '/@common/taurusConfiguration';
 
@@ -223,4 +227,55 @@ export const verifyTaurusConfiguration = (
   if (!configurationsEqual(expected, actual)) {
     throw new Error('Taurus returned a different screen topology after writing SCR');
   }
+};
+
+type TaurusConfigurationClient = Pick<
+  TaurusClient,
+  'getLedScreenConfiguration' | 'setLedScreenConfiguration'
+>;
+
+const isRequestTimeout = (error: unknown): error is Error =>
+  error instanceof Error && /^Taurus request \d+ timed out$/.test(error.message);
+
+const wait = (timeout: number): Promise<void> =>
+  new Promise(resolve => {
+    setTimeout(resolve, timeout);
+  });
+
+export const writeAndVerifyTaurusConfiguration = async (
+  client: TaurusConfigurationClient,
+  expected: TaurusLedScreenConfiguration,
+  retryDelay = 500,
+): Promise<TaurusLedScreenConfiguration> => {
+  let writeTimeout: Error | undefined;
+  try {
+    await client.setLedScreenConfiguration(expected);
+  } catch (error) {
+    if (!isRequestTimeout(error)) throw error;
+    writeTimeout = error;
+  }
+
+  let verificationError: unknown;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (attempt > 0 && retryDelay > 0) await wait(retryDelay);
+    try {
+      const actual = await client.getLedScreenConfiguration();
+      verifyTaurusConfiguration(expected, actual);
+      return actual;
+    } catch (error) {
+      verificationError = error;
+    }
+  }
+
+  if (writeTimeout) {
+    const verificationMessage =
+      verificationError instanceof Error ? verificationError.message : String(verificationError);
+    throw new Error(
+      `${writeTimeout.message}; configuration verification failed: ${verificationMessage}`,
+      {
+        cause: writeTimeout,
+      },
+    );
+  }
+  throw verificationError;
 };

@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { convertScrToTaurusConfiguration, verifyTaurusConfiguration } from '../src/taurusScr';
+import {
+  convertScrToTaurusConfiguration,
+  verifyTaurusConfiguration,
+  writeAndVerifyTaurusConfiguration,
+} from '../src/taurusScr';
 
 describe('Taurus SCR conversion', () => {
   it('converts explicit NovaLCT regions to Taurus topology', () => {
@@ -135,5 +139,58 @@ describe('Taurus SCR conversion', () => {
         { screens: [{ ...first, receivingCards: [...first.receivingCards].reverse() }] },
       ),
     ).not.toThrow();
+  });
+
+  it('accepts a timed-out write when Taurus already applied the topology', async () => {
+    const expected = {
+      screens: [
+        {
+          id: 0,
+          source: 1,
+          type: 1,
+          columns: 1,
+          rows: 1,
+          offset: { x: 0, y: 0 },
+          portNumber: 1,
+          portOrder: [0],
+          receivingCards: [
+            {
+              x: 0,
+              y: 0,
+              xInPort: 0,
+              yInPort: 0,
+              width: 756,
+              height: 192,
+              port: 0,
+              connection: 0,
+              column: 0,
+              row: 0,
+            },
+          ],
+          size: { width: 756, height: 192 },
+        },
+      ],
+    };
+    const client = {
+      setLedScreenConfiguration: async () => {
+        throw new Error('Taurus request 5 timed out');
+      },
+      getLedScreenConfiguration: async () => expected,
+    };
+
+    await expect(writeAndVerifyTaurusConfiguration(client, expected, 0)).resolves.toEqual(expected);
+  });
+
+  it('does not hide a rejected topology write', async () => {
+    const client = {
+      setLedScreenConfiguration: async () => {
+        throw new Error('Taurus request failed with status 0x1');
+      },
+      getLedScreenConfiguration: async () => ({ screens: [] }),
+    };
+
+    await expect(writeAndVerifyTaurusConfiguration(client, { screens: [] }, 0)).rejects.toThrow(
+      'status 0x1',
+    );
   });
 });
