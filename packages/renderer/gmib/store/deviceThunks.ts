@@ -26,7 +26,6 @@ import {
   selectAutobrightness,
   selectCurrentDeviceId,
   selectDeviceById,
-  selectDeviceIds,
   selectDevicesByAddress,
   selectLinks,
   selectTabChangedTimestamp,
@@ -184,12 +183,16 @@ startAppListening({
 
 startAppListening({
   matcher: isAnyOf(removeDevice, connectionClosed),
-  effect: (_, { dispatch, getState }) => {
+  effect: (_, { dispatch, getOriginalState, getState }) => {
+    const previousState = getOriginalState();
     const state = getState();
     const id = selectCurrentDeviceId(state);
-    if (id) {
-      const ids = selectDeviceIds(state);
-      if (!ids.includes(id)) dispatch(setCurrentDevice());
+    if (
+      id &&
+      selectDeviceById(previousState, id) !== undefined &&
+      selectDeviceById(state, id) === undefined
+    ) {
+      dispatch(setCurrentDevice());
     }
   },
 });
