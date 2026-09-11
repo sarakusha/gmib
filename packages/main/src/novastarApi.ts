@@ -2,6 +2,7 @@
 import express, { type Request, type Response } from 'express';
 
 import type { ScreenId } from '/@common/novastar';
+import type { TaurusNcpApplyRequest } from '/@common/taurusConfiguration';
 import type { FilterNames } from '/@common/helpers';
 
 import master from './MasterBrowser';
@@ -84,6 +85,90 @@ api.post('/taurus/login', async (req, res) => {
     res.end();
   } catch (error) {
     res.status(401).send((error as Error).message);
+  }
+});
+
+api.get('/taurus/configuration', async (req, res) => {
+  const path = typeof req.query.path === 'string' ? req.query.path : undefined;
+  if (!path) {
+    res.status(400).send('Taurus path is required');
+    return;
+  }
+  try {
+    res.json(await master.getTaurusScreenConfiguration(path));
+  } catch (error) {
+    res.status(500).send((error as Error).message);
+  }
+});
+
+api.post('/taurus/configuration/inspect', async (req, res) => {
+  const { path, filename } = req.body as { path?: string; filename?: string };
+  if (!path || !filename) {
+    res.status(400).send('Taurus path and SCR filename are required');
+    return;
+  }
+  try {
+    res.json(await master.inspectTaurusScreenConfiguration(path, filename));
+  } catch (error) {
+    res.status(400).send((error as Error).message);
+  }
+});
+
+api.post('/taurus/configuration/apply', async (req, res) => {
+  const { path, filename } = req.body as { path?: string; filename?: string };
+  if (!path || !filename) {
+    res.status(400).send('Taurus path and SCR filename are required');
+    return;
+  }
+  try {
+    res.json(await master.applyTaurusScreenConfiguration(path, filename));
+  } catch (error) {
+    res.status(500).send((error as Error).message);
+  }
+});
+
+api.post('/taurus/configuration/restore', async (req, res) => {
+  const { path } = req.body as { path?: string };
+  if (!path) {
+    res.status(400).send('Taurus path is required');
+    return;
+  }
+  try {
+    res.json(await master.restoreTaurusScreenConfiguration(path));
+  } catch (error) {
+    res.status(500).send((error as Error).message);
+  }
+});
+
+api.post('/taurus/ncp/inspect', async (req, res) => {
+  const { path, filename } = req.body as { path?: string; filename?: string };
+  if (!path || !filename) {
+    res.status(400).send('Taurus path and NCP filename are required');
+    return;
+  }
+  try {
+    res.json(await master.inspectTaurusNcpConfiguration(path, filename));
+  } catch (error) {
+    res.status(400).send((error as Error).message);
+  }
+});
+
+api.post('/taurus/ncp/apply', async (req, res) => {
+  const { path, filename, cabinetIndex, targets } = req.body as Partial<TaurusNcpApplyRequest>;
+  if (
+    !path ||
+    !filename ||
+    typeof cabinetIndex !== 'number' ||
+    !Array.isArray(targets) ||
+    !targets.length
+  ) {
+    res.status(400).send('Taurus path, NCP cabinet and receiving-card targets are required');
+    return;
+  }
+  try {
+    res.json(await master.applyTaurusNcpConfiguration(path, filename, cabinetIndex, targets));
+  } catch (error) {
+    res.status(500).send((error as Error).message);
   }
 });
 

@@ -51,14 +51,14 @@ importers:
         specifier: 2.2.3
         version: 2.2.3(debug@4.4.3)(iconv-lite@0.6.3)
       '@novastar/screen':
-        specifier: 2.2.2
-        version: 2.2.2(debug@4.4.3)(iconv-lite@0.6.3)
+        specifier: 2.3.0
+        version: 2.3.0(debug@4.4.3)(iconv-lite@0.6.3)
       '@novastar/serial':
         specifier: 2.2.1
         version: 2.2.1(debug@4.4.3)(iconv-lite@0.6.3)
       '@novastar/taurus':
-        specifier: 0.1.0
-        version: 0.1.0(debug@4.4.3)(iconv-lite@0.6.3)
+        specifier: 0.2.0
+        version: 0.2.0(debug@4.4.3)(iconv-lite@0.6.3)
       '@reduxjs/toolkit':
         specifier: ^2.12.0
         version: 2.12.0(react-redux@9.3.0(@types/react@19.2.18)(react@19.2.8)(redux@5.0.1))(react@19.2.8)
@@ -1362,8 +1362,8 @@ packages:
     peerDependencies:
       debug: ^4.3.3
 
-  '@novastar/screen@2.2.2':
-    resolution: {integrity: sha512-1W8VEPFYoPIWTho+PkB4LEKYjJWhslc4rTy3CXu05AHLFjwBdlMwxIt0+5Xd15jeqey8u9VkBDVRsucJ5DZegg==}
+  '@novastar/screen@2.3.0':
+    resolution: {integrity: sha512-DCn8OJaU6V3yOzfFs/h01hex3R1TxaKER+Te7xR2d7TGiAOh5XXA6GAFeBp1ee9uNB3hAPoWdTCWCJyut5dzNQ==}
     peerDependencies:
       debug: ^4.3.3
 
@@ -1372,8 +1372,8 @@ packages:
     peerDependencies:
       debug: ^4.3.3
 
-  '@novastar/taurus@0.1.0':
-    resolution: {integrity: sha512-MDMdgNrXrShwMILnbSWWVDkBURPNXqiIYAs5t2Dl99tCvXSIlaNfqIzZDkivlO4CN/cwaepBhoJpbigV13e7tA==}
+  '@novastar/taurus@0.2.0':
+    resolution: {integrity: sha512-90R6+Mrxf0l4V5F0XpSNkoj0NbVqL52kNuVz/lIaCehRzbuUaC/nzkpCTRe7RQvzjw5SbbR6A4RLQChwhYmVlg==}
 
   '@oxc-project/types@0.142.0':
     resolution: {integrity: sha512-7W+2q5AKQVU36fkaryontrHn3YDt1RyUYXatw9i5H8ocYe2sPKSFB6eS8WNPeRKiN1qAWWZUPm7gwFzJGrccqQ==}
@@ -2099,6 +2099,11 @@ packages:
   '@xmldom/xmldom@0.8.13':
     resolution: {integrity: sha512-KRYzxepc14G/CEpEGc3Yn+JKaAeT63smlDr+vjB8jRfgTBBI9wRj/nkQEO+ucV8p8I9bfKLWp37uHgFrbntPvw==}
     engines: {node: '>=10.0.0'}
+    deprecated: this version has critical issues, please update to the latest version
+
+  '@zip.js/zip.js@2.14.0':
+    resolution: {integrity: sha512-7HIW+xGAl6LeTlgfLEKeRBPBskNtLSXRNXqb0QuUv6kYO7hhJvSda1UfYvyfyKJxod3q5GRvYZjjdtkxO1FMiQ==}
+    engines: {bun: '>=0.7.0', deno: '>=1.0.0', node: '>=18.0.0'}
 
   abbrev@4.0.0:
     resolution: {integrity: sha512-a1wflyaL0tHtJSmLSOVybYhy22vRih4eduhhrkcjgrWGnRfrZtovJ2FRjxuTtkkj47O/baf0R86QU5OuYpz8fA==}
@@ -6767,13 +6772,14 @@ snapshots:
       - buffer
       - iconv-lite
 
-  '@novastar/screen@2.2.2(debug@4.4.3)(iconv-lite@0.6.3)':
+  '@novastar/screen@2.3.0(debug@4.4.3)(iconv-lite@0.6.3)':
     dependencies:
       '@novastar/codec': 2.2.3(debug@4.4.3)(iconv-lite@0.6.3)
       '@novastar/native': 2.2.1(debug@4.4.3)(iconv-lite@0.6.3)
       '@novastar/net': 2.2.3(debug@4.4.3)(iconv-lite@0.6.3)
       '@novastar/serial': 2.2.1(debug@4.4.3)(iconv-lite@0.6.3)
       '@sarakusha/lzma': 2.3.4
+      '@zip.js/zip.js': 2.14.0
       adm-zip: 0.5.18
       debug: 4.4.3
       fast-xml-parser: 5.10.1
@@ -6800,7 +6806,7 @@ snapshots:
       - iconv-lite
       - supports-color
 
-  '@novastar/taurus@0.1.0(debug@4.4.3)(iconv-lite@0.6.3)':
+  '@novastar/taurus@0.2.0(debug@4.4.3)(iconv-lite@0.6.3)':
     dependencies:
       typed-struct: 2.7.3(debug@4.4.3)(iconv-lite@0.6.3)
     transitivePeerDependencies:
@@ -7449,6 +7455,8 @@ snapshots:
       tinyrainbow: 3.1.1
 
   '@xmldom/xmldom@0.8.13': {}
+
+  '@zip.js/zip.js@2.14.0': {}
 
   abbrev@4.0.0: {}
 

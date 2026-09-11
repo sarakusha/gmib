@@ -68,6 +68,10 @@ const localConfigSchema: Schema<LocalConfig> = {
     additionalProperties: { type: 'string' },
     default: {},
   },
+  taurusConfigurationBackups: {
+    type: 'object',
+    default: {},
+  },
 };
 
 const localConfig = new Store<LocalConfig>({

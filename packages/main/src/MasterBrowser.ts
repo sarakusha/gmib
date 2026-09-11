@@ -12,6 +12,7 @@ import type { CabinetInfo, NovastarTelemetry } from '/@common/helpers';
 
 import debugFactory from 'debug';
 
+import { createHash } from 'crypto';
 import { connect } from 'net';
 import dgram, { type Socket } from 'dgram';
 import { networkInterfaces } from 'os';
@@ -19,12 +20,16 @@ import flatten from 'lodash/flatten';
 
 import { Connection, series } from '@novastar/codec';
 import { findNetDevices, MULTICAST_ADDRESS, net, REQ, UDP_PORT } from '@novastar/net';
-import { ScreenConfigurator } from '@novastar/screen';
+import { loadNcpConfig, ScreenConfigurator } from '@novastar/screen';
 import {
   discoverTaurusPlayers,
+  TAURUS_FTP_PORT,
   TaurusClient,
+  type TaurusLedScreenConfiguration,
   type TaurusPlayerInfo,
+  TaurusReceivingCardConfigStatus,
   TaurusResponseError,
+  uploadTaurusFile,
 } from '@novastar/taurus';
 import memoize from 'lodash/memoize';
 import { TypedEmitter } from 'tiny-typed-emitter';
@@ -33,6 +38,8 @@ import NovastarLoader from './NovastarLoader';
 import ExternalBroadcastDetection from './externalBroadcastDetection';
 import { probeGmibAddress } from './remoteGmib';
 import { getAddressesForScreen, getScreens } from './screen';
+import { getTaurusNcpTargets, inspectTaurusNcp, validateTaurusNcpFilename } from './taurusNcp';
+import { inspectTaurusScr, verifyTaurusConfiguration } from './taurusScr';
 import localConfig from './localConfig';
 import {
   createWindowsMdnsFirewallCommands,
@@ -95,6 +102,7 @@ type TaurusControl = {
   info: TaurusPlayerInfo;
   client?: TaurusClient;
   connecting?: Promise<void>;
+  configurationBusy?: boolean;
   loginFailed?: boolean;
   brightness?: number;
   illuminance?: number;
@@ -582,6 +590,230 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
     if (!control) throw new Error(`Unknown Taurus player: ${path}`);
     control.loginFailed = false;
     await this.connectTaurus(path, password);
+  }
+
+  private getTaurusClient(path: string): { control: TaurusControl; client: TaurusClient } {
+    const control = this.taurusControls.get(path);
+    if (!control) throw new Error(`Unknown Taurus player: ${path}`);
+    if (!control.client) throw new Error('Taurus authentication is required');
+    return { control, client: control.client };
+  }
+
+  private getTaurusConfigurationBackup(
+    control: TaurusControl,
+  ): TaurusLedScreenConfiguration | undefined {
+    return localConfig.get('taurusConfigurationBackups')?.[control.info.sn];
+  }
+
+  private setTaurusConfigurationBackup(
+    control: TaurusControl,
+    configuration: TaurusLedScreenConfiguration | undefined,
+  ): void {
+    const backups = localConfig.get('taurusConfigurationBackups') ?? {};
+    if (configuration) {
+      localConfig.set('taurusConfigurationBackups', {
+        ...backups,
+        [control.info.sn]: configuration,
+      });
+      return;
+    }
+    const { [control.info.sn]: _removed, ...remaining } = backups;
+    localConfig.set('taurusConfigurationBackups', remaining);
+  }
+
+  async getTaurusScreenConfiguration(path: string) {
+    const { control, client } = this.getTaurusClient(path);
+    return {
+      current: await client.getLedScreenConfiguration(),
+      backupAvailable: Boolean(this.getTaurusConfigurationBackup(control)),
+    };
+  }
+
+  async inspectTaurusScreenConfiguration(path: string, filename: string) {
+    const state = await this.getTaurusScreenConfiguration(path);
+    return inspectTaurusScr(filename, state.current, state.backupAvailable);
+  }
+
+  async inspectTaurusNcpConfiguration(path: string, filename: string) {
+    const { client } = this.getTaurusClient(path);
+    return inspectTaurusNcp(filename, await client.getLedScreenConfiguration());
+  }
+
+  async applyTaurusScreenConfiguration(path: string, filename: string) {
+    const { control, client } = this.getTaurusClient(path);
+    if (control.configurationBusy) throw new Error('Taurus configuration write is already running');
+    control.configurationBusy = true;
+    try {
+      const current = await client.getLedScreenConfiguration();
+      const inspection = inspectTaurusScr(
+        filename,
+        current,
+        Boolean(this.getTaurusConfigurationBackup(control)),
+      );
+      if (!this.getTaurusConfigurationBackup(control)) {
+        this.setTaurusConfigurationBackup(control, current);
+      }
+      this.emit('change', path, { isBusy: true, error: undefined });
+      await client.setLedScreenConfiguration(inspection.target);
+      const actual = await client.getLedScreenConfiguration();
+      verifyTaurusConfiguration(inspection.target, actual);
+      const width = Math.max(...actual.screens.map(screen => screen.offset.x + screen.size.width));
+      const height = Math.max(
+        ...actual.screens.map(screen => screen.offset.y + screen.size.height),
+      );
+      control.info = { ...control.info, width, height };
+      const result = {
+        current: actual,
+        backupAvailable: true,
+      };
+      this.emit('change', path, {
+        connected: true,
+        isBusy: false,
+        error: undefined,
+        taurus: this.getTaurusState(control),
+      });
+      return result;
+    } catch (error) {
+      this.emit('change', path, {
+        isBusy: false,
+        error: (error as Error).message,
+        taurus: this.getTaurusState(control),
+      });
+      throw error;
+    } finally {
+      control.configurationBusy = false;
+    }
+  }
+
+  async restoreTaurusScreenConfiguration(path: string) {
+    const { control, client } = this.getTaurusClient(path);
+    if (control.configurationBusy) throw new Error('Taurus configuration write is already running');
+    const backup = this.getTaurusConfigurationBackup(control);
+    if (!backup) throw new Error('No Taurus screen configuration backup is available');
+    control.configurationBusy = true;
+    this.emit('change', path, { isBusy: true, error: undefined });
+    try {
+      await client.setLedScreenConfiguration(backup);
+      const actual = await client.getLedScreenConfiguration();
+      verifyTaurusConfiguration(backup, actual);
+      this.setTaurusConfigurationBackup(control, undefined);
+      const width = Math.max(...actual.screens.map(screen => screen.offset.x + screen.size.width));
+      const height = Math.max(
+        ...actual.screens.map(screen => screen.offset.y + screen.size.height),
+      );
+      control.info = { ...control.info, width, height };
+      const result = { current: actual, backupAvailable: false };
+      this.emit('change', path, {
+        connected: true,
+        isBusy: false,
+        error: undefined,
+        taurus: this.getTaurusState(control),
+      });
+      return result;
+    } catch (error) {
+      this.emit('change', path, {
+        isBusy: false,
+        error: (error as Error).message,
+        taurus: this.getTaurusState(control),
+      });
+      throw error;
+    } finally {
+      control.configurationBusy = false;
+    }
+  }
+
+  async applyTaurusNcpConfiguration(
+    path: string,
+    filename: string,
+    cabinetIndex: number,
+    requestedTargets: Array<{ port: number; receivingCard: number }>,
+  ) {
+    const { control, client } = this.getTaurusClient(path);
+    if (control.configurationBusy) throw new Error('Taurus configuration write is already running');
+    if (!Number.isInteger(cabinetIndex) || cabinetIndex < 0) {
+      throw new RangeError('Invalid NCP cabinet index');
+    }
+    validateTaurusNcpFilename(filename);
+    if (!requestedTargets.length) throw new RangeError('Select at least one receiving card');
+    control.configurationBusy = true;
+    this.emit('change', path, { isBusy: true, error: undefined });
+    try {
+      const topology = await client.getLedScreenConfiguration();
+      const availableTargets = new Set(
+        getTaurusNcpTargets(topology).map(target => `${target.port}:${target.receivingCard}`),
+      );
+      const uniqueTargets = [
+        ...new Map(
+          requestedTargets.map(target => [`${target.port}:${target.receivingCard}`, target]),
+        ).values(),
+      ];
+      uniqueTargets.forEach(target => {
+        if (!availableTargets.has(`${target.port}:${target.receivingCard}`)) {
+          throw new RangeError(
+            `Receiving card ${target.receivingCard + 1} on port ${target.port + 1} is not configured`,
+          );
+        }
+      });
+      const decoded = await loadNcpConfig(filename);
+      const cabinet = decoded.cabinets[cabinetIndex];
+      if (!cabinet) throw new RangeError('NCP cabinet was not found');
+      const md5 = createHash('md5').update(cabinet.binary).digest('hex');
+      const safeName =
+        cabinet.name.replace(/[^a-z\d._-]+/gi, '-').replace(/^-+|-+$/g, '') || 'cabinet';
+      const ftpPath = `/sdcard/gmib/${safeName}-${md5.slice(0, 12)}.bin`;
+      const devicePath = `/mnt${ftpPath}`;
+      await uploadTaurusFile({
+        host: control.info.address,
+        port: control.info.ftpPort ?? TAURUS_FTP_PORT,
+        password: await client.getFtpPassword(),
+        remotePath: ftpPath,
+        data: cabinet.binary,
+      });
+      await client.applyReceivingCardConfiguration(
+        uniqueTargets.map(target => ({
+          filePath: devicePath,
+          md5,
+          port: target.port,
+          receivingCard: target.receivingCard,
+        })),
+      );
+      const deadline = Date.now() + 120_000;
+      while (Date.now() < deadline) {
+        await delay(0.5);
+        const progress = await client.getReceivingCardConfigProgress();
+        if (progress.status === TaurusReceivingCardConfigStatus.Completed) {
+          this.emit('change', path, {
+            connected: true,
+            isBusy: false,
+            error: undefined,
+            taurus: this.getTaurusState(control),
+          });
+          return {
+            completed: progress.completed,
+            total: progress.total,
+            progress: progress.progress,
+          };
+        }
+        if (progress.status === TaurusReceivingCardConfigStatus.Failed) {
+          throw new Error(
+            progress.errorMessage ??
+              `Taurus receiving-card configuration failed${
+                progress.errorCode === undefined ? '' : ` (${progress.errorCode})`
+              }`,
+          );
+        }
+      }
+      throw new Error('Taurus receiving-card configuration timed out');
+    } catch (error) {
+      this.emit('change', path, {
+        isBusy: false,
+        error: (error as Error).message,
+        taurus: this.getTaurusState(control),
+      });
+      throw error;
+    } finally {
+      control.configurationBusy = false;
+    }
   }
 
   openBroadcastDetector() {

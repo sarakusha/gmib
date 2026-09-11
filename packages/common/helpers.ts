@@ -5,6 +5,8 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 import propertyOf from 'lodash/propertyOf';
 import type React from 'react';
 
+import type { TaurusScreenConfiguration } from './taurusConfiguration';
+
 export const MINUTE = 60 * 1000;
 export const HOUR = 60 * MINUTE;
 
@@ -312,6 +314,7 @@ export type LocalConfig = {
   knock?: string;
   autoUpdate: boolean;
   taurusPasswords?: Record<string, string>;
+  taurusConfigurationBackups?: Record<string, TaurusScreenConfiguration>;
 };
 
 export type Modules = IModuleInfo<Minihost2Info | Minihost3Info>[];

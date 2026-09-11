@@ -4,6 +4,13 @@ import { createApi } from '@reduxjs/toolkit/query/react';
 import debugFactory from 'debug';
 
 import type { Novastar, Screen, ScreenId } from '/@common/novastar';
+import type {
+  TaurusConfigurationState,
+  TaurusNcpApplyRequest,
+  TaurusNcpApplyResult,
+  TaurusNcpInspection,
+  TaurusScrInspection,
+} from '/@common/taurusConfiguration';
 import type { CabinetInfo } from '/@common/helpers';
 import { NovastarSelector } from '/@common/helpers';
 import { host, port } from '/@common/remote';
@@ -96,6 +103,7 @@ export const selectSerials = (state: EntityState<Novastar, string>): Novastar[] 
 const novastarApi = createApi({
   baseQuery,
   reducerPath: 'novastarApi',
+  tagTypes: ['TaurusConfiguration'],
   endpoints: build => ({
     getNovastars: build.query<EntityState<Novastar, string>, void>({
       query: () => ({
@@ -121,6 +129,58 @@ const novastarApi = createApi({
     loginTaurus: build.mutation<void, { path: string; password: string }>({
       query: body => ({
         url: 'novastar/taurus/login',
+        method: 'POST',
+        body,
+      }),
+    }),
+    getTaurusScreenConfiguration: build.query<TaurusConfigurationState, string>({
+      query: path => ({
+        url: `novastar/taurus/configuration?path=${encodeURIComponent(path)}`,
+      }),
+      providesTags: (_result, _error, path) => [{ type: 'TaurusConfiguration', id: path }],
+    }),
+    inspectTaurusScreenConfiguration: build.mutation<
+      TaurusScrInspection,
+      { path: string; filename: string }
+    >({
+      query: body => ({
+        url: 'novastar/taurus/configuration/inspect',
+        method: 'POST',
+        body,
+      }),
+    }),
+    applyTaurusScreenConfiguration: build.mutation<
+      TaurusConfigurationState,
+      { path: string; filename: string }
+    >({
+      query: body => ({
+        url: 'novastar/taurus/configuration/apply',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: (_result, _error, { path }) => [{ type: 'TaurusConfiguration', id: path }],
+    }),
+    restoreTaurusScreenConfiguration: build.mutation<TaurusConfigurationState, string>({
+      query: path => ({
+        url: 'novastar/taurus/configuration/restore',
+        method: 'POST',
+        body: { path },
+      }),
+      invalidatesTags: (_result, _error, path) => [{ type: 'TaurusConfiguration', id: path }],
+    }),
+    inspectTaurusNcpConfiguration: build.mutation<
+      TaurusNcpInspection,
+      { path: string; filename: string }
+    >({
+      query: body => ({
+        url: 'novastar/taurus/ncp/inspect',
+        method: 'POST',
+        body,
+      }),
+    }),
+    applyTaurusNcpConfiguration: build.mutation<TaurusNcpApplyResult, TaurusNcpApplyRequest>({
+      query: body => ({
+        url: 'novastar/taurus/ncp/apply',
         method: 'POST',
         body,
       }),
@@ -246,8 +306,14 @@ export const useNovastar = (path?: string) => {
 };
 
 export const {
+  useApplyTaurusNcpConfigurationMutation,
+  useApplyTaurusScreenConfigurationMutation,
   useReloadMutation,
+  useGetTaurusScreenConfigurationQuery,
+  useInspectTaurusScreenConfigurationMutation,
+  useInspectTaurusNcpConfigurationMutation,
   useLoginTaurusMutation,
+  useRestoreTaurusScreenConfigurationMutation,
   useSetBrightnessMutation,
   useStartTelemetryMutation,
   useCancelTelemetryMutation,
