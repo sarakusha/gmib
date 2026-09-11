@@ -73,7 +73,7 @@ export type TaurusNcpInspection = {
   packageName?: string;
   cabinets: TaurusNcpCabinetInfo[];
   targets: TaurusNcpTarget[];
-  warnings: string[];
+  // warnings: string[];
 };
 
 export type TaurusNcpApplyRequest = {

@@ -39,14 +39,14 @@ export const inspectTaurusNcp = async (
   validateTaurusNcpFilename(filename);
   const decoded = await loadNcpConfig(filename);
   if (!decoded.cabinets.length) throw new TypeError('NCP does not contain cabinet configuration');
-  const warnings = [
-    'NCP изменяет параметры принимающих карт. Автоматическое восстановление прежних параметров пока недоступно.',
-  ];
-  if (decoded.cabinets.some(cabinet => cabinet.firmwareFile)) {
-    warnings.push(
-      'Встроенная в NCP прошивка не устанавливается — применяются только параметры кабинета.',
-    );
-  }
+  // const warnings = [
+  //   'NCP изменяет параметры принимающих карт. Автоматическое восстановление прежних параметров пока недоступно.',
+  // ];
+  // if (decoded.cabinets.some(cabinet => cabinet.firmwareFile)) {
+  //   warnings.push(
+  //     'Встроенная в NCP прошивка не устанавливается — применяются только параметры кабинета.',
+  //   );
+  // }
   return {
     filename,
     formatVersion: decoded.formatVersion,
@@ -65,6 +65,5 @@ export const inspectTaurusNcp = async (
       parameterCount: cabinet.parameters.length,
     })),
     targets: getTaurusNcpTargets(configuration),
-    warnings,
   };
 };
