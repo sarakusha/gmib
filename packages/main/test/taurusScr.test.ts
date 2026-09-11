@@ -136,9 +136,61 @@ describe('Taurus SCR conversion', () => {
     expect(() =>
       verifyTaurusConfiguration(
         { screens: [first] },
-        { screens: [{ ...first, receivingCards: [...first.receivingCards].reverse() }] },
+        {
+          screens: [
+            {
+              ...first,
+              portOrder: [0],
+              receivingCards: [...first.receivingCards]
+                .reverse()
+                .map(card => ({ ...card, xInPort: 0, yInPort: 0 })),
+            },
+          ],
+        },
       ),
     ).not.toThrow();
+  });
+
+  it('still rejects a different physical receiving-card port', () => {
+    const first = {
+      id: 0,
+      source: 1,
+      type: 1,
+      columns: 1,
+      rows: 1,
+      offset: { x: 0, y: 0 },
+      portNumber: 2,
+      portOrder: [0, 1],
+      receivingCards: [
+        {
+          x: 0,
+          y: 0,
+          xInPort: 0,
+          yInPort: 0,
+          width: 756,
+          height: 192,
+          port: 1,
+          connection: 0,
+          column: 0,
+          row: 0,
+        },
+      ],
+      size: { width: 756, height: 192 },
+    };
+
+    expect(() =>
+      verifyTaurusConfiguration(
+        { screens: [first] },
+        {
+          screens: [
+            {
+              ...first,
+              receivingCards: [{ ...first.receivingCards[0], port: 0 }],
+            },
+          ],
+        },
+      ),
+    ).toThrow('different screen topology');
   });
 
   it('accepts a timed-out write when Taurus already applied the topology', async () => {

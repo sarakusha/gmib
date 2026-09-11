@@ -59,6 +59,12 @@ const totalSize = (configuration?: TaurusScreenConfiguration): string => {
 const cardCount = (configuration?: TaurusScreenConfiguration): number =>
   configuration?.screens.reduce((count, screen) => count + screen.receivingCards.length, 0) ?? 0;
 
+const usedPorts = (screen: TaurusScreenConfiguration['screens'][number]): string =>
+  [...new Set(screen.receivingCards.map(card => card.port))]
+    .sort((left, right) => left - right)
+    .map(port => port + 1)
+    .join(', ');
+
 const TopologyTable: React.FC<{ configuration: TaurusScreenConfiguration }> = ({
   configuration,
 }) => (
@@ -82,7 +88,7 @@ const TopologyTable: React.FC<{ configuration: TaurusScreenConfiguration }> = ({
           <TableCell>
             {screen.offset.x}, {screen.offset.y}
           </TableCell>
-          <TableCell>{screen.portOrder.map(port => port + 1).join(', ')}</TableCell>
+          <TableCell>{usedPorts(screen)}</TableCell>
           <TableCell>{screen.receivingCards.length}</TableCell>
         </TableRow>
       ))}

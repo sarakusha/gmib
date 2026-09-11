@@ -151,23 +151,68 @@ export const convertScrToTaurusConfiguration = (
 const normalizeConfiguration = (configuration: TaurusLedScreenConfiguration) => ({
   screens: [...configuration.screens]
     .sort((left, right) => left.id - right.id)
-    .map(screen => ({
+    .map(({ portNumber: _portNumber, portOrder: _portOrder, ...screen }) => ({
       ...screen,
-      receivingCards: [...screen.receivingCards].sort(
-        (left, right) =>
-          left.port - right.port ||
-          left.connection - right.connection ||
-          left.y - right.y ||
-          left.x - right.x,
-      ),
+      receivingCards: [...screen.receivingCards]
+        .sort(
+          (left, right) =>
+            left.port - right.port ||
+            left.connection - right.connection ||
+            left.y - right.y ||
+            left.x - right.x,
+        )
+        .map(({ xInPort: _xInPort, yInPort: _yInPort, ...card }) => card),
     })),
 });
 
-const configurationsEqual = (
-  left: TaurusLedScreenConfiguration,
-  right: TaurusLedScreenConfiguration,
-): boolean =>
-  JSON.stringify(normalizeConfiguration(left)) === JSON.stringify(normalizeConfiguration(right));
+const formatDifferenceValue = (value: unknown): string =>
+  value === undefined ? 'undefined' : JSON.stringify(value);
+
+const collectDifferences = (
+  left: unknown,
+  right: unknown,
+  name: string,
+  differences: string[],
+): void => {
+  if (differences.length >= 8 || Object.is(left, right)) return;
+  if (Array.isArray(left) && Array.isArray(right)) {
+    if (left.length !== right.length) {
+      differences.push(`${name}.length: ${left.length} → ${right.length}`);
+      return;
+    }
+    left.forEach((value, index) =>
+      collectDifferences(value, right[index], `${name}[${index}]`, differences),
+    );
+    return;
+  }
+  if (typeof left === 'object' && left !== null && typeof right === 'object' && right !== null) {
+    const keys = new Set([...Object.keys(left), ...Object.keys(right)]);
+    keys.forEach(key =>
+      collectDifferences(
+        (left as Record<string, unknown>)[key],
+        (right as Record<string, unknown>)[key],
+        name ? `${name}.${key}` : key,
+        differences,
+      ),
+    );
+    return;
+  }
+  differences.push(`${name}: ${formatDifferenceValue(left)} → ${formatDifferenceValue(right)}`);
+};
+
+const configurationDifferences = (
+  current: TaurusLedScreenConfiguration,
+  target: TaurusLedScreenConfiguration,
+): string[] => {
+  const differences: string[] = [];
+  collectDifferences(
+    normalizeConfiguration(current),
+    normalizeConfiguration(target),
+    '',
+    differences,
+  );
+  return differences;
+};
 
 const getTotalSize = (configuration: TaurusLedScreenConfiguration): TaurusScreenSize => ({
   width: Math.max(...configuration.screens.map(screen => screen.offset.x + screen.size.width)),
@@ -209,7 +254,10 @@ export const inspectTaurusScr = (
   if (currentCards !== targetCards) {
     warnings.push(`Количество карт изменится: ${currentCards} → ${targetCards}.`);
   }
-  if (!configurationsEqual(current, target)) warnings.push('Текущая топология будет заменена.');
+  const differences = configurationDifferences(current, target);
+  if (differences.length) {
+    warnings.push(`Текущая топология будет заменена. Отличия: ${differences.join('; ')}.`);
+  }
   return {
     filename,
     scrVersion: decoded.version,
@@ -224,8 +272,11 @@ export const verifyTaurusConfiguration = (
   expected: TaurusLedScreenConfiguration,
   actual: TaurusLedScreenConfiguration,
 ): void => {
-  if (!configurationsEqual(expected, actual)) {
-    throw new Error('Taurus returned a different screen topology after writing SCR');
+  const differences = configurationDifferences(actual, expected);
+  if (differences.length) {
+    throw new Error(
+      `Taurus returned a different screen topology after writing SCR: ${differences.join('; ')}`,
+    );
   }
 };
 
