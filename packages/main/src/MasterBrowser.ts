@@ -51,10 +51,6 @@ import {
   loadTaurusNcpFirmware,
   validateTaurusNcpFilename,
 } from './taurusNcp';
-import {
-  applyTaurusReceivingCardFirmware,
-  readTaurusReceivingCardVersions,
-} from './taurusFirmware';
 import { inspectTaurusScr, writeAndVerifyTaurusConfiguration } from './taurusScr';
 import localConfig from './localConfig';
 import {
@@ -689,8 +685,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
     const inspection = await inspectTaurusNcp(filename, await client.getLedScreenConfiguration());
     const versions = new Map(
       (
-        await readTaurusReceivingCardVersions(
-          client,
+        await client.getReceivingCardVersions(
           inspection.targets.map(({ port, receivingCard }) => ({ port, receivingCard })),
         )
       ).map(version => [`${version.port}:${version.receivingCard}`, version]),
@@ -914,7 +909,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
       if (pathModule.extname(firmware.info.filename).toLowerCase() !== '.zip') {
         throw new TypeError('Receiving-card firmware must be a ZIP archive');
       }
-      const before = await readTaurusReceivingCardVersions(client, uniqueTargets);
+      const before = await client.getReceivingCardVersions(uniqueTargets);
       before.forEach(target => {
         const label = `Receiving card ${target.receivingCard + 1} on port ${target.port + 1}`;
         if (target.error || target.modelId === undefined) {
@@ -942,12 +937,14 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
         remotePath: ftpPath,
         data: firmware.data,
       });
-      await applyTaurusReceivingCardFirmware(client, devicePath, uniqueTargets, progress => {
-        control.firmwareProgress = progress;
-        this.emit('change', path, { taurus: this.getTaurusState(control) });
+      await client.applyReceivingCardFirmware(devicePath, uniqueTargets, {
+        onProgress: progress => {
+          control.firmwareProgress = progress;
+          this.emit('change', path, { taurus: this.getTaurusState(control) });
+        },
       });
       await delay(2);
-      const versions = await readTaurusReceivingCardVersions(client, uniqueTargets);
+      const versions = await client.getReceivingCardVersions(uniqueTargets);
       control.firmwareProgress = undefined;
       this.emit('change', path, {
         connected: true,

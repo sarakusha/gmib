@@ -300,7 +300,7 @@ const TaurusNcpConfiguration: React.FC<{
                       sx={{ display: 'block' }}
                     >
                       {file.label}: {file.filename}
-                      {file.version ? `; Version в манифесте: ${file.version}` : ''}
+                      {file.version ? `; версия в манифесте: ${file.version}` : ''}
                     </Typography>
                   ))}
                 </Box>
