@@ -60,6 +60,7 @@ const NameCell = styled(TableCell)(
 );
 
 const screenName = (index = 0) => `${index}`;
+const TAURUS_BRIGHTNESS_DEBOUNCE_MS = 750;
 
 const getTaurusLoginError = (error: unknown): string => {
   if (
@@ -128,23 +129,19 @@ const NovastarDeviceTab: React.FC<{ device: Novastar | undefined; selected?: boo
   const [taurusBrightness, setTaurusBrightness] = React.useState(100);
   const [taurusBrightnessDirty, setTaurusBrightnessDirty] = React.useState(false);
   const pendingTaurusBrightness = React.useRef<number | undefined>(undefined);
-  const [setBrightness, { isLoading: isSettingBrightness }] = useSetBrightnessMutation();
+  const [setBrightness] = useSetBrightnessMutation();
   const setTaurusBrightnessDebounced = React.useMemo(
     () =>
-      debounce(
-        (nextPath: string, value: number) => {
-          void setBrightness({ path: nextPath, screen: -1, value })
-            .unwrap()
-            .then(() => {
-              if (pendingTaurusBrightness.current === value) {
-                setTaurusBrightnessDirty(false);
-              }
-            })
-            .catch(() => undefined);
-        },
-        200,
-        { maxWait: 1000 },
-      ),
+      debounce((nextPath: string, value: number) => {
+        void setBrightness({ path: nextPath, screen: -1, value })
+          .unwrap()
+          .then(() => {
+            if (pendingTaurusBrightness.current === value) {
+              setTaurusBrightnessDirty(false);
+            }
+          })
+          .catch(() => undefined);
+      }, TAURUS_BRIGHTNESS_DEBOUNCE_MS),
     [setBrightness],
   );
   useEffect(
@@ -220,7 +217,6 @@ const NovastarDeviceTab: React.FC<{ device: Novastar | undefined; selected?: boo
                     unit="%"
                     align="right"
                     dirty={taurusBrightnessDirty}
-                    disabled={isSettingBrightness}
                     onChangeProperty={taurusBrightnessChanged}
                   />
                 ) : (
