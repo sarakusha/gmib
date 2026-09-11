@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [5.5.0](https://github.com/sarakusha/gmib/compare/v5.4.4...v5.5.0) (2026-09-11)
+
+### Features
+
+* add guarded Taurus receiving-card firmware updates ([7c0b438](https://github.com/sarakusha/gmib/commit/7c0b43897c424ca9d0374777e5611227a33d66b2))
+* add Taurus receiving-card telemetry ([eb525b1](https://github.com/sarakusha/gmib/commit/eb525b127016c6a371289272e419b4f2bb4822fb))
+* configure Taurus screens from NovaLCT files ([e420898](https://github.com/sarakusha/gmib/commit/e42089840c6ec50b7eb40aa4f3275f6c332efa82))
+* hide warnings ([5a9befd](https://github.com/sarakusha/gmib/commit/5a9befd9e99928604d04d3fbdacf820e5be6d015))
+* show Taurus receiving-card firmware progress ([457e865](https://github.com/sarakusha/gmib/commit/457e8657e65daf94841fbbe643e83052c829b537))
+* support NovaStar Taurus players over RNDIS ([a00d711](https://github.com/sarakusha/gmib/commit/a00d7110a4ad33c0ed64ffd1ae8ec449097f43fa))
+* support shortened Taurus serial bindings ([122a458](https://github.com/sarakusha/gmib/commit/122a4585eeba8a27c872a0cfb15e727e13e43ae5))
+
+### Bug Fixes
+
+* align telemetry card labels with NCP targets ([43d386c](https://github.com/sarakusha/gmib/commit/43d386c5bc3773d8e6e92b98e0e78a2a552ea0e1))
+* compare Taurus topology by physical mapping ([9c42717](https://github.com/sarakusha/gmib/commit/9c427179c361fb7286b1624700ac0b0da3c343db))
+* constrain long filenames in file selectors ([04ac20b](https://github.com/sarakusha/gmib/commit/04ac20b52457a6f68810d8aac90ce5cdae84ce8c))
+* keep Taurus connection alive more frequently ([56d99db](https://github.com/sarakusha/gmib/commit/56d99dbcba6d10e21a84fd45eba36a7df6f83cd0))
+* keep Taurus UI stable while reconnecting ([3563fc2](https://github.com/sarakusha/gmib/commit/3563fc28abd9d57687f6001ea4005875e3730429))
+* preserve selected NovaStar device on NiBUS disconnect ([70d577c](https://github.com/sarakusha/gmib/commit/70d577cffc4265e91f79cdb9526b19c67fea35a1))
+* preserve Taurus brightness input repeat and keep focused ([2723ee8](https://github.com/sarakusha/gmib/commit/2723ee8170b0eccd08ce957e33390725ca194d18))
+* reconnect Taurus when control socket closes ([30538c1](https://github.com/sarakusha/gmib/commit/30538c1bd866d61452e9824d33a147234e60e659))
+* recover stalled player playback ([b2d5d43](https://github.com/sarakusha/gmib/commit/b2d5d43e4f190c8c5ca4dc9b4a626d18d3bdac63))
+* retain selected Taurus configuration files ([1037b01](https://github.com/sarakusha/gmib/commit/1037b0138b1eba12bd1ca29e99b766be16ccc516))
+* verify Taurus topology after write timeout ([c22e2cb](https://github.com/sarakusha/gmib/commit/c22e2cbd28facbaf0e5135c3379e170745f25fa8))
 ## [5.4.4](https://github.com/sarakusha/gmib/compare/v5.4.3...v5.4.4) (2026-09-08)
 
 ### Bug Fixes
