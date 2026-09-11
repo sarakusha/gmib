@@ -45,4 +45,5 @@
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "biome.enabled": false,
   "liveServer.settings.AdvanceCustomBrowserCmdLine": "",
+  "js/ts.experimental.useTsgo": false,
 }

@@ -35,6 +35,7 @@ import memoize from 'lodash/memoize';
 import { TypedEmitter } from 'tiny-typed-emitter';
 
 import NovastarLoader from './NovastarLoader';
+import TaurusTelemetryLoader from './TaurusTelemetryLoader';
 import ExternalBroadcastDetection from './externalBroadcastDetection';
 import { probeGmibAddress } from './remoteGmib';
 import { getAddressesForScreen, getScreens } from './screen';
@@ -142,14 +143,17 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
 
   telemetry = memoize((address: string): NovastarTelemetry | undefined => {
     const controller = this.novastarControls.get(address);
-    if (!controller) {
+    const taurusClient = this.taurusControls.get(address)?.client;
+    if (!controller && !taurusClient) {
       setTimeout(() => this.telemetry.cache.delete(address), 0);
       return undefined;
     }
-    controller.session.connection.once('close', () => {
-      this.telemetry.cache.delete(address);
-    });
-    const loader = new NovastarLoader(controller);
+    const clearTelemetry = () => this.telemetry.cache.delete(address);
+    if (controller) controller.session.connection.once('close', clearTelemetry);
+    else taurusClient?.connection.stream.once('close', clearTelemetry);
+    const loader = controller
+      ? new NovastarLoader(controller)
+      : new TaurusTelemetryLoader(taurusClient as TaurusClient);
     return {
       start: options => {
         const cabinetHandler = (info: CabinetInfo): void => {

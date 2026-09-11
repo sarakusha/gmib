@@ -43,6 +43,7 @@ const NovastarTelemetryTab: React.FC<{ device: Novastar | undefined; selected?: 
   const isBusy = !device || device.isBusy;
   const { path, screens = [] } = device ?? {};
   const locations = screens.map(({ info }) => info && getScreenLocation(info));
+  const isTaurus = Boolean(device?.taurus);
 
   const { isLoading, telemetry: cabinets = [] } =
     useSelector(state => selectNovastarTelemetry(state, path ?? '')) ?? {};
@@ -103,36 +104,68 @@ const NovastarTelemetryTab: React.FC<{ device: Novastar | undefined; selected?: 
             sx={{
               display: 'grid',
               gap: '2px',
-              gridTemplateColumns: `repeat(${locations[index]?.cols ?? 0}, 1fr)`,
+              gridTemplateColumns: `repeat(${
+                locations[index]?.cols ?? Math.max(0, ...cabs.map(({ column }) => column + 1))
+              }, 1fr)`,
             }}
           >
-            {cabs.map(({ column, row, status, mcuVersion, fpgaVersion }) => {
-              const info: Record<string, unknown> = {};
-              if (status) {
-                const { tempInfoInScanCard, voltageInfoInScanCard } = status;
-                if (selectors.has(NovastarSelector.Temperature) && tempInfoInScanCard.IsValid)
-                  info.t = tempInfoInScanCard.Value;
-                if (selectors.has(NovastarSelector.Voltage) && voltageInfoInScanCard.IsValid)
-                  info.v = voltageInfoInScanCard.Value * 1000;
-                if (selectors.has(NovastarSelector.MCU_Version) && mcuVersion)
-                  info.MCU = mcuVersion;
-                if (selectors.has(NovastarSelector.FPGA_Version) && fpgaVersion)
-                  info.FPGA = fpgaVersion;
-              }
-              const error =
-                status || mcuVersion != null || fpgaVersion != null ? undefined : 'Timeout';
-              return (
-                <div
-                  key={`${column}:${row}`}
-                  style={{
-                    gridColumn: column + 1,
-                    gridRow: row + 1,
-                  }}
-                >
-                  <ModuleInfo x={column} y={row} info={info} error={error} />
-                </div>
-              );
-            })}
+            {cabs.map(
+              ({
+                column,
+                row,
+                port,
+                card,
+                status,
+                working,
+                temperature,
+                voltage,
+                mcuVersion,
+                fpgaVersion,
+              }) => {
+                const info: Record<string, unknown> = {};
+                if (isTaurus) {
+                  info.P = port;
+                  info.RC = card;
+                  if (selectors.has(NovastarSelector.Temperature) && temperature != null)
+                    info.t = temperature;
+                  if (selectors.has(NovastarSelector.Voltage) && voltage != null)
+                    info.v = voltage * 1000;
+                  if (selectors.has(NovastarSelector.MCU_Version) && mcuVersion)
+                    info.MCU = mcuVersion;
+                  if (selectors.has(NovastarSelector.FPGA_Version) && fpgaVersion)
+                    info.FPGA = fpgaVersion;
+                }
+                if (status) {
+                  const { tempInfoInScanCard, voltageInfoInScanCard } = status;
+                  if (selectors.has(NovastarSelector.Temperature) && tempInfoInScanCard.IsValid)
+                    info.t = tempInfoInScanCard.Value;
+                  if (selectors.has(NovastarSelector.Voltage) && voltageInfoInScanCard.IsValid)
+                    info.v = voltageInfoInScanCard.Value * 1000;
+                  if (selectors.has(NovastarSelector.MCU_Version) && mcuVersion)
+                    info.MCU = mcuVersion;
+                  if (selectors.has(NovastarSelector.FPGA_Version) && fpgaVersion)
+                    info.FPGA = fpgaVersion;
+                }
+                const error = isTaurus
+                  ? working
+                    ? undefined
+                    : 'Принимающая карта не отвечает'
+                  : status || mcuVersion != null || fpgaVersion != null
+                    ? undefined
+                    : 'Timeout';
+                return (
+                  <div
+                    key={`${column}:${row}`}
+                    style={{
+                      gridColumn: column + 1,
+                      gridRow: row + 1,
+                    }}
+                  >
+                    <ModuleInfo x={column} y={row} info={info} error={error} />
+                  </div>
+                );
+              },
+            )}
           </Box>
         </React.Fragment>
       ))}

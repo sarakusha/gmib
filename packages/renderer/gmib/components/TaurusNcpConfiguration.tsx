@@ -139,10 +139,6 @@ const TaurusNcpConfiguration: React.FC<{ path: string; disabled?: boolean }> = (
 
   return (
     <Stack spacing={2}>
-      <Typography variant="h6">Конфигурация кабинета (.ncp)</Typography>
-      <Alert severity="info">
-        NCP настраивает принимающие карты. Топология и размер экрана задаются отдельным файлом SCR.
-      </Alert>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <FilenameEllipsis
           filename={filename}
@@ -247,12 +243,6 @@ const TaurusNcpConfiguration: React.FC<{ path: string; disabled?: boolean }> = (
               </TableBody>
             </Table>
           </Box>
-
-          {inspection.warnings.map(warning => (
-            <Alert severity="warning" key={warning}>
-              {warning}
-            </Alert>
-          ))}
           <FormControlLabel
             control={
               <Checkbox

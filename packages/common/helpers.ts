@@ -338,6 +338,12 @@ export type CabinetInfo = CabinetPosition & {
   status?: Status | null;
   mcuVersion?: string | null;
   fpgaVersion?: string | null;
+  width?: number;
+  height?: number;
+  working?: boolean;
+  temperature?: number | null;
+  voltage?: number | null;
+  remarksVersion?: string | null;
 };
 
 export enum NovastarSelector {
