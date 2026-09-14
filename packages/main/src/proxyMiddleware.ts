@@ -13,6 +13,7 @@ import config, { port as currentPort } from './config';
 import localConfig from './localConfig';
 import {
   compareMasterElectionPeers,
+  getLegacyCompatibleMasterRank,
   type MasterElectionPeer,
   type MasterElectionRole,
   parseMasterElectionPeer,
@@ -32,6 +33,7 @@ type ProxyOptions = {
   readonly port: number;
   readonly identifier: string;
   readonly rank: number;
+  readonly version?: string;
 };
 
 type Proxy = RequestHandler<Request, Response> &
@@ -52,11 +54,13 @@ const delay = (timeout: number) =>
   });
 
 const rank = Math.random();
+const version = import.meta.env.VITE_APP_VERSION;
+const legacyMasterRank = getLegacyCompatibleMasterRank(version, rank);
 const identifier = localConfig.get('identifier');
 const commonServiceTxt = {
   candidateRank: rank.toString(),
   identifier,
-  version: import.meta.env.VITE_APP_VERSION,
+  version,
 };
 const candidateServiceTxt = {
   ...commonServiceTxt,
@@ -68,8 +72,8 @@ const candidateServiceTxt = {
 const masterServiceTxt = {
   ...commonServiceTxt,
   role: 'master',
-  rang: rank.toString(),
-  rank: rank.toString(),
+  rang: legacyMasterRank.toString(),
+  rank: legacyMasterRank.toString(),
 };
 let service: ReturnType<typeof bonjour.publish> | undefined;
 
@@ -121,7 +125,12 @@ let ready = new Deferred();
 const getRemotePeer = (remote: RemoteService): MasterElectionPeer =>
   parseMasterElectionPeer(remote.txt);
 
-const getLocalPeer = (): MasterElectionPeer => ({ role: serviceRole, rank, identifier });
+const getLocalPeer = (): MasterElectionPeer => ({
+  role: serviceRole,
+  rank: serviceRole === 'master' ? legacyMasterRank : rank,
+  identifier,
+  version,
+});
 
 const getRemoteAddresses = (remote: RemoteService): string[] =>
   [remote.referer.address, ...(remote.addresses ?? [])].filter(
@@ -277,6 +286,7 @@ const createProxy = (remote: RemoteService) => {
     port,
     identifier,
     rank: getRemotePeer(remote).rank,
+    version: getRemotePeer(remote).version,
     secret: (value: bigint) => {
       secret = Buffer.from(value.toString(16), 'hex');
     },
@@ -309,6 +319,7 @@ const handleRemoteService = (remote: RemoteService, updated = false): void => {
       role: 'master',
       rank: masterProxy.rank,
       identifier: masterProxy.identifier,
+      version: masterProxy.version,
     };
     if (
       !isMaster &&
