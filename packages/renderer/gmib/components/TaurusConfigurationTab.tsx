@@ -6,7 +6,6 @@ import {
   Box,
   Button,
   Checkbox,
-  CircularProgress,
   Divider,
   FormControlLabel,
   IconButton,
@@ -35,6 +34,7 @@ import type { TaurusScreenConfiguration } from '/@common/taurusConfiguration';
 import FilenameEllipsis from './FilenameEllipsis';
 import TaurusNcpConfiguration from './TaurusNcpConfiguration';
 import TaurusCalibration from './TaurusCalibration';
+import TaurusOperationDialog from './TaurusOperationDialog';
 
 const errorMessage = (error: unknown): string | undefined => {
   if (!error) return undefined;
@@ -205,7 +205,18 @@ const TaurusConfigurationTab: React.FC<{
         </Box>
 
         {operationError && <Alert severity="error">{operationError}</Alert>}
-        {busy && <CircularProgress size={28} />}
+        <TaurusOperationDialog open={isFetching} title="Чтение конфигурации Taurus">
+          Получение текущей топологии экрана…
+        </TaurusOperationDialog>
+        <TaurusOperationDialog open={inspectionState.isLoading} title="Чтение файла SCR">
+          Проверка топологии экрана…
+        </TaurusOperationDialog>
+        <TaurusOperationDialog open={applyState.isLoading} title="Запись топологии SCR">
+          Не отключайте питание до завершения операции.
+        </TaurusOperationDialog>
+        <TaurusOperationDialog open={restoreState.isLoading} title="Восстановление топологии SCR">
+          Не отключайте питание до завершения операции.
+        </TaurusOperationDialog>
 
         {state?.current && (
           <Box>
@@ -267,6 +278,7 @@ const TaurusConfigurationTab: React.FC<{
           path={path}
           disabled={!authenticated || device?.isBusy}
           firmwareProgress={device?.taurus?.firmwareProgress}
+          ncpProgress={device?.taurus?.ncpProgress}
         />
         <Divider />
         <TaurusCalibration

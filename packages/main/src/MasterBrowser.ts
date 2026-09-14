@@ -14,6 +14,7 @@ import type {
   TaurusCalibrationTarget,
   TaurusFirmwareApplyResult,
   TaurusFirmwareProgress,
+  TaurusNcpProgress,
   TaurusNcpTarget,
 } from '/@common/taurusConfiguration';
 
@@ -122,6 +123,7 @@ type TaurusControl = {
   brightness?: number;
   illuminance?: number;
   firmwareProgress?: TaurusFirmwareProgress;
+  ncpProgress?: TaurusNcpProgress;
   calibrationProgress?: TaurusCalibrationProgress;
   timeout?: NodeJS.Timeout;
 };
@@ -473,6 +475,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
       brightness: control.brightness,
       illuminance: control.illuminance,
       firmwareProgress: control.firmwareProgress,
+      ncpProgress: control.ncpProgress,
       calibrationProgress: control.calibrationProgress,
     };
   }
@@ -826,6 +829,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
     validateTaurusNcpFilename(filename);
     if (!requestedTargets.length) throw new RangeError('Select at least one receiving card');
     control.configurationBusy = true;
+    control.ncpProgress = undefined;
     this.emit('change', path, { isBusy: true, error: undefined });
     try {
       const topology = await client.getLedScreenConfiguration();
@@ -852,13 +856,27 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
         cabinet.name.replace(/[^a-z\d._-]+/gi, '-').replace(/^-+|-+$/g, '') || 'cabinet';
       const ftpPath = `/sdcard/gmib/${safeName}-${md5.slice(0, 12)}.bin`;
       const devicePath = `/mnt${ftpPath}`;
+      const updateProgress = (progress: TaurusNcpProgress): void => {
+        control.ncpProgress = progress;
+        this.emit('change', path, { taurus: this.getTaurusState(control) });
+      };
+      updateProgress({ stage: 'uploading', completed: 0, total: cabinet.binary.byteLength });
       await uploadTaurusFile({
         host: control.info.address,
         port: control.info.ftpPort ?? TAURUS_FTP_PORT,
         password: await client.getFtpPassword(),
         remotePath: ftpPath,
         data: cabinet.binary,
+        onProgress: (completed, total) => {
+          updateProgress({
+            stage: 'uploading',
+            completed,
+            total,
+            progress: total > 0 ? (completed / total) * 100 : undefined,
+          });
+        },
       });
+      updateProgress({ stage: 'applying', completed: 0, total: uniqueTargets.length });
       await client.applyReceivingCardConfiguration(
         uniqueTargets.map(target => ({
           filePath: devicePath,
@@ -871,6 +889,14 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
       while (Date.now() < deadline) {
         await delay(0.5);
         const progress = await client.getReceivingCardConfigProgress();
+        updateProgress({
+          stage: 'applying',
+          completed: progress.completed,
+          total: progress.total,
+          progress: progress.progress,
+          port: progress.executing?.port,
+          receivingCard: progress.executing?.receivingCard,
+        });
         if (progress.status === TaurusReceivingCardConfigStatus.Completed) {
           this.emit('change', path, {
             connected: true,
@@ -902,7 +928,9 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
       });
       throw error;
     } finally {
+      control.ncpProgress = undefined;
       control.configurationBusy = false;
+      this.emit('change', path, { taurus: this.getTaurusState(control) });
     }
   }
 

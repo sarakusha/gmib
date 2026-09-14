@@ -1,13 +1,5 @@
 import SaveAltIcon from '@mui/icons-material/SaveAlt';
-import {
-  Alert,
-  Button,
-  Checkbox,
-  FormControlLabel,
-  LinearProgress,
-  Stack,
-  Typography,
-} from '@mui/material';
+import { Alert, Button, Checkbox, FormControlLabel, Stack, Typography } from '@mui/material';
 import React, { useMemo, useState } from 'react';
 
 import {
@@ -19,6 +11,8 @@ import type {
   TaurusCalibrationProgress,
   TaurusScreenConfiguration,
 } from '/@common/taurusConfiguration';
+
+import TaurusOperationDialog from './TaurusOperationDialog';
 
 const errorText = (error: unknown): string | undefined => {
   if (!error) return undefined;
@@ -66,6 +60,7 @@ const TaurusCalibration: React.FC<{
   const hasModules = inspection.data?.cards.every(card =>
     card.modules.some(module => module.present),
   );
+  const progressPercent = progress?.total ? (progress.completed / progress.total) * 100 : undefined;
 
   return (
     <Stack spacing={1.5}>
@@ -135,16 +130,18 @@ const TaurusCalibration: React.FC<{
           label="Подтверждаю загрузку при неполном наборе плат. Коррекция всего кабинета не гарантируется."
         />
       )}
-      {(inspection.isLoading || operation.isLoading) && (
-        <>
-          <LinearProgress />
-          <Typography variant="body2">
-            {progress
-              ? `${stageText[progress.stage]}: порт ${progress.target.port + 1}, карта ${progress.target.receivingCard + 1}. Завершено ${progress.completed}/${progress.total}`
-              : 'Подготовка…'}
-          </Typography>
-        </>
-      )}
+      <TaurusOperationDialog open={inspection.isLoading} title="Проверка плат индикации">
+        Чтение структуры модулей и доступности таблиц коррекции…
+      </TaurusOperationDialog>
+      <TaurusOperationDialog
+        open={operation.isLoading}
+        title={progress ? stageText[progress.stage] : 'Загрузка коррекции'}
+        progress={progressPercent}
+      >
+        {progress
+          ? `Порт ${progress.target.port + 1}, карта ${progress.target.receivingCard + 1}. Завершено ${progress.completed}/${progress.total}`
+          : 'Подготовка…'}
+      </TaurusOperationDialog>
       {error && <Alert severity="error">{error}</Alert>}
       {operation.data && (
         <Alert severity="success">

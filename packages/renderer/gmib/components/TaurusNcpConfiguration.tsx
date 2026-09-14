@@ -6,12 +6,10 @@ import {
   Box,
   Button,
   Checkbox,
-  CircularProgress,
   FormControl,
   FormControlLabel,
   IconButton,
   InputLabel,
-  LinearProgress,
   MenuItem,
   Select,
   Stack,
@@ -32,8 +30,9 @@ import {
 } from '../api/novastar';
 
 import FilenameEllipsis from './FilenameEllipsis';
+import TaurusOperationDialog from './TaurusOperationDialog';
 
-import type { TaurusFirmwareProgress } from '/@common/taurusConfiguration';
+import type { TaurusFirmwareProgress, TaurusNcpProgress } from '/@common/taurusConfiguration';
 
 const errorMessage = (error: unknown): string | undefined => {
   if (!error) return undefined;
@@ -51,7 +50,8 @@ const TaurusNcpConfiguration: React.FC<{
   path: string;
   disabled?: boolean;
   firmwareProgress?: TaurusFirmwareProgress;
-}> = ({ path, disabled = false, firmwareProgress }) => {
+  ncpProgress?: TaurusNcpProgress;
+}> = ({ path, disabled = false, firmwareProgress, ncpProgress }) => {
   const { enqueueSnackbar } = useSnackbar();
   const [filename, setFilename] = useState('');
   const [cabinetIndex, setCabinetIndex] = useState(0);
@@ -71,6 +71,9 @@ const TaurusNcpConfiguration: React.FC<{
     errorMessage(inspectionState.error) ??
     errorMessage(applyState.error) ??
     errorMessage(firmwareState.error);
+  const ncpPercent =
+    ncpProgress?.progress ??
+    (ncpProgress?.total ? (ncpProgress.completed / ncpProgress.total) * 100 : undefined);
 
   useEffect(() => {
     if (previousPath.current === path) return;
@@ -241,20 +244,33 @@ const TaurusNcpConfiguration: React.FC<{
       </Box>
 
       {operationError && <Alert severity="error">{operationError}</Alert>}
-      {busy && !firmwareState.isLoading && <CircularProgress size={28} />}
-      {firmwareState.isLoading && (
-        <Stack spacing={0.5}>
-          <LinearProgress
-            variant={firmwareProgress ? 'determinate' : 'indeterminate'}
-            value={firmwareProgress?.overallProgress}
-          />
-          <Typography variant="body2">
-            {firmwareProgress
-              ? `Порт ${firmwareProgress.port + 1}, карта ${firmwareProgress.receivingCard + 1}: ${firmwareProgress.fileLabel || 'подготовка'}, файл ${Math.min(firmwareProgress.fileIndex + 1, firmwareProgress.totalFiles || 1)}/${firmwareProgress.totalFiles || '—'}, ${firmwareProgress.fileProgress}% (всего ${Math.round(firmwareProgress.overallProgress)}%)`
-              : 'Подготовка firmware…'}
-          </Typography>
-        </Stack>
-      )}
+      <TaurusOperationDialog open={inspectionState.isLoading} title="Чтение файла NCP">
+        Проверка конфигурации кабинета и принимающих карт…
+      </TaurusOperationDialog>
+      <TaurusOperationDialog
+        open={applyState.isLoading}
+        title={
+          ncpProgress?.stage === 'uploading'
+            ? 'Загрузка NCP в Taurus'
+            : 'Запись NCP в принимающие карты'
+        }
+        progress={ncpPercent}
+      >
+        {ncpProgress?.stage === 'uploading'
+          ? `Передано ${ncpProgress.completed} из ${ncpProgress.total} байт`
+          : ncpProgress
+            ? `${ncpProgress.port === undefined ? '' : `Порт ${ncpProgress.port + 1}, карта ${(ncpProgress.receivingCard ?? 0) + 1}. `}Завершено ${ncpProgress.completed}/${ncpProgress.total}`
+            : 'Подготовка NCP…'}
+      </TaurusOperationDialog>
+      <TaurusOperationDialog
+        open={firmwareState.isLoading}
+        title="Прошивка принимающих карт"
+        progress={firmwareProgress?.overallProgress}
+      >
+        {firmwareProgress
+          ? `Порт ${firmwareProgress.port + 1}, карта ${firmwareProgress.receivingCard + 1}: ${firmwareProgress.fileLabel || 'подготовка'}, файл ${Math.min(firmwareProgress.fileIndex + 1, firmwareProgress.totalFiles || 1)}/${firmwareProgress.totalFiles || '—'}, ${firmwareProgress.fileProgress}% (всего ${Math.round(firmwareProgress.overallProgress)}%)`
+          : 'Подготовка firmware…'}
+      </TaurusOperationDialog>
 
       {inspection && cabinet && (
         <>

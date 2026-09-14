@@ -1,3 +1,5 @@
+import type { TaurusCalibrationTarget } from '@novastar/taurus';
+
 export type TaurusScreenSize = {
   width: number;
   height: number;
@@ -113,6 +115,15 @@ export type TaurusNcpApplyResult = {
   progress?: number;
 };
 
+export type TaurusNcpProgress = {
+  stage: 'uploading' | 'applying';
+  completed: number;
+  total: number;
+  progress?: number;
+  port?: number;
+  receivingCard?: number;
+};
+
 export type TaurusFirmwareApplyRequest = TaurusNcpApplyRequest;
 
 export type TaurusFirmwareProgress = {
@@ -146,4 +157,3 @@ export type TaurusCalibrationRequest = {
   targets: TaurusCalibrationTarget[];
   allowPartial?: boolean;
 };
-import type { TaurusCalibrationTarget } from '@novastar/taurus';
