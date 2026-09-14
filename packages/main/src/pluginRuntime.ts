@@ -20,6 +20,15 @@ export function resolvePluginOrder(manifests: PluginManifest[], disabled: string
       sportOwners.set(sport.id, manifest.id);
     }
   }
+  const reaches = (id: string, target: string, seen = new Set<string>()): boolean => {
+    if (id === target) return true;
+    if (seen.has(id)) return false;
+    seen.add(id);
+    const manifest = byId.get(id);
+    return Object.keys({ ...manifest?.dependencies, ...manifest?.optionalDependencies }).some(
+      dependency => reaches(dependency, target, seen),
+    );
+  };
   const visit = (id: string): boolean => {
     if (errors.has(id) || disabled.includes(id)) return false;
     if (visited.has(id)) return true;
@@ -39,7 +48,12 @@ export function resolvePluginOrder(manifests: PluginManifest[], disabled: string
     // Optional integrations influence ordering only; missing/failed providers never block consumers.
     for (const [dependency, range] of Object.entries(manifest.optionalDependencies ?? {})) {
       const target = byId.get(dependency);
-      if (target && semver.satisfies(target.version, range) && !visiting.has(dependency))
+      if (
+        target &&
+        semver.satisfies(target.version, range) &&
+        !visiting.has(dependency) &&
+        !reaches(dependency, id)
+      )
         visit(dependency);
     }
     visiting.delete(id);

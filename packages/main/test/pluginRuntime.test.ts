@@ -92,3 +92,11 @@ it('supports standalone hockey when optional roster is absent, disabled or incom
     ]).errors.size,
   ).toBe(0);
 });
+
+it('an optional back-reference cannot create a mandatory cycle in standalone hockey', () => {
+  const hockey = { ...manifest('icehockey'), optionalDependencies: { 'sports-roster': '^1' } };
+  const roster = manifest('sports-roster', { icehockey: '^1' });
+  const result = resolvePluginOrder([hockey, roster]);
+  expect(result.errors.size).toBe(0);
+  expect(result.order.map(item => item.id)).toEqual(['icehockey', 'sports-roster']);
+});

@@ -32,6 +32,13 @@ import type { PluginCatalogEntry, PluginPermission, PluginStatus } from '/@commo
 const permissionLabels: Record<PluginPermission, string> = {
   'http.routes': 'HTTP',
   'output.pages': 'Вывод',
+  database: 'SQLite',
+  'services.provide': 'Общие сервисы',
+  'services.consume': 'Сервисы зависимостей',
+  'plugins.read': 'Виды спорта',
+  'output.control': 'Управление выводом',
+  'nibus.read': 'Чтение NiBUS',
+  'nibus.write': 'Табло NiBUS',
   realtime: 'События',
   storage: 'Хранилище',
 };
