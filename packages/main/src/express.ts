@@ -46,6 +46,19 @@ app.use((_, res, next) => {
   next();
 });
 
+// Plugin backups and small embedded logos use a larger local-only JSON limit.
+app.use('/plugins/:pluginId/api', (req, res, next) => {
+  const address = req.socket.remoteAddress?.replace(/^::ffff:/, '');
+  const origin = req.headers.origin;
+  if (
+    !['127.0.0.1', '::1'].includes(address ?? '') ||
+    (origin && origin !== `http://${req.headers.host}` && origin !== `https://${req.headers.host}`)
+  ) {
+    res.sendStatus(403);
+    return;
+  }
+  bodyParser.json({ limit: '20mb' })(req, res, next);
+});
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 

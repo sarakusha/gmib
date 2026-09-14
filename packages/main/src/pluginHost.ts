@@ -9,6 +9,10 @@ import { app, dialog, powerMonitor, shell } from 'electron';
 import debugFactory from 'debug';
 import { nanoid } from 'nanoid';
 import semver from 'semver';
+import { createPluginOutput } from './pluginOutput';
+import { createPluginNibus } from './pluginNibus';
+import type { PluginOutputApi } from '/@common/pluginOutput';
+import type { PluginNibusApi } from '/@common/pluginNibus';
 import { performance } from 'node:perf_hooks';
 import { GMIB_PLUGIN_API_VERSION } from '/@common/plugins';
 import type { PluginServicesContext } from '/@common/pluginServices';
@@ -105,7 +109,8 @@ type PluginContext = PluginServicesContext & {
   events: {
     publish: (event: string, data?: unknown) => void;
   };
-  output: {
+  nibus: PluginNibusApi;
+  output: PluginOutputApi & {
     registerPage: (page: { id: string; title: string; path: string }) => Promise<void>;
   };
 };
@@ -424,6 +429,10 @@ const createPluginContext = async (plugin: RuntimePlugin): Promise<PluginContext
       plugin.routes.push({ method, path: normalized, access, handler });
     };
 
+  const output = await createPluginOutput(manifest, storage, handler =>
+    plugin.disposers.push(handler),
+  );
+  const nibus = createPluginNibus(manifest, handler => plugin.disposers.push(handler));
   const databases = new Set<string>();
   const subscribePower = (event: 'suspend' | 'resume', handler: () => void) => {
     if (event === 'suspend') powerMonitor.on('suspend', handler);
@@ -547,7 +556,9 @@ const createPluginContext = async (plugin: RuntimePlugin): Promise<PluginContext
         });
       },
     },
+    nibus,
     output: {
+      ...output,
       registerPage: (page: { id: string; title: string; path: string }) =>
         registerOutputPage(plugin, page),
     },
@@ -681,6 +692,10 @@ const dispatchPluginRoute =
   (req, res, next) => {
     const pluginId = firstParam(req.params.pluginId);
     const plugin = pluginId ? runtimePlugins.get(pluginId) : undefined;
+    if (plugin && !plugin.ready) {
+      res.status(503).json({ error: 'Плагин не готов' });
+      return;
+    }
     const method = req.method.toUpperCase() as PluginHttpMethod;
     const requestPath = normalizeRoute(req.path || '/');
     const route = plugin?.routes.find(
