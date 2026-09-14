@@ -5,9 +5,15 @@ import { isDeepStrictEqual } from 'node:util';
 
 import type { Request, RequestHandler, Response } from 'express';
 import express from 'express';
-import { app, dialog, shell } from 'electron';
+import { app, dialog, powerMonitor, shell } from 'electron';
 import debugFactory from 'debug';
 import { nanoid } from 'nanoid';
+import semver from 'semver';
+import { performance } from 'node:perf_hooks';
+import { GMIB_PLUGIN_API_VERSION } from '/@common/plugins';
+import type { PluginServicesContext } from '/@common/pluginServices';
+import { openPluginDatabase } from './pluginDatabase';
+import { listPluginSports, PluginServiceRegistry, resolvePluginOrder } from './pluginRuntime';
 
 import type {
   PluginInstallResult,
@@ -50,7 +56,7 @@ type PluginHttpResponse = {
 };
 type PluginHttpHandler = (request: PluginHttpRequest) => unknown;
 
-type PluginContext = {
+type PluginContext = PluginServicesContext & {
   apiVersion: string;
   plugin: Readonly<PluginManifest>;
   logger: {
@@ -123,6 +129,8 @@ type RuntimePlugin = {
   manifest: PluginManifest;
   publicRoot?: string;
   routes: RegisteredRoute[];
+  disposers: Array<() => void | Promise<void>>;
+  ready: boolean;
 };
 
 let pluginsRoot: string | undefined;
@@ -131,6 +139,32 @@ let started = false;
 const runtimePlugins = new Map<string, RuntimePlugin>();
 const runtimeErrors = new Map<string, string>();
 const desiredPageIds = new Set<string>();
+let installedManifests: PluginManifest[] = [];
+const services = new PluginServiceRegistry();
+
+const disposePlugin = async (plugin: RuntimePlugin): Promise<void> => {
+  Object.assign(plugin, { ready: false });
+  for (const dispose of plugin.disposers.reverse()) {
+    try {
+      await dispose();
+    } catch (error) {
+      debug(`Plugin cleanup failed: ${String(error)}`);
+    }
+  }
+  plugin.disposers.splice(0);
+  services.remove(plugin.manifest.id);
+};
+let stopped = false;
+let stopPromise: Promise<void> | undefined;
+app.on('before-quit', event => {
+  if (stopped) return;
+  event.preventDefault();
+  stopPromise ??= (async () => {
+    for (const plugin of [...runtimePlugins.values()].reverse()) await disposePlugin(plugin);
+    stopped = true;
+    app.quit();
+  })();
+});
 
 const rootDirectory = (): string => {
   pluginsRoot ??= path.join(app.getPath('userData'), 'plugins');
@@ -378,6 +412,8 @@ const createPluginContext = async (plugin: RuntimePlugin): Promise<PluginContext
       { access = 'local' }: { access?: PluginHttpAccess } = {},
     ) => {
       requirePermission(manifest, 'http.routes');
+      if (manifest.localOnly && access !== 'local')
+        throw new Error('Плагин предназначен только для локального доступа');
       if (typeof handler !== 'function')
         throw new Error('Обработчик маршрута должен быть функцией');
       const normalized = normalizeRoute(route);
@@ -388,8 +424,79 @@ const createPluginContext = async (plugin: RuntimePlugin): Promise<PluginContext
       plugin.routes.push({ method, path: normalized, access, handler });
     };
 
-  return Object.freeze({
-    apiVersion: '1.0.0',
+  const databases = new Set<string>();
+  const subscribePower = (event: 'suspend' | 'resume', handler: () => void) => {
+    if (event === 'suspend') powerMonitor.on('suspend', handler);
+    else powerMonitor.on('resume', handler);
+    const unsubscribe = () => {
+      if (event === 'suspend') powerMonitor.off('suspend', handler);
+      else powerMonitor.off('resume', handler);
+    };
+    plugin.disposers.push(unsubscribe);
+    return unsubscribe;
+  };
+  return Object.freeze<PluginContext>({
+    apiVersion: GMIB_PLUGIN_API_VERSION,
+    database: {
+      open: async (name, migrations) => {
+        requirePermission(manifest, 'database');
+        if (databases.has(name)) throw new Error(`База уже открыта: ${name}`);
+        databases.add(name);
+        try {
+          const database = await openPluginDatabase(
+            path.join(rootDirectory(), DATA_DIRECTORY, manifest.id),
+            name,
+            migrations,
+          );
+          plugin.disposers.push(database.close);
+          return database.api;
+        } catch (error) {
+          databases.delete(name);
+          throw error;
+        }
+      },
+    },
+    services: {
+      provide: (name, version, value) => {
+        requirePermission(manifest, 'services.provide');
+        services.provide(manifest.id, name, version, value);
+      },
+      require: <T extends object>(owner: string, name: string, range: string) => {
+        requirePermission(manifest, 'services.consume');
+        const provider = runtimePlugins.get(owner);
+        const dependencyRange =
+          manifest.dependencies?.[owner] ?? manifest.optionalDependencies?.[owner];
+        if (
+          !provider?.ready ||
+          !dependencyRange ||
+          !semver.satisfies(provider.manifest.version, dependencyRange)
+        ) {
+          throw new Error(`Недоступна зависимость ${owner}`);
+        }
+        return services.require<T>(manifest, owner, name, range);
+      },
+    },
+    plugins: {
+      listSports: () => {
+        requirePermission(manifest, 'plugins.read');
+        return listPluginSports(
+          installedManifests,
+          isEnabled,
+          id => runtimePlugins.get(id)?.ready === true,
+          runtimeErrors,
+        );
+      },
+    },
+    lifecycle: {
+      onDispose: handler => {
+        plugin.disposers.push(handler);
+      },
+    },
+    clock: {
+      now: () => performance.now(),
+      onSuspend: handler => subscribePower('suspend', handler),
+      onResume: handler => subscribePower('resume', handler),
+    },
     plugin: Object.freeze(structuredClone(manifest)),
     logger: {
       debug: (...args: unknown[]) => logger(args.map(String).join(' ')),
@@ -436,6 +543,7 @@ const createPluginContext = async (plugin: RuntimePlugin): Promise<PluginContext
           event: `plugin:${manifest.id}:${event}`,
           data: [data],
           all: true,
+          localOnly: manifest.localOnly,
         });
       },
     },
@@ -451,6 +559,8 @@ const loadPlugin = async (directory: string, manifest: PluginManifest): Promise<
     directory,
     manifest,
     routes: [],
+    disposers: [],
+    ready: false,
     ...(manifest.public
       ? { publicRoot: await resolveInstalledPath(directory, manifest.public, 'directory') }
       : {}),
@@ -469,7 +579,9 @@ const loadPlugin = async (directory: string, manifest: PluginManifest): Promise<
       }
       await activate(await createPluginContext(plugin));
     }
+    plugin.ready = true;
   } catch (error) {
+    await disposePlugin(plugin);
     runtimePlugins.delete(manifest.id);
     desiredPageIds.forEach(pageId => {
       if (pageId.startsWith(`${PLUGIN_PAGE_PREFIX}${manifest.id}:`)) {
@@ -503,9 +615,17 @@ export const startPlugins = async (): Promise<void> => {
   await loadRegistry();
   await Promise.all([dbReady, testsDeferred.promise]);
 
-  for (const { directory, manifest } of await scanInstalled()) {
-    if (!isEnabled(manifest.id)) continue;
+  const installed = await scanInstalled();
+  installedManifests = installed.map(entry => entry.manifest);
+  const { order, errors } = resolvePluginOrder(installedManifests, registry.disabled);
+  errors.forEach((error, id) => runtimeErrors.set(id, error));
+  for (const manifest of order) {
+    const directory = installed.find(entry => entry.manifest.id === manifest.id)!.directory;
     try {
+      for (const dependency of Object.keys(manifest.dependencies ?? {})) {
+        if (!runtimePlugins.get(dependency)?.ready)
+          throw new Error(`Не загружена зависимость ${dependency}`);
+      }
       await loadPlugin(directory, manifest);
       debug(`Loaded plugin ${manifest.id}@${manifest.version}`);
     } catch (error) {
@@ -590,6 +710,15 @@ export const localPluginApiHandler: RequestHandler = (req, res, next) => {
     res.sendStatus(403);
     return;
   }
+  const origin = req.headers.origin;
+  if (
+    origin &&
+    origin !== `http://${req.headers.host}` &&
+    origin !== `https://${req.headers.host}`
+  ) {
+    res.sendStatus(403);
+    return;
+  }
   dispatchPluginRoute('local')(req, res, next);
 };
 
@@ -600,6 +729,10 @@ export const pluginStaticHandler: RequestHandler = (req, res, next) => {
   const plugin = pluginId ? runtimePlugins.get(pluginId) : undefined;
   if (!plugin?.publicRoot) {
     next();
+    return;
+  }
+  if (plugin.manifest.localOnly && !isLocalRequest(req)) {
+    res.sendStatus(403);
     return;
   }
   express.static(plugin.publicRoot, {
@@ -641,6 +774,13 @@ const permissionLabels: Record<PluginPermission, string> = {
   'output.pages': 'страницы в разделе «Вывод»',
   realtime: 'события реального времени',
   storage: 'постоянное хранилище',
+  database: 'база SQLite плагина',
+  'services.provide': 'предоставление сервисов плагинам',
+  'services.consume': 'использование сервисов зависимостей',
+  'plugins.read': 'список установленных видов спорта',
+  'output.control': 'управление привязанным выводом',
+  'nibus.read': 'чтение событий NiBUS',
+  'nibus.write': 'отправка состояния табло NiBUS',
 };
 
 const showMessage = async (options: Electron.MessageBoxOptions) => {

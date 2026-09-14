@@ -122,7 +122,68 @@ export const parsePluginManifest = (value: unknown): PluginManifest => {
     throw new Error('Для поля "pages" требуется разрешение "output.pages"');
   }
 
+  const dependencies = raw.dependencies;
+  const optionalDependencies = raw.optionalDependencies;
+  for (const dependencies of [raw.dependencies, raw.optionalDependencies]) {
+    if (dependencies !== undefined) {
+      if (!dependencies || typeof dependencies !== 'object' || Array.isArray(dependencies)) {
+        throw new Error('dependencies должен быть объектом');
+      }
+      for (const [dependency, range] of Object.entries(dependencies)) {
+        if (
+          !ID_PATTERN.test(dependency) ||
+          dependency === id ||
+          typeof range !== 'string' ||
+          !semver.validRange(range)
+        ) {
+          throw new Error(`Недопустимая зависимость: ${dependency}`);
+        }
+      }
+    }
+  }
+  let contributes: PluginManifest['contributes'];
+  if (raw.contributes !== undefined) {
+    const value = raw.contributes as Record<string, unknown> | null;
+    if (!value || !Array.isArray(value.sports))
+      throw new Error('contributes.sports должен быть массивом');
+    const ids = new Set<string>();
+    contributes = {
+      sports: value.sports.map((entry: unknown) => {
+        if (!entry || typeof entry !== 'object') throw new Error('Недопустимый вид спорта');
+        const sport = entry as Record<string, unknown>;
+        const sportId = requiredString(sport.id, 'sport.id');
+        if (!ID_PATTERN.test(sportId) || ids.has(sportId))
+          throw new Error('Повторяющийся или недопустимый sport.id');
+        ids.add(sportId);
+        if (!Number.isSafeInteger(sport.rosterVersion) || (sport.rosterVersion as number) < 1)
+          throw new Error('Недопустимый rosterVersion');
+        if (!Array.isArray(sport.positions)) throw new Error('positions должен быть массивом');
+        const positions = sport.positions.map((position: unknown) => {
+          if (!position || typeof position !== 'object') throw new Error('Недопустимая позиция');
+          const item = position as Record<string, unknown>;
+          const positionId = requiredString(item.id, 'position.id');
+          if (!ID_PATTERN.test(positionId)) throw new Error('Недопустимая позиция');
+          return { id: positionId, name: requiredString(item.name, 'position.name') };
+        });
+        if (new Set(positions.map(position => position.id)).size !== positions.length)
+          throw new Error('Повторяющаяся позиция');
+        return {
+          id: sportId,
+          name: requiredString(sport.name, 'sport.name'),
+          rosterVersion: sport.rosterVersion as number,
+          positions,
+        };
+      }),
+    };
+  }
+  if (raw.localOnly !== undefined && typeof raw.localOnly !== 'boolean')
+    throw new Error('localOnly должен быть boolean');
+
   return {
+    ...(dependencies ? { dependencies: { ...dependencies } } : {}),
+    ...(optionalDependencies ? { optionalDependencies: { ...optionalDependencies } } : {}),
+    ...(contributes ? { contributes } : {}),
+    ...(raw.localOnly === undefined ? {} : { localOnly: raw.localOnly }),
     id,
     name: requiredString(raw.name, 'name'),
     version,

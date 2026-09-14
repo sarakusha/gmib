@@ -1,6 +1,18 @@
-export const GMIB_PLUGIN_API_VERSION = '1.0.0';
+export const GMIB_PLUGIN_API_VERSION = '1.1.0';
 
-export const pluginPermissions = ['http.routes', 'storage', 'realtime', 'output.pages'] as const;
+export const pluginPermissions = [
+  'http.routes',
+  'storage',
+  'realtime',
+  'output.pages',
+  'database',
+  'services.provide',
+  'services.consume',
+  'plugins.read',
+  'output.control',
+  'nibus.read',
+  'nibus.write',
+] as const;
 
 export type PluginPermission = (typeof pluginPermissions)[number];
 
@@ -15,6 +27,21 @@ export type PluginControlPage = {
   path: string;
 };
 
+export type PluginSport = {
+  id: string;
+  name: string;
+  rosterVersion: number;
+  positions: Array<{ id: string; name: string }>;
+};
+
+export type PluginSportStatus = PluginSport & {
+  pluginId: string;
+  installed: boolean;
+  enabled: boolean;
+  ready: boolean;
+  error?: string;
+};
+
 export type PluginManifest = {
   id: string;
   name: string;
@@ -24,6 +51,10 @@ export type PluginManifest = {
   main?: string;
   public?: string;
   permissions?: PluginPermission[];
+  dependencies?: Record<string, string>;
+  optionalDependencies?: Record<string, string>;
+  contributes?: { sports: PluginSport[] };
+  localOnly?: boolean;
   pages?: PluginOutputPage[];
   control?: PluginControlPage;
 };

@@ -10,6 +10,7 @@ import { port } from './config';
 interface WebSocketEx extends WebSocket {
   _socket?: Socket;
   sourceId?: number;
+  localTrusted?: boolean;
 }
 
 const MINUTE = 60 * 1000;
@@ -29,6 +30,7 @@ type BroadcastOptions = {
   remote?: string;
   sourceId?: number;
   all?: boolean;
+  localOnly?: boolean;
 };
 
 const local = ['::1', '127.0.0.1', 'localhost'];
@@ -45,7 +47,14 @@ const rawDataToString = (data: WebSocket.RawData): string =>
       ? Buffer.from(new Uint8Array(data)).toString()
       : data.toString();
 
-wss.on('connection', (ws: WebSocketEx) => {
+wss.on('connection', (ws: WebSocketEx, request) => {
+  const origin = request.headers.origin;
+  // This connection is trusted only for same-origin local plugin events.
+  // eslint-disable-next-line no-param-reassign
+  ws.localTrusted =
+    !origin ||
+    origin === `http://${request.headers.host}` ||
+    origin === `https://${request.headers.host}`;
   ws.once('message', raw => {
     try {
       const parsed: unknown = JSON.parse(rawDataToString(raw));
@@ -68,10 +77,13 @@ export const broadcast = ({
   remote,
   sourceId,
   all = false,
+  localOnly = false,
 }: BroadcastOptions) => {
   wss.clients.forEach((ws: WebSocketEx) => {
     const remoteAddress = ws._socket?.remoteAddress;
     if (
+      (!localOnly ||
+        (ws.localTrusted && local.includes(remoteAddress?.replace(/^::ffff:/, '') ?? ''))) &&
       ws.readyState === WebSocket.OPEN &&
       (all || !ipEqual(remoteAddress, remote) || (sourceId != null && sourceId !== ws.sourceId))
     ) {
