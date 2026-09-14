@@ -34,6 +34,7 @@ import type { TaurusScreenConfiguration } from '/@common/taurusConfiguration';
 
 import FilenameEllipsis from './FilenameEllipsis';
 import TaurusNcpConfiguration from './TaurusNcpConfiguration';
+import TaurusCalibration from './TaurusCalibration';
 
 const errorMessage = (error: unknown): string | undefined => {
   if (!error) return undefined;
@@ -264,8 +265,16 @@ const TaurusConfigurationTab: React.FC<{
         <Divider />
         <TaurusNcpConfiguration
           path={path}
-          disabled={!authenticated}
+          disabled={!authenticated || device?.isBusy}
           firmwareProgress={device?.taurus?.firmwareProgress}
+        />
+        <Divider />
+        <TaurusCalibration
+          key={`${path}:${JSON.stringify(state?.current)}`}
+          path={path}
+          configuration={state?.current}
+          disabled={!authenticated || Boolean(device?.isBusy)}
+          progress={device?.taurus?.calibrationProgress}
         />
       </Stack>
     </Paper>

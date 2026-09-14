@@ -5,6 +5,8 @@ import debugFactory from 'debug';
 
 import type { Novastar, Screen, ScreenId } from '/@common/novastar';
 import type {
+  TaurusCalibrationRequest,
+  TaurusCalibrationResult,
   TaurusConfigurationState,
   TaurusFirmwareApplyRequest,
   TaurusFirmwareApplyResult,
@@ -187,6 +189,12 @@ const novastarApi = createApi({
         body,
       }),
     }),
+    inspectTaurusCalibration: build.mutation<TaurusCalibrationResult, TaurusCalibrationRequest>({
+      query: body => ({ url: 'novastar/taurus/calibration/inspect', method: 'POST', body }),
+    }),
+    applyTaurusCalibration: build.mutation<TaurusCalibrationResult, TaurusCalibrationRequest>({
+      query: body => ({ url: 'novastar/taurus/calibration/apply', method: 'POST', body }),
+    }),
     applyTaurusFirmware: build.mutation<TaurusFirmwareApplyResult, TaurusFirmwareApplyRequest>({
       query: body => ({
         url: 'novastar/taurus/ncp/firmware/apply',
@@ -316,6 +324,8 @@ export const useNovastar = (path?: string) => {
 
 export const {
   useApplyTaurusFirmwareMutation,
+  useInspectTaurusCalibrationMutation,
+  useApplyTaurusCalibrationMutation,
   useApplyTaurusNcpConfigurationMutation,
   useApplyTaurusScreenConfigurationMutation,
   useReloadMutation,

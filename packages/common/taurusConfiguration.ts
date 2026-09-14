@@ -132,3 +132,18 @@ export type TaurusFirmwareApplyResult = {
   total: number;
   versions: Array<Pick<TaurusNcpTarget, 'port' | 'receivingCard'> & TaurusReceivingCardVersionInfo>;
 };
+
+export type {
+  TaurusCalibrationTarget,
+  TaurusCalibrationModule,
+  TaurusCalibrationInspection,
+  TaurusCalibrationProgress,
+  TaurusCalibrationResult,
+} from '@novastar/taurus';
+
+export type TaurusCalibrationRequest = {
+  path: string;
+  targets: TaurusCalibrationTarget[];
+  allowPartial?: boolean;
+};
+import type { TaurusCalibrationTarget } from '@novastar/taurus';

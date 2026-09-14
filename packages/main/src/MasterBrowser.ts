@@ -10,6 +10,8 @@ import {
 import { asyncSerial, delay, notEmpty, reIPv4 } from '/@common/helpers';
 import type { CabinetInfo, NovastarTelemetry } from '/@common/helpers';
 import type {
+  TaurusCalibrationProgress,
+  TaurusCalibrationTarget,
   TaurusFirmwareApplyResult,
   TaurusFirmwareProgress,
   TaurusNcpTarget,
@@ -120,6 +122,7 @@ type TaurusControl = {
   brightness?: number;
   illuminance?: number;
   firmwareProgress?: TaurusFirmwareProgress;
+  calibrationProgress?: TaurusCalibrationProgress;
   timeout?: NodeJS.Timeout;
 };
 
@@ -470,6 +473,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
       brightness: control.brightness,
       illuminance: control.illuminance,
       firmwareProgress: control.firmwareProgress,
+      calibrationProgress: control.calibrationProgress,
     };
   }
 
@@ -673,6 +677,36 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
       current: await client.getLedScreenConfiguration(),
       backupAvailable: Boolean(this.getTaurusConfigurationBackup(control)),
     };
+  }
+
+  async runTaurusCalibration(
+    path: string,
+    requestedTargets: TaurusCalibrationTarget[],
+    apply: boolean,
+    allowPartial = false,
+  ) {
+    const { control, client } = await this.getTaurusClient(path);
+    if (control.configurationBusy) throw new Error('Taurus configuration write is already running');
+    control.configurationBusy = true;
+    this.emit('change', path, { isBusy: true, error: undefined });
+    try {
+      return apply
+        ? await client.loadReceivingCardCalibration(requestedTargets, {
+            allowPartial,
+            onProgress: progress => {
+              control.calibrationProgress = progress;
+              this.emit('change', path, { taurus: this.getTaurusState(control) });
+            },
+          })
+        : await client.inspectReceivingCardCalibration(requestedTargets);
+    } catch (error) {
+      this.emit('change', path, { error: (error as Error).message });
+      throw error;
+    } finally {
+      control.calibrationProgress = undefined;
+      control.configurationBusy = false;
+      this.emit('change', path, { isBusy: false, taurus: this.getTaurusState(control) });
+    }
   }
 
   async inspectTaurusScreenConfiguration(path: string, filename: string) {

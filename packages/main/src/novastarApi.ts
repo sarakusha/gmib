@@ -3,6 +3,7 @@ import express, { type Request, type Response } from 'express';
 
 import type { ScreenId } from '/@common/novastar';
 import type {
+  TaurusCalibrationRequest,
   TaurusFirmwareApplyRequest,
   TaurusNcpApplyRequest,
 } from '/@common/taurusConfiguration';
@@ -142,6 +143,28 @@ api.post('/taurus/configuration/restore', async (req, res) => {
     res.status(500).send((error as Error).message);
   }
 });
+
+for (const operation of ['inspect', 'apply'] as const) {
+  api.post(`/taurus/calibration/${operation}`, async (req, res) => {
+    const { path, targets, allowPartial } = req.body as Partial<TaurusCalibrationRequest>;
+    if (
+      typeof path !== 'string' ||
+      !Array.isArray(targets) ||
+      !targets.length ||
+      (allowPartial !== undefined && typeof allowPartial !== 'boolean')
+    ) {
+      res.status(400).send('Taurus path and receiving-card targets are required');
+      return;
+    }
+    try {
+      res.json(
+        await master.runTaurusCalibration(path, targets, operation === 'apply', allowPartial),
+      );
+    } catch (error) {
+      res.status(400).send((error as Error).message);
+    }
+  });
+}
 
 api.post('/taurus/ncp/inspect', async (req, res) => {
   const { path, filename } = req.body as { path?: string; filename?: string };

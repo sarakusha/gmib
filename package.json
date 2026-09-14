@@ -175,7 +175,7 @@
     "@novastar/net": "2.2.3",
     "@novastar/screen": "2.4.0",
     "@novastar/serial": "2.2.1",
-    "@novastar/taurus": "0.3.0",
+    "@novastar/taurus": "0.4.1",
     "@reduxjs/toolkit": "^2.12.0",
     "@sarakusha/ebml": "^0.0.8",
     "@sarakusha/lzma": "^2.3.4",
