@@ -153,6 +153,10 @@ Environment="XDG_SESSION_TYPE=wayland"
 Environment="XDG_CURRENT_DESKTOP=wlroots"
 Environment="NO_AT_BRIDGE=1"
 Environment="LD_PRELOAD=/usr/local/lib/gmib-hide-cursor.so"
+# Keep Cage and the remote API running while the HDMI receiver is off or still starting.
+# The DRM backend picks up physical displays; the headless backend supplies a fallback output.
+Environment="WLR_BACKENDS=drm,libinput,headless"
+Environment="WLR_HEADLESS_OUTPUTS=1"
 Environment="TERM=linux"
 ExecStartPre=/usr/bin/clear
 ExecStart=/usr/bin/cage -- ${GMIB_EXECUTABLE} --no-sandbox --kiosk-mode --ozone-platform=wayland
