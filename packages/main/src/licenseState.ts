@@ -5,6 +5,7 @@ import debugFactory from 'debug';
 import type { LicensePayloadV2, LicenseRuntimeState, SignedLicense } from '/@common/license';
 
 import { decodeLegacyLicense } from './legacyLicense';
+import { sessionTermsChanged, shouldRefreshStoredLicense } from './licenseLifecycle';
 import {
   accessDeniedMessage,
   requestLicenseActivation,
@@ -20,6 +21,7 @@ const REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000;
 let state: LicenseRuntimeState = { status: 'checking', capabilities: [] };
 let sessionPayload: LicensePayloadV2 | undefined;
 let refreshTimer: NodeJS.Timeout | undefined;
+const stateListeners = new Set<(nextState: LicenseRuntimeState) => void>();
 
 const metadata = () => ({
   name: os.hostname().replace(/\.local$/, ''),
@@ -61,6 +63,14 @@ const scheduleRefresh = (document: SignedLicense): void => {
     void refreshStoredLicense(localConfig.get('signedLicense') ?? document)
       .then(payload => {
         debug(`refreshed status: ${payload.status}`);
+        if (sessionPayload && sessionTermsChanged(sessionPayload, payload)) {
+          state = {
+            ...state,
+            restartRequired: true,
+            message: 'Условия лицензии изменились. Перезапустите GMIB, чтобы применить их.',
+          };
+          stateListeners.forEach(listener => listener(getLicenseState()));
+        }
       })
       .catch(error => {
         debug(`refresh failed: ${(error as Error).message}`);
@@ -89,6 +99,7 @@ const activateLegacyLicense = async (): Promise<LicensePayloadV2 | undefined> =>
 };
 
 export const bootstrapLicense = async (): Promise<LicenseRuntimeState> => {
+  clearTimeout(refreshTimer);
   state = { status: 'checking', capabilities: [] };
   sessionPayload = undefined;
   const document = localConfig.get('signedLicense');
@@ -97,11 +108,11 @@ export const bootstrapLicense = async (): Promise<LicenseRuntimeState> => {
     if (document) {
       payload = await verifyDocument(document);
       const initial = payloadState(payload);
-      if (initial.status === 'expired') {
+      if (shouldRefreshStoredLicense(initial)) {
         try {
           payload = await refreshStoredLicense(document);
         } catch (error) {
-          debug(`expired license refresh failed: ${(error as Error).message}`);
+          debug(`inactive license refresh failed: ${(error as Error).message}`);
         }
       }
     } else {
@@ -140,6 +151,13 @@ export const verifyLicenseDocument = (document: SignedLicense): Promise<LicenseP
   verifyDocument(document);
 
 export const getLicenseState = (): LicenseRuntimeState => ({ ...state });
+
+export const onLicenseStateChange = (
+  listener: (nextState: LicenseRuntimeState) => void,
+): (() => void) => {
+  stateListeners.add(listener);
+  return () => stateListeners.delete(listener);
+};
 
 export const hasLicenseCapability = (capability: string): boolean =>
   sessionPayload !== undefined && allowsCapability(sessionPayload, capability);

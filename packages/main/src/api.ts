@@ -53,7 +53,12 @@ import { getSensors } from './history';
 import localConfig from './localConfig';
 import { applyLegacyLicenseUpdate, parseLegacyLicenseUpdate } from './legacyLicenseStorage';
 import { requestLicenseActivation } from './licenseClient';
-import { getLicenseState, hasLicenseCapability, verifyLicenseDocument } from './licenseState';
+import {
+  bootstrapLicense,
+  getLicenseState,
+  hasLicenseCapability,
+  verifyLicenseDocument,
+} from './licenseState';
 import machineId from './machineId';
 import updateMenu from './mainMenu';
 import {
@@ -312,6 +317,7 @@ const unlicensedMutationPaths = new Set([
   '/handshake',
   '/identifier',
   '/login',
+  '/license/retry',
   '/update',
 ]);
 
@@ -1065,6 +1071,16 @@ api.post('/activate', async (req, res) => {
     res.status(500).send(message);
     debug(`ERROR: ${message}`);
   }
+});
+
+api.post('/license/retry', async (_req, res) => {
+  const nextState = await bootstrapLicense();
+  if (nextState.status !== 'active') {
+    res.status(409).send(nextState.message || 'Действующая лицензия не найдена');
+    return;
+  }
+  res.end();
+  setTimeout(relaunch, 100);
 });
 
 api.post('/checkForUpdates', (req, res) => {

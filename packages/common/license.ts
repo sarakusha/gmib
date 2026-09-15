@@ -24,13 +24,7 @@ export type SignedLicense = {
 };
 
 export type LicenseRuntimeStatus =
-  | 'checking'
-  | 'migration-required'
-  | 'active'
-  | 'expired'
-  | 'disabled'
-  | 'invalid'
-  | 'unlicensed';
+  'checking' | 'migration-required' | 'active' | 'expired' | 'disabled' | 'invalid' | 'unlicensed';
 
 export type LicenseRuntimeState = {
   status: LicenseRuntimeStatus;
@@ -38,5 +32,5 @@ export type LicenseRuntimeState = {
   expiresAt?: string | null;
   capabilities: string[];
   message?: string;
+  restartRequired?: boolean;
 };
-

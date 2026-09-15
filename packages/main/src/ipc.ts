@@ -7,7 +7,7 @@ import { getPlaylist, getPlaylistItems } from './playlist';
 import { getPlayer, loadScreen } from './screen';
 import { broadcast } from './server';
 import { findParamsByWebContentsId, findScreenParams } from './windowStore';
-import { getLicenseState } from './licenseState';
+import { getLicenseState, onLicenseStateChange } from './licenseState';
 
 import { isGmib } from '/@common/WindowParams';
 
@@ -38,6 +38,11 @@ void app.whenReady().then(() => {
     return isGmib(params) ? params.machineId : undefined;
   });
   ipcMain.handle('getRuntimeLicenseState', () => getLicenseState());
+  onLicenseStateChange(nextState => {
+    BrowserWindow.getAllWindows().forEach(window => {
+      window.webContents.send('runtimeLicenseState', nextState);
+    });
+  });
   ipcMain.on('broadcast', (event, eventName: string, data: unknown[]) => {
     const main = getMainWindow()?.webContents;
     if (main) {
