@@ -397,7 +397,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
       this.emit('screen', screenId, 'rgbv', value);
   }
 
-  async setBrightness(screenId: ScreenId, percent: number) {
+  async setBrightness(screenId: ScreenId, percent: number, persist = false) {
     const allTaurusEntries = [...this.taurusControls.entries()];
     const matchingSerials = new Set(
       getMatchingTaurusSerials(
@@ -425,7 +425,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
         taurusEntries.map(async ([path]) => {
           const control = this.taurusControls.get(path);
           if (!control?.client) return;
-          await control.client.setBrightness(percent);
+          await control.client.setBrightness(percent, persist);
           control.brightness = percent;
           this.emit('change', path, { taurus: this.getTaurusState(control) });
         }),

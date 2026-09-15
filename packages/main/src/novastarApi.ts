@@ -273,7 +273,19 @@ const makeHandler =
 api.put('/screens/mode', makeHandler('setDisplayMode'));
 api.put('/screens/gamma', makeHandler('setGamma'));
 api.put('/screens/rgbv', makeHandler('setRGBVBrightness'));
-api.put('/screens/brightness', makeHandler('setBrightness', -1));
+api.put('/screens/brightness', async (req, res) => {
+  try {
+    const { screen = -1, value, persist = false } = req.body;
+    let { path } = req.body as { path: string };
+    if (!path.includes(':') && !path.includes('/')) {
+      path = `${path}:5200`;
+    }
+    await master.setBrightness({ path, screen }, value, persist === true);
+    res.end();
+  } catch (e) {
+    res.status(500).send((e as Error).message);
+  }
+});
 api.post('/serial', (req, res) => {
   // debug(`from: ${req.ip}`);
   const { path, port } = req.body;

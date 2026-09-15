@@ -133,7 +133,7 @@ const NovastarDeviceTab: React.FC<{ device: Novastar | undefined; selected?: boo
   const setTaurusBrightnessDebounced = React.useMemo(
     () =>
       debounce((nextPath: string, value: number) => {
-        void setBrightness({ path: nextPath, screen: -1, value })
+        void setBrightness({ path: nextPath, screen: -1, value, persist: true })
           .unwrap()
           .then(() => {
             if (pendingTaurusBrightness.current === value) {

@@ -94,6 +94,7 @@ export type ScreenParam<K extends keyof Screen = keyof Screen> = ScreenId & {
 
 export type ScreenBrightness = ScreenId & {
   value: number;
+  persist?: boolean;
 };
 
 export const {
