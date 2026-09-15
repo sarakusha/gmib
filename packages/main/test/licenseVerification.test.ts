@@ -64,5 +64,14 @@ describe('license verification', () => {
     expect(allowsCapability(payload({ capabilities: ['plugins', 'taurus'] }), 'taurus')).toBe(false);
     expect(allowsCapability(payload({ status: 'expired' }), 'plugins')).toBe(false);
   });
-});
 
+  it('rejects oversized documents before verification', () => {
+    expect(() =>
+      verifyLicense(
+        { payload: 'A'.repeat(30_000), signature: 'A'.repeat(86) },
+        'a'.repeat(64),
+        new Map([['test', publicKey]]),
+      ),
+    ).toThrow('Invalid license document');
+  });
+});

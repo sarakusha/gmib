@@ -10,6 +10,7 @@ import {
 
 const PREFIX = Buffer.from('GMIB-LICENSE-V2\n', 'utf8');
 const MAX_PAYLOAD_BYTES = 16 * 1024;
+const MAX_PAYLOAD_CHARACTERS = Math.ceil((MAX_PAYLOAD_BYTES * 4) / 3) + 4;
 const BASE64_URL = /^[A-Za-z0-9_-]+$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const DEVICE_ID = /^[0-9a-f]{64}$/i;
@@ -81,6 +82,8 @@ const parseDocument = (value: unknown): SignedLicense => {
     Object.keys(value).length !== 2 ||
     typeof value.payload !== 'string' ||
     typeof value.signature !== 'string' ||
+    value.payload.length > MAX_PAYLOAD_CHARACTERS ||
+    value.signature.length > 512 ||
     !BASE64_URL.test(value.payload) ||
     !BASE64_URL.test(value.signature)
   )
@@ -116,6 +119,7 @@ export const verifyLicense = (
   const key = publicKeys.get(payload.keyId);
   if (!key) throw new Error('Unknown license signing key');
   const signature = Buffer.from(signed.signature, 'base64url');
+  if (signature.length !== 64) throw new Error('Invalid license signature');
   if (!crypto.verify(null, Buffer.concat([PREFIX, payloadBytes]), key, signature))
     throw new Error('Invalid license signature');
   return payload;
