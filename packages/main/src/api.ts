@@ -42,7 +42,6 @@ import {
   renderThumbnailFromImage,
 } from './ffmpeg';
 import getAllDisplays from './getAllDisplays';
-import getAnnounce from './getAnnounce';
 import {
   createGmibSchedulerJob,
   deleteGmibSchedulerJob,
@@ -53,7 +52,7 @@ import {
 import { getSensors } from './history';
 import localConfig from './localConfig';
 import { requestLicenseActivation } from './licenseClient';
-import { getLicenseState, verifyLicenseDocument } from './licenseState';
+import { getLicenseState, hasLicenseCapability, verifyLicenseDocument } from './licenseState';
 import machineId from './machineId';
 import updateMenu from './mainMenu';
 import {
@@ -102,7 +101,6 @@ import {
   uniquePlaylistName,
   updatePlaylist,
 } from './playlist';
-import proxyMiddleware from './proxyMiddleware';
 import { authenticatedPluginApiHandler } from './pluginHost';
 import relaunch from './relaunch';
 import {
@@ -291,13 +289,6 @@ const loadMedia = async (file: File, force = false): Promise<MediaInfo> => {
   return mediaInfo;
 };
 
-void dbReady
-  .then(() => testsDeferred.promise)
-  .then(async () => {
-    const screens = await getScreens();
-    await Promise.all(screens.map(scr => updateTest(scr)));
-  });
-
 const api = express.Router();
 
 if (!localConfig.get('unsafeMode')) {
@@ -337,18 +328,22 @@ api.use((req, res, next) => {
 
 api.use('/plugins/:pluginId', authenticatedPluginApiHandler);
 
-void getAnnounce().then(announce => {
-  if (
-    announce &&
-    typeof announce === 'object' &&
-    Boolean(announce[import.meta.env.VITE_ANNOUNCE_NOVASTAR])
-  ) {
-    api.use(proxyMiddleware);
-    void import(import.meta.env.VITE_ANNOUNCE_PROXY).then(({ default: API }) => {
-      api.use(import.meta.env.VITE_ANNOUNCE_PATH, API);
-    });
-  }
-});
+let runtimeApiStarted = false;
+
+export const startRuntimeApi = async (): Promise<void> => {
+  if (runtimeApiStarted || getLicenseState().status !== 'active') return;
+  runtimeApiStarted = true;
+  await Promise.all([dbReady, testsDeferred.promise]);
+  const screens = await getScreens();
+  await Promise.all(screens.map(scr => updateTest(scr)));
+  if (!hasLicenseCapability('novastar')) return;
+  const [{ default: proxyMiddleware }, { default: novastarApi }] = await Promise.all([
+    import('./proxyMiddleware'),
+    import(import.meta.env.VITE_ANNOUNCE_PROXY),
+  ]);
+  api.use(proxyMiddleware);
+  api.use(import.meta.env.VITE_ANNOUNCE_PATH, novastarApi);
+};
 
 api.get('/media', (req, res, next) => {
   // const { skip, take } = req.query;

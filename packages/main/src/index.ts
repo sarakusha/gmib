@@ -28,6 +28,7 @@ import { startScheduler } from './scheduler';
 import { launchPlayers } from './playerWindow';
 import { startPlugins } from './pluginHost';
 import { bootstrapLicense, getLicenseState } from './licenseState';
+import { startRuntimeApi } from './api';
 
 import { fixDefault } from '/@common/helpers';
 
@@ -109,6 +110,7 @@ if (isDevRuntime) {
 app
   .whenReady()
   .then(bootstrapLicense)
+  .then(startRuntimeApi)
   .then(() =>
     startPlugins().catch(error => {
       debug(`Failed to start plugins: ${error instanceof Error ? error.message : String(error)}`);
