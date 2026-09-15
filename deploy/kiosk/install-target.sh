@@ -56,8 +56,11 @@ command -v ffprobe >/dev/null
 sed -i 's/^# *ru_RU.UTF-8 UTF-8/ru_RU.UTF-8 UTF-8/' /etc/locale.gen
 locale-gen ru_RU.UTF-8
 
-install -d -m 0755 /opt/gmib
-install -m 0755 "$PAYLOAD_DIR/gmib.AppImage" /opt/gmib/gmib.AppImage
+# AppImageUpdater replaces the executable, so it needs write access to the directory too.
+KIOSK_GROUP="$(id -gn "$KIOSK_USER")"
+install -d -m 0755 -o "$KIOSK_USER" -g "$KIOSK_GROUP" /opt/gmib
+install -m 0755 -o "$KIOSK_USER" -g "$KIOSK_GROUP" \
+  "$PAYLOAD_DIR/gmib.AppImage" /opt/gmib/gmib.AppImage
 
 install -d -m 0755 /usr/local/libexec/gmib-kiosk
 install -m 0644 "$PAYLOAD_DIR/gmib-hide-cursor.c" /usr/local/libexec/gmib-kiosk/

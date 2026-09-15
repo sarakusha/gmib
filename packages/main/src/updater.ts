@@ -19,8 +19,15 @@ localConfig.onDidChange('autoUpdate', value => {
 let interactive = true;
 
 autoUpdater.on('error', error => {
-  interactive &&
-    dialog.showErrorBox('Error: ', error == null ? 'unknown' : (error.stack || error).toString());
+  if (!interactive) return;
+  // A synchronous error dialog blocks the HTTP API and discovery on a headless kiosk.
+  void dialog
+    .showMessageBox({
+      type: 'error',
+      title: 'Ошибка обновления',
+      message: error == null ? 'unknown' : (error.stack || error).toString(),
+    })
+    .catch(dialogError => log.error('Failed to show update error', dialogError));
 });
 
 autoUpdater.on('update-available', () => {
