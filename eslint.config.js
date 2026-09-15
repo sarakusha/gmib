@@ -73,6 +73,11 @@ module.exports = (async () => {
     },
 
     {
+      ...typescriptEslint.configs.disableTypeChecked,
+      files: ['packages/renderer/gmib/store/authMiddleware.test.ts'],
+    },
+
+    {
       files: ['**/*.{jsx,tsx}'],
       plugins: {
         '@eslint-react': react,
