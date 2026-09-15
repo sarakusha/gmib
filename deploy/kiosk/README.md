@@ -14,6 +14,9 @@ The installed system uses Ubuntu's `ffmpeg` package and provides `/usr/bin/ffmpe
 `/usr/bin/ffprobe` for GMIB media conversion and inspection.
 The installer also grants the kiosk user access to serial ports and direct `libusb` access to the
 supported FTDI adapters `0403:6001` and `0403:6015` through `udev` rules.
+NovaStar Taurus USB connections appear as RNDIS network adapters. The kiosk requests an address over
+DHCP and falls back to IPv4 link-local when DHCP is unavailable. It ignores RNDIS-provided gateways
+and DNS servers so the controller cannot take over the primary internet route.
 
 If the Pritunl organization is attached to multiple VPN servers, provisioning enables only the
 profile whose name ends in `(main)`. Other imported profiles are disabled because running `main`

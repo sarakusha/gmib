@@ -301,6 +301,7 @@ autoinstall:
         match:
           driver: rndis_host
         dhcp4: true
+        link-local: [ipv4, ipv6]
         dhcp4-overrides:
           use-routes: false
           use-dns: false

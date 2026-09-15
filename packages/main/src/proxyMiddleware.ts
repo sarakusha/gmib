@@ -11,6 +11,7 @@ import master, { isLocalhost } from './MasterBrowser';
 import bonjour, { type RemoteService } from './bonjour';
 import config, { port as currentPort } from './config';
 import localConfig from './localConfig';
+import { hasLocalNovastarTransport } from './localNovastarTransport';
 import {
   compareMasterElectionPeers,
   getLegacyCompatibleMasterRank,
@@ -47,6 +48,7 @@ let masterProxy: Proxy | undefined;
 
 const MASTER_ELECTION_SETTLE_MS = 3000;
 const MASTER_BROWSER_REFRESH_MS = 30000;
+const LOCAL_TRANSPORT_REFRESH_MS = 5000;
 
 const delay = (timeout: number) =>
   new Promise<void>(resolve => {
@@ -119,6 +121,7 @@ const browserUpdateTimer = setInterval(() => browser.update(), MASTER_BROWSER_RE
 browserUpdateTimer.unref();
 
 let isMaster = false;
+let useLocalNovastar = hasLocalNovastarTransport();
 
 let ready = new Deferred();
 
@@ -158,7 +161,7 @@ const selectStrongest = (
 let election: Promise<void> | undefined;
 
 const tryCreateMasterBrowser = () => {
-  if (election) return;
+  if (election || useLocalNovastar) return;
   browser.update();
   election = Promise.resolve()
     .then(advertiseMasterService)
@@ -214,7 +217,11 @@ const retryMasterElection = (): void => {
   });
 };
 
-if (!disableNet) {
+if (useLocalNovastar) {
+  isMaster = true;
+  master.open();
+  ready.resolve();
+} else if (!disableNet) {
   timeout = setTimeout(tryCreateMasterBrowser, 5000).unref();
 } else {
   ready.resolve();
@@ -307,7 +314,7 @@ const handleRemoteService = (remote: RemoteService, updated = false): void => {
         setTimeout(() => webContents.send('reloadDevices'), 1000).unref(),
       );
     }
-    if (isLocalhost(remote.referer.address) || disableNet) return;
+    if (isLocalhost(remote.referer.address) || disableNet || useLocalNovastar) return;
     if (remotePeer.role === 'master') clearTimeout(timeout);
     if (serviceActive && shouldYieldMasterRole(getLocalPeer(), remotePeer)) {
       await stopMasterService();
@@ -337,7 +344,7 @@ browser.on('update', remote => handleRemoteService(remote, true));
 browser.on('down', remote => {
   debug(`master service down ${remote.referer.address}:${remote.port}`);
   forgetRemoteGmib(remote);
-  if (isMaster) return;
+  if (isMaster || useLocalNovastar) return;
 
   if (masterProxy && remote.referer.address === masterProxy.host) {
     const strongest = selectStrongest(browser.services);
@@ -351,12 +358,28 @@ browser.on('down', remote => {
   }
 });
 
+const localTransportTimer = setInterval(() => {
+  if (useLocalNovastar || !hasLocalNovastarTransport()) return;
+  useLocalNovastar = true;
+  clearTimeout(timeout);
+  void stopMasterService().finally(async () => {
+    masterProxy = undefined;
+    await master.close();
+    isMaster = true;
+    master.open();
+    ready.resolve();
+    debug('using local NovaStar transport');
+  });
+}, LOCAL_TRANSPORT_REFRESH_MS);
+localTransportTimer.unref();
+
 let isClosing = false;
 
 app.on('before-quit', () => {
   if (isClosing) return;
   isClosing = true;
   clearInterval(browserUpdateTimer);
+  clearInterval(localTransportTimer);
   try {
     void master.close();
     serviceActive = false;
