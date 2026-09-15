@@ -13,7 +13,7 @@ export const showErrorBox: Dialog['showErrorBox'] = (title, content): void => {
   ipcRenderer.sendSync('showErrorBox', title, content);
 };
 
-const showSaveDialogSync = (options: unknown): string | undefined =>
+export const showSaveDialogSync = (options: SaveDialogSyncOptions): string | undefined =>
   (ipcRenderer.sendSync('showSaveDialogSync', options) as string | undefined) ?? undefined;
 
 type SaveOpts = Pick<SaveDialogSyncOptions, 'title' | 'defaultPath'> & {

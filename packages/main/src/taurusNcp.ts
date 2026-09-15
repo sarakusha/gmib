@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import { loadNcpConfig } from '@novastar/screen';
+import { getNcpDataGroupMapping, loadNcpConfig, saveNcpDataGroupOrder } from '@novastar/screen';
 import type { TaurusLedScreenConfiguration } from '@novastar/taurus';
 
 import type {
@@ -59,20 +59,37 @@ export const inspectTaurusNcp = async (
     filename,
     formatVersion: decoded.formatVersion,
     packageName: decoded.packageName,
-    cabinets: decoded.cabinets.map((cabinet, index) => ({
-      index,
-      name: cabinet.name,
-      revision: cabinet.revision,
-      firmwareFile: cabinet.firmwareFile,
-      cardModel: optionalString(cabinet.baseInfo.cardModel),
-      firmwareVersion: optionalString(cabinet.baseInfo.firmwareVersion),
-      icType: optionalString(cabinet.baseInfo.icType),
-      refreshRate: optionalNumber(cabinet.baseInfo.refreshRate),
-      scanType: optionalNumber(cabinet.baseInfo.scanType),
-      binarySize: cabinet.binary.byteLength,
-      parameterCount: cabinet.parameters.length,
-      firmware: cabinet.firmware?.info,
-    })),
+    cabinets: decoded.cabinets.map((cabinet, index) => {
+      const dataGroupMapping = getNcpDataGroupMapping(cabinet);
+      return {
+        index,
+        name: cabinet.name,
+        revision: cabinet.revision,
+        firmwareFile: cabinet.firmwareFile,
+        cardModel: optionalString(cabinet.baseInfo.cardModel),
+        firmwareVersion: optionalString(cabinet.baseInfo.firmwareVersion),
+        icType: optionalString(cabinet.baseInfo.icType),
+        refreshRate: optionalNumber(cabinet.baseInfo.refreshRate),
+        scanType: optionalNumber(cabinet.baseInfo.scanType),
+        binarySize: cabinet.binary.byteLength,
+        parameterCount: cabinet.parameters.length,
+        firmware: cabinet.firmware?.info,
+        dataGroupMapping: dataGroupMapping
+          ? { capacity: dataGroupMapping.capacity, blocks: dataGroupMapping.blocks }
+          : undefined,
+      };
+    }),
     targets: getTaurusNcpTargets(configuration),
   };
+};
+
+export const saveTaurusNcpDataGroupOrder = async (
+  sourcePath: string,
+  destinationPath: string,
+  cabinetIndex: number,
+  dataGroupOrder: readonly number[],
+): Promise<void> => {
+  validateTaurusNcpFilename(sourcePath);
+  validateTaurusNcpFilename(destinationPath);
+  await saveNcpDataGroupOrder(sourcePath, destinationPath, cabinetIndex, dataGroupOrder);
 };

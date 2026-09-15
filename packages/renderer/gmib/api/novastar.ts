@@ -13,6 +13,7 @@ import type {
   TaurusNcpApplyRequest,
   TaurusNcpApplyResult,
   TaurusNcpInspection,
+  TaurusNcpSaveRequest,
   TaurusScrInspection,
 } from '/@common/taurusConfiguration';
 import type { CabinetInfo } from '/@common/helpers';
@@ -189,6 +190,13 @@ const novastarApi = createApi({
         body,
       }),
     }),
+    saveTaurusNcpConfiguration: build.mutation<{ filename: string }, TaurusNcpSaveRequest>({
+      query: body => ({
+        url: 'novastar/taurus/ncp/save',
+        method: 'POST',
+        body,
+      }),
+    }),
     inspectTaurusCalibration: build.mutation<TaurusCalibrationResult, TaurusCalibrationRequest>({
       query: body => ({ url: 'novastar/taurus/calibration/inspect', method: 'POST', body }),
     }),
@@ -332,6 +340,7 @@ export const {
   useGetTaurusScreenConfigurationQuery,
   useInspectTaurusScreenConfigurationMutation,
   useInspectTaurusNcpConfigurationMutation,
+  useSaveTaurusNcpConfigurationMutation,
   useLoginTaurusMutation,
   useRestoreTaurusScreenConfigurationMutation,
   useSetBrightnessMutation,

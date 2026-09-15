@@ -1,5 +1,8 @@
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import MemoryIcon from '@mui/icons-material/Memory';
+import SaveAsIcon from '@mui/icons-material/SaveAs';
 import SystemUpdateAltIcon from '@mui/icons-material/SystemUpdateAlt';
 import {
   Alert,
@@ -27,6 +30,7 @@ import {
   useApplyTaurusFirmwareMutation,
   useApplyTaurusNcpConfigurationMutation,
   useInspectTaurusNcpConfigurationMutation,
+  useSaveTaurusNcpConfigurationMutation,
 } from '../api/novastar';
 
 import FilenameEllipsis from './FilenameEllipsis';
@@ -58,19 +62,26 @@ const TaurusNcpConfiguration: React.FC<{
   const [selectedTargets, setSelectedTargets] = useState<Set<string>>(new Set());
   const [confirmed, setConfirmed] = useState(false);
   const [firmwareConfirmed, setFirmwareConfirmed] = useState(false);
+  const [dataGroupOrder, setDataGroupOrder] = useState<number[]>([]);
   const [inspect, inspectionState] = useInspectTaurusNcpConfigurationMutation();
   const [apply, applyState] = useApplyTaurusNcpConfigurationMutation();
   const [applyFirmware, firmwareState] = useApplyTaurusFirmwareMutation();
+  const [saveNcp, saveState] = useSaveTaurusNcpConfigurationMutation();
   const inspection = inspectionState.data;
   const resetInspection = inspectionState.reset;
   const previousPath = useRef<string | undefined>(undefined);
   const busy =
-    disabled || inspectionState.isLoading || applyState.isLoading || firmwareState.isLoading;
+    disabled ||
+    inspectionState.isLoading ||
+    applyState.isLoading ||
+    firmwareState.isLoading ||
+    saveState.isLoading;
   const cabinet = inspection?.cabinets[cabinetIndex];
   const operationError =
     errorMessage(inspectionState.error) ??
     errorMessage(applyState.error) ??
-    errorMessage(firmwareState.error);
+    errorMessage(firmwareState.error) ??
+    errorMessage(saveState.error);
   const ncpPercent =
     ncpProgress?.progress ??
     (ncpProgress?.total ? (ncpProgress.completed / ncpProgress.total) * 100 : undefined);
@@ -83,8 +94,16 @@ const TaurusNcpConfiguration: React.FC<{
     setSelectedTargets(new Set());
     setConfirmed(false);
     setFirmwareConfirmed(false);
+    setDataGroupOrder([]);
     resetInspection();
   }, [path, resetInspection]);
+
+  useEffect(() => {
+    setDataGroupOrder(cabinet?.dataGroupMapping?.blocks.map(block => block.index) ?? []);
+    setConfirmed(false);
+  }, [cabinet]);
+
+  const dataGroupsReordered = dataGroupOrder.some((sourceIndex, index) => sourceIndex !== index);
 
   const selected = useMemo(
     () =>
@@ -125,6 +144,7 @@ const TaurusNcpConfiguration: React.FC<{
       path,
       filename,
       cabinetIndex,
+      dataGroupOrder: dataGroupsReordered ? dataGroupOrder : undefined,
       targets: selected.map(target => ({
         port: target.port,
         receivingCard: target.receivingCard,
@@ -144,11 +164,53 @@ const TaurusNcpConfiguration: React.FC<{
     cabinet,
     cabinetIndex,
     confirmed,
+    dataGroupOrder,
+    dataGroupsReordered,
     enqueueSnackbar,
     filename,
     inspection,
     path,
     selected,
+  ]);
+
+  const moveDataGroupBlock = useCallback((index: number, direction: -1 | 1) => {
+    setDataGroupOrder(current => {
+      const target = index + direction;
+      if (target < 0 || target >= current.length) return current;
+      const next = [...current];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+    setConfirmed(false);
+  }, []);
+
+  const saveReorderedNcp = useCallback(() => {
+    if (!filename || !cabinet?.dataGroupMapping || !dataGroupsReordered) return;
+    const destinationPath = window.dialogs.showSaveDialogSync({
+      title: 'Сохранить изменённую конфигурацию NCP',
+      defaultPath: filename.replace(/\.ncp$/i, '-DATA.ncp'),
+      filters: [{ name: 'NovaLCT cabinet package', extensions: ['ncp'] }],
+    });
+    if (!destinationPath) return;
+    void saveNcp({
+      sourcePath: filename,
+      destinationPath,
+      cabinetIndex,
+      dataGroupOrder,
+    })
+      .unwrap()
+      .then(({ filename: savedFilename }) => {
+        enqueueSnackbar(`Новый NCP сохранён: ${savedFilename}`, { variant: 'success' });
+      })
+      .catch(() => undefined);
+  }, [
+    cabinet,
+    cabinetIndex,
+    dataGroupOrder,
+    dataGroupsReordered,
+    enqueueSnackbar,
+    filename,
+    saveNcp,
   ]);
 
   const firmware = cabinet?.firmware;
@@ -301,6 +363,66 @@ const TaurusNcpConfiguration: React.FC<{
             {cabinet.icType ? `, ${cabinet.icType}` : ''}
             {cabinet.refreshRate ? `, ${cabinet.refreshRate} Гц` : ''}
           </Typography>
+          {cabinet.dataGroupMapping ? (
+            <Box>
+              <Typography variant="subtitle2" gutterBottom>
+                Порядок DATA-групп ({cabinet.dataGroupMapping.blocks.length} блоков, ёмкость{' '}
+                {cabinet.dataGroupMapping.capacity})
+              </Typography>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Позиция</TableCell>
+                    <TableCell>Физические DATA</TableCell>
+                    <TableCell>Логические группы</TableCell>
+                    <TableCell align="right">Порядок</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {cabinet.dataGroupMapping.blocks.map((targetBlock, targetIndex) => {
+                    const sourceBlock =
+                      cabinet.dataGroupMapping?.blocks[dataGroupOrder[targetIndex] ?? targetIndex];
+                    return (
+                      <TableRow key={targetBlock.index}>
+                        <TableCell>{targetIndex + 1}</TableCell>
+                        <TableCell>
+                          DATA{targetBlock.physicalStart + 1}–DATA{targetBlock.physicalEnd + 1}
+                        </TableCell>
+                        <TableCell>
+                          {sourceBlock?.logicalGroups.map(group => group + 1).join(', ') ?? '—'}
+                        </TableCell>
+                        <TableCell align="right">
+                          <IconButton
+                            size="small"
+                            aria-label={`Переместить блок ${targetIndex + 1} вверх`}
+                            disabled={busy || targetIndex === 0}
+                            onClick={() => moveDataGroupBlock(targetIndex, -1)}
+                          >
+                            <ArrowUpwardIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            aria-label={`Переместить блок ${targetIndex + 1} вниз`}
+                            disabled={busy || targetIndex === dataGroupOrder.length - 1}
+                            onClick={() => moveDataGroupBlock(targetIndex, 1)}
+                          >
+                            <ArrowDownwardIcon fontSize="small" />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+              {dataGroupsReordered && (
+                <Alert severity="warning" sx={{ mt: 1 }}>
+                  Порядок DATA изменён. Он будет применён при записи NCP или сохранён в новый файл.
+                </Alert>
+              )}
+            </Box>
+          ) : (
+            <Alert severity="info">В этой конфигурации таблица порядка DATA не найдена.</Alert>
+          )}
           {firmware && (
             <Alert severity="info">
               Firmware: {firmware.filename}
@@ -427,6 +549,14 @@ const TaurusNcpConfiguration: React.FC<{
             </>
           )}
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+            <Button
+              variant="outlined"
+              startIcon={<SaveAsIcon />}
+              disabled={busy || !dataGroupsReordered}
+              onClick={saveReorderedNcp}
+            >
+              Сохранить новый NCP
+            </Button>
             <Button
               variant="contained"
               color="warning"

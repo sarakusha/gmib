@@ -173,7 +173,7 @@
     "@novastar/codec": "2.2.3",
     "@novastar/native": "2.2.1",
     "@novastar/net": "2.2.3",
-    "@novastar/screen": "2.4.2",
+    "@novastar/screen": "2.5.0",
     "@novastar/serial": "2.2.1",
     "@novastar/taurus": "0.4.1",
     "@reduxjs/toolkit": "^2.12.0",

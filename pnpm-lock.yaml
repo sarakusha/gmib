@@ -51,8 +51,8 @@ importers:
         specifier: 2.2.3
         version: 2.2.3(debug@4.4.3)(iconv-lite@0.6.3)
       '@novastar/screen':
-        specifier: 2.4.2
-        version: 2.4.2(debug@4.4.3)(iconv-lite@0.6.3)
+        specifier: 2.5.0
+        version: 2.5.0(debug@4.4.3)(iconv-lite@0.6.3)
       '@novastar/serial':
         specifier: 2.2.1
         version: 2.2.1(debug@4.4.3)(iconv-lite@0.6.3)
@@ -1362,8 +1362,8 @@ packages:
     peerDependencies:
       debug: ^4.3.3
 
-  '@novastar/screen@2.4.2':
-    resolution: {integrity: sha512-MGFuTnDp9tqjXKam+C13fuMtVApuKeIjUb9XY16/ddgRE1GavAGpYFyG9Gia5vMA5/7KyAFyqL5FKffapIUZXA==}
+  '@novastar/screen@2.5.0':
+    resolution: {integrity: sha512-fy1fkQ7VWoJY4s98KSz3YkHQNwfpQKoagTYDBR5u4vDzh2WP5XvGG8oDCHexnwM1jVsxN0xq8pmhBcD/qPzevQ==}
     peerDependencies:
       debug: ^4.3.3
 
@@ -6772,7 +6772,7 @@ snapshots:
       - buffer
       - iconv-lite
 
-  '@novastar/screen@2.4.2(debug@4.4.3)(iconv-lite@0.6.3)':
+  '@novastar/screen@2.5.0(debug@4.4.3)(iconv-lite@0.6.3)':
     dependencies:
       '@novastar/codec': 2.2.3(debug@4.4.3)(iconv-lite@0.6.3)
       '@novastar/native': 2.2.1(debug@4.4.3)(iconv-lite@0.6.3)

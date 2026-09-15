@@ -29,7 +29,12 @@ import flatten from 'lodash/flatten';
 
 import { Connection, series } from '@novastar/codec';
 import { findNetDevices, MULTICAST_ADDRESS, net, REQ, UDP_PORT } from '@novastar/net';
-import { loadNcpConfig, ScreenConfigurator, sendNcpCabinetConfig } from '@novastar/screen';
+import {
+  loadNcpConfig,
+  reorderNcpDataGroupBlocks,
+  ScreenConfigurator,
+  sendNcpCabinetConfig,
+} from '@novastar/screen';
 import {
   discoverTaurusPlayers,
   TAURUS_FTP_PORT,
@@ -819,6 +824,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
     filename: string,
     cabinetIndex: number,
     requestedTargets: Array<{ port: number; receivingCard: number }>,
+    dataGroupOrder?: readonly number[],
   ) {
     const { control, client } = await this.getTaurusClient(path);
     if (control.configurationBusy) throw new Error('Taurus configuration write is already running');
@@ -849,8 +855,11 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
         }
       });
       const decoded = await loadNcpConfig(filename);
-      const cabinet = decoded.cabinets[cabinetIndex];
-      if (!cabinet) throw new RangeError('NCP cabinet was not found');
+      const sourceCabinet = decoded.cabinets[cabinetIndex];
+      if (!sourceCabinet) throw new RangeError('NCP cabinet was not found');
+      const cabinet = dataGroupOrder
+        ? reorderNcpDataGroupBlocks(sourceCabinet, dataGroupOrder)
+        : sourceCabinet;
       const updateProgress = (progress: TaurusNcpProgress): void => {
         control.ncpProgress = progress;
         this.emit('change', path, { taurus: this.getTaurusState(control) });

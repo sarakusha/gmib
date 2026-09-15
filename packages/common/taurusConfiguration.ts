@@ -58,6 +58,19 @@ export type TaurusNcpCabinetInfo = {
   binarySize: number;
   parameterCount: number;
   firmware?: TaurusReceivingCardFirmwareInfo;
+  dataGroupMapping?: TaurusNcpDataGroupMapping;
+};
+
+export type TaurusNcpDataGroupBlock = {
+  index: number;
+  physicalStart: number;
+  physicalEnd: number;
+  logicalGroups: number[];
+};
+
+export type TaurusNcpDataGroupMapping = {
+  capacity: number;
+  blocks: TaurusNcpDataGroupBlock[];
 };
 
 export type TaurusReceivingCardFirmwareFile = {
@@ -107,6 +120,14 @@ export type TaurusNcpApplyRequest = {
   filename: string;
   cabinetIndex: number;
   targets: Array<Pick<TaurusNcpTarget, 'port' | 'receivingCard'>>;
+  dataGroupOrder?: number[];
+};
+
+export type TaurusNcpSaveRequest = {
+  sourcePath: string;
+  destinationPath: string;
+  cabinetIndex: number;
+  dataGroupOrder: number[];
 };
 
 export type TaurusNcpApplyResult = {

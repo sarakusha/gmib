@@ -6,10 +6,12 @@ import type {
   TaurusCalibrationRequest,
   TaurusFirmwareApplyRequest,
   TaurusNcpApplyRequest,
+  TaurusNcpSaveRequest,
 } from '/@common/taurusConfiguration';
 import type { FilterNames } from '/@common/helpers';
 
 import master from './MasterBrowser';
+import { saveTaurusNcpDataGroupOrder } from './taurusNcp';
 
 const api = express.Router();
 
@@ -180,7 +182,8 @@ api.post('/taurus/ncp/inspect', async (req, res) => {
 });
 
 api.post('/taurus/ncp/apply', async (req, res) => {
-  const { path, filename, cabinetIndex, targets } = req.body as Partial<TaurusNcpApplyRequest>;
+  const { path, filename, cabinetIndex, targets, dataGroupOrder } =
+    req.body as Partial<TaurusNcpApplyRequest>;
   if (
     !path ||
     !filename ||
@@ -192,9 +195,37 @@ api.post('/taurus/ncp/apply', async (req, res) => {
     return;
   }
   try {
-    res.json(await master.applyTaurusNcpConfiguration(path, filename, cabinetIndex, targets));
+    res.json(
+      await master.applyTaurusNcpConfiguration(
+        path,
+        filename,
+        cabinetIndex,
+        targets,
+        dataGroupOrder,
+      ),
+    );
   } catch (error) {
     res.status(500).send((error as Error).message);
+  }
+});
+
+api.post('/taurus/ncp/save', async (req, res) => {
+  const { sourcePath, destinationPath, cabinetIndex, dataGroupOrder } =
+    req.body as Partial<TaurusNcpSaveRequest>;
+  if (
+    !sourcePath ||
+    !destinationPath ||
+    typeof cabinetIndex !== 'number' ||
+    !Array.isArray(dataGroupOrder)
+  ) {
+    res.status(400).send('Source, destination, NCP cabinet and DATA group order are required');
+    return;
+  }
+  try {
+    await saveTaurusNcpDataGroupOrder(sourcePath, destinationPath, cabinetIndex, dataGroupOrder);
+    res.json({ filename: destinationPath });
+  } catch (error) {
+    res.status(400).send((error as Error).message);
   }
 });
 
