@@ -2,13 +2,9 @@ import os from 'node:os';
 
 import debugFactory from 'debug';
 
-import type {
-  LicensePayloadV2,
-  LicenseRuntimeState,
-  SignedLicense,
-} from '/@common/license';
+import type { LicensePayloadV2, LicenseRuntimeState, SignedLicense } from '/@common/license';
 
-import getAnnounce from './getAnnounce';
+import { decodeLegacyLicense } from './legacyLicense';
 import {
   accessDeniedMessage,
   requestLicenseActivation,
@@ -78,9 +74,12 @@ const scheduleRefresh = (document: SignedLicense): void => {
 };
 
 const activateLegacyLicense = async (): Promise<LicensePayloadV2 | undefined> => {
-  const legacy = await getAnnounce();
-  if (!legacy?.key || typeof legacy.key !== 'string') return undefined;
   const deviceId = await machineIdPromise;
+  const legacy = decodeLegacyLicense(
+    { announce: localConfig.get('announce'), iv: localConfig.get('iv') },
+    deviceId,
+  );
+  if (!legacy?.key || typeof legacy.key !== 'string') return undefined;
   const document = await requestLicenseActivation({
     ...metadata(),
     deviceId,

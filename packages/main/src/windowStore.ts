@@ -18,7 +18,11 @@ import type {
 import { gmibVariables, impScreenProps, isGmib, isPlayer, isScreen } from '/@common/WindowParams';
 
 import { initializePritunlClient } from './linux';
+import { decodeLegacyLicense } from './legacyLicense';
+import { createLicensePresentation } from './licensePresentation';
+import { getLicenseState } from './licenseState';
 import localConfig from './localConfig';
+import machineIdPromise from './machineId';
 import { getTabbedWindowById } from './tabbedWindow';
 
 import { replaceNull } from '/@common/helpers';
@@ -152,36 +156,46 @@ export const registerGmib = async (
       return result;
     },
   };
-  const announce = await getAnnounce(host, port + 1);
+  const isLocal = host === 'localhost';
+  const announce = isLocal
+    ? await (async () => {
+        const machineId = await machineIdPromise;
+        const licenseState = getLicenseState();
+        const legacy = decodeLegacyLicense(
+          { announce: localConfig.get('announce'), iv: localConfig.get('iv') },
+          machineId,
+        );
+        return {
+          machineId,
+          licenseState,
+          autostart: localConfig.get('autostart'),
+          exactWindowPlacement: localConfig.get('exactWindowPlacement'),
+          info: {
+            name: os.hostname().replace(/\.local\.?$/, ''),
+            version: import.meta.env.VITE_APP_VERSION,
+            platform: os.platform(),
+            arch: os.arch(),
+          },
+          ...(typeof legacy?.key === 'string' ? { key: legacy.key } : {}),
+          ...createLicensePresentation(licenseState, machineId),
+        };
+      })()
+    : await getAnnounce(host, port + 1);
   if (typeof announce === 'object' && !browserWindow.isDestroyed()) {
     const { message: announcedMessage, ...data } = announce;
-    const localLicenseState =
-      host === 'localhost' &&
-      typeof data.licenseState === 'object' &&
-      data.licenseState !== null &&
-      'status' in data.licenseState
-        ? data.licenseState
-        : undefined;
-    const isInactiveLocalLicense = localLicenseState && localLicenseState.status !== 'active';
-    if (isInactiveLocalLicense) {
-      delete data.key;
-      delete data.plan;
-      delete data.renew;
-    }
-    const message = isInactiveLocalLicense ? undefined : announcedMessage;
+    const message = announcedMessage;
     Object.assign(params, data);
-    // if (params.plan && ['premium', 'enterprise'].includes(params.plan)) launchPlayers();
-    if (message) {
+    if (isLocal && params.licenseState?.status === 'active' && params.key) {
       void knockKnock(params);
-      if (host === 'localhost') {
-        clearInterval(knockInterval);
-        knockInterval = setInterval(() => {
-          void knockKnock(params);
-        }, 6 * HOUR).unref();
-      }
-      const announceWindow = () => {
-        const { update: _, ...props } = params;
-        browserWindow.webContents.send('gmib-params', props);
+      clearInterval(knockInterval);
+      knockInterval = setInterval(() => {
+        void knockKnock(params);
+      }, 6 * HOUR).unref();
+    }
+    const announceWindow = () => {
+      const { update: _, ...props } = params;
+      browserWindow.webContents.send('gmib-params', props);
+      if (message) {
         import.meta.env.VITE_ANNOUNCE_HOST &&
           import(import.meta.env.VITE_ANNOUNCE_HOST).then(
             ({ default: getHost }) => {
@@ -198,10 +212,10 @@ export const registerGmib = async (
               debug(`error while import: ${err}`);
             },
           );
-      };
-      browserWindow.webContents.on('did-finish-load', announceWindow);
-      if (!browserWindow.webContents.isLoading()) announceWindow();
-    }
+      }
+    };
+    browserWindow.webContents.on('did-finish-load', announceWindow);
+    if (!browserWindow.webContents.isLoading()) announceWindow();
   }
   if (browserWindow.isDestroyed()) return undefined;
   store.set(id, params);

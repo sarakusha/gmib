@@ -12,6 +12,7 @@ import localConfig from './localConfig';
 import main, { activateMainWindow } from './mainWindow';
 import type { CloseEvent, ManagedWindow } from './managedWindow';
 import { installWindowOpenHandler } from './openHandler';
+import { getLicenseState } from './licenseState';
 import { getBackgroundAutoplayPlayers } from './playerStartup';
 import relaunch, { needRestart } from './relaunch';
 import { getPlayer, getPlayers, isPlayerActive, updateShowPlayer } from './screen';
@@ -124,8 +125,12 @@ export const openPlayer = async (
     }
   } else {
     await Promise.all([dbReady, main]);
-    const [gmib] = getAllGmibParams();
-    if (gmib?.plan && ['plus', 'premium', 'enterprise'].includes(gmib.plan))
+    const license = getLicenseState();
+    if (
+      license.status === 'active' &&
+      license.plan &&
+      ['plus', 'premium', 'enterprise'].includes(license.plan)
+    )
       player = await getPlayer(id);
   }
   if (!browserWindow) {
