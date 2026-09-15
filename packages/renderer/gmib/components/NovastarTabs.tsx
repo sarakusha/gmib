@@ -47,7 +47,11 @@ const NovastarTabs: React.FC<{ device: Novastar | undefined }> = ({ device }) =>
         <NovastarDeviceTab device={device} selected={value === 'props'} />
         <NovastarTelemetryTab device={device} selected={value === 'telemetry'} />
         {isTaurus && (
-          <TaurusConfigurationTab device={device} selected={value === 'configuration'} />
+          <TaurusConfigurationTab
+            key={device?.path}
+            device={device}
+            selected={value === 'configuration'}
+          />
         )}
       </Container>
     </FixedHeadLayout>

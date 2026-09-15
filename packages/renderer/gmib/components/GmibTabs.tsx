@@ -76,7 +76,6 @@ const Tabs: React.FC = () => {
       <TabContainer
         id="novastar"
         selected={tab === 'devices' && currentNovastar !== undefined}
-        unmount
       >
         <NovastarTabs device={currentNovastar} />
       </TabContainer>

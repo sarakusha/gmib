@@ -24,7 +24,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useSnackbar } from 'notistack';
-import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
   useApplyTaurusFirmwareMutation,
@@ -36,7 +36,11 @@ import {
 import FilenameEllipsis from './FilenameEllipsis';
 import TaurusOperationDialog from './TaurusOperationDialog';
 
-import type { TaurusFirmwareProgress, TaurusNcpProgress } from '/@common/taurusConfiguration';
+import type {
+  TaurusFirmwareProgress,
+  TaurusNcpInspection,
+  TaurusNcpProgress,
+} from '/@common/taurusConfiguration';
 
 const errorMessage = (error: unknown): string | undefined => {
   if (!error) return undefined;
@@ -50,26 +54,45 @@ const errorMessage = (error: unknown): string | undefined => {
 
 const targetKey = (port: number, receivingCard: number): string => `${port}:${receivingCard}`;
 
+type TaurusNcpSession = {
+  filename: string;
+  inspection?: TaurusNcpInspection;
+  cabinetIndex: number;
+  selectedTargets: string[];
+  confirmed: boolean;
+  firmwareConfirmed: boolean;
+  dataGroupOrder: number[];
+};
+
+const ncpSessions = new Map<string, TaurusNcpSession>();
+
 const TaurusNcpConfiguration: React.FC<{
   path: string;
   disabled?: boolean;
   firmwareProgress?: TaurusFirmwareProgress;
   ncpProgress?: TaurusNcpProgress;
 }> = ({ path, disabled = false, firmwareProgress, ncpProgress }) => {
+  const savedSession = ncpSessions.get(path);
   const { enqueueSnackbar } = useSnackbar();
-  const [filename, setFilename] = useState('');
-  const [cabinetIndex, setCabinetIndex] = useState(0);
-  const [selectedTargets, setSelectedTargets] = useState<Set<string>>(new Set());
-  const [confirmed, setConfirmed] = useState(false);
-  const [firmwareConfirmed, setFirmwareConfirmed] = useState(false);
-  const [dataGroupOrder, setDataGroupOrder] = useState<number[]>([]);
+  const [filename, setFilename] = useState(savedSession?.filename ?? '');
+  const [inspection, setInspection] = useState<TaurusNcpInspection | undefined>(
+    savedSession?.inspection,
+  );
+  const [cabinetIndex, setCabinetIndex] = useState(savedSession?.cabinetIndex ?? 0);
+  const [selectedTargets, setSelectedTargets] = useState<Set<string>>(
+    new Set(savedSession?.selectedTargets),
+  );
+  const [confirmed, setConfirmed] = useState(savedSession?.confirmed ?? false);
+  const [firmwareConfirmed, setFirmwareConfirmed] = useState(
+    savedSession?.firmwareConfirmed ?? false,
+  );
+  const [dataGroupOrder, setDataGroupOrder] = useState<number[]>(
+    savedSession?.dataGroupOrder ?? [],
+  );
   const [inspect, inspectionState] = useInspectTaurusNcpConfigurationMutation();
   const [apply, applyState] = useApplyTaurusNcpConfigurationMutation();
   const [applyFirmware, firmwareState] = useApplyTaurusFirmwareMutation();
   const [saveNcp, saveState] = useSaveTaurusNcpConfigurationMutation();
-  const inspection = inspectionState.data;
-  const resetInspection = inspectionState.reset;
-  const previousPath = useRef<string | undefined>(undefined);
   const busy =
     disabled ||
     inspectionState.isLoading ||
@@ -87,21 +110,25 @@ const TaurusNcpConfiguration: React.FC<{
     (ncpProgress?.total ? (ncpProgress.completed / ncpProgress.total) * 100 : undefined);
 
   useEffect(() => {
-    if (previousPath.current === path) return;
-    previousPath.current = path;
-    setFilename('');
-    setCabinetIndex(0);
-    setSelectedTargets(new Set());
-    setConfirmed(false);
-    setFirmwareConfirmed(false);
-    setDataGroupOrder([]);
-    resetInspection();
-  }, [path, resetInspection]);
-
-  useEffect(() => {
-    setDataGroupOrder(cabinet?.dataGroupMapping?.blocks.map(block => block.index) ?? []);
-    setConfirmed(false);
-  }, [cabinet]);
+    ncpSessions.set(path, {
+      filename,
+      inspection,
+      cabinetIndex,
+      selectedTargets: [...selectedTargets],
+      confirmed,
+      firmwareConfirmed,
+      dataGroupOrder,
+    });
+  }, [
+    cabinetIndex,
+    confirmed,
+    dataGroupOrder,
+    filename,
+    firmwareConfirmed,
+    inspection,
+    path,
+    selectedTargets,
+  ]);
 
   const dataGroupsReordered = dataGroupOrder.some((sourceIndex, index) => sourceIndex !== index);
 
@@ -125,9 +152,17 @@ const TaurusNcpConfiguration: React.FC<{
     setCabinetIndex(0);
     setConfirmed(false);
     setFirmwareConfirmed(false);
+    setInspection(undefined);
+    setDataGroupOrder([]);
     void inspect({ path, filename: selectedFile })
       .unwrap()
-      .then(() => setSelectedTargets(new Set()))
+      .then(result => {
+        setInspection(result);
+        setDataGroupOrder(
+          result.cabinets[0]?.dataGroupMapping?.blocks.map(block => block.index) ?? [],
+        );
+        setSelectedTargets(new Set());
+      })
       .catch(() => setSelectedTargets(new Set()));
   }, [inspect, path]);
 
@@ -275,7 +310,10 @@ const TaurusNcpConfiguration: React.FC<{
           variant: 'success',
         });
         setFirmwareConfirmed(false);
-        void inspect({ path, filename });
+        void inspect({ path, filename })
+          .unwrap()
+          .then(setInspection)
+          .catch(() => undefined);
       })
       .catch(() => undefined);
   }, [
@@ -344,7 +382,13 @@ const TaurusNcpConfiguration: React.FC<{
                 label="Конфигурация"
                 value={cabinetIndex}
                 onChange={event => {
-                  setCabinetIndex(Number(event.target.value));
+                  const nextCabinetIndex = Number(event.target.value);
+                  setCabinetIndex(nextCabinetIndex);
+                  setDataGroupOrder(
+                    inspection.cabinets[nextCabinetIndex]?.dataGroupMapping?.blocks.map(
+                      block => block.index,
+                    ) ?? [],
+                  );
                   setConfirmed(false);
                   setFirmwareConfirmed(false);
                 }}

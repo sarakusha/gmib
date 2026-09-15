@@ -177,8 +177,7 @@ const TaurusConfigurationTab: React.FC<{
       .catch(() => undefined);
   }, [enqueueSnackbar, path, restore]);
 
-  if (!selected) return null;
-  if (!authenticated && passwordRequired) {
+  if (selected && !authenticated && passwordRequired) {
     return <Alert severity="info">Сначала войдите в Taurus на вкладке «Свойства».</Alert>;
   }
 
@@ -190,7 +189,7 @@ const TaurusConfigurationTab: React.FC<{
   const warningsConfirmed = !inspection?.warnings.length || confirmed;
 
   return (
-    <Paper sx={{ p: 2 }}>
+    <Paper sx={{ p: 2, display: selected ? 'block' : 'none' }}>
       <Stack spacing={2}>
         {!authenticated && <Alert severity="info">Переподключение к Taurus…</Alert>}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
