@@ -32,6 +32,7 @@ import { useToolbar } from '../providers/ToolbarProvider';
 import { useDispatch, useSelector } from '../store';
 import { setAutobrightness, setProtectionProp } from '../store/configSlice';
 import {
+  setActivateDialogOpen,
   setBroadcastDetected,
   setCurrentTab,
   setGmibDiscoveryBlocked,
@@ -107,8 +108,13 @@ const App: React.FC = () => {
     ['plus', 'premium', 'enterprise'].includes(licenseState.plan ?? '') &&
     licenseState.capabilities.includes('plugins');
   useEffect(() => {
-    void window.getLicenseState().then(setLicenseState);
-  }, []);
+    void window.getLicenseState().then(nextState => {
+      setLicenseState(nextState);
+      if (!isRemoteSession && nextState && nextState.status !== 'active') {
+        dispatch(setActivateDialogOpen(true));
+      }
+    });
+  }, [dispatch]);
   useEffect(() => {
     if (broadcastDetected) {
       enqueueSnackbar(
