@@ -29,14 +29,13 @@ import flatten from 'lodash/flatten';
 
 import { Connection, series } from '@novastar/codec';
 import { findNetDevices, MULTICAST_ADDRESS, net, REQ, UDP_PORT } from '@novastar/net';
-import { loadNcpConfig, ScreenConfigurator } from '@novastar/screen';
+import { loadNcpConfig, ScreenConfigurator, sendNcpCabinetConfig } from '@novastar/screen';
 import {
   discoverTaurusPlayers,
   TAURUS_FTP_PORT,
   TaurusClient,
   type TaurusLedScreenConfiguration,
   type TaurusPlayerInfo,
-  TaurusReceivingCardConfigStatus,
   TaurusResponseError,
   uploadTaurusFile,
 } from '@novastar/taurus';
@@ -833,8 +832,9 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
     this.emit('change', path, { isBusy: true, error: undefined });
     try {
       const topology = await client.getLedScreenConfiguration();
+      const availableTargetList = getTaurusNcpTargets(topology);
       const availableTargets = new Set(
-        getTaurusNcpTargets(topology).map(target => `${target.port}:${target.receivingCard}`),
+        availableTargetList.map(target => `${target.port}:${target.receivingCard}`),
       );
       const uniqueTargets = [
         ...new Map(
@@ -851,75 +851,92 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
       const decoded = await loadNcpConfig(filename);
       const cabinet = decoded.cabinets[cabinetIndex];
       if (!cabinet) throw new RangeError('NCP cabinet was not found');
-      const md5 = createHash('md5').update(cabinet.binary).digest('hex');
-      const safeName =
-        cabinet.name.replace(/[^a-z\d._-]+/gi, '-').replace(/^-+|-+$/g, '') || 'cabinet';
-      const ftpPath = `/sdcard/gmib/${safeName}-${md5.slice(0, 12)}.bin`;
-      const devicePath = `/mnt${ftpPath}`;
       const updateProgress = (progress: TaurusNcpProgress): void => {
         control.ncpProgress = progress;
         this.emit('change', path, { taurus: this.getTaurusState(control) });
       };
-      updateProgress({ stage: 'uploading', completed: 0, total: cabinet.binary.byteLength });
-      await uploadTaurusFile({
-        host: control.info.address,
-        port: control.info.ftpPort ?? TAURUS_FTP_PORT,
-        password: await client.getFtpPassword(),
-        remotePath: ftpPath,
-        data: cabinet.binary,
-        onProgress: (completed, total) => {
-          updateProgress({
-            stage: 'uploading',
-            completed,
-            total,
-            progress: total > 0 ? (completed / total) * 100 : undefined,
-          });
-        },
-      });
-      updateProgress({ stage: 'applying', completed: 0, total: uniqueTargets.length });
-      await client.applyReceivingCardConfiguration(
-        uniqueTargets.map(target => ({
-          filePath: devicePath,
-          md5,
-          port: target.port,
-          receivingCard: target.receivingCard,
-        })),
+      const allReceivingCards = uniqueTargets.length === availableTargetList.length;
+      const sendTargets = allReceivingCards ? [availableTargetList[0]] : uniqueTargets;
+      if (!sendTargets[0]) throw new RangeError('No receiving cards are configured');
+      const bytesPerTarget = cabinet.parameters.reduce(
+        (sum, parameter) => sum + parameter.data.length,
+        0,
       );
-      const deadline = Date.now() + 120_000;
-      while (Date.now() < deadline) {
-        await delay(0.5);
-        const progress = await client.getReceivingCardConfigProgress();
-        updateProgress({
-          stage: 'applying',
-          completed: progress.completed,
-          total: progress.total,
-          progress: progress.progress,
-          port: progress.executing?.port,
-          receivingCard: progress.executing?.receivingCard,
-        });
-        if (progress.status === TaurusReceivingCardConfigStatus.Completed) {
-          this.emit('change', path, {
-            connected: true,
-            isBusy: false,
-            error: undefined,
-            taurus: this.getTaurusState(control),
-          });
-          return {
-            completed: progress.completed,
-            total: progress.total,
-            progress: progress.progress,
+      const total = sendTargets.length * bytesPerTarget;
+      updateProgress({ stage: 'applying', completed: 0, total });
+      const socket = connect({ host: control.info.address, port: 5200 });
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            socket.destroy();
+            reject(new Error('Taurus TCP/5200 connection timed out'));
+          }, 5000);
+          const done = (error?: Error) => {
+            clearTimeout(timeout);
+            socket.off('error', done);
+            if (error) reject(error);
+            else resolve();
           };
+          socket.once('error', done);
+          socket.once('connect', () => done());
+        });
+        const connection = new Connection(socket, { timeout: 5000, maxLength: 512 });
+        const session = new ScreenConfigurator(connection).session;
+        let pingPending = false;
+        const heartbeat = setInterval(() => {
+          if (pingPending) return;
+          pingPending = true;
+          void client
+            .getBrightness()
+            .catch(() => connection.close())
+            .finally(() => {
+              pingPending = false;
+            });
+        }, 5000);
+        try {
+          for (let targetIndex = 0; targetIndex < sendTargets.length; targetIndex += 1) {
+            const target = sendTargets[targetIndex];
+            await sendNcpCabinetConfig(
+              session,
+              cabinet,
+              { sender: 0, port: target.port, receivingCard: target.receivingCard },
+              {
+                allReceivingCards,
+                readinessTargets: allReceivingCards
+                  ? availableTargetList.map(item => ({
+                      sender: 0,
+                      port: item.port,
+                      receivingCard: item.receivingCard,
+                    }))
+                  : undefined,
+                onProgress: progress => {
+                  const completed = targetIndex * bytesPerTarget + progress.completedBytes;
+                  updateProgress({
+                    stage: 'applying',
+                    completed,
+                    total,
+                    progress: total > 0 ? (completed / total) * 100 : undefined,
+                    port: allReceivingCards ? undefined : target.port,
+                    receivingCard: allReceivingCards ? undefined : target.receivingCard,
+                  });
+                },
+              },
+            );
+          }
+        } finally {
+          clearInterval(heartbeat);
+          connection.close();
         }
-        if (progress.status === TaurusReceivingCardConfigStatus.Failed) {
-          throw new Error(
-            progress.errorMessage ??
-              `Taurus receiving-card configuration failed${
-                progress.errorCode === undefined ? '' : ` (${progress.errorCode})`
-              }`,
-          );
-        }
+      } finally {
+        if (!socket.destroyed) socket.destroy();
       }
-      throw new Error('Taurus receiving-card configuration timed out');
+      this.emit('change', path, {
+        connected: true,
+        isBusy: false,
+        error: undefined,
+        taurus: this.getTaurusState(control),
+      });
+      return { completed: uniqueTargets.length, total: uniqueTargets.length, progress: 100 };
     } catch (error) {
       this.emit('change', path, {
         isBusy: false,

@@ -259,7 +259,7 @@ const TaurusNcpConfiguration: React.FC<{
         {ncpProgress?.stage === 'uploading'
           ? `Передано ${ncpProgress.completed} из ${ncpProgress.total} байт`
           : ncpProgress
-            ? `${ncpProgress.port === undefined ? '' : `Порт ${ncpProgress.port + 1}, карта ${(ncpProgress.receivingCard ?? 0) + 1}. `}Завершено ${ncpProgress.completed}/${ncpProgress.total}`
+            ? `${ncpProgress.port === undefined ? 'Все карты. ' : `Порт ${ncpProgress.port + 1}, карта ${(ncpProgress.receivingCard ?? 0) + 1}. `}Записано ${ncpProgress.completed}/${ncpProgress.total} байт`
             : 'Подготовка NCP…'}
       </TaurusOperationDialog>
       <TaurusOperationDialog
