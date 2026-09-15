@@ -51,14 +51,8 @@ import {
 } from './gmibScheduler';
 import { getSensors } from './history';
 import localConfig from './localConfig';
-import { applyLegacyLicenseUpdate, parseLegacyLicenseUpdate } from './legacyLicenseStorage';
-import { requestLicenseActivation } from './licenseClient';
-import {
-  getLicenseState,
-  hasLicenseCapability,
-  retryLicense,
-  verifyLicenseDocument,
-} from './licenseState';
+import { getLicenseState, hasLicenseCapability, retryLicense } from './licenseState';
+import { completeLicenseActivation } from './manualLicenseActivation';
 import machineId from './machineId';
 import updateMenu from './mainMenu';
 import {
@@ -1042,30 +1036,9 @@ api.post('/activate', async (req, res) => {
   };
   // debug(`activate: ${JSON.stringify(data)}`);
   try {
-    const signedLicense = await requestLicenseActivation(data);
-    const payload = await verifyLicenseDocument(signedLicense);
-    if (payload.status !== 'active') throw new Error(`License is ${payload.status}`);
-    const result = await fetch(`${import.meta.env.VITE_LICENSE_SERVER}/api/licenses`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
-    if (result.ok) {
-      const legacy = parseLegacyLicenseUpdate(await result.json());
-      if (typeof legacy.announce !== 'string' || typeof legacy.iv !== 'string')
-        throw new Error('License server returned an invalid response');
-      applyLegacyLicenseUpdate(localConfig, legacy);
-      localConfig.set('signedLicense', signedLicense);
-      res.end();
-      relaunch();
-    } else {
-      const message = await result.text();
-      const errMsg = `${result.statusText} - ${message} (${import.meta.env.VITE_LICENSE_SERVER})`;
-      debug(`ERROR: ${errMsg}`);
-      res.status(result.status).send(errMsg);
-    }
+    await completeLicenseActivation(data, AbortSignal.timeout(10_000));
+    res.end();
+    relaunch();
   } catch (error) {
     const { message } = error as Error;
     res.status(500).send(message);

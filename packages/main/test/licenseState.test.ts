@@ -4,6 +4,7 @@ import type { LicensePayloadV2, SignedLicense } from '/@common/license';
 
 const mocks = vi.hoisted(() => ({
   document: undefined as SignedLicense | undefined,
+  setConfig: vi.fn(),
   verifyLicense: vi.fn(),
   requestLicenseActivation: vi.fn(),
   requestLicenseRefresh: vi.fn(),
@@ -12,7 +13,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../src/localConfig', () => ({
   default: {
     get: vi.fn((key: string) => (key === 'signedLicense' ? mocks.document : undefined)),
-    set: vi.fn((key: string, value: SignedLicense) => {
+    set: mocks.setConfig.mockImplementation((key: string, value: SignedLicense) => {
       if (key === 'signedLicense') mocks.document = value;
     }),
   },
@@ -52,6 +53,7 @@ describe('main license retry', () => {
     vi.setSystemTime(new Date('2026-09-15T12:00:00.000Z'));
     mocks.document = signedLicense;
     mocks.verifyLicense.mockReset().mockResolvedValue(activePayload());
+    mocks.setConfig.mockClear();
     mocks.requestLicenseActivation.mockReset();
     mocks.requestLicenseRefresh.mockReset();
   });
@@ -105,5 +107,15 @@ describe('main license retry', () => {
       relaunchRequired: true,
     });
     expect(mocks.verifyLicense).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not store an invalid manual activation document', async () => {
+    mocks.verifyLicense.mockRejectedValue(new Error('invalid signature'));
+    const service = await import('../src/licenseState');
+
+    await expect(service.saveActiveLicenseDocument(signedLicense)).rejects.toThrow(
+      'invalid signature',
+    );
+    expect(mocks.setConfig).not.toHaveBeenCalled();
   });
 });

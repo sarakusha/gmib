@@ -148,6 +148,15 @@ export const bootstrapLicense = async (): Promise<LicenseRuntimeState> => {
 export const verifyLicenseDocument = (document: SignedLicense): Promise<LicensePayloadV2> =>
   verifyDocument(document);
 
+export const saveActiveLicenseDocument = async (
+  document: SignedLicense,
+): Promise<LicensePayloadV2> => {
+  const payload = await verifyDocument(document);
+  if (payload.status !== 'active') throw new Error(`License is ${payload.status}`);
+  localConfig.set('signedLicense', document);
+  return payload;
+};
+
 export const getLicenseState = (): LicenseRuntimeState => ({ ...state });
 
 export const retryLicense = (): Promise<LicenseRetryResult> => {

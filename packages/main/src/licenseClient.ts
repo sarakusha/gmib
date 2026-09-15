@@ -17,12 +17,17 @@ const isSignedLicense = (value: unknown): value is SignedLicense =>
   typeof Reflect.get(value, 'payload') === 'string' &&
   typeof Reflect.get(value, 'signature') === 'string';
 
-const request = async (path: string, body: unknown): Promise<SignedLicense> => {
+const request = async (
+  path: string,
+  body: unknown,
+  outerSignal?: AbortSignal,
+): Promise<SignedLicense> => {
+  const timeoutSignal = AbortSignal.timeout(10_000);
   const response = await fetch(`${import.meta.env.VITE_LICENSE_SERVER}${path}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(10_000),
+    signal: outerSignal ? AbortSignal.any([outerSignal, timeoutSignal]) : timeoutSignal,
   });
   if (!response.ok) {
     const message = await response.text();
@@ -35,8 +40,10 @@ const request = async (path: string, body: unknown): Promise<SignedLicense> => {
   return license;
 };
 
-export const requestLicenseActivation = (input: ActivationInput): Promise<SignedLicense> =>
-  request('/api/v2/licenses/activate', input);
+export const requestLicenseActivation = (
+  input: ActivationInput,
+  signal?: AbortSignal,
+): Promise<SignedLicense> => request('/api/v2/licenses/activate', input, signal);
 
 export const requestLicenseRefresh = (
   license: SignedLicense,
@@ -47,4 +54,3 @@ export const accessDeniedMessage = (state: LicenseRuntimeState): string =>
   state.status === 'active'
     ? 'Функция доступна в лицензии Plus или выше'
     : state.message || 'Требуется действующая лицензия';
-
