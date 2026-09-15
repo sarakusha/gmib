@@ -5,7 +5,11 @@ import debugFactory from 'debug';
 import type { LicensePayloadV2, LicenseRuntimeState, SignedLicense } from '/@common/license';
 
 import { decodeLegacyLicense } from './legacyLicense';
-import { sessionTermsChanged, shouldRefreshStoredLicense } from './licenseLifecycle';
+import {
+  getPayloadRuntimeState,
+  sessionTermsChanged,
+  shouldRefreshStoredLicense,
+} from './licenseLifecycle';
 import {
   accessDeniedMessage,
   requestLicenseActivation,
@@ -30,18 +34,6 @@ const metadata = () => ({
 });
 
 const publicKeys = () => parsePublicKeys(import.meta.env.VITE_LICENSE_PUBLIC_KEYS);
-
-const payloadState = (payload: LicensePayloadV2, now = Date.now()): LicenseRuntimeState => {
-  const locallyExpired = payload.expiresAt !== null && now >= Date.parse(payload.expiresAt);
-  const payloadStatus = locallyExpired && payload.status === 'active' ? 'expired' : payload.status;
-  const status = payloadStatus === 'unbound' ? 'unlicensed' : payloadStatus;
-  return {
-    status,
-    plan: payload.plan,
-    expiresAt: payload.expiresAt,
-    capabilities: payload.capabilities,
-  };
-};
 
 const verifyDocument = async (document: unknown): Promise<LicensePayloadV2> =>
   verifyLicense(document, await machineIdPromise, publicKeys());
@@ -107,7 +99,7 @@ export const bootstrapLicense = async (): Promise<LicenseRuntimeState> => {
     let payload: LicensePayloadV2 | undefined;
     if (document) {
       payload = await verifyDocument(document);
-      const initial = payloadState(payload);
+      const initial = getPayloadRuntimeState(payload);
       if (shouldRefreshStoredLicense(initial)) {
         try {
           payload = await refreshStoredLicense(document);
@@ -131,7 +123,7 @@ export const bootstrapLicense = async (): Promise<LicenseRuntimeState> => {
       state = { status: 'unlicensed', capabilities: [] };
       return state;
     }
-    state = payloadState(payload);
+    state = getPayloadRuntimeState(payload);
     if (state.status === 'active') {
       sessionPayload = payload;
       scheduleRefresh(localConfig.get('signedLicense')!);

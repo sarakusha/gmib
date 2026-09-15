@@ -1,5 +1,19 @@
 import type { LicensePayloadV2, LicenseRuntimeState } from '/@common/license';
 
+export const getPayloadRuntimeState = (
+  payload: LicensePayloadV2,
+  now = Date.now(),
+): LicenseRuntimeState => {
+  const locallyExpired = payload.expiresAt !== null && now >= Date.parse(payload.expiresAt);
+  const payloadStatus = locallyExpired && payload.status === 'active' ? 'expired' : payload.status;
+  return {
+    status: payloadStatus === 'unbound' ? 'unlicensed' : payloadStatus,
+    plan: payload.plan,
+    expiresAt: payload.expiresAt,
+    capabilities: payload.capabilities,
+  };
+};
+
 export const shouldRefreshStoredLicense = (state: LicenseRuntimeState): boolean =>
   state.status !== 'active' && state.status !== 'invalid';
 

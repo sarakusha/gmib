@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { sessionTermsChanged, shouldRefreshStoredLicense } from '../src/licenseLifecycle';
+import {
+  getPayloadRuntimeState,
+  sessionTermsChanged,
+  shouldRefreshStoredLicense,
+} from '../src/licenseLifecycle';
 
 import type { LicensePayloadV2, LicenseRuntimeStatus } from '/@common/license';
 
@@ -20,6 +24,12 @@ const payload = (changes: Partial<LicensePayloadV2> = {}): LicensePayloadV2 => (
 });
 
 describe('license lifecycle decisions', () => {
+  it('expires an active document exactly at its local boundary', () => {
+    const expiresAt = Date.parse(payload().expiresAt!);
+    expect(getPayloadRuntimeState(payload(), expiresAt - 1).status).toBe('active');
+    expect(getPayloadRuntimeState(payload(), expiresAt).status).toBe('expired');
+  });
+
   it.each(['migration-required', 'expired', 'disabled', 'unlicensed'] as LicenseRuntimeStatus[])(
     'refreshes a verified %s document during startup',
     status => {

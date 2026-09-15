@@ -52,16 +52,23 @@ describe('license verification', () => {
         new Map([['test', publicKey]]),
       ),
     ).toThrow('Invalid license signature');
-    expect(() =>
-      verifyLicense(document, 'b'.repeat(64), new Map([['test', publicKey]])),
-    ).toThrow('another device');
+    expect(() => verifyLicense(document, 'b'.repeat(64), new Map([['test', publicKey]]))).toThrow(
+      'another device',
+    );
   });
 
   it('requires both Plus and explicit capabilities', () => {
-    expect(allowsCapability(payload(), 'plugins')).toBe(true);
-    expect(allowsCapability(payload(), 'taurus')).toBe(true);
-    expect(allowsCapability(payload({ plan: 'standard' }), 'plugins')).toBe(false);
-    expect(allowsCapability(payload({ capabilities: ['plugins', 'taurus'] }), 'taurus')).toBe(false);
+    for (const plan of ['plus', 'premium', 'enterprise'] as const) {
+      expect(allowsCapability(payload({ plan }), 'plugins')).toBe(true);
+      expect(allowsCapability(payload({ plan }), 'taurus')).toBe(true);
+    }
+    for (const plan of ['basic', 'standard'] as const) {
+      expect(allowsCapability(payload({ plan }), 'plugins')).toBe(false);
+      expect(allowsCapability(payload({ plan }), 'taurus')).toBe(false);
+    }
+    expect(allowsCapability(payload({ capabilities: ['plugins', 'taurus'] }), 'taurus')).toBe(
+      false,
+    );
     expect(allowsCapability(payload({ status: 'expired' }), 'plugins')).toBe(false);
   });
 
