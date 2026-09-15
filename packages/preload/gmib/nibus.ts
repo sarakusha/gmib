@@ -80,6 +80,8 @@ import ipcDispatch from '../common/ipcDispatch';
 import { validateConfig } from '/@common/schema';
 import { enqueueSnackbar, setFlashing, setProgress } from '/@renderer/store/flasherSlice';
 import type { GmibWindowParams } from '/@common/WindowParams';
+import type { LicenseRuntimeState } from '/@common/license';
+import { getRuntimeAccessError } from './runtimeAccess';
 
 export type { Address };
 
@@ -261,6 +263,34 @@ const updateStorage = (): void => {
   window.localStorage.setItem('playerListeners', JSON.stringify([...listeners]));
 };
 function openSession() {
+  void ipcRenderer
+    .invoke('getRuntimeLicenseState')
+    .then((license: LicenseRuntimeState) => {
+      const error = getRuntimeAccessError(license);
+      if (!error) {
+        startSession();
+        return;
+      }
+      ipcDispatch(
+        setStatus({
+          status: 'failed',
+          portCount: 0,
+          error,
+        }),
+      );
+    })
+    .catch(() => {
+      ipcDispatch(
+        setStatus({
+          status: 'failed',
+          portCount: 0,
+          error: 'Не удалось проверить состояние лицензии',
+        }),
+      );
+    });
+}
+
+function startSession() {
   const addConnectionHandler = (): void => {
     ipcDispatch(setPortCount(session.ports));
   };

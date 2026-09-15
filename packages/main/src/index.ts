@@ -34,8 +34,6 @@ import { fixDefault } from '/@common/helpers';
 
 process.env['npm_package_version'] = import.meta.env.VITE_APP_VERSION;
 
-void import('./nibus');
-
 // import {REDUX_DEVTOOLS} from 'electron-devtools-installer';
 // import.meta.env.PROD && Sentry.init({ dsn: 'https://fbd4024789d247fcb5eb2493d1aa28b6@o1412889.ingest.sentry.io/6752393' });
 crashReporter.start({ uploadToServer: false });
@@ -110,6 +108,9 @@ if (isDevRuntime) {
 app
   .whenReady()
   .then(bootstrapLicense)
+  .then(async () => {
+    if (getLicenseState().status === 'active') await import('./nibus');
+  })
   .then(startRuntimeApi)
   .then(() =>
     startPlugins().catch(error => {
