@@ -5,7 +5,9 @@ import { join } from 'path';
 import debugFactory from 'debug';
 
 import kioskMode from './kioskMode';
+import { getLicenseState } from './licenseState';
 import localConfig from './localConfig';
+import { shouldShowLocalWindow } from './mainWindowVisibility';
 import type { CloseEvent, ManagedWindow } from './managedWindow';
 import relaunch, { needRestart } from './relaunch';
 import { createTabbedWindow, getTabbedWindowItems } from './tabbedWindow';
@@ -48,6 +50,14 @@ const getVisibleWindowParams = (): WindowParams[] =>
 const isLocalPlayer = (params: WindowParams): params is PlayerWindowParams =>
   isPlayer(params) && params.host === 'localhost';
 
+const shouldShowCurrentLocalWindow = (): boolean =>
+  shouldShowLocalWindow({
+    licenseStatus: getLicenseState().status,
+    kiosk: kioskMode,
+    autostart: localConfig.get('autostart'),
+    hidden: localConfig.get('localGmibHidden'),
+  });
+
 const shouldPersistHiddenLocalGmib = (closingId: number): boolean => {
   const remaining = getVisibleWindowParams().filter(params => params.id !== closingId);
   return remaining.length > 0 && remaining.every(isLocalPlayer);
@@ -78,7 +88,7 @@ export const createAppWindow = (
   );
   if (isLocal) {
     browserWindow.once('ready-to-show', () => {
-      if (!kioskMode && !localConfig.get('autostart') && !localConfig.get('localGmibHidden')) {
+      if (shouldShowCurrentLocalWindow()) {
         browserWindow.show();
         // The window may freeze from time to time at startup on Windows
         setTimeout(() => browserWindow.show(), 100);
@@ -114,7 +124,7 @@ export const createAppWindow = (
     }
   });
   void registerGmib(browserWindow, { host: address, nibusPort });
-  if (isLocal && (kioskMode || localConfig.get('localGmibHidden'))) browserWindow.hide();
+  if (isLocal && !shouldShowCurrentLocalWindow()) browserWindow.hide();
   browserWindow.on('close', event => {
     const closeEvent = event as CloseEvent;
     if (isLocal && !isQuitting && !needRestart()) {
@@ -161,7 +171,7 @@ export const createMainWindow = (): ManagedWindow => {
 
 export const activateMainWindow = (): ManagedWindow => {
   const browserWindow = createMainWindow();
-  if (kioskMode) {
+  if (!shouldShowCurrentLocalWindow() && kioskMode) {
     browserWindow.hide();
     return browserWindow;
   }
