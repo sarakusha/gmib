@@ -54,6 +54,7 @@ import { TypedEmitter } from 'tiny-typed-emitter';
 import NovastarLoader from './NovastarLoader';
 import TaurusTelemetryLoader from './TaurusTelemetryLoader';
 import ExternalBroadcastDetection from './externalBroadcastDetection';
+import { discoverLicensedTaurus } from './licensedTaurusDiscovery';
 import { probeGmibAddress } from './remoteGmib';
 import { getAddressesForScreen, getScreens } from './screen';
 import {
@@ -1181,9 +1182,10 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
     hardAddresses.forEach(address => {
       if (!this.hasNetDevice(address)) this.openNetDevice(address);
     });
+    const taurusAllowed = hasLicenseCapability('taurus');
     const [addresses, taurusPlayers] = await Promise.all([
       findNetDevices(dest),
-      discoverTaurusPlayers(dest),
+      discoverLicensedTaurus(taurusAllowed, dest, discoverTaurusPlayers),
     ]);
     if (!this.running) return;
     this.openBroadcastDetector();
@@ -1194,7 +1196,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
         this.openNetDevice(address);
       }
     });
-    if (hasLicenseCapability('taurus')) taurusPlayers.forEach(player => this.addTaurus(player));
+    taurusPlayers.forEach(player => this.addTaurus(player));
     const discoveredTaurus = new Set(taurusPlayers.map(player => getTaurusPath(player.sn)));
     this.taurusControls.forEach((control, path) => {
       if (!discoveredTaurus.has(path) && !control.client && !control.connecting) {
