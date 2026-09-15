@@ -25,8 +25,8 @@ import localConfig from './localConfig';
 import machineIdPromise from './machineId';
 import { getTabbedWindowById } from './tabbedWindow';
 
-import { replaceNull } from '/@common/helpers';
 import type { ManagedWindow } from './managedWindow';
+import { applyLegacyLicenseUpdate, parseLegacyLicenseUpdate } from './legacyLicenseStorage';
 import { checkForUpdatesNoInteractive, updateAndRestart } from './updater';
 
 export const licenseNames = ['basic', 'standard', 'plus', 'premium', 'enterprise'] as const;
@@ -92,7 +92,7 @@ const knockKnock = async (params: GmibWindowParams): Promise<void> => {
       body: JSON.stringify(data),
     });
     if (result.ok) {
-      const update = (await result.json()) as Record<string, unknown>;
+      const update = parseLegacyLicenseUpdate(await result.json());
       if (update.autoUpdate && !localConfig.get('autoUpdate')) {
         checkForUpdatesNoInteractive()
           .then(info => {
@@ -111,10 +111,7 @@ const knockKnock = async (params: GmibWindowParams): Promise<void> => {
         });
         delete update.pritunl;
       }
-      localConfig.store = {
-        ...localConfig.store,
-        ...replaceNull(update),
-      };
+      applyLegacyLicenseUpdate(localConfig, update);
       // setTimeout(() => knockKnock(params), 6 * HOUR).unref();
       attempts = 0;
     } else {

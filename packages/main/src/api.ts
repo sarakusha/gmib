@@ -13,7 +13,7 @@ import formidable from 'formidable';
 import { nanoid } from 'nanoid';
 
 import type { MediaInfo } from '/@common/mediaInfo';
-import { asyncSerial, notEmpty, replaceNull } from '/@common/helpers';
+import { asyncSerial, notEmpty } from '/@common/helpers';
 import type { CreatePlaylist, Playlist, PlaylistItem } from '/@common/playlist';
 
 import auth from './auth';
@@ -51,6 +51,7 @@ import {
 } from './gmibScheduler';
 import { getSensors } from './history';
 import localConfig from './localConfig';
+import { applyLegacyLicenseUpdate, parseLegacyLicenseUpdate } from './legacyLicenseStorage';
 import { requestLicenseActivation } from './licenseClient';
 import { getLicenseState, hasLicenseCapability, verifyLicenseDocument } from './licenseState';
 import machineId from './machineId';
@@ -1046,14 +1047,11 @@ api.post('/activate', async (req, res) => {
       body: JSON.stringify(data),
     });
     if (result.ok) {
-      const legacy: unknown = await result.json();
-      if (typeof legacy !== 'object' || legacy === null)
+      const legacy = parseLegacyLicenseUpdate(await result.json());
+      if (typeof legacy.announce !== 'string' || typeof legacy.iv !== 'string')
         throw new Error('License server returned an invalid response');
-      localConfig.store = {
-        ...localConfig.store,
-        ...replaceNull(legacy),
-        signedLicense,
-      };
+      applyLegacyLicenseUpdate(localConfig, legacy);
+      localConfig.set('signedLicense', signedLicense);
       res.end();
       relaunch();
     } else {
