@@ -54,9 +54,9 @@ import localConfig from './localConfig';
 import { applyLegacyLicenseUpdate, parseLegacyLicenseUpdate } from './legacyLicenseStorage';
 import { requestLicenseActivation } from './licenseClient';
 import {
-  bootstrapLicense,
   getLicenseState,
   hasLicenseCapability,
+  retryLicense,
   verifyLicenseDocument,
 } from './licenseState';
 import machineId from './machineId';
@@ -1074,13 +1074,13 @@ api.post('/activate', async (req, res) => {
 });
 
 api.post('/license/retry', async (_req, res) => {
-  const nextState = await bootstrapLicense();
-  if (nextState.status !== 'active') {
-    res.status(409).send(nextState.message || 'Действующая лицензия не найдена');
+  const result = await retryLicense();
+  if (result.state.status !== 'active') {
+    res.status(409).send(result.state.message || 'Действующая лицензия не найдена');
     return;
   }
   res.end();
-  setTimeout(relaunch, 100);
+  if (result.relaunchRequired) setTimeout(relaunch, 100);
 });
 
 api.post('/checkForUpdates', (req, res) => {

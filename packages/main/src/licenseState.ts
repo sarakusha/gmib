@@ -25,7 +25,13 @@ const REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000;
 let state: LicenseRuntimeState = { status: 'checking', capabilities: [] };
 let sessionPayload: LicensePayloadV2 | undefined;
 let refreshTimer: NodeJS.Timeout | undefined;
+let retryPromise: Promise<LicenseRetryResult> | undefined;
 const stateListeners = new Set<(nextState: LicenseRuntimeState) => void>();
+
+export type LicenseRetryResult = {
+  state: LicenseRuntimeState;
+  relaunchRequired: boolean;
+};
 
 const metadata = () => ({
   name: os.hostname().replace(/\.local$/, ''),
@@ -143,6 +149,22 @@ export const verifyLicenseDocument = (document: SignedLicense): Promise<LicenseP
   verifyDocument(document);
 
 export const getLicenseState = (): LicenseRuntimeState => ({ ...state });
+
+export const retryLicense = (): Promise<LicenseRetryResult> => {
+  if (sessionPayload) {
+    return Promise.resolve({ state: getLicenseState(), relaunchRequired: false });
+  }
+  if (retryPromise) return retryPromise;
+  retryPromise = bootstrapLicense()
+    .then(nextState => ({
+      state: nextState,
+      relaunchRequired: nextState.status === 'active',
+    }))
+    .finally(() => {
+      retryPromise = undefined;
+    });
+  return retryPromise;
+};
 
 export const onLicenseStateChange = (
   listener: (nextState: LicenseRuntimeState) => void,
