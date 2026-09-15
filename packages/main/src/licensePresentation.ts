@@ -1,6 +1,7 @@
 import type { LicenseRuntimeState } from '/@common/license';
 import { hashCode } from '/@common/helpers';
 
+// cspell:ignore Lqikn JEXW Dejli Vgvtzts
 const SPECIAL = 'rlXINR-cZo5bnISD5TaUT';
 const BLOCK = 'LqiknX4bnpOZyEn5DYsUT';
 const FLEX = 'MeE8KHrK9KuXZe0HnW47V';

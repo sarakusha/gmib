@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { createLicensePresentation } from '../src/licensePresentation';
 
+// cspell:ignore Lqikn JEXW Dejli Vgvtzts
+
 describe('license presentation', () => {
   it('derives local presentation from verified capabilities', () => {
     const result = createLicensePresentation(
