@@ -37,4 +37,8 @@ describe('getRuntimeAccessError', () => {
       }),
     ).toBe('Лицензия отключена');
   });
+
+  it('leaves remote transport authorization to the serving GMIB', () => {
+    expect(getRuntimeAccessError({ status: 'unlicensed', capabilities: [] }, true)).toBeUndefined();
+  });
 });

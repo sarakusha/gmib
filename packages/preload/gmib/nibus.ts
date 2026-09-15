@@ -266,7 +266,7 @@ function openSession() {
   void ipcRenderer
     .invoke('getRuntimeLicenseState')
     .then((license: LicenseRuntimeState) => {
-      const error = getRuntimeAccessError(license);
+      const error = getRuntimeAccessError(license, isRemoteSession);
       if (!error) {
         startSession();
         return;
