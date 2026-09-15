@@ -6,7 +6,7 @@ import flatten from 'lodash/flatten';
 import groupBy from 'lodash/groupBy';
 import intersection from 'lodash/intersection';
 
-import type { Aggregations } from '/@common/helpers';
+import type { Aggregations, Modules } from '/@common/helpers';
 import { Minihost3Selector, minmax, MINUTE, notEmpty } from '/@common/helpers';
 import { isRemoteSession } from '/@common/remote';
 import { reAddress } from '/@common/config';
@@ -168,7 +168,7 @@ const checkDevice = async ({ id }: DeviceState): Promise<number[]> => {
   const res = await window.nibus
     .telemetry(id)
     .start({ selectors: [Minihost3Selector.Temperature] });
-  return res.map(module => module.info?.t).filter(isNumber);
+  return res.map((module: Modules[number]) => module.info?.t).filter(isNumber);
 };
 
 const checkTemperature =
