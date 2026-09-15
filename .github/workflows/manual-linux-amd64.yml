@@ -1,0 +1,82 @@
+name: Manual Linux amd64 build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+        with:
+          run_install: false
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Write build configuration
+        env:
+          VITE_ANNOUNCE_PROXY: ${{ secrets.VITE_ANNOUNCE_PROXY }}
+          VITE_ANNOUNCE_PATH: ${{ secrets.VITE_ANNOUNCE_PATH }}
+          VITE_ANNOUNCE_WINDOW: ${{ secrets.VITE_ANNOUNCE_WINDOW }}
+          VITE_ANNOUNCE_BIND: ${{ secrets.VITE_ANNOUNCE_BIND }}
+          VITE_ANNOUNCE_HOST: ${{ secrets.VITE_ANNOUNCE_HOST }}
+          VITE_ANNOUNCE_NOVASTAR: ${{ secrets.VITE_ANNOUNCE_NOVASTAR }}
+          VITE_ANNOUNCE_DATE: ${{ secrets.VITE_ANNOUNCE_DATE }}
+          VITE_LICENSE_SERVER: ${{ secrets.VITE_LICENSE_SERVER }}
+        run: |
+          : "${VITE_ANNOUNCE_PROXY:?missing secret VITE_ANNOUNCE_PROXY}"
+          : "${VITE_ANNOUNCE_PATH:?missing secret VITE_ANNOUNCE_PATH}"
+          : "${VITE_ANNOUNCE_WINDOW:?missing secret VITE_ANNOUNCE_WINDOW}"
+          : "${VITE_ANNOUNCE_BIND:?missing secret VITE_ANNOUNCE_BIND}"
+          : "${VITE_ANNOUNCE_HOST:?missing secret VITE_ANNOUNCE_HOST}"
+          : "${VITE_ANNOUNCE_NOVASTAR:?missing secret VITE_ANNOUNCE_NOVASTAR}"
+          : "${VITE_ANNOUNCE_DATE:?missing secret VITE_ANNOUNCE_DATE}"
+          : "${VITE_LICENSE_SERVER:?missing secret VITE_LICENSE_SERVER}"
+          {
+            printf '%s\n' "VITE_ANNOUNCE_PROXY=$VITE_ANNOUNCE_PROXY"
+            printf '%s\n' "VITE_ANNOUNCE_PATH=$VITE_ANNOUNCE_PATH"
+            printf '%s\n' "VITE_ANNOUNCE_WINDOW=$VITE_ANNOUNCE_WINDOW"
+            printf '%s\n' "VITE_ANNOUNCE_BIND=$VITE_ANNOUNCE_BIND"
+            printf '%s\n' "VITE_ANNOUNCE_HOST=$VITE_ANNOUNCE_HOST"
+            printf '%s\n' "VITE_ANNOUNCE_NOVASTAR=$VITE_ANNOUNCE_NOVASTAR"
+            printf '%s\n' "VITE_ANNOUNCE_DATE=$VITE_ANNOUNCE_DATE"
+            printf '%s\n' "VITE_LICENSE_SERVER=$VITE_LICENSE_SERVER"
+          } > .env.local
+
+      - run: pnpm install --frozen-lockfile
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+
+      - name: Build sqlite3 from source
+        run: |
+          rm -f node_modules/sqlite3/build/Release/node_sqlite3.node
+          node "$(node -e "console.log(require.resolve('node-gyp/bin/node-gyp.js', { paths: [require.resolve('sqlite3/package.json')] }))")" rebuild --directory node_modules/sqlite3
+        env:
+          npm_config_build_from_source: true
+
+      - run: pnpm run build
+
+      - name: Build AppImage without publishing
+        run: pnpm exec electron-builder --config .electron-builder-light.config.js -l --x64 --publish never
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: gmib-linux-amd64-${{ github.run_number }}
+          path: dist/gmib-x86_64.AppImage
+          if-no-files-found: error
+          retention-days: 14
