@@ -2,6 +2,7 @@
 import express, { type Request, type Response } from 'express';
 
 import type { ScreenId } from '/@common/novastar';
+import type { TaurusDisplayMode } from '/@common/novastar';
 import type {
   TaurusCalibrationRequest,
   TaurusFirmwareApplyRequest,
@@ -91,6 +92,20 @@ api.post('/taurus/login', async (req, res) => {
     res.end();
   } catch (error) {
     res.status(401).send((error as Error).message);
+  }
+});
+
+api.put('/taurus/video-mode', async (req, res) => {
+  const { path, mode } = req.body as { path?: string; mode?: TaurusDisplayMode };
+  if (!path || !mode) {
+    res.status(400).send('Taurus path and display mode are required');
+    return;
+  }
+  try {
+    await master.setTaurusDisplayMode(path, mode);
+    res.end();
+  } catch (error) {
+    res.status(500).send((error as Error).message);
   }
 });
 

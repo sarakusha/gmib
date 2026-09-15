@@ -6,6 +6,8 @@ import {
   type Screen,
   type ScreenId,
   TAURUS_ALL_PATH,
+  type TaurusDisplayMode,
+  type TaurusVideoSourceName,
 } from '/@common/novastar';
 import { asyncSerial, delay, notEmpty, reIPv4 } from '/@common/helpers';
 import type { CabinetInfo, NovastarTelemetry } from '/@common/helpers';
@@ -42,6 +44,8 @@ import {
   type TaurusLedScreenConfiguration,
   type TaurusPlayerInfo,
   TaurusResponseError,
+  TaurusVideoMode,
+  TaurusVideoSource,
   uploadTaurusFile,
 } from '@novastar/taurus';
 import memoize from 'lodash/memoize';
@@ -126,6 +130,8 @@ type TaurusControl = {
   loginFailed?: boolean;
   brightness?: number;
   illuminance?: number;
+  displayMode?: TaurusDisplayMode;
+  currentVideoSource?: TaurusVideoSourceName;
   firmwareProgress?: TaurusFirmwareProgress;
   ncpProgress?: TaurusNcpProgress;
   calibrationProgress?: TaurusCalibrationProgress;
@@ -478,6 +484,8 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
       passwordRequired: !control.client && (Boolean(control.loginFailed) || !hasPassword),
       brightness: control.brightness,
       illuminance: control.illuminance,
+      displayMode: control.displayMode,
+      currentVideoSource: control.currentVideoSource,
       firmwareProgress: control.firmwareProgress,
       ncpProgress: control.ncpProgress,
       calibrationProgress: control.calibrationProgress,
@@ -607,10 +615,13 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
     if (!control?.client) return;
     const { client } = control;
     clearTimeout(control.timeout);
-    const [brightness, illuminance] = await Promise.allSettled([
-      client.getBrightness(),
-      client.getEnvironmentBrightness(),
-    ]);
+    const [brightness, illuminance, videoConfiguration, currentVideoSource] =
+      await Promise.allSettled([
+        client.getBrightness(),
+        client.getEnvironmentBrightness(),
+        client.getVideoConfiguration(),
+        client.getCurrentVideoSource(),
+      ]);
     if (brightness.status === 'rejected' && illuminance.status === 'rejected') {
       client.close();
       this.handleTaurusDisconnect(
@@ -625,6 +636,21 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
     if (illuminance.status === 'fulfilled') {
       control.illuminance = illuminance.value;
       this.emit('illuminance', path, illuminance.value);
+    }
+    if (videoConfiguration.status === 'fulfilled') {
+      const { mode, source } = videoConfiguration.value;
+      control.displayMode =
+        mode === TaurusVideoMode.Scheduled
+          ? 'scheduled'
+          : mode === TaurusVideoMode.HdmiPreferred
+            ? 'hdmiPreferred'
+            : source === TaurusVideoSource.Hdmi
+              ? 'hdmi'
+              : 'internal';
+    }
+    if (currentVideoSource.status === 'fulfilled') {
+      control.currentVideoSource =
+        currentVideoSource.value === TaurusVideoSource.Hdmi ? 'hdmi' : 'internal';
     }
     const taurus = this.getTaurusState(control);
     this.emit('change', path, { connected: true, error: undefined, taurus });
@@ -641,6 +667,33 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
     if (!control) throw new Error(`Unknown Taurus player: ${path}`);
     control.loginFailed = false;
     await this.connectTaurus(path, password);
+  }
+
+  async setTaurusDisplayMode(path: string, mode: TaurusDisplayMode): Promise<void> {
+    const { control, client } = await this.getTaurusClient(path);
+    if (mode === 'internal') await client.setAsynchronousMode();
+    else if (mode === 'hdmi') await client.setSynchronousMode();
+    else if (mode === 'hdmiPreferred') {
+      await client.setSynchronousMode({ fallbackToInternal: true });
+    } else if (mode === 'scheduled') {
+      await client.setVideoConfiguration({ mode: TaurusVideoMode.Scheduled });
+    } else {
+      throw new RangeError(`Unknown Taurus display mode: ${String(mode)}`);
+    }
+    const [configuration, source] = await Promise.all([
+      client.getVideoConfiguration(),
+      client.getCurrentVideoSource(),
+    ]);
+    control.displayMode =
+      configuration.mode === TaurusVideoMode.Scheduled
+        ? 'scheduled'
+        : configuration.mode === TaurusVideoMode.HdmiPreferred
+          ? 'hdmiPreferred'
+          : configuration.source === TaurusVideoSource.Hdmi
+            ? 'hdmi'
+            : 'internal';
+    control.currentVideoSource = source === TaurusVideoSource.Hdmi ? 'hdmi' : 'internal';
+    this.emit('change', path, { taurus: this.getTaurusState(control) });
   }
 
   private async getTaurusClient(

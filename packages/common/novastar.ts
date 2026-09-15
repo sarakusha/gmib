@@ -50,6 +50,9 @@ export type Screen = {
   chipType?: ChipTypeEnum | null;
 };
 
+export type TaurusDisplayMode = 'internal' | 'hdmi' | 'hdmiPreferred' | 'scheduled';
+export type TaurusVideoSourceName = 'internal' | 'hdmi';
+
 export type Novastar = {
   path: string;
   hasDVISignalIn?: boolean;
@@ -72,6 +75,8 @@ export type Novastar = {
     passwordRequired: boolean;
     brightness?: number;
     illuminance?: number;
+    displayMode?: TaurusDisplayMode;
+    currentVideoSource?: TaurusVideoSourceName;
     firmwareProgress?: TaurusFirmwareProgress;
     ncpProgress?: TaurusNcpProgress;
     calibrationProgress?: TaurusCalibrationProgress;

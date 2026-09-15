@@ -3,7 +3,7 @@ import type { EntityState, Middleware, MiddlewareAPI } from '@reduxjs/toolkit';
 import { createApi } from '@reduxjs/toolkit/query/react';
 import debugFactory from 'debug';
 
-import type { Novastar, Screen, ScreenId } from '/@common/novastar';
+import type { Novastar, Screen, ScreenId, TaurusDisplayMode } from '/@common/novastar';
 import type {
   TaurusCalibrationRequest,
   TaurusCalibrationResult,
@@ -136,6 +136,13 @@ const novastarApi = createApi({
       query: body => ({
         url: 'novastar/taurus/login',
         method: 'POST',
+        body,
+      }),
+    }),
+    setTaurusDisplayMode: build.mutation<void, { path: string; mode: TaurusDisplayMode }>({
+      query: body => ({
+        url: 'novastar/taurus/video-mode',
+        method: 'PUT',
         body,
       }),
     }),
@@ -343,6 +350,7 @@ export const {
   useInspectTaurusNcpConfigurationMutation,
   useSaveTaurusNcpConfigurationMutation,
   useLoginTaurusMutation,
+  useSetTaurusDisplayModeMutation,
   useRestoreTaurusScreenConfigurationMutation,
   useSetBrightnessMutation,
   useStartTelemetryMutation,

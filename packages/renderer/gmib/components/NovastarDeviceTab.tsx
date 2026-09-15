@@ -1,6 +1,16 @@
 import type { FunctionInterpolation } from '@emotion/react';
 import type { SelectProps } from '@mui/material';
-import { Box, Button, Paper, Table, TableBody, TableRow, TextField } from '@mui/material';
+import {
+  Box,
+  Button,
+  MenuItem,
+  Paper,
+  Select,
+  Table,
+  TableBody,
+  TableRow,
+  TextField,
+} from '@mui/material';
 import type { Theme } from '@mui/material/styles';
 import { css, styled } from '@mui/material/styles';
 import { ChipTypeEnum } from '@novastar/native/ChipType';
@@ -14,6 +24,7 @@ import {
   updateNovastarScreens,
   useLoginTaurusMutation,
   useSetBrightnessMutation,
+  useSetTaurusDisplayModeMutation,
 } from '../api/novastar';
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useDispatch, useSelector } from '../store';
@@ -130,6 +141,7 @@ const NovastarDeviceTab: React.FC<{ device: Novastar | undefined; selected?: boo
   const [taurusBrightnessDirty, setTaurusBrightnessDirty] = React.useState(false);
   const pendingTaurusBrightness = React.useRef<number | undefined>(undefined);
   const [setBrightness] = useSetBrightnessMutation();
+  const [setTaurusDisplayMode, displayModeState] = useSetTaurusDisplayModeMutation();
   const setTaurusBrightnessDebounced = React.useMemo(
     () =>
       debounce((nextPath: string, value: number) => {
@@ -224,6 +236,42 @@ const NovastarDeviceTab: React.FC<{ device: Novastar | undefined; selected?: boo
                     {taurus.brightness === undefined ? '—' : `${taurus.brightness}%`}
                   </ValueCell>
                 )}
+              </TableRow>
+              <TableRow>
+                <NameCell>Режим показа</NameCell>
+                <ValueCell align="right">
+                  {taurus.authenticated && taurus.displayMode ? (
+                    <Select
+                      fullWidth
+                      size="small"
+                      value={taurus.displayMode}
+                      disabled={displayModeState.isLoading}
+                      onChange={event => {
+                        void setTaurusDisplayMode({
+                          path: device.path,
+                          mode: event.target.value,
+                        });
+                      }}
+                    >
+                      <MenuItem value="internal">Встроенный плеер</MenuItem>
+                      <MenuItem value="hdmi">HDMI</MenuItem>
+                      <MenuItem value="hdmiPreferred">HDMI с возвратом на плеер</MenuItem>
+                      <MenuItem value="scheduled">По расписанию Taurus</MenuItem>
+                    </Select>
+                  ) : (
+                    '—'
+                  )}
+                </ValueCell>
+              </TableRow>
+              <TableRow>
+                <NameCell>Активный источник</NameCell>
+                <ValueCell align="right">
+                  {taurus.currentVideoSource === 'hdmi'
+                    ? 'HDMI'
+                    : taurus.currentVideoSource === 'internal'
+                      ? 'Встроенный плеер'
+                      : '—'}
+                </ValueCell>
               </TableRow>
               <TableRow>
                 <NameCell>Освещённость</NameCell>
