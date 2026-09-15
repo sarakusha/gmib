@@ -203,6 +203,10 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
 
   private running = false;
 
+  private discovery?: Promise<void>;
+
+  private discoveryOptions: Options = { interval: 30000 };
+
   private sensors = new Map<string, number>();
 
   registerGmibAddresses(source: string, addresses: string[]): void {
@@ -1146,54 +1150,69 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
     });
   }
 
+  private async findDevices(): Promise<void> {
+    const { dest } = this.discoveryOptions;
+    await this.closeBroadcastDetector();
+    if (!this.running) return;
+    const screens = await getScreens();
+    if (!this.running) return;
+    const hardAddresses = flatten(
+      await asyncSerial(screens, screen => getAddressesForScreen(screen.id)),
+    ).filter(address => reIPv4.test(address));
+    if (!this.running) return;
+    hardAddresses.forEach(address => {
+      if (!this.hasNetDevice(address)) this.openNetDevice(address);
+    });
+    const [addresses, taurusPlayers] = await Promise.all([
+      findNetDevices(dest),
+      discoverTaurusPlayers(dest),
+    ]);
+    if (!this.running) return;
+    this.openBroadcastDetector();
+    const taurusAddresses = new Set(taurusPlayers.map(player => player.address));
+    addresses.forEach(address => {
+      if (taurusAddresses.has(address)) return;
+      if (!this.hasNetDevice(address) && !hardAddresses.includes(address)) {
+        this.openNetDevice(address);
+      }
+    });
+    taurusPlayers.forEach(player => this.addTaurus(player));
+  }
+
+  async discover(): Promise<void> {
+    if (!this.running) return;
+    clearTimeout(this.finder);
+    if (this.discovery) return this.discovery;
+    const discovery = this.findDevices();
+    this.discovery = discovery;
+    try {
+      await discovery;
+    } finally {
+      if (this.discovery === discovery) this.discovery = undefined;
+      if (this.running) {
+        this.finder = setTimeout(
+          () =>
+            void this.discover().catch(error =>
+              debug(`NovaStar discovery failed: ${(error as Error).message}`),
+            ),
+          this.discoveryOptions.interval ?? 30000,
+        );
+      }
+    }
+  }
+
   open({ dest, interval = 30000 }: Options = {}): boolean {
     if (this.running) return false;
     this.running = true;
-    const updateDevices = async () => {
-      if (!this.running) return;
-      try {
-        await this.closeBroadcastDetector();
-        if (!this.running) return;
-        const screens = await getScreens();
-        if (!this.running) return;
-        const hardAddresses = flatten(
-          await asyncSerial(screens, screen => getAddressesForScreen(screen.id)),
-        ).filter(address => reIPv4.test(address));
-        if (!this.running) return;
-        hardAddresses.forEach(address => {
-          if (!this.hasNetDevice(address)) {
-            this.openNetDevice(address);
-          }
-        });
-        const [addresses, taurusPlayers] = await Promise.all([
-          findNetDevices(dest),
-          discoverTaurusPlayers(dest),
-        ]);
-        if (!this.running) return;
-        // debug(`found: ${addresses.join(', ')}`);
-        this.openBroadcastDetector();
-        const taurusAddresses = new Set(taurusPlayers.map(player => player.address));
-        addresses.forEach(address => {
-          if (taurusAddresses.has(address)) return;
-          if (!this.hasNetDevice(address) && !hardAddresses.includes(address)) {
-            this.openNetDevice(address);
-          }
-        });
-        taurusPlayers.forEach(player => this.addTaurus(player));
-      } finally {
-        if (this.running) {
-          this.finder = setTimeout(() => {
-            void updateDevices();
-          }, interval);
-        }
-      }
-    };
+    this.discoveryOptions = { dest, interval };
 
     net.on('open', this.openHandler);
     net.on('disconnect', this.disconnectHandler);
     net.on('close', this.closeHandler);
 
-    void updateDevices();
+    void this.discover().catch(error =>
+      debug(`Initial NovaStar discovery failed: ${(error as Error).message}`),
+    );
     this.emit('open');
 
     return true;

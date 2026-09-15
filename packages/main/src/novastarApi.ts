@@ -68,6 +68,15 @@ api.get('/', async (req, res) => {
   res.json(all);
 });
 
+api.post('/discover', async (_req, res) => {
+  try {
+    await master.discover();
+    res.end();
+  } catch (error) {
+    res.status(500).send((error as Error).message);
+  }
+});
+
 api.post('/reload', async (req, res) => {
   const { path } = req.body;
   try {

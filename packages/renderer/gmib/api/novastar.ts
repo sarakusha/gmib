@@ -132,6 +132,12 @@ const novastarApi = createApi({
         body: { path },
       }),
     }),
+    discover: build.mutation<void, void>({
+      query: () => ({
+        url: 'novastar/discover',
+        method: 'POST',
+      }),
+    }),
     loginTaurus: build.mutation<void, { path: string; password: string }>({
       query: body => ({
         url: 'novastar/taurus/login',
@@ -339,6 +345,7 @@ export const useNovastar = (path?: string) => {
 };
 
 export const {
+  useDiscoverMutation,
   useApplyTaurusFirmwareMutation,
   useInspectTaurusCalibrationMutation,
   useApplyTaurusCalibrationMutation,

@@ -6,6 +6,7 @@ import UsbIcon from '@mui/icons-material/Usb';
 import type { Interpolation } from '@mui/material';
 import {
   Box,
+  CircularProgress,
   Collapse,
   IconButton,
   ListItemButton,
@@ -20,7 +21,7 @@ import { css, styled } from '@mui/material/styles';
 import React, { useCallback, useMemo } from 'react';
 import { TransitionGroup } from 'react-transition-group';
 
-import { useNovastars } from '../api/novastar';
+import { useDiscoverMutation, useNovastars } from '../api/novastar';
 import { useGetAddressesQuery } from '../api/screens';
 import { useDispatch, useSelector } from '../store';
 import type { TabValues } from '../store/currentSlice';
@@ -114,13 +115,17 @@ const Devices: React.FC = () => {
   const { data: addresses = [] } = useGetAddressesQuery();
   const tab = useSelector(selectCurrentTab);
   const { novastars = [] } = useNovastars(); // useSelector(selectAllNovastars);
+  const [discoverNovastar, discoveryState] = useDiscoverMutation();
   // const [, setAccordion] = useAccordion();
-  const reloadHandler = useCallback<React.EventHandler<React.BaseSyntheticEvent<Event>>>(e => {
-    window.nibus.reloadDevices();
-    // TODO: force update novastar device list
-    // dispatch(updateNovastarDevices());
-    e.stopPropagation();
-  }, []);
+  const reloadHandler = useCallback<React.EventHandler<React.BaseSyntheticEvent<Event>>>(
+    e => {
+      e.stopPropagation();
+      if (discoveryState.isLoading) return;
+      window.nibus.reloadDevices();
+      void discoverNovastar();
+    },
+    [discoverNovastar, discoveryState.isLoading],
+  );
   // if (!current && (devices.length > 0 || novastars.length > 0)) {
   //   dispatch(setCurrentDevice(devices[0]?.id ?? novastars[0]?.path));
   // }
@@ -146,6 +151,7 @@ const Devices: React.FC = () => {
         <Box
           role="button"
           tabIndex={0}
+          aria-disabled={discoveryState.isLoading}
           title="Повторить поиск"
           onClick={reloadHandler}
           onKeyDown={e => {
@@ -167,11 +173,15 @@ const Devices: React.FC = () => {
             },
           }}
         >
-          <ReloadIcon fontSize="small" />
+          {discoveryState.isLoading ? (
+            <CircularProgress size={24} />
+          ) : (
+            <ReloadIcon fontSize="small" />
+          )}
         </Box>
       </Box>
     ),
-    [reloadHandler],
+    [discoveryState.isLoading, reloadHandler],
   );
   const items = getItems(addresses, devices);
   const hasDevices = devices.length + novastars.length > 0;
