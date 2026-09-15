@@ -27,6 +27,7 @@ import outputVisibilityAccelerator from './outputVisibilityAccelerator';
 import { startScheduler } from './scheduler';
 import { launchPlayers } from './playerWindow';
 import { startPlugins } from './pluginHost';
+import { bootstrapLicense, getLicenseState } from './licenseState';
 
 import { fixDefault } from '/@common/helpers';
 
@@ -107,18 +108,19 @@ if (isDevRuntime) {
  */
 app
   .whenReady()
+  .then(bootstrapLicense)
   .then(() =>
     startPlugins().catch(error => {
       debug(`Failed to start plugins: ${error instanceof Error ? error.message : String(error)}`);
     }),
   )
   .then(() => {
-    startScheduler();
+    if (getLicenseState().status === 'active') startScheduler();
   })
   .then(createMainWindow)
   .then(main => {
     installWindowOpenHandler(main.webContents);
-    void launchPlayers();
+    if (getLicenseState().status === 'active') void launchPlayers();
     if (
       !kioskMode &&
       !globalShortcut.register(outputVisibilityAccelerator, toggleOutputWindowsVisibility)

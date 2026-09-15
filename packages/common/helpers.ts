@@ -6,6 +6,7 @@ import propertyOf from 'lodash/propertyOf';
 import type React from 'react';
 
 import type { TaurusScreenConfiguration } from './taurusConfiguration';
+import type { SignedLicense } from './license';
 
 export const MINUTE = 60 * 1000;
 export const HOUR = 60 * MINUTE;
@@ -312,6 +313,7 @@ export type LocalConfig = {
   iv?: string;
   pritunlUserId?: string;
   knock?: string;
+  signedLicense?: SignedLicense;
   autoUpdate: boolean;
   taurusPasswords?: Record<string, string>;
   taurusConfigurationBackups?: Record<string, TaurusScreenConfiguration>;

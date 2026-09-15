@@ -52,6 +52,8 @@ import {
 } from './gmibScheduler';
 import { getSensors } from './history';
 import localConfig from './localConfig';
+import { requestLicenseActivation } from './licenseClient';
+import { getLicenseState, verifyLicenseDocument } from './licenseState';
 import machineId from './machineId';
 import updateMenu from './mainMenu';
 import {
@@ -310,6 +312,28 @@ if (!localConfig.get('unsafeMode')) {
     }),
   );
 }
+
+const unlicensedMutationPaths = new Set([
+  '/activate',
+  '/announce',
+  '/checkForUpdates',
+  '/handshake',
+  '/identifier',
+  '/login',
+  '/update',
+]);
+
+api.use((req, res, next) => {
+  if (
+    ['GET', 'HEAD', 'OPTIONS'].includes(req.method) ||
+    getLicenseState().status === 'active' ||
+    [...unlicensedMutationPaths].some(path => req.path === path || req.path.startsWith(`${path}/`))
+  ) {
+    next();
+    return;
+  }
+  res.status(403).send('Требуется действующая лицензия');
+});
 
 api.use('/plugins/:pluginId', authenticatedPluginApiHandler);
 
@@ -990,6 +1014,9 @@ api.get('/announce', async (req, res) => {
   res.json({
     announce,
     iv,
+    license: localConfig.get('signedLicense'),
+    licenseProtocol: 2,
+    licenseState: getLicenseState(),
     key: await machineId,
     autostart: localConfig.get('autostart'),
     exactWindowPlacement: localConfig.get('exactWindowPlacement'),
@@ -1013,6 +1040,9 @@ api.post('/activate', async (req, res) => {
   };
   // debug(`activate: ${JSON.stringify(data)}`);
   try {
+    const signedLicense = await requestLicenseActivation(data);
+    const payload = await verifyLicenseDocument(signedLicense);
+    if (payload.status !== 'active') throw new Error(`License is ${payload.status}`);
     const result = await fetch(`${import.meta.env.VITE_LICENSE_SERVER}/api/licenses`, {
       method: 'PUT',
       headers: {
@@ -1021,9 +1051,13 @@ api.post('/activate', async (req, res) => {
       body: JSON.stringify(data),
     });
     if (result.ok) {
+      const legacy: unknown = await result.json();
+      if (typeof legacy !== 'object' || legacy === null)
+        throw new Error('License server returned an invalid response');
       localConfig.store = {
         ...localConfig.store,
-        ...replaceNull(await result.json()),
+        ...replaceNull(legacy),
+        signedLicense,
       };
       res.end();
       relaunch();

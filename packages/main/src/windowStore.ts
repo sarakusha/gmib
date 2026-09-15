@@ -154,7 +154,21 @@ export const registerGmib = async (
   };
   const announce = await getAnnounce(host, port + 1);
   if (typeof announce === 'object' && !browserWindow.isDestroyed()) {
-    const { message, ...data } = announce;
+    const { message: announcedMessage, ...data } = announce;
+    const localLicenseState =
+      host === 'localhost' &&
+      typeof data.licenseState === 'object' &&
+      data.licenseState !== null &&
+      'status' in data.licenseState
+        ? data.licenseState
+        : undefined;
+    const isInactiveLocalLicense = localLicenseState && localLicenseState.status !== 'active';
+    if (isInactiveLocalLicense) {
+      delete data.key;
+      delete data.plan;
+      delete data.renew;
+    }
+    const message = isInactiveLocalLicense ? undefined : announcedMessage;
     Object.assign(params, data);
     // if (params.plan && ['premium', 'enterprise'].includes(params.plan)) launchPlayers();
     if (message) {

@@ -62,6 +62,7 @@ const localConfigSchema: Schema<LocalConfig> = {
   iv: { type: 'string' },
   pritunlUserId: { type: 'string' },
   knock: { type: 'string' },
+  signedLicense: { type: 'object' },
   autoUpdate: { type: 'boolean', default: false },
   taurusPasswords: {
     type: 'object',

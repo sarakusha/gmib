@@ -52,6 +52,7 @@ import {
 } from '../store/selectors';
 
 import { supportsFeature } from '/@common/capabilities';
+import type { LicenseRuntimeState } from '/@common/license';
 import { isRemoteSession } from '/@common/remote';
 
 import AppBar from './AppBar';
@@ -82,6 +83,7 @@ const App: React.FC = () => {
   const handleDrawerOpen = useCallback(() => setOpen(true), []);
   const handleDrawerClose = useCallback(() => setOpen(false), []);
   const [isSearchOpen, setSearchOpen] = useState(false);
+  const [licenseState, setLicenseState] = useState<LicenseRuntimeState>();
   const searchOpen = useCallback(() => setSearchOpen(true), [setSearchOpen]);
   const searchClose = useCallback(() => setSearchOpen(false), [setSearchOpen]);
   const autobrightness = useSelector(selectAutobrightness);
@@ -100,6 +102,13 @@ const App: React.FC = () => {
   const hasLink = links.length > 0;
   const version = useSelector(selectSessionVersion);
   const isSchedulerSupported = supportsFeature('gmibScheduler', version, isRemoteSession);
+  const pluginsAvailable =
+    licenseState?.status === 'active' &&
+    ['plus', 'premium', 'enterprise'].includes(licenseState.plan ?? '') &&
+    licenseState.capabilities.includes('plugins');
+  useEffect(() => {
+    void window.getLicenseState().then(setLicenseState);
+  }, []);
   useEffect(() => {
     if (broadcastDetected) {
       enqueueSnackbar(
@@ -321,9 +330,16 @@ const App: React.FC = () => {
               </Item>
             )}
             {!isRemoteSession && (
-              <Item onClick={() => dispatch(setCurrentTab('plugins'))} selected={tab === 'plugins'}>
+              <Item
+                disabled={!pluginsAvailable}
+                onClick={() => pluginsAvailable && dispatch(setCurrentTab('plugins'))}
+                selected={tab === 'plugins'}
+              >
                 <ExtensionOutlinedIcon sx={{ mr: 2 }} />
-                <ListItemText primary="Плагины" />
+                <ListItemText
+                  primary="Плагины"
+                  secondary={pluginsAvailable ? undefined : 'Доступно с лицензией Plus'}
+                />
               </Item>
             )}
             <Item onClick={() => dispatch(setCurrentTab('log'))} selected={tab === 'log'}>

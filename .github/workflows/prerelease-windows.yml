@@ -75,6 +75,7 @@ jobs:
           VITE_ANNOUNCE_NOVASTAR: ${{ secrets.VITE_ANNOUNCE_NOVASTAR }}
           VITE_ANNOUNCE_DATE: ${{ secrets.VITE_ANNOUNCE_DATE }}
           VITE_LICENSE_SERVER: ${{ secrets.VITE_LICENSE_SERVER }}
+          VITE_LICENSE_PUBLIC_KEYS: ${{ secrets.VITE_LICENSE_PUBLIC_KEYS }}
         run: |
           : "${VITE_ANNOUNCE_PROXY:?missing secret VITE_ANNOUNCE_PROXY}"
           : "${VITE_ANNOUNCE_PATH:?missing secret VITE_ANNOUNCE_PATH}"
@@ -84,6 +85,7 @@ jobs:
           : "${VITE_ANNOUNCE_NOVASTAR:?missing secret VITE_ANNOUNCE_NOVASTAR}"
           : "${VITE_ANNOUNCE_DATE:?missing secret VITE_ANNOUNCE_DATE}"
           : "${VITE_LICENSE_SERVER:?missing secret VITE_LICENSE_SERVER}"
+          : "${VITE_LICENSE_PUBLIC_KEYS:?missing secret VITE_LICENSE_PUBLIC_KEYS}"
           {
             printf '%s\n' "VITE_ANNOUNCE_PROXY=$VITE_ANNOUNCE_PROXY"
             printf '%s\n' "VITE_ANNOUNCE_PATH=$VITE_ANNOUNCE_PATH"
@@ -93,6 +95,7 @@ jobs:
             printf '%s\n' "VITE_ANNOUNCE_NOVASTAR=$VITE_ANNOUNCE_NOVASTAR"
             printf '%s\n' "VITE_ANNOUNCE_DATE=$VITE_ANNOUNCE_DATE"
             printf '%s\n' "VITE_LICENSE_SERVER=$VITE_LICENSE_SERVER"
+            printf '%s\n' "VITE_LICENSE_PUBLIC_KEYS=$VITE_LICENSE_PUBLIC_KEYS"
           } > .env.local
 
       - run: pnpm install --frozen-lockfile

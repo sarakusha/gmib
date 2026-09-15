@@ -27,6 +27,7 @@ interface ImportMetaEnv {
   readonly VITE_ANNOUNCE_NOVASTAR: string;
   readonly VITE_ANNOUNCE_DATE: string;
   readonly VITE_LICENSE_SERVER: string;
+  readonly VITE_LICENSE_PUBLIC_KEYS?: string;
 }
 
 interface ImportMeta {

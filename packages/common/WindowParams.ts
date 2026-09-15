@@ -1,4 +1,5 @@
 import type { Host } from '@nibus/core';
+import type { LicenseRuntimeState } from './license';
 
 import type { Screen } from './video';
 
@@ -43,6 +44,7 @@ export type GmibWindowParams = CommonWindowParams & {
   key?: string;
   info?: Partial<Host>;
   machineId?: string;
+  licenseState?: LicenseRuntimeState;
   autostart?: boolean;
   exactWindowPlacement?: boolean;
   update: (update: Partial<Pick<GmibWindowParams, GmibVariables>>) => GmibWindowParams;

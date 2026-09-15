@@ -23,6 +23,7 @@ import './hid';
 import expandTypes from '/@common/expandTypes';
 import { hashCode } from '/@common/helpers';
 import type { GmibWindowParams } from '/@common/WindowParams';
+import type { LicenseRuntimeState } from '/@common/license';
 import { setOutputHidden } from '/@renderer/store/currentSlice';
 
 /**
@@ -121,6 +122,9 @@ ipcRenderer
 
 contextBridge.exposeInMainWorld('initializeNovastar', (): Promise<boolean> =>
   gmibParams.then(params => Boolean(Reflect.get(params, import.meta.env.VITE_ANNOUNCE_NOVASTAR))),
+);
+contextBridge.exposeInMainWorld('getLicenseState', (): Promise<LicenseRuntimeState | undefined> =>
+  gmibParams.then(params => params.licenseState),
 );
 
 contextBridge.exposeInMainWorld('mediaSource', expandTypes(mediaSource));
