@@ -33,6 +33,13 @@ const configApi = createApi({
       }),
       transformErrorResponse: response => response.data,
     }),
+    retryLicense: build.mutation<void, void>({
+      query: () => ({
+        url: 'license/retry',
+        method: 'POST',
+      }),
+      transformErrorResponse: response => response.data,
+    }),
     getPages: build.query<EntityState<Page, string>, void>({
       query: () => 'pages',
       transformResponse: (response: Page[]) =>
@@ -101,7 +108,12 @@ const configApi = createApi({
   }),
 });
 
-export const { useActivateMutation, useCreatePageMutation, useDeletePageMutation } = configApi;
+export const {
+  useActivateMutation,
+  useCreatePageMutation,
+  useDeletePageMutation,
+  useRetryLicenseMutation,
+} = configApi;
 
 export const usePages = () =>
   configApi.useGetPagesQuery(undefined, {

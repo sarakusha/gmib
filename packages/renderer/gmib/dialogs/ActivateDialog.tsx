@@ -3,9 +3,11 @@ import { Field, Form, Formik, useFormikContext } from 'formik';
 import * as React from 'react';
 
 import { charValidator } from '/@common/keyValidator';
+import type { LicenseRuntimeState } from '/@common/license';
 
 import FormikTextField from '../../common/FormikTextField';
-import { useActivateMutation } from '../api/config';
+import { useActivateMutation, useRetryLicenseMutation } from '../api/config';
+import { canRetryStoredLicense } from '../licenseRecovery';
 import { useDispatch, useSelector } from '../store';
 import { setActivateDialogOpen } from '../store/currentSlice';
 import { selectHostName, selectIsActivateDialogOpen } from '../store/selectors';
@@ -21,19 +23,43 @@ const AutoFillKey = ({ field = 'key' }: { field?: string }) => {
   return null;
 };
 
-const ActivateDialog: React.FC = () => {
+const ActivateDialog: React.FC<{ licenseState?: LicenseRuntimeState }> = ({ licenseState }) => {
   const open = useSelector(selectIsActivateDialogOpen);
   const dispatch = useDispatch();
   const hostName = useSelector(selectHostName)?.replace(/\.local$/, '');
   const [activate, { error, reset }] = useActivateMutation();
+  const [retryLicense, retryState] = useRetryLicenseMutation();
+  const canRetry = canRetryStoredLicense(licenseState?.status);
   const closeHandler = () => {
     dispatch(setActivateDialogOpen(false));
     reset();
+    retryState.reset();
   };
   return (
     <Dialog open={open} maxWidth="xs" fullWidth>
       <DialogTitle>Активация</DialogTitle>
       <DialogContent>
+        {canRetry && (
+          <Alert
+            severity="info"
+            action={
+              <Button
+                color="inherit"
+                size="small"
+                disabled={retryState.isLoading}
+                onClick={() =>
+                  void retryLicense()
+                    .unwrap()
+                    .catch(() => undefined)
+                }
+              >
+                Повторить
+              </Button>
+            }
+          >
+            {licenseState?.message || 'Можно повторить проверку сохранённой лицензии.'}
+          </Alert>
+        )}
         <Formik
           initialValues={{ name: hostName, key: '' }}
           onSubmit={({ key, name }, { setSubmitting, setFieldError }) => {
@@ -80,7 +106,9 @@ const ActivateDialog: React.FC = () => {
             <AutoFillKey />
           </Form>
         </Formik>
-        {error && <Alert severity="error">{error as string}</Alert>}
+        {(error || retryState.error) && (
+          <Alert severity="error">{(error || retryState.error) as string}</Alert>
+        )}
       </DialogContent>
       <DialogActions>
         <Button color="primary" type="submit" form="license">

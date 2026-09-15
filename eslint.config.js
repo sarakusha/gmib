@@ -74,7 +74,7 @@ module.exports = (async () => {
 
     {
       ...typescriptEslint.configs.disableTypeChecked,
-      files: ['packages/renderer/gmib/store/authMiddleware.test.ts'],
+      files: ['packages/renderer/**/*.test.ts'],
     },
 
     {

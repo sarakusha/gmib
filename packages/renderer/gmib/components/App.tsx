@@ -115,6 +115,20 @@ const App: React.FC = () => {
       }
     });
   }, [dispatch]);
+  useEffect(
+    () =>
+      window.onLicenseStateChange(nextState => {
+        setLicenseState(nextState);
+        if (nextState.restartRequired) {
+          enqueueSnackbar(nextState.message, {
+            variant: 'warning',
+            persist: true,
+            preventDuplicate: true,
+          });
+        }
+      }),
+    [enqueueSnackbar],
+  );
   useEffect(() => {
     if (broadcastDetected) {
       enqueueSnackbar(
@@ -182,7 +196,7 @@ const App: React.FC = () => {
         warning={gmibDiscoveryBlocked}
         onClose={() => dispatch(setGmibDiscoveryBlocked())}
       />
-      <ActivateDialog />
+      <ActivateDialog licenseState={licenseState} />
       <Box
         sx={{
           display: 'flex',

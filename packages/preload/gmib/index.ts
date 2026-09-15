@@ -126,6 +126,14 @@ contextBridge.exposeInMainWorld('initializeNovastar', (): Promise<boolean> =>
 contextBridge.exposeInMainWorld('getLicenseState', (): Promise<LicenseRuntimeState | undefined> =>
   gmibParams.then(params => params.licenseState),
 );
+contextBridge.exposeInMainWorld(
+  'onLicenseStateChange',
+  (listener: (state: LicenseRuntimeState) => void): (() => void) => {
+    const handler = (_: Electron.IpcRendererEvent, state: LicenseRuntimeState) => listener(state);
+    ipcRenderer.on('runtimeLicenseState', handler);
+    return () => ipcRenderer.removeListener('runtimeLicenseState', handler);
+  },
+);
 
 contextBridge.exposeInMainWorld('mediaSource', expandTypes(mediaSource));
 contextBridge.exposeInMainWorld('plugins', expandTypes(plugins));
