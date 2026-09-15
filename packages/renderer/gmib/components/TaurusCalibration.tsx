@@ -70,6 +70,20 @@ const TaurusCalibration: React.FC<{
         Сначала примените подходящие параметры NCP и проверьте подключение плат.
       </Typography>
       <Stack direction="row" sx={{ flexWrap: 'wrap' }}>
+        <FormControlLabel
+          label="Все карты"
+          control={
+            <Checkbox
+              checked={cards.length > 0 && targets.length === cards.length}
+              indeterminate={targets.length > 0 && targets.length < cards.length}
+              disabled={busy || cards.length === 0}
+              onChange={event => {
+                setSelected(new Set(event.target.checked ? cards.map(([key]) => key) : []));
+                reset();
+              }}
+            />
+          }
+        />
         {cards.map(([key, card]) => (
           <FormControlLabel
             key={key}
