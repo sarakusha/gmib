@@ -64,6 +64,7 @@ import {
 } from './taurusNcp';
 import { inspectTaurusScr, writeAndVerifyTaurusConfiguration } from './taurusScr';
 import localConfig from './localConfig';
+import { hasLicenseCapability, requireLicenseCapability } from './licenseState';
 import {
   createWindowsMdnsFirewallCommands,
   type WindowsMdnsFirewallWarning,
@@ -170,7 +171,9 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
 
   telemetry = memoize((address: string): NovastarTelemetry | undefined => {
     const controller = this.novastarControls.get(address);
-    const taurusClient = this.taurusControls.get(address)?.client;
+    const taurusControl = this.taurusControls.get(address);
+    if (taurusControl && !hasLicenseCapability('taurus')) return undefined;
+    const taurusClient = taurusControl?.client;
     if (!controller && !taurusClient) {
       setTimeout(() => this.telemetry.cache.delete(address), 0);
       return undefined;
@@ -364,6 +367,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
   async reload(address: string, first = false): Promise<void> {
     const taurus = this.taurusControls.get(address);
     if (taurus) {
+      requireLicenseCapability('taurus');
       if (taurus.client) {
         this.emit('change', address, { isBusy: true });
         try {
@@ -424,6 +428,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
               ([, control]) => control.info.address === screenId.path.split(':', 1)[0],
             );
     if (screenId.screen === -1 && (isTaurusPath(screenId.path) || taurusEntries.length > 0)) {
+      requireLicenseCapability('taurus');
       if (screenId.path !== TAURUS_ALL_PATH && taurusEntries.length > 1) {
         throw new Error(
           `Неоднозначный серийный номер Taurus ${screenId.path}: ${taurusEntries
@@ -497,6 +502,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
   }
 
   private addTaurus(info: TaurusPlayerInfo): void {
+    if (!hasLicenseCapability('taurus')) return;
     const path = getTaurusPath(info.sn);
     const legacyPath = `${info.address}:5200`;
     if (this.novastarControls.has(legacyPath) || net.sessions[legacyPath]) {
@@ -545,7 +551,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
       taurus: this.getTaurusState(control),
     });
     clearTimeout(control.timeout);
-    if (!control.loginFailed && this.running) {
+    if (!control.loginFailed && this.running && hasLicenseCapability('taurus')) {
       control.timeout = setTimeout(() => {
         void this.connectTaurus(path).catch(() => undefined);
       }, 1000);
@@ -554,6 +560,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
   }
 
   private async connectTaurus(path: string, passwordOverride?: string): Promise<void> {
+    requireLicenseCapability('taurus');
     const control = this.taurusControls.get(path);
     if (!control) throw new Error(`Unknown Taurus player: ${path}`);
     if (control.connecting) return control.connecting;
@@ -623,6 +630,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
   }
 
   private async updateTaurusState(path: string): Promise<void> {
+    if (!hasLicenseCapability('taurus')) return;
     const control = this.taurusControls.get(path);
     if (!control?.client) return;
     const { client } = control;
@@ -674,6 +682,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
   }
 
   async loginTaurus(path: string, password: string): Promise<void> {
+    requireLicenseCapability('taurus');
     if (!password) throw new Error('Taurus password is empty');
     const control = this.taurusControls.get(path);
     if (!control) throw new Error(`Unknown Taurus player: ${path}`);
@@ -711,6 +720,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
   private async getTaurusClient(
     path: string,
   ): Promise<{ control: TaurusControl; client: TaurusClient }> {
+    requireLicenseCapability('taurus');
     const control = this.taurusControls.get(path);
     if (!control) throw new Error(`Unknown Taurus player: ${path}`);
     if (!control.client && !control.loginFailed) {
@@ -1184,7 +1194,7 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
         this.openNetDevice(address);
       }
     });
-    taurusPlayers.forEach(player => this.addTaurus(player));
+    if (hasLicenseCapability('taurus')) taurusPlayers.forEach(player => this.addTaurus(player));
     const discoveredTaurus = new Set(taurusPlayers.map(player => getTaurusPath(player.sn)));
     this.taurusControls.forEach((control, path) => {
       if (!discoveredTaurus.has(path) && !control.client && !control.connecting) {

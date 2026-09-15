@@ -34,6 +34,7 @@ import { normalizePluginRelativePath, parsePluginManifest } from './pluginManife
 import { getScreens } from './screen';
 import { updateTest } from './screenOutput';
 import { broadcast } from './server';
+import { hasLicenseCapability, requireLicenseCapability } from './licenseState';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:plugins`);
 const PLUGIN_PAGE_PREFIX = 'plugin:';
@@ -621,6 +622,7 @@ const syncOutputPages = async (): Promise<void> => {
 export const startPlugins = async (): Promise<void> => {
   if (started) return;
   started = true;
+  if (!hasLicenseCapability('plugins')) return;
   await fs.promises.mkdir(path.join(rootDirectory(), STAGING_DIRECTORY), { recursive: true });
   await fs.promises.mkdir(path.join(rootDirectory(), DATA_DIRECTORY), { recursive: true });
   await loadRegistry();
@@ -721,6 +723,10 @@ const isLocalRequest = (req: Request): boolean => {
 };
 
 export const localPluginApiHandler: RequestHandler = (req, res, next) => {
+  if (!hasLicenseCapability('plugins')) {
+    res.status(403).json({ error: 'Функция доступна в лицензии Plus или выше' });
+    return;
+  }
   if (!isLocalRequest(req)) {
     res.sendStatus(403);
     return;
@@ -737,9 +743,19 @@ export const localPluginApiHandler: RequestHandler = (req, res, next) => {
   dispatchPluginRoute('local')(req, res, next);
 };
 
-export const authenticatedPluginApiHandler: RequestHandler = dispatchPluginRoute('authenticated');
+export const authenticatedPluginApiHandler: RequestHandler = (req, res, next) => {
+  if (!hasLicenseCapability('plugins')) {
+    res.status(403).json({ error: 'Функция доступна в лицензии Plus или выше' });
+    return;
+  }
+  dispatchPluginRoute('authenticated')(req, res, next);
+};
 
 export const pluginStaticHandler: RequestHandler = (req, res, next) => {
+  if (!hasLicenseCapability('plugins')) {
+    res.sendStatus(403);
+    return;
+  }
   const pluginId = firstParam(req.params.pluginId);
   const plugin = pluginId ? runtimePlugins.get(pluginId) : undefined;
   if (!plugin?.publicRoot) {
@@ -836,6 +852,7 @@ export const installPluginFromArchive = async (
   archivePath: string,
   expectedManifest?: PluginManifest,
 ): Promise<PluginInstallResult> => {
+  requireLicenseCapability('plugins');
   const staging = path.join(rootDirectory(), STAGING_DIRECTORY, nanoid());
   await fs.promises.mkdir(path.dirname(staging), { recursive: true });
   try {
@@ -886,6 +903,7 @@ export const installPluginFromDialog = async (): Promise<PluginInstallResult> =>
 };
 
 export const setPluginEnabled = async (id: string, enabled: boolean): Promise<PluginStatus> => {
+  if (enabled) requireLicenseCapability('plugins');
   const installed = (await scanInstalled()).find(item => item.manifest.id === id);
   if (!installed) throw new Error(`Плагин не найден: ${id}`);
   const disabled = new Set(registry.disabled ?? []);
@@ -932,6 +950,7 @@ export const uninstallPlugin = async (id: string): Promise<boolean> => {
 };
 
 export const openPluginControl = async (id: string): Promise<void> => {
+  requireLicenseCapability('plugins');
   const installed = (await scanInstalled()).find(item => item.manifest.id === id);
   const control = installed?.manifest.control;
   if (!installed || !control) throw new Error('Страница управления плагина не найдена');
