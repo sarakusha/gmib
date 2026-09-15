@@ -522,6 +522,14 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
     void this.connectTaurus(path).catch(() => undefined);
   }
 
+  private removeTaurus(path: string, control: TaurusControl): void {
+    if (this.taurusControls.get(path) !== control) return;
+    clearTimeout(control.timeout);
+    control.client?.close();
+    this.taurusControls.delete(path);
+    this.emit('remove', path);
+  }
+
   private handleTaurusDisconnect(
     path: string,
     client: TaurusClient,
@@ -1177,6 +1185,12 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
       }
     });
     taurusPlayers.forEach(player => this.addTaurus(player));
+    const discoveredTaurus = new Set(taurusPlayers.map(player => getTaurusPath(player.sn)));
+    this.taurusControls.forEach((control, path) => {
+      if (!discoveredTaurus.has(path) && !control.client && !control.connecting) {
+        this.removeTaurus(path, control);
+      }
+    });
   }
 
   async discover(): Promise<void> {
