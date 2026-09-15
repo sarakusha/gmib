@@ -46,5 +46,6 @@ minimumReleaseAgeExclude:
   - "@nibus/*"
   - "@sarakusha/ebml@0.0.8"
   - "@sarakusha/material-ui-chip-input"
+  - "@novastar/native"
   - "@novastar/screen"
-  - '@novastar/taurus'
+  - "@novastar/taurus"

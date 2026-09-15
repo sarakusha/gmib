@@ -51,8 +51,8 @@ importers:
         specifier: 2.2.3
         version: 2.2.3(debug@4.4.3)(iconv-lite@0.6.3)
       '@novastar/screen':
-        specifier: 2.5.0
-        version: 2.5.0(debug@4.4.3)(iconv-lite@0.6.3)
+        specifier: 2.5.2
+        version: 2.5.2(debug@4.4.3)(iconv-lite@0.6.3)
       '@novastar/serial':
         specifier: 2.2.1
         version: 2.2.1(debug@4.4.3)(iconv-lite@0.6.3)
@@ -1357,13 +1357,16 @@ packages:
   '@novastar/native@2.2.1':
     resolution: {integrity: sha512-ofiCv2u/a2n7NX9Q8UGIKGjSrxSvarUmSCrs4+7h+GmOqDblx8LQ7kyfr3ExFvC0B6cbMGtI25PfZEnN5GjmgQ==}
 
+  '@novastar/native@2.5.1':
+    resolution: {integrity: sha512-Q4GD/hodGsSpSo4RjS7ftGKEmrDjZLSIdlipqQfTLjabSUenVL+A2abKlQiR4WVzSKpXc/LVFHsG1nghEQnGBA==}
+
   '@novastar/net@2.2.3':
     resolution: {integrity: sha512-eOsP0b0GNydCytkBWTulVVJidsn4fFa7CNCGzefJ3sYtc7ZyG6S8WDhlSQQw0oZmW67PYNLPgWZun9oKrdaDSQ==}
     peerDependencies:
       debug: ^4.3.3
 
-  '@novastar/screen@2.5.0':
-    resolution: {integrity: sha512-fy1fkQ7VWoJY4s98KSz3YkHQNwfpQKoagTYDBR5u4vDzh2WP5XvGG8oDCHexnwM1jVsxN0xq8pmhBcD/qPzevQ==}
+  '@novastar/screen@2.5.2':
+    resolution: {integrity: sha512-vaPyQN4EJbJ3iE9Hwr0uJv+BaG6+Op2nYiCouaLOdkdpUcevt+GGMCh4u17V16WLWRLsJaA5LyUfEhXJ5h+Ezg==}
     peerDependencies:
       debug: ^4.3.3
 
@@ -6763,6 +6766,20 @@ snapshots:
       - debug
       - iconv-lite
 
+  '@novastar/native@2.5.1(debug@4.4.3)(iconv-lite@0.6.3)':
+    dependencies:
+      '@novastar/codec': 2.2.3(debug@4.4.3)(iconv-lite@0.6.3)
+      fp-ts: 2.16.11
+      io-ts: 2.2.22(fp-ts@2.16.11)
+      io-ts-types: 0.5.19(fp-ts@2.16.11)(io-ts@2.2.22(fp-ts@2.16.11))(monocle-ts@2.3.13(fp-ts@2.16.11))(newtype-ts@0.3.5(fp-ts@2.16.11)(monocle-ts@2.3.13(fp-ts@2.16.11)))
+      monocle-ts: 2.3.13(fp-ts@2.16.11)
+      newtype-ts: 0.3.5(fp-ts@2.16.11)(monocle-ts@2.3.13(fp-ts@2.16.11))
+      tslib: 2.8.1
+    transitivePeerDependencies:
+      - buffer
+      - debug
+      - iconv-lite
+
   '@novastar/net@2.2.3(debug@4.4.3)(iconv-lite@0.6.3)':
     dependencies:
       '@novastar/codec': 2.2.3(debug@4.4.3)(iconv-lite@0.6.3)
@@ -6772,10 +6789,10 @@ snapshots:
       - buffer
       - iconv-lite
 
-  '@novastar/screen@2.5.0(debug@4.4.3)(iconv-lite@0.6.3)':
+  '@novastar/screen@2.5.2(debug@4.4.3)(iconv-lite@0.6.3)':
     dependencies:
       '@novastar/codec': 2.2.3(debug@4.4.3)(iconv-lite@0.6.3)
-      '@novastar/native': 2.2.1(debug@4.4.3)(iconv-lite@0.6.3)
+      '@novastar/native': 2.5.1(debug@4.4.3)(iconv-lite@0.6.3)
       '@novastar/net': 2.2.3(debug@4.4.3)(iconv-lite@0.6.3)
       '@novastar/serial': 2.2.1(debug@4.4.3)(iconv-lite@0.6.3)
       '@sarakusha/lzma': 2.3.4
@@ -6787,7 +6804,6 @@ snapshots:
       io-ts: 2.2.22(fp-ts@2.16.11)
       lodash: 4.18.1
       typed-struct: 2.7.3(debug@4.4.3)(iconv-lite@0.6.3)
-      uuid: 14.0.1
     transitivePeerDependencies:
       - buffer
       - iconv-lite

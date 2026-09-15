@@ -372,8 +372,8 @@ const TaurusNcpConfiguration: React.FC<{
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell>Позиция</TableCell>
-                    <TableCell>Физические DATA</TableCell>
+                    <TableCell>Позиция на экране</TableCell>
+                    <TableCell>Источник DATA</TableCell>
                     <TableCell>Логические группы</TableCell>
                     <TableCell align="right">Порядок</TableCell>
                   </TableRow>
@@ -386,10 +386,12 @@ const TaurusNcpConfiguration: React.FC<{
                       <TableRow key={targetBlock.index}>
                         <TableCell>{targetIndex + 1}</TableCell>
                         <TableCell>
-                          DATA{targetBlock.physicalStart + 1}–DATA{targetBlock.physicalEnd + 1}
+                          {sourceBlock
+                            ? `DATA${sourceBlock.physicalStart + 1}–DATA${sourceBlock.physicalEnd + 1}`
+                            : '—'}
                         </TableCell>
                         <TableCell>
-                          {sourceBlock?.logicalGroups.map(group => group + 1).join(', ') ?? '—'}
+                          {targetBlock.logicalGroups.map(group => group + 1).join(', ')}
                         </TableCell>
                         <TableCell align="right">
                           <IconButton
