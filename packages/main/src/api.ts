@@ -54,9 +54,11 @@ import localConfig from './localConfig';
 import {
   getAnnouncedLicenseDocument,
   getLicenseState,
+  getSessionLicenseDocument,
   hasLicenseCapability,
   retryLicense,
 } from './licenseState';
+import { createLicenseSessionAssertion } from './licenseSessionAssertion';
 import { completeLicenseActivation } from './manualLicenseActivation';
 import machineId from './machineId';
 import updateMenu from './mainMenu';
@@ -132,7 +134,7 @@ import {
 
 import type { Screen } from '/@common/video';
 
-import { setIncomingSecret } from './secret';
+import { getIncomingSecret, setIncomingSecret } from './secret';
 import { broadcast } from './server';
 import { updateTest } from './screenOutput';
 import { checkForUpdatesNoInteractive, updateAndRestart } from './updater';
@@ -1012,12 +1014,22 @@ api.get('/identifier', (req, res) => {
 api.get('/announce', async (req, res) => {
   const announce = localConfig.get('announce');
   const iv = localConfig.get('iv');
+  const sessionDocument = getSessionLicenseDocument();
+  const challenge = req.headers['x-ni-license-session-challenge'];
+  const identifier = req.headers['x-ni-identifier'];
+  const sessionSecret =
+    typeof identifier === 'string' ? await getIncomingSecret(identifier) : undefined;
+  const licenseSession =
+    sessionDocument && typeof challenge === 'string' && sessionSecret
+      ? createLicenseSessionAssertion(sessionDocument, challenge, sessionSecret)
+      : undefined;
   res.json({
     announce,
     iv,
     license: getAnnouncedLicenseDocument(),
     licenseProtocol: 2,
     licenseState: getLicenseState(),
+    ...(licenseSession && { licenseSession }),
     key: await machineId,
     autostart: localConfig.get('autostart'),
     exactWindowPlacement: localConfig.get('exactWindowPlacement'),

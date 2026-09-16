@@ -3,15 +3,21 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   authRequest: vi.fn(),
   decodeLegacyLicense: vi.fn(),
+  getRemoteCredentials: vi.fn(),
+  verifyLicenseSessionAssertion: vi.fn(),
   verifyLicense: vi.fn(),
 }));
 
 vi.mock('../src/authRequest', () => ({ default: mocks.authRequest }));
 vi.mock('../src/legacyLicense', () => ({ decodeLegacyLicense: mocks.decodeLegacyLicense }));
+vi.mock('../src/licenseSessionAssertion', () => ({
+  verifyLicenseSessionAssertion: mocks.verifyLicenseSessionAssertion,
+}));
 vi.mock('../src/licenseVerification', () => ({
   parsePublicKeys: vi.fn(() => new Map()),
   verifyLicense: mocks.verifyLicense,
 }));
+vi.mock('../src/secret', () => ({ getRemoteCredentials: mocks.getRemoteCredentials }));
 
 import getAnnounce from '../src/getAnnounce';
 
@@ -21,6 +27,8 @@ describe('getAnnounce remote compatibility', () => {
   beforeEach(() => {
     mocks.authRequest.mockReset();
     mocks.decodeLegacyLicense.mockReset();
+    mocks.getRemoteCredentials.mockReset().mockResolvedValue({ apiSecret: Buffer.alloc(32, 1) });
+    mocks.verifyLicenseSessionAssertion.mockReset().mockReturnValue(true);
     mocks.verifyLicense.mockReset();
   });
 
@@ -82,6 +90,7 @@ describe('getAnnounce remote compatibility', () => {
       deviceId,
       expect.any(Map),
     );
+    expect(mocks.verifyLicenseSessionAssertion).toHaveBeenCalled();
     expect(mocks.decodeLegacyLicense).not.toHaveBeenCalled();
   });
 
@@ -246,5 +255,39 @@ describe('getAnnounce remote compatibility', () => {
     expect(result).not.toHaveProperty('plan');
     expect(result).not.toHaveProperty('useProxy');
     expect(result).not.toHaveProperty('message');
+  });
+
+  it('does not use an active signed presentation without a verified host session', async () => {
+    const deviceId = '1'.repeat(64);
+    mocks.verifyLicenseSessionAssertion.mockReturnValue(false);
+    mocks.verifyLicense.mockReturnValue({
+      version: 2,
+      issuer: 'app.nata-info.ru',
+      audience: 'gmib',
+      keyId: 'test',
+      licenseId: '7e4b72c0-5d55-4a79-98e4-d432afdc2021',
+      deviceId,
+      issuedAt: '2026-09-15T10:00:00.000Z',
+      expiresAt: '2026-10-01T00:00:00.000Z',
+      status: 'active',
+      plan: 'plus',
+      capabilities: ['novastar', 'plugins', 'taurus'],
+      presentation: { version: 1, css: 'signed-but-not-in-session' },
+    });
+    mocks.authRequest.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          key: deviceId,
+          licenseProtocol: 2,
+          license: { payload: 'payload', signature: 'signature' },
+        }),
+      ),
+    );
+
+    const result = await getAnnounce('remote', 9002);
+    expect(result?.licenseState).toMatchObject({ status: 'invalid', capabilities: [] });
+    expect(result).not.toHaveProperty('message');
+    expect(result).not.toHaveProperty('plan');
+    expect(result?.useProxy).toBe(false);
   });
 });

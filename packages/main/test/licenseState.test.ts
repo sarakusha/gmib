@@ -90,6 +90,17 @@ describe('main license retry', () => {
     expect(service.hasLicenseCapability('taurus')).toBe(true);
   });
 
+  it('does not create an active session snapshot after restart with an expired document', async () => {
+    mocks.verifyLicense.mockResolvedValue(activePayload('2026-09-15T11:59:00.000Z'));
+    mocks.requestLicenseRefresh.mockRejectedValue(new Error('offline'));
+    const service = await import('../src/licenseState');
+
+    await expect(service.bootstrapLicense()).resolves.toMatchObject({ status: 'expired' });
+    expect(service.getSessionLicenseDocument()).toBeUndefined();
+    expect(service.getSessionLicensePayload()).toBeUndefined();
+    expect(service.getAnnouncedLicenseDocument()).toBe(signedLicense);
+  });
+
   it('keeps the signed presentation snapshot until restart after refresh', async () => {
     const initialDocument = signedLicense;
     const refreshedDocument = { payload: 'refreshed', signature: 'replacement' };

@@ -19,7 +19,7 @@ import { gmibVariables, impScreenProps, isGmib, isPlayer, isScreen } from '/@com
 
 import { initializePritunlClient } from './linux';
 import { decodeLegacyLicense } from './legacyLicense';
-import { getLicensePresentation } from './licensePresentation';
+import { applyLicensePresentation, getLicensePresentation } from './licensePresentation';
 import { getLicenseState, getSessionLicensePayload } from './licenseState';
 import localConfig from './localConfig';
 import machineIdPromise from './machineId';
@@ -192,18 +192,21 @@ export const registerGmib = async (
     const announceWindow = () => {
       const { update: _, ...props } = params;
       browserWindow.webContents.send('gmib-params', props);
-      if (message) {
+      if (typeof message === 'string' && message) {
         import.meta.env.VITE_ANNOUNCE_HOST &&
           import(import.meta.env.VITE_ANNOUNCE_HOST).then(
             ({ default: getHost }) => {
               const hostWindow = getHost(browserWindow);
               const dateAnnounce = getHost(data)(import.meta.env.VITE_ANNOUNCE_DATE);
-              if (!dateAnnounce || new Date().toISOString() <= dateAnnounce) {
+              applyLicensePresentation(
+                message,
+                isLocal || Reflect.get(data, 'licenseProtocol') === 2,
+                dateAnnounce,
                 // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                 hostWindow(import.meta.env.VITE_ANNOUNCE_WINDOW).bind(
                   hostWindow(import.meta.env.VITE_ANNOUNCE_BIND),
-                )(message);
-              }
+                ),
+              );
             },
             err => {
               debug(`error while import: ${err}`);

@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { LicensePayloadV2 } from '/@common/license';
-import { getLicensePresentation } from '../src/licensePresentation';
+import { applyLicensePresentation, getLicensePresentation } from '../src/licensePresentation';
 
 const payload = (status: LicensePayloadV2['status'] = 'active'): LicensePayloadV2 => ({
   version: 2,
@@ -31,5 +31,35 @@ describe('license presentation', () => {
   it('does not expose presentation fields without an active verified payload', () => {
     expect(getLicensePresentation()).toEqual({ useProxy: false });
     expect(getLicensePresentation(payload('expired'))).toEqual({ useProxy: false });
+  });
+});
+
+describe('license presentation application', () => {
+  it('applies a verified session snapshot after its signed expiry', () => {
+    const apply = vi.fn();
+    expect(
+      applyLicensePresentation(
+        'signed-css',
+        true,
+        '2026-09-16T00:00:00.000Z',
+        apply,
+        '2026-09-16T00:00:01.000Z',
+      ),
+    ).toBe(true);
+    expect(apply).toHaveBeenCalledWith('signed-css');
+  });
+
+  it('keeps the legacy expiry gate for an unverified presentation', () => {
+    const apply = vi.fn();
+    expect(
+      applyLicensePresentation(
+        'legacy-css',
+        false,
+        '2026-09-16T00:00:00.000Z',
+        apply,
+        '2026-09-16T00:00:01.000Z',
+      ),
+    ).toBe(false);
+    expect(apply).not.toHaveBeenCalled();
   });
 });
