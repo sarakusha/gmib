@@ -24,6 +24,8 @@ const REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
 let state: LicenseRuntimeState = { status: 'checking', capabilities: [] };
 let sessionPayload: LicensePayloadV2 | undefined;
+let sessionDocument: SignedLicense | undefined;
+let announcedDocument: SignedLicense | undefined;
 let refreshTimer: NodeJS.Timeout | undefined;
 let retryPromise: Promise<LicenseRetryResult> | undefined;
 const stateListeners = new Set<(nextState: LicenseRuntimeState) => void>();
@@ -100,6 +102,8 @@ export const bootstrapLicense = async (): Promise<LicenseRuntimeState> => {
   clearTimeout(refreshTimer);
   state = { status: 'checking', capabilities: [] };
   sessionPayload = undefined;
+  sessionDocument = undefined;
+  announcedDocument = undefined;
   const document = localConfig.get('signedLicense');
   try {
     let payload: LicensePayloadV2 | undefined;
@@ -129,10 +133,12 @@ export const bootstrapLicense = async (): Promise<LicenseRuntimeState> => {
       state = { status: 'unlicensed', capabilities: [] };
       return state;
     }
+    announcedDocument = localConfig.get('signedLicense');
     state = getPayloadRuntimeState(payload);
     if (state.status === 'active') {
       sessionPayload = payload;
-      scheduleRefresh(localConfig.get('signedLicense')!);
+      sessionDocument = announcedDocument!;
+      scheduleRefresh(sessionDocument);
     }
     return state;
   } catch (error) {
@@ -158,6 +164,12 @@ export const saveActiveLicenseDocument = async (
 };
 
 export const getLicenseState = (): LicenseRuntimeState => ({ ...state });
+
+export const getSessionLicensePayload = (): LicensePayloadV2 | undefined => sessionPayload;
+
+export const getSessionLicenseDocument = (): SignedLicense | undefined => sessionDocument;
+
+export const getAnnouncedLicenseDocument = (): SignedLicense | undefined => announcedDocument;
 
 export const retryLicense = (): Promise<LicenseRetryResult> => {
   if (sessionPayload) {

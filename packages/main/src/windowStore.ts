@@ -19,8 +19,8 @@ import { gmibVariables, impScreenProps, isGmib, isPlayer, isScreen } from '/@com
 
 import { initializePritunlClient } from './linux';
 import { decodeLegacyLicense } from './legacyLicense';
-import { createLicensePresentation } from './licensePresentation';
-import { getLicenseState } from './licenseState';
+import { getLicensePresentation } from './licensePresentation';
+import { getLicenseState, getSessionLicensePayload } from './licenseState';
 import localConfig from './localConfig';
 import machineIdPromise from './machineId';
 import { getTabbedWindowById } from './tabbedWindow';
@@ -174,7 +174,7 @@ export const registerGmib = async (
             arch: os.arch(),
           },
           ...(typeof legacy?.key === 'string' ? { key: legacy.key } : {}),
-          ...createLicensePresentation(licenseState, machineId),
+          ...getLicensePresentation(getSessionLicensePayload()),
         };
       })()
     : await getAnnounce(host, port + 1);

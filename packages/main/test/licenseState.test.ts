@@ -44,6 +44,7 @@ const activePayload = (expiresAt = '2026-09-16T00:00:00.000Z'): LicensePayloadV2
   status: 'active',
   plan: 'plus',
   capabilities: ['plugins', 'taurus', 'novastar'],
+  presentation: { version: 1, css: '' },
 });
 
 describe('main license retry', () => {
@@ -87,6 +88,33 @@ describe('main license retry', () => {
     expect(result.state.status).toBe('active');
     expect(result.relaunchRequired).toBe(false);
     expect(service.hasLicenseCapability('taurus')).toBe(true);
+  });
+
+  it('keeps the signed presentation snapshot until restart after refresh', async () => {
+    const initialDocument = signedLicense;
+    const refreshedDocument = { payload: 'refreshed', signature: 'replacement' };
+    const initialPayload = activePayload();
+    initialPayload.presentation.css = 'session-css';
+    const refreshedPayload = activePayload();
+    refreshedPayload.presentation.css = 'next-session-css';
+    mocks.verifyLicense.mockImplementation((document: SignedLicense) =>
+      Promise.resolve(document === refreshedDocument ? refreshedPayload : initialPayload),
+    );
+    mocks.requestLicenseRefresh.mockResolvedValue(refreshedDocument);
+
+    const service = await import('../src/licenseState');
+    await service.bootstrapLicense();
+    expect(service.getSessionLicenseDocument()).toBe(initialDocument);
+    expect(service.getSessionLicensePayload()?.presentation.css).toBe('session-css');
+
+    await vi.advanceTimersByTimeAsync(6 * 60 * 60 * 1000);
+    expect(mocks.document).toBe(refreshedDocument);
+    expect(service.getSessionLicenseDocument()).toBe(initialDocument);
+    expect(service.getSessionLicensePayload()?.presentation.css).toBe('session-css');
+    expect(service.getLicenseState()).toMatchObject({
+      status: 'active',
+      restartRequired: true,
+    });
   });
 
   it('shares concurrent inactive retries and requests one relaunch', async () => {

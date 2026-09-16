@@ -7,9 +7,11 @@ import {
   licenseStatuses,
   type SignedLicense,
 } from '/@common/license';
+import { hashCode } from '/@common/helpers';
 
 const PREFIX = Buffer.from('GMIB-LICENSE-V2\n', 'utf8');
 const MAX_PAYLOAD_BYTES = 16 * 1024;
+const MAX_PRESENTATION_BYTES = 8 * 1024;
 const MAX_PAYLOAD_CHARACTERS = Math.ceil((MAX_PAYLOAD_BYTES * 4) / 3) + 4;
 const BASE64_URL = /^[A-Za-z0-9_-]+$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -24,6 +26,7 @@ const exactKeys = [
   'keyId',
   'licenseId',
   'plan',
+  'presentation',
   'status',
   'version',
 ].sort();
@@ -36,6 +39,26 @@ const isIsoDate = (value: unknown): value is string =>
 
 const includes = <T extends string>(values: readonly T[], value: unknown): value is T =>
   typeof value === 'string' && values.includes(value as T);
+
+const validatePresentationCss = (css: string, deviceId: string): void => {
+  if (Buffer.byteLength(css, 'utf8') > MAX_PRESENTATION_BYTES)
+    throw new Error('License presentation is too large');
+  if (css === '') return;
+
+  const root = `.gmib-${hashCode(deviceId).toString(16)}`;
+  const escapedRoot = root.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const identifier = '[A-Za-z0-9_-]{1,64}';
+  const baseSelector = `${escapedRoot} \\.(${identifier})\\.(${identifier})`;
+  const rule = new RegExp(`^(${baseSelector}(?:,${baseSelector})*)`);
+  const display =
+    ' \\{ display: inherit; margin: inherit; overflow: inherit; position: inherit; color: inherit; background: inherit; \\}';
+  const block = ' \\{ display: block \\}';
+  const flex = ' \\{ display: flex \\}';
+  const full = new RegExp(
+    `${rule.source}${display}\\n(${baseSelector}\\.${identifier}(?:,${baseSelector}\\.${identifier})*)${block}\\n(${baseSelector}\\.${identifier}(?:,${baseSelector}\\.${identifier})*)${flex}$`,
+  );
+  if (!full.test(css)) throw new Error('Invalid license presentation');
+};
 
 const parsePayload = (value: unknown): LicensePayloadV2 => {
   if (!isRecord(value) || JSON.stringify(Object.keys(value).sort()) !== JSON.stringify(exactKeys))
@@ -73,6 +96,17 @@ const parsePayload = (value: unknown): LicensePayloadV2 => {
     !capabilities.every(item => typeof item === 'string' && item.length > 0 && item.length <= 100)
   )
     throw new Error('Invalid license payload');
+  const presentation = value.presentation;
+  if (
+    !isRecord(presentation) ||
+    Object.keys(presentation).length !== 2 ||
+    presentation.version !== 1 ||
+    typeof presentation.css !== 'string'
+  )
+    throw new Error('Invalid license presentation');
+  if (status !== 'active' && presentation.css !== '')
+    throw new Error('Inactive license has a presentation');
+  validatePresentationCss(presentation.css, deviceId);
   return value as LicensePayloadV2;
 };
 
@@ -114,14 +148,23 @@ export const verifyLicense = (
   const signed = parseDocument(document);
   const payloadBytes = Buffer.from(signed.payload, 'base64url');
   if (payloadBytes.length > MAX_PAYLOAD_BYTES) throw new Error('License payload is too large');
-  const payload = parsePayload(JSON.parse(payloadBytes.toString('utf8')));
-  if (payload.deviceId !== deviceId) throw new Error('License belongs to another device');
-  const key = publicKeys.get(payload.keyId);
+  const value: unknown = JSON.parse(payloadBytes.toString('utf8'));
+  if (
+    !isRecord(value) ||
+    value.version !== 2 ||
+    typeof value.keyId !== 'string' ||
+    value.keyId.length < 1 ||
+    value.keyId.length > 100
+  )
+    throw new Error('Invalid license payload');
+  const key = publicKeys.get(value.keyId);
   if (!key) throw new Error('Unknown license signing key');
   const signature = Buffer.from(signed.signature, 'base64url');
   if (signature.length !== 64) throw new Error('Invalid license signature');
   if (!crypto.verify(null, Buffer.concat([PREFIX, payloadBytes]), key, signature))
     throw new Error('Invalid license signature');
+  const payload = parsePayload(value);
+  if (payload.deviceId !== deviceId) throw new Error('License belongs to another device');
   return payload;
 };
 

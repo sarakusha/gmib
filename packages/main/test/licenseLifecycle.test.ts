@@ -20,6 +20,7 @@ const payload = (changes: Partial<LicensePayloadV2> = {}): LicensePayloadV2 => (
   status: 'active',
   plan: 'plus',
   capabilities: ['plugins', 'taurus'],
+  presentation: { version: 1, css: '' },
   ...changes,
 });
 
@@ -56,6 +57,7 @@ describe('license lifecycle decisions', () => {
     payload({ plan: 'standard' }),
     payload({ expiresAt: '2026-09-20T10:00:00.000Z' }),
     payload({ capabilities: ['plugins'] }),
+    payload({ presentation: { version: 1, css: 'signed-css' } }),
   ])('requires a restart when effective terms change', refreshed => {
     expect(sessionTermsChanged(payload(), refreshed)).toBe(true);
   });

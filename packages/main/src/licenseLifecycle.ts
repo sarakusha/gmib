@@ -24,4 +24,6 @@ export const sessionTermsChanged = (
   current.status !== refreshed.status ||
   current.plan !== refreshed.plan ||
   current.expiresAt !== refreshed.expiresAt ||
-  [...current.capabilities].sort().join('\0') !== [...refreshed.capabilities].sort().join('\0');
+  [...current.capabilities].sort().join('\0') !== [...refreshed.capabilities].sort().join('\0') ||
+  current.presentation.version !== refreshed.presentation.version ||
+  current.presentation.css !== refreshed.presentation.css;

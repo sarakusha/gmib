@@ -16,6 +16,10 @@ export type LicensePayloadV2 = {
   status: LicenseStatus;
   plan: LicensePlan;
   capabilities: string[];
+  presentation: {
+    version: 1;
+    css: string;
+  };
 };
 
 export type SignedLicense = {

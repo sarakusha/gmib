@@ -51,7 +51,12 @@ import {
 } from './gmibScheduler';
 import { getSensors } from './history';
 import localConfig from './localConfig';
-import { getLicenseState, hasLicenseCapability, retryLicense } from './licenseState';
+import {
+  getAnnouncedLicenseDocument,
+  getLicenseState,
+  hasLicenseCapability,
+  retryLicense,
+} from './licenseState';
 import { completeLicenseActivation } from './manualLicenseActivation';
 import machineId from './machineId';
 import updateMenu from './mainMenu';
@@ -1010,7 +1015,7 @@ api.get('/announce', async (req, res) => {
   res.json({
     announce,
     iv,
-    license: localConfig.get('signedLicense'),
+    license: getAnnouncedLicenseDocument(),
     licenseProtocol: 2,
     licenseState: getLicenseState(),
     key: await machineId,

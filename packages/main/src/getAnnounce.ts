@@ -1,12 +1,10 @@
 import authRequest from './authRequest';
 import { decodeLegacyLicense } from './legacyLicense';
-import { createLicensePresentation } from './licensePresentation';
+import { getPayloadRuntimeState } from './licenseLifecycle';
+import { getLicensePresentation } from './licensePresentation';
+import { parsePublicKeys, verifyLicense } from './licenseVerification';
 
-import {
-  licensePlans,
-  type LicenseRuntimeState,
-  type LicenseRuntimeStatus,
-} from '/@common/license';
+import type { LicenseRuntimeState } from '/@common/license';
 
 type AnnounceResponse = {
   announce?: string;
@@ -16,40 +14,11 @@ type AnnounceResponse = {
   [k: string]: unknown;
 };
 
-const runtimeStatuses: ReadonlySet<LicenseRuntimeStatus> = new Set([
-  'checking',
-  'migration-required',
-  'active',
-  'expired',
-  'disabled',
-  'invalid',
-  'unlicensed',
-]);
-
-const getRemoteRuntimeState = (response: AnnounceResponse): LicenseRuntimeState | undefined => {
-  if (response.licenseProtocol !== 2) return undefined;
-  const value = response.licenseState;
-  if (typeof value !== 'object' || value === null) return undefined;
-  const status = Reflect.get(value, 'status');
-  const plan = Reflect.get(value, 'plan');
-  const capabilities = Reflect.get(value, 'capabilities');
-  const expiresAt = Reflect.get(value, 'expiresAt');
-  if (
-    typeof status !== 'string' ||
-    !runtimeStatuses.has(status as LicenseRuntimeStatus) ||
-    !Array.isArray(capabilities) ||
-    capabilities.some(capability => typeof capability !== 'string') ||
-    (status === 'active' && !licensePlans.includes(plan)) ||
-    (expiresAt !== undefined && expiresAt !== null && typeof expiresAt !== 'string')
-  )
-    return undefined;
-  return {
-    status: status as LicenseRuntimeStatus,
-    capabilities,
-    ...(licensePlans.includes(plan) && { plan }),
-    ...(expiresAt === null || typeof expiresAt === 'string' ? { expiresAt } : {}),
-  };
-};
+const invalidRemoteState = (message: string): LicenseRuntimeState => ({
+  status: 'invalid',
+  capabilities: [],
+  message,
+});
 
 const getAnnounce = async (host?: string, port?: number): Promise<AnnounceResponse | undefined> => {
   const res = await authRequest({ host, port, api: 'announce' });
@@ -59,10 +28,34 @@ const getAnnounce = async (host?: string, port?: number): Promise<AnnounceRespon
   const result: AnnounceResponse = { machineId: key, ...data };
   const parsed = announce && iv && key ? decodeLegacyLicense({ announce, iv }, key) : undefined;
   const combined = parsed ? { ...parsed, ...result } : result;
-  const runtimeState = getRemoteRuntimeState(response);
-  if (!runtimeState || !key) return combined;
   const { plan: _, renew: __, message: ___, useProxy: ____, ...session } = combined;
-  return { ...session, ...createLicensePresentation(runtimeState, key) };
+  if (response.licenseProtocol === undefined) return combined;
+  if (response.licenseProtocol !== 2 || !key) {
+    return {
+      ...session,
+      licenseState: invalidRemoteState(
+        'Удалённый GMIB использует неподдерживаемый формат лицензии',
+      ),
+    };
+  }
+  try {
+    const payload = verifyLicense(
+      response.license,
+      key,
+      parsePublicKeys(import.meta.env.VITE_LICENSE_PUBLIC_KEYS),
+    );
+    const licenseState = getPayloadRuntimeState(payload);
+    return {
+      ...session,
+      licenseState,
+      ...getLicensePresentation(licenseState.status === 'active' ? payload : undefined),
+    };
+  } catch (error) {
+    return {
+      ...session,
+      licenseState: invalidRemoteState((error as Error).message),
+    };
+  }
 };
 
 export default getAnnounce;
