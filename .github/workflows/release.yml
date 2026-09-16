@@ -386,6 +386,10 @@ jobs:
         if: ${{ steps.platform_check.outputs.selected == 'true' &&
           steps.release_check.outputs.skip_build != 'true' }}
 
+      - run: pnpm run verify:artifacts
+        if: ${{ steps.platform_check.outputs.selected == 'true' &&
+          steps.release_check.outputs.skip_build != 'true' }}
+
       - name: Compile artifacts without publishing
         if: ${{ steps.platform_check.outputs.selected == 'true' &&
           steps.release_check.outputs.skip_build != 'true' }}

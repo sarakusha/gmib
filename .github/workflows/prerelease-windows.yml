@@ -114,6 +114,8 @@ jobs:
 
       - run: pnpm run build
 
+      - run: pnpm run verify:artifacts
+
       - name: Compile Windows artifacts
         uses: nick-fields/retry@v4
         with:

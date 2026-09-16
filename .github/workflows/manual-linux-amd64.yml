@@ -74,6 +74,8 @@ jobs:
 
       - run: pnpm run build
 
+      - run: pnpm run verify:artifacts
+
       - name: Build AppImage without publishing
         run: pnpm exec electron-builder --config .electron-builder-light.config.js -l --x64 --publish never
 
