@@ -1,17 +1,14 @@
 # Параметры яркости через Management API
 
-Маршрут заготовлен в `packages/main/src/managementSettingsRouter.ts` и подключается приложением под
-`/api/manage/v1`:
+GMIB предоставляет два маршрута:
 
 ```text
 GET   /api/manage/v1/settings
 PATCH /api/manage/v1/settings?dryRun=true|false
 ```
 
-Роутер принимает обязательную зависимость `strictAuth` и ставит ее первым middleware. Поэтому
-подключение должно передать существующую проверку SRP/HMAC; `unsafeMode` не должен обходить эту
-проверку. При подключении в `api.ts` сохраняются также общий auth middleware и существующий license
-mutation guard. Сам роутер не импортирует `nibus`, Electron, auth или license state.
+Оба маршрута требуют SRP/HMAC-авторизацию даже при включенном `unsafeMode`. Чтение доступно до
+активации, а PATCH требует действующей лицензии.
 
 GET возвращает только разрешенные ключи конфигурации:
 
@@ -53,19 +50,30 @@ defaults из существующей `configSchema`; это позволяет
 {
   "changed": true,
   "dryRun": false,
-  "settings": { "brightness": 40, "autobrightness": false }
+  "settings": {
+    "brightness": 40,
+    "autobrightness": false,
+    "spline": [
+      [10, 10],
+      [10000, 80]
+    ],
+    "sunSpline": [
+      ["event:dawn", 10],
+      ["event:solarNoon", 80]
+    ]
+  }
 }
 ```
 
 Повторная запись тех же значений возвращает `changed: false` и не вызывает `updateConfigStore`. При
 `dryRun=true` выполняются те же проверки и вычисляется read-back, но конфигурация и уведомление
-runtime не меняются. Успешный PATCH сохраняет конфигурацию через переданный adapter и вызывает
-обычный `updateConfigStore`, поэтому связанный renderer/runtime получает broadcast при фактическом
-подключении.
+runtime не меняются. Успешный PATCH сохраняет конфигурацию и рассылает обычное обновление
+renderer/runtime.
 
-Эта часть API изменяет только параметры конфигурации. Переключатель `autobrightness` не переносит
-алгоритм расчета, таймеры, перегрев, HID или команды NovaStar в HTTP boundary. Фактическое
-применение яркости по датчику/солнцу остается в renderer/runtime и зависит от наличия датчика,
-корректной локации и обычного жизненного цикла GMIB. Роутер в этой ветке еще не смонтирован в
-production API, поэтому до интеграции endpoint недоступен, а auth и license guards не выполняются
-автоматически.
+API изменяет желаемые параметры конфигурации. Фактическое применение яркости по датчику или солнцу
+остается в renderer/runtime и зависит от наличия датчика, корректной локации и обычного жизненного
+цикла GMIB. Сохраненный ответ подтверждает read-back конфигурации, а не измеренную яркость устройства.
+
+Для сопровождающих: endpoint использует общий license mutation gate и сохраняет изменения через
+`updateConfigStore`, поэтому успешное изменение вызывает один штатный config broadcast; no-op и
+`dryRun` его не вызывают.

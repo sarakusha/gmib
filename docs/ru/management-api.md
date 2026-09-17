@@ -3,7 +3,8 @@
 Этот документ описывает существующий REST API GMIB и standalone helper для скриптов и Ansible.
 Полный второй CRUD в `/api/manage/v1` не создается: экраны, плееры, плейлисты, привязки и оба
 планировщика уже доступны через маршруты `/api/*`. Namespace `/api/manage/v1` используется только
-для недостающих административных операций: смены общего пароля и lifecycle плагинов.
+для недостающих административных операций: смены общего пароля, lifecycle плагинов и разрешенных
+параметров яркости.
 
 ## Адрес и защита
 
@@ -13,7 +14,9 @@ HTTP API слушает порт `NIBUS_PORT + 1`, по умолчанию `9002
 query, timestamp и непустое JSON-тело. Допустимое расхождение часов обычно составляет пять минут.
 
 SRP и HMAC не шифруют HTTP-трафик. Для недоверенной сети нужен VPN или TLS-прокси. Схема протокола,
-формат ошибок и смена пароля подробно описаны в [rest-api-auth.md](rest-api-auth.md).
+формат ошибок и смена пароля подробно описаны в [rest-api-auth.md](rest-api-auth.md). Строгая
+авторизация сохраняется при `unsafeMode` для management routes и plugin routes с
+`access: "authenticated"`.
 
 ## Карта существующих маршрутов
 
@@ -43,7 +46,8 @@ SRP и HMAC не шифруют HTTP-трафик. Для недоверенно
 | Системные параметры       | `POST /api/autostart`, `POST /api/exactWindowPlacement`                                                                                                    | `{value:boolean}`; `exactWindowPlacement` инициирует перезапуск.                                                                                                          |
 | Перезапуск                | `POST /api/relaunch`                                                                                                                                       | Action без тела.                                                                                                                                                          |
 | Страницы вывода           | `GET /api/pages`, `POST /api/pages`, `PUT /api/pages/:id`, `DELETE /api/pages/:id`                                                                         | `Page`; update берет `id` из path.                                                                                                                                        |
-| Plugin runtime            | `/api/plugins/:pluginId/*`                                                                                                                                 | Маршруты определяет сам установленный plugin с `access: "authenticated"`. Это не lifecycle API; раздел Plugins требует лицензию Plus или выше.                            |
+| Параметры яркости         | `GET /api/manage/v1/settings`, `PATCH /api/manage/v1/settings?dryRun=true|false`                                                                            | Allowlist параметров яркости, автояркости, локации и кривых; подробный контракт приведен в [management-settings.md](management-settings.md).                              |
+| Plugin runtime            | `/api/plugins/:pluginId/*`                                                                                                                                 | Маршруты и DTO объявляет сам plugin с `access: "authenticated"`; они требуют auth и не открывают local routes. Единой формы `/settings` для всех plugins нет.             |
 | Plugin lifecycle          | `/api/manage/v1/plugins/*`                                                                                                                                 | Установка, inspect, включение и удаление без GUI. Контракт и ограничения описаны ниже; требуется лицензия Plus или выше.                                                  |
 | Смена пароля              | `PUT /api/manage/v1/auth/password`                                                                                                                         | `{salt, verifier}`; helper принимает новый пароль локально и вычисляет эти параметры сам. Маршрут доступен до активации лицензии.                                         |
 
@@ -54,10 +58,34 @@ SRP и HMAC не шифруют HTTP-трафик. Для недоверенно
 окончательным источником поведения: [`packages/main/src/api.ts`](../../packages/main/src/api.ts) и
 [`packages/main/src/novastarApi.ts`](../../packages/main/src/novastarApi.ts).
 
-В текущем API отсутствуют:
+Машиночитаемая схема статических маршрутов находится в
+[`docs/api/openapi.json`](../api/openapi.json); пояснения и границы схемы — в
+[`docs/api/README.md`](../api/README.md).
 
-- единый проверенный контракт настройки plugin;
-- GET/PATCH разрешенных параметров конфигурации, включая параметры и флаг автояркости.
+## Параметры яркости и автояркости
+
+`GET /api/manage/v1/settings` возвращает только `brightness`, `autobrightness`, `location`, `spline`,
+`sunSpline` и `nightMode`. `PATCH` частично меняет эти поля; повтор тех же значений возвращает
+`changed:false`, а `dryRun=true` выполняет validation и read-back без записи. Оба маршрута требуют
+авторизацию даже при `unsafeMode`; изменение требует действующей лицензии. Полный формат, диапазоны,
+reset-to-default и пример ответа описаны в [management-settings.md](management-settings.md).
+
+Endpoint сохраняет desired configuration. Фактическое применение автояркости остается в текущем
+renderer/runtime и зависит от датчика, локации и жизненного цикла GMIB; read-back конфигурации не
+является проверкой яркости на устройстве.
+
+## Настройки плагинов
+
+Authenticated plugin routes под `/api/plugins/:pluginId/*` теперь всегда требуют авторизацию, включая
+`unsafeMode`. Они не открывают наружу маршруты с `access: "local"` и не обходят `localOnly`.
+Поддержка удаленных настроек, их путь и JSON shape объявляются каждым плагином отдельно; универсального
+`/settings` в host API нет. Например, Shader Screensavers предоставляет
+`GET/PATCH /api/plugins/shader-screensavers/settings`, а его `/state` остается локальным.
+
+Версия схемы настроек развивается вместе с plugin и не требует выпуска новой версии host API.
+Плагин может предоставить собственный authenticated `/openapi.json`. Динамические plugin routes
+намеренно не входят в основной [`docs/api/openapi.json`](../api/openapi.json): host отвечает только
+за auth, license gate и dispatch явно объявленных plugin routes.
 
 ## Lifecycle плагинов
 
