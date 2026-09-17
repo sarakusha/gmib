@@ -6,10 +6,16 @@ import { describe, expect, it } from 'vitest';
 const specUrl = new URL('../../../docs/api/openapi.json', import.meta.url);
 const apiSourceUrl = new URL('../src/api.ts', import.meta.url);
 const routerSourceUrl = new URL('../src/srpAuthRouter.ts', import.meta.url);
+const pluginRouterSourceUrl = new URL('../src/pluginManagementRouter.ts', import.meta.url);
+const settingsRouterSourceUrl = new URL('../src/managementSettingsRouter.ts', import.meta.url);
+const managementApiSourceUrl = new URL('../src/managementApi.ts', import.meta.url);
 
 const specification = JSON.parse(readFileSync(specUrl, 'utf8')) as Record<string, unknown>;
 const apiSource = readFileSync(apiSourceUrl, 'utf8');
 const routerSource = readFileSync(routerSourceUrl, 'utf8');
+const pluginRouterSource = readFileSync(pluginRouterSourceUrl, 'utf8');
+const settingsRouterSource = readFileSync(settingsRouterSourceUrl, 'utf8');
+const managementApiSource = readFileSync(managementApiSourceUrl, 'utf8');
 
 const operations = Object.entries(specification.paths as Record<string, Record<string, unknown>>)
   .flatMap(([path, entry]) =>
@@ -19,6 +25,8 @@ const operations = Object.entries(specification.paths as Record<string, Record<s
   )
   .filter(
     ({ path }) =>
+      !path.startsWith('/api/manage/v1/plugins') &&
+      path !== '/api/manage/v1/settings' &&
       path !== '/api/handshake/{id}' &&
       path !== '/api/login/{id}' &&
       path !== '/api/manage/v1/auth/password',
@@ -92,6 +100,45 @@ describe('OpenAPI management contract', () => {
     expect(routerSource).toMatch(/router\.put\(\s*['"]\/manage\/v1\/auth\/password['"]/);
   });
 
+  it('maps lifecycle and runtime-settings operations to their mounted routers', () => {
+    const paths = specification.paths as Record<string, Record<string, unknown>>;
+    expect(apiSource).toMatch(/api\.use\(\s*['"]\/manage\/v1\/plugins['"]/);
+    expect(managementApiSource).toMatch(/api\.use\(\s*['"]\/manage\/v1['"]/);
+    expect(pluginRouterSource).toMatch(/router\.get\(\s*['"]\/['"]/);
+    expect(pluginRouterSource).toMatch(/router\.get\(\s*['"]\/catalog['"]/);
+    expect(pluginRouterSource).toMatch(/router\.get\(\s*['"]\/official\/:id\/inspect['"]/);
+    expect(pluginRouterSource).toMatch(/router\.post\(\s*['"]\/official\/:id\/install['"]/);
+    expect(pluginRouterSource).toMatch(/`\/archive\/\$\{operation\}`/);
+    expect(pluginRouterSource).toMatch(/router\.put\(\s*['"]\/:id\/enabled['"]/);
+    expect(pluginRouterSource).toMatch(/router\.delete\(\s*['"]\/:id['"]/);
+    expect(pluginRouterSource).toMatch(/requireLicenseCapability\('plugins'\)/);
+    expect(settingsRouterSource).toMatch(/router\.use\(strictAuth\)/);
+    expect(settingsRouterSource).toMatch(/router\.get\(['"]\/settings['"]/);
+    expect(settingsRouterSource).toMatch(/router\.patch\(['"]\/settings['"]/);
+    for (const path of [
+      '/api/manage/v1/plugins',
+      '/api/manage/v1/plugins/catalog',
+      '/api/manage/v1/plugins/official/{id}/inspect',
+      '/api/manage/v1/plugins/official/{id}/install',
+      '/api/manage/v1/plugins/archive/inspect',
+      '/api/manage/v1/plugins/archive/install',
+      '/api/manage/v1/plugins/{id}/enabled',
+      '/api/manage/v1/plugins/{id}',
+      '/api/manage/v1/settings',
+    ]) {
+      for (const operation of Object.values(paths[path])) {
+        if (operation && typeof operation === 'object' && 'security' in operation) {
+          expect(operation.security, `${path} must inherit mounted auth`).toBeUndefined();
+        }
+      }
+    }
+    const serialized = JSON.stringify(specification);
+    expect(serialized).toContain('application/octet-stream');
+    expect(serialized).toContain('restartRequired');
+    expect(serialized).toContain('unsafeMode');
+    expect(serialized).toContain('configSchema defaults');
+  });
+
   it('keeps SRP login, identifier, and password-rotation security semantics explicit', () => {
     const paths = specification.paths as Record<string, Record<string, Record<string, unknown>>>;
     expect(paths['/api/identifier'].get.security).toEqual([]);
@@ -104,6 +151,57 @@ describe('OpenAPI management contract', () => {
   it('accepts representative documented request and response values against component schemas', () => {
     validateSchema('SrpLoginRequest', { A: '0xabc', M1: '0x123' });
     validateSchema('PasswordRotationRequest', { salt: '0x12', verifier: '0xabcd' });
+    validateSchema('PluginInstallRequest', {
+      version: '1.0.0',
+      sha256: 'a'.repeat(64),
+      permissions: ['http.routes', 'storage'],
+      trustedBackend: true,
+      enabled: true,
+    });
+    validateSchema('PluginStatus', {
+      manifest: { id: 'shader-screensavers', name: 'Shaders', version: '1.0.0', gmibApi: '^1.0.0' },
+      enabled: true,
+      loaded: true,
+      runningEnabled: true,
+      restartRequired: false,
+    });
+    validateSchema('ManagementSettings', {
+      brightness: 30,
+      autobrightness: false,
+      spline: [
+        [10, 10],
+        [10000, 80],
+      ],
+      sunSpline: [
+        ['event:dawn', 10],
+        ['event:solarNoon', 80],
+        ['event:dusk', 10],
+      ],
+    });
+    validateSchema('ManagementSettingsPatch', {
+      brightness: 70,
+      location: null,
+      spline: null,
+      sunSpline: null,
+      nightMode: { brightness: 8 },
+    });
+    validateSchema('ManagementSettingsPatchResult', {
+      changed: true,
+      dryRun: true,
+      settings: {
+        brightness: 70,
+        autobrightness: false,
+        spline: [
+          [10, 10],
+          [10000, 80],
+        ],
+        sunSpline: [
+          ['event:dawn', 10],
+          ['event:solarNoon', 80],
+          ['event:dusk', 10],
+        ],
+      },
+    });
     validateSchema('Playlist', {
       id: 1,
       name: 'Morning',

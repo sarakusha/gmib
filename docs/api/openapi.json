@@ -18,7 +18,9 @@
     { "name": "Screens and players" },
     { "name": "Scheduling" },
     { "name": "Administration" },
-    { "name": "Pages" }
+    { "name": "Pages" },
+    { "name": "Plugins" },
+    { "name": "Runtime settings" }
   ],
   "security": [
     { "LocalBearer": [] },
@@ -115,6 +117,202 @@
           "401": { "$ref": "#/components/responses/Unauthorized" },
           "409": { "$ref": "#/components/responses/Conflict" },
           "500": { "$ref": "#/components/responses/SrpRotationFailure" }
+        }
+      }
+    },
+    "/api/manage/v1/plugins": {
+      "get": {
+        "tags": ["Plugins"],
+        "operationId": "listPlugins",
+        "summary": "List installed plugins",
+        "description": "Requires the plugins license capability in addition to the normal API authentication.",
+        "responses": {
+          "200": { "$ref": "#/components/responses/PluginStatusList" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/PluginForbidden" },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      }
+    },
+    "/api/manage/v1/plugins/catalog": {
+      "get": {
+        "tags": ["Plugins"],
+        "operationId": "listOfficialPlugins",
+        "summary": "List official plugin releases",
+        "description": "The catalog is read through the same authenticated, plugins-capability-gated management router.",
+        "responses": {
+          "200": { "$ref": "#/components/responses/PluginCatalogList" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/PluginForbidden" },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      }
+    },
+    "/api/manage/v1/plugins/official/{id}/inspect": {
+      "get": {
+        "tags": ["Plugins"],
+        "operationId": "inspectOfficialPlugin",
+        "parameters": [
+          { "$ref": "#/components/parameters/PluginId" },
+          { "$ref": "#/components/parameters/PluginVersionQuery" },
+          { "$ref": "#/components/parameters/PluginSha256Query" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/PluginInspection" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/PluginForbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      }
+    },
+    "/api/manage/v1/plugins/official/{id}/install": {
+      "post": {
+        "tags": ["Plugins"],
+        "operationId": "installOfficialPlugin",
+        "parameters": [{ "$ref": "#/components/parameters/PluginId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PluginInstallRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/PluginInstallResult" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/PluginForbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      }
+    },
+    "/api/manage/v1/plugins/archive/inspect": {
+      "post": {
+        "tags": ["Plugins"],
+        "operationId": "inspectPluginArchive",
+        "parameters": [{ "$ref": "#/components/parameters/PluginSha256Query" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/octet-stream": { "schema": { "type": "string", "format": "binary" } }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/PluginInspection" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/PluginForbidden" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "413": { "$ref": "#/components/responses/PayloadTooLarge" },
+          "415": { "$ref": "#/components/responses/UnsupportedMediaType" },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      }
+    },
+    "/api/manage/v1/plugins/archive/install": {
+      "post": {
+        "tags": ["Plugins"],
+        "operationId": "installPluginArchive",
+        "parameters": [
+          { "$ref": "#/components/parameters/PluginSha256Query" },
+          { "$ref": "#/components/parameters/PluginPermissionsQuery" },
+          { "$ref": "#/components/parameters/PluginTrustedBackendQuery" },
+          { "$ref": "#/components/parameters/PluginEnabledQuery" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/octet-stream": { "schema": { "type": "string", "format": "binary" } }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/PluginInstallResult" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/PluginForbidden" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "413": { "$ref": "#/components/responses/PayloadTooLarge" },
+          "415": { "$ref": "#/components/responses/UnsupportedMediaType" },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      }
+    },
+    "/api/manage/v1/plugins/{id}/enabled": {
+      "put": {
+        "tags": ["Plugins"],
+        "operationId": "setPluginEnabled",
+        "parameters": [{ "$ref": "#/components/parameters/PluginId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PluginEnabledRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/PluginStatus" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/PluginForbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      }
+    },
+    "/api/manage/v1/plugins/{id}": {
+      "delete": {
+        "tags": ["Plugins"],
+        "operationId": "uninstallPlugin",
+        "parameters": [{ "$ref": "#/components/parameters/PluginId" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/PluginUninstallResult" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/PluginForbidden" },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      }
+    },
+    "/api/manage/v1/settings": {
+      "get": {
+        "tags": ["Runtime settings"],
+        "operationId": "getManagementSettings",
+        "summary": "Read allowlisted runtime settings",
+        "description": "Requires normal authentication, including unsafeMode. The response is an allowlisted projection; private config and secrets are never returned. Curves are read back with configSchema defaults when absent.",
+        "responses": {
+          "200": { "$ref": "#/components/responses/ManagementSettings" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      },
+      "patch": {
+        "tags": ["Runtime settings"],
+        "operationId": "patchManagementSettings",
+        "summary": "Partially update allowlisted runtime settings",
+        "description": "Requires normal authentication and an active license for a mutation, including unsafeMode. Omitted fields are preserved. `dryRun=true` validates and previews the canonical readback without persistence or config broadcast. `spline:null` and `sunSpline:null` reset to configSchema defaults; location and nightMode null clear those optional fields.",
+        "parameters": [{ "$ref": "#/components/parameters/DryRun" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ManagementSettingsPatch" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/ManagementSettingsPatch" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/ForbiddenLicense" },
+          "500": { "$ref": "#/components/responses/ServerError" }
         }
       }
     },
@@ -895,7 +1093,50 @@
         "schema": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,128}$" }
       },
       "MediaId": { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } },
-      "PlayerIdQuery": { "name": "playerId", "in": "query", "schema": { "type": "integer" } }
+      "PlayerIdQuery": { "name": "playerId", "in": "query", "schema": { "type": "integer" } },
+      "PluginId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string", "pattern": "^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$" }
+      },
+      "PluginVersionQuery": {
+        "name": "version",
+        "in": "query",
+        "required": true,
+        "schema": { "type": "string", "minLength": 1 }
+      },
+      "PluginSha256Query": {
+        "name": "sha256",
+        "in": "query",
+        "required": true,
+        "schema": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" }
+      },
+      "PluginPermissionsQuery": {
+        "name": "permissions",
+        "in": "query",
+        "required": true,
+        "description": "Comma-separated exact permission list accepted by the plugin manifest.",
+        "schema": { "type": "string" }
+      },
+      "PluginTrustedBackendQuery": {
+        "name": "trustedBackend",
+        "in": "query",
+        "required": true,
+        "schema": { "type": "string", "enum": ["true", "false"] }
+      },
+      "PluginEnabledQuery": {
+        "name": "enabled",
+        "in": "query",
+        "required": true,
+        "schema": { "type": "string", "enum": ["true", "false"] }
+      },
+      "DryRun": {
+        "name": "dryRun",
+        "in": "query",
+        "required": false,
+        "schema": { "type": "string", "enum": ["true", "false"] }
+      }
     },
     "schemas": {
       "SrpChallenge": {
@@ -935,6 +1176,275 @@
         "type": "object",
         "required": ["reauthenticateRequired"],
         "properties": { "reauthenticateRequired": { "type": "boolean", "const": true } }
+      },
+      "PluginPermission": {
+        "type": "string",
+        "enum": [
+          "http.routes",
+          "storage",
+          "realtime",
+          "output.pages",
+          "database",
+          "services.provide",
+          "services.consume",
+          "plugins.read",
+          "output.control",
+          "nibus.read",
+          "nibus.write"
+        ]
+      },
+      "PluginManifest": {
+        "type": "object",
+        "required": ["id", "name", "version", "gmibApi"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$" },
+          "name": { "type": "string" },
+          "version": { "type": "string" },
+          "description": { "type": "string" },
+          "gmibApi": { "type": "string" },
+          "main": { "type": "string" },
+          "public": { "type": "string" },
+          "permissions": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PluginPermission" }
+          },
+          "dependencies": { "type": "object", "additionalProperties": { "type": "string" } },
+          "optionalDependencies": {
+            "type": "object",
+            "additionalProperties": { "type": "string" }
+          },
+          "contributes": { "type": "object", "additionalProperties": true },
+          "localOnly": { "type": "boolean" },
+          "pages": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "control": { "type": "object", "additionalProperties": true }
+        },
+        "additionalProperties": false
+      },
+      "PluginStatus": {
+        "type": "object",
+        "required": ["manifest", "enabled", "loaded", "runningEnabled", "restartRequired"],
+        "properties": {
+          "manifest": { "$ref": "#/components/schemas/PluginManifest" },
+          "enabled": { "type": "boolean" },
+          "loaded": { "type": "boolean" },
+          "runningEnabled": { "type": "boolean" },
+          "runningVersion": { "type": "string" },
+          "restartRequired": { "type": "boolean" },
+          "archiveSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "error": { "type": "string" }
+        },
+        "additionalProperties": false
+      },
+      "PluginCatalogEntry": {
+        "type": "object",
+        "required": ["manifest", "publisher", "repository", "release"],
+        "properties": {
+          "manifest": { "$ref": "#/components/schemas/PluginManifest" },
+          "publisher": {
+            "type": "object",
+            "required": ["id", "name", "verified"],
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "verified": { "type": "boolean" }
+            }
+          },
+          "repository": { "type": "string", "format": "uri" },
+          "release": {
+            "type": "object",
+            "required": ["url", "sha256", "size"],
+            "properties": {
+              "url": { "type": "string", "format": "uri" },
+              "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "size": { "type": "integer", "minimum": 0 }
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "PluginArchiveInspection": {
+        "type": "object",
+        "required": ["manifest", "sha256", "size"],
+        "properties": {
+          "manifest": { "$ref": "#/components/schemas/PluginManifest" },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "size": { "type": "integer", "minimum": 0 },
+          "installed": { "$ref": "#/components/schemas/PluginStatus" }
+        },
+        "additionalProperties": false
+      },
+      "PluginInstallConsent": {
+        "type": "object",
+        "required": ["permissions", "trustedBackend"],
+        "properties": {
+          "permissions": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PluginPermission" }
+          },
+          "trustedBackend": { "type": "boolean" }
+        },
+        "additionalProperties": false
+      },
+      "PluginInstallRequest": {
+        "type": "object",
+        "required": ["version", "sha256", "permissions", "trustedBackend", "enabled"],
+        "properties": {
+          "version": { "type": "string", "minLength": 1 },
+          "sha256": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" },
+          "permissions": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PluginPermission" }
+          },
+          "trustedBackend": { "type": "boolean" },
+          "enabled": { "type": "boolean" }
+        },
+        "additionalProperties": false
+      },
+      "PluginEnabledRequest": {
+        "type": "object",
+        "required": ["enabled"],
+        "properties": { "enabled": { "type": "boolean" } },
+        "additionalProperties": false
+      },
+      "PluginInstallResult": {
+        "type": "object",
+        "required": ["changed", "updated", "plugin", "restartRequired"],
+        "properties": {
+          "changed": { "type": "boolean" },
+          "updated": { "type": "boolean" },
+          "plugin": { "$ref": "#/components/schemas/PluginStatus" },
+          "restartRequired": { "type": "boolean" }
+        },
+        "additionalProperties": false
+      },
+      "PluginUninstallResult": {
+        "type": "object",
+        "required": ["changed", "restartRequired"],
+        "properties": {
+          "changed": { "type": "boolean" },
+          "restartRequired": { "type": "boolean" }
+        },
+        "additionalProperties": false
+      },
+      "LocationSetting": {
+        "type": "object",
+        "properties": {
+          "latitude": { "type": "number", "minimum": -90, "maximum": 90 },
+          "longitude": { "type": "number", "minimum": -180, "maximum": 180 }
+        },
+        "additionalProperties": false
+      },
+      "SplinePoint": {
+        "type": "array",
+        "prefixItems": [
+          { "type": "number", "minimum": 0, "maximum": 65535 },
+          { "type": "number", "minimum": 0, "maximum": 100 }
+        ],
+        "items": false,
+        "minItems": 2,
+        "maxItems": 2
+      },
+      "SplineSetting": {
+        "type": "array",
+        "minItems": 2,
+        "maxItems": 4,
+        "items": { "$ref": "#/components/schemas/SplinePoint" },
+        "description": "Lux values must be strictly increasing and brightness values must not decrease.",
+        "default": [
+          [10, 10],
+          [10000, 80]
+        ]
+      },
+      "SunSplinePoint": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "pattern": "^(event:(dawn|sunrise|sunriseEnd|goldenHourEnd|solarNoon|goldenHour|sunsetStart|sunset|dusk|nadir)|time:([01]\\d|2[0-3]):[0-5]\\d)$"
+          },
+          { "type": "number", "minimum": 0, "maximum": 100 }
+        ],
+        "items": false,
+        "minItems": 2,
+        "maxItems": 2
+      },
+      "SunSplineSetting": {
+        "type": "array",
+        "minItems": 0,
+        "maxItems": 10,
+        "items": { "$ref": "#/components/schemas/SunSplinePoint" },
+        "description": "Sun references must be unique.",
+        "default": [
+          ["event:dawn", 10],
+          ["event:solarNoon", 80],
+          ["event:dusk", 10]
+        ]
+      },
+      "NightBrightnessMode": {
+        "type": "object",
+        "required": ["start", "end", "brightness"],
+        "properties": {
+          "start": { "type": "string", "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$" },
+          "end": { "type": "string", "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$" },
+          "brightness": { "type": "number", "minimum": 0, "maximum": 100 }
+        },
+        "additionalProperties": false
+      },
+      "NightBrightnessModePatch": {
+        "type": "object",
+        "properties": {
+          "start": { "type": "string", "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$" },
+          "end": { "type": "string", "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$" },
+          "brightness": { "type": "number", "minimum": 0, "maximum": 100 }
+        },
+        "additionalProperties": false,
+        "description": "When creating nightMode, start, end and brightness are all required after merging; an existing complete mode can be patched one field at a time."
+      },
+      "ManagementSettings": {
+        "type": "object",
+        "required": ["brightness", "autobrightness", "spline", "sunSpline"],
+        "properties": {
+          "brightness": { "type": "number", "minimum": 0, "maximum": 100 },
+          "autobrightness": { "type": "boolean" },
+          "location": { "$ref": "#/components/schemas/LocationSetting" },
+          "spline": { "$ref": "#/components/schemas/SplineSetting" },
+          "sunSpline": { "$ref": "#/components/schemas/SunSplineSetting" },
+          "nightMode": { "$ref": "#/components/schemas/NightBrightnessMode" }
+        },
+        "additionalProperties": false
+      },
+      "ManagementSettingsPatch": {
+        "type": "object",
+        "properties": {
+          "brightness": { "type": "number", "minimum": 0, "maximum": 100 },
+          "autobrightness": { "type": "boolean" },
+          "location": {
+            "oneOf": [{ "$ref": "#/components/schemas/LocationSetting" }, { "type": "null" }]
+          },
+          "spline": {
+            "oneOf": [{ "$ref": "#/components/schemas/SplineSetting" }, { "type": "null" }]
+          },
+          "sunSpline": {
+            "oneOf": [{ "$ref": "#/components/schemas/SunSplineSetting" }, { "type": "null" }]
+          },
+          "nightMode": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/NightBrightnessModePatch" },
+              { "type": "null" }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "ManagementSettingsPatchResult": {
+        "type": "object",
+        "required": ["changed", "dryRun", "settings"],
+        "properties": {
+          "changed": { "type": "boolean" },
+          "dryRun": { "type": "boolean" },
+          "settings": { "$ref": "#/components/schemas/ManagementSettings" }
+        },
+        "additionalProperties": false
       },
       "ApiError": {
         "type": "object",
@@ -1532,6 +2042,95 @@
       "BadRequest": {
         "description": "Invalid request",
         "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } }
+      },
+      "PluginForbidden": {
+        "description": "The request is authenticated but the plugins license capability is unavailable. Runtime capability errors use JSON; the outer license gate may return plain text.",
+        "content": {
+          "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } },
+          "text/plain": { "schema": { "type": "string" } }
+        }
+      },
+      "PayloadTooLarge": {
+        "description": "The plugin archive exceeds the 50 MiB upload limit.",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } }
+      },
+      "UnsupportedMediaType": {
+        "description": "The archive upload must use application/octet-stream.",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } }
+      },
+      "PluginStatusList": {
+        "description": "Installed plugin status",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": ["plugins"],
+              "properties": {
+                "plugins": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/PluginStatus" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "PluginCatalogList": {
+        "description": "Official plugin catalog entries",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": ["plugins"],
+              "properties": {
+                "plugins": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/PluginCatalogEntry" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "PluginInspection": {
+        "description": "Validated plugin archive metadata",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/PluginArchiveInspection" }
+          }
+        }
+      },
+      "PluginStatus": {
+        "description": "Plugin desired and running status",
+        "content": {
+          "application/json": { "schema": { "$ref": "#/components/schemas/PluginStatus" } }
+        }
+      },
+      "PluginInstallResult": {
+        "description": "Install result. A changed archive or enabled state can require a restart.",
+        "content": {
+          "application/json": { "schema": { "$ref": "#/components/schemas/PluginInstallResult" } }
+        }
+      },
+      "PluginUninstallResult": {
+        "description": "Uninstall result",
+        "content": {
+          "application/json": { "schema": { "$ref": "#/components/schemas/PluginUninstallResult" } }
+        }
+      },
+      "ManagementSettings": {
+        "description": "Allowlisted effective runtime settings",
+        "content": {
+          "application/json": { "schema": { "$ref": "#/components/schemas/ManagementSettings" } }
+        }
+      },
+      "ManagementSettingsPatch": {
+        "description": "Validated settings patch result",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ManagementSettingsPatchResult" }
+          }
+        }
       },
       "PlainTextBadRequest": {
         "description": "Invalid request. This legacy branch uses Express sendStatus(400), so the body is the standard plain-text status message.",
