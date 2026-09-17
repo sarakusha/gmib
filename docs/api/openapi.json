@@ -1,0 +1,1549 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "GMIB management API",
+    "version": "5.5.0",
+    "description": "Current stable `/api` router contract. Dynamic plugin APIs, WebSocket/static surfaces, and conditionally mounted NovaStar APIs are intentionally outside this document. Request schemas describe accepted fields, but legacy CRUD handlers do not uniformly validate JSON at runtime."
+  },
+  "servers": [
+    {
+      "url": "http://{host}:{port}",
+      "variables": { "host": { "default": "localhost" }, "port": { "default": "9002" } }
+    }
+  ],
+  "tags": [
+    { "name": "Authentication" },
+    { "name": "Media" },
+    { "name": "Playlists" },
+    { "name": "Screens and players" },
+    { "name": "Scheduling" },
+    { "name": "Administration" },
+    { "name": "Pages" }
+  ],
+  "security": [
+    { "LocalBearer": [] },
+    { "HmacIdentifier": [], "HmacTimestamp": [], "HmacSignature": [] }
+  ],
+  "paths": {
+    "/api/identifier": {
+      "get": {
+        "tags": ["Authentication"],
+        "operationId": "getIdentifier",
+        "security": [],
+        "summary": "Read GMIB server identifier",
+        "responses": {
+          "200": {
+            "description": "Identifier",
+            "content": { "text/plain": { "schema": { "type": "string" } } }
+          }
+        }
+      }
+    },
+    "/api/handshake/{id}": {
+      "get": {
+        "tags": ["Authentication"],
+        "operationId": "createSrpHandshake",
+        "security": [],
+        "summary": "Start one-use SRP handshake",
+        "description": "The client id is ASCII letters, digits, `_` or `-`, at most 128 characters. A pending handshake expires after 10 seconds.",
+        "parameters": [{ "$ref": "#/components/parameters/ClientId" }],
+        "responses": {
+          "200": {
+            "description": "SRP challenge",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/SrpChallenge" } }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/api/login/{id}": {
+      "post": {
+        "tags": ["Authentication"],
+        "operationId": "completeSrpLogin",
+        "security": [],
+        "summary": "Complete SRP login",
+        "description": "Submit SRP public value A and proof M1 for an unused handshake. Verify returned M2 before retaining the session key. `salt` and `verifier` are rejected here; use password rotation.",
+        "parameters": [{ "$ref": "#/components/parameters/ClientId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/SrpLoginRequest" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Server proof",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/SrpLoginResponse" } }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/api/manage/v1/auth/password": {
+      "put": {
+        "tags": ["Authentication"],
+        "operationId": "rotateRemotePassword",
+        "summary": "Replace remote SRP credentials",
+        "description": "Always requires normal Bearer or HMAC authentication, including legacy unsafeMode. Send a newly derived salt/verifier pair, never a password. Successful rotation revokes all pending and incoming remote sessions and returns `reauthenticateRequired`.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PasswordRotationRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Credentials changed",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ReauthenticateResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "500": { "$ref": "#/components/responses/SrpRotationFailure" }
+        }
+      }
+    },
+    "/api/media": {
+      "get": {
+        "tags": ["Media"],
+        "operationId": "listMedia",
+        "responses": { "200": { "$ref": "#/components/responses/MediaList" } }
+      },
+      "post": {
+        "tags": ["Media"],
+        "operationId": "uploadMedia",
+        "description": "Multipart upload. The server reports per-file conversion failures with 207; its HMAC timestamp allowance is six hours.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": { "schema": { "type": "object", "additionalProperties": true } }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/MediaList" },
+          "207": {
+            "description": "Some files failed",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MediaUploadPartial" }
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/LicenseRequired" }
+        }
+      }
+    },
+    "/api/media/{id}": {
+      "get": {
+        "tags": ["Media"],
+        "operationId": "getMedia",
+        "parameters": [{ "$ref": "#/components/parameters/MediaId" }],
+        "responses": {
+          "200": {
+            "description": "Media",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/MediaInfo" } }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Media"],
+        "operationId": "deleteMedia",
+        "parameters": [{ "$ref": "#/components/parameters/MediaId" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/MediaList" },
+          "403": { "$ref": "#/components/responses/LicenseRequired" }
+        }
+      }
+    },
+    "/api/playlist": {
+      "get": {
+        "tags": ["Playlists"],
+        "operationId": "listPlaylists",
+        "responses": { "200": { "$ref": "#/components/responses/PlaylistList" } }
+      },
+      "post": {
+        "tags": ["Playlists"],
+        "operationId": "createPlaylist",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/CreatePlaylist" } }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Playlist" },
+          "403": { "$ref": "#/components/responses/LicenseRequired" }
+        }
+      },
+      "put": {
+        "tags": ["Playlists"],
+        "operationId": "replacePlaylist",
+        "description": "Replacement update: send the full playlist and its complete items array.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/Playlist" } }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Playlist" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "403": { "$ref": "#/components/responses/LicenseRequired" }
+        }
+      }
+    },
+    "/api/playlist/{id}": {
+      "get": {
+        "tags": ["Playlists"],
+        "operationId": "getPlaylist",
+        "parameters": [{ "$ref": "#/components/parameters/NumericId" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Playlist" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Playlists"],
+        "operationId": "deletePlaylist",
+        "parameters": [{ "$ref": "#/components/parameters/NumericId" }],
+        "responses": {
+          "204": { "$ref": "#/components/responses/NoContent" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "403": { "$ref": "#/components/responses/LicenseRequired" }
+        }
+      },
+      "patch": {
+        "tags": ["Playlists"],
+        "operationId": "changePlaylistItems",
+        "description": "Legacy item-only mutation. Exactly one of `insert` or `remove` is meaningful; other shapes currently leave items unchanged.",
+        "parameters": [{ "$ref": "#/components/parameters/NumericId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/PlaylistItemChange" } }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Playlist" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "403": { "$ref": "#/components/responses/LicenseRequired" }
+        }
+      }
+    },
+    "/api/screen": {
+      "get": {
+        "tags": ["Screens and players"],
+        "operationId": "listScreens",
+        "responses": {
+          "200": {
+            "description": "Screens",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Screen" } }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Screens and players"],
+        "operationId": "createScreen",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/CreateScreen" } }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Screen" },
+          "403": { "$ref": "#/components/responses/LicenseRequired" }
+        }
+      },
+      "put": {
+        "tags": ["Screens and players"],
+        "operationId": "replaceScreen",
+        "description": "Replacement update: absent address list clears existing addresses.",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Screen" } } }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Screen" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "403": { "$ref": "#/components/responses/LicenseRequired" }
+        }
+      }
+    },
+    "/api/screen/{id}": {
+      "get": {
+        "tags": ["Screens and players"],
+        "operationId": "getScreen",
+        "parameters": [{ "$ref": "#/components/parameters/NumericId" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Screen" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Screens and players"],
+        "operationId": "deleteScreen",
+        "parameters": [{ "$ref": "#/components/parameters/NumericId" }],
+        "responses": {
+          "204": { "$ref": "#/components/responses/NoContent" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "403": { "$ref": "#/components/responses/LicenseRequired" }
+        }
+      }
+    },
+    "/api/screen/{id}/reload": {
+      "put": {
+        "tags": ["Screens and players"],
+        "operationId": "reloadScreenOutput",
+        "parameters": [{ "$ref": "#/components/parameters/NumericId" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/EmptySuccess" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "403": { "$ref": "#/components/responses/LicenseRequired" }
+        }
+      }
+    },
+    "/api/address": {
+      "get": {
+        "tags": ["Screens and players"],
+        "operationId": "listAddresses",
+        "responses": {
+          "200": {
+            "description": "Unique configured addresses",
+            "content": {
+              "application/json": { "schema": { "type": "array", "items": { "type": "string" } } }
+            }
+          }
+        }
+      }
+    },
+    "/api/player": {
+      "get": {
+        "tags": ["Screens and players"],
+        "operationId": "listPlayers",
+        "responses": {
+          "200": {
+            "description": "Players",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Player" } }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Screens and players"],
+        "operationId": "createPlayer",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/CreatePlayer" } }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Player" },
+          "403": { "$ref": "#/components/responses/LicenseRequired" }
+        }
+      },
+      "put": {
+        "tags": ["Screens and players"],
+        "operationId": "replacePlayer",
+        "description": "Replacement update with numeric id.",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Player" } } }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Player" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "403": { "$ref": "#/components/responses/LicenseRequired" }
+        }
+      }
+    },
+    "/api/player/{id}": {
+      "get": {
+        "tags": ["Screens and players"],
+        "operationId": "getPlayer",
+        "parameters": [{ "$ref": "#/components/parameters/NumericId" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Player" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Screens and players"],
+        "operationId": "deletePlayer",
+        "parameters": [{ "$ref": "#/components/parameters/NumericId" }],
+        "responses": {
+          "204": { "$ref": "#/components/responses/NoContent" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "403": { "$ref": "#/components/responses/LicenseRequired" }
+        }
+      }
+    },
+    "/api/player/{id}/stop": {
+      "put": {
+        "tags": ["Screens and players"],
+        "operationId": "stopPlayer",
+        "parameters": [{ "$ref": "#/components/parameters/NumericId" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/EmptySuccess" },
+          "403": { "$ref": "#/components/responses/LicenseRequired" }
+        }
+      }
+    },
+    "/api/player/{id}/output": {
+      "put": {
+        "tags": ["Screens and players"],
+        "operationId": "setPlayerOutputVisibility",
+        "parameters": [{ "$ref": "#/components/parameters/NumericId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/VisibilityRequest" } }
+          }
+        },
+        "responses": {
+          "204": { "$ref": "#/components/responses/NoContent" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "403": { "$ref": "#/components/responses/LicenseRequired" }
+        }
+      },
+      "delete": {
+        "tags": ["Screens and players"],
+        "operationId": "closePlayerOutput",
+        "parameters": [{ "$ref": "#/components/parameters/NumericId" }],
+        "responses": {
+          "204": { "$ref": "#/components/responses/NoContent" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "403": { "$ref": "#/components/responses/LicenseRequired" }
+        }
+      }
+    },
+    "/api/mapping": {
+      "get": {
+        "tags": ["Screens and players"],
+        "operationId": "listMappings",
+        "responses": {
+          "200": {
+            "description": "Player mappings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/PlayerMapping" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Screens and players"],
+        "operationId": "createMapping",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/CreateMapping" } }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Mapping" },
+          "403": { "$ref": "#/components/responses/LicenseRequired" }
+        }
+      },
+      "put": {
+        "tags": ["Screens and players"],
+        "operationId": "replaceMapping",
+        "description": "Replacement update with numeric id.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/PlayerMapping" } }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Mapping" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "403": { "$ref": "#/components/responses/LicenseRequired" }
+        }
+      }
+    },
+    "/api/mapping/{id}": {
+      "delete": {
+        "tags": ["Screens and players"],
+        "operationId": "deleteMapping",
+        "parameters": [{ "$ref": "#/components/parameters/NumericId" }],
+        "responses": {
+          "204": { "$ref": "#/components/responses/NoContent" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "403": { "$ref": "#/components/responses/LicenseRequired" }
+        }
+      }
+    },
+    "/api/scheduler": {
+      "get": {
+        "tags": ["Scheduling"],
+        "operationId": "listPlayerSchedule",
+        "parameters": [{ "$ref": "#/components/parameters/PlayerIdQuery" }],
+        "responses": { "200": { "$ref": "#/components/responses/PlayerSchedule" } }
+      },
+      "post": {
+        "tags": ["Scheduling"],
+        "operationId": "createPlayerSchedule",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PlayerSchedulerJobInput" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/PlayerSchedulerJob" },
+          "403": { "$ref": "#/components/responses/LicenseRequired" }
+        }
+      }
+    },
+    "/api/scheduler/{id}": {
+      "put": {
+        "tags": ["Scheduling"],
+        "operationId": "replacePlayerSchedule",
+        "parameters": [{ "$ref": "#/components/parameters/StringId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PlayerSchedulerJobInput" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/PlayerSchedulerJob" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "403": { "$ref": "#/components/responses/LicenseRequired" }
+        }
+      },
+      "delete": {
+        "tags": ["Scheduling"],
+        "operationId": "deletePlayerSchedule",
+        "parameters": [{ "$ref": "#/components/parameters/StringId" }],
+        "responses": {
+          "204": { "$ref": "#/components/responses/NoContent" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "403": { "$ref": "#/components/responses/LicenseRequired" }
+        }
+      }
+    },
+    "/api/scheduler/{id}/run": {
+      "post": {
+        "tags": ["Scheduling"],
+        "operationId": "runPlayerSchedule",
+        "parameters": [{ "$ref": "#/components/parameters/StringId" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/PlayerSchedulerJob" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "403": { "$ref": "#/components/responses/LicenseRequired" }
+        }
+      }
+    },
+    "/api/gmib-scheduler": {
+      "get": {
+        "tags": ["Scheduling"],
+        "operationId": "listGmibSchedule",
+        "responses": { "200": { "$ref": "#/components/responses/GmibSchedule" } }
+      },
+      "post": {
+        "tags": ["Scheduling"],
+        "operationId": "createGmibSchedule",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/GmibSchedulerJobInput" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/GmibSchedulerJob" },
+          "403": { "$ref": "#/components/responses/LicenseRequired" }
+        }
+      }
+    },
+    "/api/gmib-scheduler/{id}": {
+      "put": {
+        "tags": ["Scheduling"],
+        "operationId": "replaceGmibSchedule",
+        "parameters": [{ "$ref": "#/components/parameters/StringId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/GmibSchedulerJobInput" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/GmibSchedulerJob" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "403": { "$ref": "#/components/responses/LicenseRequired" }
+        }
+      },
+      "delete": {
+        "tags": ["Scheduling"],
+        "operationId": "deleteGmibSchedule",
+        "parameters": [{ "$ref": "#/components/parameters/StringId" }],
+        "responses": {
+          "204": { "$ref": "#/components/responses/NoContent" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "403": { "$ref": "#/components/responses/LicenseRequired" }
+        }
+      }
+    },
+    "/api/gmib-scheduler/{id}/run": {
+      "post": {
+        "tags": ["Scheduling"],
+        "operationId": "runGmibSchedule",
+        "parameters": [{ "$ref": "#/components/parameters/StringId" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/GmibSchedulerJob" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "403": { "$ref": "#/components/responses/LicenseRequired" }
+        }
+      }
+    },
+    "/api/display": {
+      "get": {
+        "tags": ["Screens and players"],
+        "operationId": "listDisplays",
+        "description": "Electron display descriptors depend on the current OS and session.",
+        "responses": {
+          "200": {
+            "description": "Displays",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Display" } }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/announce": {
+      "get": {
+        "tags": ["Administration"],
+        "operationId": "getAnnounce",
+        "description": "Legacy `announce` and `iv` values may be present; do not use them as a new activation contract. A client with an HMAC session may send `x-ni-license-session-challenge` to receive a license-session assertion.",
+        "responses": {
+          "200": {
+            "description": "Runtime and license presentation",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Announce" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/activate": {
+      "post": {
+        "tags": ["Administration"],
+        "operationId": "activateLicense",
+        "description": "Allowed before activation. Success initiates relaunch; send the license key in protected JSON input, never an argv value.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/ActivateRequest" } }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/EmptySuccess" },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      }
+    },
+    "/api/license/retry": {
+      "post": {
+        "tags": ["Administration"],
+        "operationId": "retryLicense",
+        "description": "Allowed before activation; may schedule relaunch after success.",
+        "responses": {
+          "200": { "$ref": "#/components/responses/EmptySuccess" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/api/checkForUpdates": {
+      "post": {
+        "tags": ["Administration"],
+        "operationId": "checkForUpdates",
+        "description": "Allowed before activation.",
+        "responses": {
+          "200": {
+            "description": "Updater result or empty string",
+            "content": { "application/json": { "schema": {} } }
+          },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      }
+    },
+    "/api/update": {
+      "post": {
+        "tags": ["Administration"],
+        "operationId": "updateAndRestart",
+        "description": "Allowed before activation. A successful update restarts GMIB.",
+        "responses": {
+          "200": { "$ref": "#/components/responses/EmptySuccess" },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      }
+    },
+    "/api/autostart": {
+      "post": {
+        "tags": ["Administration"],
+        "operationId": "setAutostart",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/BooleanValue" } }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/EmptySuccess" },
+          "403": { "$ref": "#/components/responses/LicenseRequired" }
+        }
+      }
+    },
+    "/api/exactWindowPlacement": {
+      "post": {
+        "tags": ["Administration"],
+        "operationId": "setExactWindowPlacement",
+        "description": "A successful call schedules relaunch.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/BooleanValue" } }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/EmptySuccess" },
+          "403": { "$ref": "#/components/responses/LicenseRequired" }
+        }
+      }
+    },
+    "/api/relaunch": {
+      "post": {
+        "tags": ["Administration"],
+        "operationId": "relaunch",
+        "description": "Schedules a GMIB relaunch after returning success.",
+        "responses": {
+          "200": { "$ref": "#/components/responses/EmptySuccess" },
+          "403": { "$ref": "#/components/responses/LicenseRequired" }
+        }
+      }
+    },
+    "/api/pages": {
+      "get": {
+        "tags": ["Pages"],
+        "operationId": "listPages",
+        "responses": {
+          "200": {
+            "description": "Pages",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Page" } }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Pages"],
+        "operationId": "createPage",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/CreatePage" } }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Page" },
+          "403": { "$ref": "#/components/responses/LicenseRequired" }
+        }
+      }
+    },
+    "/api/pages/{id}": {
+      "put": {
+        "tags": ["Pages"],
+        "operationId": "replacePage",
+        "description": "Replacement update: path id overrides any body id.",
+        "parameters": [{ "$ref": "#/components/parameters/StringId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/CreatePage" } }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Page" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "403": { "$ref": "#/components/responses/LicenseRequired" }
+        }
+      },
+      "delete": {
+        "tags": ["Pages"],
+        "operationId": "deletePage",
+        "parameters": [{ "$ref": "#/components/parameters/StringId" }],
+        "responses": {
+          "204": { "$ref": "#/components/responses/NoContent" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "403": { "$ref": "#/components/responses/LicenseRequired" }
+        }
+      }
+    },
+    "/api/sensors": {
+      "get": {
+        "tags": ["Administration"],
+        "operationId": "getSensors",
+        "parameters": [
+          {
+            "name": "after",
+            "in": "query",
+            "description": "Unix epoch milliseconds; absent or invalid defaults to the previous 24 hours.",
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Three-minute sensor aggregates",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/SensorAggregate" }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "LocalBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Local runtime credential; never expose it to a remote client."
+      },
+      "HmacIdentifier": { "type": "apiKey", "in": "header", "name": "x-ni-identifier" },
+      "HmacTimestamp": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-ni-timestamp",
+        "description": "Unix milliseconds."
+      },
+      "HmacSignature": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-ni-signature",
+        "description": "HMAC-SHA256 of METHOD + PATH_AND_QUERY + TIMESTAMP + BODY using SRP session key. See scripts/gmib-api-client.mjs."
+      }
+    },
+    "parameters": {
+      "NumericId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "integer" }
+      },
+      "StringId": { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } },
+      "ClientId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,128}$" }
+      },
+      "MediaId": { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } },
+      "PlayerIdQuery": { "name": "playerId", "in": "query", "schema": { "type": "integer" } }
+    },
+    "schemas": {
+      "SrpChallenge": {
+        "type": "object",
+        "required": ["id", "salt", "B"],
+        "properties": {
+          "id": { "type": "string" },
+          "salt": { "$ref": "#/components/schemas/HexInteger" },
+          "B": { "$ref": "#/components/schemas/HexInteger" }
+        }
+      },
+      "SrpLoginRequest": {
+        "type": "object",
+        "required": ["A", "M1"],
+        "additionalProperties": false,
+        "properties": {
+          "A": { "$ref": "#/components/schemas/HexInteger" },
+          "M1": { "$ref": "#/components/schemas/HexInteger" }
+        }
+      },
+      "SrpLoginResponse": {
+        "type": "object",
+        "required": ["M2"],
+        "properties": { "M2": { "$ref": "#/components/schemas/HexInteger" } }
+      },
+      "HexInteger": { "type": "string", "pattern": "^0x[0-9a-fA-F]+$", "example": "0x1a2b" },
+      "PasswordRotationRequest": {
+        "type": "object",
+        "required": ["salt", "verifier"],
+        "additionalProperties": false,
+        "properties": {
+          "salt": { "$ref": "#/components/schemas/HexInteger" },
+          "verifier": { "$ref": "#/components/schemas/HexInteger" }
+        }
+      },
+      "ReauthenticateResponse": {
+        "type": "object",
+        "required": ["reauthenticateRequired"],
+        "properties": { "reauthenticateRequired": { "type": "boolean", "const": true } }
+      },
+      "ApiError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": { "type": "string" },
+              "message": { "type": "string" },
+              "reauthenticateRequired": { "type": "boolean" }
+            }
+          },
+          "identifier": { "type": "string" },
+          "message": { "type": "string" }
+        },
+        "additionalProperties": true
+      },
+      "MediaInfo": {
+        "type": "object",
+        "required": [
+          "md5",
+          "filename",
+          "original",
+          "duration",
+          "size",
+          "streams",
+          "width",
+          "height"
+        ],
+        "properties": {
+          "md5": { "type": "string" },
+          "filename": { "type": "string" },
+          "original": {
+            "type": "object",
+            "required": ["md5", "filename"],
+            "properties": { "md5": { "type": "string" }, "filename": { "type": "string" } }
+          },
+          "formatName": { "type": "string" },
+          "formatLongName": { "type": "string" },
+          "timecode": { "type": "number" },
+          "fps": { "type": "number" },
+          "duration": { "type": "number" },
+          "size": { "type": "number" },
+          "streams": { "type": "integer" },
+          "video": { "type": "integer" },
+          "audio": { "type": "integer" },
+          "codecName": { "type": "string" },
+          "codecLongName": { "type": "string" },
+          "profile": { "type": "string" },
+          "width": { "type": "number" },
+          "height": { "type": "number" },
+          "fieldOrder": { "type": "string" },
+          "uploadTime": { "type": "string", "format": "date-time" },
+          "thumbnail": { "type": "string" }
+        }
+      },
+      "MediaUploadPartial": {
+        "type": "object",
+        "required": ["media", "errors"],
+        "properties": {
+          "media": { "type": "array", "items": { "$ref": "#/components/schemas/MediaInfo" } },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["filename", "message"],
+              "properties": { "filename": { "type": "string" }, "message": { "type": "string" } }
+            }
+          }
+        }
+      },
+      "PlaylistItem": {
+        "type": "object",
+        "required": ["id", "md5"],
+        "properties": {
+          "id": { "type": "string" },
+          "md5": { "type": "string" },
+          "flags": { "type": "integer" },
+          "start": { "type": "number" },
+          "duration": { "type": "number" }
+        }
+      },
+      "CreatePlaylistItem": {
+        "type": "object",
+        "required": ["md5"],
+        "properties": {
+          "md5": { "type": "string" },
+          "flags": { "type": "integer" },
+          "start": { "type": "number" },
+          "duration": { "type": "number" }
+        }
+      },
+      "Playlist": {
+        "type": "object",
+        "required": ["id", "name", "flags", "items"],
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "flags": { "type": "integer" },
+          "creationTime": { "type": "string" },
+          "lastUsed": { "type": "string" },
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/PlaylistItem" } }
+        }
+      },
+      "CreatePlaylist": {
+        "type": "object",
+        "required": ["name", "flags"],
+        "properties": {
+          "name": { "type": "string" },
+          "flags": { "type": "integer" },
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/CreatePlaylistItem" }
+          }
+        }
+      },
+      "PlaylistItemChange": {
+        "type": "object",
+        "oneOf": [
+          {
+            "required": ["insert"],
+            "properties": { "insert": { "type": "array", "items": { "type": "string" } } }
+          },
+          { "required": ["remove"], "properties": { "remove": { "type": "string" } } }
+        ]
+      },
+      "Screen": {
+        "type": "object",
+        "required": ["id", "name", "left", "top"],
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "width": { "type": "number" },
+          "height": { "type": "number" },
+          "moduleWidth": { "type": "number" },
+          "moduleHeight": { "type": "number" },
+          "left": { "type": "number" },
+          "top": { "type": "number" },
+          "display": { "type": "number" },
+          "addresses": { "type": "array", "items": { "type": "string" } },
+          "downToTop": { "type": "boolean" },
+          "rightToLeft": { "type": "boolean" },
+          "borderTop": { "type": "number" },
+          "borderBottom": { "type": "number" },
+          "borderLeft": { "type": "number" },
+          "borderRight": { "type": "number" },
+          "brightnessFactor": { "type": "number" },
+          "test": { "type": "string" },
+          "brightness": { "type": "number" },
+          "useExternalKnob": { "type": "boolean" },
+          "outputTransparent": { "type": "boolean" },
+          "zIndex": { "type": "number" }
+        }
+      },
+      "CreateScreen": {
+        "type": "object",
+        "required": ["name", "left", "top"],
+        "properties": {
+          "name": { "type": "string" },
+          "width": { "type": "number" },
+          "height": { "type": "number" },
+          "moduleWidth": { "type": "number" },
+          "moduleHeight": { "type": "number" },
+          "left": { "type": "number" },
+          "top": { "type": "number" },
+          "display": { "type": "number" },
+          "addresses": { "type": "array", "items": { "type": "string" } },
+          "downToTop": { "type": "boolean" },
+          "rightToLeft": { "type": "boolean" },
+          "borderTop": { "type": "number" },
+          "borderBottom": { "type": "number" },
+          "borderLeft": { "type": "number" },
+          "borderRight": { "type": "number" },
+          "brightnessFactor": { "type": "number" },
+          "test": { "type": "string" },
+          "brightness": { "type": "number" },
+          "useExternalKnob": { "type": "boolean" },
+          "outputTransparent": { "type": "boolean" },
+          "zIndex": { "type": "number" }
+        }
+      },
+      "Player": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "playlistId": { "type": ["integer", "null"] },
+          "current": { "type": "string" },
+          "width": { "type": "number" },
+          "height": { "type": "number" },
+          "autoPlay": { "type": "boolean" },
+          "disableFadeIn": { "type": "boolean" },
+          "disableFadeOut": { "type": "boolean" },
+          "playbackEngine": { "type": "string", "enum": ["decoder", "capture"] },
+          "hidden": { "type": "boolean" }
+        }
+      },
+      "CreatePlayer": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "playlistId": { "type": ["integer", "null"] },
+          "current": { "type": "string" },
+          "width": { "type": "number" },
+          "height": { "type": "number" },
+          "autoPlay": { "type": "boolean" },
+          "disableFadeIn": { "type": "boolean" },
+          "disableFadeOut": { "type": "boolean" },
+          "playbackEngine": { "type": "string", "enum": ["decoder", "capture"] },
+          "hidden": { "type": "boolean" }
+        }
+      },
+      "VisibilityRequest": {
+        "type": "object",
+        "required": ["visible"],
+        "properties": { "visible": { "type": "boolean" } }
+      },
+      "PlayerMapping": {
+        "type": "object",
+        "required": ["id", "name", "player", "left", "top", "kiosk"],
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "player": { "type": "integer" },
+          "width": { "type": "number" },
+          "height": { "type": "number" },
+          "left": { "type": "number" },
+          "top": { "type": "number" },
+          "display": { "type": "number" },
+          "kiosk": { "type": "boolean" },
+          "zIndex": { "type": "number" },
+          "shader": { "type": "string" },
+          "transparent": { "type": "boolean" },
+          "alwaysOnTop": { "type": "boolean" },
+          "objectFit": {
+            "type": "string",
+            "enum": ["fill", "contain", "cover", "none", "scale-down"]
+          }
+        }
+      },
+      "CreateMapping": {
+        "type": "object",
+        "required": ["player"],
+        "properties": {
+          "name": { "type": "string" },
+          "player": { "type": "integer" },
+          "width": { "type": "number" },
+          "height": { "type": "number" },
+          "left": { "type": "number" },
+          "top": { "type": "number" },
+          "display": { "type": "number" },
+          "kiosk": { "type": "boolean" },
+          "zIndex": { "type": "number" },
+          "shader": { "type": "string" },
+          "transparent": { "type": "boolean" },
+          "alwaysOnTop": { "type": "boolean" },
+          "objectFit": {
+            "type": "string",
+            "enum": ["fill", "contain", "cover", "none", "scale-down"]
+          }
+        }
+      },
+      "CronPart": {
+        "type": "object",
+        "required": ["mode", "every", "selected"],
+        "properties": {
+          "mode": { "type": "string", "enum": ["all", "every", "select"] },
+          "every": { "type": "integer" },
+          "selected": { "type": "array", "items": { "type": "integer" } }
+        }
+      },
+      "SimpleCronPart": {
+        "type": "object",
+        "required": ["mode", "selected"],
+        "properties": {
+          "mode": { "type": "string", "enum": ["all", "select"] },
+          "selected": { "type": "array", "items": { "type": "integer" } }
+        }
+      },
+      "CronSchedule": {
+        "type": "object",
+        "required": ["seconds", "minutes", "hours", "days", "months", "weekdays"],
+        "properties": {
+          "seconds": { "$ref": "#/components/schemas/CronPart" },
+          "minutes": { "$ref": "#/components/schemas/CronPart" },
+          "hours": { "$ref": "#/components/schemas/CronPart" },
+          "days": { "$ref": "#/components/schemas/SimpleCronPart" },
+          "months": { "$ref": "#/components/schemas/SimpleCronPart" },
+          "weekdays": { "$ref": "#/components/schemas/SimpleCronPart" }
+        }
+      },
+      "SchedulerBase": {
+        "type": "object",
+        "required": ["kind", "name", "enabled", "priority"],
+        "properties": {
+          "id": { "type": "string" },
+          "kind": { "type": "string", "enum": ["once", "cron"] },
+          "name": { "type": "string" },
+          "runAt": { "type": "string" },
+          "cron": { "$ref": "#/components/schemas/CronSchedule" },
+          "enabled": { "type": "boolean" },
+          "priority": { "type": "number" },
+          "lastRunAt": { "type": "string" },
+          "lastRunKey": { "type": "string" },
+          "lastStatus": { "type": "string", "enum": ["idle", "success", "error"] },
+          "lastMessage": { "type": "string" },
+          "nextRunAt": { "type": "string" }
+        }
+      },
+      "PlayerSchedulerJob": {
+        "allOf": [
+          { "$ref": "#/components/schemas/SchedulerBase" },
+          {
+            "type": "object",
+            "required": ["id", "playerId", "action"],
+            "properties": {
+              "playerId": { "type": "integer" },
+              "action": {
+                "type": "string",
+                "enum": [
+                  "load-playlist",
+                  "toggle-play",
+                  "play",
+                  "stop",
+                  "hide-output",
+                  "show-output",
+                  "next",
+                  "play-item"
+                ]
+              },
+              "playlistId": { "type": "integer" },
+              "itemNumber": { "type": "integer" },
+              "hideOutputOnStop": { "type": "boolean" },
+              "outputAll": { "type": "boolean" }
+            }
+          }
+        ]
+      },
+      "PlayerSchedulerJobInput": {
+        "allOf": [
+          { "$ref": "#/components/schemas/SchedulerBase" },
+          {
+            "type": "object",
+            "required": ["playerId", "action"],
+            "properties": {
+              "playerId": { "type": "integer" },
+              "action": {
+                "type": "string",
+                "enum": [
+                  "load-playlist",
+                  "toggle-play",
+                  "play",
+                  "stop",
+                  "hide-output",
+                  "show-output",
+                  "next",
+                  "play-item"
+                ]
+              },
+              "playlistId": { "type": "integer" },
+              "itemNumber": { "type": "integer" },
+              "hideOutputOnStop": { "type": "boolean" },
+              "outputAll": { "type": "boolean" }
+            }
+          }
+        ]
+      },
+      "GmibSchedulerJob": {
+        "allOf": [
+          { "$ref": "#/components/schemas/SchedulerBase" },
+          {
+            "type": "object",
+            "required": ["id", "action"],
+            "properties": {
+              "action": {
+                "type": "string",
+                "enum": [
+                  "show-test",
+                  "hide-test",
+                  "set-brightness",
+                  "set-autobrightness",
+                  "set-overheat-protection"
+                ]
+              },
+              "screenId": { "type": "integer" },
+              "testId": { "type": "string" },
+              "brightness": { "type": "number" },
+              "enabledValue": { "type": "boolean" }
+            }
+          }
+        ]
+      },
+      "GmibSchedulerJobInput": {
+        "allOf": [
+          { "$ref": "#/components/schemas/SchedulerBase" },
+          {
+            "type": "object",
+            "required": ["action"],
+            "properties": {
+              "action": {
+                "type": "string",
+                "enum": [
+                  "show-test",
+                  "hide-test",
+                  "set-brightness",
+                  "set-autobrightness",
+                  "set-overheat-protection"
+                ]
+              },
+              "screenId": { "type": "integer" },
+              "testId": { "type": "string" },
+              "brightness": { "type": "number" },
+              "enabledValue": { "type": "boolean" }
+            }
+          }
+        ]
+      },
+      "Display": {
+        "type": "object",
+        "required": ["id", "bounds", "workArea", "displayFrequency", "internal"],
+        "properties": {
+          "id": { "type": "integer" },
+          "bounds": { "$ref": "#/components/schemas/Rectangle" },
+          "workArea": { "$ref": "#/components/schemas/Rectangle" },
+          "displayFrequency": { "type": "number" },
+          "internal": { "type": "boolean" },
+          "primary": { "type": "boolean", "const": true }
+        }
+      },
+      "Rectangle": {
+        "type": "object",
+        "properties": {
+          "x": { "type": "number" },
+          "y": { "type": "number" },
+          "width": { "type": "number" },
+          "height": { "type": "number" }
+        }
+      },
+      "Announce": {
+        "type": "object",
+        "required": [
+          "licenseProtocol",
+          "licenseState",
+          "key",
+          "autostart",
+          "exactWindowPlacement",
+          "info"
+        ],
+        "properties": {
+          "announce": { "type": "string", "deprecated": true },
+          "iv": { "type": "string", "deprecated": true },
+          "license": { "description": "Signed license document; opaque to callers." },
+          "licenseProtocol": { "type": "integer", "const": 2 },
+          "licenseState": { "type": "object", "additionalProperties": true },
+          "licenseSession": { "type": "object", "additionalProperties": true },
+          "key": { "type": "string", "description": "Machine id; do not treat as a license key." },
+          "autostart": { "type": "boolean" },
+          "exactWindowPlacement": { "type": "boolean" },
+          "info": {
+            "type": "object",
+            "required": ["name", "version", "platform", "arch"],
+            "properties": {
+              "name": { "type": "string" },
+              "version": { "type": "string" },
+              "platform": { "type": "string" },
+              "arch": { "type": "string" }
+            }
+          }
+        }
+      },
+      "ActivateRequest": {
+        "type": "object",
+        "required": ["key"],
+        "properties": {
+          "key": { "type": "string", "writeOnly": true },
+          "name": { "type": "string" }
+        }
+      },
+      "BooleanValue": {
+        "type": "object",
+        "required": ["value"],
+        "properties": { "value": { "type": "boolean" } }
+      },
+      "Page": {
+        "type": "object",
+        "required": ["id", "title"],
+        "properties": {
+          "id": { "type": "string" },
+          "url": { "type": "string" },
+          "title": { "type": "string" },
+          "permanent": { "type": "boolean", "const": true },
+          "preload": { "type": "string" },
+          "userAgent": { "type": "string" },
+          "hidden": { "type": "boolean" }
+        }
+      },
+      "CreatePage": {
+        "type": "object",
+        "required": ["title"],
+        "properties": {
+          "url": { "type": "string" },
+          "title": { "type": "string" },
+          "permanent": { "type": "boolean", "const": true },
+          "preload": { "type": "string" },
+          "userAgent": { "type": "string" },
+          "hidden": { "type": "boolean" }
+        }
+      },
+      "SensorAggregate": {
+        "type": "object",
+        "properties": {
+          "address": { "type": "string" },
+          "temperature": { "type": "number" },
+          "illuminance": { "type": "number" },
+          "time": { "type": "number" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "responses": {
+      "NoContent": { "description": "Completed without a body." },
+      "EmptySuccess": { "description": "Completed; runtime may return an empty 200 response." },
+      "BadRequest": {
+        "description": "Invalid request",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } }
+      },
+      "Unauthorized": {
+        "description": "Authentication failed; general middleware returns `{ identifier }` for a new SRP attempt.",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } }
+      },
+      "ForbiddenLicense": { "description": "Requires an active license; body is plain text." },
+      "LicenseRequired": { "description": "Requires an active license; body is plain text." },
+      "NotFound": { "description": "Resource not found." },
+      "Conflict": {
+        "description": "Conflict or state precondition failed.",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } }
+      },
+      "TooManyRequests": { "description": "Too many pending SRP handshakes." },
+      "ServerError": { "description": "Runtime failed; body may be plain text." },
+      "SrpRotationFailure": {
+        "description": "`rotation_failed` leaves old credentials active; `revocation_incomplete` means new credentials were stored and callers must reauthenticate.",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } }
+      },
+      "MediaList": {
+        "description": "Media list",
+        "content": {
+          "application/json": {
+            "schema": { "type": "array", "items": { "$ref": "#/components/schemas/MediaInfo" } }
+          }
+        }
+      },
+      "PlaylistList": {
+        "description": "Playlists",
+        "content": {
+          "application/json": {
+            "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Playlist" } }
+          }
+        }
+      },
+      "Playlist": {
+        "description": "Playlist",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Playlist" } } }
+      },
+      "Screen": {
+        "description": "Screen",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Screen" } } }
+      },
+      "Player": {
+        "description": "Player",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Player" } } }
+      },
+      "Mapping": {
+        "description": "Player mapping",
+        "content": {
+          "application/json": { "schema": { "$ref": "#/components/schemas/PlayerMapping" } }
+        }
+      },
+      "PlayerSchedule": {
+        "description": "Player scheduler jobs",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "array",
+              "items": { "$ref": "#/components/schemas/PlayerSchedulerJob" }
+            }
+          }
+        }
+      },
+      "PlayerSchedulerJob": {
+        "description": "Player scheduler job",
+        "content": {
+          "application/json": { "schema": { "$ref": "#/components/schemas/PlayerSchedulerJob" } }
+        }
+      },
+      "GmibSchedule": {
+        "description": "GMIB scheduler jobs",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "array",
+              "items": { "$ref": "#/components/schemas/GmibSchedulerJob" }
+            }
+          }
+        }
+      },
+      "GmibSchedulerJob": {
+        "description": "GMIB scheduler job",
+        "content": {
+          "application/json": { "schema": { "$ref": "#/components/schemas/GmibSchedulerJob" } }
+        }
+      },
+      "Page": {
+        "description": "Page",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Page" } } }
+      }
+    }
+  }
+}
