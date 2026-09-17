@@ -371,7 +371,7 @@ const registerOutputPage = async (
   broadcast({ event: 'page', all: true });
 };
 
-class PluginStorage {
+export class PluginStorage {
   private data: Record<string, unknown> = {};
 
   private writeQueue = Promise.resolve();
@@ -402,8 +402,7 @@ class PluginStorage {
     const cloned = structuredClone(value);
     JSON.stringify(cloned);
     await this.enqueue(async () => {
-      this.data[key] = cloned;
-      await this.persist();
+      await this.commit(key, cloned);
     });
   }
 
@@ -414,22 +413,43 @@ class PluginStorage {
         T | undefined;
       result = structuredClone(updater(current));
       JSON.stringify(result);
-      this.data[key] = result;
-      await this.persist();
+      await this.commit(key, result);
     });
     return structuredClone(result as T);
   }
 
   private enqueue(operation: () => Promise<void>): Promise<void> {
-    this.writeQueue = this.writeQueue.then(operation, operation);
-    return this.writeQueue;
+    const result = this.writeQueue.then(operation, operation);
+    this.writeQueue = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    return result;
+  }
+
+  private async commit(key: string, value: unknown): Promise<void> {
+    const hadKey = Object.prototype.hasOwnProperty.call(this.data, key);
+    const previous = this.data[key];
+    this.data[key] = value;
+    try {
+      await this.persist();
+    } catch (error) {
+      if (hadKey) this.data[key] = previous;
+      else delete this.data[key];
+      throw error;
+    }
   }
 
   private async persist(): Promise<void> {
     const snapshot = JSON.stringify(this.data, null, 2);
     const temporary = `${this.filename}.${nanoid()}.tmp`;
-    await fs.promises.writeFile(temporary, snapshot, { encoding: 'utf8', mode: 0o600 });
-    await fs.promises.rename(temporary, this.filename);
+    try {
+      await fs.promises.writeFile(temporary, snapshot, { encoding: 'utf8', mode: 0o600 });
+      await fs.promises.rename(temporary, this.filename);
+    } catch (error) {
+      await fs.promises.rm(temporary, { force: true }).catch(() => undefined);
+      throw error;
+    }
   }
 }
 

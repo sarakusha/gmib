@@ -46,7 +46,12 @@ vi.mock('../src/pluginRuntime', () => ({
   resolvePluginOrder: vi.fn(() => ({ order: [], errors: new Map() })),
 }));
 
-import { installPluginFromArchive, listPlugins, setPluginEnabled } from '../src/pluginHost';
+import {
+  installPluginFromArchive,
+  listPlugins,
+  PluginStorage,
+  setPluginEnabled,
+} from '../src/pluginHost';
 
 const archive = async (directory: string, version: string, description: string) => {
   const filename = path.join(directory, `sample-${version}.gmib-plugin`);
@@ -77,6 +82,40 @@ afterAll(async () => {
 });
 
 describe('plugin host lifecycle persistence', () => {
+  it('restores in-memory storage after set and update persistence failures', async () => {
+    const storage = await PluginStorage.create('storage-sample');
+    await storage.set('settings', { brightness: 25 });
+    const originalRename = fs.promises.rename.bind(fs.promises);
+    const failPersistence = () =>
+      vi.spyOn(fs.promises, 'rename').mockImplementation(async (source, target) => {
+        if (String(target).endsWith('state.json')) throw new Error('storage persistence failed');
+        return originalRename(source, target);
+      });
+
+    let rename = failPersistence();
+    await expect(storage.set('settings', { brightness: 50 })).rejects.toThrow(
+      'storage persistence failed',
+    );
+    rename.mockRestore();
+    await expect(storage.get('settings')).resolves.toEqual({ brightness: 25 });
+
+    rename = failPersistence();
+    await expect(
+      storage.update<{ brightness: number }>('settings', current => ({
+        brightness: (current?.brightness ?? 0) + 10,
+      })),
+    ).rejects.toThrow('storage persistence failed');
+    rename.mockRestore();
+    await expect(storage.get('settings')).resolves.toEqual({ brightness: 25 });
+
+    await expect(
+      fs.promises.readFile(
+        path.join(mocks.root, 'plugins', '.data', 'storage-sample', 'state.json'),
+        'utf8',
+      ),
+    ).resolves.toContain('25');
+  });
+
   it('reads back installed status and restores the old plugin when registry persistence fails', async () => {
     const first = await archive(mocks.root, '1.0.0', 'old');
     await installPluginFromArchive(first.filename, {

@@ -108,7 +108,7 @@ import {
   uniquePlaylistName,
   updatePlaylist,
 } from './playlist';
-import { authenticatedPluginApiHandler } from './pluginHost';
+import { mountAuthenticatedPluginApi } from './pluginApiMount';
 import { pluginManagementRouter } from './pluginManagementRouter';
 import relaunch from './relaunch';
 import {
@@ -309,7 +309,7 @@ mountApiAuth(api, {
 
 mountManagementSettingsApi(api);
 
-api.use('/plugins/:pluginId', authenticatedPluginApiHandler);
+mountAuthenticatedPluginApi(api);
 
 let runtimeApiStarted = false;
 
