@@ -1,0 +1,44 @@
+---
+- name: Validate resource declaration
+  ansible.builtin.assert:
+    that:
+      - gmib_resource.type in ['screen', 'player', 'playlist', 'mapping', 'scheduler',
+        'gmib-scheduler']
+      - gmib_resource.desired is mapping
+    fail_msg: Each gmib_resources item needs a supported type and desired mapping.
+
+- name: Require requested plugin runtime for dependent resource
+  ansible.builtin.assert:
+    that:
+      - not (gmib_resource.requires_plugin_runtime | default(false) | bool) or not
+        (gmib_restart_required | bool)
+    fail_msg: >-
+      This resource depends on a plugin runtime whose lifecycle change is pending. Enable
+      gmib_relaunch_when_required and apply after authenticated plugin readback.
+
+- name: 'Ensure {{ gmib_resource.type }}'
+  ansible.builtin.command:
+    argv: >-
+      {{
+        [
+          gmib_node,
+          gmib_checkout ~ '/scripts/gmib-api-resources.mjs',
+          'ensure',
+          '--type', gmib_resource.type,
+          '--desired-stdin',
+          '--base-url', gmib_base_url,
+          '--client-id', gmib_client_id,
+          '--timeout-ms', gmib_timeout_ms | string,
+          '--password-env', 'GMIB_ANSIBLE_PASSWORD'
+        ] + (ansible_check_mode | ternary(['--check'], []))
+      }}
+    stdin: '{{ gmib_resource.desired | to_json }}'
+  environment:
+    GMIB_ANSIBLE_PASSWORD: '{{ gmib_password }}'
+  register: gmib_resource_result
+  changed_when: (gmib_resource_result.stdout | from_json).changed | default(false) | bool
+  failed_when: >-
+    gmib_resource_result.rc != 0 or not ((gmib_resource_result.stdout | from_json).ok |
+    default(false))
+  check_mode: false
+  no_log: true

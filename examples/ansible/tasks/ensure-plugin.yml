@@ -1,0 +1,262 @@
+---
+- name: Validate plugin lifecycle declaration
+  ansible.builtin.assert:
+    that:
+      - gmib_plugin.id is string
+      - gmib_plugin.id | length > 0
+      - gmib_plugin.state | default('present') in ['present', 'absent']
+      - gmib_plugin.state | default('present') == 'absent' or gmib_plugin.official is defined or
+        gmib_plugin.enabled is defined
+    fail_msg: Plugin state needs id and state; a missing plugin also needs an official pin.
+
+- name: Read installed plugins
+  ansible.builtin.command:
+    argv:
+      - '{{ gmib_node }}'
+      - '{{ gmib_checkout }}/scripts/gmib-api.mjs'
+      - request
+      - --path
+      - /api/manage/v1/plugins
+      - --base-url
+      - '{{ gmib_base_url }}'
+      - --client-id
+      - '{{ gmib_client_id }}'
+      - --timeout-ms
+      - '{{ gmib_timeout_ms | string }}'
+      - --password-env
+      - GMIB_ANSIBLE_PASSWORD
+  environment:
+    GMIB_ANSIBLE_PASSWORD: '{{ gmib_password }}'
+  register: gmib_plugin_list_result
+  changed_when: false
+  failed_when: >-
+    gmib_plugin_list_result.rc != 0 or not ((gmib_plugin_list_result.stdout | from_json).ok |
+    default(false))
+  check_mode: false
+  no_log: true
+
+- name: Select installed plugin
+  ansible.builtin.set_fact:
+    gmib_plugin_matches: >-
+      {{
+        (gmib_plugin_list_result.stdout | from_json).data.plugins
+        | selectattr('manifest.id', 'defined')
+        | selectattr('manifest.id', 'equalto', gmib_plugin.id)
+        | list
+      }}
+  no_log: true
+
+- name: Validate install pin for missing plugin
+  ansible.builtin.assert:
+    that:
+      - gmib_plugin_matches | length > 0 or gmib_plugin.official is defined or gmib_plugin.state |
+        default('present') == 'absent'
+    fail_msg: A missing present plugin requires official version, sha256 and consent fields.
+
+- name: Calculate plugin lifecycle change
+  ansible.builtin.set_fact:
+    gmib_plugin_current:
+      '{{ (gmib_plugin_matches | first) if gmib_plugin_matches | length > 0 else {} }}'
+    gmib_plugin_desired_enabled: '{{ gmib_plugin.enabled | default(true) | bool }}'
+
+- name: Compare plugin lifecycle state
+  ansible.builtin.set_fact:
+    gmib_plugin_needs_change: >-
+      {{
+        ((gmib_plugin.state | default('present') == 'absent') and gmib_plugin_current | length > 0)
+      or
+        ((gmib_plugin.state | default('present') != 'absent') and (
+          gmib_plugin_current | length == 0 or
+          gmib_plugin_current.enabled | default(false) | bool != gmib_plugin_desired_enabled | bool
+      or
+          (gmib_plugin.official | default({}) | length > 0 and (
+            gmib_plugin_current.manifest.version | default('') != gmib_plugin.official.version |
+      default('') or
+            gmib_plugin_current.archiveSha256 | default('') != gmib_plugin.official.sha256 |
+      default('') or
+            (gmib_plugin_current.manifest.permissions | default([]) | sort) !=
+      (gmib_plugin.official.permissions | default([]) | sort) or
+            (gmib_plugin_current.manifest.main is defined) != (gmib_plugin.official.trustedBackend |
+      default(false) | bool)
+          ))
+        ))
+      }}
+  no_log: true
+
+- name: Preview plugin lifecycle change
+  ansible.builtin.debug:
+    msg: 'Plugin {{ gmib_plugin.id }} would change.'
+  changed_when: gmib_plugin_needs_change | bool
+  when: ansible_check_mode
+
+- name: Remember current plugin runtime state
+  ansible.builtin.set_fact:
+    gmib_restart_required: >-
+      {{
+        gmib_restart_required | bool or
+        gmib_plugin_current.restartRequired | default(false) | bool
+      }}
+  no_log: true
+
+- name: Install or update pinned official plugin
+  ansible.builtin.command:
+    argv:
+      - '{{ gmib_node }}'
+      - '{{ gmib_checkout }}/scripts/gmib-api.mjs'
+      - request
+      - --method
+      - POST
+      - --path
+      - '/api/manage/v1/plugins/official/{{ gmib_plugin.id | urlencode }}/install'
+      - --body-stdin
+      - --base-url
+      - '{{ gmib_base_url }}'
+      - --client-id
+      - '{{ gmib_client_id }}'
+      - --timeout-ms
+      - '{{ gmib_timeout_ms | string }}'
+      - --password-env
+      - GMIB_ANSIBLE_PASSWORD
+    stdin: >-
+      {{
+        gmib_plugin.official
+        | combine({'enabled': gmib_plugin_desired_enabled | bool})
+        | to_json
+      }}
+  environment:
+    GMIB_ANSIBLE_PASSWORD: '{{ gmib_password }}'
+  register: gmib_plugin_install_result
+  changed_when: >-
+    (((gmib_plugin_install_result.stdout | from_json).data | default({})).changed | default(false) |
+    bool)
+  failed_when: >-
+    gmib_plugin_install_result.rc != 0 or not ((gmib_plugin_install_result.stdout | from_json).ok |
+    default(false))
+  check_mode: false
+  no_log: true
+  when:
+    - not ansible_check_mode
+    - gmib_plugin.state | default('present') == 'present'
+    - gmib_plugin.official is defined
+    - gmib_plugin_needs_change | bool
+
+- name: Remember official plugin runtime state
+  ansible.builtin.set_fact:
+    gmib_restart_required: >-
+      {{
+        gmib_restart_required | bool or
+        (gmib_plugin_install_result.stdout | from_json).data.restartRequired | default(false) | bool
+      or
+        (gmib_plugin_install_result.stdout | from_json).data.plugin.restartRequired | default(false)
+      | bool }}
+  no_log: true
+  when:
+    - gmib_plugin_install_result is defined
+    - not (gmib_plugin_install_result.skipped | default(false))
+
+- name: Enable or disable installed plugin
+  ansible.builtin.command:
+    argv:
+      - '{{ gmib_node }}'
+      - '{{ gmib_checkout }}/scripts/gmib-api.mjs'
+      - request
+      - --method
+      - PUT
+      - --path
+      - '/api/manage/v1/plugins/{{ gmib_plugin.id | urlencode }}/enabled'
+      - --body-stdin
+      - --base-url
+      - '{{ gmib_base_url }}'
+      - --client-id
+      - '{{ gmib_client_id }}'
+      - --timeout-ms
+      - '{{ gmib_timeout_ms | string }}'
+      - --password-env
+      - GMIB_ANSIBLE_PASSWORD
+    stdin: "{{ {'enabled': gmib_plugin_desired_enabled | bool} | to_json }}"
+  environment:
+    GMIB_ANSIBLE_PASSWORD: '{{ gmib_password }}'
+  register: gmib_plugin_enabled_result
+  changed_when: >-
+    (((gmib_plugin_enabled_result.stdout | from_json).data | default({})).changed | default(false) |
+    bool)
+  failed_when: >-
+    gmib_plugin_enabled_result.rc != 0 or not ((gmib_plugin_enabled_result.stdout | from_json).ok |
+    default(false))
+  check_mode: false
+  no_log: true
+  when:
+    - not ansible_check_mode
+    - gmib_plugin.state | default('present') == 'present'
+    - gmib_plugin.official is not defined
+    - gmib_plugin_needs_change | bool
+
+- name: Remember enabled plugin runtime state
+  ansible.builtin.set_fact:
+    gmib_restart_required: >-
+      {{
+        gmib_restart_required | bool or
+        (gmib_plugin_enabled_result.stdout | from_json).data.restartRequired | default(false) | bool
+      or
+        (gmib_plugin_enabled_result.stdout | from_json).data.plugin.restartRequired | default(false)
+      | bool }}
+  no_log: true
+  when:
+    - gmib_plugin_enabled_result is defined
+    - not (gmib_plugin_enabled_result.skipped | default(false))
+
+- name: Note absent-plugin runtime uncertainty in check mode
+  ansible.builtin.debug:
+    msg: >-
+      Plugin {{ gmib_plugin.id }} is absent on disk. Check mode does not send the idempotent DELETE,
+      so a removed runtime pending restart cannot be observed.
+  changed_when: false
+  when:
+    - ansible_check_mode
+    - gmib_plugin.state | default('present') == 'absent'
+    - gmib_plugin_current | length == 0
+
+- name: Uninstall plugin
+  ansible.builtin.command:
+    argv:
+      - '{{ gmib_node }}'
+      - '{{ gmib_checkout }}/scripts/gmib-api.mjs'
+      - request
+      - --method
+      - DELETE
+      - --path
+      - '/api/manage/v1/plugins/{{ gmib_plugin.id | urlencode }}'
+      - --base-url
+      - '{{ gmib_base_url }}'
+      - --client-id
+      - '{{ gmib_client_id }}'
+      - --timeout-ms
+      - '{{ gmib_timeout_ms | string }}'
+      - --password-env
+      - GMIB_ANSIBLE_PASSWORD
+  environment:
+    GMIB_ANSIBLE_PASSWORD: '{{ gmib_password }}'
+  register: gmib_plugin_delete_result
+  changed_when: >-
+    (((gmib_plugin_delete_result.stdout | from_json).data | default({})).changed | default(false) |
+    bool)
+  failed_when: >-
+    gmib_plugin_delete_result.rc != 0 or not ((gmib_plugin_delete_result.stdout | from_json).ok |
+    default(false))
+  check_mode: false
+  no_log: true
+  when:
+    - not ansible_check_mode
+    - gmib_plugin.state | default('present') == 'absent'
+
+- name: Remember removed plugin runtime state
+  ansible.builtin.set_fact:
+    gmib_restart_required: >-
+      {{
+        gmib_restart_required | bool or
+        (gmib_plugin_delete_result.stdout | from_json).data.restartRequired | default(false) | bool
+      }}
+  no_log: true
+  when:
+    - gmib_plugin_delete_result is defined
+    - not (gmib_plugin_delete_result.skipped | default(false))

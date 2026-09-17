@@ -1,0 +1,5 @@
+---
+gmib:
+  hosts:
+    local-controller:
+      ansible_connection: local

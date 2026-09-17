@@ -1,0 +1,108 @@
+---
+gmib_base_url: http://gmib-sign-01:9002
+gmib_client_id: ansible-controller-01
+
+# This fixed flow reads real server IDs and passes them to dependent resources. In check mode, new
+# dependants remain pending until create returns an ID.
+gmib_linked_resources:
+  playlist:
+    name: Main playlist
+    flags: 0
+    items: []
+  player:
+    name: Main player
+    width: 1920
+    height: 1080
+    autoPlay: true
+  mapping:
+    name: Main mapping
+    left: 0
+    top: 0
+    width: 1920
+    height: 1080
+  scheduler:
+    id: morning-player
+    kind: cron
+    name: Start player in the morning
+    enabled: true
+    priority: 10
+    action: play
+    cron:
+      minutes: { mode: select, every: 1, selected: [0] }
+      hours: { mode: select, every: 1, selected: [8] }
+      days: { mode: all, selected: [] }
+      months: { mode: all, selected: [] }
+      weekdays: { mode: all, selected: [] }
+
+# Each independent entry invokes the single-resource helper once.
+gmib_resources:
+  - type: screen
+    desired:
+      name: Main screen
+      left: 0
+      top: 0
+      width: 1920
+      height: 1080
+  - type: gmib-scheduler
+    desired:
+      id: evening-brightness
+      kind: cron
+      name: Evening brightness
+      enabled: true
+      priority: 10
+      action: set-brightness
+      brightness: 35
+      cron:
+        minutes: { mode: select, every: 1, selected: [0] }
+        hours: { mode: select, every: 1, selected: [20] }
+        days: { mode: all, selected: [] }
+        months: { mode: all, selected: [] }
+        weekdays: { mode: all, selected: [] }
+
+# Outside the fixed linked flow, mapping and scheduler need an existing, verified player ID. Do not
+# guess it from create order. Add entries only after the helper returned the actual ID:
+# - type: mapping
+#   desired:
+#     name: Main mapping
+#     player: <verified-player-id>
+#     left: 0
+#     top: 0
+# - type: scheduler
+#   desired:
+#     id: morning-player
+#     kind: cron
+#     name: Start player in the morning
+#     enabled: true
+#     priority: 10
+#     playerId: <verified-player-id>
+#     action: play
+#     cron: { ... }
+
+gmib_settings:
+  brightness: 70
+  autobrightness: false
+
+# Lifecycle entries are generic. Pins and consent must come from the catalog/inspect response.
+gmib_plugins: []
+# - id: example-plugin
+#   state: present
+#   enabled: true
+#   official:
+#     version: 1.2.3
+#     sha256: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+#     permissions: [storage, http.routes]
+#     trustedBackend: true
+
+# This is an explicit example of a plugin-owned partial PATCH contract. It is not a host convention.
+gmib_plugin_settings: []
+# - path: /api/plugins/shader-screensavers/settings
+#   response_key: settings
+#   desired:
+#     scene: plasma
+#     speed: 1
+
+# One-shot operations remain false during ordinary repeat apply.
+gmib_activate: false
+gmib_license_retry: false
+gmib_relaunch_when_required: false
+gmib_rotate_password: false

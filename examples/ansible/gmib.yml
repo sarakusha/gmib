@@ -1,0 +1,389 @@
+---
+- name: Apply GMIB management state
+  hosts: gmib
+  gather_facts: false
+  vars:
+    gmib_checkout: '{{ playbook_dir }}/../..'
+    gmib_node: node
+    gmib_client_id: ansible-controller
+    gmib_timeout_ms: 10000
+    gmib_password: "{{ lookup('env', 'GMIB_PASSWORD') }}"
+    gmib_linked_resources: {}
+    gmib_resources: []
+    gmib_settings: {}
+    gmib_plugins: []
+    gmib_plugin_settings: []
+    gmib_activate: false
+    gmib_activation: {}
+    gmib_license_retry: false
+    gmib_relaunch_when_required: false
+    gmib_rotate_password: false
+    gmib_new_password: "{{ lookup('env', 'GMIB_NEW_PASSWORD') }}"
+    gmib_restart_required: false
+
+  pre_tasks:
+    - name: Validate connection variables
+      ansible.builtin.assert:
+        that:
+          - gmib_base_url is defined
+          - gmib_base_url | length > 0
+          - gmib_password | length > 0
+          - gmib_client_id | length > 0
+        fail_msg: Set gmib_base_url, gmib_client_id and GMIB_PASSWORD.
+      no_log: true
+
+    - name: Check SRP authentication
+      ansible.builtin.command:
+        argv:
+          - '{{ gmib_node }}'
+          - '{{ gmib_checkout }}/scripts/gmib-api.mjs'
+          - login
+          - --base-url
+          - '{{ gmib_base_url }}'
+          - --client-id
+          - '{{ gmib_client_id }}'
+          - --timeout-ms
+          - '{{ gmib_timeout_ms | string }}'
+          - --password-env
+          - GMIB_ANSIBLE_PASSWORD
+      environment:
+        GMIB_ANSIBLE_PASSWORD: '{{ gmib_password }}'
+      register: gmib_login_result
+      changed_when: false
+      failed_when: >-
+        gmib_login_result.rc != 0 or not ((gmib_login_result.stdout | from_json).ok |
+        default(false))
+      check_mode: false
+      no_log: true
+
+  tasks:
+    - name: Preview requested activation
+      ansible.builtin.debug:
+        msg: Activation would be requested and GMIB would reconnect.
+      changed_when: true
+      when: gmib_activate | bool and ansible_check_mode
+
+    - name: Request explicit license activation
+      ansible.builtin.command:
+        argv:
+          - '{{ gmib_node }}'
+          - '{{ gmib_checkout }}/scripts/gmib-api.mjs'
+          - request
+          - --method
+          - POST
+          - --path
+          - /api/activate
+          - --body-stdin
+          - --base-url
+          - '{{ gmib_base_url }}'
+          - --client-id
+          - '{{ gmib_client_id }}'
+          - --timeout-ms
+          - '{{ gmib_timeout_ms | string }}'
+          - --password-env
+          - GMIB_ANSIBLE_PASSWORD
+        stdin: '{{ gmib_activation | to_json }}'
+      environment:
+        GMIB_ANSIBLE_PASSWORD: '{{ gmib_password }}'
+      register: gmib_activation_result
+      changed_when: true
+      failed_when: >-
+        gmib_activation_result.rc != 0 or not ((gmib_activation_result.stdout | from_json).ok |
+        default(false))
+      check_mode: false
+      no_log: true
+      when: gmib_activate | bool and not ansible_check_mode
+
+    - name: Preview requested license retry
+      ansible.builtin.debug:
+        msg: License retry would be requested and may restart GMIB.
+      changed_when: true
+      when: gmib_license_retry | bool and ansible_check_mode
+
+    - name: Retry existing license explicitly
+      ansible.builtin.command:
+        argv:
+          - '{{ gmib_node }}'
+          - '{{ gmib_checkout }}/scripts/gmib-api.mjs'
+          - request
+          - --method
+          - POST
+          - --path
+          - /api/license/retry
+          - --base-url
+          - '{{ gmib_base_url }}'
+          - --client-id
+          - '{{ gmib_client_id }}'
+          - --timeout-ms
+          - '{{ gmib_timeout_ms | string }}'
+          - --password-env
+          - GMIB_ANSIBLE_PASSWORD
+      environment:
+        GMIB_ANSIBLE_PASSWORD: '{{ gmib_password }}'
+      register: gmib_license_retry_result
+      changed_when: true
+      failed_when: >-
+        gmib_license_retry_result.rc != 0 or not ((gmib_license_retry_result.stdout | from_json).ok
+        | default(false))
+      check_mode: false
+      no_log: true
+      when: gmib_license_retry | bool and not ansible_check_mode
+
+    - name: Allow an explicitly requested license relaunch to start
+      ansible.builtin.pause:
+        seconds: 1
+      when:
+        - not ansible_check_mode
+        - gmib_activate | bool or gmib_license_retry | bool
+
+    - name: Wait for authenticated active-license readback
+      ansible.builtin.command:
+        argv:
+          - '{{ gmib_node }}'
+          - '{{ gmib_checkout }}/scripts/gmib-api.mjs'
+          - request
+          - --path
+          - /api/announce
+          - --base-url
+          - '{{ gmib_base_url }}'
+          - --client-id
+          - '{{ gmib_client_id }}-license-readback'
+          - --timeout-ms
+          - '{{ gmib_timeout_ms | string }}'
+          - --password-env
+          - GMIB_ANSIBLE_PASSWORD
+      environment:
+        GMIB_ANSIBLE_PASSWORD: '{{ gmib_password }}'
+      register: gmib_license_readback
+      changed_when: false
+      failed_when: false
+      until: >-
+        gmib_license_readback.rc == 0 and (gmib_license_readback.stdout |
+        from_json).data.licenseState.status == 'active'
+      retries: 30
+      delay: 1
+      check_mode: false
+      no_log: true
+      when:
+        - not ansible_check_mode
+        - gmib_activate | bool or gmib_license_retry | bool
+
+    - name: Ensure plugin lifecycle state
+      ansible.builtin.include_tasks: tasks/ensure-plugin.yml
+      loop: '{{ gmib_plugins }}'
+      loop_control:
+        loop_var: gmib_plugin
+        label: '{{ gmib_plugin.id }}'
+
+    - name: Relaunch GMIB when a plugin operation requires it
+      ansible.builtin.command:
+        argv:
+          - '{{ gmib_node }}'
+          - '{{ gmib_checkout }}/scripts/gmib-api.mjs'
+          - request
+          - --method
+          - POST
+          - --path
+          - /api/relaunch
+          - --base-url
+          - '{{ gmib_base_url }}'
+          - --client-id
+          - '{{ gmib_client_id }}'
+          - --timeout-ms
+          - '{{ gmib_timeout_ms | string }}'
+          - --password-env
+          - GMIB_ANSIBLE_PASSWORD
+      environment:
+        GMIB_ANSIBLE_PASSWORD: '{{ gmib_password }}'
+      register: gmib_relaunch_result
+      changed_when: true
+      failed_when: >-
+        gmib_relaunch_result.rc != 0 or not ((gmib_relaunch_result.stdout | from_json).ok |
+        default(false))
+      check_mode: false
+      no_log: true
+      when:
+        - gmib_relaunch_when_required | bool
+        - gmib_restart_required | bool
+        - not ansible_check_mode
+
+    - name: Allow the requested plugin relaunch to start
+      ansible.builtin.pause:
+        seconds: 1
+      when:
+        - gmib_relaunch_when_required | bool
+        - gmib_restart_required | bool
+        - not ansible_check_mode
+
+    - name: Wait for managed plugin runtime readback
+      ansible.builtin.include_tasks: tasks/wait-plugin-runtime.yml
+      loop: '{{ gmib_plugins }}'
+      loop_control:
+        loop_var: gmib_plugin
+        label: '{{ gmib_plugin.id }}'
+      when:
+        - gmib_relaunch_when_required | bool
+        - gmib_restart_required | bool
+        - not ansible_check_mode
+
+    - name: Verify SRP login after plugin relaunch
+      ansible.builtin.command:
+        argv:
+          - '{{ gmib_node }}'
+          - '{{ gmib_checkout }}/scripts/gmib-api.mjs'
+          - login
+          - --base-url
+          - '{{ gmib_base_url }}'
+          - --client-id
+          - '{{ gmib_client_id }}-plugin-readback'
+          - --timeout-ms
+          - '{{ gmib_timeout_ms | string }}'
+          - --password-env
+          - GMIB_ANSIBLE_PASSWORD
+      environment:
+        GMIB_ANSIBLE_PASSWORD: '{{ gmib_password }}'
+      register: gmib_plugin_runtime_login
+      changed_when: false
+      failed_when: >-
+        gmib_plugin_runtime_login.rc != 0 or not ((gmib_plugin_runtime_login.stdout | from_json).ok
+        | default(false))
+      retries: 30
+      delay: 1
+      until: gmib_plugin_runtime_login.rc == 0
+      check_mode: false
+      no_log: true
+      when:
+        - gmib_relaunch_when_required | bool
+        - gmib_restart_required | bool
+        - not ansible_check_mode
+
+    - name: Mark requested plugin relaunch complete
+      ansible.builtin.set_fact:
+        gmib_restart_required: false
+      when:
+        - gmib_relaunch_when_required | bool
+        - gmib_restart_required | bool
+        - not ansible_check_mode
+
+    - name: Require plugin runtime before plugin-owned configuration
+      ansible.builtin.assert:
+        that:
+          - not (gmib_restart_required | bool) or gmib_plugin_settings | length == 0
+        fail_msg: >-
+          Plugin lifecycle changes are pending. Set gmib_relaunch_when_required=true and apply, then
+          configure plugin-owned routes after authenticated runtime readback.
+
+    - name: Ensure GMIB resources
+      ansible.builtin.include_tasks: tasks/ensure-linked-resources.yml
+      when: gmib_linked_resources | length > 0
+
+    - name: Ensure independent GMIB resources
+      ansible.builtin.include_tasks: tasks/ensure-resource.yml
+      loop: '{{ gmib_resources }}'
+      loop_control:
+        loop_var: gmib_resource
+        label:
+          "{{ gmib_resource.type }}:{{ gmib_resource.desired.id | default(gmib_resource.desired.name
+          | default('new')) }}"
+
+    - name: Apply GMIB brightness and runtime settings
+      ansible.builtin.command:
+        argv:
+          - '{{ gmib_node }}'
+          - '{{ gmib_checkout }}/scripts/gmib-api.mjs'
+          - request
+          - --method
+          - PATCH
+          - --path
+          - "/api/manage/v1/settings?dryRun={{ ansible_check_mode | ternary('true', 'false') }}"
+          - --body-stdin
+          - --base-url
+          - '{{ gmib_base_url }}'
+          - --client-id
+          - '{{ gmib_client_id }}'
+          - --timeout-ms
+          - '{{ gmib_timeout_ms | string }}'
+          - --password-env
+          - GMIB_ANSIBLE_PASSWORD
+        stdin: '{{ gmib_settings | to_json }}'
+      environment:
+        GMIB_ANSIBLE_PASSWORD: '{{ gmib_password }}'
+      register: gmib_settings_result
+      changed_when: >-
+        (((gmib_settings_result.stdout | from_json).data | default({})).changed | default(false) |
+        bool)
+      failed_when: >-
+        gmib_settings_result.rc != 0 or not ((gmib_settings_result.stdout | from_json).ok |
+        default(false))
+      check_mode: false
+      no_log: true
+      when: gmib_settings | length > 0
+
+    - name: Ensure plugin-owned settings
+      ansible.builtin.include_tasks: tasks/ensure-plugin-settings.yml
+      loop: '{{ gmib_plugin_settings }}'
+      loop_control:
+        loop_var: gmib_plugin_setting
+        label: '{{ gmib_plugin_setting.path }}'
+
+    - name: Preview requested password rotation
+      ansible.builtin.debug:
+        msg: Remote-management password would be rotated and sessions revoked.
+      changed_when: true
+      when: gmib_rotate_password | bool and ansible_check_mode
+
+    - name: Rotate remote-management password explicitly
+      ansible.builtin.command:
+        argv:
+          - '{{ gmib_node }}'
+          - '{{ gmib_checkout }}/scripts/gmib-api.mjs'
+          - password-set
+          - --base-url
+          - '{{ gmib_base_url }}'
+          - --client-id
+          - '{{ gmib_client_id }}'
+          - --timeout-ms
+          - '{{ gmib_timeout_ms | string }}'
+          - --password-env
+          - GMIB_ANSIBLE_PASSWORD
+          - --new-password-env
+          - GMIB_ANSIBLE_NEW_PASSWORD
+      environment:
+        GMIB_ANSIBLE_PASSWORD: '{{ gmib_password }}'
+        GMIB_ANSIBLE_NEW_PASSWORD: '{{ gmib_new_password }}'
+      register: gmib_password_result
+      changed_when: true
+      failed_when: >-
+        gmib_password_result.rc != 0 or not ((gmib_password_result.stdout | from_json).ok |
+        default(false))
+      check_mode: false
+      no_log: true
+      when: gmib_rotate_password | bool and not ansible_check_mode
+
+    - name: Verify the new remote-management password
+      ansible.builtin.command:
+        argv:
+          - '{{ gmib_node }}'
+          - '{{ gmib_checkout }}/scripts/gmib-api.mjs'
+          - login
+          - --base-url
+          - '{{ gmib_base_url }}'
+          - --client-id
+          - '{{ gmib_client_id }}-rotated'
+          - --timeout-ms
+          - '{{ gmib_timeout_ms | string }}'
+          - --password-env
+          - GMIB_ANSIBLE_NEW_PASSWORD
+      environment:
+        GMIB_ANSIBLE_NEW_PASSWORD: '{{ gmib_new_password }}'
+      register: gmib_new_password_login
+      changed_when: false
+      failed_when: >-
+        gmib_new_password_login.rc != 0 or not ((gmib_new_password_login.stdout | from_json).ok |
+        default(false))
+      retries: 10
+      delay: 1
+      until: gmib_new_password_login.rc == 0
+      check_mode: false
+      no_log: true
+      when: gmib_rotate_password | bool and not ansible_check_mode

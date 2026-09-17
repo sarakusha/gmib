@@ -1,0 +1,141 @@
+---
+- name: Validate plugin-owned settings declaration
+  ansible.builtin.assert:
+    that:
+      - gmib_plugin_setting.path is string
+      - gmib_plugin_setting.path is match('^/api/plugins/[a-z0-9-]+/')
+      - gmib_plugin_setting.desired is mapping
+      - gmib_plugin_setting.response_key | default('settings') is string
+    fail_msg:
+      Plugin settings need an explicit /api/plugins/{id}/ path and plugin-owned desired schema.
+
+- name: Read plugin-owned settings
+  ansible.builtin.command:
+    argv:
+      - '{{ gmib_node }}'
+      - '{{ gmib_checkout }}/scripts/gmib-api.mjs'
+      - request
+      - --path
+      - '{{ gmib_plugin_setting.read_path | default(gmib_plugin_setting.path) }}'
+      - --base-url
+      - '{{ gmib_base_url }}'
+      - --client-id
+      - '{{ gmib_client_id }}'
+      - --timeout-ms
+      - '{{ gmib_timeout_ms | string }}'
+      - --password-env
+      - GMIB_ANSIBLE_PASSWORD
+  environment:
+    GMIB_ANSIBLE_PASSWORD: '{{ gmib_password }}'
+  register: gmib_plugin_settings_read_result
+  changed_when: false
+  failed_when: >-
+    gmib_plugin_settings_read_result.rc != 0 or not ((gmib_plugin_settings_read_result.stdout |
+    from_json).ok | default(false))
+  check_mode: false
+  no_log: true
+
+- name: Calculate plugin-owned settings change
+  ansible.builtin.set_fact:
+    gmib_plugin_settings_current: >-
+      {{
+        (gmib_plugin_settings_read_result.stdout | from_json).data[
+          gmib_plugin_setting.response_key | default('settings')
+        ]
+      }}
+  no_log: true
+
+- name: Compare plugin-owned settings
+  ansible.builtin.set_fact:
+    gmib_plugin_settings_changed: >-
+      {{
+        gmib_plugin_settings_current | combine(gmib_plugin_setting.desired, recursive=True)
+        != gmib_plugin_settings_current
+      }}
+  no_log: true
+
+- name: Preview plugin-owned settings change
+  ansible.builtin.debug:
+    msg: '{{ gmib_plugin_setting.path }} would change according to its plugin-owned PATCH contract.'
+  changed_when: gmib_plugin_settings_changed | bool
+  when: ansible_check_mode
+
+- name: Apply plugin-owned settings
+  ansible.builtin.command:
+    argv:
+      - '{{ gmib_node }}'
+      - '{{ gmib_checkout }}/scripts/gmib-api.mjs'
+      - request
+      - --method
+      - PATCH
+      - --path
+      - '{{ gmib_plugin_setting.path }}'
+      - --body-stdin
+      - --base-url
+      - '{{ gmib_base_url }}'
+      - --client-id
+      - '{{ gmib_client_id }}'
+      - --timeout-ms
+      - '{{ gmib_timeout_ms | string }}'
+      - --password-env
+      - GMIB_ANSIBLE_PASSWORD
+    stdin: '{{ gmib_plugin_setting.desired | to_json }}'
+  environment:
+    GMIB_ANSIBLE_PASSWORD: '{{ gmib_password }}'
+  register: gmib_plugin_settings_write_result
+  changed_when: >-
+    (((gmib_plugin_settings_write_result.stdout | from_json).data | default({})).changed |
+    default(false) | bool)
+  failed_when: >-
+    gmib_plugin_settings_write_result.rc != 0 or not ((gmib_plugin_settings_write_result.stdout |
+    from_json).ok | default(false))
+  check_mode: false
+  no_log: true
+  when:
+    - not ansible_check_mode
+    - gmib_plugin_settings_changed | bool
+
+- name: Read plugin-owned settings after PATCH
+  ansible.builtin.command:
+    argv:
+      - '{{ gmib_node }}'
+      - '{{ gmib_checkout }}/scripts/gmib-api.mjs'
+      - request
+      - --path
+      - '{{ gmib_plugin_setting.read_path | default(gmib_plugin_setting.path) }}'
+      - --base-url
+      - '{{ gmib_base_url }}'
+      - --client-id
+      - '{{ gmib_client_id }}-plugin-settings-readback'
+      - --timeout-ms
+      - '{{ gmib_timeout_ms | string }}'
+      - --password-env
+      - GMIB_ANSIBLE_PASSWORD
+  environment:
+    GMIB_ANSIBLE_PASSWORD: '{{ gmib_password }}'
+  register: gmib_plugin_settings_readback_result
+  changed_when: false
+  failed_when: >-
+    gmib_plugin_settings_readback_result.rc != 0 or not
+    ((gmib_plugin_settings_readback_result.stdout | from_json).ok | default(false))
+  check_mode: false
+  no_log: true
+  when:
+    - not ansible_check_mode
+    - gmib_plugin_settings_changed | bool
+
+- name: Verify plugin-owned settings readback
+  ansible.builtin.assert:
+    that:
+      - >-
+        ((gmib_plugin_settings_readback_result.stdout | from_json).data[
+          gmib_plugin_setting.response_key | default('settings')
+        ] | combine(gmib_plugin_setting.desired, recursive=True)) ==
+        (gmib_plugin_settings_readback_result.stdout | from_json).data[
+          gmib_plugin_setting.response_key | default('settings')
+        ]
+    fail_msg: Plugin GET readback does not contain the requested partial PATCH values.
+  no_log: true
+  when:
+    - not ansible_check_mode
+    - gmib_plugin_settings_changed | bool

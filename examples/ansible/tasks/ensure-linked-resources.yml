@@ -1,0 +1,68 @@
+---
+- name: Validate linked playlist-player flow
+  ansible.builtin.assert:
+    that:
+      - gmib_linked_resources.playlist is mapping
+      - gmib_linked_resources.player is mapping
+      - gmib_linked_resources.mapping is mapping
+      - gmib_linked_resources.scheduler is mapping
+    fail_msg: Linked flow needs playlist, player, mapping and scheduler desired mappings.
+
+- name: Ensure linked playlist
+  ansible.builtin.include_tasks: ensure-resource.yml
+  vars:
+    gmib_resource:
+      type: playlist
+      desired: '{{ gmib_linked_resources.playlist }}'
+
+- name: Read linked playlist result
+  ansible.builtin.set_fact:
+    gmib_linked_playlist_id: '{{ (gmib_resource_result.stdout | from_json).id | default(none) }}'
+  no_log: true
+
+- name: Report pending playlist dependency in check mode
+  ansible.builtin.debug:
+    msg: Player, mapping and scheduler remain pending until the new playlist has a real server ID.
+  changed_when: false
+  when: gmib_linked_playlist_id is none
+
+- name: Ensure linked player
+  ansible.builtin.include_tasks: ensure-resource.yml
+  vars:
+    gmib_resource:
+      type: player
+      desired: >-
+        {{ gmib_linked_resources.player | combine({'playlistId': gmib_linked_playlist_id}) }}
+  when: gmib_linked_playlist_id is not none
+
+- name: Read linked player result
+  ansible.builtin.set_fact:
+    gmib_linked_player_id: '{{ (gmib_resource_result.stdout | from_json).id | default(none) }}'
+  no_log: true
+  when: gmib_linked_playlist_id is not none
+
+- name: Report pending player dependencies in check mode
+  ansible.builtin.debug:
+    msg: Mapping and scheduler remain pending until the new player has a real server ID.
+  changed_when: false
+  when:
+    - gmib_linked_playlist_id is not none
+    - gmib_linked_player_id is none
+
+- name: Ensure linked mapping
+  ansible.builtin.include_tasks: ensure-resource.yml
+  vars:
+    gmib_resource:
+      type: mapping
+      desired: >-
+        {{ gmib_linked_resources.mapping | combine({'player': gmib_linked_player_id}) }}
+  when: gmib_linked_player_id | default(none) is not none
+
+- name: Ensure linked player scheduler
+  ansible.builtin.include_tasks: ensure-resource.yml
+  vars:
+    gmib_resource:
+      type: scheduler
+      desired: >-
+        {{ gmib_linked_resources.scheduler | combine({'playerId': gmib_linked_player_id}) }}
+  when: gmib_linked_player_id | default(none) is not none

@@ -1,0 +1,68 @@
+---
+- name: Wait for installed plugin runtime state
+  ansible.builtin.command:
+    argv:
+      - '{{ gmib_node }}'
+      - '{{ gmib_checkout }}/scripts/gmib-api.mjs'
+      - request
+      - --path
+      - /api/manage/v1/plugins
+      - --base-url
+      - '{{ gmib_base_url }}'
+      - --client-id
+      - '{{ gmib_client_id }}-plugin-readback'
+      - --timeout-ms
+      - '{{ gmib_timeout_ms | string }}'
+      - --password-env
+      - GMIB_ANSIBLE_PASSWORD
+  environment:
+    GMIB_ANSIBLE_PASSWORD: '{{ gmib_password }}'
+  register: gmib_present_plugin_readback
+  changed_when: false
+  failed_when: false
+  until: >-
+    gmib_present_plugin_readback.rc == 0 and ((gmib_present_plugin_readback.stdout | from_json).ok |
+    default(false)) and ((((gmib_present_plugin_readback.stdout | from_json).data |
+    default({})).plugins | default([]))
+      | selectattr('manifest.id', 'defined')
+      | selectattr('manifest.id', 'equalto', gmib_plugin.id)
+      | rejectattr('restartRequired', 'equalto', true)
+      | list | length) == 1
+  retries: 30
+  delay: 1
+  check_mode: false
+  no_log: true
+  when: gmib_plugin.state | default('present') == 'present'
+
+- name: Wait for removed plugin runtime to stop
+  ansible.builtin.command:
+    argv:
+      - '{{ gmib_node }}'
+      - '{{ gmib_checkout }}/scripts/gmib-api.mjs'
+      - request
+      - --method
+      - DELETE
+      - --path
+      - '/api/manage/v1/plugins/{{ gmib_plugin.id | urlencode }}'
+      - --base-url
+      - '{{ gmib_base_url }}'
+      - --client-id
+      - '{{ gmib_client_id }}-plugin-readback'
+      - --timeout-ms
+      - '{{ gmib_timeout_ms | string }}'
+      - --password-env
+      - GMIB_ANSIBLE_PASSWORD
+  environment:
+    GMIB_ANSIBLE_PASSWORD: '{{ gmib_password }}'
+  register: gmib_absent_plugin_readback
+  changed_when: false
+  failed_when: false
+  until: >-
+    gmib_absent_plugin_readback.rc == 0 and ((gmib_absent_plugin_readback.stdout | from_json).ok |
+    default(false)) and not (((gmib_absent_plugin_readback.stdout | from_json).data |
+    default({})).restartRequired | default(true) | bool)
+  retries: 30
+  delay: 1
+  check_mode: false
+  no_log: true
+  when: gmib_plugin.state | default('present') == 'absent'
