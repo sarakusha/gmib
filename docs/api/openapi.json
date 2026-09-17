@@ -464,7 +464,7 @@
       "post": {
         "tags": ["Screens and players"],
         "operationId": "createScreen",
-        "description": "Create persists the screen fields in `CreateScreen`. The current runtime ignores `addresses` and `brightness` if they are sent; read the created screen back and use PUT with its id to set those fields.",
+        "description": "Create persists the fields in `CreateScreen`. `addresses` is not persisted on POST. `brightness` is unsupported on POST and a defined value may fail the current SQL binding; omit both fields, read the created screen back, and use PUT with its id to set them.",
         "requestBody": {
           "required": true,
           "content": {

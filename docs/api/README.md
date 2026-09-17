@@ -30,8 +30,9 @@ the stored fields represented by their input schema; send a complete object, rat
 them as partial updates. Database constraints and implementation errors can still produce the
 generic error responses.
 
-`POST /api/screen` does not persist `addresses` or `brightness`, even if legacy callers send
-them. Read the created record and then use `PUT /api/screen` with its id to set those fields.
+`POST /api/screen` does not persist `addresses`; `brightness` is unsupported on POST and passing a
+defined value may fail at the current SQL binding boundary. Omit both fields, read the created
+record, then use `PUT /api/screen` with its id to set them.
 Player `width` and `height` are persisted on create and replacement update.
 
 Scheduler input schemas describe the fields needed for a runnable job: `once` needs `runAt`,
