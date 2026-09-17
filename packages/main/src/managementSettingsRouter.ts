@@ -1,6 +1,7 @@
 import express, { type Request, type RequestHandler, type Response } from 'express';
 
-import { ManagementSettingsService, ManagementSettingsValidationError } from './managementSettings';
+import type { ManagementSettingsService } from './managementSettings';
+import { ManagementSettingsValidationError } from './managementSettings';
 
 export type ManagementSettingsRouterOptions = {
   service: ManagementSettingsService;
@@ -57,13 +58,13 @@ export const createManagementSettingsRouter = ({
       else throw error;
     }
   });
-  router.patch('/settings', (req, res) => {
+  router.patch('/settings', async (req, res, next) => {
     try {
       const dryRun = parseDryRun(req);
-      res.json(service.patch(req.body, dryRun));
+      res.json(await service.patch(req.body, dryRun));
     } catch (error) {
       if (error instanceof ManagementSettingsValidationError) sendValidationError(res, error);
-      else throw error;
+      else next(error);
     }
   });
   return router;

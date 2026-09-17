@@ -174,7 +174,7 @@ describe('management settings service', () => {
     expect(api.updateConfigStore).toHaveBeenCalledOnce();
   });
 
-  it('resets curves to schema defaults with a real config store', () => {
+  it('resets curves to schema defaults with a real config store', async () => {
     const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'gmib-management-settings-'));
     directories.push(cwd);
     const store = new Store<Config>({
@@ -202,7 +202,7 @@ describe('management settings service', () => {
     });
     const reset = { spline: null, sunSpline: null };
 
-    expect(service.patch(reset, true)).toEqual({
+    await expect(service.patch(reset, true)).resolves.toEqual({
       changed: true,
       dryRun: true,
       settings: {
@@ -216,7 +216,7 @@ describe('management settings service', () => {
     expect(store.get('sunSpline')).toEqual(customSunSpline);
     expect(updateConfigStore).not.toHaveBeenCalled();
 
-    expect(service.patch(reset)).toEqual({
+    await expect(service.patch(reset)).resolves.toEqual({
       changed: true,
       dryRun: false,
       settings: {
@@ -229,7 +229,7 @@ describe('management settings service', () => {
     expect(store.get('spline')).toEqual(configSchema.spline.default);
     expect(store.get('sunSpline')).toEqual(configSchema.sunSpline.default);
 
-    expect(service.patch(reset)).toEqual({
+    await expect(service.patch(reset)).resolves.toEqual({
       changed: false,
       dryRun: false,
       settings: {

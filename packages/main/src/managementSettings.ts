@@ -1,3 +1,5 @@
+import { isDeepStrictEqual } from 'node:util';
+
 import type {
   Config,
   Location,
@@ -34,7 +36,7 @@ export type ManagementSettingsPatch = Partial<{
 
 export type ManagementSettingsAdapter = {
   getConfig: () => Config;
-  updateConfigStore: (update: (current: Config) => Config) => Config;
+  updateConfigStore: (update: (current: Config) => Config) => Config | Promise<Config>;
 };
 
 export class ManagementSettingsValidationError extends Error {
@@ -212,46 +214,22 @@ export const validateManagementSettingsPatch = (value: unknown): ManagementSetti
     validateSunSpline(value.sunSpline, 'sunSpline');
   if ('nightMode' in value && value.nightMode !== null)
     validateNightMode(value.nightMode, 'nightMode');
-  return value as ManagementSettingsPatch;
-};
-
-const clone = <T>(value: T): T => {
-  if (value === undefined) return value;
-  if (Array.isArray(value)) return value.map(item => clone(item)) as T;
-  if (isRecord(value)) {
-    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, clone(item)])) as T;
-  }
   return value;
 };
 
-const schemaDefault = <T>(key: 'spline' | 'sunSpline'): T => {
-  const schema = configSchema[key];
-  if (typeof schema === 'object' && schema !== null && 'default' in schema) {
-    return clone(schema.default as T);
+const clone = <T>(value: T): T => structuredClone(value);
+
+const schemaDefault = (key: 'spline' | 'sunSpline'): unknown => {
+  const schema: unknown = configSchema[key];
+  if (isRecord(schema) && 'default' in schema) {
+    return schema.default;
   }
   throw new Error(`Config schema has no default for ${key}`);
 };
 
-const defaultSpline = (): SplineItem[] => schemaDefault<SplineItem[]>('spline');
-const defaultSunSpline = (): SunSplineItem[] => schemaDefault<SunSplineItem[]>('sunSpline');
-
-const equal = (left: unknown, right: unknown): boolean => {
-  if (Object.is(left, right)) return true;
-  if (Array.isArray(left) && Array.isArray(right)) {
-    return left.length === right.length && left.every((item, index) => equal(item, right[index]));
-  }
-  if (isRecord(left) && isRecord(right)) {
-    const leftKeys = Object.keys(left);
-    const rightKeys = Object.keys(right);
-    return (
-      leftKeys.length === rightKeys.length &&
-      leftKeys.every(
-        key => Object.prototype.hasOwnProperty.call(right, key) && equal(left[key], right[key]),
-      )
-    );
-  }
-  return false;
-};
+const defaultSpline = (): SplineItem[] => clone(schemaDefault('spline')) as SplineItem[];
+const defaultSunSpline = (): SunSplineItem[] =>
+  clone(schemaDefault('sunSpline')) as SunSplineItem[];
 
 const settingsFromConfig = (config: Config): ManagementSettings => {
   const settings: ManagementSettings = {
@@ -314,7 +292,7 @@ export class ManagementSettingsService {
     return settingsFromConfig(this.adapter.getConfig());
   }
 
-  patch(input: unknown, dryRun = false): ManagementSettingsPatchResult {
+  async patch(input: unknown, dryRun = false): Promise<ManagementSettingsPatchResult> {
     const patch = validateManagementSettingsPatch(input);
     const current = this.adapter.getConfig();
     const next = applyPatch(current, patch);
@@ -323,10 +301,10 @@ export class ManagementSettingsService {
     }
     const currentSettings = settingsFromConfig(current);
     const nextSettings = settingsFromConfig(next);
-    const changed = !equal(currentSettings, nextSettings);
+    const changed = !isDeepStrictEqual(currentSettings, nextSettings);
     const stored =
       changed && !dryRun
-        ? this.adapter.updateConfigStore(currentConfig => applyPatch(currentConfig, patch))
+        ? await this.adapter.updateConfigStore(currentConfig => applyPatch(currentConfig, patch))
         : next;
     return { changed, dryRun, settings: settingsFromConfig(stored) };
   }

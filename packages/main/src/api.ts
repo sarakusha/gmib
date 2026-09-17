@@ -59,6 +59,7 @@ import {
 } from './licenseState';
 import { createLicenseSessionAssertion } from './licenseSessionAssertion';
 import { completeLicenseActivation } from './manualLicenseActivation';
+import { mountManagementSettingsApi } from './managementApi';
 import machineId from './machineId';
 import updateMenu from './mainMenu';
 import {
@@ -305,6 +306,8 @@ mountApiAuth(api, {
   srpRouter: srpAuthRouter,
   unsafeMode: Boolean(localConfig.get('unsafeMode')),
 });
+
+mountManagementSettingsApi(api);
 
 api.use('/plugins/:pluginId', authenticatedPluginApiHandler);
 
