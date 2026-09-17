@@ -1,9 +1,14 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { createServer, type Server } from 'node:http';
 
+import Store from 'electron-store';
 import express, { type RequestHandler } from 'express';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { Config } from '/@common/config';
+import { configSchema } from '/@common/schema';
 
 import {
   ManagementSettingsService,
@@ -28,6 +33,7 @@ const baseConfig = (): Config =>
   }) as Config;
 
 const servers: Server[] = [];
+const directories: string[] = [];
 
 afterEach(async () => {
   await Promise.all(
@@ -40,6 +46,9 @@ afterEach(async () => {
           ),
       ),
   );
+  directories.splice(0).forEach(directory => {
+    fs.rmSync(directory, { recursive: true, force: true });
+  });
 });
 
 const startApi = async (initial = baseConfig()) => {
@@ -96,7 +105,12 @@ describe('management settings service', () => {
     if (!address || typeof address === 'string') throw new Error('test server did not start');
     const response = await fetch(`http://127.0.0.1:${address.port}/settings/settings`);
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ brightness: 30, autobrightness: false });
+    expect(await response.json()).toEqual({
+      brightness: 30,
+      autobrightness: false,
+      spline: configSchema.spline.default,
+      sunSpline: configSchema.sunSpline.default,
+    });
     expect(auth).toHaveBeenCalledOnce();
     expect(() =>
       createManagementSettingsRouter({
@@ -126,6 +140,8 @@ describe('management settings service', () => {
         autobrightness: false,
         location: { latitude: 56, longitude: 37.62 },
         nightMode: { start: '22:00', end: '06:00', brightness: 8 },
+        spline: configSchema.spline.default,
+        sunSpline: configSchema.sunSpline.default,
       },
     });
     expect(api.updateConfigStore).toHaveBeenCalledOnce();
@@ -156,6 +172,74 @@ describe('management settings service', () => {
     expect(second.status).toBe(200);
     expect(await second.json()).toMatchObject({ changed: false, dryRun: false });
     expect(api.updateConfigStore).toHaveBeenCalledOnce();
+  });
+
+  it('resets curves to schema defaults with a real config store', () => {
+    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'gmib-management-settings-'));
+    directories.push(cwd);
+    const store = new Store<Config>({
+      cwd,
+      name: 'config',
+      schema: configSchema,
+      clearInvalidConfig: true,
+    });
+    store.store = { ...store.store, spline: undefined, sunSpline: undefined };
+    expect(store.get('spline')).toEqual(configSchema.spline.default);
+    expect(store.get('sunSpline')).toEqual(configSchema.sunSpline.default);
+    const customSpline: NonNullable<Config['spline']> = [
+      [0, 5],
+      [100, 40],
+    ];
+    const customSunSpline: NonNullable<Config['sunSpline']> = [['time:12:00', 55]];
+    store.store = { ...store.store, spline: customSpline, sunSpline: customSunSpline };
+    const updateConfigStore = vi.fn((update: (current: Config) => Config) => {
+      store.store = update(store.store);
+      return store.store;
+    });
+    const service = createManagementSettingsService({
+      getConfig: () => store.store,
+      updateConfigStore,
+    });
+    const reset = { spline: null, sunSpline: null };
+
+    expect(service.patch(reset, true)).toEqual({
+      changed: true,
+      dryRun: true,
+      settings: {
+        brightness: 30,
+        autobrightness: false,
+        spline: configSchema.spline.default,
+        sunSpline: configSchema.sunSpline.default,
+      },
+    });
+    expect(store.get('spline')).toEqual(customSpline);
+    expect(store.get('sunSpline')).toEqual(customSunSpline);
+    expect(updateConfigStore).not.toHaveBeenCalled();
+
+    expect(service.patch(reset)).toEqual({
+      changed: true,
+      dryRun: false,
+      settings: {
+        brightness: 30,
+        autobrightness: false,
+        spline: configSchema.spline.default,
+        sunSpline: configSchema.sunSpline.default,
+      },
+    });
+    expect(store.get('spline')).toEqual(configSchema.spline.default);
+    expect(store.get('sunSpline')).toEqual(configSchema.sunSpline.default);
+
+    expect(service.patch(reset)).toEqual({
+      changed: false,
+      dryRun: false,
+      settings: {
+        brightness: 30,
+        autobrightness: false,
+        spline: configSchema.spline.default,
+        sunSpline: configSchema.sunSpline.default,
+      },
+    });
+    expect(updateConfigStore).toHaveBeenCalledOnce();
   });
 
   it('validates unknown fields, ranges, times, and curve ordering', async () => {
@@ -195,7 +279,12 @@ describe('management settings service', () => {
     expect(await response.json()).toEqual({
       changed: true,
       dryRun: true,
-      settings: { brightness: 70, autobrightness: true },
+      settings: {
+        brightness: 70,
+        autobrightness: true,
+        spline: configSchema.spline.default,
+        sunSpline: configSchema.sunSpline.default,
+      },
     });
     expect(api.config()).toMatchObject({ brightness: 30, autobrightness: false });
     expect(api.updateConfigStore).not.toHaveBeenCalled();

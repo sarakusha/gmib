@@ -5,6 +5,7 @@ import type {
   SplineItem,
   SunSplineItem,
 } from '/@common/config';
+import { configSchema } from '/@common/schema';
 
 export const managementSettingsKeys = [
   'brightness',
@@ -223,6 +224,17 @@ const clone = <T>(value: T): T => {
   return value;
 };
 
+const schemaDefault = <T>(key: 'spline' | 'sunSpline'): T => {
+  const schema = configSchema[key];
+  if (typeof schema === 'object' && schema !== null && 'default' in schema) {
+    return clone(schema.default as T);
+  }
+  throw new Error(`Config schema has no default for ${key}`);
+};
+
+const defaultSpline = (): SplineItem[] => schemaDefault<SplineItem[]>('spline');
+const defaultSunSpline = (): SunSplineItem[] => schemaDefault<SunSplineItem[]>('sunSpline');
+
 const equal = (left: unknown, right: unknown): boolean => {
   if (Object.is(left, right)) return true;
   if (Array.isArray(left) && Array.isArray(right)) {
@@ -246,8 +258,8 @@ const settingsFromConfig = (config: Config): ManagementSettings => {
     brightness: config.brightness,
     autobrightness: config.autobrightness,
     location: clone(config.location),
-    spline: clone(config.spline),
-    sunSpline: clone(config.sunSpline),
+    spline: clone(config.spline ?? defaultSpline()),
+    sunSpline: clone(config.sunSpline ?? defaultSunSpline()),
     nightMode: clone(config.nightMode),
   };
   return settings;
@@ -281,8 +293,8 @@ const applyPatch = (config: Config, patch: ManagementSettingsPatch): Config => {
   if ('location' in patch) {
     next.location = mergeOptionalObject(config.location, patch.location);
   }
-  if ('spline' in patch) next.spline = clone(patch.spline) ?? undefined;
-  if ('sunSpline' in patch) next.sunSpline = clone(patch.sunSpline) ?? undefined;
+  if ('spline' in patch) next.spline = clone(patch.spline ?? defaultSpline());
+  if ('sunSpline' in patch) next.sunSpline = clone(patch.sunSpline ?? defaultSunSpline());
   if ('nightMode' in patch) {
     next.nightMode = mergeOptionalObject(config.nightMode, patch.nightMode);
   }
