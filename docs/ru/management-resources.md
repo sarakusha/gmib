@@ -39,6 +39,10 @@ node scripts/gmib-api-resources.mjs --help
 поэтому initial create задавайте по `name` и сохраняйте возвращенный `id`. Scheduler принимает свой
 строковый `id` при POST; если он не задан, GMIB создаст его и вернет в результате.
 
+Если present desired одновременно содержит `id` и новое `name`, helper до записи отклоняет имя,
+занятое другим ресурсом. Так legacy `unique*Name` API не сможет незаметно переименовать ресурс с
+suffix.
+
 Удаление требует явного `state: "absent"`. Обычный `state: "present"` ничего не удаляет и не
 является prune-операцией.
 
@@ -69,10 +73,11 @@ name, чтобы не создавать дубль.
 }
 ```
 
-Для плеера `playlistId` проверяется по существующему плейлисту; для mapping — `player`. Плейлист
-сравнивает `items` по `md5`, `flags`, `start` и `duration` в заданном порядке, игнорируя
-сгенерированные item ID. При изменении порядка сохраняются ID совпадающих элементов, а новые
-получают новый ID. Каждый `md5` desired-плейлиста должен уже присутствовать в `/api/media`.
+Для плеера `playlistId` проверяется по существующему плейлисту, а непустой `current` должен быть ID
+item в его candidate playlist; для mapping проверяется `player`. Плейлист сравнивает `items` по
+`md5`, `flags`, `start` и `duration` в заданном порядке, игнорируя сгенерированные item ID. При
+изменении порядка сохраняются ID совпадающих элементов, а новые получают новый ID. Каждый `md5`
+desired-плейлиста должен уже присутствовать в `/api/media`.
 
 ## Планировщики
 
@@ -99,6 +104,9 @@ actions требуют `enabledValue`.
 `--check` выполняет те же чтения, selector и проверки ссылок, но не отправляет `POST`, `PUT` или
 `DELETE`. При отличии он честно возвращает `changed:true`, `checkMode:true` и `predicted` (`create`,
 `update` или `delete`). Никаких configuration writes, prune и run-now в этом режиме нет.
+
+Если write уже был принят, но readback не подтвердил desired, JSON-ошибка содержит `id`, выполненные
+`operations`, `changed:true` и `partial:true`. Для screen follow-up также есть `createdId`.
 
 Plugin API намеренно не входит в этот helper: plugin-owned schemas и маршруты могут развиваться без
 новой версии host. Для них используйте raw `scripts/gmib-api.mjs request` по документации

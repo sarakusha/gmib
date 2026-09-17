@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { GmibApiError } from '../../../scripts/gmib-api-client.mjs';
 import {
+  errorResult,
   GmibApiResourceError,
   ensureResource,
   normalizeDesired,
@@ -216,6 +217,64 @@ describe('management API resource helper', () => {
     );
   });
 
+  it('rejects an ID-targeted rename when another host resource owns the exact name', async () => {
+    const player = {
+      request: vi.fn(async path => {
+        if (path === '/api/player') {
+          return response([
+            { id: 4, name: 'Backup' },
+            { id: 5, name: 'Primary' },
+          ]);
+        }
+        throw new Error(`Unexpected ${path}`);
+      }),
+    };
+    await expect(
+      ensureResource(player, 'player', { id: 4, name: 'Primary' }),
+    ).rejects.toMatchObject({ code: 'name_collision' });
+
+    const scheduler = {
+      request: vi.fn(async path => {
+        if (path === '/api/scheduler') {
+          return response([
+            { id: 'job-a', name: 'Night' },
+            { id: 'job-b', name: 'Morning' },
+          ]);
+        }
+        throw new Error(`Unexpected ${path}`);
+      }),
+    };
+    await expect(
+      ensureResource(scheduler, 'scheduler', { id: 'job-a', name: 'Morning' }),
+    ).rejects.toMatchObject({ code: 'name_collision' });
+    for (const client of [player, scheduler]) {
+      expect(client.request.mock.calls.some(([, options]) => options?.method === 'PUT')).toBe(
+        false,
+      );
+    }
+  });
+
+  it('validates a player current item in the candidate playlist before mutation', async () => {
+    const put = vi.fn();
+    const current = { id: 4, name: 'Backup', playlistId: 2, current: 'old-item', hidden: false };
+    const client = {
+      request: vi.fn(async (path, options = {}) => {
+        if (path === '/api/player') {
+          if (options.method === 'PUT') return put(path, options);
+          return response([current]);
+        }
+        if (path === '/api/player/4') return response(current);
+        if (path === '/api/playlist/3') return response({ id: 3, items: [{ id: 'valid-item' }] });
+        throw new Error(`Unexpected ${path}`);
+      }),
+    };
+
+    await expect(
+      ensureResource(client, 'player', { id: 4, playlistId: 3, current: 'missing-item' }),
+    ).rejects.toMatchObject({ code: 'missing_reference' });
+    expect(put).not.toHaveBeenCalled();
+  });
+
   it('normalizes scheduler defaults and ignores result history without run-now', async () => {
     const current = {
       id: 'job-1',
@@ -357,8 +416,36 @@ describe('management API resource helper', () => {
       }),
     ).rejects.toMatchObject({
       code: 'screen_followup_failed',
+      id: 7,
       createdId: 7,
       operations: ['create'],
+    });
+  });
+
+  it('rejects null for host fields canonicalized to zero and reports partial writes honestly', () => {
+    expect(() => normalizeDesired('screen', { id: 7, zIndex: null })).toThrow(GmibApiResourceError);
+    expect(() => normalizeDesired('mapping', { id: 9, left: null })).toThrow(GmibApiResourceError);
+    expect(() => normalizeDesired('mapping', { id: 9, top: null })).toThrow(GmibApiResourceError);
+    expect(() => normalizeDesired('mapping', { id: 9, zIndex: null })).toThrow(
+      GmibApiResourceError,
+    );
+    expect(
+      errorResult(
+        new GmibApiResourceError('readback differs', {
+          code: 'apply_unconfirmed',
+          id: 4,
+          operations: ['update'],
+        }),
+      ),
+    ).toMatchObject({
+      ok: false,
+      error: {
+        code: 'apply_unconfirmed',
+        id: 4,
+        operations: ['update'],
+        changed: true,
+        partial: true,
+      },
     });
   });
 });

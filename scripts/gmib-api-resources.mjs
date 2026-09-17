@@ -416,12 +416,13 @@ const validateFields = (type, desired) => {
           'borderRight',
           'brightnessFactor',
           'brightness',
-          'zIndex',
         ],
         isOptionalFiniteNumber,
       )
     )
       fail('screen содержит нечисловое поле', 'invalid_screen');
+    if (hasOwn(desired, 'zIndex') && !isFiniteNumber(desired.zIndex))
+      fail('screen.zIndex имеет неверный тип', 'invalid_screen');
     if (
       hasOwn(desired, 'display') &&
       !(desired.display === null || Number.isSafeInteger(desired.display))
@@ -499,8 +500,10 @@ const validateFields = (type, desired) => {
       fail('mapping.name имеет неверный тип', 'invalid_mapping');
     if (hasOwn(desired, 'player') && !isPositiveInteger(desired.player))
       fail('mapping.player имеет неверный тип', 'invalid_mapping');
-    if (hasInvalid(['width', 'height', 'left', 'top', 'zIndex'], isOptionalFiniteNumber))
+    if (hasInvalid(['width', 'height'], isOptionalFiniteNumber))
       fail('mapping содержит нечисловое поле', 'invalid_mapping');
+    if (hasInvalid(['left', 'top', 'zIndex'], isFiniteNumber))
+      fail('mapping.left, top и zIndex имеют неверный тип', 'invalid_mapping');
     if (
       hasOwn(desired, 'display') &&
       !(desired.display === null || Number.isSafeInteger(desired.display))
@@ -581,6 +584,14 @@ export const normalizeDesired = (type, input) => {
 const resolveResource = async (client, type, desired) => {
   const definition = definitions[type];
   const resources = await listResources(client, definition);
+  if (
+    desired.state === 'present' &&
+    hasOwn(desired, 'id') &&
+    hasOwn(desired, 'name') &&
+    resources.some(resource => resource?.id !== desired.id && resource?.name === desired.name)
+  ) {
+    fail(`${type}: имя уже занято другим ресурсом`, 'name_collision');
+  }
   let matches;
   if (hasOwn(desired, 'id')) {
     matches = resources.filter(resource => resource?.id === desired.id);
@@ -612,10 +623,24 @@ const validateReferences = async (client, type, candidate, requested) => {
       fail('test с указанным id не найден', 'missing_reference');
     }
   }
-  if (type === 'player' && hasOwn(requested, 'playlistId') && requested.playlistId != null) {
-    if (!Number.isSafeInteger(requested.playlistId) || requested.playlistId <= 0)
-      fail('playlistId имеет неверный вид', 'invalid_reference');
-    await requireReference(client, `/api/playlist/${requested.playlistId}`, 'playlistId');
+  if (type === 'player') {
+    const requiresPlaylist =
+      (hasOwn(requested, 'playlistId') && requested.playlistId != null) ||
+      candidate.current != null;
+    if (requiresPlaylist) {
+      if (!Number.isSafeInteger(candidate.playlistId) || candidate.playlistId <= 0)
+        fail('player.current требует playlistId', 'invalid_reference');
+      const playlist = await requestData(client, `/api/playlist/${candidate.playlistId}`);
+      if (!isObject(playlist))
+        fail('playlistId: GMIB вернул некорректную ссылку', 'invalid_reference');
+      if (
+        candidate.current != null &&
+        (!Array.isArray(playlist.items) ||
+          !playlist.items.some(item => item?.id === candidate.current))
+      ) {
+        fail('player.current отсутствует в candidate playlist', 'missing_reference');
+      }
+    }
   }
   if (type === 'playlist' && hasOwn(requested, 'items')) {
     if (!Array.isArray(requested.items)) fail('items должен быть массивом', 'invalid_playlist');
@@ -720,6 +745,7 @@ const buildPayload = (type, current, desired, creating) => {
   for (const field of definition.fields) {
     if (field !== 'id' && hasOwn(desired, field)) payload[field] = desired[field];
   }
+  if (type === 'player' && payload.playlistId == null) payload.current = null;
   return payload;
 };
 
@@ -768,6 +794,7 @@ const createFollowupError = (error, createdId, operations) => {
     {
       code: 'screen_followup_failed',
       status: known?.status,
+      id: createdId,
       createdId,
       operations,
     },
@@ -987,6 +1014,22 @@ const readDesired = async options => {
 
 const writeResult = value => process.stdout.write(`${JSON.stringify(value)}\n`);
 
+export const errorResult = error => {
+  const known = error instanceof GmibApiError ? error : undefined;
+  return {
+    ok: false,
+    error: {
+      code: known?.code ?? 'internal_error',
+      message: known?.message ?? 'Внутренняя ошибка resource helper',
+      ...(known?.status ? { status: known.status } : {}),
+      ...(known?.id != null ? { id: known.id } : {}),
+      ...(known?.createdId ? { createdId: known.createdId } : {}),
+      ...(known?.operations ? { operations: known.operations } : {}),
+      ...(known?.operations ? { changed: true, partial: true } : {}),
+    },
+  };
+};
+
 export const main = async (argv = process.argv.slice(2)) => {
   const { command, options } = parseArgs(argv);
   if (options.help || command === '--help' || !command) {
@@ -1018,16 +1061,7 @@ const invokedDirectly = process.argv[1] && import.meta.url === pathToFileURL(pro
 if (invokedDirectly) {
   main().catch(error => {
     const known = error instanceof GmibApiError ? error : undefined;
-    writeResult({
-      ok: false,
-      error: {
-        code: known?.code ?? 'internal_error',
-        message: known?.message ?? 'Внутренняя ошибка resource helper',
-        ...(known?.status ? { status: known.status } : {}),
-        ...(known?.createdId ? { createdId: known.createdId } : {}),
-        ...(known?.operations ? { operations: known.operations } : {}),
-      },
-    });
+    writeResult(errorResult(error));
     process.stderr.write(
       `gmib-api-resources: ${known?.message ?? 'Внутренняя ошибка resource helper'}\n`,
     );
