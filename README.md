@@ -534,6 +534,12 @@ gmib их не удаляет. При удалении плагина его п�
 не перезапускают gmib автоматически. Полный контракт приведен в
 [`docs/ru/management-api.md`](docs/ru/management-api.md).
 
+Для повторяемого применения экранов, плееров, плейлистов, привязок, расписаний, параметров яркости и
+plugin lifecycle есть небольшой Ansible playbook в [`examples/ansible`](examples/ansible). Он
+поддерживает настоящий check mode, ждет read-back после необходимого перезапуска плагинов и не
+выполняет активацию, смену пароля или runtime actions без явного opt-in. Запуск и ограничения
+описаны в [`docs/ru/management-ansible.md`](docs/ru/management-ansible.md).
+
 Удаленные настройки предоставляются самим плагином через явно объявленные authenticated routes под
 `/api/plugins/:pluginId`. Общего `/settings` и единой схемы для всех плагинов нет: JSON contract и
 его версия принадлежат плагину и могут развиваться независимо от GMIB. Динамические plugin routes

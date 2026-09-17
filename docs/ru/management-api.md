@@ -25,31 +25,35 @@ SRP и HMAC не шифруют HTTP-трафик. Для недоверенно
 по-прежнему требует авторизации. Пустой успешный ответ может иметь статус `200` или `204` в
 зависимости от маршрута.
 
-| Область                   | Маршруты                                                                                                                                                   | Тело и результат                                                                                                                                                          |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Идентификация             | `GET /api/identifier`                                                                                                                                      | Строковый identifier сервера; маршрут свободен от авторизации.                                                                                                            |
-| Состояние и лицензия      | `GET /api/announce`                                                                                                                                        | Состояние лицензии, версия, платформа, `autostart`, `exactWindowPlacement`. Не используйте поля legacy `announce`/`iv` как новый контракт.                                |
-| Активация                 | `POST /api/activate`                                                                                                                                       | `{key, name?}`; успешный запрос инициирует перезапуск. Ключ передавайте через защищенный JSON input helper, не через argv.                                                |
-| Повтор лицензии           | `POST /api/license/retry`                                                                                                                                  | Без тела; `409`, если действующая лицензия не получена.                                                                                                                   |
-| Экраны                    | `GET /api/screen`, `GET /api/screen/:id`, `POST /api/screen`, `PUT /api/screen`, `DELETE /api/screen/:id`                                                  | `Screen`; create принимает как минимум `{name}`, update — объект с `id`. Ответы create/update возвращают фактический объект.                                              |
-| Перезагрузка вывода       | `PUT /api/screen/:id/reload`                                                                                                                               | Перезагружает уже открытое окно экрана, `404`, если его нет.                                                                                                              |
-| Дисплеи                   | `GET /api/display`                                                                                                                                         | Массив Electron display descriptors; значения зависят от текущей ОС и сессии.                                                                                             |
-| Плееры                    | `GET /api/player`, `GET /api/player/:id`, `POST /api/player`, `PUT /api/player`, `DELETE /api/player/:id`                                                  | `Player`; update требует числовой `id`, create/update возвращают фактический объект.                                                                                      |
-| Управление выводом плеера | `PUT /api/player/:id/stop`, `PUT /api/player/:id/output`, `DELETE /api/player/:id/output`                                                                  | Для visibility: `{visible:boolean}`. Это runtime action, а не сохранение desired state.                                                                                   |
-| Плейлисты                 | `GET /api/playlist`, `GET /api/playlist/:id`, `POST /api/playlist`, `PUT /api/playlist`, `DELETE /api/playlist/:id`                                        | `CreatePlaylist`/`Playlist`, включая `items`.                                                                                                                             |
-| Элементы плейлиста        | `PATCH /api/playlist/:id`                                                                                                                                  | Либо `{insert:[mediaMd5,...]}`, либо `{remove:itemId}`; возвращает плейлист целиком.                                                                                      |
-| Медиатека                 | `GET /api/media`, `GET /api/media/:md5`, `POST /api/media`, `DELETE /api/media/:md5`                                                                       | Upload — multipart, остальные ответы используют `MediaInfo`. Generic JSON helper пока не загружает multipart-файлы.                                                       |
-| Привязки                  | `GET /api/mapping`, `POST /api/mapping`, `PUT /api/mapping`, `DELETE /api/mapping/:id`                                                                     | `PlayerMapping`; create/update возвращают фактическую привязку.                                                                                                           |
-| Планировщик плеера        | `GET /api/scheduler?playerId=`, `POST /api/scheduler`, `PUT /api/scheduler/:id`, `POST /api/scheduler/:id/run`, `DELETE /api/scheduler/:id`                | `PlayerSchedulerJobInput`/`PlayerSchedulerJob`. Query входит в HMAC.                                                                                                      |
-| Планировщик GMIB          | `GET /api/gmib-scheduler`, `POST /api/gmib-scheduler`, `PUT /api/gmib-scheduler/:id`, `POST /api/gmib-scheduler/:id/run`, `DELETE /api/gmib-scheduler/:id` | `GmibSchedulerJobInput`/`GmibSchedulerJob`. Actions включают тест, яркость и автояркость.                                                                                 |
-| Яркость NovaStar          | `PUT /api/novastar/screens/brightness`                                                                                                                     | `{path, screen?:number, value, persist?:boolean}`; runtime доступен только с соответствующей license capability. Сохранение в контроллер не является read-back проверкой. |
-| Системные параметры       | `POST /api/autostart`, `POST /api/exactWindowPlacement`                                                                                                    | `{value:boolean}`; `exactWindowPlacement` инициирует перезапуск.                                                                                                          |
-| Перезапуск                | `POST /api/relaunch`                                                                                                                                       | Action без тела.                                                                                                                                                          |
-| Страницы вывода           | `GET /api/pages`, `POST /api/pages`, `PUT /api/pages/:id`, `DELETE /api/pages/:id`                                                                         | `Page`; update берет `id` из path.                                                                                                                                        |
-| Параметры яркости         | `GET /api/manage/v1/settings`, `PATCH /api/manage/v1/settings?dryRun=true|false`                                                                            | Allowlist параметров яркости, автояркости, локации и кривых; подробный контракт приведен в [management-settings.md](management-settings.md).                              |
-| Plugin runtime            | `/api/plugins/:pluginId/*`                                                                                                                                 | Маршруты и DTO объявляет сам plugin с `access: "authenticated"`; они требуют auth и не открывают local routes. Единой формы `/settings` для всех plugins нет.             |
-| Plugin lifecycle          | `/api/manage/v1/plugins/*`                                                                                                                                 | Установка, inspect, включение и удаление без GUI. Контракт и ограничения описаны ниже; требуется лицензия Plus или выше.                                                  |
-| Смена пароля              | `PUT /api/manage/v1/auth/password`                                                                                                                         | `{salt, verifier}`; helper принимает новый пароль локально и вычисляет эти параметры сам. Маршрут доступен до активации лицензии.                                         |
+| Область                   | Маршруты                                                                                                                                                   | Тело и результат                                                                                                                                                                                 |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Идентификация             | `GET /api/identifier`                                                                                                                                      | Строковый identifier сервера; маршрут свободен от авторизации.                                                                                                                                   |
+| Состояние и лицензия      | `GET /api/announce`                                                                                                                                        | Состояние лицензии, версия, платформа, `autostart`, `exactWindowPlacement`. Не используйте поля legacy `announce`/`iv` как новый контракт.                                                       |
+| Активация                 | `POST /api/activate`                                                                                                                                       | `{key, name?}`; успешный запрос инициирует перезапуск. Ключ передавайте через защищенный JSON input helper, не через argv.                                                                       |
+| Повтор лицензии           | `POST /api/license/retry`                                                                                                                                  | Без тела; `409`, если действующая лицензия не получена.                                                                                                                                          |
+| Экраны                    | `GET /api/screen`, `GET /api/screen/:id`, `POST /api/screen`, `PUT /api/screen`, `DELETE /api/screen/:id`                                                  | `Screen`; create принимает как минимум `{name}`, update — объект с `id`. Ответы create/update возвращают фактический объект.                                                                     |
+| Перезагрузка вывода       | `PUT /api/screen/:id/reload`                                                                                                                               | Перезагружает уже открытое окно экрана, `404`, если его нет.                                                                                                                                     |
+| Дисплеи                   | `GET /api/display`                                                                                                                                         | Массив Electron display descriptors; значения зависят от текущей ОС и сессии.                                                                                                                    |
+| Плееры                    | `GET /api/player`, `GET /api/player/:id`, `POST /api/player`, `PUT /api/player`, `DELETE /api/player/:id`                                                  | `Player`; update требует числовой `id`, create/update возвращают фактический объект.                                                                                                             |
+| Управление выводом плеера | `PUT /api/player/:id/stop`, `PUT /api/player/:id/output`, `DELETE /api/player/:id/output`                                                                  | Для visibility: `{visible:boolean}`. Это runtime action, а не сохранение desired state.                                                                                                          |
+| Плейлисты                 | `GET /api/playlist`, `GET /api/playlist/:id`, `POST /api/playlist`, `PUT /api/playlist`, `DELETE /api/playlist/:id`                                        | `CreatePlaylist`/`Playlist`, включая `items`.                                                                                                                                                    |
+| Элементы плейлиста        | `PATCH /api/playlist/:id`                                                                                                                                  | Либо `{insert:[mediaMd5,...]}`, либо `{remove:itemId}`; возвращает плейлист целиком.                                                                                                             |
+| Медиатека                 | `GET /api/media`, `GET /api/media/:md5`, `POST /api/media`, `DELETE /api/media/:md5`                                                                       | Upload — multipart, остальные ответы используют `MediaInfo`. Generic JSON helper пока не загружает multipart-файлы.                                                                              |
+| Привязки                  | `GET /api/mapping`, `POST /api/mapping`, `PUT /api/mapping`, `DELETE /api/mapping/:id`                                                                     | `PlayerMapping`; create/update возвращают фактическую привязку.                                                                                                                                  |
+| Планировщик плеера        | `GET /api/scheduler?playerId=`, `POST /api/scheduler`, `PUT /api/scheduler/:id`, `POST /api/scheduler/:id/run`, `DELETE /api/scheduler/:id`                | `PlayerSchedulerJobInput`/`PlayerSchedulerJob`. Query входит в HMAC.                                                                                                                             |
+| Планировщик GMIB          | `GET /api/gmib-scheduler`, `POST /api/gmib-scheduler`, `PUT /api/gmib-scheduler/:id`, `POST /api/gmib-scheduler/:id/run`, `DELETE /api/gmib-scheduler/:id` | `GmibSchedulerJobInput`/`GmibSchedulerJob`. Actions включают тест, яркость и автояркость.                                                                                                        |
+| Яркость NovaStar          | `PUT /api/novastar/screens/brightness`                                                                                                                     | `{path, screen?:number, value, persist?:boolean}`; runtime доступен только с соответствующей license capability. Сохранение в контроллер не является read-back проверкой.                        |
+| Системные параметры       | `POST /api/autostart`, `POST /api/exactWindowPlacement`                                                                                                    | `{value:boolean}`; `exactWindowPlacement` инициирует перезапуск.                                                                                                                                 |
+| Перезапуск                | `POST /api/relaunch`                                                                                                                                       | Action без тела.                                                                                                                                                                                 |
+| Страницы вывода           | `GET /api/pages`, `POST /api/pages`, `PUT /api/pages/:id`, `DELETE /api/pages/:id`                                                                         | `Page`; update берет `id` из path.                                                                                                                                                               |
+| Параметры яркости         | `GET /api/manage/v1/settings`, `PATCH /api/manage/v1/settings?dryRun=true`                                                                                 | Allowlist параметров яркости, автояркости, локации и кривых; без `dryRun` или при `false` изменения сохраняются. Подробный контракт приведен в [management-settings.md](management-settings.md). |
+| Plugin runtime            | `/api/plugins/:pluginId/*`                                                                                                                                 | Маршруты и DTO объявляет сам plugin с `access: "authenticated"`; они требуют auth и не открывают local routes. Единой формы `/settings` для всех plugins нет.                                    |
+| Plugin lifecycle          | `/api/manage/v1/plugins/*`                                                                                                                                 | Установка, inspect, включение и удаление без GUI. Контракт и ограничения описаны ниже; требуется лицензия Plus или выше.                                                                         |
+| Смена пароля              | `PUT /api/manage/v1/auth/password`                                                                                                                         | `{salt, verifier}`; helper принимает новый пароль локально и вычисляет эти параметры сам. Маршрут доступен до активации лицензии.                                                                |
+
+`POST /api/screen` не поддерживает запись `brightness`, а `addresses` при создании не сохраняется.
+Идемпотентный resource helper исключает эти поля из POST и, если они заданы, применяет их следующим
+`PUT` с фактическим server-generated `id`.
 
 Основные DTO находятся в [`packages/common/video.ts`](../../packages/common/video.ts),
 [`packages/common/playlist.ts`](../../packages/common/playlist.ts),
@@ -60,15 +64,17 @@ SRP и HMAC не шифруют HTTP-трафик. Для недоверенно
 
 Машиночитаемая схема статических маршрутов находится в
 [`docs/api/openapi.json`](../api/openapi.json); пояснения и границы схемы — в
-[`docs/api/README.md`](../api/README.md).
+[`docs/api/README.md`](../api/README.md). Готовый минимальный сценарий Ansible описан в
+[management-ansible.md](management-ansible.md).
 
 ## Параметры яркости и автояркости
 
-`GET /api/manage/v1/settings` возвращает только `brightness`, `autobrightness`, `location`, `spline`,
-`sunSpline` и `nightMode`. `PATCH` частично меняет эти поля; повтор тех же значений возвращает
-`changed:false`, а `dryRun=true` выполняет validation и read-back без записи. Оба маршрута требуют
-авторизацию даже при `unsafeMode`; изменение требует действующей лицензии. Полный формат, диапазоны,
-reset-to-default и пример ответа описаны в [management-settings.md](management-settings.md).
+`GET /api/manage/v1/settings` возвращает только `brightness`, `autobrightness`, `location`,
+`spline`, `sunSpline` и `nightMode`. `PATCH` частично меняет эти поля; повтор тех же значений
+возвращает `changed:false`, а `dryRun=true` выполняет validation и read-back без записи. Оба
+маршрута требуют авторизацию даже при `unsafeMode`; изменение требует действующей лицензии. Полный
+формат, диапазоны, reset-to-default и пример ответа описаны в
+[management-settings.md](management-settings.md).
 
 Endpoint сохраняет desired configuration. Фактическое применение автояркости остается в текущем
 renderer/runtime и зависит от датчика, локации и жизненного цикла GMIB; read-back конфигурации не
@@ -76,16 +82,16 @@ renderer/runtime и зависит от датчика, локации и жиз
 
 ## Настройки плагинов
 
-Authenticated plugin routes под `/api/plugins/:pluginId/*` теперь всегда требуют авторизацию, включая
-`unsafeMode`. Они не открывают наружу маршруты с `access: "local"` и не обходят `localOnly`.
-Поддержка удаленных настроек, их путь и JSON shape объявляются каждым плагином отдельно; универсального
-`/settings` в host API нет. Например, Shader Screensavers предоставляет
+Authenticated plugin routes под `/api/plugins/:pluginId/*` теперь всегда требуют авторизацию,
+включая `unsafeMode`. Они не открывают наружу маршруты с `access: "local"` и не обходят `localOnly`.
+Поддержка удаленных настроек, их путь и JSON shape объявляются каждым плагином отдельно;
+универсального `/settings` в host API нет. Например, Shader Screensavers предоставляет
 `GET/PATCH /api/plugins/shader-screensavers/settings`, а его `/state` остается локальным.
 
-Версия схемы настроек развивается вместе с plugin и не требует выпуска новой версии host API.
-Плагин может предоставить собственный authenticated `/openapi.json`. Динамические plugin routes
-намеренно не входят в основной [`docs/api/openapi.json`](../api/openapi.json): host отвечает только
-за auth, license gate и dispatch явно объявленных plugin routes.
+Версия схемы настроек развивается вместе с plugin и не требует выпуска новой версии host API. Плагин
+может предоставить собственный authenticated `/openapi.json`. Динамические plugin routes намеренно
+не входят в основной [`docs/api/openapi.json`](../api/openapi.json): host отвечает только за auth,
+license gate и dispatch явно объявленных plugin routes.
 
 ## Lifecycle плагинов
 
@@ -132,9 +138,9 @@ archive.
 `enabled`/`archiveSha256` описывают desired installation, а `runningEnabled`/`runningVersion` — код,
 уже работающий в процессе. `restartRequired` остается истинным при отличии версии, архива или
 состояния и после удаления работающего плагина. Повторный `DELETE` такого уже удалённого плагина
-возвращает `changed:false`, но сохраняет `restartRequired:true`, пока старый runtime работает. API сам
-gmib не перезапускает. При ошибке записи registry предыдущий каталог плагина и in-memory desired state
-восстанавливаются. Постоянные данные в `.data` при удалении сохраняются.
+возвращает `changed:false`, но сохраняет `restartRequired:true`, пока старый runtime работает. API
+сам gmib не перезапускает. При ошибке записи registry предыдущий каталог плагина и in-memory desired
+state восстанавливаются. Постоянные данные в `.data` при удалении сохраняются.
 
 Ошибки lifecycle имеют форму `{error:{code,message}}`. Частые коды: `archive_hash_mismatch`,
 `permissions_not_accepted`, `trusted_backend_not_accepted`, `official_release_unavailable`,
