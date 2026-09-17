@@ -3,7 +3,7 @@
 Этот документ описывает существующий REST API GMIB и standalone helper для скриптов и Ansible.
 Полный второй CRUD в `/api/manage/v1` не создается: экраны, плееры, плейлисты, привязки и оба
 планировщика уже доступны через маршруты `/api/*`. Namespace `/api/manage/v1` используется только
-для недостающих административных операций, пока это смена общего пароля.
+для недостающих административных операций: смены общего пароля и lifecycle плагинов.
 
 ## Адрес и защита
 
@@ -44,6 +44,7 @@ SRP и HMAC не шифруют HTTP-трафик. Для недоверенно
 | Перезапуск                | `POST /api/relaunch`                                                                                                                                       | Action без тела.                                                                                                                                                          |
 | Страницы вывода           | `GET /api/pages`, `POST /api/pages`, `PUT /api/pages/:id`, `DELETE /api/pages/:id`                                                                         | `Page`; update берет `id` из path.                                                                                                                                        |
 | Plugin runtime            | `/api/plugins/:pluginId/*`                                                                                                                                 | Маршруты определяет сам установленный plugin с `access: "authenticated"`. Это не lifecycle API; раздел Plugins требует лицензию Plus или выше.                            |
+| Plugin lifecycle          | `/api/manage/v1/plugins/*`                                                                                                                                 | Установка, inspect, включение и удаление без GUI. Контракт и ограничения описаны ниже; требуется лицензия Plus или выше.                                                  |
 | Смена пароля              | `PUT /api/manage/v1/auth/password`                                                                                                                         | `{salt, verifier}`; helper принимает новый пароль локально и вычисляет эти параметры сам. Маршрут доступен до активации лицензии.                                         |
 
 Основные DTO находятся в [`packages/common/video.ts`](../../packages/common/video.ts),
@@ -55,9 +56,61 @@ SRP и HMAC не шифруют HTTP-трафик. Для недоверенно
 
 В текущем API отсутствуют:
 
-- noninteractive install/update/enable/disable/uninstall plugin;
 - единый проверенный контракт настройки plugin;
 - GET/PATCH разрешенных параметров конфигурации, включая параметры и флаг автояркости.
+
+## Lifecycle плагинов
+
+Все маршруты ниже требуют авторизацию даже при включенном `unsafeMode` и capability `plugins`
+действующей лицензии. Они не пересекаются с runtime-маршрутами `/api/plugins/:pluginId/*`.
+
+| Метод и путь                                                                                                          | Результат                                                                                    |
+| --------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `GET /api/manage/v1/plugins`                                                                                          | `{plugins: PluginStatus[]}`.                                                                 |
+| `GET /api/manage/v1/plugins/catalog`                                                                                  | `{plugins: PluginCatalogEntry[]}` из текущего официального каталога.                         |
+| `GET /api/manage/v1/plugins/official/:id/inspect?version=<version>&sha256=<sha256>`                                   | Manifest, SHA-256, размер и текущее состояние без установки.                                 |
+| `POST /api/manage/v1/plugins/official/:id/install`                                                                    | Установка или обновление текущего закрепленного release; тело описано ниже.                  |
+| `POST /api/manage/v1/plugins/archive/inspect?sha256=<sha256>`                                                         | Проверка переданного архива без установки.                                                   |
+| `POST /api/manage/v1/plugins/archive/install?sha256=<sha256>&permissions=<list>&trustedBackend=<bool>&enabled=<bool>` | Установка или обновление переданного архива.                                                 |
+| `PUT /api/manage/v1/plugins/:id/enabled` с `{enabled:boolean}`                                                        | `{changed,plugin}`; состояние вступает в силу после перезапуска, если отличается от runtime. |
+| `DELETE /api/manage/v1/plugins/:id`                                                                                   | `{changed,restartRequired}`; отсутствие плагина является успешным no-op.                     |
+
+Тело установки официального плагина:
+
+```json
+{
+  "version": "1.2.3",
+  "sha256": "64 lowercase hex characters",
+  "permissions": ["storage", "http.routes"],
+  "trustedBackend": true,
+  "enabled": true
+}
+```
+
+`version` и `sha256` должны точно совпасть с release из текущего ответа `catalog`. Сервер не обещает
+установку исторической версии, которой уже нет в каталоге. `permissions` должен точно совпасть со
+списком manifest, а `trustedBackend` — с фактом наличия `manifest.main`; это явное согласие на
+возможности и выполнение backend-кода.
+
+Архив передается телом `application/octet-stream`, не JSON. В query `permissions` содержит точный
+список через запятую; для пустого списка параметр остается пустым. HMAC текущего протокола не
+включает binary body, поэтому ожидаемый SHA-256 и все поля согласия находятся в подписанном query.
+Сервер сам вычисляет SHA-256 полученных bytes до inspect/install. Лимиты совпадают с локальной
+установкой: архив до 50 МиБ, распакованные данные до 200 МиБ, до 2000 файлов; traversal, дубли и
+symlink запрещены. Generic CLI-команда `request` пока предназначена для JSON и не загружает binary
+archive.
+
+Повторная установка того же `version`, SHA-256 и `enabled` возвращает `changed:false`. Поля
+`enabled`/`archiveSha256` описывают desired installation, а `runningEnabled`/`runningVersion` — код,
+уже работающий в процессе. `restartRequired` остается истинным при отличии версии, архива или
+состояния и после удаления работающего плагина. Повторный `DELETE` такого уже удалённого плагина
+возвращает `changed:false`, но сохраняет `restartRequired:true`, пока старый runtime работает. API сам
+gmib не перезапускает. При ошибке записи registry предыдущий каталог плагина и in-memory desired state
+восстанавливаются. Постоянные данные в `.data` при удалении сохраняются.
+
+Ошибки lifecycle имеют форму `{error:{code,message}}`. Частые коды: `archive_hash_mismatch`,
+`permissions_not_accepted`, `trusted_backend_not_accepted`, `official_release_unavailable`,
+`plugin_not_found` и `plugin_capability_required`.
 
 ## Standalone helper
 
