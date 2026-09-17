@@ -266,6 +266,7 @@
       "post": {
         "tags": ["Screens and players"],
         "operationId": "createScreen",
+        "description": "Create persists the screen fields in `CreateScreen`. The current runtime ignores `addresses` and `brightness` if they are sent; read the created screen back and use PUT with its id to set those fields.",
         "requestBody": {
           "required": true,
           "content": {
@@ -378,7 +379,7 @@
         },
         "responses": {
           "200": { "$ref": "#/components/responses/Player" },
-          "400": { "$ref": "#/components/responses/BadRequest" },
+          "400": { "$ref": "#/components/responses/PlainTextBadRequest" },
           "404": { "$ref": "#/components/responses/NotFound" },
           "403": { "$ref": "#/components/responses/LicenseRequired" }
         }
@@ -429,7 +430,7 @@
         },
         "responses": {
           "204": { "$ref": "#/components/responses/NoContent" },
-          "400": { "$ref": "#/components/responses/BadRequest" },
+          "400": { "$ref": "#/components/responses/PlainTextBadRequest" },
           "403": { "$ref": "#/components/responses/LicenseRequired" }
         }
       },
@@ -509,12 +510,14 @@
       "get": {
         "tags": ["Scheduling"],
         "operationId": "listPlayerSchedule",
+        "description": "Cron schedules use GMIB host local time; there is no timezone field. See the input schema for action-specific fields and legacy validation limits.",
         "parameters": [{ "$ref": "#/components/parameters/PlayerIdQuery" }],
         "responses": { "200": { "$ref": "#/components/responses/PlayerSchedule" } }
       },
       "post": {
         "tags": ["Scheduling"],
         "operationId": "createPlayerSchedule",
+        "description": "Creates a scheduler record. The legacy runtime persists bodies without complete upfront validation; schema-required scheduling and action fields are required for a runnable job and can otherwise fail only at execution.",
         "requestBody": {
           "required": true,
           "content": {
@@ -533,6 +536,7 @@
       "put": {
         "tags": ["Scheduling"],
         "operationId": "replacePlayerSchedule",
+        "description": "Replacement update. The path id wins over any body id. The legacy runtime persists bodies without complete upfront validation; schema-required scheduling and action fields are required for a runnable job and can otherwise fail only at execution.",
         "parameters": [{ "$ref": "#/components/parameters/StringId" }],
         "requestBody": {
           "required": true,
@@ -575,11 +579,13 @@
       "get": {
         "tags": ["Scheduling"],
         "operationId": "listGmibSchedule",
+        "description": "Cron schedules use GMIB host local time; there is no timezone field. See the input schema for action-specific fields and legacy validation limits.",
         "responses": { "200": { "$ref": "#/components/responses/GmibSchedule" } }
       },
       "post": {
         "tags": ["Scheduling"],
         "operationId": "createGmibSchedule",
+        "description": "Creates a scheduler record. The legacy runtime persists bodies without complete upfront validation; schema-required scheduling and action fields are required for a runnable job and can otherwise fail only at execution.",
         "requestBody": {
           "required": true,
           "content": {
@@ -598,6 +604,7 @@
       "put": {
         "tags": ["Scheduling"],
         "operationId": "replaceGmibSchedule",
+        "description": "Replacement update. The path id wins over any body id. The legacy runtime persists bodies without complete upfront validation; schema-required scheduling and action fields are required for a runnable job and can otherwise fail only at execution.",
         "parameters": [{ "$ref": "#/components/parameters/StringId" }],
         "requestBody": {
           "required": true,
@@ -692,7 +699,7 @@
         "description": "Allowed before activation; may schedule relaunch after success.",
         "responses": {
           "200": { "$ref": "#/components/responses/EmptySuccess" },
-          "409": { "$ref": "#/components/responses/Conflict" }
+          "409": { "$ref": "#/components/responses/PlainTextConflict" }
         }
       }
     },
@@ -1094,7 +1101,6 @@
           "left": { "type": "number" },
           "top": { "type": "number" },
           "display": { "type": "number" },
-          "addresses": { "type": "array", "items": { "type": "string" } },
           "downToTop": { "type": "boolean" },
           "rightToLeft": { "type": "boolean" },
           "borderTop": { "type": "number" },
@@ -1103,7 +1109,6 @@
           "borderRight": { "type": "number" },
           "brightnessFactor": { "type": "number" },
           "test": { "type": "string" },
-          "brightness": { "type": "number" },
           "useExternalKnob": { "type": "boolean" },
           "outputTransparent": { "type": "boolean" },
           "zIndex": { "type": "number" }
@@ -1210,6 +1215,7 @@
       },
       "CronSchedule": {
         "type": "object",
+        "description": "Six-part schedule interpreted in the GMIB host local timezone. Selected values are sorted and deduplicated on persistence; the runtime does not range-validate them. Legacy stored five-part schedules read back with seconds set to `{ mode: \"select\", every: 1, selected: [0] }`.",
         "required": ["seconds", "minutes", "hours", "days", "months", "weekdays"],
         "properties": {
           "seconds": { "$ref": "#/components/schemas/CronPart" },
@@ -1222,52 +1228,52 @@
       },
       "SchedulerBase": {
         "type": "object",
-        "required": ["kind", "name", "enabled", "priority"],
+        "description": "Scheduler response fields. Execution state and nextRunAt are server-generated.",
+        "required": ["id", "kind", "name", "enabled", "priority"],
         "properties": {
-          "id": { "type": "string" },
+          "id": { "type": "string", "readOnly": true },
           "kind": { "type": "string", "enum": ["once", "cron"] },
           "name": { "type": "string" },
-          "runAt": { "type": "string" },
+          "runAt": { "type": "string", "format": "date-time" },
           "cron": { "$ref": "#/components/schemas/CronSchedule" },
           "enabled": { "type": "boolean" },
           "priority": { "type": "number" },
-          "lastRunAt": { "type": "string" },
-          "lastRunKey": { "type": "string" },
-          "lastStatus": { "type": "string", "enum": ["idle", "success", "error"] },
-          "lastMessage": { "type": "string" },
-          "nextRunAt": { "type": "string" }
+          "lastRunAt": { "type": "string", "format": "date-time", "readOnly": true },
+          "lastRunKey": { "type": "string", "readOnly": true },
+          "lastStatus": {
+            "type": "string",
+            "enum": ["idle", "success", "error"],
+            "readOnly": true
+          },
+          "lastMessage": { "type": "string", "readOnly": true },
+          "nextRunAt": { "type": "string", "format": "date-time", "readOnly": true }
         }
       },
-      "PlayerSchedulerJob": {
+      "SchedulerJobInputBase": {
+        "type": "object",
+        "description": "Input for a runnable scheduler job. `id` is optional only for legacy POST clients and is generated when omitted; PUT always uses the path id. `runAt` and cron date components are parsed by JavaScript on the GMIB host; send an ISO timestamp with an explicit offset for once jobs. No timezone property exists for cron jobs, which use host local time. Priority is truncated to an integer and cron selected arrays are sorted and deduplicated on persistence.",
+        "required": ["kind", "name", "enabled", "priority"],
+        "properties": {
+          "id": { "type": "string", "description": "Optional legacy POST id; ignored by PUT." },
+          "kind": { "type": "string", "enum": ["once", "cron"] },
+          "name": { "type": "string" },
+          "runAt": { "type": "string", "format": "date-time" },
+          "cron": { "$ref": "#/components/schemas/CronSchedule" },
+          "enabled": { "type": "boolean" },
+          "priority": { "type": "number" }
+        },
         "allOf": [
-          { "$ref": "#/components/schemas/SchedulerBase" },
           {
-            "type": "object",
-            "required": ["id", "playerId", "action"],
-            "properties": {
-              "playerId": { "type": "integer" },
-              "action": {
-                "type": "string",
-                "enum": [
-                  "load-playlist",
-                  "toggle-play",
-                  "play",
-                  "stop",
-                  "hide-output",
-                  "show-output",
-                  "next",
-                  "play-item"
-                ]
-              },
-              "playlistId": { "type": "integer" },
-              "itemNumber": { "type": "integer" },
-              "hideOutputOnStop": { "type": "boolean" },
-              "outputAll": { "type": "boolean" }
-            }
+            "if": { "properties": { "kind": { "const": "once" } }, "required": ["kind"] },
+            "then": { "required": ["runAt"] }
+          },
+          {
+            "if": { "properties": { "kind": { "const": "cron" } }, "required": ["kind"] },
+            "then": { "required": ["cron"] }
           }
         ]
       },
-      "PlayerSchedulerJobInput": {
+      "PlayerSchedulerJob": {
         "allOf": [
           { "$ref": "#/components/schemas/SchedulerBase" },
           {
@@ -1296,32 +1302,46 @@
           }
         ]
       },
-      "GmibSchedulerJob": {
+      "PlayerSchedulerJobInput": {
         "allOf": [
-          { "$ref": "#/components/schemas/SchedulerBase" },
+          { "$ref": "#/components/schemas/SchedulerJobInputBase" },
           {
             "type": "object",
-            "required": ["id", "action"],
+            "description": "For `load-playlist`, playlistId is required. `play-item` defaults itemNumber to 1; stop and output flags are optional. The runtime enforces these action prerequisites when executing, not necessarily while creating the legacy record.",
+            "required": ["playerId", "action"],
             "properties": {
+              "playerId": { "type": "integer" },
               "action": {
                 "type": "string",
                 "enum": [
-                  "show-test",
-                  "hide-test",
-                  "set-brightness",
-                  "set-autobrightness",
-                  "set-overheat-protection"
+                  "load-playlist",
+                  "toggle-play",
+                  "play",
+                  "stop",
+                  "hide-output",
+                  "show-output",
+                  "next",
+                  "play-item"
                 ]
               },
-              "screenId": { "type": "integer" },
-              "testId": { "type": "string" },
-              "brightness": { "type": "number" },
-              "enabledValue": { "type": "boolean" }
-            }
+              "playlistId": { "type": "integer" },
+              "itemNumber": { "type": "integer" },
+              "hideOutputOnStop": { "type": "boolean" },
+              "outputAll": { "type": "boolean" }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "properties": { "action": { "const": "load-playlist" } },
+                  "required": ["action"]
+                },
+                "then": { "required": ["playlistId"] }
+              }
+            ]
           }
         ]
       },
-      "GmibSchedulerJobInput": {
+      "GmibSchedulerJob": {
         "allOf": [
           { "$ref": "#/components/schemas/SchedulerBase" },
           {
@@ -1343,6 +1363,64 @@
               "brightness": { "type": "number" },
               "enabledValue": { "type": "boolean" }
             }
+          }
+        ]
+      },
+      "GmibSchedulerJobInput": {
+        "allOf": [
+          { "$ref": "#/components/schemas/SchedulerJobInputBase" },
+          {
+            "type": "object",
+            "description": "show-test needs screenId and testId; hide-test needs screenId; set-brightness needs brightness; set-autobrightness and set-overheat-protection need enabledValue. The runtime enforces these action prerequisites when executing, not necessarily while creating the legacy record.",
+            "required": ["action"],
+            "properties": {
+              "action": {
+                "type": "string",
+                "enum": [
+                  "show-test",
+                  "hide-test",
+                  "set-brightness",
+                  "set-autobrightness",
+                  "set-overheat-protection"
+                ]
+              },
+              "screenId": { "type": "integer" },
+              "testId": { "type": "string" },
+              "brightness": { "type": "number" },
+              "enabledValue": { "type": "boolean" }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "properties": { "action": { "const": "show-test" } },
+                  "required": ["action"]
+                },
+                "then": { "required": ["screenId", "testId"] }
+              },
+              {
+                "if": {
+                  "properties": { "action": { "const": "hide-test" } },
+                  "required": ["action"]
+                },
+                "then": { "required": ["screenId"] }
+              },
+              {
+                "if": {
+                  "properties": { "action": { "const": "set-brightness" } },
+                  "required": ["action"]
+                },
+                "then": { "required": ["brightness"] }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "action": { "enum": ["set-autobrightness", "set-overheat-protection"] }
+                  },
+                  "required": ["action"]
+                },
+                "then": { "required": ["enabledValue"] }
+              }
+            ]
           }
         ]
       },
@@ -1455,6 +1533,10 @@
         "description": "Invalid request",
         "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } }
       },
+      "PlainTextBadRequest": {
+        "description": "Invalid request. This legacy branch uses Express sendStatus(400), so the body is the standard plain-text status message.",
+        "content": { "text/plain": { "schema": { "type": "string" } } }
+      },
       "Unauthorized": {
         "description": "Authentication failed; general middleware returns `{ identifier }` for a new SRP attempt.",
         "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } }
@@ -1465,6 +1547,10 @@
       "Conflict": {
         "description": "Conflict or state precondition failed.",
         "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } }
+      },
+      "PlainTextConflict": {
+        "description": "License retry did not obtain an active license; the runtime sends its message as plain text.",
+        "content": { "text/plain": { "schema": { "type": "string" } } }
       },
       "TooManyRequests": { "description": "Too many pending SRP handshakes." },
       "ServerError": { "description": "Runtime failed; body may be plain text." },

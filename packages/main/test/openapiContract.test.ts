@@ -34,13 +34,13 @@ const pathToRuntimeLiteral = (method: string, path: string): string => {
 
 const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-const validateSchema = (name: string, value: unknown): void => {
+const validateSchema = (name: string, value: unknown, expected = true): void => {
   const specWithId = { ...specification, $id: 'https://gmib.invalid/openapi.json' };
   const ajv = new Ajv2020({ strict: false, allErrors: true });
   ajv.addSchema(specWithId);
   const validate = ajv.getSchema(`${specWithId.$id}#/components/schemas/${name}`);
   expect(validate, `missing schema ${name}`).toBeDefined();
-  expect(validate?.(value), ajv.errorsText(validate?.errors)).toBe(true);
+  expect(validate?.(value), ajv.errorsText(validate?.errors)).toBe(expected);
 };
 
 describe('OpenAPI management contract', () => {
@@ -113,10 +113,81 @@ describe('OpenAPI management contract', () => {
     validateSchema('PlayerSchedulerJobInput', {
       kind: 'once',
       name: 'Start player',
+      runAt: '2026-09-17T12:00:00+03:00',
       enabled: true,
       priority: 0,
       playerId: 1,
       action: 'play',
     });
+  });
+
+  it('requires runnable scheduler fields for kind and action variants', () => {
+    const cron = {
+      seconds: { mode: 'select', every: 1, selected: [0] },
+      minutes: { mode: 'every', every: 10, selected: [] },
+      hours: { mode: 'all', every: 1, selected: [] },
+      days: { mode: 'all', selected: [] },
+      months: { mode: 'all', selected: [] },
+      weekdays: { mode: 'all', selected: [] },
+    };
+
+    validateSchema('PlayerSchedulerJobInput', {
+      kind: 'cron',
+      name: 'Load playlist',
+      cron,
+      enabled: true,
+      priority: 1.5,
+      playerId: 1,
+      action: 'load-playlist',
+      playlistId: 2,
+    });
+    validateSchema('GmibSchedulerJobInput', {
+      kind: 'once',
+      name: 'Show page',
+      runAt: '2026-09-17T12:00:00+03:00',
+      enabled: true,
+      priority: 0,
+      action: 'show-test',
+      screenId: 1,
+      testId: 'page-1',
+    });
+    validateSchema(
+      'PlayerSchedulerJobInput',
+      {
+        kind: 'once',
+        name: 'Missing runAt',
+        enabled: true,
+        priority: 0,
+        playerId: 1,
+        action: 'play',
+      },
+      false,
+    );
+    validateSchema(
+      'PlayerSchedulerJobInput',
+      {
+        kind: 'cron',
+        name: 'Missing playlist',
+        cron,
+        enabled: true,
+        priority: 0,
+        playerId: 1,
+        action: 'load-playlist',
+      },
+      false,
+    );
+    validateSchema(
+      'GmibSchedulerJobInput',
+      {
+        kind: 'once',
+        name: 'Missing test',
+        runAt: '2026-09-17T12:00:00+03:00',
+        enabled: true,
+        priority: 0,
+        action: 'show-test',
+        screenId: 1,
+      },
+      false,
+    );
   });
 });

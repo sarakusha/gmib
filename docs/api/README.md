@@ -16,8 +16,11 @@ authenticated.
 For an executable implementation of SRP, server-proof (`M2`) verification, and HMAC signing, use
 [`scripts/gmib-api-client.mjs`](../../scripts/gmib-api-client.mjs) or
 [`scripts/gmib-api.mjs`](../../scripts/gmib-api.mjs). It signs the actual path plus query with
-`HMAC-SHA256(METHOD + PATH_AND_QUERY + TIMESTAMP + BODY)`. `BODY` is omitted only when absent or
-an empty object; therefore callers must serialize the same non-empty JSON value they sign.
+`HMAC-SHA256(METHOD + PATH_AND_QUERY + TIMESTAMP + BODY)`. `BODY` is omitted whenever the parsed
+body is falsy (`undefined`, `null`, `false`, `0`, or an empty string), and also for an empty plain
+object. For other JSON values it is `JSON.stringify(body)` (or the string itself), so callers must
+serialize the same value they sign. Multipart `/api/media` reaches HMAC middleware before
+formidable parses it, leaving `req.body` absent: do not include raw multipart bytes in `BODY`.
 
 ## Scope and limits
 
@@ -26,6 +29,17 @@ do not perform complete runtime JSON-schema validation. In particular, `PUT` ope
 the stored fields represented by their input schema; send a complete object, rather than treating
 them as partial updates. Database constraints and implementation errors can still produce the
 generic error responses.
+
+`POST /api/screen` does not persist `addresses` or `brightness`, even if legacy callers send
+them. Read the created record and then use `PUT /api/screen` with its id to set those fields.
+Player `width` and `height` are persisted on create and replacement update.
+
+Scheduler input schemas describe the fields needed for a runnable job: `once` needs `runAt`,
+`cron` needs a six-part schedule, and some actions require their target/value fields. The legacy
+handlers can still store an incomplete body and report its missing action fields only when it runs.
+Cron schedules have no timezone property and are evaluated in the GMIB host's local timezone;
+send an ISO timestamp with an explicit offset for `once`. Persisted cron selections are sorted and
+deduplicated, and priority is truncated to an integer.
 
 Media upload is `multipart/form-data`, accepts image/video/MKV inputs selected by the runtime, and
 has a six-hour HMAC timestamp window. Other remote HMAC requests have a five-minute window.
