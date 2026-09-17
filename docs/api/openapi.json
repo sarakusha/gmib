@@ -257,7 +257,7 @@
           }
         },
         "responses": {
-          "200": { "$ref": "#/components/responses/PluginStatus" },
+          "200": { "$ref": "#/components/responses/PluginEnabledResult" },
           "400": { "$ref": "#/components/responses/BadRequest" },
           "401": { "$ref": "#/components/responses/Unauthorized" },
           "403": { "$ref": "#/components/responses/PluginForbidden" },
@@ -1306,6 +1306,15 @@
         "properties": { "enabled": { "type": "boolean" } },
         "additionalProperties": false
       },
+      "PluginEnabledResult": {
+        "type": "object",
+        "required": ["changed", "plugin"],
+        "properties": {
+          "changed": { "type": "boolean" },
+          "plugin": { "$ref": "#/components/schemas/PluginStatus" }
+        },
+        "additionalProperties": false
+      },
       "PluginInstallResult": {
         "type": "object",
         "required": ["changed", "updated", "plugin", "restartRequired"],
@@ -2044,11 +2053,8 @@
         "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } }
       },
       "PluginForbidden": {
-        "description": "The request is authenticated but the plugins license capability is unavailable. Runtime capability errors use JSON; the outer license gate may return plain text.",
-        "content": {
-          "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } },
-          "text/plain": { "schema": { "type": "string" } }
-        }
+        "description": "The request is authenticated but the plugins license capability is unavailable. This lifecycle router is mounted before the general license gate and returns a structured JSON capability error.",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } }
       },
       "PayloadTooLarge": {
         "description": "The plugin archive exceeds the 50 MiB upload limit.",
@@ -2104,6 +2110,12 @@
         "description": "Plugin desired and running status",
         "content": {
           "application/json": { "schema": { "$ref": "#/components/schemas/PluginStatus" } }
+        }
+      },
+      "PluginEnabledResult": {
+        "description": "Enable/disable result",
+        "content": {
+          "application/json": { "schema": { "$ref": "#/components/schemas/PluginEnabledResult" } }
         }
       },
       "PluginInstallResult": {

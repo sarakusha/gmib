@@ -53,8 +53,10 @@ catalogue's exact version and SHA-256; archive inspection/install uses an
 `application/octet-stream` body and an expected `sha256` query value. Installation additionally
 requires exact permission and trusted-backend consent. Lifecycle responses separate desired and
 running status and report `restartRequired`; repeated identical enable/install operations can return
-`changed: false`. Archive uploads are limited to 50 MiB. Capability failures use structured JSON,
-while the outer inactive-license gate may return plain text 403.
+`changed: false`. `PUT /{id}/enabled` returns `{changed, plugin}`. Archive uploads are limited to
+50 MiB. The lifecycle router is mounted before the general license gate, so authenticated capability
+failures return structured JSON 403 responses. Settings mutations are mounted through the general
+API gate and may return its plain-text inactive-license 403.
 
 The allowlisted runtime settings contract is under `/api/manage/v1/settings`. GET and PATCH remain
 strictly authenticated even in `unsafeMode`; PATCH mutations also pass the active-license gate.

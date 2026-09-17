@@ -165,6 +165,21 @@ describe('OpenAPI management contract', () => {
       runningEnabled: true,
       restartRequired: false,
     });
+    validateSchema('PluginEnabledResult', {
+      changed: true,
+      plugin: {
+        manifest: {
+          id: 'shader-screensavers',
+          name: 'Shaders',
+          version: '1.0.0',
+          gmibApi: '^1.0.0',
+        },
+        enabled: false,
+        loaded: true,
+        runningEnabled: true,
+        restartRequired: true,
+      },
+    });
     validateSchema('ManagementSettings', {
       brightness: 30,
       autobrightness: false,
