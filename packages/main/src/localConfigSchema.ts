@@ -50,6 +50,15 @@ export const localConfigSchema: Schema<LocalConfig> = {
   },
   salt: { type: 'string' },
   verifier: { type: 'string' },
+  remoteAuth: {
+    type: 'object',
+    properties: {
+      salt: { type: 'string' },
+      verifier: { type: 'string' },
+      revision: { type: 'integer', minimum: 0 },
+    },
+    required: ['salt', 'verifier', 'revision'],
+  },
   identifier: { type: 'string', default: nanoid(), readOnly: true },
   announce: { type: 'string' },
   iv: { type: 'string' },

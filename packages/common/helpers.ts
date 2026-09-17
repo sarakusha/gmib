@@ -307,6 +307,7 @@ export type LocalConfig = {
   localPlayerTabs?: number[];
   salt?: string;
   verifier?: string;
+  remoteAuth?: RemoteAuthCredentials;
   readonly identifier: string;
   unsafeMode?: boolean;
   announce?: string;
@@ -317,6 +318,12 @@ export type LocalConfig = {
   autoUpdate: boolean;
   taurusPasswords?: Record<string, string>;
   taurusConfigurationBackups?: Record<string, TaurusScreenConfiguration>;
+};
+
+export type RemoteAuthCredentials = {
+  salt: string;
+  verifier: string;
+  revision: number;
 };
 
 export type Modules = IModuleInfo<Minihost2Info | Minihost3Info>[];

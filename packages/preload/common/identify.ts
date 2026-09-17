@@ -4,6 +4,7 @@ import { ipcRenderer } from 'electron';
 import genSignature from '/@common/generateSignature';
 import type { Credentials } from '/@common/Credentials';
 import { host, port } from '/@common/remote';
+import { srpSessionKeyToBuffer } from '/@common/srp';
 // const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:identify`);
 const credentials: Credentials = {};
 
@@ -43,7 +44,7 @@ export const getSecret = () => credentials.apiSecret?.toString('base64');
 
 export const setSecret = (apiSecret: bigint | null, identifier = credentials.identifier) => {
   ipcRenderer.send('setRemoteSecret', identifier, apiSecret);
-  if (apiSecret) credentials.apiSecret = Buffer.from(apiSecret.toString(16), 'hex');
+  if (apiSecret) credentials.apiSecret = srpSessionKeyToBuffer(apiSecret);
 };
 
 export const getIdentifier = () => credentials.identifier;

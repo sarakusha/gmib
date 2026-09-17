@@ -10,10 +10,16 @@ describe('renderer local configuration access', () => {
     },
   );
 
-  it.each(['signedLicense', 'announce', 'iv', 'knock', 'salt', 'verifier', 'identifier'])(
-    'keeps the internal setting %s in the main process',
-    key => {
-      expect(isRendererConfigKey(key)).toBe(false);
-    },
-  );
+  it.each([
+    'signedLicense',
+    'announce',
+    'iv',
+    'knock',
+    'salt',
+    'verifier',
+    'remoteAuth',
+    'identifier',
+  ])('keeps the internal setting %s in the main process', key => {
+    expect(isRendererConfigKey(key)).toBe(false);
+  });
 });

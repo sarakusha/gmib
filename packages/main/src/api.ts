@@ -4,8 +4,6 @@ import fs from 'fs';
 import os from 'node:os';
 import path from 'path';
 
-import type { SRPServerSessionStep1 } from '@sarakusha/tssrp6a';
-import { SRPParameters, SRPRoutines, SRPServerSession } from '@sarakusha/tssrp6a';
 import debugFactory from 'debug';
 import express from 'express';
 import type { File } from 'formidable';
@@ -17,6 +15,7 @@ import { asyncSerial, notEmpty } from '/@common/helpers';
 import type { CreatePlaylist, Playlist, PlaylistItem } from '/@common/playlist';
 
 import auth from './auth';
+import { mountApiAuth } from './apiAuth';
 import { testsDeferred } from './config';
 import {
   beginTransaction,
@@ -134,7 +133,8 @@ import {
 
 import type { Screen } from '/@common/video';
 
-import { getIncomingSecret, setIncomingSecret } from './secret';
+import { getIncomingSecret } from './secret';
+import { srpAuthRouter } from './srpAuthRuntime';
 import { broadcast } from './server';
 import { updateTest } from './screenOutput';
 import { checkForUpdatesNoInteractive, updateAndRestart } from './updater';
@@ -152,8 +152,6 @@ const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:api`);
 //   // RTCPeerConnection
 //   { pc: RTCPeerConnection; candidate: Promise<RTCIceCandidateInit> }
 // >();
-
-const sessions = new Map<string, SRPServerSessionStep1>();
 
 export const mediaRoot = path.join(electronApp.getPath('userData'), 'media');
 
@@ -298,40 +296,11 @@ const loadMedia = async (file: File, force = false): Promise<MediaInfo> => {
 
 const api = express.Router();
 
-if (!localConfig.get('unsafeMode')) {
-  api.use(
-    auth.unless({
-      path: [
-        /\/api\/login\/.*/,
-        /\/api\/handshake\/.*/,
-        '/api/identifier',
-        '/api/novastar/subscribe',
-      ],
-    }),
-  );
-}
-
-const unlicensedMutationPaths = new Set([
-  '/activate',
-  '/announce',
-  '/checkForUpdates',
-  '/handshake',
-  '/identifier',
-  '/login',
-  '/license/retry',
-  '/update',
-]);
-
-api.use((req, res, next) => {
-  if (
-    ['GET', 'HEAD', 'OPTIONS'].includes(req.method) ||
-    getLicenseState().status === 'active' ||
-    [...unlicensedMutationPaths].some(path => req.path === path || req.path.startsWith(`${path}/`))
-  ) {
-    next();
-    return;
-  }
-  res.status(403).send('Требуется действующая лицензия');
+mountApiAuth(api, {
+  auth,
+  getLicenseStatus: () => getLicenseState().status,
+  srpRouter: srpAuthRouter,
+  unsafeMode: Boolean(localConfig.get('unsafeMode')),
 });
 
 api.use('/plugins/:pluginId', authenticatedPluginApiHandler);
@@ -952,59 +921,6 @@ api.put('/player/:id/output', (req, res) => {
 api.delete('/player/:id/output', (req, res) => {
   const closed = closePlayerOutputWindows(+req.params.id);
   res.sendStatus(closed ? 204 : 404);
-});
-
-api.get('/handshake/:id', async (req, res) => {
-  const server = new SRPServerSession(new SRPRoutines(new SRPParameters()));
-  const salt = localConfig.get('salt');
-  const verifier = localConfig.get('verifier');
-  if (!salt || !verifier) return res.sendStatus(501);
-  const { id } = req.params;
-  try {
-    const handshake = await server.step1('gmib', BigInt(salt), BigInt(verifier));
-    sessions.set(id, handshake);
-    setTimeout(() => {
-      sessions.delete(id);
-    }, 10000).unref();
-    return res.json({
-      id,
-      salt,
-      B: `0x${handshake.B.toString(16)}`,
-    });
-  } catch (e) {
-    return res.status(500).send((e as Error).message);
-  }
-});
-
-api.post('/login/:id', async (req, res) => {
-  const { id } = req.params;
-  const handshake = sessions.get(id);
-  if (!handshake) return res.sendStatus(404);
-  const {
-    salt,
-    verifier,
-    A: rawA,
-    M1: rawM1,
-  } = req.body as {
-    salt?: string;
-    verifier?: string;
-    A: string;
-    M1: string;
-  };
-  try {
-    const A = BigInt(rawA);
-    const M1 = BigInt(rawM1);
-    const M2 = await handshake.step2(A, M1);
-    if (salt && verifier) {
-      localConfig.set('salt', salt);
-      localConfig.set('verifier', verifier);
-    }
-    const apiSecret = await handshake.sessionKey(A);
-    await setIncomingSecret(id, apiSecret);
-    return res.json({ M2: `0x${M2.toString(16)}` });
-  } catch (e) {
-    return res.status(401).send(JSON.stringify(e));
-  }
 });
 
 api.get('/identifier', (req, res) => {

@@ -5,14 +5,17 @@ import debugFactory from 'debug';
 
 import type { NullableOptional } from '/@common/helpers';
 import type { Credentials } from '/@common/Credentials';
+import { srpSessionKeyToBuffer } from '/@common/srp';
 
 import { promisifyGet, promisifyRun, removeNull } from './db';
 import localConfig from './localConfig';
+import { getRemoteAuthCredentials } from './remoteAuthConfig';
 
 export type Secret = {
   id: string;
   secret: Buffer;
   created?: Date;
+  revision: number;
 };
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:secret`);
@@ -20,15 +23,22 @@ const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:secret`);
 const isecrets = new Map<string, Buffer>();
 const osecrets = new Map<string, Buffer>();
 
+const decodeIncomingSecret = (value: string): { secret: Buffer; revision: number } => {
+  const match = value.match(/^v1:(\d+):(.+)$/);
+  if (!match) return { secret: Buffer.from(value, 'base64'), revision: 0 };
+  return { secret: Buffer.from(match[2], 'base64'), revision: Number(match[1]) };
+};
+
 const toSecret = (res: NullableOptional): Secret => {
   const { id, secret, created } = removeNull(res) as {
     id: string;
     secret: string;
     created?: string;
   };
+  const decoded = decodeIncomingSecret(secret);
   return {
     id,
-    secret: Buffer.from(secret, 'base64'),
+    ...decoded,
     ...(created && { created: new Date(created) }),
   };
 };
@@ -45,15 +55,25 @@ const getOutgoingSecretImpl = promisifyGet(
   toSecret,
 );
 
-export const setIncomingSecret = promisifyRun(
+const setIncomingSecretImpl = promisifyRun(
   `INSERT INTO isecret (id, secret, created) VALUES ($id, $secret, $created)
     ON CONFLICT(id) DO UPDATE SET secret=$secret, created=$created`,
-  (id: string, secret: bigint) => ({
+  (id: string, secret: bigint, revision: number) => ({
     $id: id,
-    $secret: Buffer.from(secret.toString(16), 'hex').toString('base64'),
+    $secret: `v1:${revision}:${srpSessionKeyToBuffer(secret).toString('base64')}`,
     $created: Date.now(),
   }),
 );
+
+const clearIncomingSecretsImpl = promisifyRun('DELETE FROM isecret', () => []);
+
+export const setIncomingSecret = (id: string, secret: bigint, revision: number): Promise<unknown> =>
+  setIncomingSecretImpl(id, secret, revision);
+
+export const clearIncomingSecrets = async (): Promise<void> => {
+  await clearIncomingSecretsImpl();
+  isecrets.clear();
+};
 
 export const setOutgoingSecret = promisifyRun(
   `INSERT INTO osecret (id, secret) VALUES ($id, $secret)
@@ -64,8 +84,20 @@ export const setOutgoingSecret = promisifyRun(
   }),
 );
 
-export const getIncomingSecret = async (id: string) =>
-  isecrets.get(id) ?? (await getIncomingSecretImpl(id))?.secret;
+export const getIncomingSecret = async (id: string) => {
+  return (await getIncomingSecretWithRevision(id))?.secret;
+};
+
+export const getIncomingSecretWithRevision = async (id: string) => {
+  const revisionBefore = (await getRemoteAuthCredentials()).revision;
+  const cached = isecrets.get(id);
+  if (cached) return { secret: cached, revision: revisionBefore };
+  const stored = await getIncomingSecretImpl(id);
+  const revisionAfter = (await getRemoteAuthCredentials()).revision;
+  if (!stored || stored.revision !== revisionBefore || stored.revision !== revisionAfter)
+    return undefined;
+  return { secret: stored.secret, revision: revisionAfter };
+};
 
 export const getOutgoingSecret = async (id: string) =>
   osecrets.get(id) ?? (await getOutgoingSecretImpl(id))?.secret;
