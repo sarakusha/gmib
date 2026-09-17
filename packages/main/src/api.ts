@@ -108,6 +108,7 @@ import {
   updatePlaylist,
 } from './playlist';
 import { authenticatedPluginApiHandler } from './pluginHost';
+import { pluginManagementRouter } from './pluginManagementRouter';
 import relaunch from './relaunch';
 import {
   clearPlayersPlaylist,
@@ -295,6 +296,8 @@ const loadMedia = async (file: File, force = false): Promise<MediaInfo> => {
 };
 
 const api = express.Router();
+
+api.use('/manage/v1/plugins', auth, pluginManagementRouter);
 
 mountApiAuth(api, {
   auth,

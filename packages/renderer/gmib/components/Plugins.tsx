@@ -118,7 +118,9 @@ const Plugins: React.FC = () => {
       const result = await window.plugins.install();
       if (result.status === 'installed') {
         enqueueSnackbar(
-          `${result.updated ? 'Обновлён' : 'Установлен'} плагин «${result.plugin.manifest.name}». Перезапустите gmib.`,
+          result.changed
+            ? `${result.updated ? 'Обновлён' : 'Установлен'} плагин «${result.plugin.manifest.name}»${result.restartRequired ? '. Перезапустите gmib.' : '.'}`
+            : `Плагин «${result.plugin.manifest.name}» уже установлен, изменений нет.`,
           { variant: 'success' },
         );
         await loadInstalled();
@@ -136,7 +138,9 @@ const Plugins: React.FC = () => {
       const result = await window.plugins.installOfficial(entry.manifest.id);
       if (result.status === 'installed') {
         enqueueSnackbar(
-          `${result.updated ? 'Обновлён' : 'Установлен'} официальный плагин «${result.plugin.manifest.name}». Перезапустите gmib.`,
+          result.changed
+            ? `${result.updated ? 'Обновлён' : 'Установлен'} официальный плагин «${result.plugin.manifest.name}»${result.restartRequired ? '. Перезапустите gmib.' : '.'}`
+            : `Официальный плагин «${result.plugin.manifest.name}» уже установлен, изменений нет.`,
           { variant: 'success' },
         );
         await loadInstalled();

@@ -63,8 +63,35 @@ export type PluginStatus = {
   manifest: PluginManifest;
   enabled: boolean;
   loaded: boolean;
+  runningEnabled: boolean;
+  runningVersion?: string;
   restartRequired: boolean;
+  archiveSha256?: string;
   error?: string;
+};
+
+export type PluginInstallConsent = {
+  permissions: PluginPermission[];
+  trustedBackend: boolean;
+};
+
+export type PluginArchiveInspection = {
+  manifest: PluginManifest;
+  sha256: string;
+  size: number;
+  installed?: PluginStatus;
+};
+
+export type PluginLifecycleInstallResult = {
+  changed: boolean;
+  updated: boolean;
+  plugin: PluginStatus;
+  restartRequired: boolean;
+};
+
+export type PluginLifecycleUninstallResult = {
+  changed: boolean;
+  restartRequired: boolean;
 };
 
 export type PluginCatalogPublisher = {
@@ -92,7 +119,8 @@ export type PluginInstallResult =
     }
   | {
       status: 'installed';
+      changed: boolean;
       plugin: PluginStatus;
       updated: boolean;
-      restartRequired: true;
+      restartRequired: boolean;
     };

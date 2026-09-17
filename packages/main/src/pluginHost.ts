@@ -1,11 +1,12 @@
 import { createRequire } from 'node:module';
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 
 import type { Request, RequestHandler, Response } from 'express';
 import express from 'express';
-import { app, dialog, powerMonitor, shell } from 'electron';
+import { app, powerMonitor, shell } from 'electron';
 import debugFactory from 'debug';
 import { nanoid } from 'nanoid';
 import semver from 'semver';
@@ -20,7 +21,7 @@ import { openPluginDatabase } from './pluginDatabase';
 import { listPluginSports, PluginServiceRegistry, resolvePluginOrder } from './pluginRuntime';
 
 import type {
-  PluginInstallResult,
+  PluginArchiveInspection,
   PluginManifest,
   PluginPermission,
   PluginStatus,
@@ -35,6 +36,14 @@ import { getScreens } from './screen';
 import { updateTest } from './screenOutput';
 import { broadcast } from './server';
 import { hasLicenseCapability, requireLicenseCapability } from './licenseState';
+import {
+  commitPluginInstall,
+  commitPluginRemoval,
+  commitRegistryUpdate,
+} from './pluginInstallTransaction';
+import { buildPluginStatus } from './pluginStatus';
+
+export { buildPluginStatus } from './pluginStatus';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:plugins`);
 const PLUGIN_PAGE_PREFIX = 'plugin:';
@@ -43,6 +52,7 @@ const STAGING_DIRECTORY = '.staging';
 const DATA_DIRECTORY = '.data';
 
 type PluginRegistry = {
+  archives?: Record<string, string>;
   disabled?: string[];
 };
 
@@ -131,6 +141,7 @@ type RegisteredRoute = {
 };
 
 type RuntimePlugin = {
+  archiveSha256?: string;
   directory: string;
   manifest: PluginManifest;
   publicRoot?: string;
@@ -141,9 +152,11 @@ type RuntimePlugin = {
 
 let pluginsRoot: string | undefined;
 let registry: PluginRegistry = {};
+let registryLoaded = false;
 let started = false;
 const runtimePlugins = new Map<string, RuntimePlugin>();
 const runtimeErrors = new Map<string, string>();
+const runtimeDirtyPlugins = new Set<string>();
 const desiredPageIds = new Set<string>();
 let installedManifests: PluginManifest[] = [];
 const services = new PluginServiceRegistry();
@@ -241,6 +254,15 @@ const loadRegistry = async (): Promise<void> => {
   try {
     const value = JSON.parse(await fs.promises.readFile(registryPath(), 'utf8')) as PluginRegistry;
     registry = {
+      archives:
+        value.archives && typeof value.archives === 'object' && !Array.isArray(value.archives)
+          ? Object.fromEntries(
+              Object.entries(value.archives).filter(
+                ([id, hash]) =>
+                  typeof id === 'string' && typeof hash === 'string' && /^[a-f0-9]{64}$/.test(hash),
+              ),
+            )
+          : {},
       disabled: Array.isArray(value.disabled)
         ? value.disabled.filter(item => typeof item === 'string')
         : [],
@@ -249,8 +271,13 @@ const loadRegistry = async (): Promise<void> => {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
       debug(`Failed to read plugin registry: ${(error as Error).message}`);
     }
-    registry = { disabled: [] };
+    registry = { archives: {}, disabled: [] };
   }
+  registryLoaded = true;
+};
+
+const ensureRegistry = async (): Promise<void> => {
+  if (!registryLoaded) await loadRegistry();
 };
 
 const saveRegistry = async (): Promise<void> => {
@@ -568,6 +595,7 @@ const createPluginContext = async (plugin: RuntimePlugin): Promise<PluginContext
 
 const loadPlugin = async (directory: string, manifest: PluginManifest): Promise<void> => {
   const plugin: RuntimePlugin = {
+    ...(registry.archives?.[manifest.id] ? { archiveSha256: registry.archives[manifest.id] } : {}),
     directory,
     manifest,
     routes: [],
@@ -778,20 +806,23 @@ const installedStatus = (
   manifest: PluginManifest,
   runtime?: RuntimePlugin,
   error?: string,
-): PluginStatus => ({
-  manifest,
-  enabled: isEnabled(manifest.id),
-  loaded: runtime?.manifest.version === manifest.version,
-  restartRequired:
-    isEnabled(manifest.id) !== Boolean(runtime) || runtime?.manifest.version !== manifest.version,
-  ...(error ? { error } : {}),
-});
+): PluginStatus =>
+  buildPluginStatus(manifest, {
+    desiredEnabled: isEnabled(manifest.id),
+    ...(runtime
+      ? {
+          runningManifest: runtime.manifest,
+          ...(runtime.archiveSha256 ? { runningArchiveSha256: runtime.archiveSha256 } : {}),
+        }
+      : {}),
+    runtimeDirty: runtimeDirtyPlugins.has(manifest.id),
+    ...(registry.archives?.[manifest.id] ? { archiveSha256: registry.archives[manifest.id] } : {}),
+    ...(error ? { error } : {}),
+  });
 
 export const listPlugins = async (): Promise<PluginStatus[]> => {
-  if (!pluginsRoot) {
-    await fs.promises.mkdir(rootDirectory(), { recursive: true });
-    await loadRegistry();
-  }
+  await fs.promises.mkdir(rootDirectory(), { recursive: true });
+  await ensureRegistry();
   const installed = await scanInstalled();
   return installed
     .map(({ manifest }) =>
@@ -800,27 +831,56 @@ export const listPlugins = async (): Promise<PluginStatus[]> => {
     .sort((left, right) => left.manifest.name.localeCompare(right.manifest.name));
 };
 
-const permissionLabels: Record<PluginPermission, string> = {
-  'http.routes': 'локальные и авторизованные HTTP-маршруты',
-  'output.pages': 'страницы в разделе «Вывод»',
-  realtime: 'события реального времени',
-  storage: 'постоянное хранилище',
-  database: 'база SQLite плагина',
-  'services.provide': 'предоставление сервисов плагинам',
-  'services.consume': 'использование сервисов зависимостей',
-  'plugins.read': 'список установленных видов спорта',
-  'output.control': 'управление привязанным выводом',
-  'nibus.read': 'чтение событий NiBUS',
-  'nibus.write': 'отправка состояния табло NiBUS',
+export const isPluginRunning = (id: string): boolean => runtimePlugins.has(id);
+
+const fileSha256 = async (filename: string): Promise<string> => {
+  const hash = crypto.createHash('sha256');
+  const stream = fs.createReadStream(filename);
+  for await (const chunk of stream) hash.update(chunk as Buffer);
+  return hash.digest('hex');
 };
 
-const showMessage = async (options: Electron.MessageBoxOptions) => {
-  return dialog.showMessageBox(options);
+const preparePluginArchive = async (
+  archivePath: string,
+  expectedManifest?: PluginManifest,
+): Promise<{ inspection: PluginArchiveInspection; staging: string }> => {
+  const staging = path.join(rootDirectory(), STAGING_DIRECTORY, nanoid());
+  await fs.promises.mkdir(path.dirname(staging), { recursive: true });
+  const stats = await fs.promises.stat(archivePath);
+  try {
+    const [manifest, sha256] = await Promise.all([
+      extractPluginArchive(archivePath, staging),
+      fileSha256(archivePath),
+    ]);
+    if (expectedManifest && !isDeepStrictEqual(manifest, expectedManifest)) {
+      throw new Error('Манифест скачанного плагина не совпадает с официальным каталогом');
+    }
+    await validatePluginFiles(staging, manifest);
+    const installed = (await listPlugins()).find(item => item.manifest.id === manifest.id);
+    return {
+      inspection: { manifest, sha256, size: stats.size, ...(installed ? { installed } : {}) },
+      staging,
+    };
+  } catch (error) {
+    await fs.promises.rm(staging, { recursive: true, force: true });
+    throw error;
+  }
+};
+
+export const inspectPluginArchive = async (
+  archivePath: string,
+  expectedManifest?: PluginManifest,
+): Promise<PluginArchiveInspection> => {
+  const prepared = await preparePluginArchive(archivePath, expectedManifest);
+  await fs.promises.rm(prepared.staging, { recursive: true, force: true });
+  return prepared.inspection;
 };
 
 const installExtractedPlugin = async (
   staging: string,
   manifest: PluginManifest,
+  sha256: string,
+  enabled: boolean,
 ): Promise<{ updated: boolean }> => {
   const target = path.join(rootDirectory(), manifest.id);
   const backup = path.join(rootDirectory(), `.backup-${manifest.id}-${nanoid()}`);
@@ -831,75 +891,56 @@ const installExtractedPlugin = async (
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
       throw error;
     });
-  if (targetExists) await fs.promises.rename(target, backup);
+  const previousRegistry = structuredClone(registry);
+  const disabled = new Set(registry.disabled ?? []);
+  if (enabled) disabled.delete(manifest.id);
+  else disabled.add(manifest.id);
+  registry = {
+    ...registry,
+    archives: { ...(registry.archives ?? {}), [manifest.id]: sha256 },
+    disabled: [...disabled].sort(),
+  };
   try {
-    await fs.promises.rename(staging, target);
+    await commitPluginInstall({
+      backup,
+      persist: saveRegistry,
+      staging,
+      target,
+      targetExists,
+    });
   } catch (error) {
-    if (targetExists) await fs.promises.rename(backup, target).catch(() => undefined);
+    registry = previousRegistry;
     throw error;
-  }
-  if (targetExists) {
-    await fs.promises
-      .rm(backup, { recursive: true, force: true })
-      .catch(error =>
-        debug(`Failed to remove plugin backup ${backup}: ${(error as Error).message}`),
-      );
   }
   return { updated: targetExists };
 };
 
 export const installPluginFromArchive = async (
   archivePath: string,
-  expectedManifest?: PluginManifest,
-): Promise<PluginInstallResult> => {
+  options: {
+    enabled: boolean;
+    expectedManifest?: PluginManifest;
+    expectedSha256: string;
+  },
+): Promise<{ plugin: PluginStatus; updated: boolean }> => {
   requireLicenseCapability('plugins');
-  const staging = path.join(rootDirectory(), STAGING_DIRECTORY, nanoid());
-  await fs.promises.mkdir(path.dirname(staging), { recursive: true });
+  const prepared = await preparePluginArchive(archivePath, options.expectedManifest);
   try {
-    const manifest = await extractPluginArchive(archivePath, staging);
-    if (expectedManifest && !isDeepStrictEqual(manifest, expectedManifest)) {
-      throw new Error('Манифест скачанного плагина не совпадает с официальным каталогом');
+    if (prepared.inspection.sha256 !== options.expectedSha256.toLowerCase()) {
+      throw new Error('SHA-256 архива плагина не совпадает с ожидаемым значением');
     }
-    await validatePluginFiles(staging, manifest);
-    const current = (await scanInstalled()).find(item => item.manifest.id === manifest.id);
-    const permissionText =
-      (manifest.permissions ?? [])
-        .map(permission => `• ${permissionLabels[permission]}`)
-        .join('\n') || 'Разрешения API не запрашиваются';
-    const backendWarning = manifest.main
-      ? '\n\nПлагин содержит доверенный backend-код. Он выполняется с правами gmib и должен быть получен из надёжного источника.'
-      : '';
-    const confirmation = await showMessage({
-      type: manifest.main ? 'warning' : 'question',
-      title: current ? 'Обновление плагина' : 'Установка плагина',
-      message: `${current ? 'Обновить' : 'Установить'} «${manifest.name}» ${manifest.version}?`,
-      detail: `${manifest.description ? `${manifest.description}\n\n` : ''}Разрешения:\n${permissionText}${backendWarning}`,
-      buttons: [current ? 'Обновить' : 'Установить', 'Отмена'],
-      defaultId: 1,
-      cancelId: 1,
-      noLink: true,
-    });
-    if (confirmation.response !== 0) return { status: 'cancelled' };
-    const { updated } = await installExtractedPlugin(staging, manifest);
-    registry.disabled = (registry.disabled ?? []).filter(id => id !== manifest.id);
-    await saveRegistry();
-    const plugin = installedStatus(manifest, runtimePlugins.get(manifest.id));
-    return { status: 'installed', plugin, updated, restartRequired: true };
+    const { manifest, sha256 } = prepared.inspection;
+    const { updated } = await installExtractedPlugin(
+      prepared.staging,
+      manifest,
+      sha256,
+      options.enabled,
+    );
+    if (runtimePlugins.has(manifest.id)) runtimeDirtyPlugins.add(manifest.id);
+    return { plugin: installedStatus(manifest, runtimePlugins.get(manifest.id)), updated };
   } finally {
-    await fs.promises.rm(staging, { recursive: true, force: true });
+    await fs.promises.rm(prepared.staging, { recursive: true, force: true });
   }
-};
-
-export const installPluginFromDialog = async (): Promise<PluginInstallResult> => {
-  const options: Electron.OpenDialogOptions = {
-    title: 'Установить плагин gmib',
-    filters: [{ name: 'Плагины gmib', extensions: ['gmib-plugin', 'zip'] }],
-    properties: ['openFile'],
-  };
-  const result = await dialog.showOpenDialog(options);
-  const [archivePath] = result.filePaths;
-  if (result.canceled || !archivePath) return { status: 'cancelled' };
-  return installPluginFromArchive(archivePath);
 };
 
 export const setPluginEnabled = async (id: string, enabled: boolean): Promise<PluginStatus> => {
@@ -909,27 +950,37 @@ export const setPluginEnabled = async (id: string, enabled: boolean): Promise<Pl
   const disabled = new Set(registry.disabled ?? []);
   if (enabled) disabled.delete(id);
   else disabled.add(id);
-  registry.disabled = [...disabled].sort();
-  await saveRegistry();
+  const previousRegistry = structuredClone(registry);
+  const nextRegistry = { ...registry, disabled: [...disabled].sort() };
+  await commitRegistryUpdate(
+    previousRegistry,
+    nextRegistry,
+    value => {
+      registry = value;
+    },
+    saveRegistry,
+  );
   return installedStatus(installed.manifest, runtimePlugins.get(id), runtimeErrors.get(id));
 };
 
 export const uninstallPlugin = async (id: string): Promise<boolean> => {
   const installed = (await scanInstalled()).find(item => item.manifest.id === id);
-  if (!installed) throw new Error(`Плагин не найден: ${id}`);
-  const confirmation = await showMessage({
-    type: 'warning',
-    title: 'Удаление плагина',
-    message: `Удалить «${installed.manifest.name}»?`,
-    detail:
-      'Файлы плагина будут удалены. Сохранённые данные останутся, чтобы их можно было восстановить при повторной установке.',
-    buttons: ['Удалить', 'Отмена'],
-    defaultId: 1,
-    cancelId: 1,
-    noLink: true,
-  });
-  if (confirmation.response !== 0) return false;
-  await fs.promises.rm(installed.directory, { recursive: true, force: true });
+  if (!installed) return false;
+  const previousRegistry = structuredClone(registry);
+  registry = {
+    ...registry,
+    archives: { ...(registry.archives ?? {}) },
+    disabled: (registry.disabled ?? []).filter(item => item !== id),
+  };
+  delete registry.archives?.[id];
+  const backup = path.join(rootDirectory(), `.backup-${id}-${nanoid()}`);
+  try {
+    await commitPluginRemoval(installed.directory, backup, saveRegistry);
+  } catch (error) {
+    registry = previousRegistry;
+    throw error;
+  }
+  if (runtimePlugins.has(id)) runtimeDirtyPlugins.add(id);
   const pluginPages = (await getPages()).filter(page =>
     page.id.startsWith(`${PLUGIN_PAGE_PREFIX}${id}:`),
   );
@@ -944,8 +995,6 @@ export const uninstallPlugin = async (id: string): Promise<boolean> => {
       .filter(screen => screen.test?.startsWith(`${PLUGIN_PAGE_PREFIX}${id}:`))
       .map(screen => updateTest(screen, true)),
   );
-  registry.disabled = (registry.disabled ?? []).filter(item => item !== id);
-  await saveRegistry();
   return true;
 };
 

@@ -1,22 +1,15 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
-import fs from 'node:fs';
-import path from 'node:path';
-
-import { app } from 'electron';
 import debugFactory from 'debug';
-import { nanoid } from 'nanoid';
 import semver from 'semver';
 
 import type {
   PluginCatalogEntry,
   PluginCatalogPublisher,
   PluginCatalogRelease,
-  PluginInstallResult,
 } from '/@common/plugins';
 import { GMIB_PLUGIN_API_VERSION } from '/@common/plugins';
 
 import { MAX_PLUGIN_ARCHIVE_SIZE } from './pluginArchive';
-import { installPluginFromArchive, listPlugins } from './pluginHost';
 import { parsePluginManifest } from './pluginManifest';
 
 export const OFFICIAL_PLUGIN_CATALOG_URL =
@@ -140,7 +133,7 @@ export const parsePluginCatalog = (value: unknown): PluginCatalogEntry[] => {
   return result.sort((left, right) => left.manifest.name.localeCompare(right.manifest.name));
 };
 
-const downloadBuffer = async (entry: PluginCatalogEntry): Promise<Buffer> => {
+export const downloadOfficialPluginArchive = async (entry: PluginCatalogEntry): Promise<Buffer> => {
   let response: Response;
   try {
     response = await fetch(entry.release.url, {
@@ -218,26 +211,5 @@ export const listOfficialPlugins = async (): Promise<PluginCatalogEntry[]> => {
         error instanceof Error ? error.message : String(error)
       }`,
     );
-  }
-};
-
-export const installOfficialPlugin = async (id: string): Promise<PluginInstallResult> => {
-  const entry = (await listOfficialPlugins()).find(plugin => plugin.manifest.id === id);
-  if (!entry) throw new Error(`Официальный плагин не найден: ${id}`);
-  const installed = (await listPlugins()).find(plugin => plugin.manifest.id === id);
-  if (installed && !semver.gt(entry.manifest.version, installed.manifest.version)) {
-    throw new Error(`Версия ${entry.manifest.version} уже установлена`);
-  }
-
-  const archive = await downloadBuffer(entry);
-  const temporaryDirectory = await fs.promises.mkdtemp(
-    path.join(app.getPath('temp'), `gmib-plugin-${nanoid()}-`),
-  );
-  const archivePath = path.join(temporaryDirectory, `${id}.gmib-plugin`);
-  try {
-    await fs.promises.writeFile(archivePath, archive, { mode: 0o600 });
-    return await installPluginFromArchive(archivePath, entry.manifest);
-  } finally {
-    await fs.promises.rm(temporaryDirectory, { recursive: true, force: true });
   }
 };

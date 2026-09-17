@@ -1,19 +1,9 @@
 import { createHash } from 'node:crypto';
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
-vi.mock('electron', () => ({ app: { getPath: vi.fn(() => '/tmp') } }));
-const pluginHostMocks = vi.hoisted(() => ({
-  installPluginFromArchive: vi.fn(async () => ({ status: 'cancelled' as const })),
-  listPlugins: vi.fn(async () => []),
-}));
-vi.mock('../src/pluginHost', () => ({
-  installPluginFromArchive: pluginHostMocks.installPluginFromArchive,
-  listPlugins: pluginHostMocks.listPlugins,
-}));
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  installOfficialPlugin,
+  downloadOfficialPluginArchive,
   listOfficialPlugins,
   OFFICIAL_PLUGIN_CATALOG_URL,
   parsePluginCatalog,
@@ -82,12 +72,7 @@ describe('parsePluginCatalog', () => {
   });
 });
 
-describe('installOfficialPlugin', () => {
-  beforeEach(() => {
-    pluginHostMocks.installPluginFromArchive.mockClear();
-    pluginHostMocks.listPlugins.mockClear();
-  });
-
+describe('downloadOfficialPluginArchive', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
@@ -100,48 +85,28 @@ describe('installOfficialPlugin', () => {
 
   it('includes the release URL in download errors', async () => {
     const entry = catalogEntry('unavailable');
-    vi.stubGlobal(
-      'fetch',
-      vi
-        .fn()
-        .mockResolvedValueOnce(new Response(JSON.stringify(catalog(entry))))
-        .mockRejectedValueOnce(new Error('fetch failed')),
-    );
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValueOnce(new Error('fetch failed')));
 
-    await expect(installOfficialPlugin('unavailable')).rejects.toThrow(entry.release.url);
+    await expect(downloadOfficialPluginArchive(entry)).rejects.toThrow(entry.release.url);
   });
 
-  it('verifies a downloaded archive before passing it to the installer', async () => {
+  it('returns an archive only after verifying its size and SHA-256', async () => {
     const archive = Buffer.from('verified plugin archive');
     const entry = catalogEntry('verified');
     entry.release.sha256 = createHash('sha256').update(archive).digest('hex');
     entry.release.size = archive.byteLength;
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify(catalog(entry))))
-      .mockResolvedValueOnce(new Response(archive));
+    const fetchMock = vi.fn().mockResolvedValueOnce(new Response(archive));
     vi.stubGlobal('fetch', fetchMock);
 
-    await expect(installOfficialPlugin('verified')).resolves.toEqual({ status: 'cancelled' });
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(pluginHostMocks.installPluginFromArchive).toHaveBeenCalledWith(
-      expect.stringMatching(/verified\.gmib-plugin$/),
-      expect.objectContaining({ id: 'verified', version: '1.0.0' }),
-    );
+    await expect(downloadOfficialPluginArchive(entry)).resolves.toEqual(archive);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('rejects a downloaded archive with another SHA-256', async () => {
     const entry = catalogEntry('corrupted');
     entry.release.size = 9;
-    vi.stubGlobal(
-      'fetch',
-      vi
-        .fn()
-        .mockResolvedValueOnce(new Response(JSON.stringify(catalog(entry))))
-        .mockResolvedValueOnce(new Response('corrupted')),
-    );
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(new Response('corrupted')));
 
-    await expect(installOfficialPlugin('corrupted')).rejects.toThrow(/SHA-256/);
-    expect(pluginHostMocks.installPluginFromArchive).not.toHaveBeenCalled();
+    await expect(downloadOfficialPluginArchive(entry)).rejects.toThrow(/SHA-256/);
   });
 });
