@@ -73,10 +73,7 @@ const Tabs: React.FC = () => {
           selected: currentDeviceId === child.props.id && tab === 'devices',
         }),
       )}
-      <TabContainer
-        id="novastar"
-        selected={tab === 'devices' && currentNovastar !== undefined}
-      >
+      <TabContainer id="novastar" selected={tab === 'devices' && currentNovastar !== undefined}>
         <NovastarTabs device={currentNovastar} />
       </TabContainer>
       <TabContainer id="test" selected={tab === 'screens'} unmount>
