@@ -11,7 +11,6 @@ import { startManagementAnsibleFixture } from './fixtures/managementAnsibleFixtu
 const execFileAsync = promisify(execFile);
 const repoRoot = path.resolve(import.meta.dirname, '../../..');
 const playbook = path.join(repoRoot, 'examples/ansible/gmib.yml');
-const inventory = path.join(repoRoot, 'examples/ansible/inventory.yml');
 const ansible = process.env.ANSIBLE_PLAYBOOK ?? 'ansible-playbook';
 const ansibleAvailable = spawnSync(ansible, ['--version'], { stdio: 'ignore' }).status === 0;
 const temporaryPaths: string[] = [];
@@ -23,7 +22,7 @@ afterEach(async () => {
 });
 
 const desired = (baseUrl: string) => ({
-  gmib_base_url: baseUrl,
+  gmib_api_url: baseUrl,
   gmib_client_id: 'ansible-integration',
   gmib_relaunch_when_required: true,
   gmib_plugins: [
@@ -99,7 +98,27 @@ const runPlaybook = async (
   temporaryPaths.push(directory);
   const varsFile = path.join(directory, 'vars.json');
   await writeFile(varsFile, JSON.stringify(variables));
-  const args = ['-i', inventory, playbook, '--extra-vars', `@${varsFile}`];
+  // Keep real SSH inventory metadata: all API helper commands must still run on the controller.
+  const inventoryFile = path.join(directory, 'inventory.json');
+  await writeFile(
+    inventoryFile,
+    JSON.stringify({
+      all: {
+        children: {
+          gmib: {
+            hosts: {
+              'fixture-device': {
+                ansible_connection: 'ssh',
+                ansible_host: '192.0.2.1',
+                ansible_port: 1,
+              },
+            },
+          },
+        },
+      },
+    }),
+  );
+  const args = ['-i', inventoryFile, playbook, '--extra-vars', `@${varsFile}`];
   if (options.check) args.push('--check');
   try {
     return await execFileAsync(ansible, args, {

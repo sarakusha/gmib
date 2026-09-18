@@ -10,6 +10,7 @@
     fail_msg: Plugin state needs id and state; a missing plugin also needs an official pin.
 
 - name: Read installed plugins
+  delegate_to: localhost
   ansible.builtin.command:
     argv:
       - '{{ gmib_node }}'
@@ -99,6 +100,7 @@
   no_log: true
 
 - name: Install or update pinned official plugin
+  delegate_to: localhost
   ansible.builtin.command:
     argv:
       - '{{ gmib_node }}'
@@ -155,6 +157,7 @@
     - not (gmib_plugin_install_result.skipped | default(false))
 
 - name: Enable or disable installed plugin
+  delegate_to: localhost
   ansible.builtin.command:
     argv:
       - '{{ gmib_node }}'
@@ -217,6 +220,7 @@
     - gmib_plugin_current | length == 0
 
 - name: Uninstall plugin
+  delegate_to: localhost
   ansible.builtin.command:
     argv:
       - '{{ gmib_node }}'

@@ -17,6 +17,7 @@
       gmib_relaunch_when_required and apply after authenticated plugin readback.
 
 - name: 'Ensure {{ gmib_resource.type }}'
+  delegate_to: localhost
   ansible.builtin.command:
     argv: >-
       {{

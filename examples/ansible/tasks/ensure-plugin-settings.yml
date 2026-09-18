@@ -10,6 +10,7 @@
       Plugin settings need an explicit /api/plugins/{id}/ path and plugin-owned desired schema.
 
 - name: Read plugin-owned settings
+  delegate_to: localhost
   ansible.builtin.command:
     argv:
       - '{{ gmib_node }}'
@@ -61,6 +62,7 @@
   when: ansible_check_mode
 
 - name: Apply plugin-owned settings
+  delegate_to: localhost
   ansible.builtin.command:
     argv:
       - '{{ gmib_node }}'
@@ -96,6 +98,7 @@
     - gmib_plugin_settings_changed | bool
 
 - name: Read plugin-owned settings after PATCH
+  delegate_to: localhost
   ansible.builtin.command:
     argv:
       - '{{ gmib_node }}'

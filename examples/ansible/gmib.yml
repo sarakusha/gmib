@@ -22,6 +22,13 @@
     gmib_restart_required: false
 
   pre_tasks:
+    - name: Use GMIB endpoint from managed inventory
+      ansible.builtin.set_fact:
+        gmib_base_url: '{{ gmib_api_url }}'
+      when:
+        - gmib_base_url is not defined
+        - gmib_api_url is defined
+
     - name: Validate connection variables
       ansible.builtin.assert:
         that:
@@ -33,6 +40,7 @@
       no_log: true
 
     - name: Check SRP authentication
+      delegate_to: localhost
       ansible.builtin.command:
         argv:
           - '{{ gmib_node }}'
@@ -64,6 +72,7 @@
       when: gmib_activate | bool and ansible_check_mode
 
     - name: Request explicit license activation
+      delegate_to: localhost
       ansible.builtin.command:
         argv:
           - '{{ gmib_node }}'
@@ -101,6 +110,7 @@
       when: gmib_license_retry | bool and ansible_check_mode
 
     - name: Retry existing license explicitly
+      delegate_to: localhost
       ansible.builtin.command:
         argv:
           - '{{ gmib_node }}'
@@ -137,6 +147,7 @@
         - gmib_activate | bool or gmib_license_retry | bool
 
     - name: Wait for authenticated active-license readback
+      delegate_to: localhost
       ansible.builtin.command:
         argv:
           - '{{ gmib_node }}'
@@ -176,6 +187,7 @@
         label: '{{ gmib_plugin.id }}'
 
     - name: Relaunch GMIB when a plugin operation requires it
+      delegate_to: localhost
       ansible.builtin.command:
         argv:
           - '{{ gmib_node }}'
@@ -227,6 +239,7 @@
         - not ansible_check_mode
 
     - name: Verify SRP login after plugin relaunch
+      delegate_to: localhost
       ansible.builtin.command:
         argv:
           - '{{ gmib_node }}'
@@ -287,6 +300,7 @@
           | default('new')) }}"
 
     - name: Apply GMIB brightness and runtime settings
+      delegate_to: localhost
       ansible.builtin.command:
         argv:
           - '{{ gmib_node }}'
@@ -333,6 +347,7 @@
       when: gmib_rotate_password | bool and ansible_check_mode
 
     - name: Rotate remote-management password explicitly
+      delegate_to: localhost
       ansible.builtin.command:
         argv:
           - '{{ gmib_node }}'
@@ -361,6 +376,7 @@
       when: gmib_rotate_password | bool and not ansible_check_mode
 
     - name: Verify the new remote-management password
+      delegate_to: localhost
       ansible.builtin.command:
         argv:
           - '{{ gmib_node }}'

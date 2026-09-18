@@ -1,5 +1,6 @@
 ---
 - name: Wait for installed plugin runtime state
+  delegate_to: localhost
   ansible.builtin.command:
     argv:
       - '{{ gmib_node }}'
@@ -35,6 +36,7 @@
   when: gmib_plugin.state | default('present') == 'present'
 
 - name: Wait for removed plugin runtime to stop
+  delegate_to: localhost
   ansible.builtin.command:
     argv:
       - '{{ gmib_node }}'

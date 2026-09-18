@@ -29,7 +29,10 @@ ansible-playbook \
 
 Все задачи с password environment и ответами API помечены `no_log`. `gmib_client_id` должен быть
 стабильным и уникальным для этого контроллера. Inventory описывает локальное выполнение helper;
-`gmib_base_url` указывает на GMIB.
+`gmib_base_url` указывает на GMIB. Если он не задан, используется `gmib_api_url` из управляемого
+inventory. Все команды API явно делегированы `localhost`, поэтому можно использовать общий inventory
+с SSH-параметрами устройств: Node.js и checkout нужны только на контроллере, а остальные playbooks
+сохраняют обычное SSH-подключение.
 
 ## Desired resources и зависимости
 
