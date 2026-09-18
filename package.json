@@ -37,7 +37,7 @@
     "test:preload": "vitest run -r packages/preload --passWithNoTests",
     "test:renderer": "vitest run -r packages/renderer --passWithNoTests",
     "test:e2e": "pnpm run build && vitest run",
-    "test:artifacts": "node --test scripts/verify-production-artifacts.test.cjs",
+    "test:artifacts": "node --test scripts/verify-production-artifacts.test.cjs scripts/guard-windows-update-metadata.test.cjs",
     "test:spelling": "cspell lint -c cspell.json",
     "verify:artifacts": "node scripts/verify-production-artifacts.cjs",
     "lint": "eslint packages/main/src packages/common packages/preload/common packages/preload/gmib packages/preload/player packages/preload/remote packages/renderer/common packages/renderer/gmib packages/renderer/player",

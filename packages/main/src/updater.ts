@@ -1,5 +1,6 @@
 import type { MenuItem } from 'electron';
 import { dialog } from 'electron';
+import os from 'node:os';
 
 import type { UpdateInfo } from 'electron-updater';
 import { autoUpdater } from 'electron-updater';
@@ -8,12 +9,25 @@ import log from './initlog';
 import localConfig from './localConfig';
 import { needRestart } from './relaunch';
 
+export const automaticUpdatesSupported = (
+  platform = process.platform,
+  systemRelease = os.release(),
+): boolean => {
+  if (platform !== 'win32') return true;
+  const major = Number.parseInt(systemRelease.split('.')[0] ?? '', 10);
+  return Number.isFinite(major) && major >= 10;
+};
+
+const updatesSupported = automaticUpdatesSupported();
+const unsupportedWindowsMessage =
+  'Автоматическое обновление отключено: Windows 7/8/8.1 не поддерживаются новыми версиями GMIB.';
+
 // let updater: MenuItem | null = null;
-autoUpdater.autoDownload = localConfig.get('autoUpdate');
+autoUpdater.autoDownload = updatesSupported && localConfig.get('autoUpdate');
 autoUpdater.logger = log;
 
 localConfig.onDidChange('autoUpdate', value => {
-  autoUpdater.autoDownload = !!value;
+  autoUpdater.autoDownload = updatesSupported && !!value;
 });
 
 let interactive = true;
@@ -73,14 +87,23 @@ autoUpdater.on('update-downloaded', () => {
 // export this to MenuItem click callback
 function checkForUpdates(menuItem: MenuItem): void {
   const updater = menuItem;
+  if (!updatesSupported) {
+    void dialog.showMessageBox({
+      type: 'info',
+      title: 'Обновление недоступно',
+      message: unsupportedWindowsMessage,
+    });
+    return;
+  }
   updater.enabled = false;
   void autoUpdater.checkForUpdates().then(() => {
     updater.enabled = true;
   });
 }
 
-export const checkForUpdatesNoInteractive = () =>
-  new Promise<UpdateInfo | undefined>((resolve, reject) => {
+export const checkForUpdatesNoInteractive = () => {
+  if (!updatesSupported) return Promise.resolve(undefined);
+  return new Promise<UpdateInfo | undefined>((resolve, reject) => {
     if (!interactive) return;
     interactive = false;
     const available = (info: UpdateInfo) => {
@@ -107,9 +130,11 @@ export const checkForUpdatesNoInteractive = () =>
   }).finally(() => {
     interactive = true;
   });
+};
 
-export const updateAndRestart = () =>
-  new Promise<void>((resolve, reject) => {
+export const updateAndRestart = () => {
+  if (!updatesSupported) return Promise.reject(new Error(unsupportedWindowsMessage));
+  return new Promise<void>((resolve, reject) => {
     if (!interactive) return;
     interactive = false;
     const onError = (err: Error) => {
@@ -131,5 +156,6 @@ export const updateAndRestart = () =>
   }).finally(() => {
     interactive = true;
   });
+};
 
 export default checkForUpdates;

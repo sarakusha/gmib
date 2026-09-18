@@ -405,6 +405,11 @@ jobs:
             join(matrix.target_args, ' ') }} --publish never
           # GH_TOKEN: ${{ github.token }}
 
+      - name: Prevent unsupported Windows updates
+        if: ${{ steps.platform_check.outputs.selected == 'true' && matrix.platform == 'windows' &&
+          steps.release_check.outputs.skip_build != 'true' }}
+        run: node scripts/guard-windows-update-metadata.cjs dist/latest.yml
+
       - name: Upload manual Linux build
         if: >-
           ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run && matrix.platform ==
