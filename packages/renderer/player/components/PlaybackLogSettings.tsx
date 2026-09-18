@@ -8,18 +8,33 @@ import {
   isValidPlaybackLogRetentionDays,
   shouldSavePlaybackLogRetentionDays,
 } from '../playback/playbackSettings';
+import { watchPlaybackLogDay } from '../playback/watchPlaybackLogDay';
 
 const PlaybackLogSettings: React.FC = () => {
   const [value, setValue] = React.useState(String(DEFAULT_PLAYBACK_LOG_RETENTION_DAYS));
   const numericValue = Number(value);
   const valid = isValidPlaybackLogRetentionDays(numericValue);
-  const { data, isError: isLoadError } = useGetPlaybackSettingsQuery();
+  const {
+    data,
+    isError: isLoadError,
+    refetch,
+  } = useGetPlaybackSettingsQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+  });
   const [updateSettings, { isLoading }] = useUpdatePlaybackSettingsMutation();
   const { enqueueSnackbar } = useSnackbar();
 
   React.useEffect(() => {
-    if (data) setValue(String(data.logRetentionDays));
-  }, [data]);
+    if (data?.logRetentionDays !== undefined) setValue(String(data.logRetentionDays));
+  }, [data?.logRetentionDays]);
+
+  React.useEffect(
+    () =>
+      watchPlaybackLogDay(() => {
+        void refetch();
+      }),
+    [refetch],
+  );
 
   const save = (): void => {
     if (shouldSavePlaybackLogRetentionDays(numericValue, data?.logRetentionDays, isLoading)) {
@@ -67,6 +82,11 @@ const PlaybackLogSettings: React.FC = () => {
               ? 'От 1 до 365 дней. По умолчанию 7.'
               : 'Введите целое число от 1 до 365'}
         </FormHelperText>
+        {data && (
+          <FormHelperText sx={{ mt: 1, overflowWrap: 'anywhere' }}>
+            Текущий файл: {data.currentLogPath}
+          </FormHelperText>
+        )}
       </FormControl>
     </Box>
   );

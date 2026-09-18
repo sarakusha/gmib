@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { PlaybackEvent } from '/@common/playback';
 import { isPlaybackEvent, isPlaybackEventForPlayer } from '/@common/playback';
-import { PlaybackEventLog } from '../src/playbackEventLog';
+import { PlaybackEventLog, playbackLogFilename } from '../src/playbackEventLog';
 import { broadcastPlaybackRetry } from '../src/playbackRetry';
 import { PlaybackStatusStore } from '../src/playbackStatus';
 
@@ -37,6 +37,12 @@ afterEach(async () => {
 });
 
 describe('PlaybackEventLog', () => {
+  it('uses a UTC date in the daily log filename', () => {
+    expect(playbackLogFilename(new Date('2026-09-18T23:59:59.999Z'))).toBe(
+      'playback-2026-09-18.jsonl',
+    );
+  });
+
   it('rotates JSONL files by the UTC event date', async () => {
     const directory = await temporaryDirectory();
     const log = new PlaybackEventLog({

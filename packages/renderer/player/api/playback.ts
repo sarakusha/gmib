@@ -26,7 +26,10 @@ const playbackApi = createApi({
       query: () => 'playback/settings',
       providesTags: ['PlaybackSettings'],
     }),
-    updatePlaybackSettings: build.mutation<PlaybackSettings, PlaybackSettings>({
+    updatePlaybackSettings: build.mutation<
+      PlaybackSettings,
+      Pick<PlaybackSettings, 'logRetentionDays'>
+    >({
       query: body => ({ url: 'playback/settings', method: 'PUT', body }),
       invalidatesTags: ['PlaybackSettings'],
     }),

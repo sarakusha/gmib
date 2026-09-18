@@ -17,6 +17,8 @@ export type PlaybackEventLogOptions = {
 
 export const utcDate = (date: Date): string => date.toISOString().slice(0, 10);
 
+export const playbackLogFilename = (date: Date): string => `playback-${utcDate(date)}.jsonl`;
+
 export const oldestRetainedUtcDate = (date: Date, retentionDays: number): string => {
   const oldest = new Date(date);
   oldest.setUTCDate(oldest.getUTCDate() - Math.max(1, retentionDays) + 1);
@@ -55,7 +57,7 @@ export class PlaybackEventLog {
       }
       const eventDate = utcDate(new Date(event.timestamp));
       if (eventDate < oldestRetainedUtcDate(now, this.retentionDays()) || eventDate > today) return;
-      const filename = path.join(this.directory, `playback-${eventDate}.jsonl`);
+      const filename = path.join(this.directory, playbackLogFilename(new Date(event.timestamp)));
       await this.fileSystem.appendFile(filename, `${JSON.stringify(event)}\n`, 'utf8');
     });
   }

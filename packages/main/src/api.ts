@@ -95,6 +95,7 @@ import {
   updateSchedulerJob,
 } from './playerScheduler';
 import { getPlayerTitle } from './playerWindow';
+import { playbackLogFilename } from './playbackEventLog';
 import { getPlaybackStatus, retryPlayback } from './playbackEvents';
 import { closePlayerOutputWindows, setPlayerOutputWindowsVisibility } from './openHandler';
 import {
@@ -342,7 +343,14 @@ api.get('/playback/status', (_req, res) => {
 });
 
 api.get('/playback/settings', (_req, res) => {
-  res.json({ logRetentionDays: localConfig.get('playbackLogRetentionDays') });
+  res.json({
+    logRetentionDays: localConfig.get('playbackLogRetentionDays'),
+    currentLogPath: path.join(
+      electronApp.getPath('logs'),
+      'playback',
+      playbackLogFilename(new Date()),
+    ),
+  });
 });
 
 api.put('/playback/settings', (req, res) => {
@@ -361,7 +369,14 @@ api.put('/playback/settings', (req, res) => {
     return;
   }
   localConfig.set('playbackLogRetentionDays', logRetentionDays);
-  res.json({ logRetentionDays });
+  res.json({
+    logRetentionDays,
+    currentLogPath: path.join(
+      electronApp.getPath('logs'),
+      'playback',
+      playbackLogFilename(new Date()),
+    ),
+  });
 });
 
 api.post('/playback/retry', (req, res) => {
