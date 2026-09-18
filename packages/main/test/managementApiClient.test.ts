@@ -303,6 +303,26 @@ describe('standalone GMIB API client', () => {
     });
   });
 
+  it('accepts a long update timeout and rejects values over one hour', () => {
+    const longRequest = new GmibApiClient({
+      baseUrl: 'http://127.0.0.1:9002',
+      clientId: 'long-update-client',
+      password: 'old-password',
+      timeoutMs: 900_000,
+    });
+    expect(longRequest.timeoutMs).toBe(900_000);
+
+    expect(
+      () =>
+        new GmibApiClient({
+          baseUrl: 'http://127.0.0.1:9002',
+          clientId: 'too-long-client',
+          password: 'old-password',
+          timeoutMs: 3_600_001,
+        }),
+    ).toThrow('timeoutMs должен быть целым числом от 100 до 3600000');
+  });
+
   it('runs the CLI in plain Node and emits JSON without the password', async () => {
     const password = 'cli-password-not-in-output';
     const passwordServer = await startServer({ password });

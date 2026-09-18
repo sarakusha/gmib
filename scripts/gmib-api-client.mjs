@@ -8,6 +8,7 @@ import {
 } from '@sarakusha/tssrp6a';
 
 const CLIENT_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
+const MAX_TIMEOUT_MS = 3_600_000;
 
 const isEmptyObject = value =>
   typeof value === 'object' &&
@@ -96,8 +97,8 @@ export class GmibApiClient {
     if (typeof password !== 'string' || password.length === 0) {
       throw new GmibApiError('Пароль не задан', { code: 'password_required' });
     }
-    if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 100 || timeoutMs > 300_000) {
-      throw new GmibApiError('timeoutMs должен быть целым числом от 100 до 300000', {
+    if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 100 || timeoutMs > MAX_TIMEOUT_MS) {
+      throw new GmibApiError(`timeoutMs должен быть целым числом от 100 до ${MAX_TIMEOUT_MS}`, {
         code: 'invalid_timeout',
       });
     }
