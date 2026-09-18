@@ -18,6 +18,8 @@ import { useGetPlaylistById } from '../../api/playlists';
 import { clearPlayer } from '../../api/updatePlayer';
 import { useDispatch } from '../../store';
 import { setCurrentPlaylistItem } from '../../store/currentSlice';
+import { selectPlaybackIssue } from '../../playback/playbackStore';
+import { usePlaybackIssues, useRetryPlayback } from '../../playback/usePlaybackIssues';
 
 import PlaylistItem from './PlaylistItem';
 
@@ -32,6 +34,8 @@ const CurrentPlaylist: React.FC<Props> = ({ playerId, className }) => {
   const { data: currentPlaylist } = useGetPlaylistById(playlistId);
   const { data: mediaData } = useGetMediaQuery();
   const dispatch = useDispatch();
+  const { issues: playbackIssues } = usePlaybackIssues();
+  const retryPlayback = useRetryPlayback();
   // const updateCurrentHandler = React.useCallback<React.ChangeEventHandler<HTMLInputElement>>(
   //   e => {
   //     dispatch(setCurrentPlaylistItem(e.target.value));
@@ -90,7 +94,13 @@ const CurrentPlaylist: React.FC<Props> = ({ playerId, className }) => {
                 ([id, media], index) =>
                   media && (
                     <Collapse key={id}>
-                      <PlaylistItem value={id} index={index + 1} media={media} />
+                      <PlaylistItem
+                        value={id}
+                        index={index + 1}
+                        media={media}
+                        playbackIssue={selectPlaybackIssue(playbackIssues, media.md5, playerId)}
+                        onRetryPlayback={retryPlayback}
+                      />
                     </Collapse>
                   ),
               )}

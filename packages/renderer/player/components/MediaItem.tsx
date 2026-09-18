@@ -2,6 +2,7 @@ import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
 import RemoveIcon from '@mui/icons-material/Remove';
+import ReplayIcon from '@mui/icons-material/Replay';
 import type { TypographyProps } from '@mui/material';
 import {
   Avatar,
@@ -19,6 +20,7 @@ import {
 } from '@mui/material';
 
 import type { MediaInfo } from '/@common/mediaInfo';
+import type { PlaybackIssue } from '/@common/playback';
 
 import { styled } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -36,6 +38,7 @@ import { formatTime, ItemTypes } from '../utils';
 
 import Numbered from './Numbered';
 import type { MediaTransferProgress } from '../api/media';
+import { playbackIssueText } from '../playback/playbackStore';
 
 const Thumbnail = styled(Avatar)(({ theme }) => ({
   width: 52,
@@ -91,6 +94,8 @@ export type MediaItemProps = {
   deleteTitle?: string;
   uploadProgress?: MediaTransferProgress;
   onCancelUpload?: () => void;
+  playbackIssue?: PlaybackIssue;
+  onRetryPlayback?: (mediaId: string) => void;
 };
 
 /* const getDuration = (seconds: number): string => {
@@ -182,6 +187,8 @@ const MediaItem = React.forwardRef<HTMLLIElement, MediaItemProps>((props, ref) =
     deleteTitle,
     uploadProgress,
     onCancelUpload,
+    playbackIssue,
+    onRetryPlayback,
   } = props;
   const { md5, thumbnail, duration, filename } = info;
   const refInner = React.useRef<HTMLLIElement>(null);
@@ -224,6 +231,7 @@ const MediaItem = React.forwardRef<HTMLLIElement, MediaItemProps>((props, ref) =
   const DeleteCloseIcon = onMove ? CloseIcon : DeleteIcon;
   const [title, setTitle] = React.useState<string>();
   const statusText = uploadStatusText(uploadProgress);
+  const playbackStatusText = playbackIssue && playbackIssueText(playbackIssue);
   React.useEffect(() => {
     if (title) {
       const timeout = setTimeout(() => setTitle(undefined), 3000);
@@ -257,6 +265,7 @@ const MediaItem = React.forwardRef<HTMLLIElement, MediaItemProps>((props, ref) =
             backgroundColor: 'action.selected',
           }),
           '&, & ~ *': { opacity: isDragging ? 0 : 1 },
+          '& .playback-retry svg': { opacity: 1 },
         }}
       >
         {onSelect && (
@@ -280,27 +289,33 @@ const MediaItem = React.forwardRef<HTMLLIElement, MediaItemProps>((props, ref) =
           id={filename}
           primary={<Numbered text={title ?? filename} index={pos != null ? pos + 1 : undefined} />}
           secondary={
-            statusText ? (
+            statusText || playbackStatusText ? (
               <Stack spacing={0.5} sx={{ minWidth: 0 }}>
                 <Typography
                   variant="body2"
-                  color={uploadProgress?.phase === 'failed' ? 'error' : 'text.secondary'}
+                  color={
+                    uploadProgress?.phase === 'failed' || playbackStatusText
+                      ? 'error'
+                      : 'text.secondary'
+                  }
                   noWrap
                 >
-                  {statusText}
+                  {statusText ?? playbackStatusText}
                 </Typography>
-                {uploadProgress?.phase !== 'failed' && uploadProgress?.phase !== 'canceled' && (
-                  <LinearProgress
-                    color="secondary"
-                    variant={
-                      uploadProgress?.phase === 'uploading' && uploadProgress.progress != null
-                        ? 'determinate'
-                        : 'indeterminate'
-                    }
-                    value={uploadProgress?.progress ?? 0}
-                    sx={{ height: 4, borderRadius: 999 }}
-                  />
-                )}
+                {statusText &&
+                  uploadProgress?.phase !== 'failed' &&
+                  uploadProgress?.phase !== 'canceled' && (
+                    <LinearProgress
+                      color="secondary"
+                      variant={
+                        uploadProgress?.phase === 'uploading' && uploadProgress.progress != null
+                          ? 'determinate'
+                          : 'indeterminate'
+                      }
+                      value={uploadProgress?.progress ?? 0}
+                      sx={{ height: 4, borderRadius: 999 }}
+                    />
+                  )}
               </Stack>
             ) : duration ? (
               <Details {...info} />
@@ -313,19 +328,36 @@ const MediaItem = React.forwardRef<HTMLLIElement, MediaItemProps>((props, ref) =
             primary: { noWrap: true },
           }}
         />
-        {onDelete && id && (
+        {((onDelete && id) || (playbackIssue && onRetryPlayback)) && (
           <ListItemSecondaryAction onClick={stopPropagation} onMouseDown={stopPropagation}>
-            <IconButton
-              edge="end"
-              aria-label="delete"
-              onClick={() => onDelete(id)}
-              sx={{ color: 'secondary.main' }}
-              size="small"
-              title={deleteTitle}
-              tabIndex={-1}
-            >
-              <DeleteCloseIcon fontSize="inherit" />
-            </IconButton>
+            <Stack direction="row">
+              {playbackIssue && onRetryPlayback && (
+                <IconButton
+                  className="playback-retry"
+                  edge="end"
+                  aria-label={`Повторить воспроизведение ${filename}`}
+                  onClick={() => onRetryPlayback(md5)}
+                  sx={{ color: 'error.main' }}
+                  size="small"
+                  title="Повторить воспроизведение"
+                >
+                  <ReplayIcon fontSize="inherit" />
+                </IconButton>
+              )}
+              {onDelete && id && (
+                <IconButton
+                  edge="end"
+                  aria-label="delete"
+                  onClick={() => onDelete(id)}
+                  sx={{ color: 'secondary.main' }}
+                  size="small"
+                  title={deleteTitle}
+                  tabIndex={-1}
+                >
+                  <DeleteCloseIcon fontSize="inherit" />
+                </IconButton>
+              )}
+            </Stack>
           </ListItemSecondaryAction>
         )}
         {onCancelUpload &&

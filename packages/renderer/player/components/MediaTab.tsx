@@ -16,6 +16,8 @@ import mediaApi, {
   useGetMedia,
 } from '../api/media';
 import { useDispatch, useSelector } from '../store';
+import { selectPlaybackIssue } from '../playback/playbackStore';
+import { usePlaybackIssues, useRetryPlayback } from '../playback/usePlaybackIssues';
 import {
   selectCurrentTab,
   selectDescending,
@@ -59,6 +61,8 @@ const MediaTab: React.FC = () => {
   const previousTab = useRef(tab);
   const currentUpload = useRef<string | undefined>(undefined);
   const controllers = useRef(new Map<string, AbortController>());
+  const { issues: playbackIssues } = usePlaybackIssues();
+  const retryPlayback = useRetryPlayback();
 
   const updateUpload = useCallback((tempId: string, update: Partial<UploadEntry>) => {
     setUploads(items =>
@@ -288,6 +292,8 @@ const MediaTab: React.FC = () => {
                           ? () => cancelUpload(item.media.md5)
                           : undefined
                       }
+                      playbackIssue={selectPlaybackIssue(playbackIssues, item.media.md5)}
+                      onRetryPlayback={retryPlayback}
                     />
                   </Collapse>
                 ))}

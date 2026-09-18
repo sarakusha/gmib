@@ -31,6 +31,8 @@ import { useDispatch, useSelector } from '../store';
 import { setCurrentPlaylist } from '../store/currentSlice';
 import { selectCurrentPlaylist } from '../store/selectors';
 import { sourceId } from '../utils';
+import { selectPlaybackIssue } from '../playback/playbackStore';
+import { usePlaybackIssues, useRetryPlayback } from '../playback/usePlaybackIssues';
 
 import { notEmpty } from '/@common/helpers';
 
@@ -56,6 +58,8 @@ const PlaylistsTab: React.FC = () => {
   const dispatch = useDispatch();
   const { width, ref } = useResizeDetector();
   const popupState = usePopupState({ variant: 'popover', popupId: 'playlists' });
+  const { issues: playbackIssues } = usePlaybackIssues();
+  const retryPlayback = useRetryPlayback();
   const { setAnchorEl } = popupState;
   React.useEffect(() => {
     setAnchorEl(ref.current);
@@ -179,6 +183,8 @@ const PlaylistsTab: React.FC = () => {
                           onMove={moveHandler}
                           onMoveFinished={moveFinishedHandler}
                           deleteTitle="Удалить из плейлиста"
+                          playbackIssue={selectPlaybackIssue(playbackIssues, media.md5)}
+                          onRetryPlayback={retryPlayback}
                         />
                       </Collapse>
                     ),

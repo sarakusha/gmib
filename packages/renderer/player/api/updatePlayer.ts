@@ -17,14 +17,28 @@ import { sourceId } from '../utils';
 import mappingApi from './mapping';
 import mediaApi from './media';
 import playerApi, { debouncedUpdatePlayer, playerAdapter, selectPlayer } from './player';
+import playbackApi from './playback';
 import playlistApi, { selectPlaylistById } from './playlists';
 import schedulerApi from './scheduler';
+import { playbackStatusFromSocketMessage, setPlaybackStatus } from '../playback/playbackStore';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:updatePlayer`);
 
 type SocketMessage = {
   event: string;
   data: unknown[];
+};
+
+export const applyPlaybackStatusMessage = (
+  dispatch: AppDispatch,
+  event: string,
+  data: unknown[],
+): boolean => {
+  const status = playbackStatusFromSocketMessage(event, data);
+  if (!status) return false;
+  setPlaybackStatus(status);
+  void dispatch(playbackApi.util.upsertQueryData('getPlaybackStatus', undefined, status));
+  return true;
 };
 
 const selectPlayersData = playerApi.endpoints.getPlayers.select();
@@ -212,6 +226,9 @@ export const socketMiddleware: Middleware = api => {
                 forceRefetch: true,
               }),
             );
+            break;
+          case 'playback:status':
+            applyPlaybackStatusMessage(dispatch, event, data);
             break;
           default:
             break;

@@ -22,11 +22,13 @@ import { useDisplays } from '../../common/displays';
 import useShiftAlert from '../../common/useShiftAlert';
 import { useDeletePlayerMutation, usePlayers } from '../api/player';
 import { PlayerMappingDialogProvider } from '../hooks/usePlayerMappingDialog';
+import { usePlaybackFeatureAvailable } from '../playback/usePlaybackIssues';
 import { useDispatch, useSelector } from '../store';
 import { setSettingsNode } from '../store/currentSlice';
 import { selectSettingsNode } from '../store/selectors';
 
 import OutputSettings from './OutputSettings';
+import PlaybackLogSettings from './PlaybackLogSettings';
 import PlayerSettings from './PlayerSettings';
 import SettingsToolbar from './SettingsToolbar';
 import TabPanel from './TabPanel';
@@ -127,6 +129,7 @@ const SettingsTab: React.FC = () => {
   const selected = normalizeSelectedItem(useSelector(selectSettingsNode));
   const [deletePlayer] = useDeletePlayerMutation();
   const showAlert = useShiftAlert();
+  const playbackAvailable = usePlaybackFeatureAvailable();
   const handleSelect = (
     e: React.SyntheticEvent | null,
     itemId: string | readonly string[] | null,
@@ -188,6 +191,7 @@ const SettingsTab: React.FC = () => {
                     ))}
                   </TransitionGroup>
                 </TreeItem>
+                {playbackAvailable && <TreeItem itemId="playback" label="Журнал воспроизведения" />}
               </TreeView>
             </Box>
             <Box sx={{ flex: 2, height: 1 }}>
@@ -198,6 +202,11 @@ const SettingsTab: React.FC = () => {
                 <TabPanel value="displays" dense>
                   <OutputSettings id={Number(id)} index={Number(index)} />
                 </TabPanel>
+                {playbackAvailable && (
+                  <TabPanel value="playback" dense>
+                    <PlaybackLogSettings />
+                  </TabPanel>
+                )}
               </TabContext>
             </Box>
           </Stack>
