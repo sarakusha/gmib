@@ -16,6 +16,7 @@ import './dialogs';
 import './pluginsIpc';
 import './express';
 import './ipc';
+import './playbackEvents';
 import './rtc';
 import './displayTopology';
 import './hid';

@@ -316,6 +316,7 @@ export type LocalConfig = {
   knock?: string;
   signedLicense?: SignedLicense;
   autoUpdate: boolean;
+  playbackLogRetentionDays: number;
   taurusPasswords?: Record<string, string>;
   taurusConfigurationBackups?: Record<string, TaurusScreenConfiguration>;
 };

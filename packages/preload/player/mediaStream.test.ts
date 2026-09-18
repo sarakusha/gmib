@@ -333,6 +333,40 @@ describe('mediaStream recovery orchestration', () => {
     expect(records('completed')).toHaveLength(1);
   });
 
+  it('keeps absolute seek positions and updates the UI at timer cadence instead of every frame', async () => {
+    await import('./mediaStream');
+    await flush();
+    const source = current();
+    source.duration = 60;
+    source.emit({ seekStartTime: 10 });
+    mock.dispatch.mockClear();
+    source.emit({ frame: { timestamp: 1_000_000 } });
+    source.emit({ frame: { timestamp: 1_020_000 } });
+    expect(
+      mock.dispatch.mock.calls.filter(([action]) => action.type.endsWith('/setPosition')),
+    ).toHaveLength(0);
+    source.emit({ timer: 1 });
+    expect(
+      mock.dispatch.mock.calls
+        .filter(([action]) => action.type.endsWith('/setPosition'))
+        .at(-1)?.[0].payload,
+    ).toBe(11);
+  });
+
+  it('normalizes empty and oversized errors to the shared event schema', async () => {
+    const { isPlaybackEvent } = await import('/@common/playback');
+    await import('./mediaStream');
+    await flush();
+    current().emit({ err: { message: '' } });
+    await flush();
+    current().emit({ err: { message: 'x'.repeat(20_000) } });
+    await flush();
+    expect(records('error')).toHaveLength(2);
+    expect(records('error').every(isPlaybackEvent)).toBe(true);
+    expect(records('error')[0].error).toBe('Unknown playback error');
+    expect(records('error')[1].error).toHaveLength(16_384);
+  });
+
   it('bounds silent decoder hangs using the watchdog and quarantines them', async () => {
     mock.playlist.items = [mock.playlist.items[0]];
     await import('./mediaStream');

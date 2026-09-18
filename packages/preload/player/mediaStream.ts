@@ -64,7 +64,7 @@ const reportAttempt = (
       playlistId: player?.playlistId ?? undefined,
       itemId: attempt.itemId,
       mediaId: attempt.mediaId,
-      filename: attempt.filename,
+      filename: attempt.filename?.slice(0, 4096),
       attempt: attempt.attempt,
       playbackId: attempt.playbackId,
       timestamp: new Date().toISOString(),
@@ -85,7 +85,9 @@ const markStarted = (attempt?: PlaybackAttempt): void => {
 
 const recordFailure = (attempt: PlaybackAttempt, error: unknown): void => {
   if (!recovery.fail(attempt)) return;
-  const message = error instanceof Error ? error.message : String(error);
+  const message = (
+    (error instanceof Error ? error.message : String(error)).trim() || 'Unknown playback error'
+  ).slice(0, 16_384);
   reportAttempt(attempt, 'error', message);
   if (recovery.blocked(attempt.mediaId)) reportAttempt(attempt, 'quarantined', message);
 };
@@ -416,18 +418,23 @@ const handleDecoderSourceMessage = (source: VideoSource, data: DecoderSourceMess
   if (data.frame && playbackState === 'playing') {
     markStarted(sourceAttempts.get(source));
     playbackWatchdog.defer();
-    decoderPosition = data.frame.timestamp / 1_000_000;
-    ipcDispatch(setPosition(decoderPosition));
+    decoderPosition = (source.options.startTime ?? 0) + data.frame.timestamp / 1_000_000;
   }
   if (typeof data.duration === 'number') {
     decoderDuration = data.duration;
     ipcDispatch(setDuration(data.duration));
   }
-  // eslint-disable-next-line no-param-reassign
-  if (typeof data.seekStartTime === 'number') source.options.startTime = data.seekStartTime;
+  if (typeof data.seekStartTime === 'number') {
+    // eslint-disable-next-line no-param-reassign
+    source.options.startTime = data.seekStartTime;
+    decoderPosition = data.seekStartTime;
+    ipcDispatch(setPosition(decoderPosition));
+  }
   if (typeof data.timer === 'number') {
     decoderPosition = (source.options.startTime ?? 0) + data.timer;
-    ipcDispatch(setPosition(decoderPosition));
+    ipcDispatch(
+      setPosition(source.duration ? Math.min(source.duration, decoderPosition) : decoderPosition),
+    );
   }
   if (data.done) endedSources.add(source);
   if (data.done && !sourceAttempts.get(source)?.started) {

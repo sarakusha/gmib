@@ -65,6 +65,7 @@ export const localConfigSchema: Schema<LocalConfig> = {
   pritunlUserId: { type: 'string' },
   knock: { type: 'string' },
   autoUpdate: { type: 'boolean', default: false },
+  playbackLogRetentionDays: { type: 'integer', minimum: 1, maximum: 365, default: 7 },
   taurusPasswords: {
     type: 'object',
     additionalProperties: { type: 'string' },

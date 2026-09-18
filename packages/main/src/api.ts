@@ -95,6 +95,7 @@ import {
   updateSchedulerJob,
 } from './playerScheduler';
 import { getPlayerTitle } from './playerWindow';
+import { getPlaybackStatus, retryPlayback } from './playbackEvents';
 import { closePlayerOutputWindows, setPlayerOutputWindowsVisibility } from './openHandler';
 import {
   deleteAllPlaylistItems,
@@ -334,6 +335,44 @@ export const startRuntimeApi = async (): Promise<void> => {
 api.get('/media', (req, res, next) => {
   // const { skip, take } = req.query;
   getAllMedia().then(result => res.json(result), next);
+});
+
+api.get('/playback/status', (_req, res) => {
+  res.json(getPlaybackStatus());
+});
+
+api.get('/playback/settings', (_req, res) => {
+  res.json({ logRetentionDays: localConfig.get('playbackLogRetentionDays') });
+});
+
+api.put('/playback/settings', (req, res) => {
+  const body: unknown = req.body;
+  const logRetentionDays =
+    typeof body === 'object' && body !== null && 'logRetentionDays' in body
+      ? body.logRetentionDays
+      : undefined;
+  if (
+    typeof logRetentionDays !== 'number' ||
+    !Number.isInteger(logRetentionDays) ||
+    logRetentionDays < 1 ||
+    logRetentionDays > 365
+  ) {
+    res.status(400).json({ message: 'logRetentionDays must be an integer from 1 to 365' });
+    return;
+  }
+  localConfig.set('playbackLogRetentionDays', logRetentionDays);
+  res.json({ logRetentionDays });
+});
+
+api.post('/playback/retry', (req, res) => {
+  const body: unknown = req.body;
+  const mediaId =
+    typeof body === 'object' && body !== null && 'mediaId' in body ? body.mediaId : undefined;
+  if (!retryPlayback(mediaId)) {
+    res.status(400).json({ message: 'mediaId must be a non-empty string' });
+    return;
+  }
+  res.sendStatus(204);
 });
 
 api.get('/media/:id', (req, res, next) => {
