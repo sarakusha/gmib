@@ -8,6 +8,7 @@ export type PlaybackAttempt = {
   engine?: 'decoder' | 'capture';
   attempt: number;
   playbackId: string;
+  startedAt?: string;
   started: boolean;
   failed: boolean;
 };

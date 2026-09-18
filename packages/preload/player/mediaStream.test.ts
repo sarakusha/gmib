@@ -195,10 +195,13 @@ describe('mediaStream recovery orchestration', () => {
     }
     expect(records('error')).toHaveLength(3);
     expect(records('quarantined')).toHaveLength(1);
+    expect(records('error')[2].quarantined).toBe(true);
+    expect(records('quarantined')[0].quarantined).toBe(true);
     expect(current().options.mediaId).toBe('good-md5');
     expect(records('started')).toHaveLength(0);
     current().emit({ frame: { timestamp: 1000 } });
     expect(records('started')).toHaveLength(1);
+    expect(records('started')[0].startedAt).toBe(records('started')[0].timestamp);
   });
 
   it('quarantines a failed preload without interrupting the good current source', async () => {

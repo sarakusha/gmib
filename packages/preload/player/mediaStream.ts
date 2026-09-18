@@ -56,8 +56,11 @@ const reportAttempt = (
   attempt: PlaybackAttempt,
   event: PlaybackEvent['event'],
   error?: string,
+  quarantined?: boolean,
 ): void => {
   try {
+    const timestamp =
+      event === 'started' && attempt.startedAt ? attempt.startedAt : new Date().toISOString();
     ipcRenderer.send('playback:event', {
       event,
       playerId: sourceId,
@@ -67,9 +70,11 @@ const reportAttempt = (
       filename: attempt.filename?.slice(0, 4096),
       attempt: attempt.attempt,
       playbackId: attempt.playbackId,
-      timestamp: new Date().toISOString(),
+      timestamp,
+      startedAt: attempt.startedAt,
       engine: attempt.engine,
       error,
+      quarantined,
     } satisfies PlaybackEvent);
   } catch {
     /* Logging must not prevent playback recovery. */
@@ -80,6 +85,8 @@ const markStarted = (attempt?: PlaybackAttempt): void => {
   if (!attempt || attempt.failed || attempt.started || playbackState !== 'playing') return;
   // eslint-disable-next-line no-param-reassign
   attempt.started = true;
+  // eslint-disable-next-line no-param-reassign
+  attempt.startedAt = new Date().toISOString();
   reportAttempt(attempt, 'started');
 };
 
@@ -88,8 +95,9 @@ const recordFailure = (attempt: PlaybackAttempt, error: unknown): void => {
   const message = (
     (error instanceof Error ? error.message : String(error)).trim() || 'Unknown playback error'
   ).slice(0, 16_384);
-  reportAttempt(attempt, 'error', message);
-  if (recovery.blocked(attempt.mediaId)) reportAttempt(attempt, 'quarantined', message);
+  const quarantined = recovery.blocked(attempt.mediaId);
+  reportAttempt(attempt, 'error', message, quarantined);
+  if (quarantined) reportAttempt(attempt, 'quarantined', message, true);
 };
 
 const withTimeout = async <T>(promise: Promise<T>, message: string): Promise<T> => {

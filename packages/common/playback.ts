@@ -18,7 +18,9 @@ export type PlaybackEvent = {
   attempt: number;
   playbackId: string;
   timestamp: string;
+  startedAt?: string;
   error?: string;
+  quarantined?: boolean;
   engine?: 'decoder' | 'capture';
 };
 
@@ -65,8 +67,13 @@ export const isPlaybackEvent = (value: unknown): value is PlaybackEvent => {
     isNonEmptyString(timestamp, 64) &&
     !Number.isNaN(Date.parse(timestamp)) &&
     new Date(timestamp).toISOString() === timestamp &&
+    isOptionalString(value['startedAt'], 64) &&
+    (value['startedAt'] === undefined ||
+      (!Number.isNaN(Date.parse(value['startedAt'])) &&
+        new Date(value['startedAt']).toISOString() === value['startedAt'])) &&
     isOptionalString(error, 16_384) &&
     (!['error', 'quarantined'].includes(event) || isNonEmptyString(error, 16_384)) &&
+    (value['quarantined'] === undefined || typeof value['quarantined'] === 'boolean') &&
     (value['engine'] === undefined ||
       value['engine'] === 'decoder' ||
       value['engine'] === 'capture')
