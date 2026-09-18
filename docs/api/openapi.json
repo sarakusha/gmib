@@ -20,7 +20,8 @@
     { "name": "Administration" },
     { "name": "Pages" },
     { "name": "Plugins" },
-    { "name": "Runtime settings" }
+    { "name": "Runtime settings" },
+    { "name": "Managed hosts" }
   ],
   "security": [
     { "LocalBearer": [] },
@@ -312,6 +313,61 @@
           "400": { "$ref": "#/components/responses/BadRequest" },
           "401": { "$ref": "#/components/responses/Unauthorized" },
           "403": { "$ref": "#/components/responses/ForbiddenLicense" },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      }
+    },
+    "/api/manage/v1/hosts": {
+      "get": {
+        "tags": ["Managed hosts"],
+        "operationId": "getManagementHosts",
+        "summary": "Read saved and passively discovered GMIB endpoints",
+        "description": "Requires normal authentication, including unsafeMode. Saved and mDNS-discovered endpoints are returned separately. The revision covers only the normalized saved list, so discovery churn does not invalidate an update. Responses use Cache-Control: no-store.",
+        "responses": {
+          "200": {
+            "description": "Saved and discovered endpoints",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ManagementHostsSnapshot" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      },
+      "put": {
+        "tags": ["Managed hosts"],
+        "operationId": "putManagementHosts",
+        "summary": "Replace the complete saved GMIB endpoint list",
+        "description": "Requires normal authentication and an active license, including unsafeMode. The signed JSON body must contain the revision from GET and the complete desired saved list. A stale revision returns 412. `dryRun=true` validates and predicts the resulting revision and normalized saved list without persistence. The predicted revision becomes current only if the same replacement is later applied against an unchanged base revision.",
+        "parameters": [{ "$ref": "#/components/parameters/DryRun" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ManagementHostsPutRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Normalized replacement result",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ManagementHostsPutResult" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/ForbiddenLicense" },
+          "412": {
+            "description": "The saved list changed after the supplied revision was read.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
           "500": { "$ref": "#/components/responses/ServerError" }
         }
       }
@@ -1452,6 +1508,101 @@
           "changed": { "type": "boolean" },
           "dryRun": { "type": "boolean" },
           "settings": { "$ref": "#/components/schemas/ManagementSettings" }
+        },
+        "additionalProperties": false
+      },
+      "ManagementHost": {
+        "type": "object",
+        "required": ["key", "address", "nibusPort", "apiPort"],
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Normalized address and NiBUS port endpoint key; this is not a stable device identity. IPv6 keys use brackets."
+          },
+          "address": { "type": "string", "minLength": 1, "maxLength": 253 },
+          "nibusPort": { "type": "integer", "minimum": 1, "maximum": 65534 },
+          "apiPort": { "type": "integer", "minimum": 2, "maximum": 65535 },
+          "name": { "type": "string", "minLength": 1, "maxLength": 200 }
+        },
+        "additionalProperties": false
+      },
+      "DiscoveredManagementHost": {
+        "type": "object",
+        "required": ["key", "address", "nibusPort", "apiPort", "version"],
+        "properties": {
+          "key": { "type": "string" },
+          "address": { "type": "string", "minLength": 1, "maxLength": 253 },
+          "nibusPort": { "type": "integer", "minimum": 1, "maximum": 65534 },
+          "apiPort": { "type": "integer", "minimum": 2, "maximum": 65535 },
+          "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "version": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "platform": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "arch": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "osVersion": { "type": "string", "minLength": 1, "maxLength": 200 }
+        },
+        "additionalProperties": false
+      },
+      "ManagementHostInput": {
+        "type": "object",
+        "required": ["address", "nibusPort"],
+        "properties": {
+          "address": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 253,
+            "description": "IPv4, IPv6 (optionally bracketed), or hostname. URL syntax, scoped IPv6, whitespace, and abbreviated or encoded IPv4 forms are rejected."
+          },
+          "nibusPort": { "type": "integer", "minimum": 1, "maximum": 65534 },
+          "name": { "type": "string", "maxLength": 200 }
+        },
+        "additionalProperties": false
+      },
+      "ManagementHostsSnapshot": {
+        "type": "object",
+        "required": ["revision", "saved", "discovered"],
+        "properties": {
+          "revision": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "description": "Deterministic revision of normalized saved endpoints only."
+          },
+          "saved": {
+            "type": "array",
+            "maxItems": 1000,
+            "items": { "$ref": "#/components/schemas/ManagementHost" }
+          },
+          "discovered": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/DiscoveredManagementHost" }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ManagementHostsPutRequest": {
+        "type": "object",
+        "required": ["revision", "hosts"],
+        "properties": {
+          "revision": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+          "hosts": {
+            "type": "array",
+            "maxItems": 1000,
+            "items": { "$ref": "#/components/schemas/ManagementHostInput" }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ManagementHostsPutResult": {
+        "type": "object",
+        "required": ["changed", "dryRun", "revision", "saved"],
+        "properties": {
+          "changed": { "type": "boolean" },
+          "dryRun": { "type": "boolean" },
+          "revision": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+          "saved": {
+            "type": "array",
+            "maxItems": 1000,
+            "items": { "$ref": "#/components/schemas/ManagementHost" }
+          }
         },
         "additionalProperties": false
       },

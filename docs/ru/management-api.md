@@ -47,6 +47,7 @@ SRP и HMAC не шифруют HTTP-трафик. Для недоверенно
 | Перезапуск                | `POST /api/relaunch`                                                                                                                                       | Action без тела.                                                                                                                                                                                 |
 | Страницы вывода           | `GET /api/pages`, `POST /api/pages`, `PUT /api/pages/:id`, `DELETE /api/pages/:id`                                                                         | `Page`; update берет `id` из path.                                                                                                                                                               |
 | Параметры яркости         | `GET /api/manage/v1/settings`, `PATCH /api/manage/v1/settings?dryRun=true`                                                                                 | Allowlist параметров яркости, автояркости, локации и кривых; без `dryRun` или при `false` изменения сохраняются. Подробный контракт приведен в [management-settings.md](management-settings.md). |
+| Удаленные хосты           | `GET /api/manage/v1/hosts`, `PUT /api/manage/v1/hosts?dryRun=true`                                                                                         | Saved endpoints и текущий passive mDNS snapshot раздельно; PUT атомарно заменяет полный saved list с optimistic revision.                                                                        |
 | Plugin runtime            | `/api/plugins/:pluginId/*`                                                                                                                                 | Маршруты и DTO объявляет сам plugin с `access: "authenticated"`; они требуют auth и не открывают local routes. Единой формы `/settings` для всех plugins нет.                                    |
 | Plugin lifecycle          | `/api/manage/v1/plugins/*`                                                                                                                                 | Установка, inspect, включение и удаление без GUI. Контракт и ограничения описаны ниже; требуется лицензия Plus или выше.                                                                         |
 | Смена пароля              | `PUT /api/manage/v1/auth/password`                                                                                                                         | `{salt, verifier}`; helper принимает новый пароль локально и вычисляет эти параметры сам. Маршрут доступен до активации лицензии.                                                                |
@@ -66,6 +67,51 @@ SRP и HMAC не шифруют HTTP-трафик. Для недоверенно
 [`docs/api/openapi.json`](../api/openapi.json); пояснения и границы схемы — в
 [`docs/api/README.md`](../api/README.md). Готовый минимальный сценарий Ansible описан в
 [management-ansible.md](management-ansible.md).
+
+## Удаленные хосты и inventory
+
+`GET /api/manage/v1/hosts` возвращает `{revision, saved, discovered}`. `saved` — пользовательский
+список из существующей настройки GMIB, а `discovered` — текущий снимок уже работающего passive mDNS
+discovery. Чтение не выполняет сетевые probes и не переносит найденные endpoints в saved list. Оба
+маршрута требуют авторизацию даже при `unsafeMode`; PUT также требует действующую лицензию. Ответы
+помечены `Cache-Control: no-store`. Снимок discovery отражает внутренний кэш mDNS, а не
+гарантированную доступность хоста в момент ответа.
+
+Каждый endpoint содержит `key`, `address`, `nibusPort`, `apiPort` и необязательное `name`.
+`nibusPort` — сохраненный порт сервиса NiBUS, а HTTP API GMIB использует следующий порт, поэтому
+`apiPort = nibusPort + 1` и допустимый `nibusPort` ограничен диапазоном 1–65534. `key` строится из
+нормализованных address и NiBUS port; IPv6 в key заключен в квадратные скобки. Это идентичность
+сетевого endpoint, а не стабильный device ID. Для обнаруженного endpoint могут дополнительно
+возвращаться `version`, `platform`, `arch` и `osVersion`; credentials, license fields и machine ID в
+DTO отсутствуют.
+
+Management API различает endpoints с одинаковым address и разными NiBUS ports. Существующее меню
+удаленных хостов GMIB может сгруппировать их по address; этот API не меняет поведение меню.
+
+PUT принимает только полный desired list и revision из последнего GET:
+
+```json
+{
+  "revision": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "hosts": [
+    { "address": "gmib-sign-01.example", "nibusPort": 9001, "name": "Главный экран" },
+    { "address": "2001:db8::10", "nibusPort": 9101 }
+  ]
+}
+```
+
+Revision вычисляется только по нормализованному saved list: появление или исчезновение mDNS-хоста не
+создает ложный конфликт. Если saved list изменился после GET, PUT возвращает `412` и текущую
+revision; клиенту нужно перечитать список и заново выполнить merge. `dryRun=true` полностью
+проверяет адреса, порты, дубликаты и revision, но не сохраняет данные. Возвращенная при dry-run
+revision описывает predicted list и станет текущей только после обычного PUT на той же base
+revision. Повтор идентичного списка возвращает `changed:false` и не перезаписывает настройку.
+
+PUT нормализует hostname через IDNA и lowercase, удаляет завершающую точку DNS и канонизирует IPv6.
+URL, пробелы, scoped IPv6, сокращенные или encoded IPv4 формы отклоняются; одинаковые address+NiBUS
+port после нормализации считаются дубликатами. Если старый saved list содержит невалидную запись,
+GET отвечает `invalid_saved_hosts` с индексом поля и не скрывает запись: сначала исправьте ее в
+GMIB, затем повторите синхронизацию.
 
 ## Параметры яркости и автояркости
 

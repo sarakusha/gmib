@@ -68,6 +68,16 @@ endpoint changes desired configuration and broadcasts the config through the exi
 it does not move brightness algorithms, timers, sensor scheduling, or hardware commands into the
 management router.
 
+The saved-host synchronization contract is under `/api/manage/v1/hosts`. GET remains strictly
+authenticated in `unsafeMode` and returns saved endpoints separately from the current passive mDNS
+snapshot. Its revision covers only the normalized saved list. PUT carries that revision in the
+signed JSON body, replaces the complete saved list, and returns 412 if the list changed in the
+meantime; `dryRun=true` returns the predicted normalized list and revision without persistence.
+Responses use `Cache-Control: no-store`. `nibusPort` is the stored NiBUS service port and `apiPort`
+is its derived HTTP port (`nibusPort + 1`). The normalized endpoint `key` identifies an address/port
+pair, not a physical machine, and the DTO contains no credentials, license material, or device
+identifier.
+
 Dynamic plugin handlers under `/api/plugins/{pluginId}` and local plugin routes under
 `/plugins/{pluginId}/api` are deliberately excluded: the route set and DTOs are plugin-defined.
 Plugins may optionally expose a plugin-owned authenticated `GET /openapi.json` through that generic

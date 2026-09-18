@@ -9,6 +9,8 @@ const routerSourceUrl = new URL('../src/srpAuthRouter.ts', import.meta.url);
 const pluginRouterSourceUrl = new URL('../src/pluginManagementRouter.ts', import.meta.url);
 const settingsRouterSourceUrl = new URL('../src/managementSettingsRouter.ts', import.meta.url);
 const managementApiSourceUrl = new URL('../src/managementApi.ts', import.meta.url);
+const hostsRouterSourceUrl = new URL('../src/managementHostsRouter.ts', import.meta.url);
+const managementHostsApiSourceUrl = new URL('../src/managementHostsApi.ts', import.meta.url);
 
 const specification = JSON.parse(readFileSync(specUrl, 'utf8')) as Record<string, unknown>;
 const apiSource = readFileSync(apiSourceUrl, 'utf8');
@@ -16,6 +18,8 @@ const routerSource = readFileSync(routerSourceUrl, 'utf8');
 const pluginRouterSource = readFileSync(pluginRouterSourceUrl, 'utf8');
 const settingsRouterSource = readFileSync(settingsRouterSourceUrl, 'utf8');
 const managementApiSource = readFileSync(managementApiSourceUrl, 'utf8');
+const hostsRouterSource = readFileSync(hostsRouterSourceUrl, 'utf8');
+const managementHostsApiSource = readFileSync(managementHostsApiSourceUrl, 'utf8');
 
 const operations = Object.entries(specification.paths as Record<string, Record<string, unknown>>)
   .flatMap(([path, entry]) =>
@@ -27,6 +31,7 @@ const operations = Object.entries(specification.paths as Record<string, Record<s
     ({ path }) =>
       !path.startsWith('/api/manage/v1/plugins') &&
       path !== '/api/manage/v1/settings' &&
+      path !== '/api/manage/v1/hosts' &&
       path !== '/api/handshake/{id}' &&
       path !== '/api/login/{id}' &&
       path !== '/api/manage/v1/auth/password',
@@ -104,6 +109,7 @@ describe('OpenAPI management contract', () => {
     const paths = specification.paths as Record<string, Record<string, unknown>>;
     expect(apiSource).toMatch(/api\.use\(\s*['"]\/manage\/v1\/plugins['"]/);
     expect(managementApiSource).toMatch(/api\.use\(\s*['"]\/manage\/v1['"]/);
+    expect(managementHostsApiSource).toMatch(/api\.use\(\s*['"]\/manage\/v1['"]/);
     expect(pluginRouterSource).toMatch(/router\.get\(\s*['"]\/['"]/);
     expect(pluginRouterSource).toMatch(/router\.get\(\s*['"]\/catalog['"]/);
     expect(pluginRouterSource).toMatch(/router\.get\(\s*['"]\/official\/:id\/inspect['"]/);
@@ -115,6 +121,9 @@ describe('OpenAPI management contract', () => {
     expect(settingsRouterSource).toMatch(/router\.use\(strictAuth\)/);
     expect(settingsRouterSource).toMatch(/router\.get\(['"]\/settings['"]/);
     expect(settingsRouterSource).toMatch(/router\.patch\(['"]\/settings['"]/);
+    expect(hostsRouterSource).toMatch(/router\.use\(strictAuth\)/);
+    expect(hostsRouterSource).toMatch(/router\.get\(['"]\/hosts['"]/);
+    expect(hostsRouterSource).toMatch(/router\.put\(['"]\/hosts['"]/);
     for (const path of [
       '/api/manage/v1/plugins',
       '/api/manage/v1/plugins/catalog',
@@ -125,6 +134,7 @@ describe('OpenAPI management contract', () => {
       '/api/manage/v1/plugins/{id}/enabled',
       '/api/manage/v1/plugins/{id}',
       '/api/manage/v1/settings',
+      '/api/manage/v1/hosts',
     ]) {
       for (const operation of Object.values(paths[path])) {
         if (operation && typeof operation === 'object' && 'security' in operation) {
@@ -216,6 +226,28 @@ describe('OpenAPI management contract', () => {
           ['event:dusk', 10],
         ],
       },
+    });
+    const host = {
+      key: '[2001:db8::1]:9001',
+      address: '2001:db8::1',
+      nibusPort: 9001,
+      apiPort: 9002,
+      name: 'Main sign',
+    };
+    validateSchema('ManagementHostsSnapshot', {
+      revision: `sha256:${'a'.repeat(64)}`,
+      saved: [host],
+      discovered: [{ ...host, version: '5.5.0', platform: 'linux' }],
+    });
+    validateSchema('ManagementHostsPutRequest', {
+      revision: `sha256:${'a'.repeat(64)}`,
+      hosts: [{ address: '2001:db8::1', nibusPort: 9001, name: 'Main sign' }],
+    });
+    validateSchema('ManagementHostsPutResult', {
+      changed: true,
+      dryRun: true,
+      revision: `sha256:${'b'.repeat(64)}`,
+      saved: [host],
     });
     validateSchema('Playlist', {
       id: 1,
