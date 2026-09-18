@@ -4,6 +4,8 @@ export type PlaybackAttempt = {
   mediaId: string;
   itemId: string;
   filename?: string;
+  playlistId?: number;
+  engine?: 'decoder' | 'capture';
   attempt: number;
   playbackId: string;
   started: boolean;
@@ -20,8 +22,13 @@ export default class PlaybackRecovery {
     return (this.failures.get(mediaId) ?? 0) >= this.limit;
   }
 
-  begin(item: PlaylistItem, filename?: string): PlaybackAttempt {
+  begin(
+    item: PlaylistItem,
+    filename?: string,
+    context: Pick<PlaybackAttempt, 'playlistId' | 'engine'> = {},
+  ): PlaybackAttempt {
     return {
+      ...context,
       mediaId: item.md5,
       itemId: item.id,
       filename,

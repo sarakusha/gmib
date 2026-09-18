@@ -333,6 +333,26 @@ describe('mediaStream recovery orchestration', () => {
     expect(records('completed')).toHaveLength(1);
   });
 
+  it('preserves the original playlist context when an old source fails during an asynchronous switch', async () => {
+    await import('./mediaStream');
+    await flush();
+    const source = current();
+    let resolve!: (value: unknown) => void;
+    const invoke = mock.invoke.getMockImplementation()!;
+    mock.invoke.mockImplementation((channel: string, ...args: any[]) =>
+      channel === 'getPlaylist'
+        ? new Promise(done => {
+            resolve = done;
+          })
+        : invoke(channel, ...args),
+    );
+    event('player', { ...mock.player, playlistId: 2, playbackEngine: 'capture' });
+    source.emit({ err: { message: 'old file failed during playlist lookup' } });
+    expect(records('error')[0]).toMatchObject({ playlistId: 1, engine: 'decoder' });
+    resolve({ id: 2, items: [{ id: 'new', md5: 'new-md5' }] });
+    await flush();
+  });
+
   it('keeps absolute seek positions and updates the UI at timer cadence instead of every frame', async () => {
     await import('./mediaStream');
     await flush();

@@ -61,14 +61,14 @@ const reportAttempt = (
     ipcRenderer.send('playback:event', {
       event,
       playerId: sourceId,
-      playlistId: player?.playlistId ?? undefined,
+      playlistId: attempt.playlistId,
       itemId: attempt.itemId,
       mediaId: attempt.mediaId,
       filename: attempt.filename?.slice(0, 4096),
       attempt: attempt.attempt,
       playbackId: attempt.playbackId,
       timestamp: new Date().toISOString(),
-      engine: activeEngine,
+      engine: attempt.engine,
       error,
     } satisfies PlaybackEvent);
   } catch {
@@ -483,11 +483,14 @@ const activateDecoder = (source: VideoSource): void => {
     .catch(err => failDecoder(source, err));
 };
 
+const beginAttempt = (item: PlaylistItem): PlaybackAttempt =>
+  recovery.begin(item, undefined, { playlistId: playlist?.id, engine: activeEngine });
+
 const loadMedia = async (
   item: PlaylistItem,
   version: number,
 ): Promise<{ uri: string; attempt: PlaybackAttempt } | undefined> => {
-  const attempt = recovery.begin(item);
+  const attempt = beginAttempt(item);
   try {
     const media: MediaInfo | undefined = await withTimeout(
       ipcRenderer.invoke('getMedia', item.md5),
@@ -633,7 +636,7 @@ const update = async (): Promise<void> => {
       } catch (error) {
         const item = selectItem();
         if (item && version === revision) {
-          recordFailure(recovery.begin(item), error);
+          recordFailure(beginAttempt(item), error);
           updatePending = true;
         }
       }
