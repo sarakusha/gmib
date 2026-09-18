@@ -10,7 +10,8 @@ import { startManagementAnsibleFixture } from './fixtures/managementAnsibleFixtu
 
 const execFileAsync = promisify(execFile);
 const repoRoot = path.resolve(import.meta.dirname, '../../..');
-const playbook = path.join(repoRoot, 'examples/ansible/gmib.yml');
+const playbook =
+  process.env.GMIB_ANSIBLE_TEST_PLAYBOOK ?? path.join(repoRoot, 'examples/ansible/gmib.yml');
 const ansible = process.env.ANSIBLE_PLAYBOOK ?? 'ansible-playbook';
 const ansibleAvailable = spawnSync(ansible, ['--version'], { stdio: 'ignore' }).status === 0;
 const temporaryPaths: string[] = [];
