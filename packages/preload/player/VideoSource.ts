@@ -1,9 +1,7 @@
 import type { FadeOptions } from '@sarakusha/ebml/FadeTransform';
-import debugFactory from 'debug';
 
 import DecoderWorker from './decoder?worker&inline';
 
-const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:VideoSource`);
 let lastId = 0;
 
 export type VideoSourceMessageHandler = (this: VideoSource, ev: MessageEvent) => void;
@@ -20,6 +18,7 @@ export type VideoSourceOptions = {
 };
 
 type DecoderMessage = {
+  ready?: boolean;
   frame?: VideoFrame;
   done?: boolean;
   duration?: number;
@@ -34,8 +33,6 @@ type DecoderMessage = {
   };
 };
 
-const shouldLogDecoderDebug = (message: string): boolean => /(?:error|warn|fail)/i.test(message);
-
 export default class VideoSource {
   #closed = false;
 
@@ -44,6 +41,12 @@ export default class VideoSource {
   #hasStarted = false;
 
   #duration = 0;
+
+  #ready = false;
+
+  get ready() {
+    return this.#ready;
+  }
 
   readonly id;
 
@@ -103,9 +106,11 @@ export default class VideoSource {
       },
       new CountQueuingStrategy({ highWaterMark: 8 }),
     );
+    let delayTimeout = 0;
     const close = (hidden?: true) => {
       if (this.#closed) return;
       this.#closed = true;
+      window.clearTimeout(delayTimeout);
       if (!hidden) {
         decoder.postMessage({ close: true });
         setTimeout(() => decoder.terminate(), 100);
@@ -126,7 +131,6 @@ export default class VideoSource {
         ...(options.fade && { fade: options.fade }),
       });
     };
-    let delayTimeout = 0;
     if (options.delay) {
       delayTimeout = window.setTimeout(() => {
         delayTimeout = 0;
@@ -135,16 +139,16 @@ export default class VideoSource {
     } else {
       start(!options.autoplay);
     }
-    const sourceLabel =
-      [options.itemId && `item=${options.itemId}`, options.mediaId && `media=${options.mediaId}`]
-        .filter(Boolean)
-        .join(' ') || uri;
     const onMessage = options.onMessage ? options.onMessage.bind(this) : () => {};
     decoder.onmessage = ev => {
       const payload: unknown = ev.data;
       if (!payload || typeof payload !== 'object') return;
       const data = payload as DecoderMessage;
-      if (data.debug && shouldLogDecoderDebug(data.debug)) debug(`${sourceLabel}: ${data.debug}`);
+      if (this.#closed) {
+        data.frame?.close();
+        return;
+      }
+      if (data.ready) this.#ready = true;
       if (data.frame) {
         if (streamController && !this.#closed && (streamController.desiredSize ?? 0) > 0) {
           streamController.enqueue(data.frame);
@@ -160,9 +164,6 @@ export default class VideoSource {
       // decoder recovery needs to attach the replacement before this stream closes.
       onMessage(ev);
       if (data.err) {
-        debug(
-          `${sourceLabel}: decoder error, ending source: ${data.err.message ?? 'unknown error'}`,
-        );
         // Treat decoder failures as a source boundary so playback can continue
         // with the next item instead of tearing down the whole stream.
         try {
@@ -175,11 +176,32 @@ export default class VideoSource {
       }
     };
 
+    decoder.onerror = event => {
+      event.preventDefault();
+      if (this.#closed) return;
+      onMessage(
+        new MessageEvent('message', {
+          data: { err: { message: event.message || 'Decoder worker failed' } },
+        }),
+      );
+      close();
+    };
+    decoder.onmessageerror = () => {
+      if (this.#closed) return;
+      onMessage(
+        new MessageEvent('message', {
+          data: { err: { message: 'Decoder worker message could not be decoded' } },
+        }),
+      );
+      close();
+    };
+
     this.decoder = decoder;
     this.readable = readable;
     this.close = close;
     this.#paused = !options.autoplay;
     this.play = () => {
+      if (this.#closed) return;
       this.#hasStarted = true;
       if (delayTimeout) {
         window.clearTimeout(delayTimeout);
@@ -191,6 +213,7 @@ export default class VideoSource {
       this.#paused = false;
     };
     this.pause = () => {
+      if (this.#closed) return;
       decoder.postMessage({ pause: true });
       this.#paused = true;
     };

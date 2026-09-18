@@ -4,8 +4,9 @@ import { ipcRenderer } from 'electron';
 
 import debugFactory from 'debug';
 
+import type { PlaybackEvent } from '/@common/playback';
 import type { MediaInfo } from '/@common/mediaInfo';
-import type { Playlist } from '/@common/playlist';
+import type { Playlist, PlaylistItem } from '/@common/playlist';
 import { getUrl } from '/@common/remote';
 import type { CandidateMessage, OfferMessage, RtcMessage, WithWebSocketKey } from '/@common/rtc';
 import type { Player } from '/@common/video';
@@ -22,13 +23,13 @@ import ipcDispatch from '../common/ipcDispatch';
 import VideoSource from './VideoSource';
 import { resolvePlaybackEngine, shouldFallbackAfterDecoderError } from './playbackEngine';
 import PlaybackWatchdog from './playbackWatchdog';
+import PlaybackRecovery, { type PlaybackAttempt } from './playbackRecovery';
 
 let playlist: Playlist | undefined;
 let player: Player;
 let playbackState: MediaSessionPlaybackState = 'none';
 let activeEngine: Player['playbackEngine'] | undefined;
 let currentItemId: string | undefined;
-let currentUri: string | undefined;
 let sourceVideo: HTMLVideoElement | undefined;
 let capturedStream: MediaStream | undefined;
 // let captureGeneration = 0;
@@ -43,7 +44,65 @@ const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:mediastream`);
 const PLAYBACK_STALL_CHECK_INTERVAL = 5_000;
 const playbackWatchdog = new PlaybackWatchdog();
 
-let playbackRecoveryInProgress = false;
+const recovery = new PlaybackRecovery();
+const sourceAttempts = new WeakMap<VideoSource, PlaybackAttempt>();
+const endedSources = new WeakSet<VideoSource>();
+let captureAttempt: PlaybackAttempt | undefined;
+let revision = 0;
+let updatePending = false;
+let updating = false;
+
+const reportAttempt = (
+  attempt: PlaybackAttempt,
+  event: PlaybackEvent['event'],
+  error?: string,
+): void => {
+  try {
+    ipcRenderer.send('playback:event', {
+      event,
+      playerId: sourceId,
+      playlistId: player?.playlistId ?? undefined,
+      itemId: attempt.itemId,
+      mediaId: attempt.mediaId,
+      filename: attempt.filename,
+      attempt: attempt.attempt,
+      playbackId: attempt.playbackId,
+      timestamp: new Date().toISOString(),
+      engine: activeEngine,
+      error,
+    } satisfies PlaybackEvent);
+  } catch {
+    /* Logging must not prevent playback recovery. */
+  }
+};
+
+const markStarted = (attempt?: PlaybackAttempt): void => {
+  if (!attempt || attempt.failed || attempt.started || playbackState !== 'playing') return;
+  // eslint-disable-next-line no-param-reassign
+  attempt.started = true;
+  reportAttempt(attempt, 'started');
+};
+
+const recordFailure = (attempt: PlaybackAttempt, error: unknown): void => {
+  if (!recovery.fail(attempt)) return;
+  const message = error instanceof Error ? error.message : String(error);
+  reportAttempt(attempt, 'error', message);
+  if (recovery.blocked(attempt.mediaId)) reportAttempt(attempt, 'quarantined', message);
+};
+
+const withTimeout = async <T>(promise: Promise<T>, message: string): Promise<T> => {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(message)), 15_000);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+};
 
 let linuxPreferSoftwareDecoding = false;
 
@@ -83,25 +142,37 @@ const createSourceVideo = (uri: string): HTMLVideoElement => {
   video.style.cssText =
     'position:absolute;left:-1px;top:-1px;width:1px;height:1px;opacity:0;pointer-events:none;';
   video.addEventListener('loadedmetadata', () => {
-    debug(
-      `source metadata loaded: duration=${Number.isFinite(video.duration) ? video.duration : '<unknown>'}`,
-    );
+    if (video !== sourceVideo) return;
     refreshStreamTracks();
     ipcDispatch(setDuration(Number.isFinite(video.duration) ? video.duration : undefined));
   });
   video.addEventListener('durationchange', () => {
+    if (video !== sourceVideo) return;
     ipcDispatch(setDuration(Number.isFinite(video.duration) ? video.duration : undefined));
   });
   video.addEventListener('timeupdate', () => {
+    if (video !== sourceVideo) return;
     // debug(`source time update: ${video.currentTime}s`);
     ipcDispatch(setPosition(video.currentTime));
   });
+  video.addEventListener('playing', () => {
+    if (video === sourceVideo) markStarted(captureAttempt);
+  });
   video.addEventListener('ended', () => {
+    if (video !== sourceVideo || playbackState !== 'playing') return;
+    if (captureAttempt && !captureAttempt.started) {
+      requestPlaybackRecovery('Capture ended without starting playback');
+      return;
+    }
+    if (captureAttempt?.started && !captureAttempt.failed) {
+      reportAttempt(captureAttempt, 'completed');
+      recovery.reset(captureAttempt.mediaId);
+    }
+    clearSource();
     playNextItem();
   });
   video.addEventListener('error', () => {
     const message = video.error?.message || `media error code ${video.error?.code ?? 'unknown'}`;
-    debug(`source video error: ${message}`);
     if (video === sourceVideo) requestPlaybackRecovery(`source video error: ${message}`);
   });
 
@@ -239,7 +310,7 @@ const disposeSource = (_reason: string): void => {
 const clearSource = (): void => {
   // debug('clear source');
   currentItemId = undefined;
-  currentUri = undefined;
+  captureAttempt = undefined;
   disposeSource('clear source');
   ipcDispatch(setDuration(0));
   ipcDispatch(setPosition(0));
@@ -247,475 +318,352 @@ const clearSource = (): void => {
 
 const playSource = async (): Promise<void> => {
   const video = sourceVideo;
+  const version = revision;
   if (!video) return;
   try {
-    // debug(`play source: ${currentUri ?? '<empty>'}`);
-    await video.play();
-    syncConsumerPlayback();
+    await withTimeout(video.play(), 'Capture playback did not start');
+    if (video === sourceVideo && playbackState === 'playing') syncConsumerPlayback();
   } catch (err) {
-    debug(`error while starting source video: ${(err as Error).message}`);
+    if (video === sourceVideo && version === revision && playbackState === 'playing')
+      requestPlaybackRecovery(String(err));
   }
 };
 
-const loadSource = async (uri: string, itemId?: string, mediaId?: string): Promise<void> => {
-  // debug(`load source: ${uri}`);
-  disposeSource('replace source');
-  currentUri = uri;
-  currentItemId = itemId;
-  createSourceVideo(uri);
+const selectItem = (advance = false): PlaylistItem | undefined =>
+  recovery.select(playlist?.items ?? [], player?.current, advance);
 
-  refreshStreamTracks();
-  ipcDispatch(setCurrentPlaylistItem(itemId ? { itemId, mediaId } : undefined));
-
-  if (playbackState === 'playing') await playSource();
+const selectCurrent = (item: PlaylistItem): void => {
+  if (player.current === item.id) return;
+  player = { ...player, current: item.id };
+  ipcDispatch(setCurrentPlaylistItem({ itemId: item.id, mediaId: item.md5 }));
 };
 
 const playNextItem = (): void => {
-  if (!playlist?.items.length) return;
-  const currentIndex = playlist.items.findIndex(item => item.id === currentItemId);
-  const nextIndex = ((currentIndex === -1 ? 0 : currentIndex) + 1) % playlist.items.length;
-  const nextItem = playlist.items[nextIndex];
-  ipcDispatch(setCurrentPlaylistItem({ itemId: nextItem.id, mediaId: nextItem.md5 }));
+  const next = selectItem(true);
+  if (next) selectCurrent(next);
+  scheduleUpdate();
 };
 
 let currentSource: VideoSource | undefined;
 let nextSource: VideoSource | undefined;
 let videoStream: MergeableStream<VideoFrame> | undefined;
-let prevDecoderEnabled: boolean | undefined;
 let decoderPosition = 0;
 let decoderDuration = 0;
-
-const DECODER_RECOVERY_SEEK_STEP = 2;
-const DECODER_MAX_RECOVERY_ATTEMPTS = 5;
-const SEEK_END_GUARD = 0.1;
-const decoderRecoveryAttempts = new Map<string, number>();
-
-type DecoderSourceMessage = {
-  frame?: VideoFrame;
-  duration?: number;
-  seekStartTime?: number;
-  timer?: number;
-  recoverableError?: {
-    message?: string;
-  };
-  err?: {
-    message?: string;
-  };
-};
-
-const getDecoderRecoveryKey = (source: VideoSource): string =>
-  source.options.itemId ?? source.options.mediaId ?? source.uri;
-
-const getDecoderSourcePosition = (source: VideoSource, timer = 0): number =>
-  (source.options.startTime ?? 0) + timer;
+let preloadedAt = 0;
 
 const clampSeekPosition = (position: number, duration?: number): number => {
   const nextPosition = Math.max(0, position);
   if (!duration || !Number.isFinite(duration)) return nextPosition;
-  return Math.min(nextPosition, Math.max(0, duration - SEEK_END_GUARD));
+  return Math.min(nextPosition, Math.max(0, duration - 0.1));
 };
 
 const getActiveDuration = (): number =>
   activeEngine === 'decoder'
-    ? decoderDuration || currentSource?.duration || nextSource?.duration || 0
+    ? decoderDuration || currentSource?.duration || 0
     : Number.isFinite(sourceVideo?.duration)
       ? (sourceVideo?.duration ?? 0)
       : 0;
 
 const disposeDecoder = (): void => {
-  // debug('dispose decoder engine');
-  currentSource?.close();
+  const current = currentSource;
+  const next = nextSource;
   currentSource = undefined;
-  nextSource?.close();
   nextSource = undefined;
+  current?.close();
+  next?.close();
+  // A merged stream stays writable across file failures; retire it only when the engine stops.
   videoStream = undefined;
-  prevDecoderEnabled = undefined;
   decoderPosition = 0;
   decoderDuration = 0;
-  decoderRecoveryAttempts.clear();
   blankConsumers();
+  const tracks = stream.getTracks();
   replaceStreamTracks(new MediaStream());
+  tracks.forEach(track => track.stop());
 };
 
-const recoverDecoderSource = (source: VideoSource, reason?: string): void => {
-  if (source !== currentSource || !videoStream || source.closed) return;
+const failDecoder = (source: VideoSource, error: unknown): void => {
+  if (source !== currentSource && source !== nextSource) return;
+  const attempt = sourceAttempts.get(source);
+  if (!attempt || attempt.failed) return;
+  recordFailure(attempt, error);
   if (shouldFallbackAfterDecoderError() && !linuxPreferSoftwareDecoding) {
     linuxPreferSoftwareDecoding = true;
-    void ipcRenderer
-      .invoke('setLocalConfig', 'linuxPreferSoftwareDecoding', true)
-      .catch((err: unknown) => {
-        debug(`failed to persist Linux software decoder preference: ${(err as Error).message}`);
-      });
-    debug(
-      `WebCodecs decoder failed; enabling Linux software decoding and restarting source: ${reason ?? 'unknown error'}`,
-    );
-    seekDecoderSource(decoderPosition, 'recover');
-    return;
+    void ipcRenderer.invoke('setLocalConfig', 'linuxPreferSoftwareDecoding', true).catch(() => {});
   }
-  const key = getDecoderRecoveryKey(source);
-  const attempts = (decoderRecoveryAttempts.get(key) ?? 0) + 1;
-  decoderRecoveryAttempts.set(key, attempts);
-  if (attempts > DECODER_MAX_RECOVERY_ATTEMPTS) {
-    debug(
-      `decoder recovery limit reached, ending source: item=${source.options.itemId ?? '<none>'} media=${source.options.mediaId ?? '<none>'} reason=${reason ?? 'unknown error'}`,
-    );
-    return;
-  }
+  if (source === currentSource) currentSource = undefined;
+  if (source === nextSource) nextSource = undefined;
+  source.close();
+  scheduleUpdate();
+};
 
-  const duration = source.duration || undefined;
-  const recoveryPosition = Math.min(
-    duration ? Math.max(0, duration - 0.1) : Number.POSITIVE_INFINITY,
-    Math.max(decoderPosition, source.options.startTime ?? 0) + DECODER_RECOVERY_SEEK_STEP,
-  );
-  if (!Number.isFinite(recoveryPosition)) return;
-  debug(
-    `recover decoder source after error, seeking to ${recoveryPosition}s (attempt ${attempts}/${DECODER_MAX_RECOVERY_ATTEMPTS}): item=${source.options.itemId ?? '<none>'} media=${source.options.mediaId ?? '<none>'} reason=${reason ?? 'unknown error'}`,
-  );
-  seekDecoderSource(recoveryPosition, 'recover');
+type DecoderSourceMessage = {
+  frame?: VideoFrame;
+  done?: boolean;
+  duration?: number;
+  seekStartTime?: number;
+  timer?: number;
+  recoverableError?: { message?: string };
+  err?: { message?: string };
 };
 
 const handleDecoderSourceMessage = (source: VideoSource, data: DecoderSourceMessage): void => {
-  if (data.frame && source === currentSource && playbackState === 'playing') {
-    playbackWatchdog.defer();
+  if (source !== currentSource && source !== nextSource) return;
+  if (data.err || data.recoverableError) {
+    failDecoder(source, data.err?.message ?? data.recoverableError?.message ?? 'Decoder error');
+    return;
   }
-  if (typeof data.duration === 'number' && source === currentSource) {
+  if (source !== currentSource) return;
+  if (data.frame && playbackState === 'playing') {
+    markStarted(sourceAttempts.get(source));
+    playbackWatchdog.defer();
+    decoderPosition = data.frame.timestamp / 1_000_000;
+    ipcDispatch(setPosition(decoderPosition));
+  }
+  if (typeof data.duration === 'number') {
     decoderDuration = data.duration;
     ipcDispatch(setDuration(data.duration));
   }
-  if (typeof data.seekStartTime === 'number') {
-    // eslint-disable-next-line no-param-reassign
-    source.options.startTime = data.seekStartTime;
-    // debug(
-    //   `decoder source seek start time: ${data.seekStartTime}s: media=${source.options.mediaId ?? '<none>'}, current: ${source === currentSource ? 'yes' : 'no'}`,
-    // );
-    if (source === currentSource) {
-      decoderPosition = data.seekStartTime;
-      ipcDispatch(setPosition(decoderPosition));
-    }
-  }
-  if (typeof data.timer === 'number' && source === currentSource) {
-    decoderPosition = getDecoderSourcePosition(source, data.timer);
-    // debug(
-    //   `decoder source timer: ${data.timer}s, position: ${decoderPosition}s: media=${source.options.mediaId ?? '<none>'}`,
-    // );
-    ipcDispatch(
-      setPosition(source.duration ? Math.min(source.duration, decoderPosition) : decoderPosition),
-    );
-  }
-  if (data.recoverableError && source === currentSource) {
-    recoverDecoderSource(source, data.recoverableError.message);
-  }
-  if (data.err && source === currentSource) {
-    recoverDecoderSource(source, data.err.message);
-  }
-};
-
-const playNextDecoderSource = () => {
-  const source = nextSource;
-  if (source && videoStream) {
-    const same = currentSource?.options.mediaId === source.options.mediaId;
-    if (same && !source.options.fade?.disableIn) {
-      source.setDisableFadeIn();
-    }
-
-    const { itemId, mediaId } = source.options;
-    if (playbackState === 'playing') source.play();
-    currentSource = source;
-    nextSource = undefined;
-    decoderPosition = source.options.startTime ?? 0;
-    decoderDuration = source.duration || decoderDuration;
+  // eslint-disable-next-line no-param-reassign
+  if (typeof data.seekStartTime === 'number') source.options.startTime = data.seekStartTime;
+  if (typeof data.timer === 'number') {
+    decoderPosition = (source.options.startTime ?? 0) + data.timer;
     ipcDispatch(setPosition(decoderPosition));
-    ipcDispatch(setDuration(decoderDuration));
-    void videoStream
-      .add(source.readable)
-      .then(playNextDecoderSource)
-      .catch(err => {
-        debug(`error while adding next decoder source: ${(err as Error).message}`);
-      });
-    if (player.current !== itemId) {
-      ipcDispatch(setCurrentPlaylistItem(itemId ? { itemId, mediaId } : undefined));
-    } else {
-      void update();
-    }
   }
-};
-
-const seekDecoderSource = (position: number, reason: 'user' | 'recover' = 'user'): void => {
-  const source = currentSource;
-  if (!source || !videoStream || source.closed) return;
-  const { itemId, mediaId } = source.options;
-  const nextPosition = clampSeekPosition(position, source.duration || decoderDuration);
-  if (reason === 'user') decoderRecoveryAttempts.delete(getDecoderRecoveryKey(source));
-  // debug(
-  //   `seek decoder source to ${nextPosition}s (${reason}): item=${itemId ?? '<none>'} media=${mediaId ?? '<none>'}`,
-  // );
-  nextSource?.close();
-  const recoverySource = new VideoSource(source.uri, {
-    itemId,
-    autoplay: playbackState === 'playing',
-    startTime: nextPosition,
-    fade: {
-      disableIn: true,
-      disableOut: true,
-      duration: 0,
-    },
-    mediaId,
-    preferSoftwareDecoding: linuxPreferSoftwareDecoding,
-    onMessage: ({ data }: { data: unknown }) => {
-      if (data && typeof data === 'object') {
-        handleDecoderSourceMessage(recoverySource, data);
-      }
-    },
-  });
-  nextSource = recoverySource;
-  source.close();
-  // debug(
-  //   `seek decoder source: closed previous source, added recovery source: position=${nextPosition}s item=${itemId ?? '<none>'} media=${mediaId ?? '<none>'}`,
-  // );
-  decoderPosition = nextPosition;
-  ipcDispatch(setPosition(nextPosition));
-};
-
-const restartCurrentSource = (): void => {
-  // debug('restart current source');
-  seek(0);
-  if (playbackState === 'playing') {
-    if (activeEngine === 'capture') void playSource();
-    else currentSource?.play();
+  if (data.done) endedSources.add(source);
+  if (data.done && !sourceAttempts.get(source)?.started) {
+    failDecoder(source, 'Decoder ended without a playable frame');
   }
 };
 
 const initializeDecoderStream = (): void => {
   if (videoStream) return;
-  // debug('initialize decoder engine');
-  replaceStreamTracks(new MediaStream());
-  videoStream = mergeStreams<VideoFrame>();
+  const merged = mergeStreams<VideoFrame>();
+  videoStream = merged;
   const trackGenerator = new MediaStreamTrackGenerator({ kind: 'video' });
-  void videoStream.pipeTo(trackGenerator.writable).catch(err => {
-    debug(`error while piping decoder video stream to track: ${(err as Error).message}`);
+  void merged.pipeTo(trackGenerator.writable).catch(err => {
+    if (videoStream !== merged) return;
+    videoStream = undefined;
+    if (currentSource) failDecoder(currentSource, err);
   });
-  stream.addTrack(trackGenerator);
-  replacePeerTracks();
+  replaceStreamTracks(new MediaStream([trackGenerator]));
 };
 
-const updateDecoder = async (): Promise<void> => {
-  initializeDecoderStream();
-  const enabled = Boolean(playlist && playlist.items.length > 0 && playbackState !== 'none');
-  const delay = 0;
-  const { current } = player;
-  if (!enabled && playbackState === 'none') {
+const activateDecoder = (source: VideoSource): void => {
+  const merged = videoStream;
+  if (!merged) return;
+  currentSource = source;
+  if (nextSource === source) nextSource = undefined;
+  const item = playlist?.items.find(candidate => candidate.id === source.options.itemId);
+  if (item) selectCurrent(item);
+  decoderPosition = source.options.startTime ?? 0;
+  decoderDuration = source.duration;
+  ipcDispatch(setPosition(decoderPosition));
+  ipcDispatch(setDuration(decoderDuration));
+  playbackWatchdog.defer();
+  if (playbackState === 'playing') source.play();
+  void merged
+    .add(source.readable)
+    .then(() => {
+      if (source !== currentSource || videoStream !== merged) return;
+      const attempt = sourceAttempts.get(source);
+      if (attempt?.started && !attempt.failed && endedSources.has(source)) {
+        reportAttempt(attempt, 'completed');
+        recovery.reset(attempt.mediaId);
+      }
+      currentSource = undefined;
+      playNextItem();
+    })
+    .catch(err => failDecoder(source, err));
+};
+
+const loadMedia = async (
+  item: PlaylistItem,
+  version: number,
+): Promise<{ uri: string; attempt: PlaybackAttempt } | undefined> => {
+  const attempt = recovery.begin(item);
+  try {
+    const media: MediaInfo | undefined = await withTimeout(
+      ipcRenderer.invoke('getMedia', item.md5),
+      'Media lookup timed out',
+    );
+    if (version !== revision) return undefined;
+    attempt.filename = media?.filename;
+    const uri = getMediaUri(media?.filename);
+    if (!uri) throw new Error('Media file is missing');
+    return { uri, attempt };
+  } catch (error) {
+    if (version !== revision) return undefined;
+    recordFailure(attempt, error);
+    scheduleUpdate();
+    return undefined;
+  }
+};
+
+const createDecoder = (
+  uri: string,
+  attempt: PlaybackAttempt,
+  startTime = 0,
+  seeking = false,
+): VideoSource => {
+  const item = playlist?.items.find(candidate => candidate.id === attempt.itemId);
+  const next = recovery.select(playlist?.items ?? [], attempt.itemId, true);
+  const same = item?.md5 === next?.md5;
+  const source = new VideoSource(uri, {
+    itemId: attempt.itemId,
+    mediaId: attempt.mediaId,
+    startTime,
+    preferSoftwareDecoding: linuxPreferSoftwareDecoding,
+    fade: {
+      disableIn: seeking || same || player.disableFadeIn,
+      disableOut: seeking || same || player.disableFadeOut,
+      duration: seeking ? 0 : 500,
+    },
+    onMessage: ({ data }: { data: DecoderSourceMessage }) =>
+      handleDecoderSourceMessage(source, data),
+  });
+  sourceAttempts.set(source, attempt);
+  return source;
+};
+
+const updateDecoder = async (version: number): Promise<void> => {
+  const item = selectItem();
+  if (playbackState === 'none' || !item) {
     disposeDecoder();
     return;
   }
-  if (prevDecoderEnabled !== enabled) {
-    prevDecoderEnabled = enabled;
-    stream.getTracks().forEach(track => {
-      // eslint-disable-next-line no-param-reassign
-      track.enabled = enabled;
-    });
-    syncConsumerPlayback();
-    enabled ||
-      setTimeout(() => {
-        if (currentSource?.hasStarted) {
-          nextSource?.close();
-          nextSource = undefined;
-          currentSource.close();
-          currentSource = undefined;
-        }
-      }, 100);
-  }
-  if (!playlist || playlist.items.length === 0) {
-    currentSource?.close();
+  initializeDecoderStream();
+  selectCurrent(item);
+  if (currentSource?.options.itemId !== item.id) {
+    const previous = currentSource;
     currentSource = undefined;
-    nextSource?.close();
-    nextSource = undefined;
-    return;
-  }
-
-  const currentItem = playlist.items.find(item => item.id === current) ?? playlist.items[0];
-  const media: MediaInfo = await ipcRenderer.invoke('getMedia', currentItem.md5);
-
-  const nextIndex =
-    (playlist.items.findIndex(item => item.id === current) + 1) % playlist.items.length;
-  const nextItem = playlist.items[nextIndex];
-  const nextMedia: MediaInfo = await ipcRenderer.invoke('getMedia', nextItem.md5);
-
-  const same = currentItem.md5 === nextItem.md5;
-
-  if (!nextSource || nextSource.closed || nextSource.options.itemId !== nextItem.id) {
-    if (nextSource && !nextSource.hasStarted) nextSource.close();
-    const uri = getMediaUri(nextMedia?.filename);
-    if (uri) {
-      const preloadedSource = new VideoSource(uri, {
-        itemId: nextItem.id,
-        delay,
-        fade: {
-          disableIn: same || player.disableFadeIn,
-          disableOut: player.disableFadeOut,
-          duration: 500,
-        },
-        mediaId: nextItem.md5,
-        preferSoftwareDecoding: linuxPreferSoftwareDecoding,
-        onMessage: ({ data }: { data: unknown }) => {
-          if (data && typeof data === 'object') {
-            handleDecoderSourceMessage(preloadedSource, data);
-          }
-        },
-      });
-      nextSource = preloadedSource;
-    }
-  }
-  if (!currentSource || currentSource.closed || current !== currentSource.options.itemId) {
-    if (nextSource && nextSource.options.itemId === current && playlist.items.length > 1) {
-      currentSource?.close();
-      return;
-    }
-
-    const uri = getMediaUri(media?.filename);
-    if (uri && videoStream) {
-      const videoSource = new VideoSource(uri, {
-        itemId: current,
-        autoplay: playbackState === 'playing',
-        fade: {
-          disableIn: player.disableFadeIn,
-          disableOut: same || player.disableFadeOut,
-          duration: 500,
-        },
-        mediaId: currentItem.md5,
-        preferSoftwareDecoding: linuxPreferSoftwareDecoding,
-        onMessage: ({ data }: { data: unknown }) => {
-          if (data && typeof data === 'object') {
-            handleDecoderSourceMessage(videoSource, data);
-          }
-        },
-      });
-      if (currentSource && !currentSource.closed) {
-        nextSource = videoSource;
-        currentSource.close();
-      } else {
-        currentSource = videoSource;
-        void videoStream
-          .add(videoSource.readable)
-          .then(playNextDecoderSource)
-          .catch(err => {
-            debug(`error while adding decoder source: ${(err as Error).message}`);
-          });
+    previous?.close();
+    if (nextSource?.options.itemId === item.id && !nextSource.closed) activateDecoder(nextSource);
+    else {
+      const loaded = await loadMedia(item, version);
+      if (!loaded) return;
+      try {
+        activateDecoder(createDecoder(loaded.uri, loaded.attempt));
+      } catch (err) {
+        recordFailure(loaded.attempt, err);
+        scheduleUpdate();
+        return;
       }
     }
   }
-  if (currentSource && (playbackState !== 'playing') !== currentSource.paused) {
+  if (currentSource) {
     if (playbackState === 'playing') currentSource.play();
     else currentSource.pause();
+    currentSource.setDisableFadeOut(player.disableFadeOut || selectItem(true)?.md5 === item.md5);
   }
-  syncConsumerPlayback();
-  currentSource?.setDisableFadeOut(player.disableFadeOut || same);
-};
-
-const updateCapture = async (): Promise<void> => {
-  const enabled = Boolean(playlist && playlist.items.length > 0 && playbackState !== 'none');
   syncTrackEnabled();
-
-  if (!enabled) {
-    pauseSource();
-    blankConsumers();
-    if (!playlist || playlist.items.length === 0) clearSource();
-    return;
+  const nextItem = selectItem(true);
+  // Never decode the same file concurrently: both failures belong to one retry budget.
+  if (!nextItem || nextItem.md5 === item.md5 || nextSource?.options.itemId !== nextItem.id) {
+    const stale = nextSource;
+    nextSource = undefined;
+    stale?.close();
   }
-
-  const currentPlaylist = playlist;
-  if (!currentPlaylist) return;
-
-  const currentItem =
-    currentPlaylist.items.find(item => item.id === player.current) ?? currentPlaylist.items[0];
-  const media: MediaInfo = await ipcRenderer.invoke('getMedia', currentItem.md5);
-  const uri = getMediaUri(media?.filename);
-
-  if (!uri) {
-    clearSource();
-    return;
-  }
-
-  if (uri !== currentUri || currentItem.id !== currentItemId) {
-    await loadSource(uri, currentItem.id, currentItem.md5);
-  } else if (playbackState === 'playing' && sourceVideo?.paused) {
-    await playSource();
-  } else if (playbackState !== 'playing') {
-    pauseSource();
+  if (nextItem && nextItem.md5 !== item.md5 && !nextSource && playbackState === 'playing') {
+    const loaded = await loadMedia(nextItem, version);
+    if (!loaded) return;
+    try {
+      nextSource = createDecoder(loaded.uri, loaded.attempt);
+      preloadedAt = Date.now();
+    } catch (err) {
+      recordFailure(loaded.attempt, err);
+      scheduleUpdate();
+    }
   }
 };
 
-const switchEngine = (engine: NonNullable<Player['playbackEngine']>): void => {
-  if (activeEngine === engine) return;
-  debug(`switch playback engine: ${activeEngine ?? '<none>'} -> ${engine}`);
-  if (activeEngine === 'capture') disposeSource('switch engine');
-  if (activeEngine === 'decoder') disposeDecoder();
-  replaceStreamTracks(new MediaStream());
-  activeEngine = engine;
-  if (engine === 'decoder') initializeDecoderStream();
+const updateCapture = async (version: number): Promise<void> => {
+  const item = selectItem();
+  if (playbackState === 'none' || !item) {
+    clearSource();
+    blankConsumers();
+    return;
+  }
+  selectCurrent(item);
+  if (currentItemId !== item.id || !sourceVideo) {
+    const loaded = await loadMedia(item, version);
+    if (!loaded) return;
+    disposeSource('replace source');
+    currentItemId = item.id;
+    captureAttempt = loaded.attempt;
+    try {
+      createSourceVideo(loaded.uri);
+      playbackWatchdog.defer();
+      refreshStreamTracks();
+    } catch (error) {
+      recordFailure(loaded.attempt, error);
+      clearSource();
+      scheduleUpdate();
+      return;
+    }
+  }
+  syncTrackEnabled();
+  if (playbackState === 'playing' && sourceVideo?.paused) await playSource();
+  else if (playbackState !== 'playing') pauseSource();
 };
 
 const update = async (): Promise<void> => {
-  const engine = getPlaybackEngine();
-  switchEngine(engine);
-  if (engine === 'capture') await updateCapture();
-  else await updateDecoder();
-};
-
-const getPlaybackPosition = (): number | undefined => {
-  if (activeEngine === 'decoder') return undefined;
-  return sourceVideo?.currentTime;
-};
-
-const recoverPlayback = async (reason: string): Promise<void> => {
-  if (
-    playbackState !== 'playing' ||
-    !player?.autoPlay ||
-    !playlist?.items.length ||
-    playbackRecoveryInProgress
-  ) {
-    return;
-  }
-
-  playbackRecoveryInProgress = true;
-  playbackWatchdog.defer();
-  debug(
-    `recover stalled playback: engine=${activeEngine ?? '<none>'} position=${getPlaybackPosition() ?? '<unknown>'} reason=${reason}`,
-  );
+  updatePending = true;
+  if (updating || !player) return;
+  updating = true;
   try {
-    if (activeEngine === 'capture') {
-      const currentItem =
-        playlist.items.find(item => item.id === player.current) ?? playlist.items[0];
-      const media: MediaInfo = await ipcRenderer.invoke('getMedia', currentItem.md5);
-      const uri = getMediaUri(media?.filename);
-      if (uri) await loadSource(uri, currentItem.id, currentItem.md5);
-      return;
+    while (updatePending) {
+      updatePending = false;
+      const version = revision;
+      const engine = getPlaybackEngine();
+      if (activeEngine !== engine) {
+        clearSource();
+        disposeDecoder();
+        activeEngine = engine;
+      }
+      try {
+        if (engine === 'capture') await updateCapture(version);
+        else await updateDecoder(version);
+      } catch (error) {
+        const item = selectItem();
+        if (item && version === revision) {
+          recordFailure(recovery.begin(item), error);
+          updatePending = true;
+        }
+      }
     }
-
-    if (activeEngine === 'decoder' && currentSource && !currentSource.closed) {
-      seekDecoderSource(decoderPosition, 'recover');
-      return;
-    }
-
-    currentSource?.close();
-    currentSource = undefined;
-    nextSource?.close();
-    nextSource = undefined;
-    await update();
-  } catch (err) {
-    debug(`error while recovering playback: ${(err as Error).message}`);
   } finally {
-    playbackRecoveryInProgress = false;
+    updating = false;
   }
 };
+
+function scheduleUpdate(): void {
+  revision += 1;
+  void update();
+}
 
 function requestPlaybackRecovery(reason: string): void {
-  void recoverPlayback(reason);
+  if (playbackState !== 'playing') return;
+  playbackWatchdog.defer();
+  if (activeEngine === 'decoder' && currentSource) failDecoder(currentSource, reason);
+  else if (activeEngine === 'capture' && captureAttempt) {
+    recordFailure(captureAttempt, reason);
+    clearSource();
+    scheduleUpdate();
+  } else scheduleUpdate();
 }
 
 window.setInterval(() => {
-  const active = Boolean(playbackState === 'playing' && player?.autoPlay && playlist?.items.length);
-  if (playbackWatchdog.observe(active, getPlaybackPosition())) {
-    requestPlaybackRecovery('playback position did not advance');
+  const active = Boolean(playbackState === 'playing' && selectItem());
+  if (
+    playbackWatchdog.observe(
+      active,
+      activeEngine === 'capture' ? sourceVideo?.currentTime : undefined,
+    )
+  ) {
+    requestPlaybackRecovery('Playback did not advance for 30 seconds');
+  }
+  if (active && nextSource && !nextSource.ready && Date.now() - preloadedAt >= 30_000) {
+    failDecoder(nextSource, 'Preloaded decoder did not become ready for 30 seconds');
   }
 }, PLAYBACK_STALL_CHECK_INTERVAL);
 
@@ -736,62 +684,94 @@ export const updateSrcObject = (selector: string) => {
 
 export const seek = (position: number): void => {
   if (!Number.isFinite(position)) return;
-  const nextPosition = Math.max(0, position);
-  if (activeEngine === 'capture') {
-    if (!sourceVideo) return;
-    const capturePosition = clampSeekPosition(nextPosition, sourceVideo.duration);
-    // debug(`seek capture source to ${capturePosition}s: ${currentUri ?? '<empty>'}`);
-    sourceVideo.currentTime = capturePosition;
-    ipcDispatch(setPosition(sourceVideo.currentTime));
-    return;
+  const nextPosition = clampSeekPosition(position, getActiveDuration());
+  if (activeEngine === 'capture' && sourceVideo) {
+    try {
+      sourceVideo.currentTime = nextPosition;
+    } catch (error) {
+      requestPlaybackRecovery(String(error));
+    }
+  } else if (activeEngine === 'decoder' && currentSource) {
+    const previous = currentSource;
+    const attempt = sourceAttempts.get(previous);
+    if (!attempt) return;
+    try {
+      const source = createDecoder(previous.uri, attempt, nextPosition, true);
+      currentSource = undefined;
+      previous.close();
+      activateDecoder(source);
+    } catch (error) {
+      failDecoder(previous, error);
+    }
   }
-  if (activeEngine === 'decoder') seekDecoderSource(nextPosition);
 };
 
-const initialize = async () => {
+let playerRequest = 0;
+const applyPlayer = async (value: Player, restart = false): Promise<void> => {
+  const request = ++playerRequest;
+  revision += 1;
+  player = value;
+  // Pause immediately, before awaiting playlist IPC, so late play/decoder events cannot resume it.
+  if (!value.autoPlay) {
+    updatePlaybackState('paused');
+    sourceVideo?.pause();
+    currentSource?.pause();
+  }
+  try {
+    const loaded: Playlist | undefined = value.playlistId
+      ? await withTimeout(
+          ipcRenderer.invoke('getPlaylist', value.playlistId),
+          'Playlist lookup timed out',
+        )
+      : undefined;
+    if (request !== playerRequest) return;
+    playlist = loaded;
+    updatePlaybackState(value.autoPlay ? 'playing' : loaded?.items.length ? 'paused' : 'none');
+    await update();
+    if (restart && request === playerRequest) seek(0);
+  } catch (error) {
+    // Keep the requested state. A later player/playlist update can restore unavailable metadata.
+    debug(`playlist lookup failed: ${String(error)}`);
+  }
+};
+
+const initialize = async (): Promise<void> => {
   streamReady.resolve();
-  if (shouldFallbackAfterDecoderError()) {
-    linuxPreferSoftwareDecoding = Boolean(
-      await ipcRenderer.invoke('getLocalConfig', 'linuxPreferSoftwareDecoding'),
-    );
+  try {
+    if (shouldFallbackAfterDecoderError()) {
+      linuxPreferSoftwareDecoding = Boolean(
+        await ipcRenderer.invoke('getLocalConfig', 'linuxPreferSoftwareDecoding'),
+      );
+    }
+    const value: Player = await ipcRenderer.invoke('getPlayer', sourceId);
+    if (!player) await applyPlayer(value);
+  } catch (error) {
+    debug(`player initialization failed: ${String(error)}`);
   }
-  player = await ipcRenderer.invoke('getPlayer', sourceId);
-  if (player?.playlistId) {
-    playlist = await ipcRenderer.invoke('getPlaylist', player.playlistId);
-    if (player.autoPlay) updatePlaybackState('playing');
-  }
-  void update();
 };
 
 ipcRenderer.on('player', (_, value: Player, options?: { restart?: boolean }) => {
-  void (async () => {
-    player = value;
-    playlist = player.playlistId
-      ? await ipcRenderer.invoke('getPlaylist', player.playlistId)
-      : undefined;
-    const state: 'paused' | 'none' = playlist?.items.length ? 'paused' : 'none';
-    if (player.autoPlay !== (playbackState === 'playing')) {
-      updatePlaybackState(player.autoPlay ? 'playing' : state);
-    }
-    await update();
-    if (options?.restart) restartCurrentSource();
-  })();
+  void applyPlayer(value, options?.restart);
 });
 
-ipcRenderer.on('updatePlaylist', (_, updatedPlaylist) => {
+ipcRenderer.on('updatePlaylist', (_, updatedPlaylist: Playlist) => {
+  if (updatedPlaylist.id !== player?.playlistId) return;
   playlist = updatedPlaylist;
-  void update();
+  scheduleUpdate();
+});
+
+ipcRenderer.on('playback:retry', (_, mediaId: string) => {
+  recovery.reset(mediaId);
+  scheduleUpdate();
 });
 
 ipcRenderer.on('stop', () => {
+  playerRequest += 1;
+  revision += 1;
   const duration = getActiveDuration();
-  if (sourceVideo) {
-    sourceVideo.pause();
-    sourceVideo.currentTime = 0;
-  }
-  decoderPosition = 0;
   updatePlaybackState('none');
-  void update();
+  clearSource();
+  disposeDecoder();
   blankConsumers();
   ipcDispatch(setDuration(duration));
   ipcDispatch(setPosition(0));

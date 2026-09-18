@@ -42,31 +42,35 @@ onmessage = async (event: MessageEvent<unknown>) => {
   };
   if ('uri' in data && typeof d.uri === 'string') {
     cancel = false;
-    const ebml = new EbmlDecoder();
-    const chunkGenerator = new VideoChunkGenerator({ startTime: d.startTime });
-    void chunkGenerator.config.catch(err => {
-      postMessage({ debug: `decoder video config error: ${(err as Error).message}` });
-    });
-    const decoderConfig = chunkGenerator.config.then(config =>
-      getLinuxDecoderConfig(
-        config,
-        /Linux/i.test(navigator.userAgent) ? 'linux' : 'win32',
-        Boolean(d.preferSoftwareDecoding),
-      ),
-    );
-    const frameGenerator = new VideoFrameGenerator(decoderConfig, 20);
-    fade = new FadeTransform(d.fade);
-    const valve = new ReducingValve(d.closed);
-    play = valve.open;
-    pause = valve.close;
-    if (controller) controller.abort(new CancelError());
-    controller = new AbortController();
-    const fetcher = new RangeFetcher(d.uri, {
-      abortController: controller,
-      chunkSize: 5 * 1024 * 1024,
-    });
-
     try {
+      const ebml = new EbmlDecoder();
+      const chunkGenerator = new VideoChunkGenerator({ startTime: d.startTime });
+      void chunkGenerator.config.then(
+        () => postMessage({ ready: true }),
+        err => {
+          const serialized = serializeError(err);
+          if (serialized) postMessage({ err: serialized });
+        },
+      );
+      const decoderConfig = chunkGenerator.config.then(config =>
+        getLinuxDecoderConfig(
+          config,
+          /Linux/i.test(navigator.userAgent) ? 'linux' : 'win32',
+          Boolean(d.preferSoftwareDecoding),
+        ),
+      );
+      const frameGenerator = new VideoFrameGenerator(decoderConfig, 20);
+      fade = new FadeTransform(d.fade);
+      const valve = new ReducingValve(d.closed);
+      play = valve.open;
+      pause = valve.close;
+      if (controller) controller.abort(new CancelError());
+      controller = new AbortController();
+      const fetcher = new RangeFetcher(d.uri, {
+        abortController: controller,
+        chunkSize: 5 * 1024 * 1024,
+      });
+
       readable = fetcher
         .pipeThrough(ebml)
         .pipeThrough(chunkGenerator)
