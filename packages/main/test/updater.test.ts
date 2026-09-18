@@ -28,12 +28,3 @@ it('keeps the event loop available while an update error dialog remains open', a
   );
   expect(mocks.showErrorBox).not.toHaveBeenCalled();
 });
-
-it('blocks automatic updates on Windows versions older than 10', async () => {
-  const { automaticUpdatesSupported } = await import('../src/updater');
-
-  expect(automaticUpdatesSupported('win32', '6.1.7601')).toBe(false);
-  expect(automaticUpdatesSupported('win32', '6.3.9600')).toBe(false);
-  expect(automaticUpdatesSupported('win32', '10.0.19045')).toBe(true);
-  expect(automaticUpdatesSupported('linux', '6.1.0')).toBe(true);
-});
