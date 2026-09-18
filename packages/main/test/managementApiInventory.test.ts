@@ -314,11 +314,11 @@ describe.runIf(ansibleAvailable)('managed overlay is a standard Ansible inventor
       const overlay = path.join(directory, 'gmib-overlay.json');
       await writeFile(
         original,
-        `all:\n  children:\n    gmib:\n      hosts:\n        sign-a:\n          ansible_host: ssh.example.invalid\n          ansible_user: fixture-user\n    othergroup:\n      hosts:\n        other-a:\n          ansible_host: other.example.invalid\n`,
+        `all:\n  children:\n    gmib:\n      hosts:\n        sign-a:\n          ansible_host: ssh.example.invalid\n          ansible_user: fixture-user\n          gmib_address: gmib.example.invalid\n          gmib_nibus_port: 9001\n          gmib_saved_name: Editable old name\n    othergroup:\n      hosts:\n        other-a:\n          ansible_host: other.example.invalid\n`,
       );
       await writeFile(
         overlay,
-        `${JSON.stringify(overlayFor([record('gmib.example.invalid', 9001, 'sign-a')]), null, 2)}\n`,
+        `${JSON.stringify(overlayFor([record('gmib.example.invalid', 9001, 'Remote current name')], 'gmib', new Map([['gmib.example.invalid:9001', 'sign-a']])), null, 2)}\n`,
       );
       const stdout = execFileSync('ansible-inventory', ['--list', '-i', overlay, '-i', original], {
         encoding: 'utf8',
@@ -329,9 +329,20 @@ describe.runIf(ansibleAvailable)('managed overlay is a standard Ansible inventor
         ansible_user: 'fixture-user',
         gmib_address: 'gmib.example.invalid',
         gmib_nibus_port: 9001,
+        gmib_saved_name: 'Editable old name',
       });
       expect(result._meta.hostvars['other-a']).toMatchObject({ ansible_host: 'other.example.invalid' });
       expect(result._meta.hostvars['sign-a']).not.toHaveProperty('ansible_connection');
+      const operational = JSON.parse(
+        execFileSync('ansible-inventory', ['--list', '-i', original, '-i', overlay], {
+          encoding: 'utf8',
+        }),
+      );
+      expect(operational._meta.hostvars['sign-a']).toMatchObject({
+        ansible_host: 'ssh.example.invalid',
+        ansible_user: 'fixture-user',
+        gmib_saved_name: 'Remote current name',
+      });
     } finally {
       await rm(directory, { recursive: true, force: true });
     }
