@@ -11,10 +11,10 @@ import {
   rm,
   writeFile,
 } from 'node:fs/promises';
-import { constants as fsConstants } from 'node:fs';
+import { constants as fsConstants, realpathSync } from 'node:fs';
 import { isIP } from 'node:net';
 import { basename, dirname, join, resolve } from 'node:path';
-import { domainToASCII, pathToFileURL } from 'node:url';
+import { domainToASCII, fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 
 import { GmibApiClient, GmibApiError } from './gmib-api-client.mjs';
@@ -1178,7 +1178,14 @@ export const main = async (argv = process.argv.slice(2)) => {
 
 const readBaseline = async (filename, context) => parseBaseline(await readJson(filename, 'baseline_read_error'), context);
 
-const invokedDirectly = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+const invokedDirectly = (() => {
+  if (!process.argv[1]) return false;
+  try {
+    return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+})();
 if (invokedDirectly) {
   main().catch(error => {
     const result = errorResult(error);

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 import { randomUUID } from 'node:crypto';
-import { lstatSync, readFileSync } from 'node:fs';
-import { pathToFileURL } from 'node:url';
+import { lstatSync, readFileSync, realpathSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 import { GmibApiClient, GmibApiError } from './gmib-api-client.mjs';
 
@@ -1057,7 +1057,14 @@ export const main = async (argv = process.argv.slice(2)) => {
   }
 };
 
-const invokedDirectly = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+const invokedDirectly = (() => {
+  if (!process.argv[1]) return false;
+  try {
+    return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+})();
 if (invokedDirectly) {
   main().catch(error => {
     const known = error instanceof GmibApiError ? error : undefined;
