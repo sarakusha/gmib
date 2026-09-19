@@ -204,7 +204,7 @@ const createShaderRenderer = (video, canvas, fragmentSource, fit) => {
 
   const render = () => {
     frameId = window.requestAnimationFrame(render);
-    if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
+    if (gl.isContextLost() || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
 
     resize();
     const sourceSize = getVideoSize(video);
@@ -229,6 +229,8 @@ const createShaderRenderer = (video, canvas, fragmentSource, fit) => {
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
+    // The player watchdog checks both video presentation and a successful canvas draw.
+    if (gl.getError() === gl.NO_ERROR) canvas.dataset.outputFrameAt = String(Date.now());
   };
 
   window.addEventListener('resize', resize);

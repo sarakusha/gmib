@@ -685,6 +685,18 @@ window.setInterval(() => {
   }
 }, PLAYBACK_STALL_CHECK_INTERVAL);
 
+export const getOutputPlaybackState = () => ({
+  playbackState,
+  playable: Boolean(player && selectItem()),
+});
+
+export const detachStreamFromVideo = (video: HTMLVideoElement): void => {
+  consumers.delete(video);
+  video.pause();
+  // eslint-disable-next-line no-param-reassign
+  video.srcObject = null;
+};
+
 export const attachStreamToVideo = (video: HTMLVideoElement): void => {
   if (video) {
     // debug(`attach shared stream to ${video.tagName.toLowerCase()}#${video.id || '<no-id>'}`);
