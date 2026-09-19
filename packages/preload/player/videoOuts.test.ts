@@ -100,6 +100,16 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 describe('output presentation recovery', () => {
+  it('does not reopen a closed output on background checks while stopped', async () => {
+    windows[0].close();
+    mock.state.playbackState = 'none';
+    await check(30_000);
+    await check(60_000);
+    expect(open).toHaveBeenCalledTimes(1);
+    mock.state.playbackState = 'playing';
+    await check(65_000);
+    expect(open).toHaveBeenCalledTimes(2);
+  });
   it('requires real presentation and leaves healthy repeated checks untouched', async () => {
     windows[0].dispatchEvent(new Event('load'));
     expect((await check(0)).outputs[0].state).toBe('starting');

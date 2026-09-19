@@ -193,6 +193,7 @@ const createShaderRenderer = (video, canvas, fragmentSource, fit) => {
 
   const started = performance.now();
   let frameId = 0;
+  let lastHealthCheck = -Infinity;
 
   const resize = () => {
     applyOutputBounds(canvas);
@@ -230,7 +231,13 @@ const createShaderRenderer = (video, canvas, fragmentSource, fit) => {
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     // The player watchdog checks both video presentation and a successful canvas draw.
-    if (gl.getError() === gl.NO_ERROR) canvas.dataset.outputFrameAt = String(Date.now());
+    // Sampling once per second avoids a synchronous GPU error query and DOM write
+    // for every frame on low-powered players.
+    const now = performance.now();
+    if (now - lastHealthCheck >= 1000) {
+      lastHealthCheck = now;
+      if (gl.getError() === gl.NO_ERROR) canvas.dataset.outputFrameAt = String(Date.now());
+    }
   };
 
   window.addEventListener('resize', resize);

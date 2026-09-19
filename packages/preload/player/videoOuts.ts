@@ -126,7 +126,7 @@ const createVideoOut = (mapping: PlayerMapping): void => {
   win.addEventListener('beforeunload', () => dispose(entry, false));
 };
 
-export const update = (): Promise<void> => {
+export const update = (initialOrExplicit = true): Promise<void> => {
   if (pendingUpdate) return pendingUpdate;
   pendingUpdate = (async () => {
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -157,6 +157,9 @@ export const update = (): Promise<void> => {
         }
         if (
           !videoOuts.has(mapping.id) &&
+          (initialOrExplicit ||
+            (getOutputPlaybackState().playbackState === 'playing' &&
+              getOutputPlaybackState().playable)) &&
           !probe.hidden &&
           !probe.unavailableOutputIds.includes(mapping.id)
         )
@@ -175,7 +178,7 @@ export const update = (): Promise<void> => {
 
 const check = async (request: OutputHealthProbe): Promise<void> => {
   probe = request;
-  await update();
+  await update(false);
   if (disposed) return;
   const playback = getOutputPlaybackState();
   const now = Date.now();
