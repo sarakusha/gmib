@@ -14,6 +14,7 @@ import type { CloseEvent, ManagedWindow } from './managedWindow';
 import { installWindowOpenHandler } from './openHandler';
 import { getLicenseState } from './licenseState';
 import { getBackgroundAutoplayPlayers } from './playerStartup';
+import { watchPlayerOutput } from './playerOutputHealth';
 import relaunch, { needRestart } from './relaunch';
 import { getPlayer, getPlayers, isPlayerActive, updateShowPlayer } from './screen';
 import { createTabbedWindow } from './tabbedWindow';
@@ -152,6 +153,7 @@ export const openPlayer = async (
     );
     registerPlayer(browserWindow, { host, port: nibusPort, playerId: id }, gmibParams);
     isQuitting = false;
+    if (!isRemote) watchPlayerOutput(browserWindow, id, url);
     browserWindow.loadURL(url).catch(err => {
       debug(`error while load player ${url}: ${err instanceof Error ? err.message : String(err)}`);
     });
@@ -177,6 +179,7 @@ export const openPlayer = async (
       debug(`<<<<CRASH>>>> player process gone: ${details.reason} (${details.exitCode})`);
       if (
         import.meta.env.PROD &&
+        isRemote &&
         !isQuitting &&
         ![/* 'clean-exit', */ 'killed'].includes(details.reason)
       ) {

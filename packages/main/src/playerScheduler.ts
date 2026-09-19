@@ -6,6 +6,7 @@ import { getNextRunAt, getRunKey } from '/@common/scheduler';
 import { setPlayerOutputWindowsVisibility } from './openHandler';
 import { getPlaylist, getPlaylistItems } from './playlist';
 import { openPlayer } from './playerWindow';
+import { checkPlayerOutput } from './playerOutputHealth';
 import {
   createStoredSchedulerJob,
   deleteStoredSchedulerJob,
@@ -106,7 +107,7 @@ const updatePlayerRuntime = async (
   }
 };
 
-const runJob = async (job: PlayerSchedulerJob): Promise<void> => {
+const runJob = async (job: PlayerSchedulerJob): Promise<string | undefined> => {
   const player = await getPlayer(job.playerId);
   if (!player) throw new Error(`Плеер ${job.playerId} не найден`);
 
@@ -136,7 +137,7 @@ const runJob = async (job: PlayerSchedulerJob): Promise<void> => {
       break;
     case 'play':
       await updatePlayerRuntime({ ...player, autoPlay: true }, { openHidden: true });
-      break;
+      return checkPlayerOutput(player.id);
     case 'stop': {
       await updatePlayerRuntime({
         ...player,
@@ -186,6 +187,7 @@ const runJob = async (job: PlayerSchedulerJob): Promise<void> => {
     default:
       break;
   }
+  return undefined;
 };
 
 export const executePlayerSchedulerJob = async (
@@ -196,13 +198,13 @@ export const executePlayerSchedulerJob = async (
   const lastRunAt = now.toISOString();
   const lastRunKey = getRunKey(now);
   try {
-    await runJob(job);
+    const message = await runJob(job);
     const nextJob = {
       ...job,
       lastRunAt,
       lastRunKey,
       lastStatus: 'success' as const,
-      lastMessage: `Задание "${job.name}" выполнено`,
+      lastMessage: message ?? `Задание "${job.name}" выполнено`,
       ...(options.disableOnce && job.kind === 'once' ? { enabled: false } : {}),
     };
     await setJobResult(job, nextJob);
