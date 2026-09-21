@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [5.6.1](https://github.com/sarakusha/gmib/compare/v5.6.0...v5.6.1) (2026-09-21)
+
+### Features
+
+* compact playback event logs ([d8168f0](https://github.com/sarakusha/gmib/commit/d8168f0c1f8e849ec15960f8e4d659d758963942))
+* show current playback log path ([264350f](https://github.com/sarakusha/gmib/commit/264350f600727882b5c5faf18a7279c0d3d073ea))
+
+### Bug Fixes
+
+* allow long management API requests ([4c021e5](https://github.com/sarakusha/gmib/commit/4c021e58c16db75c39c311c7a54d53ba6c61230b))
+* block unsupported Windows updates ([0dccabc](https://github.com/sarakusha/gmib/commit/0dccabc9a95e10ec70f2fcaa9be967097b24dcaf))
+* **ci:** normalize generated context bridge paths ([ddfae38](https://github.com/sarakusha/gmib/commit/ddfae381d85cf5132b0bdbac799dccac17b00536))
+* isolate player renderer recovery from shared processes ([a8482fd](https://github.com/sarakusha/gmib/commit/a8482fd185f9f9681276499b80d7dac8a2bd3c9a))
+* monitor output presentation and recover stalled windows ([90057bd](https://github.com/sarakusha/gmib/commit/90057bdb4449d3a39e0db56cee91d528a7baee1a))
+* preserve stopped outputs and bound shader health overhead ([4ee8654](https://github.com/sarakusha/gmib/commit/4ee86542b8958b05a832b24ab255f434c316fb4d))
+* reconcile output window placement and visibility intent ([ea2f79a](https://github.com/sarakusha/gmib/commit/ea2f79aeb9a41e13b9d7e6b42965119612a02272))
+* supervise player output and verify scheduled playback ([a887d3e](https://github.com/sarakusha/gmib/commit/a887d3eba365a9fda165554396f5ee97ce0bdb17))
 ## [5.6.0](https://github.com/sarakusha/gmib/compare/v5.5.0...v5.6.0) (2026-09-18)
 
 ### Features
