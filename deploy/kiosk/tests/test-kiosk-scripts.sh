@@ -210,11 +210,109 @@ GMIB_PROVISION_CONFIG="$provision_config" GMIB_PROVISION_STATE_DIR="$recovery_st
 grep -Fqx 'enable gmib-cage@tty1.service' "$stub_state/systemctl.log" || fail 'recovery did not enable Cage'
 grep -Fqx 'disable gmib-provision.service' "$stub_state/systemctl.log" || fail 'recovery did not disable itself'
 
+# Exercise a fresh enrollment twice: a raw OpenVPN response must be wrapped in
+# the one-file tar expected by Pritunl, while an existing safe tar must pass
+# through byte-for-byte unchanged.
+cat >"$stub_bin/curl" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+output=""
+while (($# > 0)); do
+  case "$1" in
+    --output)
+      output="$2"
+      shift 2
+      ;;
+    *)
+      shift
+      ;;
+  esac
+done
+cat >/dev/null
+cp "$STUB_RESPONSE_FILE" "$output"
+EOF
+cat >"$stub_bin/pritunl-client" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+case "$1" in
+  list)
+    if [[ -f "$STUB_STATE/profile-added" ]]; then
+      connected=false
+      [[ ! -f "$STUB_STATE/profile-connected" ]] || connected=true
+      printf '[{"id":"profile-new","name":"gmib test (main)","connected":%s}]\n' "$connected"
+    else
+      printf '%s\n' '[]'
+    fi
+    ;;
+  add)
+    cp "$2" "$STUB_STATE/imported-profile"
+    touch "$STUB_STATE/profile-added"
+    ;;
+  start)
+    touch "$STUB_STATE/profile-connected"
+    ;;
+  disable | stop | remove)
+    ;;
+  *)
+    exit 2
+    ;;
+esac
+EOF
+chmod 0755 "$stub_bin/curl" "$stub_bin/pritunl-client"
+
+run_enrollment_import() {
+  local response="$1" state="$2"
+  rm -f \
+    "$stub_state/profile-added" \
+    "$stub_state/profile-connected" \
+    "$stub_state/imported-profile"
+  mkdir -m 0700 "$state"
+  printf '%s\n' TEST-CODE |
+    STUB_RESPONSE_FILE="$response" \
+      GMIB_PROVISION_CONFIG="$provision_config" GMIB_PROVISION_STATE_DIR="$state" \
+      GMIB_PROVISION_DEVICE_ID='01234567-89ab-cdef' GMIB_PROVISION_MAC_ADDRESSES_JSON='[]' \
+      "$KIOSK_DIR/first-boot-provision.sh" >/dev/null
+  [[ -s "$state/complete" ]] || fail 'fresh enrollment did not complete'
+  [[ -s "$stub_state/imported-profile" ]] || fail 'fresh enrollment did not import a profile'
+}
+
+raw_profile="$work_dir/raw.ovpn"
+cat >"$raw_profile" <<'EOF'
+client
+dev tun
+remote vpn.example.test 1194 udp
+<ca>
+TEST-CA
+</ca>
+EOF
+run_enrollment_import "$raw_profile" "$work_dir/raw-import-state"
+mapfile -t wrapped_names < <(tar -tf "$stub_state/imported-profile")
+[[ ${#wrapped_names[@]} -eq 1 && "${wrapped_names[0]}" == gmib.ovpn ]] ||
+  fail 'raw OpenVPN profile was not wrapped as one safe gmib.ovpn tar member'
+wrapped_extract="$work_dir/wrapped-extract"
+mkdir "$wrapped_extract"
+tar -xf "$stub_state/imported-profile" -C "$wrapped_extract"
+cmp -s "$raw_profile" "$wrapped_extract/gmib.ovpn" || fail 'wrapped OpenVPN payload changed'
+
+existing_tar_dir="$work_dir/existing-tar"
+mkdir "$existing_tar_dir"
+cp "$raw_profile" "$existing_tar_dir/main.ovpn"
+printf '%s\n' 'secondary profile marker' >"$existing_tar_dir/secondary.ovpn"
+existing_tar="$work_dir/existing-profile.tar"
+tar --format=ustar -cf "$existing_tar" -C "$existing_tar_dir" main.ovpn secondary.ovpn
+run_enrollment_import "$existing_tar" "$work_dir/tar-import-state"
+cmp -s "$existing_tar" "$stub_state/imported-profile" ||
+  fail 'existing safe Pritunl tar was rewritten before import'
+
 # Static integration checks cover service ordering, response negotiation, and
 # both layers of Cyrillic tty support (UTF-8 decoding and console glyphs).
 assert_contains "$KIOSK_DIR/gmib-provision.service" 'EnvironmentFile=-/etc/default/locale'
 grep -Eq '^After=.*console-setup\.service' "$KIOSK_DIR/gmib-provision.service" ||
   fail 'first-boot tty starts before the Cyrillic console font is loaded'
+grep -Eq '^After=.*systemd-modules-load\.service' "$KIOSK_DIR/gmib-provision.service" ||
+  fail 'first-boot tty starts before early kernel modules are loaded'
+assert_contains "$KIOSK_DIR/gmib-provision.service" 'ExecStartPre=-/usr/bin/udevadm settle --timeout=30'
+assert_contains "$KIOSK_DIR/gmib-provision.service" 'ExecStartPre=/usr/bin/setupcon --force'
 ! grep -Fq 'ConditionPathExists=' "$KIOSK_DIR/gmib-provision.service" ||
   fail 'completion recovery is blocked by a systemd path condition'
 grep -Fq "Accept: application/vnd.gmib.enrollment+json" "$KIOSK_DIR/first-boot-provision.sh" ||

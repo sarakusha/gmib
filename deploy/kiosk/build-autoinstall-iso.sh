@@ -31,7 +31,7 @@ Required:
   --gmib-version VERSION      GMIB version embedded in the image name and metadata.
   --pritunl-deb PATH          Pinned amd64 pritunl-client Debian package.
   --zabbix-agent2-deb PATH    Pinned Zabbix Agent 2 7.4 Ubuntu 24.04 amd64 package.
-  --bootstrap-url URL         HTTPS endpoint returning a Pritunl profile tar.
+  --bootstrap-url URL         HTTPS endpoint returning enrollment JSON, raw OVPN, or Pritunl tar.
   --ssh-authorized-key PATH   Public SSH key for the admin account.
   --output PATH               Output ISO path.
 

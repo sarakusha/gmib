@@ -16,7 +16,8 @@ The installed system uses Ubuntu's `ffmpeg` package and provides `/usr/bin/ffmpe
 `/usr/bin/ffprobe` for GMIB media conversion and inspection.
 The system locale, provisioning tty, and Cage/GMIB service use `ru_RU.UTF-8`. A Unicode Cyrillic
 console font is configured separately: the locale controls byte decoding, while the font provides
-the decoded glyphs on tty1.
+the decoded glyphs on tty1. Provisioning waits for pending udev work and reapplies that font just
+before drawing its prompt, because a late DRM/i915 console takeover can reset the earlier font.
 The installer also grants the kiosk user access to serial ports and direct `libusb` access to the
 supported FTDI adapters `0403:6001` and `0403:6015` through `udev` rules.
 NovaStar Taurus USB connections appear as RNDIS network adapters. The kiosk requests an address over
@@ -85,7 +86,8 @@ Accept: application/vnd.gmib.enrollment+json
 ```
 
 A successful versioned response is JSON. `vpnProfile` is base64 of the raw OpenVPN profile or
-Pritunl profile tar accepted by `pritunl-client add`:
+Pritunl profile tar accepted by `pritunl-client add`. A validated raw profile is wrapped locally in
+a one-file tar before import; an existing safe Pritunl tar is passed through unchanged:
 
 ```json
 {

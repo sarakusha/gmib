@@ -87,6 +87,54 @@ profile_connected() {
     jq -e --arg id "$profile_id" '.[] | select(.id == $id and .connected == true)' >/dev/null
 }
 
+profile_is_safe_tar() {
+  local archive="$1"
+  tar -tf "$archive" 2>/dev/null |
+    awk '
+      { entries = 1 }
+      /(^\/|(^|\/)\.\.(\/|$))/ { unsafe = 1 }
+      END { exit !entries || unsafe }
+    '
+}
+
+profile_is_raw_ovpn() {
+  local profile="$1"
+  # OpenVPN profiles are text. Require the client role and an embedded CA block
+  # before putting a legacy/raw response into the archive expected by Pritunl.
+  LC_ALL=C grep -Iq . "$profile" &&
+    awk '
+      { sub(/\r$/, "") }
+      /^[[:space:]]*client([[:space:]]*([#;].*)?)?$/ { client = 1 }
+      /^[[:space:]]*<ca>[[:space:]]*$/ { ca_open = 1 }
+      /^[[:space:]]*<\/ca>[[:space:]]*$/ { ca_close = 1 }
+      END { exit !(client && ca_open && ca_close) }
+    ' "$profile"
+}
+
+wrap_raw_ovpn_for_pritunl() {
+  local raw_profile="$1"
+  local wrap_dir wrapped_archive ovpn_copy
+  wrap_dir="$(mktemp -d --tmpdir="$STATE_DIR" ovpn.XXXXXXXX)" || return 1
+  wrapped_archive="$(mktemp --tmpdir="$STATE_DIR" profile-tar.XXXXXXXX)" || {
+    rmdir "$wrap_dir"
+    return 1
+  }
+  chmod 0600 "$wrapped_archive"
+  ovpn_copy="$wrap_dir/gmib.ovpn"
+  if ! install -m 0600 "$raw_profile" "$ovpn_copy" ||
+    ! tar --format=ustar -cf "$wrapped_archive" -C "$wrap_dir" gmib.ovpn; then
+    [[ ! -f "$ovpn_copy" ]] || shred -u "$ovpn_copy" 2>/dev/null || rm -f "$ovpn_copy"
+    rmdir "$wrap_dir" 2>/dev/null || true
+    [[ ! -f "$wrapped_archive" ]] ||
+      shred -u "$wrapped_archive" 2>/dev/null || rm -f "$wrapped_archive"
+    return 1
+  fi
+  shred -u "$ovpn_copy" 2>/dev/null || rm -f "$ovpn_copy"
+  rmdir "$wrap_dir"
+  mv -f "$wrapped_archive" "$raw_profile"
+  chmod 0600 "$raw_profile"
+}
+
 finish_provisioning() {
   local profile_id="$1"
   # Zabbix is optional. Apply it only after the stable hostname is set and the
@@ -246,16 +294,19 @@ while true; do
     chmod 0600 "$PENDING_PROFILE_FILE"
   fi
 
-  archive_is_safe=false
-  if tar -tf "$PENDING_PROFILE_FILE" >/dev/null 2>&1 &&
-    ! tar -tf "$PENDING_PROFILE_FILE" | grep -Eq '(^/|(^|/)\.\.(/|$))'; then
-    archive_is_safe=true
-  elif grep -aq '^client$' "$PENDING_PROFILE_FILE" && grep -aq '^<ca>$' "$PENDING_PROFILE_FILE"; then
-    # New enrollment endpoints return one server-specific OpenVPN profile. Keep accepting the
-    # historical multi-profile tar archive so already deployed app-server versions remain usable.
-    archive_is_safe=true
-  fi
-  if [[ "$archive_is_safe" != true ]]; then
+  if profile_is_safe_tar "$PENDING_PROFILE_FILE"; then
+    # Keep historical Pritunl archives byte-for-byte unchanged.
+    :
+  elif profile_is_raw_ovpn "$PENDING_PROFILE_FILE"; then
+    # pritunl-client add imports sprofile tar archives, not standalone OpenVPN files.
+    # Wrap the server-specific profile locally while keeping the API compatible with
+    # both raw OVPN and historical multi-profile tar responses.
+    if ! wrap_raw_ovpn_for_pritunl "$PENDING_PROFILE_FILE"; then
+      echo "Не удалось подготовить VPN-профиль для импорта."
+      echo
+      continue
+    fi
+  else
     echo "API вернул некорректный VPN-профиль."
     shred -u "$PENDING_PROFILE_FILE" 2>/dev/null || rm -f "$PENDING_PROFILE_FILE"
     rm -f "$PENDING_ZABBIX_FILE"

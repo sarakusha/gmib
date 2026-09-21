@@ -1,6 +1,6 @@
 [Unit]
 Description=GMIB first-boot VPN provisioning
-After=console-setup.service network-online.target pritunl-client.service systemd-user-sessions.service
+After=console-setup.service systemd-modules-load.service network-online.target pritunl-client.service systemd-user-sessions.service
 Wants=console-setup.service network-online.target pritunl-client.service
 Conflicts=getty@tty1.service
 Before=gmib-cage@tty1.service
@@ -8,6 +8,8 @@ Before=gmib-cage@tty1.service
 [Service]
 Type=idle
 EnvironmentFile=-/etc/default/locale
+ExecStartPre=-/usr/bin/udevadm settle --timeout=30
+ExecStartPre=/usr/bin/setupcon --force
 ExecStart=/usr/local/sbin/gmib-first-boot-provision
 Restart=on-failure
 RestartSec=3
