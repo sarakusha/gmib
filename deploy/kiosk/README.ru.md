@@ -1,10 +1,12 @@
 # Образ GMIB kiosk для Ubuntu x86
 
 В этой папке находится сборщик установочного образа Ubuntu Server 24.04 для выделенного GMIB-плеера.
-Образ устанавливает минимальную систему, GMIB AppImage, Cage, Pritunl Client и SSH. После первого
+Образ устанавливает минимальную систему, GMIB AppImage, Cage, Pritunl Client, Zabbix Agent 2 7.4 и SSH. После первого
 запуска оператор вводит короткий одноразовый код, устройство получает собственный VPN-профиль из
 `app-server` и запускает GMIB без рабочего стола и курсора мыши.
-Локаль `ru_RU.UTF-8` генерируется для SSH-сеансов с русскоязычных рабочих станций.
+Локаль `ru_RU.UTF-8` генерируется и выбирается для root, первичной настройки и пользователя GMIB.
+Для tty1 отдельно устанавливается Unicode-шрифт с кириллицей: локаль отвечает за декодирование
+UTF-8, а консольный шрифт — за наличие русских глифов.
 При обычной загрузке сообщения ядра и статусы systemd скрыты, но остаются доступны через
 `journalctl`; установщик Ubuntu сохраняет диагностический вывод.
 В установленной системе используются штатные `/usr/bin/ffmpeg` и `/usr/bin/ffprobe` из Ubuntu-пакета
@@ -21,11 +23,16 @@ USB-подключение NovaStar Taurus определяется как RNDIS
 `main` и `mikrotik` создаёт перекрывающиеся маршруты. Доступ к нужным сетям следует публиковать как
 routes основного сервера Pritunl.
 
+Zabbix устанавливается выключенным и замаскированным. Он включается только после установки
+стабильного hostname и подключения VPN, использует только active checks и не слушает входящий порт
+10050. Ошибка необязательной конфигурации мониторинга не мешает запуску VPN и GMIB.
+
 ## Что потребуется
 
 - официальный `ubuntu-24.04.4-live-server-amd64.iso` с проверенной SHA-256;
 - релизный `gmib-x86_64.AppImage` из workflow `Release`;
 - пакет `pritunl-client_*_amd64.deb` для Ubuntu Noble;
+- официальный пакет `zabbix-agent2_*ubuntu24.04_amd64.deb` ветки 7.4;
 - публичный SSH-ключ администратора, например `~/.ssh/id_ed25519.pub`;
 - `xorriso`, `dpkg-deb`, `sha256sum`, `openssl`, `file`, `awk` и `sed`.
 
@@ -40,6 +47,7 @@ e907d92eeec9df64163a7e454cbc8d7755e8ddc7ed42f99dbc80c40f1a138433
 
 ```bash
 deploy/kiosk/download-pritunl-client-deb.sh dist
+deploy/kiosk/download-zabbix-agent2-deb.sh dist
 ```
 
 На macOS инструменты сборки можно установить через Homebrew:
@@ -80,8 +88,10 @@ mkdir -p /home/user/appliance-build/input /home/user/appliance-build/output
 git clone https://github.com/sarakusha/gmib.git /home/user/appliance-build/gmib-repo
 ```
 
-В `/home/user/appliance-build/input` должны находиться три постоянных входных файла:
-`ubuntu-24.04.4-live-server-amd64.iso`, `pritunl-client.deb` и `id_ed25519.pub`.
+В `/home/user/appliance-build/input` должны находиться четыре постоянных входных файла:
+`ubuntu-24.04.4-live-server-amd64.iso`, `pritunl-client.deb`, `zabbix-agent2.deb` и
+`id_ed25519.pub`. Helper Zabbix по умолчанию фиксирует проверенную версию
+`1:7.4.14-1+ubuntu24.04` и проверяет подпись официального APT-репозитория.
 
 ## Ручная сборка на рабочей машине
 
@@ -92,11 +102,12 @@ deploy/kiosk/build-autoinstall-iso.sh \
   --base-iso /Users/sarakusha/Downloads/ubuntu-24.04.4-live-server-amd64-2.iso \
   --base-iso-sha256 e907d92eeec9df64163a7e454cbc8d7755e8ddc7ed42f99dbc80c40f1a138433 \
   --appimage /private/tmp/gmib-release/gmib-x86_64.AppImage \
-  --gmib-version 5.4.2 \
+  --gmib-version 5.6.1 \
   --pritunl-deb /private/tmp/pritunl-client_1.3.4729.52-0ubuntu1~noble_amd64.deb \
+  --zabbix-agent2-deb /private/tmp/zabbix-agent2_1_7.4.14-1+ubuntu24.04_amd64.deb \
   --bootstrap-url https://app.nata-info.ru/api/vpn/enroll/gmib \
   --ssh-authorized-key /Users/sarakusha/.ssh/id_ed25519.pub \
-  --output /Users/sarakusha/Downloads/gmib-kiosk-5.4.2-ubuntu-24.04.4-amd64.iso
+  --output /Users/sarakusha/Downloads/gmib-kiosk-5.6.1-ubuntu-24.04.4-amd64.iso
 ```
 
 Пути к AppImage и `.deb` меняются при выпуске новых версий. Выходной файл не должен существовать до
@@ -109,6 +120,37 @@ deploy/kiosk/build-autoinstall-iso.sh \
 Token, API Secret и общий VPN-профиль туда не попадают. Для обычного сертификата Let's Encrypt
 параметр `--bootstrap-tls-pin` не нужен: используется стандартная проверка HTTPS, которая не
 ломается при плановой смене сертификата.
+
+### Контракт enrollment с Zabbix
+
+Устройство отправляет прежний `POST /api/vpn/enroll/gmib`, добавляя заголовок
+`Accept: application/vnd.gmib.enrollment+json`. Новый ответ имеет вид:
+
+```json
+{
+  "version": 1,
+  "vpnProfile": "BASE64",
+  "zabbix": {
+    "enabled": true,
+    "serverActive": "zabbix.internal:10051",
+    "metadata": "gmib kiosk",
+    "tlsConnect": "psk",
+    "pskIdentity": "gmib-device-id",
+    "psk": "32-or-more-hex-characters"
+  }
+}
+```
+
+`vpnProfile` — base64 от прежнего raw OpenVPN-профиля или tar-архива Pritunl. Для соединения без
+шифрования укажите `tlsConnect: "unencrypted"` и не передавайте поля PSK. Выключенный мониторинг —
+`{"enabled":false}`; при временной недоступности конфигурации допустимо поле
+`"error":"configuration_unavailable"`. Старый raw-ответ VPN продолжает поддерживаться.
+
+Ответ enrollment и ожидающая конфигурация хранятся только в root-only файлах до завершения операции.
+Код и PSK не попадают в журнал или argv. Установленный ключ доступен только root и группе `zabbix`.
+Проверить состояние без вывода ключа можно командой `sudo gmib-zabbix-configure status`, выключить
+агент — `sudo gmib-zabbix-configure disable`. Новую конфигурацию передавайте через stdin или
+root-only файл, а не аргумент командной строки.
 
 ## Запись и установка
 
@@ -199,7 +241,7 @@ ISO значительно больше допустимого размера о
 
 ```bash
 deploy/kiosk/publish-image.sh \
-  --iso /Users/sarakusha/Downloads/gmib-kiosk-5.4.2-ubuntu-24.04.4-amd64.iso
+  --iso /Users/sarakusha/Downloads/gmib-kiosk-5.6.1-ubuntu-24.04.4-amd64.iso
 ```
 
 Скрипт также публикует GGS-образ по имени `ggs-<версия>-ubuntu-<версия>-amd64.iso`. Загрузка идёт во

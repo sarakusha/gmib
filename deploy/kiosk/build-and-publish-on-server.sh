@@ -8,6 +8,7 @@ BUILD_ROOT="${GMIB_APPLIANCE_BUILD_ROOT:-/home/user/appliance-build}"
 GMIB_VERSION=""
 BASE_ISO=""
 PRITUNL_DEB=""
+ZABBIX_AGENT2_DEB=""
 SSH_KEY=""
 PUBLIC_DIR="${GMIB_APPLIANCE_PUBLIC_DIR:-/home/user/src/app-server/public/downloads/gmib-kiosk}"
 PUBLIC_BASE_URL="${GMIB_APPLIANCE_PUBLIC_URL:-https://app.nata-info.ru/downloads/gmib-kiosk}"
@@ -27,6 +28,7 @@ Options:
   --build-root PATH         Private build directory. Default: /home/user/appliance-build.
   --base-iso PATH           Cached Ubuntu ISO.
   --pritunl-deb PATH        Cached amd64 Pritunl Client package.
+  --zabbix-agent2-deb PATH  Cached Zabbix Agent 2 7.4 Ubuntu 24.04 amd64 package.
   --ssh-authorized-key PATH Public SSH key embedded for the admin account.
   --public-dir PATH         App-server GMIB kiosk download directory.
   --public-base-url URL     Public URL corresponding to --public-dir.
@@ -56,6 +58,10 @@ while (($# > 0)); do
       ;;
     --pritunl-deb)
       PRITUNL_DEB="${2:-}"
+      shift 2
+      ;;
+    --zabbix-agent2-deb)
+      ZABBIX_AGENT2_DEB="${2:-}"
       shift 2
       ;;
     --ssh-authorized-key)
@@ -116,13 +122,14 @@ fi
 
 BASE_ISO="${BASE_ISO:-$BUILD_ROOT/input/ubuntu-24.04.4-live-server-amd64.iso}"
 PRITUNL_DEB="${PRITUNL_DEB:-$BUILD_ROOT/input/pritunl-client.deb}"
+ZABBIX_AGENT2_DEB="${ZABBIX_AGENT2_DEB:-$BUILD_ROOT/input/zabbix-agent2.deb}"
 SSH_KEY="${SSH_KEY:-$BUILD_ROOT/input/id_ed25519.pub}"
 APPIMAGE="$BUILD_ROOT/input/gmib-$GMIB_VERSION-x86_64.AppImage"
 OUTPUT_DIR="$BUILD_ROOT/output"
 OUTPUT="$OUTPUT_DIR/gmib-kiosk-$GMIB_VERSION-ubuntu-24.04.4-amd64.iso"
 BASE_ISO_SHA256=e907d92eeec9df64163a7e454cbc8d7755e8ddc7ed42f99dbc80c40f1a138433
 
-for input in "$BASE_ISO" "$PRITUNL_DEB" "$SSH_KEY"; do
+for input in "$BASE_ISO" "$PRITUNL_DEB" "$ZABBIX_AGENT2_DEB" "$SSH_KEY"; do
   if [[ ! -f "$input" ]]; then
     echo "Missing cached input: $input" >&2
     exit 1
@@ -135,6 +142,12 @@ mkdir -p "$BUILD_ROOT/input" "$OUTPUT_DIR" "$PUBLIC_DIR"
 actual_base_iso_sha256="$(sha256sum "$BASE_ISO" | awk '{print tolower($1)}')"
 if [[ "$actual_base_iso_sha256" != "$BASE_ISO_SHA256" ]]; then
   echo "Ubuntu ISO checksum mismatch: $BASE_ISO" >&2
+  exit 1
+fi
+if [[ "$(dpkg-deb --field "$ZABBIX_AGENT2_DEB" Package)" != zabbix-agent2 ]] ||
+  [[ "$(dpkg-deb --field "$ZABBIX_AGENT2_DEB" Architecture)" != amd64 ]] ||
+  [[ ! "$(dpkg-deb --field "$ZABBIX_AGENT2_DEB" Version)" =~ ^1:7\.4\.[0-9]+-[0-9]+\+ubuntu24\.04$ ]]; then
+  echo "Cached Zabbix package is not Agent 2 7.4 for Ubuntu 24.04 amd64: $ZABBIX_AGENT2_DEB" >&2
   exit 1
 fi
 if [[ "$(dpkg-deb --field "$PRITUNL_DEB" Package)" != pritunl-client ]] ||
@@ -186,9 +199,10 @@ fi
 base_size="$(stat -c %s "$BASE_ISO")"
 appimage_size="$(stat -c %s "$APPIMAGE")"
 pritunl_size="$(stat -c %s "$PRITUNL_DEB")"
+zabbix_size="$(stat -c %s "$ZABBIX_AGENT2_DEB")"
 reserve_bytes=$((2 * 1024 * 1024 * 1024))
 overhead_bytes=$((64 * 1024 * 1024))
-required_bytes=$((base_size + appimage_size + pritunl_size + overhead_bytes + reserve_bytes))
+required_bytes=$((base_size + appimage_size + pritunl_size + zabbix_size + overhead_bytes + reserve_bytes))
 available_bytes="$(df -PB1 "$OUTPUT_DIR" | awk 'NR == 2 {print $4}')"
 
 unpublish_current_image() {
@@ -223,6 +237,7 @@ fi
   --appimage "$APPIMAGE" \
   --gmib-version "$GMIB_VERSION" \
   --pritunl-deb "$PRITUNL_DEB" \
+  --zabbix-agent2-deb "$ZABBIX_AGENT2_DEB" \
   --bootstrap-url "$BOOTSTRAP_URL" \
   --ssh-authorized-key "$SSH_KEY" \
   --output "$OUTPUT"

@@ -9,6 +9,7 @@ BASE_ISO_SHA256=""
 APPIMAGE=""
 GMIB_VERSION=""
 PRITUNL_DEB=""
+ZABBIX_AGENT2_DEB=""
 BOOTSTRAP_URL=""
 BOOTSTRAP_TLS_PIN=""
 SSH_KEY_FILE=""
@@ -29,6 +30,7 @@ Required:
   --appimage PATH             Release gmib x86_64 AppImage.
   --gmib-version VERSION      GMIB version embedded in the image name and metadata.
   --pritunl-deb PATH          Pinned amd64 pritunl-client Debian package.
+  --zabbix-agent2-deb PATH    Pinned Zabbix Agent 2 7.4 Ubuntu 24.04 amd64 package.
   --bootstrap-url URL         HTTPS endpoint returning a Pritunl profile tar.
   --ssh-authorized-key PATH   Public SSH key for the admin account.
   --output PATH               Output ISO path.
@@ -69,6 +71,10 @@ while (($# > 0)); do
       ;;
     --pritunl-deb)
       PRITUNL_DEB="${2:-}"
+      shift 2
+      ;;
+    --zabbix-agent2-deb)
+      ZABBIX_AGENT2_DEB="${2:-}"
       shift 2
       ;;
     --bootstrap-url)
@@ -145,7 +151,7 @@ for command in awk dpkg-deb file xorriso sha256sum openssl sed; do
   fi
 done
 
-for value_name in BASE_ISO BASE_ISO_SHA256 APPIMAGE GMIB_VERSION PRITUNL_DEB BOOTSTRAP_URL \
+for value_name in BASE_ISO BASE_ISO_SHA256 APPIMAGE GMIB_VERSION PRITUNL_DEB ZABBIX_AGENT2_DEB BOOTSTRAP_URL \
   SSH_KEY_FILE OUTPUT_ISO; do
   if [[ -z "${!value_name}" ]]; then
     echo "Missing required option for $value_name" >&2
@@ -158,7 +164,7 @@ if [[ ! "$GMIB_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; the
   exit 1
 fi
 
-for input_file in "$BASE_ISO" "$APPIMAGE" "$PRITUNL_DEB" "$SSH_KEY_FILE"; do
+for input_file in "$BASE_ISO" "$APPIMAGE" "$PRITUNL_DEB" "$ZABBIX_AGENT2_DEB" "$SSH_KEY_FILE"; do
   if [[ ! -f "$input_file" ]]; then
     echo "Input file does not exist: $input_file" >&2
     exit 1
@@ -171,6 +177,12 @@ fi
 if [[ "$(dpkg-deb --field "$PRITUNL_DEB" Package)" != pritunl-client ]] ||
   [[ "$(dpkg-deb --field "$PRITUNL_DEB" Architecture)" != amd64 ]]; then
   echo "--pritunl-deb must be the amd64 pritunl-client package." >&2
+  exit 1
+fi
+if [[ "$(dpkg-deb --field "$ZABBIX_AGENT2_DEB" Package)" != zabbix-agent2 ]] ||
+  [[ "$(dpkg-deb --field "$ZABBIX_AGENT2_DEB" Architecture)" != amd64 ]] ||
+  [[ ! "$(dpkg-deb --field "$ZABBIX_AGENT2_DEB" Version)" =~ ^1:7\.4\.[0-9]+-[0-9]+\+ubuntu24\.04$ ]]; then
+  echo "--zabbix-agent2-deb must be an official Zabbix 7.4 Ubuntu 24.04 amd64 package." >&2
   exit 1
 fi
 if [[ -e "$OUTPUT_ISO" ]]; then
@@ -261,7 +273,9 @@ payload_dir="$work_dir/gmib-installer"
 install -d -m 0755 "$payload_dir"
 install -m 0755 "$APPIMAGE" "$payload_dir/gmib.AppImage"
 install -m 0644 "$PRITUNL_DEB" "$payload_dir/pritunl-client.deb"
+install -m 0644 "$ZABBIX_AGENT2_DEB" "$payload_dir/zabbix-agent2.deb"
 install -m 0755 "$SCRIPT_DIR/first-boot-provision.sh" "$payload_dir/"
+install -m 0755 "$SCRIPT_DIR/gmib-zabbix-configure" "$payload_dir/"
 install -m 0644 "$SCRIPT_DIR/gmib-provision.service" "$payload_dir/"
 install -m 0755 "$SCRIPT_DIR/install-target.sh" "$payload_dir/"
 install -m 0755 "$REPO_ROOT/scripts/setup-linux-kiosk.sh" "$payload_dir/"
@@ -361,7 +375,9 @@ manifest="$payload_dir/SHA256SUMS"
     install-target.sh \
     pritunl-client.deb \
     provision.conf \
-    setup-linux-kiosk.sh
+    setup-linux-kiosk.sh \
+    gmib-zabbix-configure \
+    zabbix-agent2.deb
 ) >"$manifest"
 
 xorriso \

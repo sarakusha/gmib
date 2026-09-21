@@ -1,17 +1,22 @@
 # GMIB kiosk image
 
 This directory builds an Ubuntu Server 24.04 amd64 installer for dedicated GMIB players. The image
-contains the GMIB AppImage and a pinned Pritunl Client package. Installation erases one explicitly
+contains the GMIB AppImage plus pinned Pritunl Client and Zabbix Agent 2 7.4 packages. Installation erases one explicitly
 selected disk, installs the Cage service, and powers the computer off.
 
 On the first boot, `gmib-provision.service` owns `tty1` and asks the operator for a short one-time
 enrollment code. It exchanges the code for a device-specific Pritunl profile over HTTPS, imports
 and starts the profile, erases the downloaded archive, and reboots into the GMIB Cage kiosk. The
-image and installed computer never contain the bootstrap API key.
+image and installed computer never contain the bootstrap API key. Zabbix is installed masked and
+disabled; it is enabled only after the stable hostname and VPN identity are established. The
+generated configuration uses active checks only, so the agent does not listen on TCP port 10050.
 Normal kiosk boots hide kernel and systemd status messages while retaining them in `journalctl`.
 The Ubuntu installer remains verbose so installation failures are visible.
 The installed system uses Ubuntu's `ffmpeg` package and provides `/usr/bin/ffmpeg` and
 `/usr/bin/ffprobe` for GMIB media conversion and inspection.
+The system locale, provisioning tty, and Cage/GMIB service use `ru_RU.UTF-8`. A Unicode Cyrillic
+console font is configured separately: the locale controls byte decoding, while the font provides
+the decoded glyphs on tty1.
 The installer also grants the kiosk user access to serial ports and direct `libusb` access to the
 supported FTDI adapters `0403:6001` and `0403:6015` through `udev` rules.
 NovaStar Taurus USB connections appear as RNDIS network adapters. The kiosk requests an address over
@@ -54,7 +59,8 @@ in [`README.ru.md`](README.ru.md#быстрый-выпуск-образа-на-a
 - Generate a separate Pritunl identity for every device. A shared fleet VPN profile turns one stolen
   player into a fleet-wide credential leak.
 - Keep the imported VPN identity in `/var/lib/pritunl-client`; it is required for reconnecting. The
-  temporary profile archive and the enrollment code are not retained.
+  enrollment code and Zabbix PSK are never logged. Pending response files are root-only and erased
+  after provisioning; the installed PSK is readable only by root and the `zabbix` service group.
 
 The administrator account accepts only the SSH public key embedded at image-build time. Its random
 password is discarded, and it has passwordless sudo. The unprivileged `gmib` account owns the GMIB
@@ -68,6 +74,7 @@ must also match it:
 ```http
 POST /api/vpn/enroll/gmib HTTP/1.1
 Content-Type: application/json
+Accept: application/vnd.gmib.enrollment+json
 
 {
   "code": "7K4M-P9TX",
@@ -77,10 +84,29 @@ Content-Type: application/json
 }
 ```
 
-A successful response is the Pritunl profile tar archive accepted by
-`pritunl-client add profile.tar`. Recommended error responses are `403` for an invalid or expired
-code, `409` for a redeemed or differently bound code, and `429` with `Retry-After` when throttled.
-Do not return a Pritunl URI in JSON: an archive avoids putting the secret URI in a process argument.
+A successful versioned response is JSON. `vpnProfile` is base64 of the raw OpenVPN profile or
+Pritunl profile tar accepted by `pritunl-client add`:
+
+```json
+{
+  "version": 1,
+  "vpnProfile": "BASE64",
+  "zabbix": {
+    "enabled": true,
+    "serverActive": "zabbix.internal:10051",
+    "metadata": "gmib kiosk",
+    "tlsConnect": "psk",
+    "pskIdentity": "gmib-device-id",
+    "psk": "32-or-more-hex-characters"
+  }
+}
+```
+
+For an unencrypted active connection, use `tlsConnect: "unencrypted"` and omit both PSK fields.
+Disabled monitoring is `{"enabled":false}`; temporary absence may additionally use
+`"error":"configuration_unavailable"`. Invalid optional monitoring data never blocks VPN or GMIB.
+The legacy raw VPN response body remains supported during rollout. Recommended HTTP errors are
+`403`, `409`, and `429` with `Retry-After`. Do not put codes, profiles, or PSKs in URLs or argv.
 
 Generate the pin from the bootstrap server certificate:
 
@@ -112,6 +138,15 @@ deploy/kiosk/download-pritunl-client-deb.sh dist
 Set `PRITUNL_CLIENT_VERSION` to an exact APT version when reproducing an older image. The helper
 writes the package SHA-256 next to the Debian file.
 
+Download the pinned official Zabbix Agent 2 7.4 package from Zabbix's signed Noble repository. The
+reviewed default is `1:7.4.14-1+ubuntu24.04`:
+
+```bash
+deploy/kiosk/download-zabbix-agent2-deb.sh dist
+```
+
+Both helpers use isolated APT state and do not add repositories to the builder.
+
 Then build the installation ISO on Linux or macOS. On Ubuntu install `xorriso`; on macOS install
 `xorriso`, `dpkg`, GNU coreutils, and OpenSSL 3 with Homebrew:
 
@@ -123,11 +158,12 @@ deploy/kiosk/build-autoinstall-iso.sh \
   --base-iso ubuntu-24.04.4-live-server-amd64.iso \
   --base-iso-sha256 e907d92eeec9df64163a7e454cbc8d7755e8ddc7ed42f99dbc80c40f1a138433 \
   --appimage gmib-x86_64.AppImage \
-  --gmib-version 5.4.2 \
+  --gmib-version 5.6.1 \
   --pritunl-deb pritunl-client_amd64.deb \
+  --zabbix-agent2-deb zabbix-agent2_1_7.4.14-1+ubuntu24.04_amd64.deb \
   --bootstrap-url https://app.nata-info.ru/api/vpn/enroll/gmib \
   --ssh-authorized-key id_ed25519.pub \
-  --output gmib-kiosk-5.4.2-ubuntu-24.04.4-amd64.iso
+  --output gmib-kiosk-5.6.1-ubuntu-24.04.4-amd64.iso
 ```
 
 The build verifies the Ubuntu ISO checksum and writes `gmib-kiosk-24.04.iso.sha256`. Every embedded
@@ -164,13 +200,17 @@ The installer powers the computer off when complete. Remove the USB drive, power
 one-time enrollment code on the provisioning screen. After the VPN connects, the machine reboots and
 starts the GMIB kiosk automatically.
 
+Use `sudo gmib-zabbix-configure status` for sanitized monitoring state or
+`sudo gmib-zabbix-configure disable` to stop, mask, and remove its managed credentials. Feed an
+updated JSON object through stdin or a root-only file; never put a PSK on the command line.
+
 ## Publishing
 
 Publish the versioned ISO and its checksum to app-server with:
 
 ```bash
 deploy/kiosk/publish-image.sh \
-  --iso gmib-kiosk-5.4.2-ubuntu-24.04.4-amd64.iso
+  --iso gmib-kiosk-5.6.1-ubuntu-24.04.4-amd64.iso
 ```
 
 The public catalog is `https://app.nata-info.ru/gmib/kiosk`. The publisher validates the checksum,

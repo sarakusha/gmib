@@ -4,7 +4,7 @@ set -euo pipefail
 OUTPUT_DIR="${1:-.}"
 VERSION="${PRITUNL_CLIENT_VERSION:-}"
 
-for command in apt-get curl dpkg-deb gpg; do
+for command in apt-get curl dpkg dpkg-deb gpg; do
   if ! command -v "$command" >/dev/null 2>&1; then
     echo "Missing required command: $command" >&2
     exit 1
@@ -20,6 +20,7 @@ if [[ ! -d "$OUTPUT_DIR" ]]; then
 fi
 
 work_dir="$(mktemp -d)"
+chmod 0755 "$work_dir"
 cleanup() {
   rm -rf "$work_dir"
 }

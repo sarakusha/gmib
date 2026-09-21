@@ -18,8 +18,10 @@ for required_file in \
   gmib.AppImage \
   image-release \
   pritunl-client.deb \
+  zabbix-agent2.deb \
   provision.conf \
   first-boot-provision.sh \
+  gmib-zabbix-configure \
   gmib-provision.service \
   setup-linux-kiosk.sh \
   gmib-hide-cursor.c; do
@@ -39,15 +41,43 @@ fi
 passwd --lock "$KIOSK_USER" >/dev/null
 
 export DEBIAN_FRONTEND=noninteractive
+# Neither package is allowed to start a network service while the image is being
+# installed. The Zabbix unit remains masked until a validated enrollment config
+# is applied after the stable hostname and VPN identity are established.
+policy_rc_d=/usr/sbin/policy-rc.d
+policy_rc_d_backup=""
+if [[ -e "$policy_rc_d" ]]; then
+  policy_rc_d_backup="$(mktemp)"
+  cp -a "$policy_rc_d" "$policy_rc_d_backup"
+fi
+cleanup_policy_rc_d() {
+  if [[ -n "$policy_rc_d_backup" ]]; then
+    cp -a "$policy_rc_d_backup" "$policy_rc_d"
+    rm -f "$policy_rc_d_backup"
+  else
+    rm -f "$policy_rc_d"
+  fi
+}
+trap cleanup_policy_rc_d EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+printf '#!/bin/sh\nexit 101\n' >"$policy_rc_d"
+chmod 0755 "$policy_rc_d"
+systemctl mask zabbix-agent2.service >/dev/null 2>&1 || true
 apt-get update
 apt-get install -y \
   ca-certificates \
+  console-setup \
   curl \
   ffmpeg \
   jq \
+  kbd \
   locales \
   openssh-server \
-  "$PAYLOAD_DIR/pritunl-client.deb"
+  "$PAYLOAD_DIR/pritunl-client.deb" \
+  "$PAYLOAD_DIR/zabbix-agent2.deb"
+cleanup_policy_rc_d
+trap - EXIT INT TERM
 
 # GMIB invokes the system tools for media inspection and conversion.
 command -v ffmpeg >/dev/null
@@ -55,6 +85,16 @@ command -v ffprobe >/dev/null
 
 sed -i 's/^# *ru_RU.UTF-8 UTF-8/ru_RU.UTF-8 UTF-8/' /etc/locale.gen
 locale-gen ru_RU.UTF-8
+update-locale LANG=ru_RU.UTF-8 LANGUAGE=ru_RU:ru
+cat >/etc/default/console-setup <<'EOF'
+ACTIVE_CONSOLES="/dev/tty[1-6]"
+CHARMAP="UTF-8"
+CODESET="CyrSlav"
+FONTFACE="Terminus"
+FONTSIZE="16x32"
+VIDEOMODE=
+EOF
+setupcon --save-only
 
 # AppImageUpdater replaces the executable, so it needs write access to the directory too.
 KIOSK_GROUP="$(id -gn "$KIOSK_USER")"
@@ -74,7 +114,13 @@ install -d -m 0755 /etc/gmib
 install -m 0644 "$PAYLOAD_DIR/image-release" /etc/gmib/image-release
 install -m 0644 "$PAYLOAD_DIR/provision.conf" /etc/gmib/provision.conf
 install -m 0755 "$PAYLOAD_DIR/first-boot-provision.sh" /usr/local/sbin/gmib-first-boot-provision
+install -m 0755 "$PAYLOAD_DIR/gmib-zabbix-configure" /usr/local/sbin/gmib-zabbix-configure
 install -m 0644 "$PAYLOAD_DIR/gmib-provision.service" /etc/systemd/system/gmib-provision.service
+install -d -m 0755 /etc/systemd/system/gmib-cage@.service.d
+cat >/etc/systemd/system/gmib-cage@.service.d/locale.conf <<'EOF'
+[Service]
+EnvironmentFile=-/etc/default/locale
+EOF
 
 # Keep the kiosk boot clean while retaining diagnostics in journalctl. The Ubuntu installer itself
 # remains verbose so installation failures are still visible.
@@ -99,6 +145,8 @@ visudo --check --file=/etc/sudoers.d/90-gmib-admin >/dev/null
 
 systemctl daemon-reload
 systemctl enable ssh.service pritunl-client.service gmib-provision.service >/dev/null
+systemctl disable zabbix-agent2.service >/dev/null 2>&1 || true
+systemctl mask zabbix-agent2.service >/dev/null 2>&1 || true
 systemctl disable gmib-cage@tty1.service >/dev/null 2>&1 || true
 systemctl disable getty@tty1.service >/dev/null 2>&1 || true
 

@@ -1,13 +1,13 @@
 [Unit]
 Description=GMIB first-boot VPN provisioning
-After=network-online.target pritunl-client.service systemd-user-sessions.service
-Wants=network-online.target pritunl-client.service
+After=console-setup.service network-online.target pritunl-client.service systemd-user-sessions.service
+Wants=console-setup.service network-online.target pritunl-client.service
 Conflicts=getty@tty1.service
 Before=gmib-cage@tty1.service
-ConditionPathExists=!/var/lib/gmib-provision/complete
 
 [Service]
 Type=idle
+EnvironmentFile=-/etc/default/locale
 ExecStart=/usr/local/sbin/gmib-first-boot-provision
 Restart=on-failure
 RestartSec=3

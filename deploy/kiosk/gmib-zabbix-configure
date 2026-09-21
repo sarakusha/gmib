@@ -1,0 +1,199 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="${GMIB_ZABBIX_ROOT:-}"
+SYSTEMCTL="${GMIB_ZABBIX_SYSTEMCTL:-systemctl}"
+AGENT2="${GMIB_ZABBIX_AGENT2:-zabbix_agent2}"
+ETC_DIR="$ROOT/etc/zabbix"
+CONFIG_FILE="$ETC_DIR/zabbix_agent2.conf"
+PSK_FILE="$ETC_DIR/gmib-agent2.psk"
+PSK_CONFIG_PATH="/etc/zabbix/gmib-agent2.psk"
+STATE_FILE="$ROOT/var/lib/gmib-zabbix/configured.json"
+SERVICE="zabbix-agent2.service"
+
+usage() {
+  cat <<'EOF'
+Usage:
+  gmib-zabbix-configure apply [FILE|-]
+  gmib-zabbix-configure status
+  gmib-zabbix-configure disable
+
+"apply" reads the enrollment zabbix object from FILE or standard input. Secrets
+must not be passed in command arguments. "status" never prints the PSK.
+EOF
+}
+
+if [[ ${EUID} -ne 0 && -z "$ROOT" ]]; then
+  echo "gmib-zabbix-configure must run as root." >&2
+  exit 1
+fi
+for command in jq install mktemp mv; do
+  command -v "$command" >/dev/null 2>&1 || {
+    echo "Missing required command: $command" >&2
+    exit 1
+  }
+done
+
+service_disable() {
+  "$SYSTEMCTL" disable --now "$SERVICE" >/dev/null
+  "$SYSTEMCTL" mask "$SERVICE" >/dev/null
+}
+
+disable_agent() {
+  service_disable
+  rm -f "$CONFIG_FILE" "$PSK_FILE" "$STATE_FILE"
+}
+
+status_agent() {
+  local service_state="inactive"
+  if "$SYSTEMCTL" is-active --quiet "$SERVICE" >/dev/null 2>&1; then
+    service_state="active"
+  fi
+  if [[ ! -r "$STATE_FILE" ]]; then
+    jq -cn --arg service "$service_state" '{enabled:false, service:$service}'
+    return
+  fi
+  jq --arg service "$service_state" \
+    '{enabled:true, service:$service, serverActive, metadata, tlsConnect,
+      pskIdentity:(.pskIdentity // null), pskConfigured:(.tlsConnect == "psk")}' \
+    "$STATE_FILE"
+}
+
+validate_input() {
+  local input_file="$1"
+  jq -e '
+    type == "object" and
+    (.enabled | type == "boolean") and
+    if .enabled == false then
+      ((keys - ["enabled", "error"]) | length == 0) and
+      ((has("error") | not) or .error == "configuration_unavailable")
+    else
+      ((keys - ["enabled", "serverActive", "metadata", "tlsConnect", "pskIdentity", "psk"]) | length == 0) and
+      (.serverActive | type == "string" and length > 0 and length <= 2048 and
+        test("^[A-Za-z0-9._,;:\\[\\]-]+$")) and
+      (.metadata | type == "string" and (utf8bytelength <= 2034) and
+        (explode | all(. >= 32 and . != 127))) and
+      (.tlsConnect == "unencrypted" or .tlsConnect == "psk") and
+      if .tlsConnect == "psk" then
+        (.pskIdentity | type == "string" and (utf8bytelength >= 1) and (utf8bytelength <= 128) and
+          (explode | all(. >= 32 and . != 127))) and
+        (.psk | type == "string" and test("^[0-9A-Fa-f]{32,512}$") and (length % 2 == 0))
+      else
+        (has("pskIdentity") | not) and (has("psk") | not)
+      end
+    end
+  ' "$input_file" >/dev/null
+}
+
+apply_agent() (
+  local source="${1:--}" input_file="" hostname config_tmp="" validate_tmp="" psk_tmp="" state_tmp=""
+  # shellcheck disable=SC2329 # Invoked by the EXIT trap.
+  cleanup_apply() {
+    [[ "$source" != - || -z "$input_file" ]] || rm -f "$input_file"
+    rm -f "${config_tmp:-}" "${validate_tmp:-}" "${psk_tmp:-}" "${state_tmp:-}"
+  }
+  trap cleanup_apply EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+  if [[ "$source" == - ]]; then
+    input_file="$(mktemp)"
+    chmod 0600 "$input_file"
+    cat >"$input_file"
+  else
+    input_file="$source"
+  fi
+
+  if [[ ! -r "$input_file" ]] || ! validate_input "$input_file"; then
+    echo "Invalid Zabbix enrollment configuration." >&2
+    return 1
+  fi
+  if [[ "$(jq -r '.enabled' "$input_file")" != true ]]; then
+    disable_agent
+    return 0
+  fi
+
+  hostname="$(hostname)"
+  if [[ ! "$hostname" =~ ^[A-Za-z0-9._-]{1,128}$ ]]; then
+    echo "The current hostname is not valid for Zabbix active checks." >&2
+    return 1
+  fi
+
+  service_disable
+  install -d -m 0755 "$ETC_DIR"
+  install -d -m 0700 "$(dirname "$STATE_FILE")"
+  config_tmp="$(mktemp "$ETC_DIR/.gmib-agent2.conf.XXXXXX")"
+  chmod 0644 "$config_tmp"
+  {
+    printf 'PidFile=/run/zabbix/zabbix_agent2.pid\n'
+    printf 'LogType=system\n'
+    printf 'ServerActive=%s\n' "$(jq -r '.serverActive' "$input_file")"
+    printf 'Hostname=%s\n' "$hostname"
+    printf 'HostMetadata=%s\n' "$(jq -r '.metadata' "$input_file")"
+    printf 'TLSConnect=%s\n' "$(jq -r '.tlsConnect' "$input_file")"
+    printf 'DenyKey=system.run[*]\n'
+  } >"$config_tmp"
+
+  if [[ "$(jq -r '.tlsConnect' "$input_file")" == psk ]]; then
+    getent group zabbix >/dev/null 2>&1 || {
+      echo "The zabbix service group is missing." >&2
+      return 1
+    }
+    psk_tmp="$(mktemp "$ETC_DIR/.gmib-agent2.psk.XXXXXX")"
+    jq -r '.psk' "$input_file" >"$psk_tmp"
+    chown root:zabbix "$psk_tmp"
+    chmod 0640 "$psk_tmp"
+    printf 'TLSPSKIdentity=%s\n' "$(jq -r '.pskIdentity' "$input_file")" >>"$config_tmp"
+    printf 'TLSPSKFile=%s\n' "$PSK_CONFIG_PATH" >>"$config_tmp"
+  fi
+
+  # Validate an equivalent temporary configuration before replacing the live one.
+  validate_tmp="$(mktemp "$ETC_DIR/.gmib-agent2.validate.XXXXXX")"
+  if [[ -n "$psk_tmp" ]]; then
+    sed "s|^TLSPSKFile=.*|TLSPSKFile=$psk_tmp|" "$config_tmp" >"$validate_tmp"
+  else
+    cp "$config_tmp" "$validate_tmp"
+  fi
+  chmod 0644 "$validate_tmp"
+  "$AGENT2" -T -c "$validate_tmp" >/dev/null
+
+  if [[ -n "$psk_tmp" ]]; then
+    mv -f "$psk_tmp" "$PSK_FILE"
+    psk_tmp=""
+  else
+    rm -f "$PSK_FILE"
+  fi
+  mv -f "$config_tmp" "$CONFIG_FILE"
+  config_tmp=""
+
+  state_tmp="$(mktemp "$(dirname "$STATE_FILE")/.configured.XXXXXX")"
+  jq '{serverActive, metadata, tlsConnect, pskIdentity:(.pskIdentity // null)}' \
+    "$input_file" >"$state_tmp"
+  chmod 0600 "$state_tmp"
+  mv -f "$state_tmp" "$STATE_FILE"
+  state_tmp=""
+
+  "$SYSTEMCTL" unmask "$SERVICE" >/dev/null
+  "$SYSTEMCTL" enable --now "$SERVICE" >/dev/null
+)
+
+case "${1:-}" in
+  apply)
+    (($# <= 2)) || { usage >&2; exit 2; }
+    apply_agent "${2:--}"
+    ;;
+  status)
+    (($# == 1)) || { usage >&2; exit 2; }
+    status_agent
+    ;;
+  disable)
+    (($# == 1)) || { usage >&2; exit 2; }
+    disable_agent
+    ;;
+  -h | --help)
+    usage
+    ;;
+  *)
+    usage >&2
+    exit 2
+    ;;
+esac
