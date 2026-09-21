@@ -15,6 +15,7 @@ interface Window {
     readonly identify: { readonly getSecret: () => any; readonly setSecret: (apiSecret: bigint | null, identifier?: string | undefined) => void; readonly getIdentifier: () => string | undefined; readonly generateSignature: (method: string, uri: string, timestamp: number, body?: unknown) => Promise<string | undefined>; readonly initialized: Promise<boolean>; };
     readonly initializeNovastar: () => Promise<boolean>;
     readonly getLicenseState: () => Promise<import("../common/license").LicenseRuntimeState | undefined>;
+    readonly getDeviceName: () => Promise<string | undefined>;
     readonly onLicenseStateChange: (listener: (state: import("../common/license").LicenseRuntimeState) => void) => () => void;
     readonly mediaSource: { readonly close: (screenId: number) => void; readonly play: (screenId: number) => void; };
     readonly plugins: { readonly list: () => Promise<import("../common/plugins").PluginStatus[]>; readonly catalog: () => Promise<import("../common/plugins").PluginCatalogEntry[]>; readonly install: () => Promise<import("../common/plugins").PluginInstallResult>; readonly installOfficial: (id: string) => Promise<import("../common/plugins").PluginInstallResult>; readonly setEnabled: (id: string, enabled: boolean) => Promise<import("../common/plugins").PluginStatus>; readonly uninstall: (id: string) => Promise<boolean>; readonly openControl: (id: string) => Promise<void>; readonly restart: () => Promise<void>; };

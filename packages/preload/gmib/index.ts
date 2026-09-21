@@ -126,6 +126,9 @@ contextBridge.exposeInMainWorld('initializeNovastar', (): Promise<boolean> =>
 contextBridge.exposeInMainWorld('getLicenseState', (): Promise<LicenseRuntimeState | undefined> =>
   gmibParams.then(params => params.licenseState),
 );
+contextBridge.exposeInMainWorld('getDeviceName', (): Promise<string | undefined> =>
+  gmibParams.then(params => params.info?.name),
+);
 contextBridge.exposeInMainWorld(
   'onLicenseStateChange',
   (listener: (state: LicenseRuntimeState) => void): (() => void) => {
