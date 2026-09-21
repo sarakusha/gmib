@@ -49,6 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       release_id: ${{ steps.release_check.outputs.release_id }}
+      should_build: ${{ steps.release_check.outputs.should_build }}
 
     steps:
       - uses: actions/checkout@v6
@@ -67,11 +68,20 @@ jobs:
 
             const { owner, repo } = context.repo;
             const releases = (await github.rest.repos.listReleases({ owner, repo, per_page: 100 })).data;
+            const matchesVersion = candidate =>
+              candidate.tag_name === `v${version}` || candidate.tag_name === version;
             let release = releases.find(
-              candidate => candidate.draft && (candidate.tag_name === `v${version}` || candidate.tag_name === version),
+              candidate => candidate.draft && matchesVersion(candidate),
             );
 
             if (!release) {
+              const existingRelease = releases.find(matchesVersion);
+              if (existingRelease) {
+                core.notice(`Release for v${version} already exists; skipping build.`);
+                core.setOutput('should_build', 'false');
+                return;
+              }
+
               try {
                 release = (
                   await github.rest.repos.createRelease({
@@ -89,30 +99,39 @@ jobs:
 
                 const refreshed = (await github.rest.repos.listReleases({ owner, repo, per_page: 100 })).data;
                 release = refreshed.find(
-                  candidate => candidate.draft && (candidate.tag_name === `v${version}` || candidate.tag_name === version),
+                  candidate => candidate.draft && matchesVersion(candidate),
                 );
 
                 if (!release) {
+                  const existingRelease = refreshed.find(matchesVersion);
+                  if (existingRelease) {
+                    core.notice(`Release for v${version} already exists; skipping build.`);
+                    core.setOutput('should_build', 'false');
+                    return;
+                  }
                   throw error;
                 }
               }
             }
 
             core.setOutput('release_id', String(release.id));
+            core.setOutput('should_build', 'true');
 
   draft_release:
     needs: prepare_release
+    if: ${{ needs.prepare_release.outputs.should_build == 'true' }}
     strategy:
       fail-fast: true
       matrix:
         include:
-          - platform: macos
-            arch: x64
-            os: macos-15-intel
-            builder_config: .electron-builder.config.js
-            target_args:
-              - -m
-              - --x64
+          # Intel macOS builds are temporarily disabled.
+          # - platform: macos
+          #   arch: x64
+          #   os: macos-15-intel
+          #   builder_config: .electron-builder.config.js
+          #   target_args:
+          #     - -m
+          #     - --x64
           - platform: macos
             arch: arm64
             os: macos-15
@@ -488,7 +507,11 @@ jobs:
       - prepare_release
       - draft_release
     runs-on: ubuntu-24.04
-    if: ${{ github.event_name != 'workflow_dispatch' }}
+    if: >-
+      ${{ always() && github.event_name != 'workflow_dispatch' &&
+      needs.prepare_release.result == 'success' &&
+      needs.prepare_release.outputs.should_build == 'true' &&
+      needs.draft_release.result == 'success' }}
 
     steps:
       - uses: actions/checkout@v6
@@ -517,8 +540,7 @@ jobs:
               metadataFiles.push({
                 name: 'latest-mac.yml',
                 assets: [
-                  `gmib-${version}-mac.zip`,
-                  `gmib-${version}.dmg`,
+                  // Intel macOS builds are temporarily disabled.
                   `gmib-${version}-arm64-mac.zip`,
                   `gmib-${version}-arm64.dmg`,
                 ],
