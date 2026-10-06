@@ -45,6 +45,7 @@ vi.mock('./VideoSource', () => ({
     ready = true;
     duration = 10;
     hasStarted = false;
+    acceptedFrames = 0;
     resolve!: () => void;
     readable = new Promise<void>(resolve => {
       this.resolve = resolve;
@@ -68,6 +69,7 @@ vi.mock('./VideoSource', () => ({
     }
     setDisableFadeOut() {}
     emit(data: unknown) {
+      if (data && typeof data === 'object' && 'frame' in data) this.acceptedFrames += 1;
       this.options.onMessage({ data });
     }
     end() {
@@ -429,5 +431,106 @@ describe('mediaStream recovery orchestration', () => {
     event('stop');
     await flush();
     expect(records('completed')).toHaveLength(1);
+  });
+
+  it('does not mistake a frame received around pause for an empty decoder', async () => {
+    mock.playlist.items = [mock.playlist.items[0]];
+    await import('./mediaStream');
+    await flush();
+    const source = current();
+    event('player', { ...mock.player, autoPlay: false });
+    await flush();
+    source.emit({ frame: { timestamp: 0 } });
+    source.end();
+    await flush();
+    expect(records('started')).toHaveLength(0);
+    expect(records('completed')).toHaveLength(0);
+    expect(records('error')).toHaveLength(0);
+  });
+
+  it('skips a previously playable first item after failure and retries it on the next lap', async () => {
+    await import('./mediaStream');
+    await flush();
+    current().emit({ frame: { timestamp: 0 } });
+    current().end();
+    await flush();
+    expect(current().options.mediaId).toBe('good-md5');
+    current().emit({ frame: { timestamp: 0 } });
+    current().end();
+    await flush();
+    expect(current().options.mediaId).toBe('bad-md5');
+    for (let count = 1; count <= 6; count += 1) {
+      current().emit({ err: { message: 'temporary decoder failure' } });
+      await flush();
+      expect(current().options.mediaId).toBe('good-md5');
+      expect(
+        mock.sources.filter(source => !source.closed && source.options.mediaId === 'bad-md5'),
+      ).toHaveLength(0);
+      expect(records('quarantined')).toHaveLength(count === 6 ? 1 : 0);
+      if (count < 6) {
+        current().emit({ frame: { timestamp: 0 } });
+        current().end();
+        await flush();
+        expect(current().options.mediaId).toBe('bad-md5');
+      }
+    }
+  });
+
+  it('automatically retries an all-quarantined playlist after cooldown without manual play', async () => {
+    mock.playlist.items = [mock.playlist.items[0]];
+    await import('./mediaStream');
+    await flush();
+    for (let count = 0; count < 3; count += 1) {
+      current().end();
+      await flush();
+    }
+    expect(current()).toBeUndefined();
+    await vi.advanceTimersByTimeAsync(295_000);
+    expect(current()).toBeUndefined();
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(current().options.mediaId).toBe('bad-md5');
+    expect(mock.sources).toHaveLength(4);
+    current().emit({ frame: { timestamp: 0 } });
+    current().end();
+    await flush();
+    expect(records('completed')).toHaveLength(1);
+    expect(records('error')).toHaveLength(3);
+  });
+
+  it('does not repeatedly preload a proven file after a background failure', async () => {
+    await import('./mediaStream');
+    await flush();
+    current().emit({ frame: { timestamp: 0 } });
+    current().end();
+    await flush();
+    const good = current();
+    const preload = mock.sources.findLast(
+      source => !source.closed && source.options.mediaId === 'bad-md5',
+    );
+    preload.emit({ err: { message: 'temporary preload failure' } });
+    await flush();
+    const count = mock.sources.length;
+    event('updatePlaylist', mock.playlist);
+    await flush();
+    expect(mock.sources).toHaveLength(count);
+    expect(current()).toBe(good);
+    good.emit({ frame: { timestamp: 0 } });
+    good.end();
+    await flush();
+    expect(current().options.mediaId).toBe('bad-md5');
+    expect(records('error')).toHaveLength(1);
+    expect(records('quarantined')).toHaveLength(0);
+  });
+
+  it('advances capture playback after an error in a previously played file', async () => {
+    mock.player.playbackEngine = 'capture';
+    await import('./mediaStream');
+    await flush();
+    expect(records('started')[0].mediaId).toBe('bad-md5');
+    mock.videos.at(-1).emit('error');
+    await flush();
+    expect(records('error')).toHaveLength(1);
+    expect(records('started').at(-1).mediaId).toBe('good-md5');
+    expect(records('quarantined')).toHaveLength(0);
   });
 });

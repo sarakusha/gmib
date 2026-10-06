@@ -4,11 +4,11 @@ import CancelError from '@sarakusha/ebml/CancelError';
 import type { FadeOptions } from '@sarakusha/ebml/FadeTransform';
 import FadeTransform from '@sarakusha/ebml/FadeTransform';
 import RangeFetcher from '@sarakusha/ebml/RangeFetcher';
-import ReducingValve from '@sarakusha/ebml/ReducingValve';
 import VideoChunkGenerator from '@sarakusha/ebml/VideoChunkGenerator';
 import VideoFrameGenerator from '@sarakusha/ebml/VideoFrameGenerator';
 
 import { getLinuxDecoderConfig } from './playbackEngine';
+import FramePacer from './FramePacer';
 
 let controller: AbortController | undefined;
 let readable: ReadableStream<VideoFrame> | undefined;
@@ -18,6 +18,7 @@ let pause = noop;
 let cancel = false;
 
 let fade: FadeTransform | undefined;
+let pacer: FramePacer | undefined;
 
 const serializeError = (err: unknown) => {
   if (err instanceof CancelError) return undefined;
@@ -42,6 +43,8 @@ onmessage = async (event: MessageEvent<unknown>) => {
   };
   if ('uri' in data && typeof d.uri === 'string') {
     cancel = false;
+    let decodedFrames = 0;
+    const diagnostics = () => ({ decodedFrames, ...pacer?.diagnostics });
     try {
       const ebml = new EbmlDecoder();
       const chunkGenerator = new VideoChunkGenerator({ startTime: d.startTime });
@@ -49,7 +52,7 @@ onmessage = async (event: MessageEvent<unknown>) => {
         () => postMessage({ ready: true }),
         err => {
           const serialized = serializeError(err);
-          if (serialized) postMessage({ err: serialized });
+          if (serialized) postMessage({ err: serialized, diagnostics: diagnostics() });
         },
       );
       const decoderConfig = chunkGenerator.config.then(config =>
@@ -61,9 +64,9 @@ onmessage = async (event: MessageEvent<unknown>) => {
       );
       const frameGenerator = new VideoFrameGenerator(decoderConfig, 20);
       fade = new FadeTransform(d.fade);
-      const valve = new ReducingValve(d.closed);
-      play = valve.open;
-      pause = valve.close;
+      pacer = new FramePacer(d.closed, timer => postMessage({ timer }));
+      play = pacer.open;
+      pause = pacer.close;
       if (controller) controller.abort(new CancelError());
       controller = new AbortController();
       const fetcher = new RangeFetcher(d.uri, {
@@ -75,8 +78,16 @@ onmessage = async (event: MessageEvent<unknown>) => {
         .pipeThrough(ebml)
         .pipeThrough(chunkGenerator)
         .pipeThrough(frameGenerator)
+        .pipeThrough(
+          new TransformStream<VideoFrame, VideoFrame>({
+            transform(frame, output) {
+              decodedFrames += 1;
+              output.enqueue(frame);
+            },
+          }),
+        )
         .pipeThrough(fade)
-        .pipeThrough(valve);
+        .pipeThrough(pacer);
       if (!readable) return;
       const reader = readable.getReader();
       const transfer = async () => {
@@ -86,7 +97,7 @@ onmessage = async (event: MessageEvent<unknown>) => {
         }
         const { value: frame, done } = await reader.read();
         if (done) {
-          postMessage({ done: true });
+          postMessage({ done: true, diagnostics: diagnostics() });
           return;
         }
         if (frame) {
@@ -97,7 +108,7 @@ onmessage = async (event: MessageEvent<unknown>) => {
       await transfer();
     } catch (err) {
       const serialized = serializeError(err);
-      if (serialized) postMessage({ err: serialized });
+      if (serialized) postMessage({ err: serialized, diagnostics: diagnostics() });
     } finally {
       play = noop;
       pause = noop;
@@ -109,7 +120,9 @@ onmessage = async (event: MessageEvent<unknown>) => {
   } else if ('pause' in data && d.pause) {
     pause();
   } else if ('close' in data && d.close) {
-    controller?.abort(new CancelError());
+    const reason = new CancelError();
+    pacer?.cancel(reason);
+    controller?.abort(reason);
     cancel = true;
   } else if ('disableFadeOut' in data) {
     fade?.setDisableFadeOut(Boolean(d.disableFadeOut));

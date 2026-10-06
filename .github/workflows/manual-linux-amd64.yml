@@ -72,6 +72,19 @@ jobs:
         env:
           npm_config_build_from_source: true
 
+      - name: Verify playback and types
+        run: |
+          pnpm run test:preload
+          pnpm run typecheck
+
+      - name: Verify real decoder playback
+        run: |
+          if ! command -v ffmpeg >/dev/null || ! command -v xvfb-run >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg xvfb
+          fi
+          xvfb-run -a node scripts/test-decoder-pipeline.mjs
+
       - run: pnpm run build
 
       - run: pnpm run verify:artifacts

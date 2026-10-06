@@ -44,6 +44,12 @@ export default class VideoSource {
 
   #ready = false;
 
+  #acceptedFrames = 0;
+
+  get acceptedFrames() {
+    return this.#acceptedFrames;
+  }
+
   get ready() {
     return this.#ready;
   }
@@ -152,8 +158,14 @@ export default class VideoSource {
       if (data.frame) {
         if (streamController && !this.#closed && (streamController.desiredSize ?? 0) > 0) {
           streamController.enqueue(data.frame);
+          this.#acceptedFrames += 1;
         } else {
           data.frame.close();
+          // A discarded frame was never available for playback. Do not report it
+          // as progress (or read its timestamp after closing it) in the owner.
+          const { frame: _frame, ...metadata } = data;
+          onMessage(new MessageEvent('message', { data: metadata }));
+          return;
         }
       }
       if (data.done) {

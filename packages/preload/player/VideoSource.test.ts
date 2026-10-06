@@ -82,7 +82,7 @@ describe('VideoSource with the real sequential stream merger', () => {
   );
 
   it('releases a frame arriving from a retired decoder without forwarding its event', () => {
-    const onMessage = vi.fn();
+    const onMessage = vi.fn<(event: MessageEvent<{ frame?: VideoFrame }>) => void>();
     const source = new VideoSource('/old.webm', { onMessage });
     source.close();
     const close = vi.fn();
@@ -93,5 +93,18 @@ describe('VideoSource with the real sequential stream merger', () => {
     );
     expect(close).toHaveBeenCalledOnce();
     expect(onMessage).not.toHaveBeenCalled();
+  });
+
+  it('only reports accepted frames as playback progress when its queue is full', () => {
+    const onMessage = vi.fn<(event: MessageEvent<{ frame?: VideoFrame }>) => void>();
+    const source = new VideoSource('/preloaded.webm', { onMessage });
+    const frames = Array.from({ length: 9 }, () => ({ timestamp: 0, close: vi.fn() }));
+    frames.forEach(frame => {
+      workers[0].onmessage?.(new MessageEvent('message', { data: { frame } }));
+    });
+    expect(source.acceptedFrames).toBe(8);
+    expect(frames[8].close).toHaveBeenCalledOnce();
+    expect(onMessage.mock.calls.filter(([event]) => event.data.frame)).toHaveLength(8);
+    source.close();
   });
 });

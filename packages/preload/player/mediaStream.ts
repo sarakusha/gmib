@@ -47,6 +47,9 @@ const playbackWatchdog = new PlaybackWatchdog();
 const recovery = new PlaybackRecovery();
 const sourceAttempts = new WeakMap<VideoSource, PlaybackAttempt>();
 const endedSources = new WeakSet<VideoSource>();
+// Do not burn a proven file's retry budget on repeated background preloads
+// while the same healthy clip is still playing.
+const deferredPreloads = new Set<string>();
 let captureAttempt: PlaybackAttempt | undefined;
 let revision = 0;
 let updatePending = false;
@@ -87,6 +90,7 @@ const markStarted = (attempt?: PlaybackAttempt): void => {
   attempt.started = true;
   // eslint-disable-next-line no-param-reassign
   attempt.startedAt = new Date().toISOString();
+  recovery.markPlayable(attempt.mediaId);
   reportAttempt(attempt, 'started');
 };
 
@@ -176,7 +180,8 @@ const createSourceVideo = (uri: string): HTMLVideoElement => {
     }
     if (captureAttempt?.started && !captureAttempt.failed) {
       reportAttempt(captureAttempt, 'completed');
-      recovery.reset(captureAttempt.mediaId);
+      recovery.succeeded(captureAttempt.mediaId);
+      deferredPreloads.clear();
     }
     clearSource();
     playNextItem();
@@ -395,7 +400,9 @@ const failDecoder = (source: VideoSource, error: unknown): void => {
   if (source !== currentSource && source !== nextSource) return;
   const attempt = sourceAttempts.get(source);
   if (!attempt || attempt.failed) return;
+  const wasCurrent = source === currentSource;
   recordFailure(attempt, error);
+  if (recovery.hasPlayed(attempt.mediaId)) deferredPreloads.add(attempt.mediaId);
   if (shouldFallbackAfterDecoderError() && !linuxPreferSoftwareDecoding) {
     linuxPreferSoftwareDecoding = true;
     void ipcRenderer.invoke('setLocalConfig', 'linuxPreferSoftwareDecoding', true).catch(() => {});
@@ -403,6 +410,12 @@ const failDecoder = (source: VideoSource, error: unknown): void => {
   if (source === currentSource) currentSource = undefined;
   if (source === nextSource) nextSource = undefined;
   source.close();
+  // A file that has already played gets another chance on the next lap, rather
+  // than spending the healthy playlist's airtime on a burst of immediate retries.
+  if (wasCurrent && recovery.hasPlayed(attempt.mediaId)) {
+    const next = selectItem(true);
+    if (next) selectCurrent(next);
+  }
   scheduleUpdate();
 };
 
@@ -414,12 +427,35 @@ type DecoderSourceMessage = {
   timer?: number;
   recoverableError?: { message?: string };
   err?: { message?: string };
+  diagnostics?: {
+    decodedFrames?: number;
+    receivedFrames?: number;
+    outputFrames?: number;
+    droppedFrames?: number;
+    clockRebases?: number;
+  };
+};
+
+const decoderFailureDetails = (source: VideoSource, data: DecoderSourceMessage): string => {
+  const counts = Object.entries(data.diagnostics ?? {})
+    .filter(([, value]) => typeof value === 'number' && Number.isFinite(value))
+    .map(([key, value]) => `${key}=${value}`);
+  return [
+    `phase=${source === currentSource ? 'current' : 'preload'}`,
+    `acceptedFrames=${source.acceptedFrames}`,
+    `playedBefore=${recovery.hasPlayed(source.options.mediaId ?? '')}`,
+    ...counts,
+  ].join(', ');
 };
 
 const handleDecoderSourceMessage = (source: VideoSource, data: DecoderSourceMessage): void => {
   if (source !== currentSource && source !== nextSource) return;
   if (data.err || data.recoverableError) {
-    failDecoder(source, data.err?.message ?? data.recoverableError?.message ?? 'Decoder error');
+    const message = data.err?.message ?? data.recoverableError?.message ?? 'Decoder error';
+    failDecoder(
+      source,
+      data.diagnostics ? `${message} [${decoderFailureDetails(source, data)}]` : message,
+    );
     return;
   }
   if (source !== currentSource) return;
@@ -445,8 +481,13 @@ const handleDecoderSourceMessage = (source: VideoSource, data: DecoderSourceMess
     );
   }
   if (data.done) endedSources.add(source);
-  if (data.done && !sourceAttempts.get(source)?.started) {
-    failDecoder(source, 'Decoder ended without a playable frame');
+  // `started` records an active play, not every frame accepted by the source.
+  // A frame already queued when pause arrives must not turn EOF into a file error.
+  if (data.done && source.acceptedFrames === 0) {
+    failDecoder(
+      source,
+      `Decoder ended without a playable frame [${decoderFailureDetails(source, data)}]`,
+    );
   }
 };
 
@@ -483,7 +524,8 @@ const activateDecoder = (source: VideoSource): void => {
       const attempt = sourceAttempts.get(source);
       if (attempt?.started && !attempt.failed && endedSources.has(source)) {
         reportAttempt(attempt, 'completed');
-        recovery.reset(attempt.mediaId);
+        recovery.succeeded(attempt.mediaId);
+        deferredPreloads.clear();
       }
       currentSource = undefined;
       playNextItem();
@@ -581,7 +623,13 @@ const updateDecoder = async (version: number): Promise<void> => {
     nextSource = undefined;
     stale?.close();
   }
-  if (nextItem && nextItem.md5 !== item.md5 && !nextSource && playbackState === 'playing') {
+  if (
+    nextItem &&
+    nextItem.md5 !== item.md5 &&
+    !deferredPreloads.has(nextItem.md5) &&
+    !nextSource &&
+    playbackState === 'playing'
+  ) {
     const loaded = await loadMedia(nextItem, version);
     if (!loaded) return;
     try {
@@ -664,13 +712,20 @@ function requestPlaybackRecovery(reason: string): void {
   playbackWatchdog.defer();
   if (activeEngine === 'decoder' && currentSource) failDecoder(currentSource, reason);
   else if (activeEngine === 'capture' && captureAttempt) {
+    const { mediaId } = captureAttempt;
     recordFailure(captureAttempt, reason);
     clearSource();
+    if (recovery.hasPlayed(mediaId)) {
+      const next = selectItem(true);
+      if (next) selectCurrent(next);
+    }
     scheduleUpdate();
   } else scheduleUpdate();
 }
 
 window.setInterval(() => {
+  const expired = recovery.releaseExpired();
+  if (playbackState === 'playing' && expired.length) scheduleUpdate();
   const active = Boolean(playbackState === 'playing' && selectItem());
   if (
     playbackWatchdog.observe(
@@ -792,6 +847,7 @@ ipcRenderer.on('updatePlaylist', (_, updatedPlaylist: Playlist) => {
 
 ipcRenderer.on('playback:retry', (_, mediaId: string) => {
   recovery.reset(mediaId);
+  deferredPreloads.delete(mediaId);
   scheduleUpdate();
 });
 
