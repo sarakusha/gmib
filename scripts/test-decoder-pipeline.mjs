@@ -16,28 +16,62 @@ const temporary = await mkdtemp(path.join(tmpdir(), 'gmib-decoder-pipeline-'));
 const compareLegacy = process.argv.includes('--compare-legacy');
 let app;
 let server;
+const responseTimers = new Set();
+const phase = message => console.log(`[decoder-smoke] ${message}`);
+const bounded = async (promise, milliseconds, label) => {
+  let timer;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error(`${label} timed out after ${milliseconds}ms`)),
+          milliseconds,
+        );
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+};
+// Also bounds a completely stalled Chromium renderer, whose own timers cannot fire.
+const watchdog = setTimeout(() => {
+  console.error('[decoder-smoke] Overall 120s deadline exceeded');
+  app?.process().kill('SIGKILL');
+  responseTimers.forEach(clearTimeout);
+  server?.closeAllConnections();
+  server?.close();
+  void rm(temporary, { recursive: true, force: true }).finally(() => process.exit(1));
+}, 120_000);
+watchdog.unref();
 try {
+  phase('Generating five-second H264 fixture');
   const mediaPath = path.join(temporary, 'five-seconds.mkv');
-  execFileSync(process.env.FFMPEG_PATH || 'ffmpeg', [
-    '-hide_banner',
-    '-loglevel',
-    'error',
-    '-f',
-    'lavfi',
-    '-i',
-    'testsrc2=size=320x180:rate=25:duration=5',
-    '-c:v',
-    'libx264',
-    '-pix_fmt',
-    'yuv420p',
-    '-g',
-    '25',
-    '-an',
-    mediaPath,
-  ]);
+  execFileSync(
+    process.env.FFMPEG_PATH || 'ffmpeg',
+    [
+      '-hide_banner',
+      '-loglevel',
+      'error',
+      '-f',
+      'lavfi',
+      '-i',
+      'testsrc2=size=320x180:rate=25:duration=5',
+      '-c:v',
+      'libx264',
+      '-pix_fmt',
+      'yuv420p',
+      '-g',
+      '25',
+      '-an',
+      mediaPath,
+    ],
+    { timeout: 30_000 },
+  );
   const workers = new Map();
   for (const legacy of compareLegacy ? [false, true] : [false]) {
     const name = legacy ? 'legacy' : 'current';
+    phase(`Building ${name} worker`);
     const result = await build({
       configFile: false,
       root,
@@ -99,14 +133,20 @@ try {
       response.end(media.subarray(start, end + 1));
     };
     const delay = Number(url.searchParams.get('delay')) || 0;
-    if (delay) setTimeout(send, delay);
-    else send();
+    if (delay) {
+      const timer = setTimeout(() => {
+        responseTimers.delete(timer);
+        send();
+      }, delay);
+      responseTimers.add(timer);
+    } else send();
   });
   await new Promise((resolve, reject) => {
     server.once('error', reject);
     server.listen(0, '127.0.0.1', resolve);
   });
   const url = `http://127.0.0.1:${server.address().port}`;
+  phase(`HTTP fixture listening at ${url}`);
   const main = path.join(temporary, 'main.cjs');
   await writeFile(
     main,
@@ -115,6 +155,7 @@ app.whenReady().then(()=>{const w=new BrowserWindow({show:false,webPreferences:{
   );
   const env = { ...process.env };
   delete env.ELECTRON_RUN_AS_NODE;
+  phase('Launching isolated Electron');
   app = await electron.launch({
     args: [
       main,
@@ -122,13 +163,21 @@ app.whenReady().then(()=>{const w=new BrowserWindow({show:false,webPreferences:{
       ...(process.platform === 'linux' ? ['--no-sandbox'] : []),
     ],
     env,
+    timeout: 30_000,
   });
-  const page = await app.firstWindow();
-  await page.waitForLoadState('domcontentloaded');
-  const results = await page.evaluate(
+  phase('Electron launched; waiting for renderer');
+  const page = await app.firstWindow({ timeout: 30_000 });
+  page.on('console', message => {
+    if (message.text().startsWith('[decoder-smoke]')) console.log(message.text());
+  });
+  page.on('pageerror', error => console.error(`[decoder-smoke] Renderer error: ${error.message}`));
+  await page.waitForLoadState('domcontentloaded', { timeout: 30_000 });
+  phase('Renderer loaded; testing real worker pipeline');
+  const pipelineRun = page.evaluate(
     async ({ compareLegacy }) => {
       const sleep = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
       function source(label, { delay = 0, legacy = false, pause = false } = {}) {
+        console.log(`[decoder-smoke] ${label}: creating worker`);
         const worker = new Worker(`/${legacy ? 'legacy' : 'current'}.js`);
         const startedAt = performance.now();
         let finish;
@@ -150,11 +199,15 @@ app.whenReady().then(()=>{const w=new BrowserWindow({show:false,webPreferences:{
         void completed.catch(() => {});
         worker.onerror = event => fail(new Error(`${label}: ${event.message}`));
         worker.onmessage = ({ data }) => {
-          if (data.ready) ready();
+          if (data.ready) {
+            console.log(`[decoder-smoke] ${label}: decoder configured`);
+            ready();
+          }
           if (data.err || data.recoverableError)
             fail(new Error(`${label}: ${JSON.stringify(data)}`));
           if ('frames' in data) legacyDiagnostics = data;
           if (data.frame) {
+            if (!frames) console.log(`[decoder-smoke] ${label}: first real frame`);
             if (!(data.frame instanceof VideoFrame))
               fail(new Error('Expected real transferred VideoFrame'));
             frames += 1;
@@ -172,6 +225,7 @@ app.whenReady().then(()=>{const w=new BrowserWindow({show:false,webPreferences:{
             }
           }
           if (data.done) {
+            console.log(`[decoder-smoke] ${label}: complete, ${frames} frames`);
             clearTimeout(timeout);
             finish({
               label,
@@ -189,6 +243,7 @@ app.whenReady().then(()=>{const w=new BrowserWindow({show:false,webPreferences:{
           fade: { disableIn: true, disableOut: true },
         });
         return {
+          // A failure or the source timeout must reject readiness too.
           configured: Promise.race([configured, completed]),
           get frames() {
             return frames;
@@ -240,6 +295,7 @@ app.whenReady().then(()=>{const w=new BrowserWindow({show:false,webPreferences:{
     },
     { compareLegacy },
   );
+  const results = await bounded(pipelineRun, 60_000, 'Real decoder pipeline');
   console.log(
     JSON.stringify(
       { electron: await app.evaluate(() => process.versions.electron), results },
@@ -264,7 +320,25 @@ app.whenReady().then(()=>{const w=new BrowserWindow({show:false,webPreferences:{
     }
   }
 } finally {
-  await app?.close();
-  await new Promise(resolve => (server ? server.close(resolve) : resolve()));
-  await rm(temporary, { recursive: true, force: true });
+  phase('Cleaning up isolated Electron and HTTP fixture');
+  try {
+    if (app) {
+      try {
+        await bounded(app.close(), 10_000, 'Electron cleanup');
+      } catch (error) {
+        app.process().kill('SIGKILL');
+        throw error;
+      }
+    }
+  } finally {
+    responseTimers.forEach(clearTimeout);
+    server?.closeAllConnections();
+    await bounded(
+      new Promise(resolve => (server ? server.close(resolve) : resolve())),
+      5000,
+      'HTTP cleanup',
+    );
+    await rm(temporary, { recursive: true, force: true });
+    clearTimeout(watchdog);
+  }
 }
