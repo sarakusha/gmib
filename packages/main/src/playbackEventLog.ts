@@ -115,6 +115,16 @@ export class PlaybackEventLog {
       const timestamp = new Date(event.timestamp);
       const eventDate = utcDate(timestamp);
       if (eventDate < oldestRetainedUtcDate(now, this.retentionDays()) || eventDate > today) return;
+      if (event.version === 3) {
+        // Each record survives rotation and restarts independently. A leading newline also
+        // isolates a partial last record left by a terminated process.
+        await this.fileSystem.appendFile(
+          path.join(this.directory, playbackLogFilename(timestamp)),
+          `\n${JSON.stringify(event)}\n`,
+          'utf8',
+        );
+        return;
+      }
       const eventRunKey = runKey(event);
       if (
         event.event === 'quarantined' &&

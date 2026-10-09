@@ -534,3 +534,150 @@ describe('mediaStream recovery orchestration', () => {
     expect(records('quarantined')).toHaveLength(0);
   });
 });
+
+describe('playback statistics events', () => {
+  it('flushes successful active intervals across pause and seek before a unique completion', async () => {
+    mock.playlist.items = [mock.playlist.items[0]];
+    const { seek } = await import('./mediaStream');
+    const { isPlaybackStatisticsEvent } = await import('/@common/playback');
+    await flush();
+    current().emit({ frame: { timestamp: 0 } });
+    await vi.advanceTimersByTimeAsync(2000);
+    current().emit({ frame: { timestamp: 2_000_000 } });
+    event('player', { ...mock.player, autoPlay: false });
+    await flush();
+    await vi.advanceTimersByTimeAsync(10000);
+    event('player', { ...mock.player, autoPlay: true });
+    await flush();
+    current().emit({ frame: { timestamp: 2_000_000 } });
+    await vi.advanceTimersByTimeAsync(1000);
+    current().emit({ frame: { timestamp: 3_000_000 } });
+    seek(8);
+    await flush();
+    current().emit({ frame: { timestamp: 0 } });
+    await vi.advanceTimersByTimeAsync(1000);
+    current().emit({ frame: { timestamp: 1_000_000 } });
+    const last = current();
+    last.end();
+    await flush();
+    last.end();
+    event('stop');
+    await flush();
+    expect(records('progress').map(record => record.playedMs)).toEqual([2000, 1000, 1000]);
+    expect(records('completed')).toHaveLength(1);
+    expect(records('seeked')).toHaveLength(1);
+    expect(records('seeked')[0]).toMatchObject({ previousPosition: 3, position: 8 });
+    expect(records('paused')).toHaveLength(1);
+    expect(records('resumed')).toHaveLength(1);
+    expect(records('interrupted')).toHaveLength(0);
+    const emitted = mock.send.mock.calls
+      .filter(([channel]) => channel === 'playback:event')
+      .map(([, value]) => value);
+    expect(emitted.every(isPlaybackStatisticsEvent)).toBe(true);
+    expect(new Set(emitted.map(record => record.eventId)).size).toBe(emitted.length);
+  });
+
+  it('records manual next and stop as interruptions without errors or skips', async () => {
+    await import('./mediaStream');
+    await flush();
+    current().emit({ frame: { timestamp: 0 } });
+    event('player', { ...mock.player, current: 'good' });
+    await flush();
+    current().emit({ frame: { timestamp: 0 } });
+    event('stop');
+    event('stop');
+    await flush();
+    expect(records('interrupted')).toHaveLength(2);
+    expect(records('skipped')).toHaveLength(0);
+    expect(records('error')).toHaveLength(0);
+  });
+
+  it('separates a failed preload from a foreground abandonment', async () => {
+    await import('./mediaStream');
+    await flush();
+    const playing = current();
+    const preload = mock.sources.find(source => source !== playing && !source.closed);
+    preload.emit({ err: { message: 'preload failure' } });
+    await flush();
+    expect(records('error')).toHaveLength(1);
+    expect(records('skipped')).toHaveLength(0);
+    playing.emit({ frame: { timestamp: 0 } });
+    await vi.advanceTimersByTimeAsync(1000);
+    playing.emit({ frame: { timestamp: 1_000_000 } });
+    playing.emit({ err: { message: 'active failure' } });
+    await flush();
+    expect(records('error')).toHaveLength(2);
+    expect(records('skipped')).toHaveLength(1);
+    expect(records('progress')[0].playedMs).toBe(1000);
+    expect(records('completed')).toHaveLength(0);
+    expect(records('interrupted')).toHaveLength(0);
+  });
+});
+
+describe('capture statistics', () => {
+  it('excludes waiting and seek jumps and flushes before completion', async () => {
+    mock.player.playbackEngine = 'capture';
+    mock.playlist.items = [mock.playlist.items[0]];
+    const { seek } = await import('./mediaStream');
+    await flush();
+    const video = mock.videos[0];
+    await vi.advanceTimersByTimeAsync(1000);
+    video.currentTime = 1;
+    video.emit('timeupdate');
+    video.emit('waiting');
+    await vi.advanceTimersByTimeAsync(10000);
+    video.emit('playing');
+    await vi.advanceTimersByTimeAsync(1000);
+    video.currentTime = 2;
+    video.emit('timeupdate');
+    seek(8);
+    video.emit('seeking');
+    video.emit('seeked');
+    await vi.advanceTimersByTimeAsync(1000);
+    video.currentTime = 9;
+    video.emit('timeupdate');
+    await vi.advanceTimersByTimeAsync(1000);
+    video.currentTime = 10;
+    video.emit('ended');
+    await flush();
+    expect(records('progress').map(record => record.playedMs)).toEqual([1000, 1000, 2000]);
+    expect(records('completed')).toHaveLength(1);
+    expect(records('started')[0].playbackId).toBe(records('completed')[0].playbackId);
+    expect(records('seeked')).toHaveLength(1);
+    expect(records('seeked')[0]).toMatchObject({ previousPosition: 2, position: 8 });
+  });
+
+  it('ends attribution when a new playlist reuses the current item id', async () => {
+    await import('./mediaStream');
+    await flush();
+    const previous = current();
+    previous.emit({ frame: { timestamp: 0 } });
+    mock.playlist = { ...mock.playlist, id: 2 };
+    event('player', { ...mock.player, playlistId: 2 });
+    await flush();
+    expect(previous.closed).toBe(true);
+    expect(records('interrupted')[0]).toMatchObject({
+      playlistId: 1,
+      reason: 'playlist-changed',
+    });
+    current().emit({ frame: { timestamp: 0 } });
+    expect(records('started')[1].playlistId).toBe(2);
+    expect(records('started')[1].playbackId).not.toBe(records('started')[0].playbackId);
+  });
+});
+
+it('counts only the abandoned slot when lookup retries fail for a previously played file', async () => {
+  mock.playlist.items = [mock.playlist.items[0]];
+  await import('./mediaStream');
+  await flush();
+  current().emit({ frame: { timestamp: 0 } });
+  mock.invoke.mockImplementation(async (channel: string) => {
+    if (channel === 'getMedia') throw new Error('temporarily unavailable');
+    return undefined;
+  });
+  current().end();
+  for (let index = 0; index < 5; index += 1) await flush();
+  expect(records('error')).toHaveLength(6);
+  expect(records('skipped')).toHaveLength(1);
+  expect(records('skipped')[0].playbackId).toBe(records('error')[5].playbackId);
+});

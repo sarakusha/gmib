@@ -4,11 +4,24 @@ export const playbackEventNames = [
   'error',
   'quarantined',
   'recovered',
+  'progress',
+  'paused',
+  'resumed',
+  'seeked',
+  'interrupted',
+  'skipped',
 ] as const;
 
 export type PlaybackEventName = (typeof playbackEventNames)[number];
 
 export type PlaybackEvent = {
+  version?: 3;
+  eventId?: string;
+  segmentStartedAt?: string;
+  playedMs?: number;
+  reason?: string;
+  position?: number;
+  previousPosition?: number;
   event: PlaybackEventName;
   playerId: number;
   playlistId?: number;
@@ -23,6 +36,8 @@ export type PlaybackEvent = {
   quarantined?: boolean;
   engine?: 'decoder' | 'capture';
 };
+
+export type PlaybackStatisticsEvent = PlaybackEvent & { version: 3; eventId: string };
 
 export type PlaybackIssue = PlaybackEvent & {
   event: 'error' | 'quarantined';
@@ -49,12 +64,42 @@ const isOptionalString = (value: unknown, maxLength: number): value is string | 
 const isInteger = (value: unknown, minimum = 0): value is number =>
   typeof value === 'number' && Number.isSafeInteger(value) && value >= minimum;
 
+const isTimestamp = (value: unknown): value is string =>
+  isNonEmptyString(value, 64) &&
+  !Number.isNaN(Date.parse(value)) &&
+  new Date(value).toISOString() === value;
+
+const isUuid = (value: unknown): value is string =>
+  typeof value === 'string' &&
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+
 export const isPlaybackEvent = (value: unknown): value is PlaybackEvent => {
   if (!isRecord(value)) return false;
   const timestamp = value['timestamp'];
   const event = value['event'];
   const error = value['error'];
   return (
+    (value['version'] === undefined
+      ? value['eventId'] === undefined &&
+        ['started', 'completed', 'error', 'quarantined', 'recovered'].includes(String(event))
+      : value['version'] === 3 && isUuid(value['eventId']) && isUuid(value['playbackId'])) &&
+    isOptionalString(value['reason'], 512) &&
+    (event !== 'seeked'
+      ? value['position'] === undefined && value['previousPosition'] === undefined
+      : typeof value['position'] === 'number' &&
+        Number.isFinite(value['position']) &&
+        value['position'] >= 0 &&
+        typeof value['previousPosition'] === 'number' &&
+        Number.isFinite(value['previousPosition']) &&
+        value['previousPosition'] >= 0) &&
+    (event !== 'progress'
+      ? value['segmentStartedAt'] === undefined && value['playedMs'] === undefined
+      : isTimestamp(value['segmentStartedAt']) &&
+        isTimestamp(timestamp) &&
+        typeof value['playedMs'] === 'number' &&
+        Number.isFinite(value['playedMs']) &&
+        value['playedMs'] >= 0 &&
+        value['playedMs'] <= Date.parse(timestamp) - Date.parse(value['segmentStartedAt'])) &&
     typeof event === 'string' &&
     playbackEventNames.includes(event as PlaybackEventName) &&
     isInteger(value['playerId']) &&
@@ -87,3 +132,6 @@ export const isPlaybackEventForPlayer = (
   value: unknown,
   playerId: number | undefined,
 ): value is PlaybackEvent => isPlaybackEvent(value) && value.playerId === playerId;
+
+export const isPlaybackStatisticsEvent = (value: unknown): value is PlaybackStatisticsEvent =>
+  isPlaybackEvent(value) && value.version === 3;

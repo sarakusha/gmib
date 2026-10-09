@@ -23,6 +23,7 @@ import ipcDispatch from '../common/ipcDispatch';
 import VideoSource from './VideoSource';
 import { resolvePlaybackEngine, shouldFallbackAfterDecoderError } from './playbackEngine';
 import PlaybackWatchdog from './playbackWatchdog';
+import PlaybackProgress from './playbackProgress';
 import PlaybackRecovery, { type PlaybackAttempt } from './playbackRecovery';
 
 let playlist: Playlist | undefined;
@@ -50,6 +51,9 @@ const endedSources = new WeakSet<VideoSource>();
 // Do not burn a proven file's retry budget on repeated background preloads
 // while the same healthy clip is still playing.
 const deferredPreloads = new Set<string>();
+const progress = new WeakMap<PlaybackAttempt, PlaybackProgress>();
+const terminalAttempts = new WeakSet<PlaybackAttempt>();
+const skippedAttempts = new WeakSet<PlaybackAttempt>();
 let captureAttempt: PlaybackAttempt | undefined;
 let revision = 0;
 let updatePending = false;
@@ -60,11 +64,14 @@ const reportAttempt = (
   event: PlaybackEvent['event'],
   error?: string,
   quarantined?: boolean,
+  details: Partial<PlaybackEvent> = {},
 ): void => {
   try {
     const timestamp =
       event === 'started' && attempt.startedAt ? attempt.startedAt : new Date().toISOString();
     ipcRenderer.send('playback:event', {
+      version: 3,
+      eventId: crypto.randomUUID(),
       event,
       playerId: sourceId,
       playlistId: attempt.playlistId,
@@ -78,10 +85,53 @@ const reportAttempt = (
       engine: attempt.engine,
       error,
       quarantined,
+      ...details,
     } satisfies PlaybackEvent);
   } catch {
     /* Logging must not prevent playback recovery. */
   }
+};
+
+const attemptProgress = (attempt: PlaybackAttempt): PlaybackProgress => {
+  let tracker = progress.get(attempt);
+  if (!tracker) {
+    tracker = new PlaybackProgress(segment =>
+      reportAttempt(attempt, 'progress', undefined, undefined, segment),
+    );
+    progress.set(attempt, tracker);
+  }
+  return tracker;
+};
+
+const finishAttempt = (
+  attempt: PlaybackAttempt | undefined,
+  event: 'completed' | 'interrupted',
+  reason?: string,
+): void => {
+  if (!attempt?.started || attempt.failed || terminalAttempts.has(attempt)) return;
+  if (attempt === captureAttempt && sourceVideo) observeProgress(attempt, sourceVideo.currentTime);
+  attemptProgress(attempt).flush();
+  terminalAttempts.add(attempt);
+  reportAttempt(attempt, event, undefined, undefined, { reason });
+};
+
+const reportSkipped = (
+  attempt: PlaybackAttempt,
+  foreground: boolean,
+  advancePlayed = false,
+): void => {
+  if (!foreground || skippedAttempts.has(attempt)) return;
+  // Background preload retries/quarantine scans are errors, not abandoned show slots.
+  if (!recovery.blocked(attempt.mediaId) && !(advancePlayed && recovery.hasPlayed(attempt.mediaId)))
+    return;
+  skippedAttempts.add(attempt);
+  reportAttempt(attempt, 'skipped', undefined, undefined, { reason: 'playback-error' });
+};
+
+const observeProgress = (attempt: PlaybackAttempt | undefined, position: number): void => {
+  if (!attempt || attempt.failed || terminalAttempts.has(attempt) || playbackState !== 'playing')
+    return;
+  attemptProgress(attempt).observe(position);
 };
 
 const markStarted = (attempt?: PlaybackAttempt): void => {
@@ -91,11 +141,15 @@ const markStarted = (attempt?: PlaybackAttempt): void => {
   // eslint-disable-next-line no-param-reassign
   attempt.startedAt = new Date().toISOString();
   recovery.markPlayable(attempt.mediaId);
+  attemptProgress(attempt).reset();
   reportAttempt(attempt, 'started');
 };
 
 const recordFailure = (attempt: PlaybackAttempt, error: unknown): void => {
-  if (!recovery.fail(attempt)) return;
+  if (attempt === captureAttempt && sourceVideo) observeProgress(attempt, sourceVideo.currentTime);
+  if (terminalAttempts.has(attempt) || !recovery.fail(attempt)) return;
+  attemptProgress(attempt).flush();
+  terminalAttempts.add(attempt);
   const message = (
     (error instanceof Error ? error.message : String(error)).trim() || 'Unknown playback error'
   ).slice(0, 16_384);
@@ -128,6 +182,17 @@ const getPlaybackEngine = (): NonNullable<Player['playbackEngine']> =>
 
 const updatePlaybackState = (next: MediaSessionPlaybackState): void => {
   if (playbackState === next) return;
+  const attempt =
+    activeEngine === 'capture'
+      ? captureAttempt
+      : currentSource && sourceAttempts.get(currentSource);
+  if (attempt?.started && !attempt.failed && !terminalAttempts.has(attempt)) {
+    if (activeEngine === 'capture' && sourceVideo && playbackState === 'playing')
+      observeProgress(attempt, sourceVideo.currentTime);
+    attemptProgress(attempt).reset();
+    if (next === 'paused' || next === 'playing')
+      reportAttempt(attempt, next === 'paused' ? 'paused' : 'resumed');
+  }
   playbackState = next;
   playbackWatchdog.setActive(next === 'playing');
   ipcDispatch(setPlaybackState(next));
@@ -167,10 +232,27 @@ const createSourceVideo = (uri: string): HTMLVideoElement => {
   video.addEventListener('timeupdate', () => {
     if (video !== sourceVideo) return;
     // debug(`source time update: ${video.currentTime}s`);
+    if (!video.seeking) observeProgress(captureAttempt, video.currentTime);
     ipcDispatch(setPosition(video.currentTime));
   });
   video.addEventListener('playing', () => {
-    if (video === sourceVideo) markStarted(captureAttempt);
+    if (video === sourceVideo) {
+      markStarted(captureAttempt);
+      observeProgress(captureAttempt, video.currentTime);
+    }
+  });
+  video.addEventListener('waiting', () => {
+    if (video === sourceVideo && captureAttempt) {
+      observeProgress(captureAttempt, video.currentTime);
+      attemptProgress(captureAttempt).reset();
+    }
+  });
+  video.addEventListener('seeking', () => {
+    if (video === sourceVideo && captureAttempt) attemptProgress(captureAttempt).reset();
+  });
+  video.addEventListener('seeked', () => {
+    if (video === sourceVideo && captureAttempt)
+      attemptProgress(captureAttempt).reset(video.currentTime);
   });
   video.addEventListener('ended', () => {
     if (video !== sourceVideo || playbackState !== 'playing') return;
@@ -179,7 +261,8 @@ const createSourceVideo = (uri: string): HTMLVideoElement => {
       return;
     }
     if (captureAttempt?.started && !captureAttempt.failed) {
-      reportAttempt(captureAttempt, 'completed');
+      observeProgress(captureAttempt, video.currentTime);
+      finishAttempt(captureAttempt, 'completed');
       recovery.succeeded(captureAttempt.mediaId);
       deferredPreloads.clear();
     }
@@ -322,8 +405,8 @@ const disposeSource = (_reason: string): void => {
   }
 };
 
-const clearSource = (): void => {
-  // debug('clear source');
+const clearSource = (reason = 'source-replaced'): void => {
+  finishAttempt(captureAttempt, 'interrupted', reason);
   currentItemId = undefined;
   captureAttempt = undefined;
   disposeSource('clear source');
@@ -379,8 +462,9 @@ const getActiveDuration = (): number =>
       ? (sourceVideo?.duration ?? 0)
       : 0;
 
-const disposeDecoder = (): void => {
+const disposeDecoder = (reason = 'source-replaced'): void => {
   const current = currentSource;
+  finishAttempt(current && sourceAttempts.get(current), 'interrupted', reason);
   const next = nextSource;
   currentSource = undefined;
   nextSource = undefined;
@@ -402,6 +486,7 @@ const failDecoder = (source: VideoSource, error: unknown): void => {
   if (!attempt || attempt.failed) return;
   const wasCurrent = source === currentSource;
   recordFailure(attempt, error);
+  reportSkipped(attempt, wasCurrent, true);
   if (recovery.hasPlayed(attempt.mediaId)) deferredPreloads.add(attempt.mediaId);
   if (shouldFallbackAfterDecoderError() && !linuxPreferSoftwareDecoding) {
     linuxPreferSoftwareDecoding = true;
@@ -463,6 +548,7 @@ const handleDecoderSourceMessage = (source: VideoSource, data: DecoderSourceMess
     markStarted(sourceAttempts.get(source));
     playbackWatchdog.defer();
     decoderPosition = (source.options.startTime ?? 0) + data.frame.timestamp / 1_000_000;
+    observeProgress(sourceAttempts.get(source), decoderPosition);
   }
   if (typeof data.duration === 'number') {
     decoderDuration = data.duration;
@@ -523,7 +609,7 @@ const activateDecoder = (source: VideoSource): void => {
       if (source !== currentSource || videoStream !== merged) return;
       const attempt = sourceAttempts.get(source);
       if (attempt?.started && !attempt.failed && endedSources.has(source)) {
-        reportAttempt(attempt, 'completed');
+        finishAttempt(attempt, 'completed');
         recovery.succeeded(attempt.mediaId);
         deferredPreloads.clear();
       }
@@ -539,6 +625,7 @@ const beginAttempt = (item: PlaylistItem): PlaybackAttempt =>
 const loadMedia = async (
   item: PlaylistItem,
   version: number,
+  foreground = true,
 ): Promise<{ uri: string; attempt: PlaybackAttempt } | undefined> => {
   const attempt = beginAttempt(item);
   try {
@@ -554,6 +641,7 @@ const loadMedia = async (
   } catch (error) {
     if (version !== revision) return undefined;
     recordFailure(attempt, error);
+    reportSkipped(attempt, foreground);
     scheduleUpdate();
     return undefined;
   }
@@ -595,6 +683,7 @@ const updateDecoder = async (version: number): Promise<void> => {
   selectCurrent(item);
   if (currentSource?.options.itemId !== item.id) {
     const previous = currentSource;
+    finishAttempt(previous && sourceAttempts.get(previous), 'interrupted', 'item-changed');
     currentSource = undefined;
     previous?.close();
     if (nextSource?.options.itemId === item.id && !nextSource.closed) activateDecoder(nextSource);
@@ -605,6 +694,7 @@ const updateDecoder = async (version: number): Promise<void> => {
         activateDecoder(createDecoder(loaded.uri, loaded.attempt));
       } catch (err) {
         recordFailure(loaded.attempt, err);
+        reportSkipped(loaded.attempt, true);
         scheduleUpdate();
         return;
       }
@@ -630,7 +720,7 @@ const updateDecoder = async (version: number): Promise<void> => {
     !nextSource &&
     playbackState === 'playing'
   ) {
-    const loaded = await loadMedia(nextItem, version);
+    const loaded = await loadMedia(nextItem, version, false);
     if (!loaded) return;
     try {
       nextSource = createDecoder(loaded.uri, loaded.attempt);
@@ -653,6 +743,7 @@ const updateCapture = async (version: number): Promise<void> => {
   if (currentItemId !== item.id || !sourceVideo) {
     const loaded = await loadMedia(item, version);
     if (!loaded) return;
+    finishAttempt(captureAttempt, 'interrupted', 'item-changed');
     disposeSource('replace source');
     currentItemId = item.id;
     captureAttempt = loaded.attempt;
@@ -662,6 +753,7 @@ const updateCapture = async (version: number): Promise<void> => {
       refreshStreamTracks();
     } catch (error) {
       recordFailure(loaded.attempt, error);
+      reportSkipped(loaded.attempt, true);
       clearSource();
       scheduleUpdate();
       return;
@@ -682,8 +774,8 @@ const update = async (): Promise<void> => {
       const version = revision;
       const engine = getPlaybackEngine();
       if (activeEngine !== engine) {
-        clearSource();
-        disposeDecoder();
+        clearSource('engine-changed');
+        disposeDecoder('engine-changed');
         activeEngine = engine;
       }
       try {
@@ -692,7 +784,9 @@ const update = async (): Promise<void> => {
       } catch (error) {
         const item = selectItem();
         if (item && version === revision) {
-          recordFailure(beginAttempt(item), error);
+          const attempt = beginAttempt(item);
+          recordFailure(attempt, error);
+          reportSkipped(attempt, true);
           updatePending = true;
         }
       }
@@ -714,6 +808,7 @@ function requestPlaybackRecovery(reason: string): void {
   else if (activeEngine === 'capture' && captureAttempt) {
     const { mediaId } = captureAttempt;
     recordFailure(captureAttempt, reason);
+    reportSkipped(captureAttempt, true, true);
     clearSource();
     if (recovery.hasPlayed(mediaId)) {
       const next = selectItem(true);
@@ -767,24 +862,46 @@ export const updateSrcObject = (selector: string) => {
   if (video) attachStreamToVideo(video);
 };
 
+const reportSeek = (
+  attempt: PlaybackAttempt | undefined,
+  previousPosition: number,
+  position: number,
+): void => {
+  if (!attempt || attempt.failed || terminalAttempts.has(attempt)) return;
+  reportAttempt(attempt, 'seeked', undefined, undefined, {
+    previousPosition,
+    position,
+    reason: `${previousPosition.toFixed(2)} → ${position.toFixed(2)} с`,
+  });
+};
+
 export const seek = (position: number): void => {
   if (!Number.isFinite(position)) return;
   const nextPosition = clampSeekPosition(position, getActiveDuration());
   if (activeEngine === 'capture' && sourceVideo) {
+    const previousPosition = sourceVideo.currentTime;
     try {
+      if (captureAttempt) {
+        observeProgress(captureAttempt, sourceVideo.currentTime);
+        attemptProgress(captureAttempt).reset();
+      }
       sourceVideo.currentTime = nextPosition;
+      reportSeek(captureAttempt, previousPosition, nextPosition);
     } catch (error) {
       requestPlaybackRecovery(String(error));
     }
   } else if (activeEngine === 'decoder' && currentSource) {
     const previous = currentSource;
+    const previousPosition = decoderPosition;
     const attempt = sourceAttempts.get(previous);
     if (!attempt) return;
+    attemptProgress(attempt).reset();
     try {
       const source = createDecoder(previous.uri, attempt, nextPosition, true);
       currentSource = undefined;
       previous.close();
       activateDecoder(source);
+      reportSeek(attempt, previousPosition, nextPosition);
     } catch (error) {
       failDecoder(previous, error);
     }
@@ -810,6 +927,10 @@ const applyPlayer = async (value: Player, restart = false): Promise<void> => {
         )
       : undefined;
     if (request !== playerRequest) return;
+    if (playlist?.id !== loaded?.id) {
+      clearSource('playlist-changed');
+      disposeDecoder('playlist-changed');
+    }
     playlist = loaded;
     updatePlaybackState(value.autoPlay ? 'playing' : loaded?.items.length ? 'paused' : 'none');
     await update();
@@ -856,8 +977,8 @@ ipcRenderer.on('stop', () => {
   revision += 1;
   const duration = getActiveDuration();
   updatePlaybackState('none');
-  clearSource();
-  disposeDecoder();
+  clearSource('stopped');
+  disposeDecoder('stopped');
   blankConsumers();
   ipcDispatch(setDuration(duration));
   ipcDispatch(setPosition(0));

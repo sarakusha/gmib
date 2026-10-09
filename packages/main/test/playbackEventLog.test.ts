@@ -555,3 +555,60 @@ describe('broadcastPlaybackRetry', () => {
     expect(send).toHaveBeenCalledExactlyOnceWith('playback:retry', 'media-1');
   });
 });
+
+describe('v3 statistics records', () => {
+  const progress: PlaybackEvent = {
+    ...eventAt('2026-09-18T00:00:01.000Z'),
+    version: 3,
+    eventId: '12345678-1234-4234-8234-123456789abc',
+    playbackId: '12345678-1234-4234-8234-123456789def',
+    event: 'progress',
+    segmentStartedAt: '2026-09-17T23:59:59.000Z',
+    playedMs: 2000,
+    startedAt: '2026-09-17T23:59:59.000Z',
+    filename: 'clip.mp4',
+    playlistId: 4,
+  };
+
+  it('preserves independent attribution and active intervals across UTC rotation', async () => {
+    const directory = await temporaryDirectory();
+    const log = new PlaybackEventLog({
+      directory,
+      retentionDays: () => 7,
+      now: () => new Date('2026-09-18T12:00:00.000Z'),
+    });
+    await log.append(progress);
+    expect(await readRecords(directory)).toEqual([progress]);
+  });
+
+  it('validates the version, deduplication identity and active interval', () => {
+    expect(isPlaybackEvent(progress)).toBe(true);
+    expect(isPlaybackEvent({ ...progress, version: 4 })).toBe(false);
+    expect(isPlaybackEvent({ ...progress, eventId: undefined })).toBe(false);
+    expect(isPlaybackEvent({ ...progress, playbackId: 'legacy-id' })).toBe(false);
+    expect(isPlaybackEvent({ ...progress, playedMs: NaN })).toBe(false);
+    expect(isPlaybackEvent({ ...progress, playedMs: -1 })).toBe(false);
+    expect(isPlaybackEvent({ ...progress, playedMs: 2001 })).toBe(false);
+    expect(isPlaybackEvent({ ...progress, segmentStartedAt: progress.timestamp })).toBe(false);
+    expect(
+      isPlaybackEvent({ ...progress, segmentStartedAt: '2026-09-19T00:00:00.000Z', playedMs: 0 }),
+    ).toBe(false);
+    expect(isPlaybackEvent({ ...progress, event: 'started' })).toBe(false);
+    expect(isPlaybackEvent({ ...progress, event: 'completed', segmentStartedAt: undefined })).toBe(
+      false,
+    );
+    expect(isPlaybackEvent({ ...progress, event: 'started', playedMs: undefined })).toBe(false);
+    const seek = {
+      ...progress,
+      event: 'seeked',
+      segmentStartedAt: undefined,
+      playedMs: undefined,
+      position: 30,
+      previousPosition: 10,
+    };
+    expect(isPlaybackEvent(seek)).toBe(true);
+    expect(isPlaybackEvent({ ...seek, position: Infinity })).toBe(false);
+    expect(isPlaybackEvent({ ...seek, previousPosition: -1 })).toBe(false);
+    expect(isPlaybackEvent({ ...seek, event: 'started' })).toBe(false);
+  });
+});
