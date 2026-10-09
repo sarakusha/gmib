@@ -96,7 +96,10 @@ import {
   updateSchedulerJob,
 } from './playerScheduler';
 import { getPlayerTitle } from './playerWindow';
-import { playbackLogFilename } from './playbackEventLog';
+import {
+  getPlaybackStatisticsPath,
+  getPlaybackStatisticsStore,
+} from './playbackStatisticsDatabase';
 import { getPlaybackStatus, retryPlayback } from './playbackEvents';
 import { mountPlaybackStatisticsApi } from './playbackStatisticsApi';
 import { closePlayerOutputWindows, setPlayerOutputWindowsVisibility } from './openHandler';
@@ -340,7 +343,7 @@ api.get('/media', (req, res, next) => {
   getAllMedia().then(result => res.json(result), next);
 });
 
-mountPlaybackStatisticsApi(api, () => path.join(electronApp.getPath('logs'), 'playback'));
+mountPlaybackStatisticsApi(api, getPlaybackStatisticsStore);
 
 api.get('/playback/status', (_req, res) => {
   res.json(getPlaybackStatus());
@@ -349,11 +352,7 @@ api.get('/playback/status', (_req, res) => {
 api.get('/playback/settings', (_req, res) => {
   res.json({
     logRetentionDays: localConfig.get('playbackLogRetentionDays'),
-    currentLogPath: path.join(
-      electronApp.getPath('logs'),
-      'playback',
-      playbackLogFilename(new Date()),
-    ),
+    currentLogPath: getPlaybackStatisticsPath(),
   });
 });
 
@@ -375,11 +374,7 @@ api.put('/playback/settings', (req, res) => {
   localConfig.set('playbackLogRetentionDays', logRetentionDays);
   res.json({
     logRetentionDays,
-    currentLogPath: path.join(
-      electronApp.getPath('logs'),
-      'playback',
-      playbackLogFilename(new Date()),
-    ),
+    currentLogPath: getPlaybackStatisticsPath(),
   });
 });
 

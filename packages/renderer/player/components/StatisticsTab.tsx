@@ -44,6 +44,8 @@ import {
   type PlaybackStatisticsRange,
   type PlaybackStatisticsRow,
 } from '/@common/playbackStatistics';
+import { supportsFeature } from '/@common/capabilities';
+import { isRemoteSession, version } from '/@common/remote';
 
 type SortKey =
   | 'filename'
@@ -111,6 +113,7 @@ const status = (error: unknown): number | string | undefined =>
   (error as FetchBaseQueryError | undefined)?.status;
 
 const StatisticsTab: React.FC = () => {
+  const supported = supportsFeature('playbackStatistics', version, isRemoteSession);
   const [preset, setPreset] = React.useState<StatisticsPreset>('week');
   const [range, setRange] = React.useState<PlaybackStatisticsRange | undefined>();
   const [draft, setDraft] = React.useState<PlaybackStatisticsRange>({ from: '', to: '' });
@@ -122,10 +125,11 @@ const StatisticsTab: React.FC = () => {
   const query = useGetPlaybackStatisticsQuery(
     { playerId: sourceId, ...range, outputId },
     {
+      skip: !supported,
       refetchOnMountOrArgChange: true,
     },
   );
-  const data = query.currentData;
+  const data = supported ? query.currentData : undefined;
   const history = useGetPlaybackHistoryQuery(
     {
       playerId: sourceId,
@@ -135,7 +139,7 @@ const StatisticsTab: React.FC = () => {
       offset,
       limit: 20,
     },
-    { skip: !selected, refetchOnMountOrArgChange: true },
+    { skip: !supported || !selected, refetchOnMountOrArgChange: true },
   );
   const historyData = history.currentData;
 
@@ -188,6 +192,14 @@ const StatisticsTab: React.FC = () => {
     link.click();
     window.setTimeout(() => URL.revokeObjectURL(url), 0);
   };
+
+  if (!supported) {
+    return (
+      <Alert severity="info">
+        На этом плеере статистика недоступна. Обновите GMIB на устройстве.
+      </Alert>
+    );
+  }
 
   return (
     <Box sx={{ height: 1, overflowY: 'auto', maxWidth: 1400, mx: 'auto' }}>
@@ -512,11 +524,12 @@ const StatisticsTab: React.FC = () => {
               </TableContainer>
             </>
           )}
-          <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 2 }}>
-            Качество журнала: пропущено устаревших записей — {data.quality.ignoredLegacyRecords},
-            некорректных — {data.quality.invalidRecords}, попыток с неполными данными —{' '}
-            {data.quality.incompleteAttempts}, нечитаемых файлов — {data.quality.unreadableFiles}.
-          </Typography>
+          {data.quality.incompleteAttempts > 0 && (
+            <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 2 }}>
+              Попыток с неполными данными — {data.quality.incompleteAttempts}. Без сохранённого
+              завершения они не считаются успешными показами.
+            </Typography>
+          )}
         </>
       )}
       <Dialog open={!!selected} onClose={() => setSelected(null)} maxWidth="md" fullWidth>
@@ -542,7 +555,7 @@ const StatisticsTab: React.FC = () => {
                 {' · '}время (общее / исправное):{' '}
                 {formatDurationPair(entry.playedMs, entry.successfulMs)}
                 {entry.outcome === 'completed'
-                  ? ` · ${entry.outputResult && entry.events.some(event => event.output) ? resultLabels[entry.outputResult.status] : 'вывод не подтверждён (старый журнал)'}`
+                  ? ` · ${entry.outputResult && entry.events.some(event => event.output) ? resultLabels[entry.outputResult.status] : 'вывод не подтверждён'}`
                   : ''}
                 {entry.skipped ? ' · пропуск' : ''}
               </Typography>

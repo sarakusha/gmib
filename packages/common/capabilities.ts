@@ -20,7 +20,7 @@ const minimumVersions: Record<FeatureName, string> = {
   playerScheduler: '5.0.0',
   playerSeek: '4.12.0',
   playerShaders: '5.0.0',
-  playbackStatistics: '5.6.3',
+  playbackStatistics: '5.6.5',
   playbackDiagnostics: '5.6.0',
   playbackLogPath: '5.6.1',
   remotePlayerOutputVisibility: '5.4.1',

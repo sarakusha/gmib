@@ -7,28 +7,33 @@ import express from 'express';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { mountPlaybackStatisticsApi } from '../src/playbackStatisticsApi';
+import { PlaybackStatisticsStore } from '../src/playbackStatisticsStore';
 
 let server: Server | undefined;
 let directory: string | undefined;
+let store: PlaybackStatisticsStore | undefined;
 afterEach(async () => {
   if (server)
     await new Promise<void>((resolve, reject) => {
       server!.close(error => (error ? reject(error) : resolve()));
     });
   server = undefined;
+  await store?.close();
+  store = undefined;
   if (directory) await fs.rm(directory, { recursive: true, force: true });
 });
 
 describe('playback statistics API', () => {
   it('validates dates/player/pagination and keeps normal host authentication ahead of reads', async () => {
     directory = await fs.mkdtemp(path.join(os.tmpdir(), 'gmib-statistics-api-'));
+    store = new PlaybackStatisticsStore(path.join(directory, 'playback.sqlite'));
     const app = express();
     const router = express.Router();
     router.use((req, res, next) => {
       if (req.get('Authorization') !== 'Bearer test-only') res.sendStatus(401);
       else next();
     });
-    mountPlaybackStatisticsApi(router, () => directory!);
+    mountPlaybackStatisticsApi(router, () => store!);
     app.use('/api', router);
     server = createServer(app);
     await new Promise<void>((resolve, reject) => {

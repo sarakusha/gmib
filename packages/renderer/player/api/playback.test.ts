@@ -120,3 +120,58 @@ describe('playback status transport', () => {
     expect(getPlaybackSnapshot().issues).toEqual([active]);
   });
 });
+
+describe('SQLite playback statistics transport compatibility', () => {
+  it.each([
+    ['?host=remote.example&version=5.6.3', false],
+    ['?host=remote.example&version=5.6.4', false],
+    ['?host=remote.example&version=5.6.5', true],
+    ['?host=remote.example&version=5.7.0', true],
+    ['?host=remote.example', true],
+    ['?version=5.6.4', true],
+  ])('gates statistics and history requests for %s', async (search, supported) => {
+    const { playbackApi, store } = await loadStatus(search);
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockClear();
+
+    const statistics = store.dispatch(
+      playbackApi.endpoints.getPlaybackStatistics.initiate({ playerId: 1 }),
+    );
+    const history = store.dispatch(
+      playbackApi.endpoints.getPlaybackHistory.initiate({ playerId: 1, mediaId: 'clip' }),
+    );
+    const results = await Promise.all([statistics, history]);
+
+    expect(fetchMock).toHaveBeenCalledTimes(supported ? 2 : 0);
+    if (supported) {
+      const requests = fetchMock.mock.calls.map(call => (call[0] as Request).url);
+      expect(requests.some(url => url.includes('/api/playback/statistics?playerId=1'))).toBe(true);
+      expect(
+        requests.some(url =>
+          url.includes('/api/playback/statistics/history?playerId=1&mediaId=clip'),
+        ),
+      ).toBe(true);
+    } else {
+      results.forEach(result => expect(result.error).toMatchObject({ status: 404 }));
+    }
+    statistics.unsubscribe();
+    history.unsubscribe();
+    store.dispatch(playbackApi.util.resetApiState());
+  });
+
+  it('retains a missing-endpoint fallback when the host version is unknown', async () => {
+    const { playbackApi, store } = await loadStatus('?host=remote.example');
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ message: 'Not found' }), {
+        status: 404,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    const statistics = store.dispatch(
+      playbackApi.endpoints.getPlaybackStatistics.initiate({ playerId: 1 }),
+    );
+    await expect(statistics.unwrap()).rejects.toMatchObject({ status: 404 });
+    statistics.unsubscribe();
+    store.dispatch(playbackApi.util.resetApiState());
+  });
+});

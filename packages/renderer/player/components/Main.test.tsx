@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Main from './Main';
 
 const state = vi.hoisted(() => ({
-  version: '5.6.2',
+  version: '5.6.4',
   remote: true,
   statistics: vi.fn<() => React.ReactNode>(() => 'Statistics content'),
   dispatch: vi.fn(),
@@ -45,11 +45,13 @@ describe('playback statistics remote version support', () => {
   });
 
   it.each([
-    ['5.6.2', false],
-    ['5.6.3', true],
+    ['5.6.3', false],
+    ['5.6.4', false],
+    ['5.6.5', true],
+    [undefined, true],
     ['5.7.0', true],
   ])('gates the tab and its API-owning component for remote %s', (version, supported) => {
-    state.version = version;
+    state.version = version ?? '';
     const html = renderToStaticMarkup(
       <ThemeProvider theme={createTheme()}>
         <Main />
@@ -73,7 +75,7 @@ describe('playback statistics remote version support', () => {
   });
 
   it('keeps the statistics component and its local selection across tab switches', () => {
-    state.version = '5.6.3';
+    state.version = '5.6.5';
     state.tab = 'player';
     state.statistics.mockImplementation(() => {
       const [period, setPeriod] = React.useState('7 дней');

@@ -1,8 +1,4 @@
 import { randomUUID } from 'node:crypto';
-import fs from 'node:fs/promises';
-import os from 'node:os';
-import path from 'node:path';
-import { gzipSync } from 'node:zlib';
 
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 
@@ -10,13 +6,11 @@ import type { PlaybackStatisticsEvent } from '/@common/playback';
 import {
   aggregatePlaybackHistory,
   aggregatePlaybackStatistics,
-  PlaybackStatisticsReader,
   statisticsPeriod,
 } from '../src/playbackStatistics';
 
 const now = new Date('2026-10-09T18:00:00.000Z');
 const query = { playerId: 1, from: '2026-10-01', to: '2026-10-09' };
-const directories: string[] = [];
 const originalTZ = process.env.TZ;
 process.env.TZ = 'UTC';
 const event = (
@@ -70,9 +64,8 @@ const successful = (start = '2026-10-08T10:00:00.000Z', end = '2026-10-08T10:00:
     event(id, 'completed', end),
   ];
 };
-afterEach(async () => {
+afterEach(() => {
   process.env.TZ = 'UTC';
-  await Promise.all(directories.splice(0).map(dir => fs.rm(dir, { recursive: true, force: true })));
 });
 
 // Restore the process-wide test setting when this suite is unloaded.
@@ -233,34 +226,5 @@ describe('playback statistics', () => {
     await expect(
       aggregatePlaybackHistory(events, { ...query, mediaId: 'md5-a', limit: 101 }, now),
     ).rejects.toThrow('Invalid history');
-  });
-});
-
-describe('playback statistics file reader', () => {
-  it('reads v3 and gzip, skips legacy/corrupt lines, and reflects append and deletion', async () => {
-    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'gmib-statistics-'));
-    directories.push(dir);
-    const filename = path.join(dir, 'playback-2026-10-08.jsonl');
-    const events = successful();
-    const lines = (items: unknown[]) => items.map(value => JSON.stringify(value)).join('\n') + '\n';
-    await fs.writeFile(filename, lines([{ event: 'header', version: 2 }, events[0]]) + '{broken\n');
-    await fs.writeFile(
-      path.join(dir, 'playback-2026-10-09.jsonl.gz'),
-      gzipSync(lines(events.slice(1))),
-    );
-    const reader = new PlaybackStatisticsReader(dir);
-    const first = await reader.statistics(query);
-    expect(first.totals.starts).toBe(1);
-    expect(first.totals.completed).toBe(1);
-    expect(first.quality).toMatchObject({ ignoredLegacyRecords: 1, invalidRecords: 1 });
-    await fs.appendFile(
-      filename,
-      lines(successful('2026-10-08T12:00:00.000Z', '2026-10-08T12:00:10.000Z')),
-    );
-    expect((await reader.statistics(query)).totals.completed).toBe(2);
-    await fs.unlink(filename);
-    expect((await reader.statistics(query)).totals.starts).toBe(0);
-    await fs.writeFile(path.join(dir, 'playback-2026-10-07.jsonl.gz'), 'bad gzip');
-    expect((await reader.statistics(query)).quality.unreadableFiles).toBe(1);
   });
 });

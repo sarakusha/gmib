@@ -2,7 +2,9 @@ import type { Request, Router } from 'express';
 
 import type { PlaybackStatisticsQuery } from '/@common/playbackStatistics';
 
-import { PlaybackStatisticsQueryError, PlaybackStatisticsReader } from './playbackStatistics';
+import { PlaybackStatisticsQueryError } from './playbackStatistics';
+import { PlaybackStatisticsSqlReader } from './playbackStatisticsSql';
+import type { PlaybackStatisticsStore } from './playbackStatisticsStore';
 
 const textParameter = (req: Request, name: string, required = false): string | undefined => {
   const value = req.query[name];
@@ -30,10 +32,13 @@ const queryFromRequest = (req: Request): PlaybackStatisticsQuery => ({
 });
 
 /** Mount after the existing host authentication middleware. No user-supplied filesystem paths. */
-export const mountPlaybackStatisticsApi = (api: Router, directory: () => string): void => {
-  let reader: PlaybackStatisticsReader | undefined;
+export const mountPlaybackStatisticsApi = (
+  api: Router,
+  store: () => PlaybackStatisticsStore,
+): void => {
+  let reader: PlaybackStatisticsSqlReader | undefined;
   const getReader = () => {
-    reader ??= new PlaybackStatisticsReader(directory());
+    reader ??= new PlaybackStatisticsSqlReader(store());
     return reader;
   };
   api.get('/playback/statistics', async (req, res, next) => {

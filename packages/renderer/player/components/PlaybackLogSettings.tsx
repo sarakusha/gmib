@@ -15,6 +15,7 @@ import { watchPlaybackLogDay } from '../playback/watchPlaybackLogDay';
 
 const PlaybackLogSettings: React.FC = () => {
   const supportsLogPath = supportsFeature('playbackLogPath', version, isRemoteSession);
+  const usesStatisticsDatabase = supportsFeature('playbackStatistics', version, isRemoteSession);
   const [value, setValue] = React.useState(String(DEFAULT_PLAYBACK_LOG_RETENTION_DAYS));
   const numericValue = Number(value);
   const valid = isValidPlaybackLogRetentionDays(numericValue);
@@ -33,11 +34,11 @@ const PlaybackLogSettings: React.FC = () => {
   }, [data?.logRetentionDays]);
 
   React.useEffect(() => {
-    if (!supportsLogPath) return undefined;
+    if (!supportsLogPath || usesStatisticsDatabase) return undefined;
     return watchPlaybackLogDay(() => {
       void refetch();
     });
-  }, [refetch, supportsLogPath]);
+  }, [refetch, supportsLogPath, usesStatisticsDatabase]);
 
   const save = (): void => {
     if (shouldSavePlaybackLogRetentionDays(numericValue, data?.logRetentionDays, isLoading)) {
@@ -87,7 +88,7 @@ const PlaybackLogSettings: React.FC = () => {
         </FormHelperText>
         {supportsLogPath && data?.currentLogPath && (
           <FormHelperText sx={{ mt: 1, overflowWrap: 'anywhere' }}>
-            Текущий файл: {data.currentLogPath}
+            {usesStatisticsDatabase ? 'База статистики' : 'Текущий файл'}: {data.currentLogPath}
           </FormHelperText>
         )}
       </FormControl>

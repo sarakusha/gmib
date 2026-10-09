@@ -6,8 +6,8 @@ import { expect, it } from 'vitest';
 
 import type { PlaybackStatisticsEvent } from '/@common/playback';
 import { isPlaybackOutputEvidence } from '/@common/playbackOutput';
-import { PlaybackEventLog } from '../src/playbackEventLog';
-import { PlaybackStatisticsReader } from '../src/playbackStatistics';
+import { PlaybackStatisticsStore } from '../src/playbackStatisticsStore';
+import { PlaybackStatisticsSqlReader } from '../src/playbackStatisticsSql';
 
 // Electron supplied this opaque display identifier on the affected Linux host.
 const nativeDisplayId = 16095738401594692;
@@ -19,14 +19,14 @@ const output = {
   state: 'showing' as const,
 };
 
-it('reads native display IDs above MAX_SAFE_INTEGER from actual event log output', async () => {
+it('reads native display IDs above MAX_SAFE_INTEGER from the SQLite journal', async () => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'gmib-native-display-'));
+  const now = () => new Date('2020-10-09T12:00:00.000Z');
+  const logger = new PlaybackStatisticsStore(path.join(directory, 'playback.sqlite'), {
+    retentionDays: () => 7,
+    now,
+  });
   try {
-    const logger = new PlaybackEventLog({
-      directory,
-      retentionDays: () => 7,
-      now: () => new Date('2020-10-09T12:00:00.000Z'),
-    });
     const startedAt = '2020-10-09T10:00:00.000Z';
     const endedAt = '2020-10-09T10:00:05.000Z';
     const base = {
@@ -62,7 +62,7 @@ it('reads native display IDs above MAX_SAFE_INTEGER from actual event log output
       },
     ];
     for (const event of events) await logger.append(event);
-    const reader = new PlaybackStatisticsReader(directory);
+    const reader = new PlaybackStatisticsSqlReader(logger, now);
     const query = { playerId: 1, from: '2020-10-09', to: '2020-10-09' };
     const stats = await reader.statistics(query);
     expect(stats.quality.invalidRecords).toBe(0);
@@ -72,6 +72,7 @@ it('reads native display IDs above MAX_SAFE_INTEGER from actual event log output
     expect(history.total).toBe(1);
     expect(history.entries[0].outputResult?.status).toBe('confirmed');
   } finally {
+    await logger.close();
     await fs.rm(directory, { recursive: true, force: true });
   }
 });

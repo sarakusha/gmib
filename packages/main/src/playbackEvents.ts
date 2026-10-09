@@ -6,6 +6,7 @@ import debugFactory from 'debug';
 import {
   isPlaybackEventForPlayer,
   isPlaybackRetryMediaId,
+  isPlaybackStatisticsEvent,
   type PlaybackEvent,
   type PlaybackStatusSnapshot,
 } from '/@common/playback';
@@ -14,7 +15,9 @@ import { isPlayer } from '/@common/WindowParams';
 import { PlaybackOutputEvidenceTracker } from './playbackOutputEvidence';
 import { getPlaybackOutputs, onPlaybackOutputsChanged } from './playbackOutputState';
 import localConfig from './localConfig';
-import { PlaybackEventLog } from './playbackEventLog';
+import { onBeforeDatabaseClose } from './db';
+import { cleanupLegacyPlaybackLogs } from './playbackEventLog';
+import { getPlaybackStatisticsStore } from './playbackStatisticsDatabase';
 import { broadcastPlaybackRetry } from './playbackRetry';
 import { PlaybackStatusStore } from './playbackStatus';
 import { broadcast } from './server';
@@ -71,28 +74,45 @@ const logFailure = (action: string, error: unknown): void => {
   debug(`${action}: ${error instanceof Error ? error.message : String(error)}`);
 };
 
+let stopping = false;
+let stopRecording: (() => Promise<void>) | undefined;
+onBeforeDatabaseClose(() => {
+  stopping = true;
+  return stopRecording?.();
+});
+
 void app.whenReady().then(() => {
-  const eventLog = new PlaybackEventLog({
-    directory: path.join(app.getPath('logs'), 'playback'),
-    retentionDays: () => localConfig.get('playbackLogRetentionDays'),
-    onMaintenanceError: error => logFailure('playback log cleanup failed', error),
-  });
+  if (stopping) return;
+  const store = getPlaybackStatisticsStore();
 
   const append = (event: PlaybackEvent): void => {
-    void eventLog.append(event).catch(error => logFailure('playback event write failed', error));
+    if (stopping || !isPlaybackStatisticsEvent(event)) return;
+    void store.append(event).catch(error => logFailure('playback event write failed', error));
   };
-  onPlaybackOutputsChanged((playerId, outputs, at) => {
+  const offOutputsChanged = onPlaybackOutputsChanged((playerId, outputs, at) => {
     outputEvidence.changed(playerId, outputs, at).forEach(append);
   });
 
+  let legacyCleanup = Promise.resolve();
   const cleanup = (): void => {
-    void eventLog.cleanup().catch(error => logFailure('playback log cleanup failed', error));
+    if (stopping) return;
+    void store.cleanup().catch(error => logFailure('playback database cleanup failed', error));
+    // Existing files expire normally but are never read for statistics or imported.
+    legacyCleanup = legacyCleanup
+      .then(() =>
+        cleanupLegacyPlaybackLogs(
+          path.join(app.getPath('logs'), 'playback'),
+          localConfig.get('playbackLogRetentionDays'),
+        ),
+      )
+      .catch(error => logFailure('legacy playback log cleanup failed', error));
   };
   cleanup();
+  let cleanupTimer: NodeJS.Timeout;
   const scheduleCleanup = (): void => {
     const now = new Date();
     const nextUtcDay = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1);
-    const cleanupTimer = setTimeout(
+    cleanupTimer = setTimeout(
       () => {
         cleanup();
         scheduleCleanup();
@@ -102,9 +122,10 @@ void app.whenReady().then(() => {
     cleanupTimer.unref();
   };
   scheduleCleanup();
-  localConfig.onDidChange('playbackLogRetentionDays', cleanup);
+  const offRetentionChanged = localConfig.onDidChange('playbackLogRetentionDays', cleanup);
 
-  ipcMain.on('playback:event', (ipcEvent, value: unknown) => {
+  const onPlaybackEvent = (ipcEvent: Electron.IpcMainEvent, value: unknown): void => {
+    if (stopping) return;
     const params = findParamsByWebContentsId(ipcEvent.sender.id);
     if (
       !isPlayer(params) ||
@@ -118,5 +139,13 @@ void app.whenReady().then(() => {
     trackPlayerStatusLifecycle(ipcEvent.sender, params.playerId);
     updateStatus(value);
     outputEvidence.process(value).forEach(append);
-  });
+  };
+  ipcMain.on('playback:event', onPlaybackEvent);
+  stopRecording = () => {
+    ipcMain.removeListener('playback:event', onPlaybackEvent);
+    offOutputsChanged();
+    offRetentionChanged();
+    clearTimeout(cleanupTimer);
+    return legacyCleanup;
+  };
 });

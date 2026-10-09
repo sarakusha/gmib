@@ -7,10 +7,12 @@ import type { PlaybackStatistics } from '/@common/playbackStatistics';
 
 import StatisticsTab from './StatisticsTab';
 
-const { statisticsQuery, historyQuery } = vi.hoisted(() => ({
+const { statisticsQuery, historyQuery, remote } = vi.hoisted(() => ({
+  remote: { version: '5.6.5', isRemoteSession: true },
   statisticsQuery: vi.fn(),
   historyQuery: vi.fn(),
 }));
+vi.mock('/@common/remote', () => remote);
 vi.mock('../api/playback', () => ({
   useGetPlaybackStatisticsQuery: statisticsQuery,
   useGetPlaybackHistoryQuery: historyQuery,
@@ -72,6 +74,7 @@ const data: PlaybackStatistics = {
 
 describe('StatisticsTab', () => {
   beforeEach(() => {
+    remote.version = '5.6.5';
     statisticsQuery
       .mockReset()
       .mockReturnValue({ currentData: data, isLoading: false, isError: false });
@@ -96,9 +99,40 @@ describe('StatisticsTab', () => {
     expect(html).toContain('Новый плеер - Вывод · Основной дисплей');
     expect(html).toContain('Резервный · Выбранный дисплей');
     expect(html).toContain('выход скрыт: 1');
+    expect(html).not.toContain('Качество журнала');
+    expect(html).not.toContain('Попыток с неполными данными');
   });
 
-  it('explains unsupported older hosts', () => {
+  it('skips both queries when mounted directly on an older remote host', () => {
+    remote.version = '5.6.4';
+    const html = renderToStaticMarkup(<StatisticsTab />);
+    expect(html).toContain('Обновите GMIB на устройстве');
+    expect(statisticsQuery).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ skip: true }),
+    );
+    expect(historyQuery).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ skip: true }),
+    );
+    expect(html).not.toContain('promo.mp4');
+  });
+
+  it('reports incomplete attempts without obsolete file parsing counters', () => {
+    statisticsQuery.mockReturnValue({
+      currentData: { ...data, quality: { ...data.quality, incompleteAttempts: 2 } },
+      isLoading: false,
+      isError: false,
+    });
+    const html = renderToStaticMarkup(<StatisticsTab />);
+    expect(html).toContain('Попыток с неполными данными — 2');
+    expect(html).toContain('не считаются успешными показами');
+    expect(html).not.toContain('устаревших записей');
+    expect(html).not.toContain('нечитаемых файлов');
+  });
+
+  it('explains an absent endpoint when the host version is unknown', () => {
+    remote.version = '';
     statisticsQuery.mockReturnValue({
       currentData: undefined,
       isLoading: false,

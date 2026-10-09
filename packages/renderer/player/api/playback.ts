@@ -1,6 +1,8 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 
 import type { PlaybackSettings, PlaybackStatusSnapshot } from '/@common/playback';
+import { supportsFeature } from '/@common/capabilities';
+import { isRemoteSession, version } from '/@common/remote';
 import type {
   PlaybackHistory,
   PlaybackHistoryQuery,
@@ -33,10 +35,22 @@ const playbackApi = createApi({
       providesTags: ['PlaybackSettings'],
     }),
     getPlaybackStatistics: build.query<PlaybackStatistics, PlaybackStatisticsQuery>({
-      query: params => ({ url: 'playback/statistics', params }),
+      queryFn: async (params, _api, _options, query) => {
+        if (!supportsFeature('playbackStatistics', version, isRemoteSession)) {
+          return { error: { status: 404, data: 'Playback statistics unsupported' } };
+        }
+        const result = await query({ url: 'playback/statistics', params });
+        return result.error ? { error: result.error } : { data: result.data as PlaybackStatistics };
+      },
     }),
     getPlaybackHistory: build.query<PlaybackHistory, PlaybackHistoryQuery>({
-      query: params => ({ url: 'playback/statistics/history', params }),
+      queryFn: async (params, _api, _options, query) => {
+        if (!supportsFeature('playbackStatistics', version, isRemoteSession)) {
+          return { error: { status: 404, data: 'Playback statistics unsupported' } };
+        }
+        const result = await query({ url: 'playback/statistics/history', params });
+        return result.error ? { error: result.error } : { data: result.data as PlaybackHistory };
+      },
     }),
     updatePlaybackSettings: build.mutation<
       PlaybackSettings,

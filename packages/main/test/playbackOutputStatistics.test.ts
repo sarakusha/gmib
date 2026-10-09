@@ -1,15 +1,8 @@
 import { randomUUID } from 'node:crypto';
-import fs from 'node:fs/promises';
-import os from 'node:os';
-import path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import type { PlaybackStatisticsEvent } from '/@common/playback';
 import type { PlaybackOutputSnapshot, PlaybackOutputResult } from '/@common/playbackOutput';
-import {
-  aggregatePlaybackStatistics,
-  aggregatePlaybackHistory,
-  PlaybackStatisticsReader,
-} from '../src/playbackStatistics';
+import { aggregatePlaybackStatistics, aggregatePlaybackHistory } from '../src/playbackStatistics';
 
 const query = { playerId: 1, from: '2020-10-01', to: '2020-10-31' };
 const t = (seconds: number) =>
@@ -76,11 +69,6 @@ const partial = () => {
     }),
   ];
 };
-const dirs: string[] = [];
-afterEach(async () => {
-  await Promise.all(dirs.splice(0).map(dir => fs.rm(dir, { recursive: true, force: true })));
-});
-
 describe('output-aware statistics', () => {
   it('does not sum screens and keeps source completion separate from full/partial display', async () => {
     const data = await aggregatePlaybackStatistics(partial(), query);
@@ -108,7 +96,7 @@ describe('output-aware statistics', () => {
     ).toEqual([]);
   });
 
-  it('does not claim success for old records without output evidence', async () => {
+  it('does not claim success without output evidence', async () => {
     const events = partial()
       .filter(item => item.event !== 'output-changed')
       .map(({ output: _output, outputResult: _result, ...rest }) => rest);
@@ -170,50 +158,5 @@ describe('output-aware statistics', () => {
       display: 1,
       resolvedDisplayId: 1,
     });
-    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'gmib-output-metadata-'));
-    dirs.push(directory);
-    await fs.writeFile(
-      path.join(directory, 'playback-2020-10-08.jsonl'),
-      events.map(item => JSON.stringify(item)).join('\n'),
-    );
-    expect((await new PlaybackStatisticsReader(directory).statistics(selected)).outputs).toEqual(
-      expected.outputs,
-    );
-  });
-
-  it('preserves output time through long-attempt compaction, rotation and retained-file reads', async () => {
-    const id = randomUUID();
-    const events = [make(id, 'started', 0, { output: { outputs: [output(1), output(2)] } })];
-    for (let i = 0; i < 600; i += 1)
-      events.push(
-        make(id, 'progress', i + 1, {
-          segmentStartedAt: t(i),
-          playedMs: 1000,
-          output: { outputs: [output(1), output(2, i % 2 ? 'hidden' : 'showing')] },
-        }),
-      );
-    events.push(
-      make(id, 'completed', 600, {
-        outputResult: result([summary(1), summary(2, 'partial')], 'partial'),
-      }),
-    );
-    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'gmib-output-statistics-'));
-    dirs.push(directory);
-    await fs.writeFile(
-      path.join(directory, 'playback-2020-10-08.jsonl'),
-      events.map(item => JSON.stringify(item)).join('\n'),
-    );
-    const reader = new PlaybackStatisticsReader(directory);
-    for (const outputId of [undefined, 1, 2]) {
-      const actual = await reader.statistics({ ...query, outputId });
-      const expected = await aggregatePlaybackStatistics(events, { ...query, outputId });
-      expect(actual.totals).toEqual(expected.totals);
-      expect(actual.outputs).toEqual(expected.outputs);
-      expect(actual.days).toEqual(expected.days);
-      expect(await reader.history({ ...query, outputId, mediaId: 'clip' })).toEqual(
-        await aggregatePlaybackHistory(events, { ...query, outputId, mediaId: 'clip' }),
-      );
-    }
-    expect((await reader.statistics(query)).totals.successfulMs).toBe(300000);
   });
 });
