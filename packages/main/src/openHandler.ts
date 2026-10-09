@@ -7,6 +7,7 @@ import find from 'lodash/find';
 
 import { DefaultDisplays, type PlayerMapping } from '/@common/video';
 
+import { invalidatePlaybackOutputs } from './playbackOutputState';
 import getAllDisplays from './getAllDisplays';
 import {
   isOutputHidden,
@@ -102,6 +103,7 @@ const getPlayerOutputWindows = (playerId?: number): BrowserWindow[] =>
     .filter(window => playerId == null || getVideoOutputPlayer(window) === playerId);
 
 export const closePlayerOutputWindows = (playerId?: number): boolean => {
+  invalidatePlaybackOutputs(playerId);
   const outputs = getPlayerOutputWindows(playerId);
   outputs.forEach(window => window.close());
   return outputs.length > 0;

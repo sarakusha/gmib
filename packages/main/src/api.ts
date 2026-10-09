@@ -1,3 +1,4 @@
+import { invalidatePlaybackOutputs } from './playbackOutputState';
 import crypto from 'crypto';
 import { BrowserWindow, app as electronApp } from 'electron';
 import fs from 'fs';
@@ -931,6 +932,7 @@ api.post('/mapping', async (req, res, next) => {
     const { lastID } = await insertPlayerMapping(data);
     const mapping = await getPlayerMappingById(lastID);
     const win = mapping && findPlayerWindow(mapping.player);
+    if (mapping) invalidatePlaybackOutputs(mapping.player);
     if (win) win.webContents.send('updateVideoOuts');
     res.json(mapping);
     broadcast({ event: 'mapping', remote: req.ip });
@@ -942,13 +944,19 @@ api.post('/mapping', async (req, res, next) => {
 api.put('/mapping', async (req, res, next) => {
   try {
     const { id, ...props } = await uniquePlayerMappingName(req.body);
+    const previous = await getPlayerMappingById(id);
     const { changes } = await updatePlayerMapping(id, props);
     if (!changes) {
       res.sendStatus(404);
       return;
     }
     const mapping = await getPlayerMappingById(id);
+    if (previous && previous.player !== mapping?.player) {
+      invalidatePlaybackOutputs(previous.player);
+      findPlayerWindow(previous.player)?.webContents.send('updateVideoOuts');
+    }
     const win = mapping && findPlayerWindow(mapping.player);
+    if (mapping) invalidatePlaybackOutputs(mapping.player);
     if (win) win.webContents.send('updateVideoOuts');
     res.json(mapping);
     broadcast({ event: 'mapping', remote: req.ip });
@@ -966,6 +974,7 @@ api.delete('/mapping/:id', async (req, res) => {
     await deletePlayerMapping(id);
     broadcast({ event: 'mapping', remote: req.ip });
     const win = mapping && findPlayerWindow(mapping.player);
+    if (mapping) invalidatePlaybackOutputs(mapping.player);
     if (win) win.webContents.send('updateVideoOuts');
     res.sendStatus(204);
   }

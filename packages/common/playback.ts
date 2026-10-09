@@ -1,3 +1,10 @@
+import {
+  isPlaybackOutputEvidence,
+  isPlaybackOutputResult,
+  type PlaybackOutputEvidence,
+  type PlaybackOutputResult,
+} from './playbackOutput';
+
 export const playbackEventNames = [
   'started',
   'completed',
@@ -10,12 +17,15 @@ export const playbackEventNames = [
   'seeked',
   'interrupted',
   'skipped',
+  'output-changed',
 ] as const;
 
 export type PlaybackEventName = (typeof playbackEventNames)[number];
 
 export type PlaybackEvent = {
   version?: 3;
+  output?: PlaybackOutputEvidence;
+  outputResult?: PlaybackOutputResult;
   eventId?: string;
   segmentStartedAt?: string;
   playedMs?: number;
@@ -83,6 +93,8 @@ export const isPlaybackEvent = (value: unknown): value is PlaybackEvent => {
       ? value['eventId'] === undefined &&
         ['started', 'completed', 'error', 'quarantined', 'recovered'].includes(String(event))
       : value['version'] === 3 && isUuid(value['eventId']) && isUuid(value['playbackId'])) &&
+    (value['output'] === undefined || isPlaybackOutputEvidence(value['output'])) &&
+    (value['outputResult'] === undefined || isPlaybackOutputResult(value['outputResult'])) &&
     isOptionalString(value['reason'], 512) &&
     (event !== 'seeked'
       ? value['position'] === undefined && value['previousPosition'] === undefined

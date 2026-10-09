@@ -4,6 +4,7 @@ import type { ManagedWindow } from '../src/managedWindow';
 import type { PlayerOutputHealth } from '../../common/outputHealth';
 
 const mocks = vi.hoisted(() => ({
+  displays: vi.fn(),
   handlers: new Map(),
   appHandlers: new Map(),
   player: vi.fn(),
@@ -18,6 +19,7 @@ vi.mock('electron', () => ({
   app: { on: (name: string, handler: unknown) => mocks.appHandlers.set(name, handler) },
   ipcMain: { on: (name: string, handler: unknown) => mocks.handlers.set(name, handler) },
 }));
+vi.mock('../src/getAllDisplays', () => ({ default: mocks.displays }));
 vi.mock('../src/screen', () => ({ getPlayer: mocks.player }));
 vi.mock('../src/playerMapping', () => ({ getPlayerMappingsForPlayer: mocks.mappings }));
 vi.mock('../src/playlist', () => ({ getPlaylistItems: mocks.items }));
@@ -52,10 +54,11 @@ beforeEach(async () => {
   vi.useFakeTimers({
     toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'performance'],
   });
+  mocks.displays.mockReturnValue([{ id: 8, primary: true }]);
   mocks.handlers.clear();
   mocks.appHandlers.clear();
   mocks.player.mockResolvedValue({ id: 1, autoPlay: true, playlistId: 2 });
-  mocks.mappings.mockResolvedValue([{ id: 7 }]);
+  mocks.mappings.mockResolvedValue([{ id: 7, name: 'Main', display: -1 }]);
   mocks.items.mockResolvedValue([{}]);
   mocks.native.mockReturnValue({ hidden: false, repaired: false });
   mocks.unavailable.mockReturnValue([]);
@@ -124,4 +127,114 @@ describe('player output supervisor integration', () => {
     expect(contents.send).not.toHaveBeenCalled();
     expect(mocks.recover).not.toHaveBeenCalled();
   });
+});
+
+describe('output evidence from supervision', () => {
+  it('publishes reusable health only on state changes and expires a silent report', async () => {
+    const state = await import('../src/playbackOutputState');
+    const listener = vi.fn();
+    const unsubscribe = state.onPlaybackOutputsChanged(listener);
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(state.getPlaybackOutputs(1)[0]?.state).toBe('unknown');
+    reply(1);
+    expect(state.getPlaybackOutputs(1)[0]).toMatchObject({
+      state: 'showing',
+      display: -1,
+      resolvedDisplayId: 8,
+    });
+    const count = listener.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(5000);
+    reply(2);
+    expect(listener).toHaveBeenCalledTimes(count);
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(state.getPlaybackOutputs(1)[0]?.state).toBe('unknown');
+    unsubscribe();
+  });
+  it('immediately invalidates hiding and rejects the outstanding reply until a fresh probe', async () => {
+    const state = await import('../src/playbackOutputState');
+    await vi.advanceTimersByTimeAsync(5000);
+    reply(1);
+    await vi.advanceTimersByTimeAsync(5000);
+    state.invalidatePlaybackOutputs(1, 'hidden');
+    reply(2);
+    expect(state.getPlaybackOutputs(1)[0]?.state).toBe('hidden');
+    state.invalidatePlaybackOutputs(1);
+    await vi.advanceTimersByTimeAsync(5000);
+    reply(3);
+    expect(state.getPlaybackOutputs(1)[0]?.state).toBe('showing');
+  });
+  it('reports disconnected and returned displays without reusing pre-disconnect replies', async () => {
+    const state = await import('../src/playbackOutputState');
+    await vi.advanceTimersByTimeAsync(5000);
+    reply(1);
+    mocks.displays.mockReturnValue([]);
+    mocks.unavailable.mockReturnValue([7]);
+    state.invalidatePlaybackOutputs();
+    await vi.advanceTimersByTimeAsync(5000);
+    reply(2);
+    expect(state.getPlaybackOutputs(1)[0]?.state).toBe('unavailable');
+    mocks.displays.mockReturnValue([{ id: 8, primary: true }]);
+    mocks.unavailable.mockReturnValue([]);
+    state.invalidatePlaybackOutputs();
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(state.getPlaybackOutputs(1)[0]?.state).toBe('unknown');
+    reply(3);
+    expect(state.getPlaybackOutputs(1)[0]?.state).toBe('showing');
+  });
+  it('expires good evidence even when metadata lookup is hung', async () => {
+    const state = await import('../src/playbackOutputState');
+    await vi.advanceTimersByTimeAsync(5000);
+    reply(1);
+    mocks.player.mockImplementation(() => new Promise(() => {}));
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(state.getPlaybackOutputs(1)[0]?.state).toBe('unknown');
+  });
+  it('rejects replies from the previous mapping and starts unknown on navigation', async () => {
+    const state = await import('../src/playbackOutputState');
+    await vi.advanceTimersByTimeAsync(5000);
+    mocks.displays.mockReturnValue([{ id: 8, primary: true }, { id: 9 }]);
+    mocks.mappings.mockResolvedValue([{ id: 7, name: 'Other', display: 9 }]);
+    await vi.advanceTimersByTimeAsync(5000);
+    reply(1);
+    expect(state.getPlaybackOutputs(1)[0]?.state).toBe('unknown');
+    reply(2);
+    expect(state.getPlaybackOutputs(1)[0]).toMatchObject({
+      state: 'showing',
+      resolvedDisplayId: 9,
+    });
+    contents.emit('did-start-navigation', {}, 'http://localhost', false, true);
+    expect(state.getPlaybackOutputs(1)[0]?.state).toBe('unknown');
+  });
+});
+
+it('does not send a stale probe after hiding while playlist metadata is in flight', async () => {
+  const state = await import('../src/playbackOutputState');
+  await vi.advanceTimersByTimeAsync(5000);
+  reply(1);
+  let resolveItems!: (value: unknown[]) => void;
+  mocks.items.mockImplementation(
+    () =>
+      new Promise(resolve => {
+        resolveItems = resolve;
+      }),
+  );
+  await vi.advanceTimersByTimeAsync(5000);
+  state.invalidatePlaybackOutputs(1, 'hidden');
+  resolveItems([{}]);
+  await settle();
+  expect(contents.send).toHaveBeenCalledTimes(1);
+  reply(2);
+  expect(state.getPlaybackOutputs(1)[0]?.state).toBe('hidden');
+});
+
+it('invalidates healthy evidence when native reconciliation repairs hidden or misplaced output', async () => {
+  const state = await import('../src/playbackOutputState');
+  await vi.advanceTimersByTimeAsync(5000);
+  reply(1);
+  expect(state.getPlaybackOutputs(1)[0]?.state).toBe('showing');
+  mocks.native.mockReturnValue({ hidden: false, repaired: true });
+  await vi.advanceTimersByTimeAsync(5000);
+  expect(state.getPlaybackOutputs(1)[0]?.state).toBe('unknown');
+  reply(2);
+  expect(state.getPlaybackOutputs(1)[0]?.state).toBe('showing');
 });

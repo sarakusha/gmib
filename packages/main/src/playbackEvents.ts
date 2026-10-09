@@ -11,6 +11,8 @@ import {
 } from '/@common/playback';
 import { isPlayer } from '/@common/WindowParams';
 
+import { PlaybackOutputEvidenceTracker } from './playbackOutputEvidence';
+import { getPlaybackOutputs, onPlaybackOutputsChanged } from './playbackOutputState';
 import localConfig from './localConfig';
 import { PlaybackEventLog } from './playbackEventLog';
 import { broadcastPlaybackRetry } from './playbackRetry';
@@ -20,6 +22,7 @@ import { findManagedWindow, findParamsByWebContentsId, getPlayerParams } from '.
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:playbackEvents`);
 const statusStore = new PlaybackStatusStore();
+const outputEvidence = new PlaybackOutputEvidenceTracker(getPlaybackOutputs);
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 const snapshot = (): PlaybackStatusSnapshot => ({
@@ -45,6 +48,7 @@ export const retryPlayback = (mediaId: unknown): boolean => {
 };
 
 const clearPlayerIssues = (playerId: number): void => {
+  outputEvidence.clearPlayer(playerId);
   if (statusStore.clearPlayer(playerId)) emitStatus();
 };
 
@@ -74,6 +78,13 @@ void app.whenReady().then(() => {
     onMaintenanceError: error => logFailure('playback log cleanup failed', error),
   });
 
+  const append = (event: PlaybackEvent): void => {
+    void eventLog.append(event).catch(error => logFailure('playback event write failed', error));
+  };
+  onPlaybackOutputsChanged((playerId, outputs, at) => {
+    outputEvidence.changed(playerId, outputs, at).forEach(append);
+  });
+
   const cleanup = (): void => {
     void eventLog.cleanup().catch(error => logFailure('playback log cleanup failed', error));
   };
@@ -98,6 +109,7 @@ void app.whenReady().then(() => {
     if (
       !isPlayer(params) ||
       params.host !== 'localhost' ||
+      ipcEvent.senderFrame !== ipcEvent.sender.mainFrame ||
       !isPlaybackEventForPlayer(value, params.playerId)
     ) {
       debug('rejected playback event with invalid sender attribution');
@@ -105,6 +117,6 @@ void app.whenReady().then(() => {
     }
     trackPlayerStatusLifecycle(ipcEvent.sender, params.playerId);
     updateStatus(value);
-    void eventLog.append(value).catch(error => logFailure('playback event write failed', error));
+    outputEvidence.process(value).forEach(append);
   });
 });

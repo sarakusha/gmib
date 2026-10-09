@@ -2,6 +2,7 @@ import { app, screen } from 'electron';
 
 import debugFactory from 'debug';
 
+import { invalidatePlaybackOutputs } from './playbackOutputState';
 import { dbReady } from './db';
 import { refreshPlayerOutputWindows } from './openHandler';
 import { getScreens } from './screen';
@@ -31,6 +32,7 @@ const refreshDisplayOutputs = async (): Promise<void> => {
 };
 
 const scheduleRefreshDisplayOutputs = (): void => {
+  invalidatePlaybackOutputs();
   if (refreshTimer) clearTimeout(refreshTimer);
   refreshTimer = setTimeout(() => {
     refreshTimer = undefined;

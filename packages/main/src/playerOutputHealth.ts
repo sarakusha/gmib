@@ -8,6 +8,16 @@ import {
   type PlayerOutputHealth,
 } from '/@common/outputHealth';
 
+import { DefaultDisplays, type PlayerMapping } from '/@common/video';
+import type { PlaybackOutputSnapshot } from '/@common/playbackOutput';
+import getAllDisplays from './getAllDisplays';
+import {
+  forgetPlaybackOutputs,
+  invalidatePlaybackOutputs,
+  onPlaybackOutputsInvalidated,
+  setPlaybackOutputs,
+} from './playbackOutputState';
+
 import type { ManagedWindow } from './managedWindow';
 import { getPlayerMappingsForPlayer } from './playerMapping';
 import { getPlayer } from './screen';
@@ -27,6 +37,9 @@ type Monitor = {
   policy: OutputHealthPolicy;
   poll: () => Promise<void>;
   expectedIds: number[];
+  mappings: PlayerMapping[];
+  metadataSignature: string;
+  generation: number;
   hidden: boolean;
   unavailable: boolean;
   requestId: number;
@@ -55,6 +68,39 @@ const bounded = async <T>(operation: Promise<T>): Promise<T> => {
   }
 };
 
+const publishEvidence = (monitor: Monitor, report?: PlayerOutputHealth): void => {
+  const displays = getAllDisplays();
+  const outputs: PlaybackOutputSnapshot[] = monitor.mappings.map(mapping => {
+    const display = displays.find(item =>
+      mapping.display === DefaultDisplays.Primary
+        ? item.primary
+        : mapping.display === DefaultDisplays.Secondary
+          ? !item.primary
+          : item.id === mapping.display,
+    );
+    const observed = report?.outputs.find(output => output.id === mapping.id);
+    return {
+      id: mapping.id,
+      name: mapping.name ?? `Выход ${mapping.id}`,
+      display: mapping.display ?? undefined,
+      resolvedDisplayId: display?.id,
+      state: !display ? 'unavailable' : monitor.hidden ? 'hidden' : (observed?.state ?? 'unknown'),
+    };
+  });
+  setPlaybackOutputs(monitor.playerId, outputs);
+};
+
+onPlaybackOutputsInvalidated(playerId => {
+  monitors.forEach(target => {
+    const monitor = target;
+    if (playerId !== undefined && monitor.playerId !== playerId) return;
+    monitor.generation += 1;
+    monitor.pending.clear();
+    monitor.lastHealth = undefined;
+    monitor.lastHealthAt = 0;
+  });
+});
+
 ipcMain.on('player-output:health', (event, report: unknown) => {
   const monitor = monitors.get(event.sender.id);
   if (!monitor || event.senderFrame !== event.sender.mainFrame || !isPlayerOutputHealth(report))
@@ -64,6 +110,7 @@ ipcMain.on('player-output:health', (event, report: unknown) => {
   monitor.lastHealth = report;
   monitor.lastHealthAt = performance.now();
   monitor.policy.report(report, monitor.lastHealthAt);
+  publishEvidence(monitor, report);
   if (report.recovery) debug(`player ${monitor.playerId}: ${report.recovery}`);
   monitor.listeners.forEach(listener => listener(report));
 });
@@ -81,6 +128,9 @@ export const watchPlayerOutput = (window: ManagedWindow, playerId: number, url: 
     playerId,
     policy: new OutputHealthPolicy(performance.now()),
     expectedIds: [],
+    mappings: [],
+    metadataSignature: '',
+    generation: 0,
     hidden: false,
     unavailable: false,
     requestId: 0,
@@ -90,32 +140,52 @@ export const watchPlayerOutput = (window: ManagedWindow, playerId: number, url: 
     poll: async () => {
       if (polling || disposed || quitting || window.isDestroyed()) return;
       polling = true;
+      const generation = monitor.generation;
       try {
         const [player, mappings] = await bounded(
           Promise.all([getPlayer(playerId), getPlayerMappingsForPlayer(playerId)]),
         );
-        if (disposed || quitting || window.isDestroyed()) return;
+        if (disposed || quitting || window.isDestroyed() || generation !== monitor.generation)
+          return;
         const native = reconcilePlayerOutputWindows(playerId);
         const unavailable = getUnavailablePlayerOutputIds(mappings);
+        const metadataSignature = JSON.stringify({
+          mappings,
+          hidden: native.hidden,
+          displays: getAllDisplays(),
+        });
+        if (metadataSignature !== monitor.metadataSignature || native.repaired) {
+          monitor.metadataSignature = metadataSignature;
+          monitor.pending.clear();
+          monitor.lastHealth = undefined;
+        }
+        monitor.mappings = mappings;
         monitor.expectedIds = mappings
           .map(mapping => mapping.id)
           .filter(id => !unavailable.includes(id));
         monitor.hidden = native.hidden;
         monitor.unavailable = unavailable.length > 0;
+        const fresh =
+          monitor.lastHealth &&
+          performance.now() - monitor.lastHealthAt <= OUTPUT_HEALTH_CHECK_INTERVAL * 2;
+        publishEvidence(monitor, fresh ? monitor.lastHealth : undefined);
         const items = player?.playlistId ? await bounded(getPlaylistItems(player.playlistId)) : [];
-        if (disposed || quitting || window.isDestroyed()) return;
+        if (disposed || quitting || window.isDestroyed() || generation !== monitor.generation)
+          return;
         const active = Boolean(player?.autoPlay && items.length && !native.hidden);
         const reason = monitor.policy.check(monitor.expectedIds, active, performance.now());
         if (reason) {
           debug(`player ${playerId}: reload player: ${reason}`);
           monitor.pending.clear();
           monitor.lastHealth = undefined;
+          invalidatePlaybackOutputs(playerId);
           // A killed renderer does not run unload handlers; close its orphaned child outputs.
           // loadURL also recovers an initial page-load failure with no committed URL.
           closePlayerOutputWindows(playerId);
           void recoverPlayerRenderer(window, url, reason.includes('did not answer')).catch(error =>
             debug(`player ${playerId}: reload failed: ${String(error)}`),
           );
+          return;
         }
         const signature = JSON.stringify({
           active,
@@ -141,6 +211,7 @@ export const watchPlayerOutput = (window: ManagedWindow, playerId: number, url: 
         webContents.send('player-output:check', probe);
         lastError = '';
       } catch (error) {
+        invalidatePlaybackOutputs(playerId);
         const message = String(error);
         if (message !== lastError) debug(`player ${playerId}: check failed: ${message}`);
         lastError = message;
@@ -151,6 +222,11 @@ export const watchPlayerOutput = (window: ManagedWindow, playerId: number, url: 
   };
   monitors.set(webContents.id, monitor);
   const timer = setInterval(() => {
+    if (
+      monitor.lastHealth &&
+      performance.now() - monitor.lastHealthAt >= OUTPUT_HEALTH_CHECK_INTERVAL * 2
+    )
+      invalidatePlaybackOutputs(playerId);
     void monitor.poll();
   }, OUTPUT_HEALTH_CHECK_INTERVAL);
   timer.unref();
@@ -158,6 +234,7 @@ export const watchPlayerOutput = (window: ManagedWindow, playerId: number, url: 
     disposed = true;
     clearInterval(timer);
     monitors.delete(webContents.id);
+    forgetPlaybackOutputs(playerId);
     monitor.listeners.clear();
   };
   webContents.once('destroyed', dispose);
@@ -166,6 +243,7 @@ export const watchPlayerOutput = (window: ManagedWindow, playerId: number, url: 
     monitor.pending.clear();
     monitor.lastHealth = undefined;
     monitor.policy.reset(performance.now());
+    invalidatePlaybackOutputs(playerId);
   });
   webContents.on('did-finish-load', () => {
     void monitor.poll();
