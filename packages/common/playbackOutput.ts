@@ -38,7 +38,9 @@ const snapshot = (value: unknown): value is PlaybackOutputSnapshot =>
   typeof value['name'] === 'string' &&
   value['name'].length <= 512 &&
   (value['display'] === undefined || Number.isSafeInteger(value['display'])) &&
-  (value['resolvedDisplayId'] === undefined || Number.isSafeInteger(value['resolvedDisplayId'])) &&
+  // Electron exposes native 64-bit display IDs as numbers. Keep this opaque value
+  // as supplied, even above MAX_SAFE_INTEGER; it is not used for arithmetic.
+  (value['resolvedDisplayId'] === undefined || Number.isInteger(value['resolvedDisplayId'])) &&
   states.includes(value['state'] as PlaybackOutputState);
 const outputs = (value: unknown): value is PlaybackOutputSnapshot[] =>
   Array.isArray(value) &&
