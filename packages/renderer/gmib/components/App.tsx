@@ -1,12 +1,9 @@
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import CloseIcon from '@mui/icons-material/Close';
-import HighlightOffIcon from '@mui/icons-material/HighlightOff';
 import MenuIcon from '@mui/icons-material/Menu';
 import SearchIcon from '@mui/icons-material/Search';
-import SettingsEthernetIcon from '@mui/icons-material/SettingsEthernet';
 import ExtensionOutlinedIcon from '@mui/icons-material/ExtensionOutlined';
 import {
-  Backdrop,
   Box,
   Divider,
   IconButton,
@@ -19,7 +16,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import { keyframes, styled } from '@mui/material/styles';
+import { styled } from '@mui/material/styles';
 import { useSnackbar } from 'notistack';
 import React, { useCallback, useEffect, useState } from 'react';
 
@@ -43,12 +40,12 @@ import {
   selectBroadcastDetected,
   selectCurrentTab,
   selectGmibDiscoveryBlocked,
-  selectIsClosed,
   selectIsOnline,
   selectIsRemoteDialogOpen,
   selectLinks,
   selectLoading,
   selectOverheatProtection,
+  selectSession,
   selectSessionVersion,
 } from '../store/selectors';
 
@@ -57,18 +54,13 @@ import type { LicenseRuntimeState } from '/@common/license';
 import { isRemoteSession } from '/@common/remote';
 
 import AppBar from './AppBar';
+import ConnectionFeedback from './ConnectionFeedback';
 import Devices from './Devices';
 import Drawer from './Drawer';
 import GmibTabs from './GmibTabs';
 import HttpPages from './HttpPages';
 
 const drawerWidth = 240;
-
-const blink = keyframes`
-  50% {
-    opacity: 0;
-  }
-`;
 
 const Item = styled(ListItemButton)(({ theme }) => ({
   minHeight: 56,
@@ -93,7 +85,7 @@ const App: React.FC = () => {
   const tab = useSelector(selectCurrentTab);
   const online = useSelector(selectIsOnline);
   const loading = useSelector(selectLoading);
-  const sessionClosed = useSelector(selectIsClosed);
+  const { status: sessionStatus, error: sessionError } = useSelector(selectSession);
   const isRemoteDialogOpen = useSelector(selectIsRemoteDialogOpen);
   const { enabled: protectionEnabled = false } = useSelector(selectOverheatProtection) ?? {};
   const broadcastDetected = useSelector(selectBroadcastDetected);
@@ -170,24 +162,12 @@ const App: React.FC = () => {
   }, [dispatch, isSchedulerSupported, tab]);
   return (
     <>
-      <Backdrop
-        sx={{
-          zIndex: theme => theme.zIndex.drawer + 10,
-          color: '#fff',
-        }}
-        open={!online || loading}
-      >
-        {sessionClosed ? (
-          <HighlightOffIcon fontSize="large" />
-        ) : (
-          loading && (
-            <SettingsEthernetIcon
-              sx={{ animation: `${blink} normal 1.5s infinite ease-in-out` }}
-              fontSize="large"
-            />
-          )
-        )}
-      </Backdrop>
+      <ConnectionFeedback
+        online={online}
+        loading={loading}
+        status={sessionStatus}
+        error={sessionError}
+      />
       <RemoteHostsDialog
         open={isRemoteDialogOpen}
         onClose={() => dispatch(setRemoteDialogOpen(false))}
