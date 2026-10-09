@@ -97,6 +97,7 @@ import {
 import { getPlayerTitle } from './playerWindow';
 import { playbackLogFilename } from './playbackEventLog';
 import { getPlaybackStatus, retryPlayback } from './playbackEvents';
+import { mountPlaybackStatisticsApi } from './playbackStatisticsApi';
 import { closePlayerOutputWindows, setPlayerOutputWindowsVisibility } from './openHandler';
 import {
   deleteAllPlaylistItems,
@@ -337,6 +338,8 @@ api.get('/media', (req, res, next) => {
   // const { skip, take } = req.query;
   getAllMedia().then(result => res.json(result), next);
 });
+
+mountPlaybackStatisticsApi(api, () => path.join(electronApp.getPath('logs'), 'playback'));
 
 api.get('/playback/status', (_req, res) => {
   res.json(getPlaybackStatus());

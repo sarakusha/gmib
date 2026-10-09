@@ -17,6 +17,7 @@ import MediaTab from './MediaTab';
 import PlaylistsTab from './PlaylistsTab';
 import SchedulerTab from './SchedulerTab';
 import SettingsTab from './SettingsTab';
+import StatisticsTab from './StatisticsTab';
 import TabPanel from './TabPanel';
 
 const Main: React.FC<{ className?: string }> = ({ className }) => {
@@ -64,6 +65,11 @@ const Main: React.FC<{ className?: string }> = ({ className }) => {
           <TabPanel value="settings">
             <SettingsTab />
           </TabPanel>
+          {value === 'statistics' && (
+            <TabPanel value="statistics">
+              <StatisticsTab />
+            </TabPanel>
+          )}
         </Box>
       </Box>
     </TabContext>

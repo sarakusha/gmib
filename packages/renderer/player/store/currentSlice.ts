@@ -3,7 +3,7 @@ import { createSlice } from '@reduxjs/toolkit';
 
 import type { SortOrder } from '/@common/mediaInfo';
 
-export const tabNames = ['player', 'media', 'scheduler', 'settings'] as const;
+export const tabNames = ['player', 'media', 'scheduler', 'settings', 'statistics'] as const;
 
 export type TabNames = (typeof tabNames)[number];
 
@@ -24,6 +24,7 @@ export const tabs: Record<TabNames, string> = {
   media: 'Медиатека',
   scheduler: 'Планировщик',
   settings: 'Настройки',
+  statistics: 'Статистика',
 };
 
 const initialState: CurrentState = {

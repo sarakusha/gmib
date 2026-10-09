@@ -1,6 +1,12 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 
 import type { PlaybackSettings, PlaybackStatusSnapshot } from '/@common/playback';
+import type {
+  PlaybackHistory,
+  PlaybackHistoryQuery,
+  PlaybackStatistics,
+  PlaybackStatisticsQuery,
+} from '/@common/playbackStatistics';
 
 import baseQuery from '../../common/authBaseQuery';
 import { isPlaybackStatusSnapshot } from '../playback/playbackStore';
@@ -26,6 +32,12 @@ const playbackApi = createApi({
       query: () => 'playback/settings',
       providesTags: ['PlaybackSettings'],
     }),
+    getPlaybackStatistics: build.query<PlaybackStatistics, PlaybackStatisticsQuery>({
+      query: params => ({ url: 'playback/statistics', params }),
+    }),
+    getPlaybackHistory: build.query<PlaybackHistory, PlaybackHistoryQuery>({
+      query: params => ({ url: 'playback/statistics/history', params }),
+    }),
     updatePlaybackSettings: build.mutation<
       PlaybackSettings,
       Pick<PlaybackSettings, 'logRetentionDays'>
@@ -39,6 +51,8 @@ const playbackApi = createApi({
 export const {
   useGetPlaybackSettingsQuery,
   useGetPlaybackStatusQuery,
+  useGetPlaybackStatisticsQuery,
+  useGetPlaybackHistoryQuery,
   useRetryPlaybackMutation,
   useUpdatePlaybackSettingsMutation,
 } = playbackApi;
