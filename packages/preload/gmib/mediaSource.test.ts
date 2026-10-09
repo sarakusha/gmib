@@ -52,6 +52,7 @@ const flush = async () => {
 };
 
 beforeEach(async () => {
+  vi.useFakeTimers();
   vi.resetModules();
   vi.clearAllMocks();
   mock.listeners.clear();
@@ -64,7 +65,10 @@ beforeEach(async () => {
   vi.stubGlobal('RTCPeerConnection', Peer);
   await import('./mediaSource');
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.useRealTimers();
+});
 
 describe('screen window capture', () => {
   it('keeps native window geometry instead of forcing a 16:9 frame', async () => {
@@ -137,21 +141,47 @@ describe('screen window capture', () => {
     expect(Peer.instances).toHaveLength(1);
   });
 
-  it.each(['closed', 'disconnected', 'failed'])(
-    'releases capture on %s and allows reconnect',
-    async state => {
-      request();
-      await flush();
-      const peer = Peer.instances[0];
-      peer.connectionState = state;
-      peer.onconnectionstatechange?.();
-      expect(stop).toHaveBeenCalledOnce();
-      expect(peer.close).toHaveBeenCalledOnce();
-      request();
-      await flush();
-      expect(mock.capture).toHaveBeenCalledTimes(2);
-    },
-  );
+  it.each(['closed', 'failed'])('releases capture on %s and allows reconnect', async state => {
+    request();
+    await flush();
+    const peer = Peer.instances[0];
+    peer.connectionState = state;
+    peer.onconnectionstatechange?.();
+    expect(stop).toHaveBeenCalledOnce();
+    expect(peer.close).toHaveBeenCalledOnce();
+    request();
+    await flush();
+    expect(mock.capture).toHaveBeenCalledTimes(2);
+  });
+
+  it('retains capture through a short disconnect and releases a sustained loss', async () => {
+    request();
+    await flush();
+    const peer = Peer.instances[0];
+    peer.connectionState = 'disconnected';
+    peer.onconnectionstatechange?.();
+    vi.advanceTimersByTime(9000);
+    expect(stop).not.toHaveBeenCalled();
+    peer.connectionState = 'connected';
+    peer.onconnectionstatechange?.();
+    vi.advanceTimersByTime(2000);
+    expect(stop).not.toHaveBeenCalled();
+    peer.connectionState = 'disconnected';
+    peer.onconnectionstatechange?.();
+    vi.advanceTimersByTime(10000);
+    expect(stop).toHaveBeenCalledOnce();
+  });
+
+  it('releases a capture when the receiver vanishes before answering', async () => {
+    request();
+    await flush();
+    vi.advanceTimersByTime(20000);
+    expect(stop).toHaveBeenCalledOnce();
+    expect(Peer.instances[0].close).toHaveBeenCalledOnce();
+    request();
+    await flush();
+    expect(Peer.instances).toHaveLength(2);
+  });
 
   it('releases capture when negotiation fails', async () => {
     mock.invoke.mockImplementation((name: string) =>

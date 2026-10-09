@@ -189,6 +189,7 @@ const ScreenComponent: React.FC<Props> = ({
   React.useEffect(() => {
     if (isActive) void window.mediaSource.play(scrId);
     else window.mediaSource.close(scrId);
+    return () => window.mediaSource.close(scrId);
   }, [scrId, isActive]);
   return !screen ? null : (
     <Box

@@ -4,17 +4,14 @@ import debounce from 'lodash/debounce';
 import debugFactory from 'debug';
 
 import { host, isRemoteSession, port } from '/@common/remote';
-import type {
-  AnswerMessage,
-  CandidateMessage,
-  OfferMessage,
-  RequestMessage,
-  RtcMessage,
-  WithWebSocketKey,
-} from '/@common/rtc';
+import type { CandidateMessage, OfferMessage, RtcMessage, WithWebSocketKey } from '/@common/rtc';
 import { setOutputHidden } from '/@renderer/store/currentSlice';
 
 import ipcDispatch from '../common/ipcDispatch';
+import {
+  createScreenPreviewConnection,
+  SCREEN_DISCONNECT_GRACE_MS,
+} from './screenPreviewConnection';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:mediaSource`);
 
@@ -85,152 +82,50 @@ const stopPreview = (screenId: number): void => {
 
 export const close = (screenId: number): void => {
   activeScreens.delete(screenId);
+  remotePreviews.get(screenId)?.();
+  remotePreviews.delete(screenId);
   stopPreview(screenId);
 };
 
-let ws: WebSocket;
+const remotePreviews = new Map<number, () => void>();
 
-const openSocket = async (): Promise<void> => {
-  if (!ws || ws.readyState === ws.CLOSED || ws.readyState === ws.CLOSING) {
-    ws = new WebSocket(`ws://${host}:${port + 1}`);
-    return openSocket();
-  }
-  if (ws.readyState === ws.OPEN) return undefined;
-  return new Promise<void>((resolve, reject) => {
-    const release = () => {
-      ws.removeEventListener('open', openHandler);
-
-      ws.removeEventListener('error', errorHandler);
-    };
-    const openHandler = () => {
-      release();
-      resolve();
-    };
-    const errorHandler = () => {
-      release();
-      reject(new Error('WebSocket connection failed'));
-    };
-    ws.addEventListener('open', openHandler);
-    ws.addEventListener('error', errorHandler);
-  });
+const playRemote = (screenId: number): void => {
+  if (remotePreviews.has(screenId)) return;
+  remotePreviews.set(
+    screenId,
+    createScreenPreviewConnection(
+      `ws://${host}:${port + 1}`,
+      screenId,
+      stream => {
+        const video = getVideo(screenId);
+        if (video && activeScreens.has(screenId)) {
+          video.srcObject = stream;
+          void video.play().catch(error => debug(`Screen preview play failed: ${String(error)}`));
+        }
+      },
+      hidden => ipcDispatch(setOutputHidden(hidden)),
+      debug,
+    ),
+  );
 };
 
-const playRemote = debounce((screenId: number) => {
-  // console.log('PLAY REMOTE');
-  if (!ws || ws.readyState === ws.CLOSED) ws = new WebSocket(`ws://${host}:${port + 1}`);
-  let pc = new RTCPeerConnection();
-  const request: RequestMessage = {
-    event: 'request',
-    sourceId: screenId,
-    sourceType: 'screen',
-  };
-  let requestTimeout = 0;
-
-  const requestOffer = () => {
-    if (!activeScreens.has(screenId)) return;
-    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(request));
-    requestTimeout = window.setTimeout(requestOffer, 3000);
-  };
-
-  const connect = async () => {
-    if (!activeScreens.has(screenId)) return;
-    // console.log('CONNECT');
-    pc.onicecandidate = e => {
-      const { candidate } = e;
-      if (!candidate) return;
-      if (ws.readyState === ws.OPEN) {
-        const msg: CandidateMessage = {
-          event: 'candidate',
-          candidate: candidate.toJSON(),
-          sourceId: screenId,
-          sourceType: 'screen',
-        };
-        ws.send(JSON.stringify(msg));
-      }
-    };
-
-    pc.ontrack = e => {
-      const video = getVideo(screenId);
-      // console.log('VIDEO', video);
-      if (video) {
-        [video.srcObject] = e.streams;
-        video.onloadedmetadata = () => video.play();
-      }
-      // deferred.resolve(e.streams[0]);
-    };
-    pc.onconnectionstatechange = () => {
-      debug(`RTC connection: ${pc.connectionState}`);
-      if (['disconnected', 'failed'].includes(pc.connectionState)) {
-        debug('try reconnect');
-
-        window.clearTimeout(requestTimeout);
-        pc.close();
-        pc = new RTCPeerConnection();
-        setTimeout(() => {
-          void connect();
-        }, 3000);
-      }
-    };
-    // console.log('WAIT CONNECT');
-    await openSocket();
-    // console.log('SEND REQUEST');
-    requestOffer();
-  };
-
-  ws.onmessage = async ev => {
-    try {
-      const data = typeof ev.data === 'string' ? ev.data : String(ev.data);
-      const msg = JSON.parse(data) as RtcMessage;
-      // console.log({ msg, screenId });
-      switch (msg.event) {
-        case 'candidate':
-          if (msg.sourceId === screenId && 'candidate' in msg) {
-            await pc.addIceCandidate(msg.candidate ?? undefined);
-          }
-          break;
-        case 'offer':
-          if (msg.sourceId === screenId && activeScreens.has(screenId)) {
-            window.clearTimeout(requestTimeout);
-            await pc.setRemoteDescription(msg.desc);
-            const answer: AnswerMessage = {
-              event: 'answer',
-              desc: await pc.createAnswer(),
-              sourceId: screenId,
-              sourceType: 'screen',
-            };
-            await pc.setLocalDescription(answer.desc);
-            // console.log('ANSWER');
-            ws.send(JSON.stringify(answer));
-          }
-          break;
-        case 'displayTopologyChanged':
-          if (!activeScreens.has(screenId)) break;
-          window.clearTimeout(requestTimeout);
-          pc.close();
-          pc = new RTCPeerConnection();
-          void connect();
-          break;
-        case 'outputVisibility':
-          ipcDispatch(setOutputHidden(msg.hidden));
-          break;
-        default:
-          // console.warn(`Unknown msg: ${msg}`);
-          break;
-      }
-    } catch (e) {
-      debug(`error while parse websocket message: ${(e as Error).message}`);
-    }
-  };
-  void connect();
-}, 500);
-
 if (!isRemoteSession) {
-  const peers = new Map<string, { pc: RTCPeerConnection; stream: MediaStream }>();
+  const peers = new Map<
+    string,
+    {
+      pc: RTCPeerConnection;
+      stream: MediaStream;
+      disconnectTimer?: ReturnType<typeof setTimeout>;
+      negotiationTimer?: ReturnType<typeof setTimeout>;
+    }
+  >();
   const pendingPeers = new Set<string>();
   const releasePeer = (id: string, expected?: RTCPeerConnection): void => {
     const entry = peers.get(id);
     if (!entry || (expected && entry.pc !== expected)) return;
     peers.delete(id);
+    clearTimeout(entry.disconnectTimer);
+    clearTimeout(entry.negotiationTimer);
     entry.pc.close();
     entry.stream.getTracks().forEach(track => track.stop());
   };
@@ -254,16 +149,34 @@ if (!isRemoteSession) {
               if (!stream) return;
               const capturedStream = stream;
               const pc = new RTCPeerConnection();
-              peers.set(id, { pc, stream });
+              peers.set(id, {
+                pc,
+                stream,
+                // A receiver can vanish before sending an answer, leaving ICE in `new`.
+                negotiationTimer: setTimeout(() => releasePeer(id, pc), 20000),
+              });
 
               pc.onconnectionstatechange = () => {
-                if (['closed', 'disconnected', 'failed'].includes(pc.connectionState))
+                const entry = peers.get(id);
+                if (!entry || entry.pc !== pc) return;
+                if (pc.connectionState === 'disconnected') {
+                  entry.disconnectTimer ??= setTimeout(
+                    () => releasePeer(id, pc),
+                    SCREEN_DISCONNECT_GRACE_MS,
+                  );
+                } else if (['closed', 'failed'].includes(pc.connectionState)) {
                   releasePeer(id, pc);
+                } else if (pc.connectionState === 'connected') {
+                  clearTimeout(entry.negotiationTimer);
+                  entry.negotiationTimer = undefined;
+                  clearTimeout(entry.disconnectTimer);
+                  entry.disconnectTimer = undefined;
+                }
               };
 
               pc.onicecandidate = e => {
                 const { candidate } = e;
-                if (!candidate) return;
+                if (!candidate || peers.get(id)?.pc !== pc) return;
                 const candidateMsg: WithWebSocketKey<CandidateMessage> = {
                   id,
                   event: 'candidate',
@@ -271,13 +184,16 @@ if (!isRemoteSession) {
                   sourceId: msg.sourceId,
                   sourceType: 'screen',
                 };
-                void ipcRenderer.invoke('socket', candidateMsg);
+                void ipcRenderer
+                  .invoke('socket', candidateMsg)
+                  .catch(error => debug(String(error)));
               };
               for (const track of capturedStream.getVideoTracks()) {
                 pc.addTrack(track, capturedStream);
               }
 
               const offer = await pc.createOffer();
+              if (peers.get(id)?.pc !== pc) return;
               const offerMsg: WithWebSocketKey<OfferMessage> = {
                 id,
                 event: 'offer',
@@ -286,6 +202,7 @@ if (!isRemoteSession) {
                 sourceType: 'screen',
               };
               await pc.setLocalDescription(offer);
+              if (peers.get(id)?.pc !== pc) return;
               await Promise.all(
                 pc.getSenders().map(async sender => {
                   const params = sender.getParameters();
@@ -297,6 +214,7 @@ if (!isRemoteSession) {
                   });
                 }),
               );
+              if (peers.get(id)?.pc !== pc) return;
               await ipcRenderer.invoke('socket', offerMsg);
             } catch (e) {
               const ownsStream = peers.has(id);
@@ -325,7 +243,7 @@ if (!isRemoteSession) {
         default:
           debug(`Unknown event: ${msg.event}`);
       }
-    })();
+    })().catch(error => debug(`Screen preview signaling failed: ${String(error)}`));
   });
 }
 
