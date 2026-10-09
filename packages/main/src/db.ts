@@ -24,6 +24,13 @@ const dbPath = path.join(app.getPath('userData'), 'db.sqlite3');
 const db = new Database(dbPath, createTables);
 const pendingOperations = new Set<Promise<unknown>>();
 
+const beforeCloseCallbacks = new Set<() => void | Promise<void>>();
+
+/** Stop producers and finish their current work before draining SQL statements. */
+export const onBeforeDatabaseClose = (callback: () => void | Promise<void>): void => {
+  beforeCloseCallbacks.add(callback);
+};
+
 let closePromise: Promise<void> | undefined;
 let isQuitting = false;
 let isClosed = false;
@@ -66,6 +73,7 @@ const useStatement = <T>(statement: Statement, operation: Promise<T>): Promise<T
   trackOperation(operation.finally(() => finalizeStatement(statement)));
 
 const closeDatabaseImpl = async (): Promise<void> => {
+  await Promise.all([...beforeCloseCallbacks].map(async callback => callback()));
   while (pendingOperations.size > 0) {
     await Promise.allSettled([...pendingOperations]);
   }
@@ -81,8 +89,10 @@ const closeDatabaseImpl = async (): Promise<void> => {
 export const closeDatabase = (): Promise<void> => (closePromise ??= closeDatabaseImpl());
 
 const quitHandler = (event: Event): void => {
-  if (isClosed || isQuitting) return;
+  if (isClosed) return;
   event.preventDefault();
+  // Other async shutdown handlers can call app.quit again before SQL work finishes.
+  if (isQuitting) return;
   isQuitting = true;
   void closeDatabase()
     .catch(error => debug(`error while close database: ${error}`))

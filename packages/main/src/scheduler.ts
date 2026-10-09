@@ -1,10 +1,12 @@
+import debugFactory from 'debug';
+
 import type { GmibSchedulerJob, PlayerSchedulerJob, SchedulerJobBase } from '/@common/scheduler';
 import { getRunKey, matchesCron } from '/@common/scheduler';
 
-import { dbReady } from './db';
+import { dbReady, onBeforeDatabaseClose } from './db';
 import { executeGmibSchedulerJob } from './gmibScheduler';
 import { executePlayerSchedulerJob } from './playerScheduler';
-import { enqueueSchedulerJob } from './schedulerQueue';
+import { enqueueSchedulerJob, stopSchedulerQueue } from './schedulerQueue';
 import { compareSchedulerOrder } from './schedulerOrder';
 import { getStoredGmibSchedulerJobs, getStoredPlayerSchedulerJobs } from './schedulerStore';
 
@@ -31,6 +33,7 @@ const executeDueJobs = async (): Promise<void> => {
     getStoredGmibSchedulerJobs(),
     getStoredPlayerSchedulerJobs(),
   ]);
+  if (stopped) return;
   const dueJobs: DueJob[] = [];
 
   for (const job of gmibJobs) {
@@ -68,24 +71,49 @@ const executeDueJobs = async (): Promise<void> => {
   }
 };
 
+const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:scheduler`);
 let timer: NodeJS.Timeout | undefined;
-let checking = false;
+let checking: Promise<void> | undefined;
+let started = false;
+let stopped = false;
 const queuedOccurrences = new Set<string>();
 
-const checkDueJobs = async (): Promise<void> => {
-  if (checking) return;
-  checking = true;
-  try {
-    await executeDueJobs();
-  } finally {
-    checking = false;
-  }
+const checkDueJobs = (): Promise<void> => {
+  if (checking) return checking;
+  if (stopped) return Promise.resolve();
+  checking = executeDueJobs()
+    .catch(error => {
+      debug(
+        `Failed to check scheduled jobs: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    })
+    .finally(() => {
+      checking = undefined;
+    });
+  return checking;
 };
 
+export const stopScheduler = async (): Promise<void> => {
+  stopped = true;
+  if (timer) clearInterval(timer);
+  timer = undefined;
+  // Reject queued jobs immediately; a running job may still need to write its result.
+  await Promise.all([checking, stopSchedulerQueue()]);
+};
+
+onBeforeDatabaseClose(stopScheduler);
+
 export const startScheduler = (): void => {
-  if (timer) return;
-  void dbReady.then(() => {
-    timer = setInterval(() => void checkDueJobs(), 1000);
-    void checkDueJobs();
-  });
+  if (started || stopped) return;
+  started = true;
+  void dbReady
+    .then(() => {
+      if (stopped) return;
+      timer = setInterval(() => void checkDueJobs(), 1000);
+      timer.unref();
+      void checkDueJobs();
+    })
+    .catch(error => {
+      debug(`Failed to start scheduler: ${error instanceof Error ? error.message : String(error)}`);
+    });
 };
