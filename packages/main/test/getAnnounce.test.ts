@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   authRequest: vi.fn(),
@@ -24,6 +24,7 @@ import getAnnounce from '../src/getAnnounce';
 // cspell:ignore Dejli Vgvtzts
 
 describe('getAnnounce remote compatibility', () => {
+  afterEach(() => vi.useRealTimers());
   beforeEach(() => {
     mocks.authRequest.mockReset();
     mocks.decodeLegacyLicense.mockReset();
@@ -258,6 +259,9 @@ describe('getAnnounce remote compatibility', () => {
   });
 
   it('does not use an active signed presentation without a verified host session', async () => {
+    // Exercise session rejection while this fixture is valid, regardless of the run date.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-16T00:00:00.000Z'));
     const deviceId = '1'.repeat(64);
     mocks.verifyLicenseSessionAssertion.mockReturnValue(false);
     mocks.verifyLicense.mockReturnValue({
