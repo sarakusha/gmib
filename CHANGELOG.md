@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [5.6.3](https://github.com/sarakusha/gmib/compare/v5.6.2...v5.6.3) (2026-10-09)
+
+### Features
+
+* account for output health in playback statistics ([ee5f24e](https://github.com/sarakusha/gmib/commit/ee5f24ee1e0ed6a28f26c8583e7dc2b8bcad1e0f))
+* add playback statistics reports and history ([6177f65](https://github.com/sarakusha/gmib/commit/6177f6532051b18d9f4f367f8bf03718827e28f2))
+* record detailed playback lifecycle and active intervals ([77dfa21](https://github.com/sarakusha/gmib/commit/77dfa2121742c3bf6bb76b510f1a81f742b66cce))
+* record playback output health evidence ([65e0b6b](https://github.com/sarakusha/gmib/commit/65e0b6b67962bce1691023c32f32f6f06b0cf576))
+
+### Bug Fixes
+
+* balance remote preview resolution and framerate ([14eba3a](https://github.com/sarakusha/gmib/commit/14eba3aeb65d2cf7267f43b8fa2e2fa442731427))
+* gate remote playback features by host version ([7a46c76](https://github.com/sarakusha/gmib/commit/7a46c76f34b2e8d4343aa0d289d183a233d62bc0))
+* prevent false playback failures and retry temporary quarantine ([2c2fd80](https://github.com/sarakusha/gmib/commit/2c2fd80a276f3d452fba9dec135d7fddcf732d3c))
+* serialize Electron dev startup and restarts ([4841c9d](https://github.com/sarakusha/gmib/commit/4841c9ddd5b66725ac0a519029608191a247519c))
+* stop scheduler before closing database ([6e53a10](https://github.com/sarakusha/gmib/commit/6e53a10520365915bbc91540c38c7a1f205beabc))
 ## [5.6.1](https://github.com/sarakusha/gmib/compare/v5.6.0...v5.6.1) (2026-09-21)
 
 ### Features

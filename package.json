@@ -1,6 +1,6 @@
 {
   "name": "gmib",
-  "version": "5.6.3-playback.1",
+  "version": "5.6.3",
   "description": "Nata-Info gmib tool",
   "private": true,
   "engines": {
