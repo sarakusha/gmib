@@ -25,6 +25,7 @@ const Main: React.FC<{ className?: string }> = ({ className }) => {
   const dispatch = useDispatch();
   const isSchedulerSupported = supportsFeature('playerScheduler', version, isRemoteSession);
   const isStatisticsSupported = supportsFeature('playbackStatistics', version, isRemoteSession);
+  const [statisticsOpened, setStatisticsOpened] = React.useState(value === 'statistics');
   const visibleTabNames = React.useMemo(
     () =>
       tabNames.filter(
@@ -40,6 +41,9 @@ const Main: React.FC<{ className?: string }> = ({ className }) => {
   React.useEffect(() => {
     if (!visibleTabNames.some(name => name === value)) dispatch(setCurrentTab('player'));
   }, [dispatch, visibleTabNames, value]);
+  React.useEffect(() => {
+    if (isStatisticsSupported && value === 'statistics') setStatisticsOpened(true);
+  }, [isStatisticsSupported, value]);
   return (
     <TabContext value={value}>
       <Box sx={{ width: 1, height: 1, display: 'flex', flexDirection: 'column' }}>
@@ -71,7 +75,7 @@ const Main: React.FC<{ className?: string }> = ({ className }) => {
           <TabPanel value="settings">
             <SettingsTab />
           </TabPanel>
-          {isStatisticsSupported && value === 'statistics' && (
+          {isStatisticsSupported && statisticsOpened && (
             <TabPanel value="statistics">
               <StatisticsTab />
             </TabPanel>
