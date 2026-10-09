@@ -38,6 +38,7 @@ import {
   statisticsCsv,
 } from './statisticsHelpers';
 import type { StatisticsPreset } from './statisticsHelpers';
+import PlaybackHistoryItem from './PlaybackHistoryItem';
 
 import {
   PLAYBACK_HISTORY_MAX_OFFSET,
@@ -75,40 +76,6 @@ const instantLabel = (value: string, timeZone: string) =>
   new Date(value).toLocaleString('ru-RU', { timeZone });
 const instantRangeLabel = (range: PlaybackStatisticsRange, timeZone: string) =>
   `${instantLabel(range.from, timeZone)} — ${instantLabel(range.to, timeZone)}`;
-const outcomeLabels = {
-  completed: 'источник завершён',
-  error: 'ошибка',
-  interrupted: 'прервано',
-  pending: 'не завершено',
-} as const;
-const eventLabels: Record<string, string> = {
-  started: 'запуск',
-  completed: 'завершение',
-  error: 'ошибка',
-  quarantined: 'отключено после ошибок',
-  recovered: 'восстановлено',
-  progress: 'воспроизведение',
-  paused: 'пауза',
-  seeked: 'перемотка',
-  'details-truncated': 'детализация сокращена',
-  resumed: 'возобновление',
-  interrupted: 'прервано',
-  skipped: 'пропущено',
-  'output-changed': 'состояние выхода изменилось',
-};
-const resultLabels = {
-  confirmed: 'вывод подтверждён',
-  partial: 'вывод частичный',
-  unconfirmed: 'вывод не подтверждён',
-} as const;
-const reasonLabels: Record<string, string> = {
-  'engine-changed': 'смена движка',
-  'item-changed': 'смена ролика',
-  'playback-error': 'ошибка воспроизведения',
-  'playlist-changed': 'смена плейлиста',
-  'source-replaced': 'источник заменён',
-  stopped: 'остановка',
-};
 const status = (error: unknown): number | string | undefined =>
   (error as FetchBaseQueryError | undefined)?.status;
 
@@ -313,8 +280,12 @@ const StatisticsTab: React.FC = () => {
             </Typography>
             {data.clipped && (
               <Alert severity="info" sx={{ mt: 1 }}>
-                Часть периода вне доступного журнала. Показан интервал{' '}
-                {data.effective ? instantRangeLabel(data.effective, data.timeZone) : 'без записей'}.
+                Часть периода вне доступного журнала.
+                {data.effective &&
+                (data.effective.from !== data.available?.from ||
+                  data.effective.to !== data.available?.to)
+                  ? ` Показан интервал ${instantRangeLabel(data.effective, data.timeZone)}.`
+                  : ''}
               </Alert>
             )}
           </Paper>
@@ -546,61 +517,7 @@ const StatisticsTab: React.FC = () => {
           )}
           {historyData?.entries.length === 0 && <Typography>Записей нет.</Typography>}
           {historyData?.entries.map(entry => (
-            <Paper variant="outlined" key={entry.playbackId} sx={{ p: 1.5, mb: 1 }}>
-              <Typography variant="body2">
-                {new Date(entry.startedAt ?? entry.timestamp).toLocaleString('ru-RU', {
-                  timeZone: data?.timeZone,
-                })}{' '}
-                · {outcomeLabels[entry.outcome]}
-                {' · '}время (общее / исправное):{' '}
-                {formatDurationPair(entry.playedMs, entry.successfulMs)}
-                {entry.outcome === 'completed'
-                  ? ` · ${entry.outputResult && entry.events.some(event => event.output) ? resultLabels[entry.outputResult.status] : 'вывод не подтверждён'}`
-                  : ''}
-                {entry.skipped ? ' · пропуск' : ''}
-              </Typography>
-              {entry.outputResult?.outputs.map(output => (
-                <Typography
-                  key={output.id}
-                  title={outputDetails(output)}
-                  variant="caption"
-                  sx={{ display: 'block' }}
-                >
-                  {outputName(output)} · {resultLabels[output.status]}
-                  {output.reasons.length
-                    ? ` · ${output.reasons.map(reason => outputStateLabels[reason]).join(', ')}`
-                    : ''}
-                </Typography>
-              ))}
-              {entry.outputResult &&
-                entry.outputResult.outputs.length === 0 &&
-                entry.events.some(event => event.output) && (
-                  <Typography variant="caption" sx={{ display: 'block' }}>
-                    выходы не настроены
-                  </Typography>
-                )}
-              {entry.events.map((event, index) => (
-                <Typography
-                  key={`${event.timestamp}-${index}`}
-                  variant="caption"
-                  sx={{ display: 'block' }}
-                  color="text.secondary"
-                  title={event.output?.outputs.map(outputDetails).join(' ')}
-                >
-                  {new Date(event.timestamp).toLocaleTimeString('ru-RU', {
-                    timeZone: data?.timeZone,
-                  })}{' '}
-                  · {eventLabels[event.event] ?? 'другое событие'}
-                  {event.reason ? ` · ${reasonLabels[event.reason] ?? event.reason}` : ''}
-                  {event.error ? ` · ${event.error}` : ''}
-                  {event.output
-                    ? event.output.outputs.length
-                      ? ` · ${event.output.outputs.map(output => `${outputName(output)}: ${outputStateLabels[output.state]}`).join('; ')}`
-                      : ' · выходы не настроены'
-                    : ''}
-                </Typography>
-              ))}
-            </Paper>
+            <PlaybackHistoryItem key={entry.playbackId} entry={entry} timeZone={data?.timeZone} />
           ))}
         </DialogContent>
         {historyData && historyData.total > PLAYBACK_HISTORY_MAX_OFFSET + 20 && (

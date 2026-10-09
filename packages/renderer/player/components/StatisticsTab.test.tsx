@@ -118,6 +118,24 @@ describe('StatisticsTab', () => {
     expect(html).not.toContain('promo.mp4');
   });
 
+  it('does not repeat boundaries when all available history is included', () => {
+    statisticsQuery.mockReturnValue({ currentData: { ...data, effective: data.available } });
+    const html = renderToStaticMarkup(<StatisticsTab />);
+    expect(html).toContain('Часть периода вне доступного журнала');
+    expect(html).not.toContain('Показан интервал');
+  });
+
+  it('retains actual boundaries when only part of the available history is included', () => {
+    statisticsQuery.mockReturnValue({
+      currentData: {
+        ...data,
+        effective: { ...data.effective!, from: '2026-10-08T21:00:00Z' },
+      },
+    });
+    const html = renderToStaticMarkup(<StatisticsTab />);
+    expect(html).toContain('Показан интервал 09.10.2026, 00:00:00');
+  });
+
   it('reports incomplete attempts without obsolete file parsing counters', () => {
     statisticsQuery.mockReturnValue({
       currentData: { ...data, quality: { ...data.quality, incompleteAttempts: 2 } },
