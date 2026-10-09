@@ -52,9 +52,7 @@ const AutoFillName = ({ fallbackName }: { fallbackName?: string }) => {
       .then(deviceName => {
         const name = normalizeDeviceName(deviceName || fallbackName);
         if (name) {
-          void setValues(current =>
-            current.name.trim() ? current : { ...current, name },
-          );
+          void setValues(current => (current.name.trim() ? current : { ...current, name }));
         }
       })
       .catch(() => undefined);
