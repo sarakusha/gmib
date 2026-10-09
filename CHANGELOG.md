@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [5.6.5](https://github.com/sarakusha/gmib/compare/v5.6.4...v5.6.5) (2026-10-09)
+
+### Features
+
+* store and calculate playback statistics in SQLite ([df75e71](https://github.com/sarakusha/gmib/commit/df75e71460c269354f896445e98b41e97f401b41))
 ## [5.6.4](https://github.com/sarakusha/gmib/compare/v5.6.3...v5.6.4) (2026-10-09)
 
 ### Bug Fixes
