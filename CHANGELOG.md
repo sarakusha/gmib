@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [5.6.4](https://github.com/sarakusha/gmib/compare/v5.6.3...v5.6.4) (2026-10-09)
+
+### Bug Fixes
+
+* accept native display identifiers in playback logs ([87ac43d](https://github.com/sarakusha/gmib/commit/87ac43df15cdde3f21918bc4016e9168928b7f90))
+* preserve playback statistics across tab switches ([b49f0ff](https://github.com/sarakusha/gmib/commit/b49f0ff264ea558e80de455fdcfc3a4cad1983d4))
+* show connection progress and debounce heartbeat dimming ([4bcfd11](https://github.com/sarakusha/gmib/commit/4bcfd11378f4338aab364582dc4f0743eb6c4b75))
+* stabilize remote screen preview connections ([2eda00c](https://github.com/sarakusha/gmib/commit/2eda00c1c16f65d4c0ce1fab95144c4e304ddfe7))
 ## [5.6.3](https://github.com/sarakusha/gmib/compare/v5.6.2...v5.6.3) (2026-10-09)
 
 ### Features
