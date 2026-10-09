@@ -898,7 +898,10 @@ const addTrackSender = (pc: RTCPeerConnection, kind: TrackKind): RTCRtpSender =>
     if (!params.encodings || params.encodings.length === 0) setTimeout(updateParams, 10);
     else {
       params.encodings[0].maxBitrate = PREVIEW_MAX_BITRATE;
-      if (kind === 'video') params.encodings[0].maxFramerate = PREVIEW_MAX_FRAMERATE;
+      if (kind === 'video') {
+        params.encodings[0].maxFramerate = PREVIEW_MAX_FRAMERATE;
+        params.degradationPreference = 'balanced';
+      }
       void sender.setParameters(params).catch(err => {
         debug(`error while setting ${kind} preview encoding params: ${(err as Error).message}`);
       });

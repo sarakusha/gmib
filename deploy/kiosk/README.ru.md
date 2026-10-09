@@ -43,23 +43,6 @@ Zabbix устанавливается выключенным и замаскир
 e907d92eeec9df64163a7e454cbc8d7755e8ddc7ed42f99dbc80c40f1a138433
 ```
 
-На Ubuntu установите инструменты командой `sudo apt-get install xorriso`. Пакет Pritunl можно
-скачать на машине Ubuntu amd64, не меняя её постоянную APT-конфигурацию:
-
-```bash
-deploy/kiosk/download-pritunl-client-deb.sh dist
-deploy/kiosk/download-zabbix-agent2-deb.sh dist
-```
-
-На macOS инструменты сборки можно установить через Homebrew:
-
-```bash
-brew install xorriso dpkg coreutils openssl@3
-```
-
-Скрипт загрузки Pritunl предназначен для Ubuntu amd64, но полученный `.deb` можно затем перенести на
-Mac и использовать при сборке ISO.
-
 ## Быстрый выпуск образа на app-server
 
 На настроенном сервере вся обычная процедура сводится к обновлению репозитория и одному запуску:
@@ -74,7 +57,7 @@ deploy/kiosk/build-and-publish-on-server.sh --replace-current
 
 - определяет версию GMIB из `package.json`;
 - скачивает соответствующий AppImage с GitHub и проверяет SHA-256;
-- использует сохранённые Ubuntu ISO, Pritunl Client и публичный SSH-ключ;
+- использует сохранённые Ubuntu ISO, Pritunl Client, Zabbix Agent 2 и публичный SSH-ключ;
 - собирает, публикует и проверяет новый образ.
 
 Старый GMIB-kiosk удаляется только при нехватке места и только после проверки входных файлов.
@@ -93,10 +76,68 @@ git clone https://github.com/sarakusha/gmib.git /home/user/appliance-build/gmib-
 `ubuntu-24.04.4-live-server-amd64.iso`, `pritunl-client.deb`, `zabbix-agent2.deb` и
 `id_ed25519.pub`. Helper Zabbix по умолчанию фиксирует проверенную версию
 `1:7.4.14-1+ubuntu24.04` и проверяет подпись официального APT-репозитория.
+Сборщик проверяет наличие и корректность этих файлов до возможного удаления старого образа.
+
+### Обновление Pritunl Client или Zabbix Agent 2 на сервере
+
+Обновляйте пакет отдельно от обычного выпуска GMIB. Выполните **один** из двух helper-скриптов
+на Ubuntu amd64 в корне серверной копии репозитория. Они скачивают подписанный APT-пакет в новый
+временный каталог; постоянный кэш сборщика пока не меняется:
+
+```bash
+cd /home/user/appliance-build/gmib-repo
+stage=$(mktemp -d /home/user/appliance-build/package-update.XXXXXX)
+deploy/kiosk/download-pritunl-client-deb.sh "$stage"
+# Вместо предыдущей команды для Zabbix:
+# ZABBIX_AGENT2_VERSION='<проверенная точная версия 1:7.4.x-1+ubuntu24.04>' \
+#   deploy/kiosk/download-zabbix-agent2-deb.sh "$stage"
+```
+
+Pritunl helper без `PRITUNL_CLIENT_VERSION` выбирает последнюю доступную версию из своего репозитория;
+для заранее выбранной версии задайте эту переменную. Zabbix helper без
+`ZABBIX_AGENT2_VERSION` повторно скачает закреплённую `1:7.4.14-1+ubuntu24.04`, поэтому для
+обновления задайте проверенную точную версию.
+
+Проверьте единственный скачанный `.deb`, его контрольную сумму, имя пакета, версию и архитектуру:
+
+```bash
+deb=$(find "$stage" -maxdepth 1 -type f -name '*.deb' -print -quit)
+test -n "$deb" || exit 1
+sha256sum -c "$deb.sha256" || exit 1
+dpkg-deb --field "$deb" Package Version Architecture
+```
+
+Если вывод соответствует выбранному пакету и версии, сохраните прежний кэш и атомарно замените
+именно этот пакет. Новый образ затем собирается обычной командой выше:
+
+```bash
+package=$(dpkg-deb --field "$deb" Package)
+case "$package" in pritunl-client|zabbix-agent2) ;; *) echo 'Unexpected package' >&2; exit 1;; esac
+cached="/home/user/appliance-build/input/$package.deb"
+cp -p "$cached" "$cached.$(date -u +%Y%m%dT%H%M%SZ).bak" || exit 1
+install -m 0644 "$deb" "$cached.new" || exit 1
+mv -f "$cached.new" "$cached"
+```
+
+Замена кэша влияет только на следующие сборки образа; уже опубликованные ISO и установленные
+киоски не меняются. Сохраните каталог `stage` до проверки нового ISO.
 
 ## Ручная сборка на рабочей машине
 
-Запускайте команду из корня репозитория GMIB. Пример с текущими локальными файлами:
+На Ubuntu установите инструменты командой `sudo apt-get install xorriso`. При необходимости
+скачайте `.deb` helper-скриптами выше в отдельный каталог и передайте их пути через
+`--pritunl-deb` и `--zabbix-agent2-deb`. Helper-скрипты не меняют постоянную APT-конфигурацию.
+
+На macOS инструменты сборки можно установить через Homebrew:
+
+```bash
+brew install xorriso dpkg coreutils openssl@3
+```
+
+Скрипт загрузки Pritunl предназначен для Ubuntu amd64, но полученный `.deb` можно затем перенести на
+Mac и использовать при сборке ISO.
+
+Запускайте команду из корня репозитория GMIB. Пример для версии 5.6.1:
 
 ```bash
 deploy/kiosk/build-autoinstall-iso.sh \

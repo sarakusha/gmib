@@ -498,7 +498,7 @@ const ScreenComponent: React.FC<Props> = ({
           css={{
             width: '100%',
             height: '100%',
-            objectFit: 'cover',
+            objectFit: 'contain',
             backgroundColor: 'black',
             visibility: screen.test ? 'visible' : 'hidden',
           }}

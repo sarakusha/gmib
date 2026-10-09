@@ -45,6 +45,53 @@ The flag is required only on a small disk. It permits the script to unpublish th
 kiosk image when there is not enough room to build both versions side by side. It never removes the
 cached Ubuntu ISO or a GGS image. The one-time server preparation and input filenames are documented
 in [`README.ru.md`](README.ru.md#быстрый-выпуск-образа-на-app-server).
+The server build reuses `/home/user/appliance-build/input/pritunl-client.deb` and
+`/home/user/appliance-build/input/zabbix-agent2.deb`. The build validates them before it may remove
+the old image. Downloading a package into another directory does not update this cache.
+
+### Updating Pritunl Client or Zabbix Agent 2 on the server
+
+Update one package at a time, separately from a normal GMIB release. From the server clone on
+Ubuntu amd64, run **one** helper into a fresh staging directory. Neither helper changes the
+builder's cached input yet:
+
+```bash
+cd /home/user/appliance-build/gmib-repo
+stage=$(mktemp -d /home/user/appliance-build/package-update.XXXXXX)
+deploy/kiosk/download-pritunl-client-deb.sh "$stage"
+# Instead of the preceding command for Zabbix:
+# ZABBIX_AGENT2_VERSION='<reviewed exact 1:7.4.x-1+ubuntu24.04 version>' \
+#   deploy/kiosk/download-zabbix-agent2-deb.sh "$stage"
+```
+
+Without `PRITUNL_CLIENT_VERSION`, the Pritunl helper selects the latest available package from its
+repository; set that variable to pin a reviewed version. Without `ZABBIX_AGENT2_VERSION`, the Zabbix
+helper downloads the existing `1:7.4.14-1+ubuntu24.04` pin again, so set an exact reviewed version
+for an update.
+
+Inspect the single downloaded `.deb`, its checksum, package name, version, and architecture:
+
+```bash
+deb=$(find "$stage" -maxdepth 1 -type f -name '*.deb' -print -quit)
+test -n "$deb" || exit 1
+sha256sum -c "$deb.sha256" || exit 1
+dpkg-deb --field "$deb" Package Version Architecture
+```
+
+After reviewing the output, back up and atomically replace only the selected cached package. Then
+run the normal image build above:
+
+```bash
+package=$(dpkg-deb --field "$deb" Package)
+case "$package" in pritunl-client|zabbix-agent2) ;; *) echo 'Unexpected package' >&2; exit 1;; esac
+cached="/home/user/appliance-build/input/$package.deb"
+cp -p "$cached" "$cached.$(date -u +%Y%m%dT%H%M%SZ).bak" || exit 1
+install -m 0644 "$deb" "$cached.new" || exit 1
+mv -f "$cached.new" "$cached"
+```
+
+Replacing the cache affects future image builds only; published ISOs and installed kiosks stay as
+they are. Retain the `stage` directory until the new ISO has been verified.
 
 ## Security model
 
@@ -129,25 +176,9 @@ Build the x86_64 AppImage in the manual `Release` workflow with `dry-run` enable
 set to `linux`. Download the `gmib-linux-x64-*` artifact. The x64 job deliberately runs on Ubuntu
 22.04 so native modules remain compatible with Ubuntu 22.04 and 24.04 targets.
 
-Download and pin the amd64 `pritunl-client` Debian package from the official Pritunl Noble
-repository on an Ubuntu builder. This helper uses an isolated temporary APT configuration and does
-not add the repository to the builder permanently:
-
-```bash
-deploy/kiosk/download-pritunl-client-deb.sh dist
-```
-
-Set `PRITUNL_CLIENT_VERSION` to an exact APT version when reproducing an older image. The helper
-writes the package SHA-256 next to the Debian file.
-
-Download the pinned official Zabbix Agent 2 7.4 package from Zabbix's signed Noble repository. The
-reviewed default is `1:7.4.14-1+ubuntu24.04`:
-
-```bash
-deploy/kiosk/download-zabbix-agent2-deb.sh dist
-```
-
-Both helpers use isolated APT state and do not add repositories to the builder.
+For a manual build, obtain the amd64 Pritunl Client and Zabbix Agent 2 Debian packages on Ubuntu
+using the helpers described above and pass their paths as `--pritunl-deb` and `--zabbix-agent2-deb`.
+The helpers use isolated APT state and do not add repositories to the builder permanently.
 
 Then build the installation ISO on Linux or macOS. On Ubuntu install `xorriso`; on macOS install
 `xorriso`, `dpkg`, GNU coreutils, and OpenSSL 3 with Homebrew:

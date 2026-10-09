@@ -39,13 +39,11 @@ const createStream = async (sourceId?: string): Promise<MediaStream | undefined>
       return await navigator.mediaDevices.getUserMedia({
         audio: false,
         video: {
+          // Capture the whole window at its source aspect ratio. Fixed min/max dimensions
+          // force Chromium to letterbox narrow outputs into an unrelated frame size.
           mandatory: {
             chromeMediaSource: 'desktop',
             chromeMediaSourceId: sourceId,
-            minWidth: 1280,
-            maxWidth: 1280,
-            minHeight: 720,
-            maxHeight: 720,
           },
         },
       });
@@ -227,76 +225,99 @@ const playRemote = debounce((screenId: number) => {
 }, 500);
 
 if (!isRemoteSession) {
-  const peers = new Map<string, RTCPeerConnection>();
+  const peers = new Map<string, { pc: RTCPeerConnection; stream: MediaStream }>();
+  const pendingPeers = new Set<string>();
+  const releasePeer = (id: string, expected?: RTCPeerConnection): void => {
+    const entry = peers.get(id);
+    if (!entry || (expected && entry.pc !== expected)) return;
+    peers.delete(id);
+    entry.pc.close();
+    entry.stream.getTracks().forEach(track => track.stop());
+  };
   // console.log('LISTEN SOCKET');
   ipcRenderer.on('socket', (_, { id, ...msg }: WithWebSocketKey<RtcMessage>) => {
     void (async () => {
       // console.log({ socket: msg });
       // if (msg.sourceId !== sourceId) return;
       if (msg.event === 'outputVisibility' || msg.event === 'displayTopologyChanged') return;
-      const stream = await createStream(await getMediaSourceId(msg.sourceId));
-      if (!stream) return;
       switch (msg.event) {
         case 'request':
-          try {
-            const pc = new RTCPeerConnection();
-            peers.set(id, pc);
+          // Signaling messages reuse this capture; only a new peer needs a new stream.
+          if (pendingPeers.has(id)) return;
+          {
+            // A request starts a fresh negotiation, including screen switches/reconnects.
+            releasePeer(id);
+            pendingPeers.add(id);
+            let stream: MediaStream | undefined;
+            try {
+              stream = await createStream(await getMediaSourceId(msg.sourceId));
+              if (!stream) return;
+              const capturedStream = stream;
+              const pc = new RTCPeerConnection();
+              peers.set(id, { pc, stream });
 
-            pc.onconnectionstatechange = () => {
-              if (['closed', 'failed'].includes(pc.connectionState)) peers.delete(id);
-            };
+              pc.onconnectionstatechange = () => {
+                if (['closed', 'disconnected', 'failed'].includes(pc.connectionState))
+                  releasePeer(id, pc);
+              };
 
-            pc.onicecandidate = e => {
-              const { candidate } = e;
-              if (!candidate) return;
-              const candidateMsg: WithWebSocketKey<CandidateMessage> = {
+              pc.onicecandidate = e => {
+                const { candidate } = e;
+                if (!candidate) return;
+                const candidateMsg: WithWebSocketKey<CandidateMessage> = {
+                  id,
+                  event: 'candidate',
+                  candidate: candidate.toJSON(),
+                  sourceId: msg.sourceId,
+                  sourceType: 'screen',
+                };
+                void ipcRenderer.invoke('socket', candidateMsg);
+              };
+              for (const track of capturedStream.getVideoTracks()) {
+                pc.addTrack(track, capturedStream);
+              }
+
+              const offer = await pc.createOffer();
+              const offerMsg: WithWebSocketKey<OfferMessage> = {
                 id,
-                event: 'candidate',
-                candidate: candidate.toJSON(),
+                event: 'offer',
+                desc: JSON.parse(JSON.stringify(offer)),
                 sourceId: msg.sourceId,
                 sourceType: 'screen',
               };
-              void ipcRenderer.invoke('socket', candidateMsg);
-            };
-            stream.getVideoTracks().forEach(track => {
-              const sender = pc.addTrack(track, stream);
-              const updateParams = () => {
-                const params = sender.getParameters();
-                if (!params.encodings || params.encodings.length === 0)
-                  setTimeout(updateParams, 10);
-                else {
-                  // params.encodings[0].maxBitrate = 128000;
-                  // params.encodings[0].maxFramerate = 1;
-                  void sender.setParameters(params);
-                }
-              };
-              updateParams();
-            });
-
-            const offer = await pc.createOffer();
-            const offerMsg: WithWebSocketKey<OfferMessage> = {
-              id,
-              event: 'offer',
-              desc: JSON.parse(JSON.stringify(offer)),
-              sourceId: msg.sourceId,
-              sourceType: 'screen',
-            };
-            await pc.setLocalDescription(offer);
-            await ipcRenderer.invoke('socket', offerMsg);
-          } catch (e) {
-            debug(`error while create offer: ${(e as Error).message}`);
+              await pc.setLocalDescription(offer);
+              await Promise.all(
+                pc.getSenders().map(async sender => {
+                  const params = sender.getParameters();
+                  params.degradationPreference = 'balanced';
+                  await sender.setParameters(params).catch(error => {
+                    debug(
+                      `error while setting screen preview encoding params: ${(error as Error).message}`,
+                    );
+                  });
+                }),
+              );
+              await ipcRenderer.invoke('socket', offerMsg);
+            } catch (e) {
+              const ownsStream = peers.has(id);
+              releasePeer(id);
+              if (!ownsStream) stream?.getTracks().forEach(track => track.stop());
+              debug(`error while create offer: ${(e as Error).message}`);
+            } finally {
+              pendingPeers.delete(id);
+            }
           }
           break;
         case 'candidate':
           {
-            const pc = peers.get(id);
+            const pc = peers.get(id)?.pc;
             if (!pc) debug(`Unknown id: ${id} [${[...peers.keys()].join(',')}]`);
             else if (msg.candidate) await pc.addIceCandidate(msg.candidate);
           }
           break;
         case 'answer':
           {
-            const pc = peers.get(id);
+            const pc = peers.get(id)?.pc;
             if (!pc) debug(`Unknown id: ${id} [${[...peers.keys()].join(',')}]`);
             else await pc.setRemoteDescription(msg.desc);
           }
