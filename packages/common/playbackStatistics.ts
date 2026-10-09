@@ -1,8 +1,15 @@
+import type {
+  PlaybackOutputResult,
+  PlaybackOutputSnapshot,
+  PlaybackOutputState,
+} from './playbackOutput';
+
 export const PLAYBACK_HISTORY_MAX_OFFSET = 10_000;
 
 /** Calendar dates are interpreted in the playback host's time zone; `to` is inclusive. */
 export type PlaybackStatisticsQuery = {
   playerId: number;
+  outputId?: number;
   from?: string;
   to?: string;
 };
@@ -10,6 +17,10 @@ export type PlaybackStatisticsQuery = {
 export type PlaybackStatisticsMetrics = {
   starts: number;
   completed: number;
+  confirmed: number;
+  partial: number;
+  unconfirmed: number;
+  playedMs: number;
   errors: number;
   skipped: number;
   interrupted: number;
@@ -20,6 +31,11 @@ export type PlaybackStatisticsRow = PlaybackStatisticsMetrics & {
   mediaId: string;
   filename: string;
 };
+
+export type PlaybackOutputStatistics = PlaybackStatisticsMetrics &
+  Omit<PlaybackOutputSnapshot, 'state'> & {
+    reasons: { reason: PlaybackOutputState; count: number }[];
+  };
 
 export type PlaybackStatisticsRange = { from: string; to: string };
 
@@ -35,6 +51,8 @@ export type PlaybackStatistics = {
   clipped: boolean;
   totals: PlaybackStatisticsMetrics;
   rows: PlaybackStatisticsRow[];
+  outputs: PlaybackOutputStatistics[];
+  outputId?: number;
   days: (PlaybackStatisticsMetrics & { date: string; hasRecords: boolean })[];
   quality: {
     ignoredLegacyRecords: number;
@@ -58,8 +76,16 @@ export type PlaybackHistoryEntry = {
   timestamp: string;
   outcome: 'completed' | 'error' | 'interrupted' | 'pending';
   playedMs: number;
+  successfulMs: number;
+  outputResult?: PlaybackOutputResult;
   skipped: boolean;
-  events: { event: string; timestamp: string; error?: string; reason?: string }[];
+  events: {
+    event: string;
+    timestamp: string;
+    error?: string;
+    reason?: string;
+    output?: { outputs: PlaybackOutputSnapshot[] };
+  }[];
 };
 
 export type PlaybackHistory = {

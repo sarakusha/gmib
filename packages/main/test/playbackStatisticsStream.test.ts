@@ -32,6 +32,28 @@ const event = (
   mediaId: 'clip',
   filename: 'clip.mp4',
   attempt: 1,
+  output: {
+    outputs: [{ id: 10, name: 'Screen', display: 5, resolvedDisplayId: 5, state: 'showing' }],
+  },
+  ...(kind === 'completed'
+    ? {
+        outputResult: {
+          status: 'confirmed' as const,
+          reasons: [],
+          outputs: [
+            {
+              id: 10,
+              name: 'Screen',
+              display: 5,
+              resolvedDisplayId: 5,
+              state: 'showing' as const,
+              status: 'confirmed' as const,
+              reasons: [],
+            },
+          ],
+        },
+      }
+    : {}),
   ...(kind === 'error' ? { error: 'Decode failure' } : {}),
   ...extra,
 });

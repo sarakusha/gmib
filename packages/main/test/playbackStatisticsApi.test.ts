@@ -51,6 +51,9 @@ describe('playback statistics API', () => {
     for (const suffix of [
       '',
       '?playerId=abc',
+      '?playerId=1&outputId=-1',
+      '?playerId=1&outputId=abc',
+      '?playerId=1&outputId=1&outputId=2',
       '?playerId=-1',
       '?playerId=1&playerId=2',
       '?playerId=1&from=2026-10-01',

@@ -7,6 +7,7 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  MenuItem,
   Paper,
   Stack,
   Table,
@@ -30,6 +31,8 @@ import {
   formatDuration,
   isValidRange,
   MIN_STATISTICS_BAR_WIDTH,
+  outputName,
+  outputStateLabels,
   presetRange,
   statisticsCsv,
 } from './statisticsHelpers';
@@ -41,12 +44,26 @@ import {
   type PlaybackStatisticsRow,
 } from '/@common/playbackStatistics';
 
-type SortKey = 'filename' | 'starts' | 'completed' | 'successfulMs' | 'errors' | 'skipped';
+type SortKey =
+  | 'filename'
+  | 'starts'
+  | 'completed'
+  | 'confirmed'
+  | 'partial'
+  | 'unconfirmed'
+  | 'playedMs'
+  | 'successfulMs'
+  | 'errors'
+  | 'skipped';
 const columns: { key: SortKey; label: string }[] = [
   { key: 'filename', label: 'Ролик' },
   { key: 'starts', label: 'Запуски' },
-  { key: 'completed', label: 'Завершено' },
-  { key: 'successfulMs', label: 'Время показов' },
+  { key: 'completed', label: 'Источник завершён' },
+  { key: 'confirmed', label: 'Подтверждено' },
+  { key: 'partial', label: 'Частично' },
+  { key: 'unconfirmed', label: 'Не подтверждено' },
+  { key: 'playedMs', label: 'Время источника' },
+  { key: 'successfulMs', label: 'Исправный вывод' },
   { key: 'errors', label: 'Ошибки' },
   { key: 'skipped', label: 'Пропуски' },
 ];
@@ -58,7 +75,7 @@ const instantLabel = (value: string, timeZone: string) =>
 const instantRangeLabel = (range: PlaybackStatisticsRange, timeZone: string) =>
   `${instantLabel(range.from, timeZone)} — ${instantLabel(range.to, timeZone)}`;
 const outcomeLabels = {
-  completed: 'завершено',
+  completed: 'источник завершён',
   error: 'ошибка',
   interrupted: 'прервано',
   pending: 'не завершено',
@@ -76,7 +93,13 @@ const eventLabels: Record<string, string> = {
   resumed: 'возобновление',
   interrupted: 'прервано',
   skipped: 'пропущено',
+  'output-changed': 'состояние выхода изменилось',
 };
+const resultLabels = {
+  confirmed: 'вывод подтверждён',
+  partial: 'вывод частичный',
+  unconfirmed: 'вывод не подтверждён',
+} as const;
 const reasonLabels: Record<string, string> = {
   'engine-changed': 'смена движка',
   'item-changed': 'смена ролика',
@@ -96,8 +119,9 @@ const StatisticsTab: React.FC = () => {
   const [descending, setDescending] = React.useState(true);
   const [selected, setSelected] = React.useState<PlaybackStatisticsRow | null>(null);
   const [offset, setOffset] = React.useState(0);
+  const [outputId, setOutputId] = React.useState<number | undefined>();
   const query = useGetPlaybackStatisticsQuery(
-    { playerId: sourceId, ...range },
+    { playerId: sourceId, ...range, outputId },
     {
       refetchOnMountOrArgChange: true,
     },
@@ -107,6 +131,7 @@ const StatisticsTab: React.FC = () => {
     {
       playerId: sourceId,
       ...range,
+      outputId,
       mediaId: selected?.mediaId ?? '',
       offset,
       limit: 20,
@@ -160,7 +185,7 @@ const StatisticsTab: React.FC = () => {
     );
     const link = document.createElement('a');
     link.href = url;
-    link.download = `gmib-statistics-${sourceId}-${data.requestedDates.from}-${data.requestedDates.to}.csv`;
+    link.download = `gmib-statistics-${sourceId}-${data.requestedDates.from}-${data.requestedDates.to}${outputId === undefined ? '' : `-output-${outputId}`}.csv`;
     link.click();
     window.setTimeout(() => URL.revokeObjectURL(url), 0);
   };
@@ -190,6 +215,27 @@ const StatisticsTab: React.FC = () => {
           <Typography variant="body2" color="text.secondary">
             Время плеера: {data.timeZone}
           </Typography>
+        )}
+        {data && (
+          <TextField
+            select
+            size="small"
+            label="Выход"
+            value={outputId ?? 'all'}
+            onChange={event => {
+              setOutputId(event.target.value === 'all' ? undefined : Number(event.target.value));
+              setSelected(null);
+              setOffset(0);
+            }}
+            sx={{ minWidth: 190, maxWidth: '100%' }}
+          >
+            <MenuItem value="all">Все настроенные выходы</MenuItem>
+            {data.outputs.map(output => (
+              <MenuItem key={output.id} value={output.id}>
+                {outputName(output)}
+              </MenuItem>
+            ))}
+          </TextField>
         )}
         <Box sx={{ flexGrow: 1 }} />
         <Button variant="text" onClick={refresh} disabled={query.isFetching} size="small">
@@ -271,11 +317,15 @@ const StatisticsTab: React.FC = () => {
           >
             {[
               [
-                'Время успешных показов',
+                'Время исправного вывода',
                 formatDuration(data.totals.successfulMs),
-                'Без неудачных попыток',
+                'Только завершённые попытки',
               ],
-              ['Завершено', data.totals.completed, `Запусков: ${data.totals.starts}`],
+              ['Подтверждено', data.totals.confirmed, `Запусков: ${data.totals.starts}`],
+              ['Частично', data.totals.partial, 'Вывод прерывался'],
+              ['Не подтверждено', data.totals.unconfirmed, 'Вывод не наблюдался'],
+              ['Источник завершён', data.totals.completed, 'Достигнут конец файла'],
+              ['Активное время источника', formatDuration(data.totals.playedMs), 'Все попытки'],
               ['Ошибки', data.totals.errors, 'Включая повторные попытки'],
               ['Пропуски из-за ошибок', data.totals.skipped, 'Переходы к следующему ролику'],
             ].map(([label, value, caption]) => (
@@ -291,12 +341,12 @@ const StatisticsTab: React.FC = () => {
             ))}
           </Box>
           <Typography variant="h6" gutterBottom>
-            Завершённые показы по дням
+            Подтверждённые показы по дням
           </Typography>
           <Box
             role="region"
             tabIndex={0}
-            aria-label="График завершённых показов, прокрутка по горизонтали"
+            aria-label="График подтверждённых показов, прокрутка по горизонтали"
             sx={{ overflowX: 'auto', maxWidth: '100%', mb: 3 }}
           >
             <Box
@@ -315,7 +365,7 @@ const StatisticsTab: React.FC = () => {
                 <Box
                   key={day.date}
                   data-bar-min-width={MIN_STATISTICS_BAR_WIDTH}
-                  title={`${day.date}: ${day.hasRecords ? day.completed : 'нет записей'}`}
+                  title={`${day.date}: ${day.hasRecords ? day.confirmed : 'нет записей'}`}
                   sx={{
                     flex: `0 0 ${MIN_STATISTICS_BAR_WIDTH}px`,
                     display: 'flex',
@@ -326,13 +376,13 @@ const StatisticsTab: React.FC = () => {
                   }}
                 >
                   <Typography variant="caption">
-                    {day.hasRecords ? day.completed : 'нет записей'}
+                    {day.hasRecords ? day.confirmed : 'нет записей'}
                   </Typography>
                   <Box
                     sx={{
                       width: 34,
-                      minHeight: day.completed ? 4 : 0,
-                      height: `${data.days.length ? (day.completed / Math.max(1, ...data.days.map(item => item.completed))) * 135 : 0}px`,
+                      minHeight: day.confirmed ? 4 : 0,
+                      height: `${data.days.length ? (day.confirmed / Math.max(1, ...data.days.map(item => item.confirmed))) * 135 : 0}px`,
                       bgcolor: day.hasRecords ? 'primary.main' : 'action.disabledBackground',
                       borderRadius: '4px 4px 0 0',
                     }}
@@ -389,6 +439,10 @@ const StatisticsTab: React.FC = () => {
                       </TableCell>
                       <TableCell align="right">{row.starts}</TableCell>
                       <TableCell align="right">{row.completed}</TableCell>
+                      <TableCell align="right">{row.confirmed}</TableCell>
+                      <TableCell align="right">{row.partial}</TableCell>
+                      <TableCell align="right">{row.unconfirmed}</TableCell>
+                      <TableCell align="right">{formatDuration(row.playedMs)}</TableCell>
                       <TableCell align="right">{formatDuration(row.successfulMs)}</TableCell>
                       <TableCell align="right">{row.errors}</TableCell>
                       <TableCell align="right">{row.skipped}</TableCell>
@@ -397,6 +451,46 @@ const StatisticsTab: React.FC = () => {
                 </TableBody>
               </Table>
             </TableContainer>
+          )}
+          {data.outputs.length > 0 && (
+            <>
+              <Typography variant="h6" sx={{ mt: 3 }} gutterBottom>
+                Выходы
+              </Typography>
+              <Typography variant="caption" color="text.secondary" component="p">
+                Сводка по всем настроенным выходам за период, независимо от выбранного фильтра.
+              </Typography>
+              <TableContainer sx={{ overflowX: 'auto' }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Выход и экран</TableCell>
+                      <TableCell align="right">Подтверждено</TableCell>
+                      <TableCell align="right">Частично</TableCell>
+                      <TableCell align="right">Не подтверждено</TableCell>
+                      <TableCell align="right">Исправный вывод</TableCell>
+                      <TableCell>Причины</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {data.outputs.map(output => (
+                      <TableRow key={output.id}>
+                        <TableCell>{outputName(output)}</TableCell>
+                        <TableCell align="right">{output.confirmed}</TableCell>
+                        <TableCell align="right">{output.partial}</TableCell>
+                        <TableCell align="right">{output.unconfirmed}</TableCell>
+                        <TableCell align="right">{formatDuration(output.successfulMs)}</TableCell>
+                        <TableCell>
+                          {output.reasons
+                            .map(({ reason, count }) => `${outputStateLabels[reason]}: ${count}`)
+                            .join('; ') || '—'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </>
           )}
           <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 2 }}>
             Качество журнала: пропущено устаревших записей — {data.quality.ignoredLegacyRecords},
@@ -424,9 +518,28 @@ const StatisticsTab: React.FC = () => {
                 {new Date(entry.startedAt ?? entry.timestamp).toLocaleString('ru-RU', {
                   timeZone: data?.timeZone,
                 })}{' '}
-                · {outcomeLabels[entry.outcome]} · {formatDuration(entry.playedMs)}
+                · {outcomeLabels[entry.outcome]} · источник: {formatDuration(entry.playedMs)}
+                {' · '}исправный вывод: {formatDuration(entry.successfulMs)}
+                {entry.outcome === 'completed'
+                  ? ` · ${entry.outputResult && entry.events.some(event => event.output) ? resultLabels[entry.outputResult.status] : 'вывод не подтверждён (старый журнал)'}`
+                  : ''}
                 {entry.skipped ? ' · пропуск' : ''}
               </Typography>
+              {entry.outputResult?.outputs.map(output => (
+                <Typography key={output.id} variant="caption" sx={{ display: 'block' }}>
+                  {outputName(output)} · {resultLabels[output.status]}
+                  {output.reasons.length
+                    ? ` · ${output.reasons.map(reason => outputStateLabels[reason]).join(', ')}`
+                    : ''}
+                </Typography>
+              ))}
+              {entry.outputResult &&
+                entry.outputResult.outputs.length === 0 &&
+                entry.events.some(event => event.output) && (
+                  <Typography variant="caption" sx={{ display: 'block' }}>
+                    выходы не настроены
+                  </Typography>
+                )}
               {entry.events.map((event, index) => (
                 <Typography
                   key={`${event.timestamp}-${index}`}
@@ -440,6 +553,11 @@ const StatisticsTab: React.FC = () => {
                   · {eventLabels[event.event] ?? 'другое событие'}
                   {event.reason ? ` · ${reasonLabels[event.reason] ?? event.reason}` : ''}
                   {event.error ? ` · ${event.error}` : ''}
+                  {event.output
+                    ? event.output.outputs.length
+                      ? ` · ${event.output.outputs.map(output => `${outputName(output)}: ${outputStateLabels[output.state]}`).join('; ')}`
+                      : ' · выходы не настроены'
+                    : ''}
                 </Typography>
               ))}
             </Paper>

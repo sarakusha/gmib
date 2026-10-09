@@ -24,6 +24,7 @@ const integerParameter = (req: Request, name: string, required = false): number 
 
 const queryFromRequest = (req: Request): PlaybackStatisticsQuery => ({
   playerId: integerParameter(req, 'playerId', true)!,
+  outputId: integerParameter(req, 'outputId'),
   from: textParameter(req, 'from'),
   to: textParameter(req, 'to'),
 });

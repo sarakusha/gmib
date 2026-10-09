@@ -34,6 +34,28 @@ const event = (
   mediaId: 'md5-a',
   filename: 'clip.mp4',
   attempt: 1,
+  output: {
+    outputs: [{ id: 10, name: 'Screen', display: 5, resolvedDisplayId: 5, state: 'showing' }],
+  },
+  ...(kind === 'completed'
+    ? {
+        outputResult: {
+          status: 'confirmed' as const,
+          reasons: [],
+          outputs: [
+            {
+              id: 10,
+              name: 'Screen',
+              display: 5,
+              resolvedDisplayId: 5,
+              state: 'showing' as const,
+              status: 'confirmed' as const,
+              reasons: [],
+            },
+          ],
+        },
+      }
+    : {}),
   ...(kind === 'error' ? { error: 'Decoder failed' } : {}),
   ...extra,
 });
@@ -78,6 +100,10 @@ describe('playback statistics', () => {
     expect(result.totals).toEqual({
       starts: 2,
       completed: 1,
+      confirmed: 1,
+      partial: 0,
+      unconfirmed: 0,
+      playedMs: 14000,
       errors: 2,
       skipped: 1,
       interrupted: 0,

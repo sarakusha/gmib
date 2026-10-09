@@ -36,6 +36,10 @@ describe('playback statistics presentation', () => {
     const metrics = {
       starts: 1,
       completed: 1,
+      confirmed: 0,
+      partial: 1,
+      unconfirmed: 0,
+      playedMs: 2000,
       errors: 0,
       skipped: 0,
       interrupted: 0,
@@ -53,6 +57,16 @@ describe('playback statistics presentation', () => {
       clipped: true,
       totals: metrics,
       rows: [{ ...metrics, mediaId: 'x', filename: '=SUM(1,2)"clip' }],
+      outputs: [
+        {
+          ...metrics,
+          id: 5,
+          name: 'Сцена',
+          display: 7,
+          reasons: [{ reason: 'missing', count: 1 }],
+        },
+      ],
+      outputId: 5,
       days: [],
       quality: {
         ignoredLegacyRecords: 2,
@@ -65,7 +79,9 @@ describe('playback statistics presentation', () => {
     expect(csv).toContain('"Запрошенные даты","2026-10-03","2026-10-09"');
     expect(csv).toContain('"Устаревших записей пропущено","2"');
     expect(csv).toContain('"Попыток с неполными данными","0"');
-    expect(csv).toContain('"Итого","1","1","1000"');
+    expect(csv).toContain('"Выход","Сцена (№5, экран 7)"');
+    expect(csv).toContain('"Итого","1","1","0","1","0","2000","1000"');
+    expect(csv).toContain('"Сцена","5","7","0","1","0","1000","окно вывода отсутствует: 1"');
     expect(csv).toContain('"\'=SUM(1,2)""clip"');
   });
 

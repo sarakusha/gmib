@@ -3,6 +3,7 @@ import type {
   PlaybackStatisticsRange,
   PlaybackStatisticsRow,
 } from '/@common/playbackStatistics';
+import type { PlaybackOutputState } from '/@common/playbackOutput';
 
 export type StatisticsPreset = 'today' | 'yesterday' | 'week' | 'custom';
 
@@ -48,6 +49,24 @@ export const formatDuration = (milliseconds: number): string => {
     : `${minutes} мин ${String(remainingSeconds).padStart(2, '0')} с`;
 };
 
+export const outputStateLabels: Record<PlaybackOutputState, string> = {
+  showing: 'показ идёт',
+  hidden: 'выход скрыт',
+  unavailable: 'монитор недоступен',
+  missing: 'окно вывода отсутствует',
+  starting: 'ожидание вывода',
+  stalled: 'вывод остановился',
+  unknown: 'состояние неизвестно',
+};
+
+export const outputName = (output: {
+  id: number;
+  name: string;
+  display?: string | number;
+  resolvedDisplayId?: string | number;
+}): string =>
+  `${output.name || `Выход ${output.id}`} (№${output.id}${output.display !== undefined ? `, экран ${output.display}` : ''}${output.resolvedDisplayId !== undefined && output.resolvedDisplayId !== output.display ? ` → ${output.resolvedDisplayId}` : ''})`;
+
 const csvCell = (value: string | number): string => {
   const text = String(value);
   // Quoting plus an apostrophe prevents spreadsheet formula execution.
@@ -59,8 +78,12 @@ export const statisticsCsv = (data: PlaybackStatistics): string => {
   const columns = [
     'Ролик',
     'Запуски',
-    'Завершено',
-    'Время успешных показов (мс)',
+    'Завершено источником',
+    'Подтверждено',
+    'Частично',
+    'Не подтверждено',
+    'Активное время источника (мс)',
+    'Время исправного вывода завершённых попыток (мс)',
     'Ошибки',
     'Пропуски',
     'Прервано',
@@ -70,6 +93,10 @@ export const statisticsCsv = (data: PlaybackStatistics): string => {
     row.filename,
     row.starts,
     row.completed,
+    row.confirmed,
+    row.partial,
+    row.unconfirmed,
+    row.playedMs,
     row.successfulMs,
     row.errors,
     row.skipped,
@@ -79,6 +106,17 @@ export const statisticsCsv = (data: PlaybackStatistics): string => {
     line(['Плеер', data.playerId]),
     line(['Часовой пояс', data.timeZone]),
     line(['Запрошенные даты', data.requestedDates.from, data.requestedDates.to]),
+    line([
+      'Выход',
+      data.outputId === undefined
+        ? 'Все настроенные'
+        : outputName(
+            data.outputs.find(output => output.id === data.outputId) ?? {
+              id: data.outputId,
+              name: '',
+            },
+          ),
+    ]),
     line(['Фактический интервал', data.effective?.from ?? '', data.effective?.to ?? '']),
     line(['Доступные записи', data.available?.from ?? '', data.available?.to ?? '']),
     line(['Диапазон сокращён', data.clipped ? 'да' : 'нет']),
@@ -90,6 +128,32 @@ export const statisticsCsv = (data: PlaybackStatistics): string => {
     line(columns),
     line(metrics({ ...data.totals, mediaId: '', filename: 'Итого' })),
     ...data.rows.map(row => line(metrics(row))),
+    '',
+    line(['Выходы (все настроенные; независимо от фильтра)']),
+    line([
+      'Выход',
+      'ID',
+      'Экран',
+      'Подтверждено',
+      'Частично',
+      'Не подтверждено',
+      'Время исправного вывода (мс)',
+      'Причины',
+    ]),
+    ...data.outputs.map(output =>
+      line([
+        output.name,
+        output.id,
+        output.display ?? '',
+        output.confirmed,
+        output.partial,
+        output.unconfirmed,
+        output.successfulMs,
+        output.reasons
+          .map(({ reason, count }) => `${outputStateLabels[reason]}: ${count}`)
+          .join('; '),
+      ]),
+    ),
   ].join('\r\n');
 };
 

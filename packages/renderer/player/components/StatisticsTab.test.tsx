@@ -1,4 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server';
+import { act } from 'react';
+import { createRoot } from 'react-dom/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { PlaybackStatistics } from '/@common/playbackStatistics';
@@ -18,6 +20,10 @@ vi.mock('../utils', () => ({ sourceId: 7 }));
 const metrics = {
   starts: 3,
   completed: 2,
+  confirmed: 1,
+  partial: 1,
+  unconfirmed: 0,
+  playedMs: 8_000_000,
   errors: 1,
   skipped: 1,
   interrupted: 0,
@@ -35,8 +41,18 @@ const data: PlaybackStatistics = {
   clipped: true,
   totals: metrics,
   rows: [{ ...metrics, mediaId: 'clip-1', filename: 'promo.mp4' }],
+  outputs: [
+    { ...metrics, id: 1, name: 'Основной', display: 2, reasons: [{ reason: 'hidden', count: 1 }] },
+    {
+      ...metrics,
+      id: 2,
+      name: 'Резервный',
+      display: 3,
+      reasons: [{ reason: 'missing', count: 1 }],
+    },
+  ],
   days: [
-    { ...metrics, date: '2026-10-08', hasRecords: false, completed: 0 },
+    { ...metrics, date: '2026-10-08', hasRecords: false, completed: 0, confirmed: 0 },
     { ...metrics, date: '2026-10-09', hasRecords: true },
   ],
   quality: {
@@ -67,9 +83,12 @@ describe('StatisticsTab', () => {
     expect(html).toContain('promo.mp4');
     expect(html).toContain('2 ч 10 мин 00 с');
     expect(html).toContain('Часть периода вне доступного журнала');
-    expect(html).toContain('График завершённых показов, прокрутка по горизонтали');
+    expect(html).toContain('График подтверждённых показов, прокрутка по горизонтали');
     expect(html).toContain('data-bar-min-width="80"');
     expect(html).toContain('нет записей');
+    expect(html).toContain('Основной (№1, экран 2)');
+    expect(html).toContain('Резервный (№2, экран 3)');
+    expect(html).toContain('выход скрыт: 1');
   });
 
   it('explains unsupported older hosts', () => {
@@ -81,5 +100,75 @@ describe('StatisticsTab', () => {
     });
     const html = renderToStaticMarkup(<StatisticsTab />);
     expect(html).toContain('Обновите GMIB на устройстве');
+  });
+
+  it('passes the selected output to statistics and history queries', () => {
+    const container = document.createElement('div');
+    document.body.append(container);
+    const root = createRoot(container);
+    act(() => root.render(<StatisticsTab />));
+    const select = container.querySelector('[role="combobox"]');
+    expect(select).not.toBeNull();
+    act(() => {
+      select?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    });
+    const option = [...document.querySelectorAll('[role="option"]')].find(item =>
+      item.textContent?.includes('Основной'),
+    );
+    expect(option).toBeDefined();
+    act(() => {
+      option?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    expect(statisticsQuery).toHaveBeenLastCalledWith(
+      { playerId: 7, outputId: 1 },
+      expect.any(Object),
+    );
+    expect(historyQuery).toHaveBeenLastCalledWith(
+      expect.objectContaining({ outputId: 1 }),
+      expect.any(Object),
+    );
+    act(() => root.unmount());
+    container.remove();
+  });
+
+  it('labels an observed empty output list in history', () => {
+    historyQuery.mockReturnValue({
+      currentData: {
+        entries: [
+          {
+            playbackId: 'attempt-1',
+            mediaId: 'clip-1',
+            filename: 'promo.mp4',
+            timestamp: '2026-10-09T10:00:00Z',
+            outcome: 'completed',
+            playedMs: 1000,
+            successfulMs: 0,
+            outputResult: { status: 'unconfirmed', outputs: [], reasons: ['missing'] },
+            skipped: false,
+            events: [
+              { event: 'started', timestamp: '2026-10-09T10:00:00Z', output: { outputs: [] } },
+            ],
+          },
+        ],
+        total: 1,
+        offset: 0,
+        limit: 20,
+      },
+      isFetching: false,
+      isError: false,
+    });
+    const container = document.createElement('div');
+    document.body.append(container);
+    const root = createRoot(container);
+    act(() => root.render(<StatisticsTab />));
+    const row = [...container.querySelectorAll('button')].find(
+      button => button.textContent === 'promo.mp4',
+    );
+    act(() => {
+      row?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    expect(document.body.textContent).toContain('выходы не настроены');
+    act(() => root.unmount());
+    container.remove();
   });
 });

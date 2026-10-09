@@ -5,11 +5,17 @@ import { setImmediate as yieldToLoop } from 'node:timers/promises';
 import { createGunzip } from 'node:zlib';
 
 import { isPlaybackStatisticsEvent, type PlaybackStatisticsEvent } from '/@common/playback';
+import type {
+  PlaybackOutputResult,
+  PlaybackOutputSnapshot,
+  PlaybackOutputState,
+} from '/@common/playbackOutput';
 import { PLAYBACK_HISTORY_MAX_OFFSET } from '/@common/playbackStatistics';
 import type {
   PlaybackHistory,
   PlaybackHistoryEntry,
   PlaybackHistoryQuery,
+  PlaybackOutputStatistics,
   PlaybackStatistics,
   PlaybackStatisticsMetrics,
   PlaybackStatisticsQuery,
@@ -21,6 +27,10 @@ const MAX_LINE_LENGTH = 256 * 1024;
 const emptyMetrics = (): PlaybackStatisticsMetrics => ({
   starts: 0,
   completed: 0,
+  confirmed: 0,
+  partial: 0,
+  unconfirmed: 0,
+  playedMs: 0,
   errors: 0,
   skipped: 0,
   interrupted: 0,
@@ -59,6 +69,8 @@ export const statisticsPeriod = (query: PlaybackStatisticsQuery, now: Date) => {
   if ((query.from === undefined) !== (query.to === undefined)) {
     throw new PlaybackStatisticsQueryError('Both from and to are required');
   }
+  if (query.outputId !== undefined && (!Number.isSafeInteger(query.outputId) || query.outputId < 0))
+    throw new PlaybackStatisticsQueryError('Invalid outputId');
   const today = localDate(now);
   const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
   const dates = { from: query.from ?? localDate(weekStart), to: query.to ?? today };
@@ -107,12 +119,58 @@ const interval = (event: PlaybackStatisticsEvent) => ({
   playedMs: event.playedMs ?? 0,
 });
 
+// Compacted intervals carry exact per-day output totals, never synthetic healthy states.
+type EvidenceEvent = PlaybackStatisticsEvent & {
+  outputDurations?: { all: number; outputs: Record<number, number> };
+};
+const outputTime = (event: EvidenceEvent, outputId?: number): number => {
+  if (event.outputDurations)
+    return outputId === undefined
+      ? event.outputDurations.all
+      : (event.outputDurations.outputs[outputId] ?? 0);
+  const outputs = event.output?.outputs ?? [];
+  const showing =
+    outputId === undefined
+      ? outputs.length > 0 && outputs.every(output => output.state === 'showing')
+      : outputs.some(output => output.id === outputId && output.state === 'showing');
+  return showing ? (event.playedMs ?? 0) : 0;
+};
+const attemptOutputs = (events: PlaybackStatisticsEvent[]): Map<number, PlaybackOutputSnapshot> => {
+  const outputs = new Map<number, PlaybackOutputSnapshot>();
+  const timestamps = new Map<number, string>();
+  for (const event of events)
+    for (const output of [
+      ...(event.output?.outputs ?? []),
+      ...(event.outputResult?.outputs ?? []),
+    ]) {
+      if ((timestamps.get(output.id) ?? '') > event.timestamp) continue;
+      timestamps.set(output.id, event.timestamp);
+      outputs.set(output.id, output);
+    }
+  return outputs;
+};
+const scopedResult = (
+  event: PlaybackStatisticsEvent | undefined,
+  outputId?: number,
+): PlaybackOutputResult => {
+  const result = event?.outputResult;
+  if (outputId === undefined)
+    return result ?? { status: 'unconfirmed', outputs: [], reasons: ['unknown'] };
+  const output = result?.outputs.find(item => item.id === outputId);
+  return {
+    status: output?.status ?? 'unconfirmed',
+    outputs: output ? [output] : [],
+    reasons: output?.reasons ?? ['unknown'],
+  };
+};
+
 export const aggregatePlaybackStatistics = async (
   events: PlaybackStatisticsEvent[],
   query: PlaybackStatisticsQuery,
   now = new Date(),
   quality = emptyQuality(),
   roundMilliseconds = true,
+  includeOutputs = true,
 ): Promise<PlaybackStatistics> => {
   const period = statisticsPeriod(query, now);
   const attempts = await uniqueAttempts(events, query.playerId);
@@ -147,6 +205,8 @@ export const aggregatePlaybackStatistics = async (
     clipped: !effective || lower > period.from || upper < period.to,
     totals: emptyMetrics(),
     rows: [],
+    outputs: [],
+    outputId: query.outputId,
     days: [],
     quality: { ...quality },
   };
@@ -173,7 +233,11 @@ export const aggregatePlaybackStatistics = async (
     const validEvents = attempt.events.filter(
       event => Date.parse(event.timestamp) <= now.getTime(),
     );
-    if (!validEvents.length) continue;
+    if (
+      !validEvents.length ||
+      (query.outputId !== undefined && !attemptOutputs(validEvents).has(query.outputId))
+    )
+      continue;
     const relevant = validEvents.filter(
       event =>
         inPeriod(event.timestamp) ||
@@ -211,12 +275,18 @@ export const aggregatePlaybackStatistics = async (
           skipped: 'skipped',
           interrupted: 'interrupted',
         } as const
-      )[event.event as 'started'];
+      )[event.event as 'started' | 'completed' | 'error' | 'skipped' | 'interrupted'];
       if (metric && inPeriod(event.timestamp) && !counted.has(metric)) {
         counted.add(metric);
         row[metric] += 1;
         result.totals[metric] += 1;
         if (day) day[metric] += 1;
+        if (metric === 'completed') {
+          const status = scopedResult(event, query.outputId).status;
+          row[status] += 1;
+          result.totals[status] += 1;
+          if (day) day[status] += 1;
+        }
       }
     }
     // Distinct event IDs may still overlap after a retry; never credit an interval twice.
@@ -237,22 +307,65 @@ export const aggregatePlaybackStatistics = async (
         const day = dayMap.get(localDate(date));
         if (!day) continue;
         day.hasRecords = true;
-        if (terminal?.event !== 'completed') continue;
         const amount =
           (rangeOverlap(start, end, date.getTime(), nextDay(date).getTime()) * span.playedMs) /
           (span.end - span.start);
-        day.successfulMs += amount;
-        row.successfulMs += amount;
-        result.totals.successfulMs += amount;
+        day.playedMs += amount;
+        row.playedMs += amount;
+        result.totals.playedMs += amount;
+        if (terminal?.event !== 'completed') continue;
+        const healthy =
+          span.playedMs > 0 ? (amount * outputTime(event, query.outputId)) / span.playedMs : 0;
+        day.successfulMs += healthy;
+        row.successfulMs += healthy;
+        result.totals.successfulMs += healthy;
       }
     }
   }
   result.rows = [...rows.values()].sort(
     (a, b) => b.successfulMs - a.successfulMs || a.filename.localeCompare(b.filename),
   );
+  if (includeOutputs) {
+    const observedInPeriod = ownEvents.filter(
+      event =>
+        inPeriod(event.timestamp) ||
+        (event.event === 'progress' &&
+          rangeOverlap(interval(event).start, interval(event).end, lower, upper) > 0),
+    );
+    for (const [id, output] of attemptOutputs(observedInPeriod)) {
+      const part = await aggregatePlaybackStatistics(
+        events,
+        { ...query, outputId: id },
+        now,
+        quality,
+        false,
+        false,
+      );
+      if (!part.rows.length) continue;
+      const reasons = new Map<PlaybackOutputState, number>();
+      for (const attempt of attempts) {
+        const terminal = attempt.events.find(event => event.event === 'completed');
+        if (!terminal || !inPeriod(terminal.timestamp) || !attemptOutputs(attempt.events).has(id))
+          continue;
+        for (const reason of new Set(scopedResult(terminal, id).reasons))
+          reasons.set(reason, (reasons.get(reason) ?? 0) + 1);
+      }
+      result.outputs.push({
+        id: output.id,
+        name: output.name,
+        display: output.display,
+        resolvedDisplayId: output.resolvedDisplayId,
+        ...part.totals,
+        reasons: [...reasons].map(([reason, count]) => ({ reason, count })),
+      });
+    }
+    result.outputs.sort((a, b) => a.id - b.id);
+  }
   if (roundMilliseconds)
-    for (const metrics of [result.totals, ...result.rows, ...result.days])
+    for (const metrics of [result.totals, ...result.rows, ...result.days, ...result.outputs]) {
       metrics.successfulMs = Math.round(metrics.successfulMs);
+      metrics.playedMs = Math.round(metrics.playedMs);
+    }
   return result;
 };
 
@@ -293,8 +406,10 @@ export const aggregatePlaybackHistory = async (
       })
     )
       continue;
+    if (query.outputId !== undefined && !attemptOutputs(own).has(query.outputId)) continue;
     const terminal = own.find(event => ['completed', 'error', 'interrupted'].includes(event.event));
     let playedMs = 0;
+    let successfulMs = 0;
     let creditedUntil = -Infinity;
     for (const event of own
       .filter(event => event.event === 'progress')
@@ -302,10 +417,13 @@ export const aggregatePlaybackHistory = async (
       const span = interval(event);
       const start = Math.max(span.start, creditedUntil);
       creditedUntil = Math.max(creditedUntil, span.end);
-      if (span.end > span.start)
-        playedMs +=
-          (rangeOverlap(start, span.end, period.from, period.to) * span.playedMs) /
-          (span.end - span.start);
+      if (span.end > span.start) {
+        const ratio =
+          rangeOverlap(start, span.end, period.from, period.to) / (span.end - span.start);
+        playedMs += ratio * span.playedMs;
+        if (terminal?.event === 'completed')
+          successfulMs += ratio * outputTime(event, query.outputId);
+      }
     }
     entries.push({
       playbackId: attempt.playbackId,
@@ -315,10 +433,18 @@ export const aggregatePlaybackHistory = async (
       timestamp: (terminal ?? own[own.length - 1]).timestamp,
       outcome: (terminal?.event as PlaybackHistoryEntry['outcome']) ?? 'pending',
       playedMs: Math.round(playedMs),
+      successfulMs: Math.round(successfulMs),
+      outputResult: scopedResult(terminal, query.outputId),
       skipped: own.some(event => event.event === 'skipped'),
       events: own
         .filter(event => event.event !== 'progress')
-        .map(({ event, timestamp, error, reason }) => ({ event, timestamp, error, reason })),
+        .map(({ event, timestamp, error, reason, output }) => ({
+          event,
+          timestamp,
+          error,
+          reason,
+          output,
+        })),
     });
   }
   entries.sort(
@@ -362,7 +488,10 @@ const compactAttempt = (events: PlaybackStatisticsEvent[]): PlaybackStatisticsEv
       activity.set(localDate(new Date(event.timestamp)), event);
   }
   for (const event of activity.values()) essential.push(event);
-  const spans = new Map<string, { start: number; end: number; playedMs: number }>();
+  const spans = new Map<
+    string,
+    { start: number; end: number; playedMs: number; all: number; outputs: Record<number, number> }
+  >();
   let creditedUntil = -Infinity;
   let reference: PlaybackStatisticsEvent | undefined;
   for (const event of events
@@ -382,12 +511,22 @@ const compactAttempt = (events: PlaybackStatisticsEvent[]): PlaybackStatisticsEv
       const dayStart = Math.max(start, date.getTime());
       const dayEnd = Math.min(span.end, nextDay(date).getTime());
       const amount = ((dayEnd - dayStart) * span.playedMs) / (span.end - span.start);
+      const ratio = span.playedMs > 0 ? amount / span.playedMs : 0;
+      const all = outputTime(event) * ratio;
+      const outputs: Record<number, number> = {};
+      const identities = attemptOutputs([event]);
+      for (const id of Object.keys((event as EvidenceEvent).outputDurations?.outputs ?? {}))
+        outputs[Number(id)] = outputTime(event, Number(id)) * ratio;
+      for (const id of identities.keys()) outputs[id] = outputTime(event, id) * ratio;
       const previous = spans.get(key);
       if (previous) {
         previous.start = Math.min(previous.start, dayStart);
         previous.end = Math.max(previous.end, dayEnd);
         previous.playedMs += amount;
-      } else spans.set(key, { start: dayStart, end: dayEnd, playedMs: amount });
+        previous.all += all;
+        for (const [id, ms] of Object.entries(outputs))
+          previous.outputs[Number(id)] = (previous.outputs[Number(id)] ?? 0) + ms;
+      } else spans.set(key, { start: dayStart, end: dayEnd, playedMs: amount, all, outputs });
     }
   }
   if (reference) {
@@ -398,7 +537,9 @@ const compactAttempt = (events: PlaybackStatisticsEvent[]): PlaybackStatisticsEv
         segmentStartedAt: new Date(span.start).toISOString(),
         timestamp: new Date(span.end).toISOString(),
         playedMs: span.playedMs,
-      });
+        output: { outputs: [...attemptOutputs(events).values()] },
+        outputDurations: { all: span.all, outputs: span.outputs },
+      } as EvidenceEvent);
     }
   }
   // A quarantine/recovery without a start must still establish coverage and a row.
@@ -605,11 +746,13 @@ export class PlaybackStatisticsReader {
 
   async statistics(query: PlaybackStatisticsQuery): Promise<PlaybackStatistics> {
     const now = new Date();
-    statisticsPeriod(query, now);
+    const period = statisticsPeriod(query, now);
     return this.serialize(async () => {
       let first = Infinity;
       let last = -Infinity;
       const rows = new Map<string, PlaybackStatisticsRow>();
+      const outputs = new Map<number, PlaybackOutputStatistics>();
+      const outputMetadata = new Map<number, { at: string; output: PlaybackOutputSnapshot }>();
       const days = new Map<string, PlaybackStatistics['days'][number]>();
       const totals = emptyMetrics();
       let incompleteAttempts = 0;
@@ -623,6 +766,24 @@ export class PlaybackStatisticsReader {
             addMetrics(existing, row);
             existing.filename = row.filename;
           } else rows.set(row.mediaId, { ...row });
+        }
+        for (const output of part.outputs) {
+          const existing = outputs.get(output.id);
+          if (existing) {
+            addMetrics(existing, output);
+            existing.name = output.name;
+            existing.display = output.display;
+            existing.resolvedDisplayId = output.resolvedDisplayId;
+            for (const reason of output.reasons) {
+              const previous = existing.reasons.find(item => item.reason === reason.reason);
+              if (previous) previous.count += reason.count;
+              else existing.reasons.push({ ...reason });
+            }
+          } else
+            outputs.set(output.id, {
+              ...output,
+              reasons: output.reasons.map(reason => ({ ...reason })),
+            });
         }
         for (const day of part.days) {
           const existing = days.get(day.date);
@@ -638,6 +799,17 @@ export class PlaybackStatisticsReader {
         (event, day) => {
           first = Math.min(first, Date.parse(event.segmentStartedAt ?? event.timestamp));
           last = Math.max(last, Date.parse(event.timestamp));
+          const time = Date.parse(event.timestamp);
+          if (
+            (time >= period.from && time < period.to) ||
+            (event.event === 'progress' &&
+              rangeOverlap(interval(event).start, interval(event).end, period.from, period.to) > 0)
+          ) {
+            for (const output of attemptOutputs([event]).values()) {
+              if ((outputMetadata.get(output.id)?.at ?? '') <= event.timestamp)
+                outputMetadata.set(output.id, { at: event.timestamp, output });
+            }
+          }
           batches.add(event, day);
         },
         day => batches.endDay(day),
@@ -660,12 +832,27 @@ export class PlaybackStatisticsReader {
       const result = await aggregatePlaybackStatistics(coverage, query, now, quality);
       result.quality.incompleteAttempts = incompleteAttempts;
       result.totals = totals;
+      result.outputs = [...outputs.values()]
+        .sort((a, b) => a.id - b.id)
+        .map(row => {
+          const metadata = outputMetadata.get(row.id)?.output;
+          return metadata
+            ? {
+                ...row,
+                name: metadata.name,
+                display: metadata.display,
+                resolvedDisplayId: metadata.resolvedDisplayId,
+              }
+            : row;
+        });
       result.rows = [...rows.values()].sort(
         (a, b) => b.successfulMs - a.successfulMs || a.filename.localeCompare(b.filename),
       );
       result.days = result.days.map(day => days.get(day.date) ?? { ...day, hasRecords: false });
-      for (const metrics of [result.totals, ...result.rows, ...result.days])
+      for (const metrics of [result.totals, ...result.rows, ...result.days, ...result.outputs]) {
         metrics.successfulMs = Math.round(metrics.successfulMs);
+        metrics.playedMs = Math.round(metrics.playedMs);
+      }
       return result;
     });
   }
@@ -716,8 +903,8 @@ export class PlaybackStatisticsReader {
           event => {
             const entry = selected.get(event.playbackId);
             if (!entry || event.mediaId !== query.mediaId || event.event === 'progress') return;
-            const { event: name, timestamp, error, reason } = event;
-            entry.events.push({ event: name, timestamp, error, reason });
+            const { event: name, timestamp, error, reason, output } = event;
+            entry.events.push({ event: name, timestamp, error, reason, output });
             if (entry.events.length > MAX_HISTORY_DETAILS) {
               entry.events.shift();
               omitted.set(entry.playbackId, (omitted.get(entry.playbackId) ?? 0) + 1);
