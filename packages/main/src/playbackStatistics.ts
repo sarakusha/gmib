@@ -24,6 +24,7 @@ import type {
 
 const LOG_FILE = /^playback-(\d{4}-\d{2}-\d{2})\.jsonl(?:\.gz)?$/;
 const MAX_LINE_LENGTH = 256 * 1024;
+const MAX_EMPTY_FILE_CACHE = 512;
 const emptyMetrics = (): PlaybackStatisticsMetrics => ({
   starts: 0,
   completed: 0,
@@ -621,10 +622,17 @@ const addMetrics = (target: PlaybackStatisticsMetrics, source: PlaybackStatistic
  * Streaming reader: the working set grows with daily record volume, not with
  * retention duration. Requests are serialized so remote dashboards cannot
  * multiply that working set. Long attempts compact their progress incrementally.
- * Every request rechecks the files, so append, rotation and deletion are visible.
+ * Every request rechecks file metadata, so append, rotation and deletion are visible.
+ * Unchanged files without valid events retain only their quality counters, avoiding
+ * repeated parsing of legacy archives without retaining historical event records.
  */
 export class PlaybackStatisticsReader {
   private queue: Promise<unknown> = Promise.resolve();
+
+  private readonly emptyFiles = new Map<
+    string,
+    { fingerprint: string; quality: ReturnType<typeof emptyQuality> }
+  >();
 
   constructor(private readonly directory: string) {}
 
@@ -640,6 +648,54 @@ export class PlaybackStatisticsReader {
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
       throw error;
+    }
+  }
+
+  private async fingerprint(filename: string): Promise<string> {
+    const stat = await fs.stat(path.join(this.directory, filename), { bigint: true });
+    // ctime also detects same-size rewrites with restored modification times.
+    return [stat.dev, stat.ino, stat.size, stat.mtimeNs, stat.ctimeNs].join(':');
+  }
+
+  private async readCachedFile(
+    filename: string,
+    consume: (event: PlaybackStatisticsEvent) => void,
+    quality: ReturnType<typeof emptyQuality>,
+  ): Promise<void> {
+    const before = await this.fingerprint(filename);
+    const cached = this.emptyFiles.get(filename);
+    if (cached?.fingerprint === before) {
+      Object.assign(quality, {
+        ignoredLegacyRecords: quality.ignoredLegacyRecords + cached.quality.ignoredLegacyRecords,
+        invalidRecords: quality.invalidRecords + cached.quality.invalidRecords,
+      });
+      return;
+    }
+    this.emptyFiles.delete(filename);
+    const fileQuality = emptyQuality();
+    let hasEvents = false;
+    try {
+      await this.readFile(
+        filename,
+        event => {
+          // A valid event belonging to another player or to the future still
+          // prevents caching: a later query must be able to consume it.
+          hasEvents = true;
+          consume(event);
+        },
+        fileQuality,
+      );
+      if (!hasEvents && (await this.fingerprint(filename)) === before) {
+        this.emptyFiles.set(filename, { fingerprint: before, quality: fileQuality });
+        if (this.emptyFiles.size > MAX_EMPTY_FILE_CACHE)
+          this.emptyFiles.delete(this.emptyFiles.keys().next().value!);
+      }
+    } finally {
+      // Keep useful counters even when the end of a compressed file is damaged.
+      Object.assign(quality, {
+        ignoredLegacyRecords: quality.ignoredLegacyRecords + fileQuality.ignoredLegacyRecords,
+        invalidRecords: quality.invalidRecords + fileQuality.invalidRecords,
+      });
     }
   }
 
@@ -715,7 +771,11 @@ export class PlaybackStatisticsReader {
     let day: string | undefined;
     let ids = new Set<string>();
     let previousIds = new Set<string>();
-    for (const filename of await this.files()) {
+    const filenames = await this.files();
+    const retained = new Set(filenames);
+    for (const filename of this.emptyFiles.keys())
+      if (!retained.has(filename)) this.emptyFiles.delete(filename);
+    for (const filename of filenames) {
       const fileDay = LOG_FILE.exec(filename)![1];
       if (day !== fileDay) {
         if (day) await endDay(day);
@@ -724,7 +784,7 @@ export class PlaybackStatisticsReader {
         day = fileDay;
       }
       try {
-        await this.readFile(
+        await this.readCachedFile(
           filename,
           event => {
             if (event.playerId !== playerId || Date.parse(event.timestamp) > now.getTime()) return;
