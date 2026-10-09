@@ -91,6 +91,9 @@ class TabbedWindow {
 
   private activeId: number | undefined;
 
+  /** Most recently selected last; hidden/background tabs never replace a recent choice. */
+  private selectionHistory: number[] = [];
+
   constructor() {
     const options: BrowserWindowConstructorOptions = {
       show: false,
@@ -126,6 +129,8 @@ class TabbedWindow {
         tab.window.emit('closed');
       }
       this.tabs = [];
+      this.selectionHistory = [];
+      this.activeId = undefined;
     });
     this.window.on('show', () => {
       this.window.focus();
@@ -160,7 +165,7 @@ class TabbedWindow {
     view.webContents.on('page-title-updated', (event: Event) => {
       event.preventDefault();
     });
-    if (!this.activeId) this.activeId = tab.id;
+    if (this.activeId === undefined) this.select(tab.id);
     this.render();
     this.layout();
     emitChange();
@@ -171,7 +176,7 @@ class TabbedWindow {
     const tab = this.tabs.find(item => item.id === id);
     if (!tab || tab.destroyed) return;
     tab.hidden = false;
-    this.activeId = id;
+    this.select(id);
     this.window.contentView.addChildView(tab.view);
     this.window.show();
     this.window.focus();
@@ -191,12 +196,18 @@ class TabbedWindow {
     tab.destroyed = true;
     tab.view.webContents.close();
     this.tabs = this.tabs.filter(item => item.id !== id);
+    this.selectionHistory = this.selectionHistory.filter(selected => selected !== id);
     tab.window.emit('closed');
-    if (this.activeId === id) this.activeId = this.tabs.find(item => !item.hidden)?.id;
-    if (this.activeId) this.activate(this.activeId);
-    else {
+    if (this.activeId === id) {
+      this.activeId = this.previousVisibleTabId();
+      if (this.activeId !== undefined) this.activate(this.activeId);
+      else {
+        this.render();
+        this.window.close();
+      }
+    } else {
       this.render();
-      this.window.close();
+      this.layout();
     }
     emitChange();
   }
@@ -205,10 +216,11 @@ class TabbedWindow {
     const tab = this.tabs.find(item => item.id === id);
     if (!tab) return;
     tab.hidden = true;
+    this.selectionHistory = this.selectionHistory.filter(selected => selected !== id);
     tab.view.setVisible(false);
     if (this.activeId === id) {
-      this.activeId = this.tabs.find(item => !item.hidden && item.id !== id)?.id;
-      if (this.activeId) this.activate(this.activeId);
+      this.activeId = this.previousVisibleTabId();
+      if (this.activeId !== undefined) this.activate(this.activeId);
       else this.window.hide();
     }
     this.render();
@@ -293,6 +305,19 @@ class TabbedWindow {
 
   private activeTab() {
     return this.tabs.find(item => item.id === this.activeId);
+  }
+
+  private select(id: number) {
+    this.activeId = id;
+    this.selectionHistory = this.selectionHistory.filter(selected => selected !== id);
+    this.selectionHistory.push(id);
+  }
+
+  private previousVisibleTabId(): number | undefined {
+    const visible = this.visibleTabs();
+    return (
+      this.selectionHistory.findLast(id => visible.some(tab => tab.id === id)) ?? visible[0]?.id
+    );
   }
 
   private async closeApplication() {
