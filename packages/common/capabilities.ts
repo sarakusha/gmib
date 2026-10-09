@@ -5,6 +5,10 @@ export type FeatureName =
   | 'playerScheduler'
   | 'playerSeek'
   | 'playerShaders'
+  | 'playbackStatistics'
+  | 'playbackDiagnostics'
+  | 'playbackLogPath'
+  | 'remotePlayerOutputVisibility'
   | 'remotePlayerOutputClose'
   | 'schedulerSecondsAndPriority'
   | 'windowZIndex';
@@ -16,6 +20,10 @@ const minimumVersions: Record<FeatureName, string> = {
   playerScheduler: '5.0.0',
   playerSeek: '4.12.0',
   playerShaders: '5.0.0',
+  playbackStatistics: '5.6.3',
+  playbackDiagnostics: '5.6.0',
+  playbackLogPath: '5.6.1',
+  remotePlayerOutputVisibility: '5.4.1',
   remotePlayerOutputClose: '5.1.1',
   schedulerSecondsAndPriority: '5.3.0',
   windowZIndex: '5.0.1',

@@ -24,16 +24,22 @@ const Main: React.FC<{ className?: string }> = ({ className }) => {
   const value = useSelector(selectCurrentTab);
   const dispatch = useDispatch();
   const isSchedulerSupported = supportsFeature('playerScheduler', version, isRemoteSession);
+  const isStatisticsSupported = supportsFeature('playbackStatistics', version, isRemoteSession);
   const visibleTabNames = React.useMemo(
-    () => tabNames.filter(name => name !== 'scheduler' || isSchedulerSupported),
-    [isSchedulerSupported],
+    () =>
+      tabNames.filter(
+        name =>
+          (name !== 'scheduler' || isSchedulerSupported) &&
+          (name !== 'statistics' || isStatisticsSupported),
+      ),
+    [isSchedulerSupported, isStatisticsSupported],
   );
   const handleChange = (event: React.SyntheticEvent, newValue: TabNames) => {
     dispatch(setCurrentTab(newValue));
   };
   React.useEffect(() => {
-    if (value === 'scheduler' && !isSchedulerSupported) dispatch(setCurrentTab('player'));
-  }, [dispatch, isSchedulerSupported, value]);
+    if (!visibleTabNames.some(name => name === value)) dispatch(setCurrentTab('player'));
+  }, [dispatch, visibleTabNames, value]);
   return (
     <TabContext value={value}>
       <Box sx={{ width: 1, height: 1, display: 'flex', flexDirection: 'column' }}>
@@ -65,7 +71,7 @@ const Main: React.FC<{ className?: string }> = ({ className }) => {
           <TabPanel value="settings">
             <SettingsTab />
           </TabPanel>
-          {value === 'statistics' && (
+          {isStatisticsSupported && value === 'statistics' && (
             <TabPanel value="statistics">
               <StatisticsTab />
             </TabPanel>

@@ -49,7 +49,7 @@ export type PlaybackStatusSnapshot = {
 
 export type PlaybackSettings = {
   logRetentionDays: number;
-  currentLogPath: string;
+  currentLogPath?: string;
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>

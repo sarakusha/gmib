@@ -2,6 +2,8 @@ import { useSnackbar } from 'notistack';
 import * as React from 'react';
 
 import type { PlaybackStatusSnapshot } from '/@common/playback';
+import { supportsFeature } from '/@common/capabilities';
+import { isRemoteSession, version } from '/@common/remote';
 
 import { useGetPlaybackStatusQuery, useRetryPlaybackMutation } from '../api/playback';
 import {
@@ -12,6 +14,9 @@ import {
 } from './playbackStore';
 
 let playbackUnsupported = false;
+const emptySnapshot: PlaybackStatusSnapshot = { issues: [] };
+const supportsPlaybackDiagnostics = () =>
+  supportsFeature('playbackDiagnostics', version, isRemoteSession);
 
 const errorStatus = (error: unknown): number | undefined => {
   if (typeof error !== 'object' || error === null || !('status' in error)) return undefined;
@@ -21,7 +26,7 @@ const errorStatus = (error: unknown): number | undefined => {
 const usePlaybackStatusResource = () => {
   const [enabled, setEnabled] = React.useState(!playbackUnsupported);
   const status = useGetPlaybackStatusQuery(undefined, {
-    skip: !enabled,
+    skip: !supportsPlaybackDiagnostics() || !enabled,
     refetchOnFocus: true,
   });
   React.useEffect(() => {
@@ -38,14 +43,18 @@ export const usePlaybackIssues = (): PlaybackStatusSnapshot => {
   React.useEffect(() => {
     if (status.data) setPlaybackStatus(status.data);
   }, [status.data]);
-  return React.useSyncExternalStore(
+  const snapshot = React.useSyncExternalStore(
     subscribePlaybackStatus,
     getPlaybackSnapshot,
     getPlaybackSnapshot,
   );
+  return supportsPlaybackDiagnostics() ? snapshot : emptySnapshot;
 };
 
-export const usePlaybackFeatureAvailable = (): boolean => usePlaybackStatusResource().isSuccess;
+export const usePlaybackFeatureAvailable = (): boolean => {
+  const status = usePlaybackStatusResource();
+  return supportsPlaybackDiagnostics() && status.isSuccess;
+};
 
 export const usePlaybackIssue = (mediaId: string, playerId?: number) => {
   const { issues } = usePlaybackIssues();
@@ -57,6 +66,7 @@ export const useRetryPlayback = (): ((mediaId: string) => void) => {
   const { enqueueSnackbar } = useSnackbar();
   return React.useCallback(
     (mediaId: string) => {
+      if (!supportsPlaybackDiagnostics() || playbackUnsupported) return;
       void retry(mediaId)
         .unwrap()
         .catch(() => {

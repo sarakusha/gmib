@@ -4,6 +4,9 @@ import type { IconButtonProps } from '@mui/material';
 import IconButton from '@mui/material/IconButton';
 import * as React from 'react';
 
+import { supportsFeature } from '/@common/capabilities';
+import { isRemoteSession, version } from '/@common/remote';
+
 import { useSetPlayerOutputVisibilityMutation } from '../api/player';
 import { useDispatch, useSelector } from '../store';
 import { setOutputHidden } from '../store/currentSlice';
@@ -14,16 +17,19 @@ type Props = {
 };
 
 const OutputVisibilityButton: React.FC<Props> = ({ size }) => {
+  const isSupported = supportsFeature('remotePlayerOutputVisibility', version, isRemoteSession);
   const outputHidden = useSelector(selectOutputHidden);
   const dispatch = useDispatch();
   const [setOutputVisibility, { isLoading }] = useSetPlayerOutputVisibilityMutation();
   const toggleOutputVisibility = React.useCallback(() => {
+    if (!isSupported) return;
     const visible = outputHidden;
     void setOutputVisibility(visible)
       .unwrap()
       .then(() => dispatch(setOutputHidden(!visible)))
       .catch(() => undefined);
-  }, [dispatch, outputHidden, setOutputVisibility]);
+  }, [dispatch, isSupported, outputHidden, setOutputVisibility]);
+  if (!isSupported) return null;
   return (
     <IconButton
       size={size}

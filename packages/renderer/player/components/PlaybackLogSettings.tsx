@@ -2,6 +2,9 @@ import { Box, FormControl, FormHelperText, FormLabel, TextField } from '@mui/mat
 import { useSnackbar } from 'notistack';
 import * as React from 'react';
 
+import { supportsFeature } from '/@common/capabilities';
+import { isRemoteSession, version } from '/@common/remote';
+
 import { useGetPlaybackSettingsQuery, useUpdatePlaybackSettingsMutation } from '../api/playback';
 import {
   DEFAULT_PLAYBACK_LOG_RETENTION_DAYS,
@@ -11,6 +14,7 @@ import {
 import { watchPlaybackLogDay } from '../playback/watchPlaybackLogDay';
 
 const PlaybackLogSettings: React.FC = () => {
+  const supportsLogPath = supportsFeature('playbackLogPath', version, isRemoteSession);
   const [value, setValue] = React.useState(String(DEFAULT_PLAYBACK_LOG_RETENTION_DAYS));
   const numericValue = Number(value);
   const valid = isValidPlaybackLogRetentionDays(numericValue);
@@ -28,13 +32,12 @@ const PlaybackLogSettings: React.FC = () => {
     if (data?.logRetentionDays !== undefined) setValue(String(data.logRetentionDays));
   }, [data?.logRetentionDays]);
 
-  React.useEffect(
-    () =>
-      watchPlaybackLogDay(() => {
-        void refetch();
-      }),
-    [refetch],
-  );
+  React.useEffect(() => {
+    if (!supportsLogPath) return undefined;
+    return watchPlaybackLogDay(() => {
+      void refetch();
+    });
+  }, [refetch, supportsLogPath]);
 
   const save = (): void => {
     if (shouldSavePlaybackLogRetentionDays(numericValue, data?.logRetentionDays, isLoading)) {
@@ -82,7 +85,7 @@ const PlaybackLogSettings: React.FC = () => {
               ? 'От 1 до 365 дней. По умолчанию 7.'
               : 'Введите целое число от 1 до 365'}
         </FormHelperText>
-        {data && (
+        {supportsLogPath && data?.currentLogPath && (
           <FormHelperText sx={{ mt: 1, overflowWrap: 'anywhere' }}>
             Текущий файл: {data.currentLogPath}
           </FormHelperText>

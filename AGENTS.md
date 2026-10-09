@@ -20,6 +20,24 @@ Keep `README.md` and the built-in help at `packages/renderer/gmib/components/Hel
 
 Do not add development artifacts such as build scripts, test commands, packaging details, or contributor-only workflow notes to `Help.mdx`; keep those in `README.md` or contributor documentation.
 
+## Remote Version Compatibility
+
+When adding or changing a feature that can be used on a remote GMIB host, check compatibility
+with older host versions as part of the implementation. Register the feature and its first
+supported release in `packages/common/capabilities.ts`, and use the existing `supportsFeature`
+helper with the **remote host version** from `packages/common/remote.ts`.
+
+Gate both the interface and the operations: hide unsupported controls/tabs, avoid unsupported
+API requests or IPC commands, and omit new payload fields when talking to older hosts. A hidden
+control alone is not sufficient if mounted components still query the unsupported endpoint.
+Keep local features available according to the existing helper policy. Preserve an appropriate
+runtime fallback (for example, HTTP 404) when the host version is missing or an endpoint is absent.
+
+Determine the minimum version from the release containing the feature; do not guess or change
+existing compatibility thresholds without evidence. Check adjacent features for missed gates.
+Validate versions below the minimum, at the minimum, a newer version, and local operation.
+Keep the compatibility notes in `README.md` and built-in help synchronized when user-visible.
+
 ## Commit Messages
 
 Use Conventional Commits for all commit messages.
