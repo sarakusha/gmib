@@ -59,13 +59,39 @@ export const outputStateLabels: Record<PlaybackOutputState, string> = {
   unknown: 'состояние неизвестно',
 };
 
-export const outputName = (output: {
+type OutputLabel = {
   id: number;
   name: string;
   display?: string | number;
   resolvedDisplayId?: string | number;
-}): string =>
-  `${output.name || `Выход ${output.id}`} (№${output.id}${output.display !== undefined ? `, экран ${output.display}` : ''}${output.resolvedDisplayId !== undefined && output.resolvedDisplayId !== output.display ? ` → ${output.resolvedDisplayId}` : ''})`;
+};
+
+export const outputName = (output: OutputLabel): string => {
+  const display = Number(output.display);
+  const label =
+    display === -1
+      ? 'Основной дисплей'
+      : display === -2
+        ? 'Дополнительный дисплей'
+        : output.display === undefined || display === 0
+          ? 'Дисплей не выбран'
+          : 'Выбранный дисплей';
+  return `${output.name || 'Выход'} · ${label}`;
+};
+
+export const outputDetails = (output: OutputLabel): string =>
+  `ID выхода: ${output.id}. Дисплей в настройках: ${output.display ?? 'не указан'}. Системный ID дисплея: ${output.resolvedDisplayId ?? 'нет данных'}.`;
+
+/** Keep both durations readable side by side, including seconds and totals over 24 hours. */
+export const formatDurationPair = (totalMs: number, healthyMs: number): string => {
+  const clock = (ms: number) => {
+    const seconds = Math.floor(ms / 1000);
+    return [Math.floor(seconds / 3600), Math.floor((seconds % 3600) / 60), seconds % 60]
+      .map(value => String(value).padStart(2, '0'))
+      .join(':');
+  };
+  return `${clock(totalMs)} / ${clock(healthyMs)}`;
+};
 
 const csvCell = (value: string | number): string => {
   const text = String(value);

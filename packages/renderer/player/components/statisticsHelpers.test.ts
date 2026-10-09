@@ -79,7 +79,7 @@ describe('playback statistics presentation', () => {
     expect(csv).toContain('"Запрошенные даты","2026-10-03","2026-10-09"');
     expect(csv).toContain('"Устаревших записей пропущено","2"');
     expect(csv).toContain('"Попыток с неполными данными","0"');
-    expect(csv).toContain('"Выход","Сцена (№5, экран 7)"');
+    expect(csv).toContain('"Выход","Сцена · Выбранный дисплей"');
     expect(csv).toContain('"Итого","1","1","0","1","0","2000","1000"');
     expect(csv).toContain('"Сцена","5","7","0","1","0","1000","окно вывода отсутствует: 1"');
     expect(csv).toContain('"\'=SUM(1,2)""clip"');

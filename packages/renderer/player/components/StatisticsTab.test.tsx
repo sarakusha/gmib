@@ -42,7 +42,14 @@ const data: PlaybackStatistics = {
   totals: metrics,
   rows: [{ ...metrics, mediaId: 'clip-1', filename: 'promo.mp4' }],
   outputs: [
-    { ...metrics, id: 1, name: 'Основной', display: 2, reasons: [{ reason: 'hidden', count: 1 }] },
+    {
+      ...metrics,
+      id: 1,
+      name: 'Новый плеер - Вывод',
+      display: -1,
+      resolvedDisplayId: 1,
+      reasons: [{ reason: 'hidden', count: 1 }],
+    },
     {
       ...metrics,
       id: 2,
@@ -81,13 +88,13 @@ describe('StatisticsTab', () => {
       expect.objectContaining({ skip: true }),
     );
     expect(html).toContain('promo.mp4');
-    expect(html).toContain('2 ч 10 мин 00 с');
+    expect(html).toContain('02:13:20 / 02:10:00');
     expect(html).toContain('Часть периода вне доступного журнала');
     expect(html).toContain('График подтверждённых показов, прокрутка по горизонтали');
     expect(html).toContain('data-bar-min-width="80"');
     expect(html).toContain('нет записей');
-    expect(html).toContain('Основной (№1, экран 2)');
-    expect(html).toContain('Резервный (№2, экран 3)');
+    expect(html).toContain('Новый плеер - Вывод · Основной дисплей');
+    expect(html).toContain('Резервный · Выбранный дисплей');
     expect(html).toContain('выход скрыт: 1');
   });
 

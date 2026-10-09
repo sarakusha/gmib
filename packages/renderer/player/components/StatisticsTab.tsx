@@ -28,9 +28,10 @@ import React from 'react';
 import { useGetPlaybackHistoryQuery, useGetPlaybackStatisticsQuery } from '../api/playback';
 import { sourceId } from '../utils';
 import {
-  formatDuration,
+  formatDurationPair,
   isValidRange,
   MIN_STATISTICS_BAR_WIDTH,
+  outputDetails,
   outputName,
   outputStateLabels,
   presetRange,
@@ -52,7 +53,6 @@ type SortKey =
   | 'partial'
   | 'unconfirmed'
   | 'playedMs'
-  | 'successfulMs'
   | 'errors'
   | 'skipped';
 const columns: { key: SortKey; label: string }[] = [
@@ -62,8 +62,7 @@ const columns: { key: SortKey; label: string }[] = [
   { key: 'confirmed', label: 'Подтверждено' },
   { key: 'partial', label: 'Частично' },
   { key: 'unconfirmed', label: 'Не подтверждено' },
-  { key: 'playedMs', label: 'Время источника' },
-  { key: 'successfulMs', label: 'Исправный вывод' },
+  { key: 'playedMs', label: 'Время: общее / исправное' },
   { key: 'errors', label: 'Ошибки' },
   { key: 'skipped', label: 'Пропуски' },
 ];
@@ -115,7 +114,7 @@ const StatisticsTab: React.FC = () => {
   const [preset, setPreset] = React.useState<StatisticsPreset>('week');
   const [range, setRange] = React.useState<PlaybackStatisticsRange | undefined>();
   const [draft, setDraft] = React.useState<PlaybackStatisticsRange>({ from: '', to: '' });
-  const [sortKey, setSortKey] = React.useState<SortKey>('completed');
+  const [sortKey, setSortKey] = React.useState<SortKey>('confirmed');
   const [descending, setDescending] = React.useState(true);
   const [selected, setSelected] = React.useState<PlaybackStatisticsRow | null>(null);
   const [offset, setOffset] = React.useState(0);
@@ -231,7 +230,7 @@ const StatisticsTab: React.FC = () => {
           >
             <MenuItem value="all">Все настроенные выходы</MenuItem>
             {data.outputs.map(output => (
-              <MenuItem key={output.id} value={output.id}>
+              <MenuItem key={output.id} value={output.id} title={outputDetails(output)}>
                 {outputName(output)}
               </MenuItem>
             ))}
@@ -310,35 +309,45 @@ const StatisticsTab: React.FC = () => {
           <Box
             sx={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(165px, 1fr))',
-              gap: 2,
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))',
+              gap: 3,
               mb: 3,
             }}
           >
-            {[
-              [
-                'Время исправного вывода',
-                formatDuration(data.totals.successfulMs),
-                'Только завершённые попытки',
-              ],
-              ['Подтверждено', data.totals.confirmed, `Запусков: ${data.totals.starts}`],
-              ['Частично', data.totals.partial, 'Вывод прерывался'],
-              ['Не подтверждено', data.totals.unconfirmed, 'Вывод не наблюдался'],
-              ['Источник завершён', data.totals.completed, 'Достигнут конец файла'],
-              ['Активное время источника', formatDuration(data.totals.playedMs), 'Все попытки'],
-              ['Ошибки', data.totals.errors, 'Включая повторные попытки'],
-              ['Пропуски из-за ошибок', data.totals.skipped, 'Переходы к следующему ролику'],
-            ].map(([label, value, caption]) => (
-              <Box key={label}>
-                <Typography variant="body2">{label}</Typography>
-                <Typography variant="h5" sx={{ fontVariantNumeric: 'tabular-nums' }}>
-                  {value}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {caption}
-                </Typography>
-              </Box>
-            ))}
+            <Box>
+              <Typography variant="subtitle2">Время</Typography>
+              <Typography variant="caption" color="text.secondary">
+                Общее / Исправный вывод · чч:мм:сс
+              </Typography>
+              <Typography variant="h6" sx={{ fontVariantNumeric: 'tabular-nums', my: 0.5 }}>
+                {formatDurationPair(data.totals.playedMs, data.totals.successfulMs)}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Общее — все попытки. Исправный вывод — только завершённые.
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="subtitle2">Показы</Typography>
+              <Typography variant="h6" sx={{ fontVariantNumeric: 'tabular-nums', my: 0.5 }}>
+                {data.totals.confirmed} подтверждено
+              </Typography>
+              <Typography variant="body2">
+                Частично: {data.totals.partial} · Не подтверждено: {data.totals.unconfirmed}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Завершено воспроизведений: {data.totals.completed} · Запусков: {data.totals.starts}
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="subtitle2">Ошибки и пропуски</Typography>
+              <Typography variant="h6" sx={{ fontVariantNumeric: 'tabular-nums', my: 0.5 }}>
+                {data.totals.errors} / {data.totals.skipped}
+              </Typography>
+              <Typography variant="body2">Ошибки / Пропуски из-за ошибок</Typography>
+              <Typography variant="caption" color="text.secondary">
+                Ошибка может завершиться успешной повторной попыткой без пропуска.
+              </Typography>
+            </Box>
           </Box>
           <Typography variant="h6" gutterBottom>
             Подтверждённые показы по дням
@@ -442,8 +451,13 @@ const StatisticsTab: React.FC = () => {
                       <TableCell align="right">{row.confirmed}</TableCell>
                       <TableCell align="right">{row.partial}</TableCell>
                       <TableCell align="right">{row.unconfirmed}</TableCell>
-                      <TableCell align="right">{formatDuration(row.playedMs)}</TableCell>
-                      <TableCell align="right">{formatDuration(row.successfulMs)}</TableCell>
+                      <TableCell
+                        align="right"
+                        sx={{ whiteSpace: 'nowrap' }}
+                        title="Общее время / Исправный вывод · чч:мм:сс"
+                      >
+                        {formatDurationPair(row.playedMs, row.successfulMs)}
+                      </TableCell>
                       <TableCell align="right">{row.errors}</TableCell>
                       <TableCell align="right">{row.skipped}</TableCell>
                     </TableRow>
@@ -468,18 +482,24 @@ const StatisticsTab: React.FC = () => {
                       <TableCell align="right">Подтверждено</TableCell>
                       <TableCell align="right">Частично</TableCell>
                       <TableCell align="right">Не подтверждено</TableCell>
-                      <TableCell align="right">Исправный вывод</TableCell>
+                      <TableCell align="right">Время: общее / исправное</TableCell>
                       <TableCell>Причины</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {data.outputs.map(output => (
                       <TableRow key={output.id}>
-                        <TableCell>{outputName(output)}</TableCell>
+                        <TableCell title={outputDetails(output)}>{outputName(output)}</TableCell>
                         <TableCell align="right">{output.confirmed}</TableCell>
                         <TableCell align="right">{output.partial}</TableCell>
                         <TableCell align="right">{output.unconfirmed}</TableCell>
-                        <TableCell align="right">{formatDuration(output.successfulMs)}</TableCell>
+                        <TableCell
+                          align="right"
+                          sx={{ whiteSpace: 'nowrap' }}
+                          title="Общее время / Исправный вывод · чч:мм:сс"
+                        >
+                          {formatDurationPair(output.playedMs, output.successfulMs)}
+                        </TableCell>
                         <TableCell>
                           {output.reasons
                             .map(({ reason, count }) => `${outputStateLabels[reason]}: ${count}`)
@@ -518,15 +538,21 @@ const StatisticsTab: React.FC = () => {
                 {new Date(entry.startedAt ?? entry.timestamp).toLocaleString('ru-RU', {
                   timeZone: data?.timeZone,
                 })}{' '}
-                · {outcomeLabels[entry.outcome]} · источник: {formatDuration(entry.playedMs)}
-                {' · '}исправный вывод: {formatDuration(entry.successfulMs)}
+                · {outcomeLabels[entry.outcome]}
+                {' · '}время (общее / исправное):{' '}
+                {formatDurationPair(entry.playedMs, entry.successfulMs)}
                 {entry.outcome === 'completed'
                   ? ` · ${entry.outputResult && entry.events.some(event => event.output) ? resultLabels[entry.outputResult.status] : 'вывод не подтверждён (старый журнал)'}`
                   : ''}
                 {entry.skipped ? ' · пропуск' : ''}
               </Typography>
               {entry.outputResult?.outputs.map(output => (
-                <Typography key={output.id} variant="caption" sx={{ display: 'block' }}>
+                <Typography
+                  key={output.id}
+                  title={outputDetails(output)}
+                  variant="caption"
+                  sx={{ display: 'block' }}
+                >
                   {outputName(output)} · {resultLabels[output.status]}
                   {output.reasons.length
                     ? ` · ${output.reasons.map(reason => outputStateLabels[reason]).join(', ')}`
@@ -546,6 +572,7 @@ const StatisticsTab: React.FC = () => {
                   variant="caption"
                   sx={{ display: 'block' }}
                   color="text.secondary"
+                  title={event.output?.outputs.map(outputDetails).join(' ')}
                 >
                   {new Date(event.timestamp).toLocaleTimeString('ru-RU', {
                     timeZone: data?.timeZone,
