@@ -74,6 +74,7 @@ jobs:
 
       - name: Verify playback and types
         run: |
+          pnpm exec vitest run -r packages/main test/playbackStatistics
           pnpm run test:preload
           pnpm run typecheck
 
