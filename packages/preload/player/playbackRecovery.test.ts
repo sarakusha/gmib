@@ -5,6 +5,46 @@ import PlaybackRecovery from './playbackRecovery';
 const item = (id: string, md5 = id) => ({ id, md5 }) as PlaylistItem;
 
 describe('PlaybackRecovery', () => {
+  it('permits repeat preloading only after completion and disables it after failure or reset', () => {
+    const recovery = new PlaybackRecovery();
+    const playable = item('playable');
+    expect(recovery.canPreloadRepeat('playable')).toBe(false);
+    recovery.begin(playable);
+    recovery.markPlayable('playable');
+    expect(recovery.canPreloadRepeat('playable')).toBe(false);
+
+    recovery.succeeded('playable');
+    expect(recovery.canPreloadRepeat('playable')).toBe(true);
+    expect(recovery.fail(recovery.begin(playable))).toBe(true);
+    expect(recovery.canPreloadRepeat('playable')).toBe(false);
+    recovery.markPlayable('playable');
+    expect(recovery.canPreloadRepeat('playable')).toBe(false);
+
+    recovery.succeeded('playable');
+    expect(recovery.canPreloadRepeat('playable')).toBe(true);
+    recovery.reset('playable');
+    expect(recovery.hasPlayed('playable')).toBe(true);
+    expect(recovery.canPreloadRepeat('playable')).toBe(false);
+  });
+
+  it('counts a concurrently preloaded attempt after successful completion but invalidates it on reset', () => {
+    const recovery = new PlaybackRecovery();
+    const playable = item('playable');
+    recovery.succeeded('playable');
+    const preload = recovery.begin(playable);
+    recovery.succeeded('playable');
+
+    expect(recovery.fail(preload)).toBe(true);
+    expect(recovery.fail(preload)).toBe(false);
+    expect(recovery.canPreloadRepeat('playable')).toBe(false);
+    expect(recovery.begin(playable).attempt).toBe(2);
+
+    const stale = recovery.begin(playable);
+    recovery.reset('playable');
+    expect(recovery.fail(stale)).toBe(false);
+    expect(recovery.begin(playable).attempt).toBe(1);
+  });
+
   it('quarantines unknown media for five minutes after three distinct failed attempts', () => {
     let time = 1_000;
     const recovery = new PlaybackRecovery(3, () => time);

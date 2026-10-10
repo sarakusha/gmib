@@ -338,6 +338,235 @@ describe('mediaStream recovery orchestration', () => {
     expect(records('completed')).toHaveLength(1);
   });
 
+  it('preloads repeats only after completion, promotes the same decoder, and counts its later error', async () => {
+    mock.playlist.items = [mock.playlist.items[0]];
+    await import('./mediaStream');
+    await flush();
+    const first = current();
+    expect(mock.sources).toHaveLength(1);
+    first.emit({ frame: { timestamp: 0 } });
+    event('updatePlaylist', mock.playlist);
+    await flush();
+    expect(mock.sources).toHaveLength(1);
+
+    first.end();
+    await flush();
+    const second = current();
+    const repeat = mock.sources.find(source => !source.closed && source !== second);
+    expect(mock.sources).toHaveLength(3);
+    expect(repeat.options.mediaId).toBe(second.options.mediaId);
+    expect(repeat.paused).toBe(true);
+    expect(repeat.hasStarted).toBe(false);
+    second.emit({ frame: { timestamp: 0 } });
+    second.end();
+    await flush();
+    expect(current()).toBe(repeat);
+    expect(repeat.paused).toBe(false);
+    expect(mock.sources.filter(source => !source.closed && source !== repeat)).toHaveLength(1);
+    repeat.emit({ frame: { timestamp: 0 } });
+    const promotedStart = records('started').at(-1);
+    repeat.emit({ err: { message: 'promoted repeat failed' } });
+    repeat.emit({ err: { message: 'duplicate callback' } });
+    await flush();
+    expect(records('error')).toHaveLength(1);
+    expect(records('error')[0].playbackId).toBe(promotedStart.playbackId);
+    expect(records('completed')).toHaveLength(2);
+    expect(current()).not.toBe(repeat);
+    expect(mock.sources.filter(source => !source.closed)).toEqual([current()]);
+  });
+
+  it.each(['error', 'empty EOF'] as const)(
+    'disables repeat preloading after a background %s while preserving current playback',
+    async failure => {
+      mock.playlist.items = [mock.playlist.items[0]];
+      await import('./mediaStream');
+      await flush();
+      current().emit({ frame: { timestamp: 0 } });
+      current().end();
+      await flush();
+      const playing = current();
+      const repeat = mock.sources.find(source => !source.closed && source !== playing);
+      if (failure === 'error') repeat.emit({ err: { message: 'repeat preload failed' } });
+      else repeat.end();
+      await flush();
+      expect(records('error')).toHaveLength(1);
+      repeat.emit({ err: { message: 'late duplicate' } });
+      await flush();
+      expect(records('error')).toHaveLength(1);
+      expect(records('skipped')).toHaveLength(0);
+      expect(records('quarantined')).toHaveLength(0);
+      expect(current()).toBe(playing);
+      expect(playing.closed).toBe(false);
+      expect(repeat.closed).toBe(true);
+      const count = mock.sources.length;
+      for (let index = 0; index < 3; index += 1) {
+        playing.emit({ frame: { timestamp: index * 1_000_000 } });
+        event('updatePlaylist', mock.playlist);
+        await flush();
+      }
+      expect(mock.sources).toHaveLength(count);
+      expect(mock.sources.filter(source => !source.closed)).toEqual([playing]);
+
+      playing.end();
+      await flush();
+      expect(current()).not.toBe(playing);
+      expect(current()).not.toBe(repeat);
+      expect(mock.sources.filter(source => !source.closed && source !== current())).toHaveLength(1);
+      expect(records('error')).toHaveLength(1);
+    },
+  );
+
+  it('discards the pending same-file decoder before a fresh retry after current playback fails', async () => {
+    mock.playlist.items = [mock.playlist.items[0]];
+    await import('./mediaStream');
+    await flush();
+    current().emit({ frame: { timestamp: 0 } });
+    current().end();
+    await flush();
+    const playing = current();
+    const repeat = mock.sources.find(source => !source.closed && source !== playing);
+    const count = mock.sources.length;
+    playing.emit({ frame: { timestamp: 0 } });
+    playing.emit({ err: { message: 'current failed with repeat prepared' } });
+    await flush();
+    const retry = current();
+    expect(playing.closed).toBe(true);
+    expect(repeat.closed).toBe(true);
+    expect(repeat.hasStarted).toBe(false);
+    expect(retry).not.toBe(repeat);
+    expect(mock.sources).toHaveLength(count + 1);
+    expect(mock.sources.filter(source => !source.closed)).toEqual([retry]);
+    expect(records('error')).toHaveLength(1);
+    repeat.emit({ err: { message: 'cancelled preload callback' } });
+    playing.emit({ err: { message: 'duplicate current callback' } });
+    event('updatePlaylist', mock.playlist);
+    await flush();
+    expect(current()).toBe(retry);
+    expect(records('error')).toHaveLength(1);
+    expect(mock.sources).toHaveLength(count + 1);
+  });
+
+  it('closes a prepared repeat on manual retry and waits for another successful completion', async () => {
+    mock.playlist.items = [mock.playlist.items[0]];
+    await import('./mediaStream');
+    await flush();
+    current().emit({ frame: { timestamp: 0 } });
+    current().end();
+    await flush();
+    const playing = current();
+    const repeat = mock.sources.find(source => !source.closed && source !== playing);
+    const count = mock.sources.length;
+    event('playback:retry', 'bad-md5');
+    await flush();
+    expect(repeat.closed).toBe(true);
+    expect(current()).toBe(playing);
+    playing.emit({ frame: { timestamp: 0 } });
+    event('updatePlaylist', mock.playlist);
+    await flush();
+    expect(mock.sources).toHaveLength(count);
+    expect(mock.sources.filter(source => !source.closed)).toEqual([playing]);
+    playing.end();
+    await flush();
+    expect(mock.sources.filter(source => !source.closed)).toHaveLength(2);
+    expect(records('error')).toHaveLength(0);
+    expect(records('completed')).toHaveLength(2);
+  });
+
+  it.each(['manual retry', 'current failure'] as const)(
+    'discards repeat metadata resolving after %s',
+    async reason => {
+      mock.playlist.items = [mock.playlist.items[0]];
+      await import('./mediaStream');
+      await flush();
+      let resolve!: (value: unknown) => void;
+      let lookups = 0;
+      const invoke = mock.invoke.getMockImplementation()!;
+      mock.invoke.mockImplementation((channel: string, ...args: any[]) => {
+        if (channel === 'getMedia' && ++lookups === 2) {
+          return new Promise(done => {
+            resolve = done;
+          });
+        }
+        return invoke(channel, ...args);
+      });
+      current().emit({ frame: { timestamp: 0 } });
+      current().end();
+      await flush();
+      const playing = current();
+      expect(lookups).toBe(2);
+      expect(mock.sources).toHaveLength(2);
+      if (reason === 'manual retry') event('playback:retry', 'bad-md5');
+      else playing.emit({ err: { message: 'failure while repeat metadata was pending' } });
+      resolve({ filename: 'bad-md5.webm' });
+      await flush();
+      const active = current();
+      expect(active).toBeDefined();
+      if (reason === 'manual retry') expect(active).toBe(playing);
+      else expect(active).not.toBe(playing);
+      expect(mock.sources).toHaveLength(reason === 'manual retry' ? 2 : 3);
+      expect(mock.sources.filter(source => !source.closed)).toEqual([active]);
+      expect(records('error')).toHaveLength(reason === 'manual retry' ? 0 : 1);
+      active.emit({ frame: { timestamp: 0 } });
+      event('updatePlaylist', mock.playlist);
+      await flush();
+      expect(mock.sources.filter(source => !source.closed)).toEqual([active]);
+    },
+  );
+
+  it('keeps one paused repeat across pause, resume, seek and successive successful loops', async () => {
+    mock.playlist.items = [mock.playlist.items[0]];
+    const { seek } = await import('./mediaStream');
+    await flush();
+    current().emit({ frame: { timestamp: 0 } });
+    current().end();
+    await flush();
+    const second = current();
+    const repeat = mock.sources.find(source => !source.closed && source !== second);
+    second.emit({ frame: { timestamp: 1_000_000 } });
+    event('player', { ...mock.player, autoPlay: false });
+    await flush();
+    expect(second.paused).toBe(true);
+    expect(repeat.paused).toBe(true);
+    expect(mock.sources.filter(source => !source.closed)).toHaveLength(2);
+    await vi.advanceTimersByTimeAsync(60_000);
+    seek(2);
+    await flush();
+    const sought = mock.sources.at(-1);
+    expect(second.closed).toBe(true);
+    expect(sought.paused).toBe(true);
+    expect(sought.options.startTime).toBe(2);
+    expect(sought.options.fade).toEqual({ disableIn: true, disableOut: true, duration: 0 });
+    expect(repeat.closed).toBe(false);
+    expect(records('completed')).toHaveLength(1);
+    event('player', mock.player);
+    await flush();
+    expect(current()).toBe(sought);
+    expect(repeat.paused).toBe(true);
+    sought.emit({ frame: { timestamp: 0 } });
+    sought.end();
+    await flush();
+    expect(current()).toBe(repeat);
+
+    for (let index = 0; index < 3; index += 1) {
+      const playing = current();
+      const pending = mock.sources.filter(source => !source.closed && source !== playing);
+      expect(pending).toHaveLength(1);
+      expect(pending[0].paused).toBe(true);
+      playing.emit({ frame: { timestamp: 0 } });
+      playing.end();
+      await flush();
+      expect(current()).toBe(pending[0]);
+      expect(mock.sources.filter(source => !source.closed)).toHaveLength(2);
+    }
+    expect(records('started')).toHaveLength(5);
+    expect(records('completed')).toHaveLength(5);
+    expect(records('paused')).toHaveLength(1);
+    expect(records('resumed')).toHaveLength(1);
+    expect(records('seeked')).toHaveLength(1);
+    expect(records('error')).toHaveLength(0);
+    expect(records('interrupted')).toHaveLength(0);
+  });
+
   it('preserves the original playlist context when an old source fails during an asynchronous switch', async () => {
     await import('./mediaStream');
     await flush();

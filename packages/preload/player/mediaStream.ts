@@ -487,6 +487,13 @@ const failDecoder = (source: VideoSource, error: unknown): void => {
   const wasCurrent = source === currentSource;
   recordFailure(attempt, error);
   reportSkipped(attempt, wasCurrent, true);
+  // После ошибки текущего файла повтор проверяем последовательно. Уже подготовленная
+  // копия того же файла не должна обойти этот запрет при следующем updateDecoder().
+  if (wasCurrent && nextSource?.options.mediaId === attempt.mediaId) {
+    const stale = nextSource;
+    nextSource = undefined;
+    stale.close();
+  }
   if (recovery.hasPlayed(attempt.mediaId)) deferredPreloads.add(attempt.mediaId);
   if (shouldFallbackAfterDecoderError() && !linuxPreferSoftwareDecoding) {
     linuxPreferSoftwareDecoding = true;
@@ -543,6 +550,16 @@ const handleDecoderSourceMessage = (source: VideoSource, data: DecoderSourceMess
     );
     return;
   }
+  // Пустой EOF — ошибка и у фонового декодера: ready подтверждает только
+  // чтение конфигурации. Иначе испорченная предзагрузка исчезнет без учёта ошибки.
+  // Проверяем принятые кадры, а не started: пауза могла прийти вместе с кадром.
+  if (data.done && source.acceptedFrames === 0) {
+    failDecoder(
+      source,
+      `Decoder ended without a playable frame [${decoderFailureDetails(source, data)}]`,
+    );
+    return;
+  }
   if (source !== currentSource) return;
   if (data.frame && playbackState === 'playing') {
     markStarted(sourceAttempts.get(source));
@@ -567,14 +584,6 @@ const handleDecoderSourceMessage = (source: VideoSource, data: DecoderSourceMess
     );
   }
   if (data.done) endedSources.add(source);
-  // `started` records an active play, not every frame accepted by the source.
-  // A frame already queued when pause arrives must not turn EOF into a file error.
-  if (data.done && source.acceptedFrames === 0) {
-    failDecoder(
-      source,
-      `Decoder ended without a playable frame [${decoderFailureDetails(source, data)}]`,
-    );
-  }
 };
 
 const initializeDecoderStream = (): void => {
@@ -707,15 +716,17 @@ const updateDecoder = async (version: number): Promise<void> => {
   }
   syncTrackEnabled();
   const nextItem = selectItem(true);
-  // Never decode the same file concurrently: both failures belong to one retry budget.
-  if (!nextItem || nextItem.md5 === item.md5 || nextSource?.options.itemId !== nextItem.id) {
+  // Непроверенный или недавно ошибавшийся файл запускаем по одной попытке.
+  // После полного успешного показа разрешаем одну подготовленную копию повтора;
+  // её ошибка отключит предзагрузку, сохранив текущий показ и общий карантин файла.
+  const canPreload = nextItem && (nextItem.md5 !== item.md5 || recovery.canPreloadRepeat(item.md5));
+  if (!canPreload || nextSource?.options.itemId !== nextItem.id) {
     const stale = nextSource;
     nextSource = undefined;
     stale?.close();
   }
   if (
-    nextItem &&
-    nextItem.md5 !== item.md5 &&
+    canPreload &&
     !deferredPreloads.has(nextItem.md5) &&
     !nextSource &&
     playbackState === 'playing'

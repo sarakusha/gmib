@@ -16,6 +16,7 @@ export type PlaybackAttempt = {
 type MediaRecovery = {
   failures: number;
   everPlayed: boolean;
+  repeatReady: boolean;
   cooldowns: number;
   blockedUntil?: number;
 };
@@ -43,6 +44,11 @@ export default class PlaybackRecovery {
 
   hasPlayed(mediaId: string): boolean {
     return this.media.get(mediaId)?.everPlayed ?? false;
+  }
+
+  /** Повтор предзагружаем только после полного показа без последующих ошибок. */
+  canPreloadRepeat(mediaId: string): boolean {
+    return this.media.get(mediaId)?.repeatReady ?? false;
   }
 
   /** First rendered frame proves the file has played, without forgiving earlier errors. */
@@ -104,6 +110,7 @@ export default class PlaybackRecovery {
       return false;
     }
     state.failures += 1;
+    state.repeatReady = false;
     if (state.failures >= (state.everPlayed ? this.limit * 2 : this.limit)) {
       const base = state.everPlayed ? PLAYED_COOLDOWN_MS : UNKNOWN_COOLDOWN_MS;
       const cap = state.everPlayed ? PLAYED_MAX_COOLDOWN_MS : UNKNOWN_MAX_COOLDOWN_MS;
@@ -118,13 +125,18 @@ export default class PlaybackRecovery {
     this.media.set(mediaId, {
       failures: 0,
       everPlayed: played,
+      repeatReady: false,
       cooldowns: 0,
     });
   }
 
   /** A full playback proves this media worked and clears its failure history. */
   succeeded(mediaId: string): void {
-    this.media.set(mediaId, { failures: 0, everPlayed: true, cooldowns: 0 });
+    // Успех текущего показа не отменяет уже созданную попытку следующего повтора.
+    // Ссылку на состояние сохраняем; только явный reset делает старые попытки устаревшими.
+    const state = this.state(mediaId);
+    Object.assign(state, { failures: 0, everPlayed: true, repeatReady: true, cooldowns: 0 });
+    delete state.blockedUntil;
   }
 
   select(items: PlaylistItem[], current?: string, advance = false): PlaylistItem | undefined {
@@ -140,7 +152,7 @@ export default class PlaybackRecovery {
   private state(mediaId: string): MediaRecovery {
     let state = this.media.get(mediaId);
     if (!state) {
-      state = { failures: 0, everPlayed: false, cooldowns: 0 };
+      state = { failures: 0, everPlayed: false, repeatReady: false, cooldowns: 0 };
       this.media.set(mediaId, state);
     }
     return state;
