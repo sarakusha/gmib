@@ -284,6 +284,95 @@ describe('SQLite playback reports', () => {
     const older = await reader.history({ ...query, mediaId: 'clip', offset: 1, limit: 1 });
     expect(older.entries[0].playbackId).toBe(records[0].playbackId);
   });
+  it('retains the history total for a page beyond the last entry', async () => {
+    await append(successful());
+    expect(await reader.history({ ...query, mediaId: 'clip', offset: 10 })).toEqual({
+      entries: [],
+      total: 1,
+      offset: 10,
+      limit: 50,
+    });
+    expect(await reader.history({ ...query, mediaId: 'absent' })).toEqual({
+      entries: [],
+      total: 0,
+      offset: 0,
+      limit: 50,
+    });
+  });
+
+  it('uses the latest filename once per media with deterministic equal-time ties', async () => {
+    const ids = [randomUUID(), randomUUID(), randomUUID()].sort();
+    await append([
+      event(ids[0], 'started', '2026-10-08T10:00:00.000Z', { filename: 'old.mp4' }),
+      event(ids[1], 'started', '2026-10-08T11:00:00.000Z', { filename: 'new.mp4' }),
+      event(ids[2], 'started', '2026-10-08T11:00:00.000Z', { filename: 'latest.mp4' }),
+    ]);
+    expect((await reader.statistics(query)).rows[0]).toMatchObject({
+      mediaId: 'clip',
+      filename: 'latest.mp4',
+      starts: 3,
+    });
+  });
+
+  it('aggregates thousands of distinct media in two reads and reuses the report facts', async () => {
+    // Bulk seed realistic cardinality without timing thousands of individual writer transactions.
+    const count = 6000;
+    const start = Date.parse('2026-10-08T10:00:00.000Z');
+    await store.read(async sql => {
+      await sql.exec(`CREATE TEMP TABLE fixture AS WITH RECURSIVE numbers(n) AS (
+        VALUES(1) UNION ALL SELECT n+1 FROM numbers WHERE n<${count}
+      ) SELECT CAST(n AS TEXT) AS id,${start}+n*1000 AS at FROM numbers;
+      INSERT INTO attempts(id,player_id,media_id,attempt,filename,filename_at,first_at,last_at,
+        started_at,completed_at,terminal,terminal_at,completed_status)
+      SELECT id,1,id,1,id||'.mp4',at+1000,at,at+1000,at,at+1000,'completed',at+1000,'confirmed' FROM fixture;
+      INSERT INTO events(id,attempt_id,at,type)
+      SELECT id||'-start',id,at,'started' FROM fixture UNION ALL
+      SELECT id||'-end',id,at+1000,'completed' FROM fixture;
+      INSERT INTO segments(id,attempt_id,start_at,end_at,played_ms,all_showing)
+      SELECT id,id,at,at+1000,1000,1 FROM fixture;
+      DROP TABLE fixture;`);
+    });
+    const statements: string[] = [];
+    let reportPlan: { detail: string }[] = [];
+    reader = new PlaybackStatisticsSqlReader(
+      {
+        read: callback =>
+          store.read(sql =>
+            callback({
+              ...sql,
+              get: (statement, params) => {
+                statements.push(statement);
+                return sql.get(statement, params);
+              },
+              all: async (statement, params) => {
+                statements.push(statement);
+                reportPlan = await sql.all('EXPLAIN QUERY PLAN ' + statement, params);
+                return sql.all(statement, params);
+              },
+            }),
+          ),
+      },
+      () => now,
+    );
+    const result = await reader.statistics(query);
+    expect(statements).toHaveLength(2);
+    expect(result.rows).toHaveLength(count);
+    expect(result.totals).toMatchObject({
+      starts: count,
+      completed: count,
+      confirmed: count,
+      playedMs: count * 1000,
+      successfulMs: count * 1000,
+    });
+    expect(result.days[0]).toMatchObject({ starts: count, playedMs: count * 1000 });
+    expect(reportPlan.filter(row => row.detail === 'MATERIALIZE attempt_metrics')).toHaveLength(1);
+    statements.length = 0;
+    const history = await reader.history({ ...query, mediaId: '1' });
+    expect(statements).toHaveLength(3);
+    expect(history.total).toBe(1);
+    expect(history.entries[0]).toMatchObject({ mediaId: '1', playedMs: 1000, successfulMs: 1000 });
+  });
+
   it('uses the host calendar for a DST day instead of fixed 24-hour buckets', async () => {
     process.env.TZ = 'Europe/Berlin';
     const dstNow = new Date('2026-10-26T18:00:00.000Z');

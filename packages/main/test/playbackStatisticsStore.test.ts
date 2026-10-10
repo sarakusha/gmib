@@ -53,6 +53,18 @@ afterEach(async () => {
 });
 
 describe('playback SQLite facts', () => {
+  it('indexes seen events by attempt and timestamp for targeted lookup and cascade work', async () => {
+    const store = create();
+    const plan = await store.read(db =>
+      db.all<{ detail: string }>(
+        'EXPLAIN QUERY PLAN SELECT id FROM seen_events WHERE attempt_id=? AND at<=? ORDER BY at DESC LIMIT 1',
+        ['attempt', timestamp(10)],
+      ),
+    );
+
+    expect(plan.map(row => row.detail).join(' ')).toContain('seen_events_attempt_at');
+  });
+
   it('persists facts and deduplicates event IDs across progress and event types after reopening', async () => {
     const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'gmib-playback-db-'));
     directories.push(directory);

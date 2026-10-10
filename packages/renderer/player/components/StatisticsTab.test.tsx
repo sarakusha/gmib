@@ -161,6 +161,71 @@ describe('StatisticsTab', () => {
     expect(html).toContain('Обновите GMIB на устройстве');
   });
 
+  it('keeps the default preset range implicit when refresh returns that same range', async () => {
+    const refetch = vi.fn().mockResolvedValue({ data });
+    statisticsQuery.mockReturnValue({
+      currentData: data,
+      isLoading: false,
+      isError: false,
+      refetch,
+    });
+    const container = document.createElement('div');
+    document.body.append(container);
+    const root = createRoot(container);
+    act(() => root.render(<StatisticsTab />));
+
+    const refresh = [...container.querySelectorAll('button')].find(
+      button => button.textContent?.trim() === 'Обновить',
+    );
+    await act(async () => {
+      refresh?.click();
+      await Promise.resolve();
+    });
+
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(statisticsQuery).toHaveBeenLastCalledWith({ playerId: 7 }, expect.any(Object));
+    act(() => root.unmount());
+    container.remove();
+  });
+
+  it('advances an explicit preset range when refresh crosses midnight', async () => {
+    const refreshedData = {
+      ...data,
+      today: '2026-10-10',
+      requestedDates: { from: '2026-10-03', to: '2026-10-09' },
+    };
+    const refetch = vi.fn().mockResolvedValue({ data: refreshedData });
+    statisticsQuery.mockReturnValue({
+      currentData: data,
+      isLoading: false,
+      isError: false,
+      refetch,
+    });
+    const container = document.createElement('div');
+    document.body.append(container);
+    const root = createRoot(container);
+    act(() => root.render(<StatisticsTab />));
+
+    const week = [...container.querySelectorAll('button')].find(
+      button => button.textContent?.trim() === '7 дней',
+    );
+    act(() => week?.click());
+    const refresh = [...container.querySelectorAll('button')].find(
+      button => button.textContent?.trim() === 'Обновить',
+    );
+    await act(async () => {
+      refresh?.click();
+      await Promise.resolve();
+    });
+
+    expect(statisticsQuery).toHaveBeenLastCalledWith(
+      { playerId: 7, from: '2026-10-04', to: '2026-10-10' },
+      expect.any(Object),
+    );
+    act(() => root.unmount());
+    container.remove();
+  });
+
   it('passes the selected output to statistics and history queries', () => {
     const container = document.createElement('div');
     document.body.append(container);

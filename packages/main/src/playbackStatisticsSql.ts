@@ -9,11 +9,7 @@ import type {
   PlaybackStatisticsQuery,
 } from '/@common/playbackStatistics';
 import { localDate, PlaybackStatisticsQueryError, statisticsPeriod } from './playbackStatistics';
-import type {
-  PlaybackSqlDatabase,
-  PlaybackSqlValue,
-  PlaybackStatisticsStore,
-} from './playbackStatisticsStore';
+import type { PlaybackSqlValue, PlaybackStatisticsStore } from './playbackStatisticsStore';
 
 const emptyMetrics = (): PlaybackStatisticsMetrics => ({
   starts: 0,
@@ -63,9 +59,10 @@ const calendarDays = (from: number, to: number): Day[] => {
  * Only small report rows leave SQLite. The window excludes overlapping progress
  * evidence before applying the selected period, so an earlier segment cannot be
  * credited twice merely because the query starts in the middle of a playback.
+ * Materialize reused stages to prevent repeated correlated lookups in report sections.
  */
 const facts = `
-own AS (
+own AS MATERIALIZED (
   SELECT a.id,a.player_id,a.media_id,a.filename,a.filename_at,a.first_at,
     CASE WHEN a.last_at<=b.now THEN a.last_at ELSE COALESCE((
       SELECT MAX(at) FROM seen_events WHERE attempt_id=a.id AND at<=b.now),a.first_at) END AS last_at,
@@ -93,7 +90,7 @@ credited_segments AS (
   SELECT *, MAX(start_at,COALESCE(previous_end,start_at)) AS credited_start
   FROM ordered_segments
 ),
-selected_events AS (
+selected_events AS MATERIALIZED (
   SELECT e.* FROM events e JOIN own a ON a.id=e.attempt_id, bounds b
   WHERE e.at>=b.lo AND e.at<=b.hi AND e.at<b.finish AND e.at<=b.now
 ),
@@ -119,7 +116,7 @@ scopes AS (
   SELECT CAST(o.output_id AS TEXT),o.output_id FROM observed_outputs o,bounds b
     WHERE b.include_outputs GROUP BY o.output_id
 ),
-scoped_attempts AS (
+scoped_attempts AS MATERIALIZED (
   SELECT a.*,s.scope,s.output_id FROM own a JOIN relevant r ON r.attempt_id=a.id CROSS JOIN scopes s,bounds b
   WHERE s.output_id IS NULL OR EXISTS (
     SELECT 1 FROM attempt_outputs ao WHERE ao.attempt_id=a.id AND ao.output_id=s.output_id
@@ -138,7 +135,7 @@ metric_times AS (
     MIN(CASE WHEN type='interrupted' THEN at END) AS interrupted_at
   FROM selected_events GROUP BY attempt_id
 ),
-scoped_segments AS (
+scoped_segments AS MATERIALIZED (
   SELECT a.scope,a.id AS attempt_id,s.id,s.start_at,s.end_at,s.played_ms,
     MAX(s.credited_start,b.lo) AS lo,MIN(s.end_at,b.hi) AS hi,
     CASE WHEN a.terminal='completed' THEN CASE WHEN a.output_id IS NULL THEN s.all_showing
@@ -152,7 +149,7 @@ durations AS (
     SUM((hi-lo)*played_ms/(end_at-start_at)*healthy) AS successfulMs
   FROM scoped_segments GROUP BY scope,attempt_id
 ),
-attempt_metrics AS (
+attempt_metrics AS MATERIALIZED (
   SELECT a.*,COALESCE(d.playedMs,0) AS playedMs,COALESCE(d.successfulMs,0) AS successfulMs,
     m.starts_at IS NOT NULL AS starts,m.completed_at IS NOT NULL AS completed,
     m.errors_at IS NOT NULL AS errors,m.skipped_at IS NOT NULL AS skipped,
@@ -191,6 +188,95 @@ const outputIdentity = (output: SqlOutput) => ({
   display: output.display ?? undefined,
   resolvedDisplayId: output.resolved_display_id ?? undefined,
 });
+
+const metricNames = Object.keys(emptyMetrics());
+type ReportParts = {
+  total: ScopeMetrics;
+  media: PlaybackStatisticsMetrics & { mediaId: string; filename: string };
+  day: PlaybackStatisticsMetrics & { date: string; hasRecords: number };
+  output: SqlOutput;
+  reason: { output_id: number; reason: PlaybackOutputState; count: number };
+};
+
+// Tag the small aggregate rows so all sections share ONE evaluation of facts.
+// Keep native numeric columns: SQLite JSON formatting loses precision for large display IDs.
+// Only fixed internal column names enter this SQL; query values remain parameters.
+const reportColumns = [
+  'scope',
+  'incomplete',
+  'mediaId',
+  'filename',
+  'date',
+  'hasRecords',
+  'id',
+  'name',
+  'display',
+  'resolved_display_id',
+  'output_id',
+  'reason',
+  'count',
+  'reasonOrderAt',
+  'reasonOrderIndex',
+  ...metricNames,
+];
+type ReportRow = { [K in keyof ReportParts]: ReportParts[K] & { kind: K } }[keyof ReportParts];
+const reportPart = (kind: keyof ReportParts, columns: string[], query: string): string =>
+  `SELECT '${kind}' AS kind,${reportColumns.map(column => (columns.includes(column) ? column : `NULL AS ${column}`)).join(',')}
+   FROM (${query})`;
+
+const totalsQuery = `SELECT scope,${metricSum},SUM(incomplete) AS incomplete FROM attempt_metrics GROUP BY scope`;
+// Rank once instead of rescanning all attempts for every distinct media filename.
+const mediaQuery = `SELECT media_id AS mediaId,
+        MAX(CASE WHEN filename_rank=1 THEN filename END) AS filename,${metricSum}
+        FROM (SELECT *,ROW_NUMBER() OVER (
+          PARTITION BY media_id ORDER BY filename_at DESC,id DESC) AS filename_rank
+          FROM attempt_metrics WHERE scope='selected') GROUP BY media_id`;
+
+const outputsQuery = `SELECT o.output_id AS id,o.name,o.display,o.resolved_display_id
+        FROM output_observations o JOIN (
+          SELECT output_id,MAX(at) AS at FROM observed_outputs GROUP BY output_id
+        ) chosen ON chosen.output_id=o.output_id,bounds b
+        WHERE o.player_id=b.player AND o.at=(SELECT MAX(p.at) FROM output_observations p
+          WHERE p.player_id=o.player_id AND p.output_id=o.output_id AND p.at<=chosen.at)`;
+const reasonsQuery = `SELECT ao.output_id,j.value AS reason,COUNT(DISTINCT ao.attempt_id) AS count,
+        MIN(a.first_at) AS reasonOrderAt,MIN(CAST(j.key AS INTEGER)) AS reasonOrderIndex
+        FROM attempt_outputs ao JOIN scoped_attempts a ON a.id=ao.attempt_id
+          AND a.scope=CAST(ao.output_id AS TEXT),
+          bounds b,json_each(COALESCE(ao.completed_reasons,'["unknown"]')) j
+        WHERE a.completed_at>=b.lo AND a.completed_at<=b.hi AND a.completed_at<b.finish
+        GROUP BY ao.output_id,j.value`;
+
+// Calendar boundaries come from the host: DST days may have 23 or 25 hours.
+const dailyFacts = `days AS (
+      SELECT json_extract(value,'$.date') AS date,json_extract(value,'$.from') AS lo,
+        json_extract(value,'$.to') AS hi FROM json_each(?)
+    ),event_days AS (
+      SELECT d.date,a.id,
+        m.starts_at>=d.lo AND m.starts_at<d.hi AS starts,
+        m.completed_at>=d.lo AND m.completed_at<d.hi AS completed,
+        m.errors_at>=d.lo AND m.errors_at<d.hi AS errors,
+        m.skipped_at>=d.lo AND m.skipped_at<d.hi AS skipped,
+        m.interrupted_at>=d.lo AND m.interrupted_at<d.hi AS interrupted,
+        a.status,0 AS playedMs,0 AS successfulMs
+      FROM days d JOIN attempt_metrics a ON a.scope='selected'
+      LEFT JOIN metric_times m ON m.attempt_id=a.id
+      WHERE (m.starts_at>=d.lo AND m.starts_at<d.hi) OR (m.completed_at>=d.lo AND m.completed_at<d.hi)
+        OR (m.errors_at>=d.lo AND m.errors_at<d.hi) OR (m.skipped_at>=d.lo AND m.skipped_at<d.hi)
+        OR (m.interrupted_at>=d.lo AND m.interrupted_at<d.hi)
+      UNION ALL
+      SELECT d.date,s.attempt_id,0,0,0,0,0,'unconfirmed',
+        (MIN(s.hi,d.hi)-MAX(s.lo,d.lo))*s.played_ms/(s.end_at-s.start_at),
+        (MIN(s.hi,d.hi)-MAX(s.lo,d.lo))*s.played_ms/(s.end_at-s.start_at)*s.healthy
+      FROM scoped_segments s JOIN days d ON MIN(s.hi,d.hi)>MAX(s.lo,d.lo)
+      WHERE s.scope='selected'
+    )`;
+const daysQuery = `SELECT d.date,${metricSum},
+      EXISTS(SELECT 1 FROM selected_events ev JOIN scoped_attempts a ON a.id=ev.attempt_id AND a.scope='selected'
+        WHERE ev.at>=d.lo AND ev.at<d.hi) OR
+      EXISTS(SELECT 1 FROM ordered_segments s JOIN scoped_attempts a ON a.id=s.attempt_id AND a.scope='selected',bounds b
+        WHERE s.end_at>=b.lo AND s.end_at<=b.hi AND s.end_at<b.finish AND s.end_at>=d.lo AND s.end_at<d.hi) OR
+      EXISTS(SELECT 1 FROM scoped_segments s WHERE s.scope='selected' AND MIN(s.hi,d.hi)>MAX(s.lo,d.lo)) AS hasRecords
+      FROM days d LEFT JOIN event_days e ON e.date=d.date GROUP BY d.date`;
 
 export class PlaybackStatisticsSqlReader {
   constructor(
@@ -263,50 +349,34 @@ export class PlaybackStatisticsSqlReader {
         1,
       ];
       const cte = `WITH bounds(player,lo,hi,finish,now,output_id,media,include_outputs) AS (VALUES(?,?,?,?,?,?,?,?)),${facts}`;
-      const totals = await sql.all<ScopeMetrics>(
-        `${cte} SELECT scope,${metricSum},SUM(incomplete) AS incomplete FROM attempt_metrics GROUP BY scope`,
-        params,
+      const parts = await sql.all<ReportRow>(
+        `${cte},${dailyFacts}
+        ${reportPart('total', ['scope', 'incomplete', ...metricNames], totalsQuery)}
+        UNION ALL ${reportPart('media', ['mediaId', 'filename', ...metricNames], mediaQuery)}
+        UNION ALL ${reportPart('day', ['date', 'hasRecords', ...metricNames], daysQuery)}
+        UNION ALL ${reportPart('output', ['id', 'name', 'display', 'resolved_display_id'], outputsQuery)}
+        UNION ALL ${reportPart('reason', ['output_id', 'reason', 'count', 'reasonOrderAt', 'reasonOrderIndex'], reasonsQuery)}
+        ORDER BY kind,date,id,output_id,reasonOrderAt,reasonOrderIndex`,
+        [...params, JSON.stringify(days)],
       );
+      const rows = <K extends ReportRow['kind']>(kind: K) =>
+        parts.filter((part): part is Extract<ReportRow, { kind: K }> => part.kind === kind);
+      const totals = rows('total');
       const selected = totals.find(row => row.scope === 'selected');
       if (selected) {
         result.totals = metrics(selected);
         result.quality.incompleteAttempts = selected.incomplete;
       }
-      const rows = await sql.all<PlaybackStatisticsMetrics & { mediaId: string; filename: string }>(
-        `${cte} SELECT media_id AS mediaId,
-        (SELECT filename FROM attempt_metrics latest WHERE latest.scope='selected'
-          AND latest.media_id=a.media_id ORDER BY latest.filename_at DESC,latest.id DESC LIMIT 1) AS filename,
-        ${metricSum} FROM attempt_metrics a WHERE scope='selected' GROUP BY media_id`,
-        params,
-      );
-      result.rows = rows
+      result.rows = rows('media')
         .map(row => ({ mediaId: row.mediaId, filename: row.filename, ...metrics(row) }))
         .sort((a, b) => b.successfulMs - a.successfulMs || a.filename.localeCompare(b.filename));
-      result.days = await this.days(sql, cte, params, days);
-      const outputs = await sql.all<SqlOutput>(
-        `${cte} SELECT o.output_id AS id,o.name,o.display,o.resolved_display_id
-        FROM output_observations o JOIN (
-          SELECT output_id,MAX(at) AS at FROM observed_outputs GROUP BY output_id
-        ) chosen ON chosen.output_id=o.output_id,bounds b
-        WHERE o.player_id=b.player AND o.at=(SELECT MAX(p.at) FROM output_observations p
-          WHERE p.player_id=o.player_id AND p.output_id=o.output_id AND p.at<=chosen.at)
-        ORDER BY o.output_id`,
-        params,
-      );
-      const reasons = await sql.all<{
-        output_id: number;
-        reason: PlaybackOutputState;
-        count: number;
-      }>(
-        `${cte} SELECT ao.output_id,j.value AS reason,COUNT(DISTINCT ao.attempt_id) AS count
-        FROM attempt_outputs ao JOIN scoped_attempts a ON a.id=ao.attempt_id
-          AND a.scope=CAST(ao.output_id AS TEXT),
-          bounds b,json_each(COALESCE(ao.completed_reasons,'["unknown"]')) j
-        WHERE a.completed_at>=b.lo AND a.completed_at<=b.hi AND a.completed_at<b.finish
-        GROUP BY ao.output_id,j.value ORDER BY ao.output_id,MIN(a.first_at),MIN(CAST(j.key AS INTEGER))`,
-        params,
-      );
-      result.outputs = outputs.flatMap(output => {
+      result.days = rows('day').map(row => ({
+        date: row.date,
+        hasRecords: Boolean(row.hasRecords),
+        ...metrics(row),
+      }));
+      const reasons = rows('reason');
+      result.outputs = rows('output').flatMap(output => {
         const part = totals.find(row => row.scope === String(output.id));
         if (!part) return [];
         return [
@@ -321,54 +391,6 @@ export class PlaybackStatisticsSqlReader {
       });
       return result;
     });
-  }
-
-  private async days(
-    sql: PlaybackSqlDatabase,
-    cte: string,
-    params: PlaybackSqlValue[],
-    days: Day[],
-  ): Promise<PlaybackStatistics['days']> {
-    // Calendar boundaries are created by the host, not SQLite's UTC-only date().
-    // In particular a day may contain 23 or 25 hours during a DST transition.
-    const query = `${cte},days AS (
-      SELECT json_extract(value,'$.date') AS date,json_extract(value,'$.from') AS lo,
-        json_extract(value,'$.to') AS hi FROM json_each(?)
-    ),event_days AS (
-      SELECT d.date,a.id,
-        m.starts_at>=d.lo AND m.starts_at<d.hi AS starts,
-        m.completed_at>=d.lo AND m.completed_at<d.hi AS completed,
-        m.errors_at>=d.lo AND m.errors_at<d.hi AS errors,
-        m.skipped_at>=d.lo AND m.skipped_at<d.hi AS skipped,
-        m.interrupted_at>=d.lo AND m.interrupted_at<d.hi AS interrupted,
-        a.status,0 AS playedMs,0 AS successfulMs
-      FROM days d JOIN attempt_metrics a ON a.scope='selected'
-      LEFT JOIN metric_times m ON m.attempt_id=a.id
-      WHERE (m.starts_at>=d.lo AND m.starts_at<d.hi) OR (m.completed_at>=d.lo AND m.completed_at<d.hi)
-        OR (m.errors_at>=d.lo AND m.errors_at<d.hi) OR (m.skipped_at>=d.lo AND m.skipped_at<d.hi)
-        OR (m.interrupted_at>=d.lo AND m.interrupted_at<d.hi)
-      UNION ALL
-      SELECT d.date,s.attempt_id,0,0,0,0,0,'unconfirmed',
-        (MIN(s.hi,d.hi)-MAX(s.lo,d.lo))*s.played_ms/(s.end_at-s.start_at),
-        (MIN(s.hi,d.hi)-MAX(s.lo,d.lo))*s.played_ms/(s.end_at-s.start_at)*s.healthy
-      FROM scoped_segments s JOIN days d ON MIN(s.hi,d.hi)>MAX(s.lo,d.lo)
-      WHERE s.scope='selected'
-    ) SELECT d.date,${metricSum},
-      EXISTS(SELECT 1 FROM selected_events ev JOIN scoped_attempts a ON a.id=ev.attempt_id AND a.scope='selected'
-        WHERE ev.at>=d.lo AND ev.at<d.hi) OR
-      EXISTS(SELECT 1 FROM ordered_segments s JOIN scoped_attempts a ON a.id=s.attempt_id AND a.scope='selected',bounds b
-        WHERE s.end_at>=b.lo AND s.end_at<=b.hi AND s.end_at<b.finish AND s.end_at>=d.lo AND s.end_at<d.hi) OR
-      EXISTS(SELECT 1 FROM scoped_segments s WHERE s.scope='selected' AND MIN(s.hi,d.hi)>MAX(s.lo,d.lo)) AS hasRecords
-      FROM days d LEFT JOIN event_days e ON e.date=d.date GROUP BY d.date ORDER BY d.lo`;
-    const rows = await sql.all<PlaybackStatisticsMetrics & { date: string; hasRecords: number }>(
-      query,
-      [...params, JSON.stringify(days)],
-    );
-    return rows.map(row => ({
-      date: row.date,
-      hasRecords: Boolean(row.hasRecords),
-      ...metrics(row),
-    }));
   }
 
   async history(query: PlaybackHistoryQuery): Promise<PlaybackHistory> {
@@ -398,12 +420,12 @@ export class PlaybackStatisticsSqlReader {
         query.mediaId,
         0,
       ];
+      // History needs attempt identity and durations, not report counters or output breakdowns.
       const cte = `WITH bounds(player,lo,hi,finish,now,output_id,media,include_outputs) AS (VALUES(?,?,?,?,?,?,?,?)),${facts},
-        candidates AS (SELECT * FROM attempt_metrics WHERE scope='selected' AND media_id=?)`;
-      const total = await sql.get<{ count: number }>(
-        `${cte} SELECT COUNT(*) AS count FROM candidates`,
-        [...params, query.mediaId],
-      );
+        candidates AS MATERIALIZED (
+          SELECT a.*,COALESCE(d.playedMs,0) AS playedMs,COALESCE(d.successfulMs,0) AS successfulMs
+          FROM scoped_attempts a LEFT JOIN durations d ON d.attempt_id=a.id AND d.scope=a.scope
+          WHERE a.scope='selected')`;
       type Candidate = {
         id: string;
         filename: string;
@@ -418,10 +440,14 @@ export class PlaybackStatisticsSqlReader {
         successfulMs: number;
         skipped_at: number | null;
       };
-      const selected = await sql.all<Candidate>(
-        `${cte} SELECT * FROM candidates ORDER BY COALESCE(terminal_at,last_at) DESC,id LIMIT ? OFFSET ?`,
-        [...params, query.mediaId, limit, offset],
+      const page = await sql.all<Candidate & { count: number }>(
+        `${cte} SELECT totals.count,page.* FROM (SELECT COUNT(*) AS count FROM candidates) totals
+        LEFT JOIN (SELECT * FROM candidates ORDER BY COALESCE(terminal_at,last_at) DESC,id LIMIT ? OFFSET ?) page ON 1
+        ORDER BY COALESCE(page.terminal_at,page.last_at) DESC,page.id`,
+        [...params, limit, offset],
       );
+      const total = page[0]?.count ?? 0;
+      const selected = page.filter(row => row.id != null);
       const entries: PlaybackHistoryEntry[] = selected.map(row => ({
         playbackId: row.id,
         mediaId: query.mediaId,
@@ -448,7 +474,7 @@ export class PlaybackStatisticsSqlReader {
         skipped: row.skipped_at != null,
         events: [],
       }));
-      if (!entries.length) return { entries, total: total?.count ?? 0, offset, limit };
+      if (!entries.length) return { entries, total, offset, limit };
       const ids = entries.map(entry => entry.playbackId);
       const placeholders = ids.map(() => '?').join(',');
       const outputs = await sql.all<SqlResultOutput>(
@@ -518,7 +544,7 @@ export class PlaybackStatisticsSqlReader {
             reason: `Показаны последние 1000 событий; более ранних событий: ${omitted}.`,
           });
       }
-      return { entries, total: total?.count ?? 0, offset, limit };
+      return { entries, total, offset, limit };
     });
   }
 }

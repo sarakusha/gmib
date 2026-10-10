@@ -62,6 +62,7 @@ CREATE INDEX IF NOT EXISTS events_attempt_at ON events(attempt_id, at);
 CREATE INDEX IF NOT EXISTS events_at ON events(at);
 CREATE INDEX IF NOT EXISTS output_observations_at ON output_observations(player_id, output_id, at);
 CREATE INDEX IF NOT EXISTS seen_events_at ON seen_events(at);
+CREATE INDEX IF NOT EXISTS seen_events_attempt_at ON seen_events(attempt_id, at);
 `;
 
 type AttemptIdentity = {

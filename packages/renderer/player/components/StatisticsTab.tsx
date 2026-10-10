@@ -129,7 +129,13 @@ const StatisticsTab: React.FC = () => {
   const refresh = () => {
     void query.refetch().then(result => {
       if (result.data?.today && preset !== 'custom') {
-        setRange(presetRange(preset, result.data.today));
+        const nextRange = presetRange(preset, result.data.today);
+        if (
+          result.data.requestedDates.from !== nextRange.from ||
+          result.data.requestedDates.to !== nextRange.to
+        ) {
+          setRange(nextRange);
+        }
       }
     });
   };
