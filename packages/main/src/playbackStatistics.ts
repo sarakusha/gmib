@@ -59,14 +59,29 @@ export const statisticsPeriod = (query: PlaybackStatisticsQuery, now: Date) => {
   if (!Number.isSafeInteger(query.playerId) || query.playerId < 0) {
     throw new PlaybackStatisticsQueryError('Invalid playerId');
   }
+  if (query.outputId !== undefined && (!Number.isSafeInteger(query.outputId) || query.outputId < 0))
+    throw new PlaybackStatisticsQueryError('Invalid outputId');
+  if (
+    query.preset !== undefined &&
+    query.preset !== 'today' &&
+    query.preset !== 'yesterday' &&
+    query.preset !== 'week'
+  )
+    throw new PlaybackStatisticsQueryError('Invalid preset');
+  if (query.preset !== undefined && (query.from !== undefined || query.to !== undefined))
+    throw new PlaybackStatisticsQueryError('Preset cannot be combined with from or to');
   if ((query.from === undefined) !== (query.to === undefined)) {
     throw new PlaybackStatisticsQueryError('Both from and to are required');
   }
-  if (query.outputId !== undefined && (!Number.isSafeInteger(query.outputId) || query.outputId < 0))
-    throw new PlaybackStatisticsQueryError('Invalid outputId');
   const today = localDate(now);
   const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
-  const dates = { from: query.from ?? localDate(weekStart), to: query.to ?? today };
+  const yesterday = localDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1));
+  const dates =
+    query.preset === 'today'
+      ? { from: today, to: today }
+      : query.preset === 'yesterday'
+        ? { from: yesterday, to: yesterday }
+        : { from: query.from ?? localDate(weekStart), to: query.to ?? today };
   const from = calendarDate(dates.from);
   const to = nextDay(calendarDate(dates.to));
   if (from >= to) throw new PlaybackStatisticsQueryError('Period end precedes start');

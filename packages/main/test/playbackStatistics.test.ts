@@ -389,6 +389,30 @@ describe('playback statistics', () => {
     );
   });
 
+  it('resolves relative presets on the host calendar and retains the legacy default', () => {
+    process.env.TZ = 'America/New_York';
+    const localNow = new Date('2026-11-02T01:30:00.000Z');
+    const today = statisticsPeriod({ playerId: 1, preset: 'today' }, localNow);
+    expect(today.dates).toEqual({ from: '2026-11-01', to: '2026-11-01' });
+    expect(today.to - today.from).toBe(25 * 3600000);
+    expect(statisticsPeriod({ playerId: 1, preset: 'yesterday' }, localNow).dates).toEqual({
+      from: '2026-10-31',
+      to: '2026-10-31',
+    });
+    const week = { from: '2026-10-26', to: '2026-11-01' };
+    expect(statisticsPeriod({ playerId: 1, preset: 'week' }, localNow).dates).toEqual(week);
+    expect(statisticsPeriod({ playerId: 1 }, localNow).dates).toEqual(week);
+    expect(
+      statisticsPeriod({ playerId: 1, from: '2026-10-01', to: '2026-10-02' }, localNow).dates,
+    ).toEqual({ from: '2026-10-01', to: '2026-10-02' });
+    expect(() =>
+      statisticsPeriod({ playerId: 1, preset: 'today', from: '2026-10-01' }, localNow),
+    ).toThrow('Preset cannot be combined with from or to');
+    expect(() => statisticsPeriod({ playerId: 1, preset: 'invalid' as 'today' }, localNow)).toThrow(
+      'Invalid preset',
+    );
+  });
+
   it('clips wall duration to a full local day across a daylight saving transition', async () => {
     process.env.TZ = 'America/New_York';
     const id = randomUUID();

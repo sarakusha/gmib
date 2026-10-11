@@ -1,6 +1,9 @@
 import type { Request, Router } from 'express';
 
-import type { PlaybackStatisticsQuery } from '/@common/playbackStatistics';
+import type {
+  PlaybackStatisticsPeriodPreset,
+  PlaybackStatisticsQuery,
+} from '/@common/playbackStatistics';
 
 import { PlaybackStatisticsQueryError } from './playbackStatistics';
 import { PlaybackStatisticsSqlReader } from './playbackStatisticsSql';
@@ -24,9 +27,17 @@ const integerParameter = (req: Request, name: string, required = false): number 
   return Number(value);
 };
 
+const presetParameter = (req: Request): PlaybackStatisticsPeriodPreset | undefined => {
+  // Express may leave bracket notation as a literal key instead of parsing it as an object.
+  if (Object.keys(req.query).some(key => /^preset(?:\[|\.)/.test(key)))
+    throw new PlaybackStatisticsQueryError('Invalid preset');
+  return textParameter(req, 'preset') as PlaybackStatisticsPeriodPreset | undefined;
+};
+
 const queryFromRequest = (req: Request): PlaybackStatisticsQuery => ({
   playerId: integerParameter(req, 'playerId', true)!,
   outputId: integerParameter(req, 'outputId'),
+  preset: presetParameter(req),
   from: textParameter(req, 'from'),
   to: textParameter(req, 'to'),
 });

@@ -39,6 +39,12 @@ import {
 } from './statisticsHelpers';
 import type { StatisticsPreset } from './statisticsHelpers';
 import PlaybackHistoryItem from './PlaybackHistoryItem';
+import {
+  readStatisticsPeriod,
+  saveStatisticsPeriod,
+  statisticsPeriodKey,
+  type StatisticsPeriodPreference,
+} from './statisticsPeriodPreference';
 
 import {
   PLAYBACK_HISTORY_MAX_OFFSET,
@@ -46,7 +52,7 @@ import {
   type PlaybackStatisticsRow,
 } from '/@common/playbackStatistics';
 import { supportsFeature } from '/@common/capabilities';
-import { isRemoteSession, version } from '/@common/remote';
+import { host, isRemoteSession, port, version } from '/@common/remote';
 
 type SortKey =
   | 'filename'
@@ -81,9 +87,26 @@ const status = (error: unknown): number | string | undefined =>
 
 const StatisticsTab: React.FC = () => {
   const supported = supportsFeature('playbackStatistics', version, isRemoteSession);
-  const [preset, setPreset] = React.useState<StatisticsPreset>('week');
-  const [range, setRange] = React.useState<PlaybackStatisticsRange | undefined>();
-  const [draft, setDraft] = React.useState<PlaybackStatisticsRange>({ from: '', to: '' });
+  const relativePeriodSupported =
+    (!isRemoteSession || Boolean(version)) &&
+    supportsFeature('playbackStatisticsPeriodPreset', version, isRemoteSession);
+  const preferenceKey = statisticsPeriodKey(host, port, sourceId);
+  const [period, setPeriod] = React.useState(() => readStatisticsPeriod(preferenceKey));
+  const [preset, setPreset] = React.useState<StatisticsPreset>(period.preset);
+  const [draft, setDraft] = React.useState<PlaybackStatisticsRange>(
+    period.preset === 'custom' ? period.range : { from: '', to: '' },
+  );
+  const [hostToday, setHostToday] = React.useState<string>();
+  // Новые хосты сразу вычисляют относительный период по своим часам — без
+  // предварительного отчёта за неделю. Старым передаём только явные даты.
+  const range =
+    period.preset === 'custom'
+      ? period.range
+      : relativePeriodSupported
+        ? { preset: period.preset }
+        : hostToday
+          ? presetRange(period.preset, hostToday)
+          : undefined;
   const [sortKey, setSortKey] = React.useState<SortKey>('confirmed');
   const [descending, setDescending] = React.useState(true);
   const [selected, setSelected] = React.useState<PlaybackStatisticsRow | null>(null);
@@ -97,13 +120,16 @@ const StatisticsTab: React.FC = () => {
     },
   );
   const data = supported ? query.currentData : undefined;
+  React.useEffect(() => {
+    if (data?.today) setHostToday(data.today);
+  }, [data?.today]);
   const wallClockDuration =
     supportsFeature('playbackWallClockDuration', version, isRemoteSession) &&
     data?.durationBasis === 'wall-clock';
   const history = useGetPlaybackHistoryQuery(
     {
       playerId: sourceId,
-      ...range,
+      ...(data?.requestedDates ?? range),
       outputId,
       mediaId: selected?.mediaId ?? '',
       offset,
@@ -113,33 +139,34 @@ const StatisticsTab: React.FC = () => {
   );
   const historyData = history.currentData;
 
+  const selectPeriod = (next: StatisticsPeriodPreference) => {
+    setPeriod(next);
+    saveStatisticsPeriod(preferenceKey, next);
+    setSelected(null);
+    setOffset(0);
+  };
+
   const choosePreset = (_: React.MouseEvent<HTMLElement>, next: StatisticsPreset | null) => {
     if (!next) return;
     setPreset(next);
     if (next === 'custom') {
-      setDraft(data?.requestedDates ?? range ?? { from: '', to: '' });
-    } else if (data?.today) {
-      setRange(presetRange(next, data.today));
+      saveStatisticsPeriod(preferenceKey, { preset: 'today' });
+      setDraft(
+        data?.requestedDates ?? (period.preset === 'custom' ? period.range : { from: '', to: '' }),
+      );
+    } else {
+      selectPeriod({ preset: next });
     }
     setSelected(null);
   };
   const applyCustom = () => {
     if (isValidRange(draft)) {
-      setRange(draft);
-      setSelected(null);
+      selectPeriod({ preset: 'custom', range: draft });
     }
   };
   const refresh = () => {
     void query.refetch().then(result => {
-      if (result.data?.today && preset !== 'custom') {
-        const nextRange = presetRange(preset, result.data.today);
-        if (
-          result.data.requestedDates.from !== nextRange.from ||
-          result.data.requestedDates.to !== nextRange.to
-        ) {
-          setRange(nextRange);
-        }
-      }
+      if (result.data?.today) setHostToday(result.data.today);
     });
   };
   const sortedRows = React.useMemo(

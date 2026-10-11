@@ -38,3 +38,18 @@ describe('wall-clock playback duration compatibility', () => {
     expect(supportsFeature('playbackWallClockDuration', '5.6.5', false)).toBe(true);
   });
 });
+
+describe('playback statistics period presets compatibility', () => {
+  it.each([
+    ['5.6.5', false],
+    ['5.6.6', true],
+    ['5.7.0', true],
+    [undefined, true],
+  ])('uses the remote version %s', (version, supported) => {
+    expect(supportsFeature('playbackStatisticsPeriodPreset', version, true)).toBe(supported);
+  });
+
+  it('keeps local presets available under the existing policy', () => {
+    expect(supportsFeature('playbackStatisticsPeriodPreset', '5.6.5', false)).toBe(true);
+  });
+});

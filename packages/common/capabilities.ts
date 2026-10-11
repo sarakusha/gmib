@@ -6,6 +6,7 @@ export type FeatureName =
   | 'playerSeek'
   | 'playerShaders'
   | 'playbackStatistics'
+  | 'playbackStatisticsPeriodPreset'
   | 'playbackWallClockDuration'
   | 'playbackDiagnostics'
   | 'playbackLogPath'
@@ -22,6 +23,7 @@ const minimumVersions: Record<FeatureName, string> = {
   playerSeek: '4.12.0',
   playerShaders: '5.0.0',
   playbackStatistics: '5.6.5',
+  playbackStatisticsPeriodPreset: '5.6.6',
   playbackWallClockDuration: '5.6.6',
   playbackDiagnostics: '5.6.0',
   playbackLogPath: '5.6.1',

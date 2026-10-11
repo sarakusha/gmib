@@ -6,9 +6,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PlaybackStatistics } from '/@common/playbackStatistics';
 
 import StatisticsTab from './StatisticsTab';
+import { statisticsPeriodKey } from './statisticsPeriodPreference';
 
 const { statisticsQuery, historyQuery, remote } = vi.hoisted(() => ({
-  remote: { version: '5.6.5', isRemoteSession: true },
+  remote: { version: '5.6.5', isRemoteSession: true, host: 'player.test', port: 9001 },
   statisticsQuery: vi.fn(),
   historyQuery: vi.fn(),
 }));
@@ -76,6 +77,8 @@ describe('StatisticsTab', () => {
   beforeEach(() => {
     remote.version = '5.6.5';
     remote.isRemoteSession = true;
+    remote.host = 'player.test';
+    window.localStorage.clear();
     statisticsQuery
       .mockReset()
       .mockReturnValue({ currentData: data, isLoading: false, isError: false });
@@ -131,7 +134,10 @@ describe('StatisticsTab', () => {
         expect(html).not.toContain(explanation);
         expect(html).toContain('Общее — все попытки. Исправный вывод — только завершённые.');
       }
-      expect(statisticsQuery).toHaveBeenCalledWith({ playerId: 7 }, expect.any(Object));
+      expect(statisticsQuery).toHaveBeenCalledWith(
+        expect.objectContaining({ playerId: 7 }),
+        expect.any(Object),
+      );
       expect(historyQuery).toHaveBeenCalledWith(
         expect.objectContaining({ playerId: 7, mediaId: '' }),
         expect.objectContaining({ skip: true }),
@@ -197,7 +203,8 @@ describe('StatisticsTab', () => {
     expect(html).toContain('Обновите GMIB на устройстве');
   });
 
-  it('keeps the default preset range implicit when refresh returns that same range', async () => {
+  it('requests today from the host immediately and keeps it relative on refresh', async () => {
+    remote.version = '5.6.6';
     const refetch = vi.fn().mockResolvedValue({ data });
     statisticsQuery.mockReturnValue({
       currentData: data,
@@ -219,7 +226,16 @@ describe('StatisticsTab', () => {
     });
 
     expect(refetch).toHaveBeenCalledTimes(1);
-    expect(statisticsQuery).toHaveBeenLastCalledWith({ playerId: 7 }, expect.any(Object));
+    expect(statisticsQuery).toHaveBeenLastCalledWith(
+      { playerId: 7, preset: 'today' },
+      expect.any(Object),
+    );
+    for (const [args] of statisticsQuery.mock.calls)
+      expect(args).toEqual({ playerId: 7, preset: 'today' });
+    const today = [...container.querySelectorAll('button')].find(
+      button => button.textContent?.trim() === 'Сегодня',
+    );
+    expect(today?.getAttribute('aria-pressed')).toBe('true');
     act(() => root.unmount());
     container.remove();
   });
@@ -280,7 +296,7 @@ describe('StatisticsTab', () => {
       option?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
     expect(statisticsQuery).toHaveBeenLastCalledWith(
-      { playerId: 7, outputId: 1 },
+      { playerId: 7, outputId: 1, from: data.today, to: data.today },
       expect.any(Object),
     );
     expect(historyQuery).toHaveBeenLastCalledWith(
@@ -289,6 +305,85 @@ describe('StatisticsTab', () => {
     );
     act(() => root.unmount());
     container.remove();
+  });
+
+  it.each(['yesterday', 'week'] as const)(
+    'restores %s after reopening and keeps it relative across days',
+    preset => {
+      remote.version = '5.6.6';
+      const container = document.createElement('div');
+      document.body.append(container);
+      let root = createRoot(container);
+      act(() => root.render(<StatisticsTab />));
+      const label = preset === 'week' ? '7 дней' : 'Вчера';
+      const button = [...container.querySelectorAll('button')].find(
+        item => item.textContent?.trim() === label,
+      );
+      act(() => button?.click());
+      expect(statisticsQuery).toHaveBeenLastCalledWith({ playerId: 7, preset }, expect.any(Object));
+      act(() => root.unmount());
+      statisticsQuery
+        .mockClear()
+        .mockReturnValue({ currentData: { ...data, today: '2026-10-10' } });
+      root = createRoot(container);
+      act(() => root.render(<StatisticsTab />));
+      expect(statisticsQuery.mock.calls[0][0]).toEqual({ playerId: 7, preset });
+      expect(
+        [...container.querySelectorAll('button')]
+          .find(item => item.textContent?.trim() === label)
+          ?.getAttribute('aria-pressed'),
+      ).toBe('true');
+      act(() => root.unmount());
+      container.remove();
+    },
+  );
+
+  it('uses custom dates only for the current view and restores today afterwards', () => {
+    remote.version = '5.6.6';
+    const key = statisticsPeriodKey(remote.host, remote.port, 7);
+    window.localStorage.setItem(key, JSON.stringify({ preset: 'week' }));
+    const container = document.createElement('div');
+    document.body.append(container);
+    let root = createRoot(container);
+    act(() => root.render(<StatisticsTab />));
+    const custom = [...container.querySelectorAll('button')].find(
+      item => item.textContent?.trim() === 'Период',
+    );
+    act(() => custom?.click());
+    const apply = [...container.querySelectorAll('button')].find(
+      item => item.textContent?.trim() === 'Показать',
+    );
+    act(() => apply?.click());
+    expect(statisticsQuery).toHaveBeenLastCalledWith(
+      { playerId: 7, ...data.requestedDates },
+      expect.any(Object),
+    );
+    expect(JSON.parse(window.localStorage.getItem(key)!)).toEqual({ preset: 'today' });
+    act(() => root.unmount());
+    statisticsQuery.mockClear();
+    root = createRoot(container);
+    act(() => root.render(<StatisticsTab />));
+    expect(statisticsQuery.mock.calls[0][0]).toEqual({ playerId: 7, preset: 'today' });
+    expect(container.querySelector('input[type="date"]')).toBeNull();
+    act(() => root.unmount());
+    container.remove();
+  });
+
+  it.each(['5.6.5', ''])('uses explicit dates for an older or unknown host: %s', version => {
+    remote.version = version;
+    window.localStorage.setItem(
+      statisticsPeriodKey(remote.host, remote.port, 7),
+      JSON.stringify({ preset: 'yesterday' }),
+    );
+    const container = document.createElement('div');
+    const root = createRoot(container);
+    act(() => root.render(<StatisticsTab />));
+    for (const [args] of statisticsQuery.mock.calls) expect(args).not.toHaveProperty('preset');
+    expect(statisticsQuery).toHaveBeenLastCalledWith(
+      { playerId: 7, from: '2026-10-08', to: '2026-10-08' },
+      expect.any(Object),
+    );
+    act(() => root.unmount());
   });
 
   it('labels an observed empty output list in history', () => {

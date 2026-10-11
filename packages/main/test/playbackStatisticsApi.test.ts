@@ -53,6 +53,13 @@ describe('playback statistics API', () => {
       rows: [],
       totals: { successfulMs: 0 },
     });
+    const today = await fetch(`${base}?playerId=1&preset=today`, { headers });
+    expect(today.status).toBe(200);
+    const todayBody = await today.json();
+    expect(todayBody.requestedDates).toEqual({
+      from: todayBody.today,
+      to: todayBody.today,
+    });
     for (const suffix of [
       '',
       '?playerId=abc',
@@ -64,6 +71,12 @@ describe('playback statistics API', () => {
       '?playerId=1&from=2026-10-01',
       '?playerId=1&from=2026-02-30&to=2026-10-01',
       '?playerId=1&from=2026-10-10&to=2026-10-01',
+      '?playerId=1&preset=',
+      '?playerId=1&preset=month',
+      '?playerId=1&preset=today&preset=week',
+      '?playerId=1&preset[x]=today',
+      '?playerId=1&preset=today&from=2026-10-01&to=2026-10-02',
+      '?playerId=1&preset=week&to=2026-10-02',
       '/history?playerId=1',
       '/history?playerId=1&mediaId=x&limit=101',
       '/history?playerId=1&mediaId=x&offset=-1',
@@ -73,5 +86,9 @@ describe('playback statistics API', () => {
     const history = await fetch(`${base}/history?playerId=1&mediaId=x`, { headers });
     expect(history.status).toBe(200);
     expect(await history.json()).toMatchObject({ entries: [], total: 0, offset: 0, limit: 50 });
+    const presetHistory = await fetch(`${base}/history?playerId=1&mediaId=x&preset=today`, {
+      headers,
+    });
+    expect(presetHistory.status).toBe(200);
   });
 });

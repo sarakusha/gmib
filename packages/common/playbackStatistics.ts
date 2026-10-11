@@ -6,10 +6,13 @@ import type {
 
 export const PLAYBACK_HISTORY_MAX_OFFSET = 10_000;
 
+export type PlaybackStatisticsPeriodPreset = 'today' | 'yesterday' | 'week';
+
 /** Calendar dates are interpreted in the playback host's time zone; `to` is inclusive. */
 export type PlaybackStatisticsQuery = {
   playerId: number;
   outputId?: number;
+  preset?: PlaybackStatisticsPeriodPreset;
   from?: string;
   to?: string;
 };
