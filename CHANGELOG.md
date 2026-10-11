@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [5.6.6](https://github.com/sarakusha/gmib/compare/v5.6.5...v5.6.6) (2026-10-11)
+
+### Bug Fixes
+
+* preload healthy repeated media safely ([f01f889](https://github.com/sarakusha/gmib/commit/f01f889d6169f94e6e1f38562615b6173a74d1c7))
+* restore previously selected window tab ([dd8ee53](https://github.com/sarakusha/gmib/commit/dd8ee534a2e9b22cc40a1d9eda49f2359695298b))
+* simplify playback history and avoid duplicate ranges ([c11b85c](https://github.com/sarakusha/gmib/commit/c11b85c2a5004dacd835bfb84c20d28e6833f5d6))
+
+### Performance Improvements
+
+* batch playback statistics writes ([51469f9](https://github.com/sarakusha/gmib/commit/51469f971b382b83fd26c1872e1f9b1ad37b2fa8))
+* reuse playback statistics query results ([63bdb17](https://github.com/sarakusha/gmib/commit/63bdb17bd9d9bed467a3f30a037e906e10ac782c))
+* simplify playback time accounting and isolate statistics reads ([bc1cea0](https://github.com/sarakusha/gmib/commit/bc1cea04602304f07c7ee9c3efca318e1dc619fc))
 ## [5.6.5](https://github.com/sarakusha/gmib/compare/v5.6.4...v5.6.5) (2026-10-09)
 
 ### Features
