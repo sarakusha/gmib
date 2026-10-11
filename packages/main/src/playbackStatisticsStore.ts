@@ -71,16 +71,68 @@ CREATE INDEX IF NOT EXISTS seen_events_at ON seen_events(at);
 CREATE INDEX IF NOT EXISTS seen_events_attempt_at ON seen_events(attempt_id, at);
 `;
 
-type AttemptIdentity = {
+// Читаем строку целиком в той же BEGIN IMMEDIATE, где затем её записываем.
+// Это позволяет слить обновления attempts без потери событий при конкуренции писателей.
+type AttemptRow = {
+  id: string;
   player_id: number;
   media_id: string;
-  terminal_at: number | null;
+  attempt: number;
+  playlist_id: number | null;
+  item_id: string | null;
+  engine: string | null;
+  filename: string;
+  filename_at: number;
+  first_at: number;
+  last_at: number;
+  started_at: number | null;
+  declared_started_at: number | null;
   completed_at: number | null;
+  error_at: number | null;
+  skipped_at: number | null;
+  interrupted_at: number | null;
+  terminal: string | null;
+  terminal_at: number | null;
+  result_status: string | null;
+  result_reasons: string | null;
+  completed_status: string | null;
+  completed_reasons: string | null;
 };
-type OutputIdentity = { name: string; display: number | null; resolved_display_id: number | null };
+const attemptColumns = [
+  'id',
+  'player_id',
+  'media_id',
+  'attempt',
+  'playlist_id',
+  'item_id',
+  'engine',
+  'filename',
+  'filename_at',
+  'first_at',
+  'last_at',
+  'started_at',
+  'declared_started_at',
+  'completed_at',
+  'error_at',
+  'skipped_at',
+  'interrupted_at',
+  'terminal',
+  'terminal_at',
+  'result_status',
+  'result_reasons',
+  'completed_status',
+  'completed_reasons',
+] as const satisfies readonly (keyof AttemptRow)[];
+// Имена столбцов заданы кодом, значения события всегда передаются параметрами.
+const upsertAttempt = `INSERT INTO attempts(${attemptColumns.join(',')})
+  VALUES(${attemptColumns.map(() => '?').join(',')}) ON CONFLICT(id) DO UPDATE SET
+  ${attemptColumns
+    .filter(column => column !== 'id')
+    .map(column => `${column}=excluded.${column}`)
+    .join(',')}`;
 const reasons = (value: string[] | undefined): string => JSON.stringify(value ?? ['unknown']);
-const earliest = (column: string): string =>
-  `${column} = CASE WHEN ${column} IS NULL OR ? < ${column} THEN ? ELSE ${column} END`;
+const earliest = (previous: number | null, next: number): number =>
+  previous === null ? next : Math.min(previous, next);
 
 /** Отдельная база фактов; файловые отчёты читают снимок WAL в своей очереди. */
 export class PlaybackStatisticsStore {
@@ -305,95 +357,105 @@ export class PlaybackStatisticsStore {
       // Сначала проверка eventId/идентичности попытки, затем индекс attempts и факты.
       // При ошибке откатывается и seen_events: повторная доставка сможет записать событие.
       await this.transaction(sql, async () => {
-        if (await sql.get('SELECT id FROM seen_events WHERE id = ?', [event.eventId])) return;
-        const attempt = await sql.get<AttemptIdentity>(
-          'SELECT player_id, media_id, terminal_at, completed_at FROM attempts WHERE id = ?',
-          [event.playbackId],
+        // Дедупликация имеет приоритет над проверкой payload: повтор eventId — no-op,
+        // даже если повторная доставка содержит другую идентичность попытки.
+        const existing = await sql.get<AttemptRow & { duplicate: number }>(
+          `SELECT a.*,EXISTS(SELECT 1 FROM seen_events WHERE id=?) AS duplicate
+          FROM (SELECT 1) LEFT JOIN attempts a ON a.id=?`,
+          [event.eventId, event.playbackId],
         );
+        if (existing?.duplicate) return;
+        const attempt = existing?.id == null ? undefined : existing;
         if (attempt && (attempt.player_id !== event.playerId || attempt.media_id !== event.mediaId))
           throw new Error('Playback attempt identity changed');
         const segmentStart =
           event.event === 'progress' ? Math.max(cutoff, Date.parse(event.segmentStartedAt!)) : at;
-        await sql.run(
-          `INSERT INTO attempts(id, player_id, media_id, attempt, playlist_id, item_id, engine, filename, filename_at, first_at, last_at)
-          VALUES(?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET
-          playlist_id=COALESCE(playlist_id,excluded.playlist_id),
-          item_id=COALESCE(item_id,excluded.item_id), engine=COALESCE(engine,excluded.engine),
-          first_at=MIN(first_at,excluded.first_at), last_at=MAX(last_at,excluded.last_at),
-          filename=CASE WHEN excluded.filename_at >= filename_at THEN excluded.filename ELSE filename END,
-          filename_at=MAX(filename_at,excluded.filename_at)`,
-          [
-            event.playbackId,
-            event.playerId,
-            event.mediaId,
-            event.attempt,
-            event.playlistId ?? null,
-            event.itemId ?? null,
-            event.engine ?? null,
-            event.filename || event.mediaId,
-            event.filename ? at : Number.MIN_SAFE_INTEGER,
-            segmentStart,
-            at,
-          ],
-        );
-        await sql.run('INSERT INTO seen_events(id,at,attempt_id) VALUES(?,?,?)', [
-          event.eventId,
-          at,
-          event.playbackId,
-        ]);
+        const row: AttemptRow = attempt
+          ? { ...attempt }
+          : {
+              id: event.playbackId,
+              player_id: event.playerId,
+              media_id: event.mediaId,
+              attempt: event.attempt,
+              playlist_id: null,
+              item_id: null,
+              engine: null,
+              filename: event.filename || event.mediaId,
+              filename_at: Number.MIN_SAFE_INTEGER,
+              first_at: segmentStart,
+              last_at: at,
+              started_at: null,
+              declared_started_at: null,
+              completed_at: null,
+              error_at: null,
+              skipped_at: null,
+              interrupted_at: null,
+              terminal: null,
+              terminal_at: null,
+              result_status: null,
+              result_reasons: null,
+              completed_status: null,
+              completed_reasons: null,
+            };
+        row.playlist_id ??= event.playlistId ?? null;
+        row.item_id ??= event.itemId ?? null;
+        row.engine ??= event.engine ?? null;
+        row.first_at = Math.min(row.first_at, segmentStart);
+        row.last_at = Math.max(row.last_at, at);
+        if (event.filename && at >= row.filename_at) {
+          row.filename = event.filename;
+          row.filename_at = at;
+        }
         if (event.startedAt !== undefined) {
           const declared = Date.parse(event.startedAt);
-          await sql.run(
-            `UPDATE attempts SET ${earliest('declared_started_at')},
-            first_at=CASE WHEN terminal_at>=COALESCE(started_at,?) THEN
-              MIN(first_at,MAX(?,COALESCE(started_at,?))) ELSE first_at END WHERE id=?`,
-            [declared, declared, declared, cutoff, declared, event.playbackId],
-          );
+          row.declared_started_at = earliest(row.declared_started_at, declared);
+          const start = row.started_at ?? declared;
+          if (row.terminal_at !== null && row.terminal_at >= start)
+            row.first_at = Math.min(row.first_at, Math.max(cutoff, start));
         }
-        const timestampColumn: Partial<Record<PlaybackStatisticsEvent['event'], string>> = {
+        const timestampColumn = {
           started: 'started_at',
           completed: 'completed_at',
           error: 'error_at',
           skipped: 'skipped_at',
           interrupted: 'interrupted_at',
-        };
-        const column = timestampColumn[event.event];
-        if (column)
-          await sql.run(`UPDATE attempts SET ${earliest(column)} WHERE id=?`, [
-            at,
-            at,
-            event.playbackId,
-          ]);
-        // Выбираем первый исход по времени события, а не по порядку доставки.
-        // completed храним отдельно: он нужен для счётчиков завершений даже тогда,
-        // когда первым terminal была ошибка или прерывание. skipped не terminal.
+        } as const;
+        if (event.event in timestampColumn) {
+          const column = timestampColumn[event.event as keyof typeof timestampColumn];
+          row[column] = earliest(row[column], at);
+        }
+        // Флаги считаем по состоянию ДО события: первый исход и первое completed
+        // независимы. При равных timestamp сохраняется уже принятый результат.
         const terminal =
           ['completed', 'error', 'interrupted'].includes(event.event) &&
           (attempt?.terminal_at == null || at < attempt.terminal_at);
         const completed =
           event.event === 'completed' &&
           (attempt?.completed_at == null || at < attempt.completed_at);
-        if (terminal)
-          await sql.run(
-            `UPDATE attempts SET terminal=?,terminal_at=?,result_status=?,result_reasons=?,
-            first_at=CASE WHEN ?>=COALESCE(started_at,declared_started_at) THEN
-              MIN(first_at,MAX(?,COALESCE(started_at,declared_started_at))) ELSE first_at END WHERE id=?`,
-            [
-              event.event,
-              at,
-              event.outputResult?.status ?? 'unconfirmed',
-              reasons(event.outputResult?.reasons),
-              at,
-              cutoff,
-              event.playbackId,
-            ],
-          );
-        if (completed)
-          await sql.run('UPDATE attempts SET completed_status=?,completed_reasons=? WHERE id=?', [
-            event.outputResult?.status ?? 'unconfirmed',
-            reasons(event.outputResult?.reasons),
-            event.playbackId,
-          ]);
+        if (terminal) {
+          row.terminal = event.event;
+          row.terminal_at = at;
+          row.result_status = event.outputResult?.status ?? 'unconfirmed';
+          row.result_reasons = reasons(event.outputResult?.reasons);
+          const start = row.started_at ?? row.declared_started_at;
+          if (start !== null && at >= start)
+            row.first_at = Math.min(row.first_at, Math.max(cutoff, start));
+        }
+        if (completed) {
+          row.completed_status = event.outputResult?.status ?? 'unconfirmed';
+          row.completed_reasons = reasons(event.outputResult?.reasons);
+        }
+        // Вместо UPSERT и нескольких UPDATE — одна запись уже объединённой строки.
+        // Блокировка писателя удерживается с чтения existing до COMMIT.
+        await sql.run(
+          upsertAttempt,
+          attemptColumns.map(column => row[column]),
+        );
+        await sql.run('INSERT INTO seen_events(id,at,attempt_id) VALUES(?,?,?)', [
+          event.eventId,
+          at,
+          event.playbackId,
+        ]);
         await this.recordOutputs(sql, event, at, terminal, completed);
         // progress хранится только как числовой сегмент + состояния его выходов.
         // Остальные события попадают в events; обе ветки уже отмечены в seen_events.
@@ -450,24 +512,31 @@ export class PlaybackStatisticsStore {
       outputs.set(output.id, output);
     // При более раннем исходе заменяем результаты целиком: старые выходы не должны
     // унаследовать подтверждение от вытесненного, более позднего terminal/completed.
-    if (terminal)
+    const reset = [
+      ...(terminal ? ['result_status', 'result_reasons', 'result_state'] : []),
+      ...(completed ? ['completed_status', 'completed_reasons', 'completed_state'] : []),
+    ];
+    if (reset.length)
       await sql.run(
-        'UPDATE attempt_outputs SET result_status=NULL,result_reasons=NULL,result_state=NULL WHERE attempt_id=?',
-        [event.playbackId],
-      );
-    if (completed)
-      await sql.run(
-        'UPDATE attempt_outputs SET completed_status=NULL,completed_reasons=NULL,completed_state=NULL WHERE attempt_id=?',
+        `UPDATE attempt_outputs SET ${reset.map(column => `${column}=NULL`).join(',')} WHERE attempt_id=?`,
         [event.playbackId],
       );
     for (const output of outputs.values()) {
+      const result = event.outputResult?.outputs.find(item => item.id === output.id);
       await sql.run(
-        `INSERT INTO attempt_outputs(attempt_id,output_id,name,display,resolved_display_id,metadata_at)
-        VALUES(?,?,?,?,?,?) ON CONFLICT(attempt_id,output_id) DO UPDATE SET
+        `INSERT INTO attempt_outputs(attempt_id,output_id,name,display,resolved_display_id,metadata_at,
+          result_status,result_reasons,result_state,completed_status,completed_reasons,completed_state)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(attempt_id,output_id) DO UPDATE SET
         name=CASE WHEN excluded.metadata_at >= metadata_at THEN excluded.name ELSE name END,
         display=CASE WHEN excluded.metadata_at >= metadata_at THEN excluded.display ELSE display END,
         resolved_display_id=CASE WHEN excluded.metadata_at >= metadata_at THEN excluded.resolved_display_id ELSE resolved_display_id END,
-        metadata_at=MAX(metadata_at,excluded.metadata_at)`,
+        metadata_at=MAX(metadata_at,excluded.metadata_at),
+        result_status=COALESCE(excluded.result_status,result_status),
+        result_reasons=COALESCE(excluded.result_reasons,result_reasons),
+        result_state=COALESCE(excluded.result_state,result_state),
+        completed_status=COALESCE(excluded.completed_status,completed_status),
+        completed_reasons=COALESCE(excluded.completed_reasons,completed_reasons),
+        completed_state=COALESCE(excluded.completed_state,completed_state)`,
         [
           event.playbackId,
           output.id,
@@ -475,46 +544,40 @@ export class PlaybackStatisticsStore {
           output.display ?? null,
           output.resolvedDisplayId ?? null,
           at,
+          terminal && result ? result.status : null,
+          terminal && result ? reasons(result.reasons) : null,
+          terminal && result ? result.state : null,
+          completed && result ? result.status : null,
+          completed && result ? reasons(result.reasons) : null,
+          completed && result ? result.state : null,
         ],
       );
-      const result = event.outputResult?.outputs.find(item => item.id === output.id);
-      if (terminal && result)
-        await sql.run(
-          'UPDATE attempt_outputs SET result_status=?,result_reasons=?,result_state=? WHERE attempt_id=? AND output_id=?',
-          [result.status, reasons(result.reasons), result.state, event.playbackId, output.id],
-        );
-      if (completed && result)
-        await sql.run(
-          'UPDATE attempt_outputs SET completed_status=?,completed_reasons=?,completed_state=? WHERE attempt_id=? AND output_id=?',
-          [result.status, reasons(result.reasons), result.state, event.playbackId, output.id],
-        );
-      // Историческое имя/назначение сохраняем при отличии от предыдущего наблюдения,
-      // а не на каждом progress. Состояние showing хранится отдельно в segments_output.
-      const previous = await sql.get<OutputIdentity>(
-        `SELECT name,display,resolved_display_id FROM output_observations
-        WHERE player_id=? AND output_id=? AND at<=? ORDER BY at DESC LIMIT 1`,
-        [event.playerId, output.id, at],
-      );
-      if (
-        !previous ||
-        previous.name !== output.name ||
-        previous.display !== (output.display ?? null) ||
-        previous.resolved_display_id !== (output.resolvedDisplayId ?? null)
-      ) {
-        await sql.run(
-          `INSERT INTO output_observations(player_id,output_id,at,name,display,resolved_display_id)
-          VALUES(?,?,?,?,?,?) ON CONFLICT(player_id,output_id,at) DO UPDATE SET
+      // Проверка последнего исторического имени и условная запись — одна команда.
+      // IS сравнивает nullable назначения так же, как прежняя проверка в JS.
+      // Неизменившееся описание не создаёт строку и не раздувает историю выходов.
+      await sql.run(
+        `INSERT INTO output_observations(player_id,output_id,at,name,display,resolved_display_id)
+        SELECT ?,?,?,?,?,? WHERE NOT EXISTS (
+          SELECT 1 FROM (SELECT name,display,resolved_display_id FROM output_observations
+            WHERE player_id=? AND output_id=? AND at<=? ORDER BY at DESC LIMIT 1) previous
+          WHERE previous.name=? AND previous.display IS ? AND previous.resolved_display_id IS ?)
+        ON CONFLICT(player_id,output_id,at) DO UPDATE SET
           name=excluded.name,display=excluded.display,resolved_display_id=excluded.resolved_display_id`,
-          [
-            event.playerId,
-            output.id,
-            at,
-            output.name,
-            output.display ?? null,
-            output.resolvedDisplayId ?? null,
-          ],
-        );
-      }
+        [
+          event.playerId,
+          output.id,
+          at,
+          output.name,
+          output.display ?? null,
+          output.resolvedDisplayId ?? null,
+          event.playerId,
+          output.id,
+          at,
+          output.name,
+          output.display ?? null,
+          output.resolvedDisplayId ?? null,
+        ],
+      );
     }
   }
 
