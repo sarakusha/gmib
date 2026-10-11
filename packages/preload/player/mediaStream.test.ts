@@ -765,7 +765,7 @@ describe('mediaStream recovery orchestration', () => {
 });
 
 describe('playback statistics events', () => {
-  it('flushes successful active intervals across pause and seek before a unique completion', async () => {
+  it('preserves pause and seek events before a unique completion without frame progress', async () => {
     mock.playlist.items = [mock.playlist.items[0]];
     const { seek } = await import('./mediaStream');
     const { isPlaybackStatisticsEvent } = await import('/@common/playback');
@@ -792,8 +792,15 @@ describe('playback statistics events', () => {
     last.end();
     event('stop');
     await flush();
-    expect(records('progress').map(record => record.playedMs)).toEqual([2000, 1000, 1000]);
+    expect(records('progress')).toHaveLength(0);
     expect(records('completed')).toHaveLength(1);
+    const started = records('started')[0];
+    const completed = records('completed')[0];
+    expect(completed).toMatchObject({
+      playbackId: started.playbackId,
+      startedAt: started.timestamp,
+    });
+    expect(Date.parse(completed.timestamp) - Date.parse(started.timestamp)).toBe(14_000);
     expect(records('seeked')).toHaveLength(1);
     expect(records('seeked')[0]).toMatchObject({ previousPosition: 3, position: 8 });
     expect(records('paused')).toHaveLength(1);
@@ -837,14 +844,14 @@ describe('playback statistics events', () => {
     await flush();
     expect(records('error')).toHaveLength(2);
     expect(records('skipped')).toHaveLength(1);
-    expect(records('progress')[0].playedMs).toBe(1000);
+    expect(records('progress')).toHaveLength(0);
     expect(records('completed')).toHaveLength(0);
     expect(records('interrupted')).toHaveLength(0);
   });
 });
 
 describe('capture statistics', () => {
-  it('excludes waiting and seek jumps and flushes before completion', async () => {
+  it('preserves capture start, seek and completion without frame progress', async () => {
     mock.player.playbackEngine = 'capture';
     mock.playlist.items = [mock.playlist.items[0]];
     const { seek } = await import('./mediaStream');
@@ -869,7 +876,7 @@ describe('capture statistics', () => {
     video.currentTime = 10;
     video.emit('ended');
     await flush();
-    expect(records('progress').map(record => record.playedMs)).toEqual([1000, 1000, 2000]);
+    expect(records('progress')).toHaveLength(0);
     expect(records('completed')).toHaveLength(1);
     expect(records('started')[0].playbackId).toBe(records('completed')[0].playbackId);
     expect(records('seeked')).toHaveLength(1);

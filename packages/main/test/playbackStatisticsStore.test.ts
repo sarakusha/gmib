@@ -2,10 +2,15 @@ import { randomUUID } from 'node:crypto';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { Database } from 'sqlite3';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { PlaybackStatisticsEvent } from '/@common/playback';
 import type { PlaybackOutputResult, PlaybackOutputSnapshot } from '/@common/playbackOutput';
-import { PlaybackStatisticsStore, type PlaybackSqlDatabase } from '../src/playbackStatisticsStore';
+import {
+  PlaybackStatisticsStore,
+  type PlaybackSqlReader,
+  type PlaybackSqlDatabase,
+} from '../src/playbackStatisticsStore';
 
 const day = '2020-10-09';
 const timestamp = (seconds: number) => new Date(`${day}T12:00:00.000Z`).getTime() + seconds * 1000;
@@ -35,6 +40,13 @@ const event = (overrides: Partial<PlaybackStatisticsEvent> = {}): PlaybackStatis
   output: { outputs: [output] },
   ...overrides,
 });
+const deferred = () => {
+  let resolve!: () => void;
+  const promise = new Promise<void>(yes => {
+    resolve = yes;
+  });
+  return { promise, resolve };
+};
 const stores: PlaybackStatisticsStore[] = [];
 const directories: string[] = [];
 const create = (options: ConstructorParameters<typeof PlaybackStatisticsStore>[1] = {}) => {
@@ -52,7 +64,202 @@ afterEach(async () => {
   );
 });
 
+const createFile = async (
+  options: ConstructorParameters<typeof PlaybackStatisticsStore>[1] = {},
+) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'gmib-playback-reader-'));
+  directories.push(directory);
+  const store = new PlaybackStatisticsStore(path.join(directory, 'playback.sqlite'), {
+    now: () => new Date(iso(60)),
+    ...options,
+  });
+  stores.push(store);
+  return store;
+};
+
 describe('playback SQLite facts', () => {
+  it('pins a file snapshot before the callback and allows subsequent appends to complete', async () => {
+    const store = await createFile();
+    await store.append(event());
+    const gate = deferred();
+    const started = deferred();
+    const reading = store.read(async db => {
+      started.resolve();
+      await gate.promise;
+      const first = await db.get('SELECT COUNT(*) AS count FROM attempts');
+      const second = await db.get('SELECT COUNT(*) AS count FROM attempts');
+      return [first, second];
+    });
+    await started.promise;
+    try {
+      // Если append ждёт callback читателя, эта проверка завершится по тайм-ауту.
+      await store.append(event());
+    } finally {
+      gate.resolve();
+    }
+    expect(await reading).toEqual([{ count: 1 }, { count: 1 }]);
+    expect(await store.read(db => db.get('SELECT COUNT(*) AS count FROM attempts'))).toEqual({
+      count: 2,
+    });
+  });
+
+  it('waits for writes already accepted before read and continues after writer and reader failures', async () => {
+    const store = await createFile();
+    await store.ready;
+    const gate = deferred();
+    const started = deferred();
+    const maintenance = store.write(async db => {
+      await db.run('CREATE TABLE fixture(value INTEGER)');
+      await db.run('INSERT INTO fixture VALUES(1)');
+      started.resolve();
+      await gate.promise;
+    });
+    await started.promise;
+    let invoked = false;
+    const reading = store.read(async db => {
+      invoked = true;
+      return db.get('SELECT value FROM fixture');
+    });
+    await Promise.resolve();
+    expect(invoked).toBe(false);
+    gate.resolve();
+    await maintenance;
+    expect(await reading).toEqual({ value: 1 });
+    const failedWrite = store.write(async db => {
+      await db.run('INSERT INTO fixture VALUES(2)');
+      throw new Error('writer failed');
+    });
+    const afterFailure = store.read(db => db.all('SELECT value FROM fixture'));
+    await expect(failedWrite).rejects.toThrow('writer failed');
+    expect(await afterFailure).toEqual([{ value: 1 }]);
+    await expect(
+      store.read(async () => {
+        throw new Error('reader failed');
+      }),
+    ).rejects.toThrow('reader failed');
+    await store.append(event());
+    expect(await store.read(db => db.get('SELECT COUNT(*) AS count FROM attempts'))).toEqual({
+      count: 1,
+    });
+    await expect(store.read(db => db.get('SELECT * FROM missing_table'))).rejects.toThrow();
+    expect(await store.read(db => db.get('SELECT value FROM fixture'))).toEqual({ value: 1 });
+  });
+
+  it.each(['file', 'memory'])('rejects mutations through the %s read interface', async mode => {
+    const store = mode === 'file' ? await createFile() : create();
+    await store.append(event());
+    for (const statement of ['DELETE FROM attempts', 'COMMIT', 'PRAGMA query_only=OFF'])
+      await expect(store.read(db => db.get(statement))).rejects.toThrow('read-only');
+    await expect(
+      store.read(db => db.all('WITH fixture AS (SELECT 1) DELETE FROM attempts')),
+    ).rejects.toThrow('readonly');
+    expect(await store.read(db => db.get('/* report */ -- comment\n SELECT 1 AS value'))).toEqual({
+      value: 1,
+    });
+    expect(await store.read(db => db.get('SELECT COUNT(*) AS count FROM attempts'))).toEqual({
+      count: 1,
+    });
+    await store.write(db => db.run('DELETE FROM attempts'));
+    expect(await store.read(db => db.get('SELECT COUNT(*) AS count FROM attempts'))).toEqual({
+      count: 0,
+    });
+  });
+
+  it('bounds accepted reader callbacks without blocking writes and drains both queues on close', async () => {
+    const store = await createFile({ maxPendingReads: 2 });
+    const gate = deferred();
+    const started = deferred();
+    const active = store.read(async () => {
+      started.resolve();
+      await gate.promise;
+    });
+    await started.promise;
+    const queued = store.read(db => db.get('SELECT COUNT(*) AS count FROM attempts'));
+    await expect(store.read(db => db.get('SELECT 1'))).rejects.toThrow('queue is full');
+    const append = store.append(event());
+    const closing = store.close();
+    let closed = false;
+    void closing.then(() => {
+      closed = true;
+    });
+    await expect(store.write(db => db.run('DELETE FROM attempts'))).rejects.toThrow('closing');
+    try {
+      await append;
+      expect(closed).toBe(false);
+    } finally {
+      gate.resolve();
+    }
+    await active;
+    expect(await queued).toEqual({ count: 1 });
+    await closing;
+    expect(closed).toBe(true);
+  });
+
+  it('uses a serial fallback for the in-memory database', async () => {
+    const store = create();
+    const gate = deferred();
+    const started = deferred();
+    const reading = store.read(async () => {
+      started.resolve();
+      await gate.promise;
+    });
+    await started.promise;
+    let written = false;
+    const append = store.append(event()).then(() => {
+      written = true;
+    });
+    await Promise.resolve();
+    expect(written).toBe(false);
+    gate.resolve();
+    await Promise.all([reading, append]);
+    expect(written).toBe(true);
+  });
+
+  it('expires write handles and drains unawaited SQL before releasing the transaction', async () => {
+    const store = await createFile();
+    let escaped!: PlaybackSqlDatabase;
+    await store.write(async db => {
+      escaped = db;
+      void db.exec('CREATE TABLE fixture(value INTEGER); INSERT INTO fixture VALUES(1);');
+    });
+    await expect(escaped.run('INSERT INTO fixture VALUES(2)')).rejects.toThrow('finished');
+    expect(await store.read(db => db.all('SELECT value FROM fixture'))).toEqual([{ value: 1 }]);
+    await expect(
+      store.write(async db => {
+        void db.run('INSERT INTO fixture VALUES(2)');
+        void db.run('INSERT INTO missing_table VALUES(3)');
+      }),
+    ).rejects.toThrow();
+    expect(await store.read(db => db.all('SELECT value FROM fixture'))).toEqual([{ value: 1 }]);
+  });
+
+  it('closes both connections when reader initialization fails', async () => {
+    const nativeExec = Database.prototype.exec;
+    const exec = vi
+      .spyOn(Database.prototype, 'exec')
+      .mockImplementation(function failReader(statement, callback) {
+        if (statement === 'PRAGMA query_only=ON; PRAGMA busy_timeout=5000;') {
+          callback?.(new Error('reader initialization failed'));
+          return this;
+        }
+        return nativeExec.call(this, statement, callback!);
+      });
+    const close = vi.spyOn(Database.prototype, 'close');
+    try {
+      const store = await createFile();
+      await expect(store.ready).rejects.toThrow('reader initialization failed');
+      expect(close).toHaveBeenCalledTimes(2);
+      await expect(store.read(db => db.get('SELECT 1'))).rejects.toThrow(
+        'reader initialization failed',
+      );
+      await expect(store.close()).resolves.toBeUndefined();
+      expect(close).toHaveBeenCalledTimes(2);
+    } finally {
+      exec.mockRestore();
+      close.mockRestore();
+    }
+  });
+
   it('indexes seen events by attempt and timestamp for targeted lookup and cascade work', async () => {
     const store = create();
     const plan = await store.read(db =>
@@ -565,7 +772,7 @@ describe('playback SQLite facts', () => {
     await expect(bad.read(db => db.get('SELECT 1'))).rejects.toThrow();
     await expect(bad.close()).resolves.toBeUndefined();
     const store = create();
-    let escaped!: PlaybackSqlDatabase;
+    let escaped!: PlaybackSqlReader;
     await store.read(async db => {
       escaped = db;
     });

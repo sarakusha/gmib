@@ -11,7 +11,7 @@ let closing = false;
 export const getPlaybackStatisticsPath = (): string =>
   path.join(app.getPath('userData'), 'playback.sqlite');
 
-/** The event writer and HTTP reports share one transaction queue and database lifetime. */
+/** The WAL writer and snapshot reader share the application database lifetime. */
 export const getPlaybackStatisticsStore = (): PlaybackStatisticsStore => {
   if (closing) throw new Error('Playback statistics database is closing');
   store ??= new PlaybackStatisticsStore(getPlaybackStatisticsPath(), {

@@ -105,29 +105,31 @@ const uniqueAttempts = async (
 const rangeOverlap = (start: number, end: number, from: number, to: number): number =>
   Math.max(0, Math.min(end, to) - Math.max(start, from));
 
-/** Only observed active segments count; missing progress never becomes wall-clock airtime. */
-const interval = (event: PlaybackStatisticsEvent) => ({
+// Retained legacy segments can establish coverage, but never contribute duration.
+const legacyInterval = (event: PlaybackStatisticsEvent) => ({
   start: Date.parse(event.segmentStartedAt ?? event.timestamp),
   end: Date.parse(event.timestamp),
-  playedMs: event.playedMs ?? 0,
 });
 
-// Compacted intervals carry exact per-day output totals, never synthetic healthy states.
-type EvidenceEvent = PlaybackStatisticsEvent & {
-  outputDurations?: { all: number; outputs: Record<number, number> };
+/** One attempt occupies wall time until its first terminal event, including pauses and seeks. */
+const attemptInterval = (events: PlaybackStatisticsEvent[]) => {
+  const terminal = events.find(event =>
+    ['completed', 'error', 'interrupted'].includes(event.event),
+  );
+  const observedStart = events.find(event => event.event === 'started')?.timestamp;
+  const declaredStart = events
+    .map(event => event.startedAt)
+    .filter((value): value is string => value !== undefined && Number.isFinite(Date.parse(value)))
+    .sort((a, b) => Date.parse(a) - Date.parse(b))[0];
+  const startedAt = observedStart ?? declaredStart;
+  const start = startedAt === undefined ? NaN : Date.parse(startedAt);
+  const end = terminal === undefined ? NaN : Date.parse(terminal.timestamp);
+  const valid = Number.isFinite(start) && Number.isFinite(end) && end >= start;
+  return { terminal, startedAt, start, end, valid };
 };
-const outputTime = (event: EvidenceEvent, outputId?: number): number => {
-  if (event.outputDurations)
-    return outputId === undefined
-      ? event.outputDurations.all
-      : (event.outputDurations.outputs[outputId] ?? 0);
-  const outputs = event.output?.outputs ?? [];
-  const showing =
-    outputId === undefined
-      ? outputs.length > 0 && outputs.every(output => output.state === 'showing')
-      : outputs.some(output => output.id === outputId && output.state === 'showing');
-  return showing ? (event.playedMs ?? 0) : 0;
-};
+
+const attemptOverlaps = (span: ReturnType<typeof attemptInterval>, from: number, to: number) =>
+  span.valid && rangeOverlap(span.start, span.end, from, to) > 0;
 const attemptOutputs = (events: PlaybackStatisticsEvent[]): Map<number, PlaybackOutputSnapshot> => {
   const outputs = new Map<number, PlaybackOutputSnapshot>();
   const timestamps = new Map<number, string>();
@@ -177,6 +179,12 @@ export const aggregatePlaybackStatistics = async (
     first = Math.min(first, Date.parse(event.segmentStartedAt ?? event.timestamp));
     last = Math.max(last, Date.parse(event.timestamp));
   }
+  for (const attempt of attempts) {
+    const span = attemptInterval(
+      attempt.events.filter(event => Date.parse(event.timestamp) <= now.getTime()),
+    );
+    if (Number.isFinite(span.start)) first = Math.min(first, span.start);
+  }
   const available = Number.isFinite(first)
     ? { from: new Date(first).toISOString(), to: new Date(last).toISOString() }
     : null;
@@ -188,6 +196,7 @@ export const aggregatePlaybackStatistics = async (
       : null;
   const result: PlaybackStatistics = {
     playerId: query.playerId,
+    durationBasis: 'wall-clock',
     timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     today: period.today,
     generatedAt: now.toISOString(),
@@ -221,6 +230,7 @@ export const aggregatePlaybackStatistics = async (
     return ms >= lower && ms <= upper && ms < period.to;
   };
   let processed = 0;
+  const relevantAttempts: PlaybackStatisticsEvent[][] = [];
   for (const attempt of attempts) {
     if (++processed % 250 === 0) await yieldToLoop();
     const validEvents = attempt.events.filter(
@@ -231,13 +241,15 @@ export const aggregatePlaybackStatistics = async (
       (query.outputId !== undefined && !attemptOutputs(validEvents).has(query.outputId))
     )
       continue;
+    const span = attemptInterval(validEvents);
     const relevant = validEvents.filter(
       event =>
         inPeriod(event.timestamp) ||
         (event.event === 'progress' &&
-          rangeOverlap(interval(event).start, interval(event).end, lower, upper) > 0),
+          rangeOverlap(legacyInterval(event).start, legacyInterval(event).end, lower, upper) > 0),
     );
-    if (!relevant.length) continue;
+    if (!relevant.length && !attemptOverlaps(span, lower, upper)) continue;
+    relevantAttempts.push(validEvents);
     const attribution = validEvents[0];
     let row = rows.get(attribution.mediaId);
     if (!row) {
@@ -250,11 +262,8 @@ export const aggregatePlaybackStatistics = async (
     }
     const latestName = validEvents.findLast(event => event.filename)?.filename;
     if (latestName) row.filename = latestName;
-    const terminal = validEvents.find(event =>
-      ['completed', 'error', 'interrupted'].includes(event.event),
-    );
-    const progresses = validEvents.filter(event => event.event === 'progress');
-    if (!terminal || (terminal.event === 'completed' && !progresses.length))
+    const { terminal } = span;
+    if (!terminal || (terminal.event === 'completed' && !span.valid))
       result.quality.incompleteAttempts += 1;
     const counted = new Set<string>();
     for (const event of relevant) {
@@ -282,16 +291,12 @@ export const aggregatePlaybackStatistics = async (
         }
       }
     }
-    // Distinct event IDs may still overlap after a retry; never credit an interval twice.
-    let creditedUntil = -Infinity;
-    for (const event of progresses.sort((a, b) =>
-      (a.segmentStartedAt ?? '').localeCompare(b.segmentStartedAt ?? ''),
-    )) {
-      const span = interval(event);
-      const start = Math.max(span.start, creditedUntil, lower);
+    if (attemptOverlaps(span, lower, upper)) {
+      const start = Math.max(span.start, lower);
       const end = Math.min(span.end, upper);
-      creditedUntil = Math.max(creditedUntil, span.end);
-      if (end <= start || span.end <= span.start) continue;
+      const confirmed =
+        terminal?.event === 'completed' &&
+        scopedResult(terminal, query.outputId).status === 'confirmed';
       for (
         let date = calendarDate(localDate(new Date(start)));
         date.getTime() < end;
@@ -300,18 +305,14 @@ export const aggregatePlaybackStatistics = async (
         const day = dayMap.get(localDate(date));
         if (!day) continue;
         day.hasRecords = true;
-        const amount =
-          (rangeOverlap(start, end, date.getTime(), nextDay(date).getTime()) * span.playedMs) /
-          (span.end - span.start);
+        const amount = rangeOverlap(start, end, date.getTime(), nextDay(date).getTime());
         day.playedMs += amount;
         row.playedMs += amount;
         result.totals.playedMs += amount;
-        if (terminal?.event !== 'completed') continue;
-        const healthy =
-          span.playedMs > 0 ? (amount * outputTime(event, query.outputId)) / span.playedMs : 0;
-        day.successfulMs += healthy;
-        row.successfulMs += healthy;
-        result.totals.successfulMs += healthy;
+        if (!confirmed) continue;
+        day.successfulMs += amount;
+        row.successfulMs += amount;
+        result.totals.successfulMs += amount;
       }
     }
   }
@@ -323,9 +324,16 @@ export const aggregatePlaybackStatistics = async (
       event =>
         inPeriod(event.timestamp) ||
         (event.event === 'progress' &&
-          rangeOverlap(interval(event).start, interval(event).end, lower, upper) > 0),
+          rangeOverlap(legacyInterval(event).start, legacyInterval(event).end, lower, upper) > 0),
     );
-    for (const [id, output] of attemptOutputs(observedInPeriod)) {
+    const outputs = attemptOutputs(observedInPeriod);
+    // Bridge intervals whose only events lie outside the requested days.
+    for (const attempt of relevantAttempts) {
+      const historical = attempt.filter(event => Date.parse(event.timestamp) <= upper);
+      for (const [id, output] of attemptOutputs(historical.length ? historical : attempt))
+        if (!outputs.has(id)) outputs.set(id, output);
+    }
+    for (const [id, output] of outputs) {
       const part = await aggregatePlaybackStatistics(
         events,
         { ...query, outputId: id },
@@ -387,42 +395,38 @@ export const aggregatePlaybackHistory = async (
     const own = attempt.events.filter(
       event => event.mediaId === query.mediaId && Date.parse(event.timestamp) <= now.getTime(),
     );
+    const span = attemptInterval(own);
     if (
       !own.length ||
-      !own.some(event => {
-        const ms = Date.parse(event.timestamp);
-        return (
-          (ms >= period.from && ms < period.to) ||
-          (event.event === 'progress' &&
-            rangeOverlap(interval(event).start, interval(event).end, period.from, period.to) > 0)
-        );
-      })
+      (!attemptOverlaps(span, period.from, period.to) &&
+        !own.some(event => {
+          const ms = Date.parse(event.timestamp);
+          return (
+            (ms >= period.from && ms < period.to) ||
+            (event.event === 'progress' &&
+              rangeOverlap(
+                legacyInterval(event).start,
+                legacyInterval(event).end,
+                period.from,
+                period.to,
+              ) > 0)
+          );
+        }))
     )
       continue;
     if (query.outputId !== undefined && !attemptOutputs(own).has(query.outputId)) continue;
-    const terminal = own.find(event => ['completed', 'error', 'interrupted'].includes(event.event));
-    let playedMs = 0;
-    let successfulMs = 0;
-    let creditedUntil = -Infinity;
-    for (const event of own
-      .filter(event => event.event === 'progress')
-      .sort((a, b) => (a.segmentStartedAt ?? '').localeCompare(b.segmentStartedAt ?? ''))) {
-      const span = interval(event);
-      const start = Math.max(span.start, creditedUntil);
-      creditedUntil = Math.max(creditedUntil, span.end);
-      if (span.end > span.start) {
-        const ratio =
-          rangeOverlap(start, span.end, period.from, period.to) / (span.end - span.start);
-        playedMs += ratio * span.playedMs;
-        if (terminal?.event === 'completed')
-          successfulMs += ratio * outputTime(event, query.outputId);
-      }
-    }
+    const { terminal } = span;
+    const playedMs = span.valid ? rangeOverlap(span.start, span.end, period.from, period.to) : 0;
+    const successfulMs =
+      terminal?.event === 'completed' &&
+      scopedResult(terminal, query.outputId).status === 'confirmed'
+        ? playedMs
+        : 0;
     entries.push({
       playbackId: attempt.playbackId,
       mediaId: query.mediaId,
       filename: own.findLast(event => event.filename)?.filename ?? query.mediaId,
-      startedAt: own.find(event => event.event === 'started')?.timestamp ?? own[0].startedAt,
+      startedAt: span.startedAt,
       timestamp: (terminal ?? own[own.length - 1]).timestamp,
       outcome: (terminal?.event as PlaybackHistoryEntry['outcome']) ?? 'pending',
       playedMs: Math.round(playedMs),

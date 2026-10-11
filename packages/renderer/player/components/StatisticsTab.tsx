@@ -97,6 +97,9 @@ const StatisticsTab: React.FC = () => {
     },
   );
   const data = supported ? query.currentData : undefined;
+  const wallClockDuration =
+    supportsFeature('playbackWallClockDuration', version, isRemoteSession) &&
+    data?.durationBasis === 'wall-clock';
   const history = useGetPlaybackHistoryQuery(
     {
       playerId: sourceId,
@@ -312,7 +315,9 @@ const StatisticsTab: React.FC = () => {
                 {formatDurationPair(data.totals.playedMs, data.totals.successfulMs)}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                Общее — все попытки. Исправный вывод — только завершённые.
+                {wallClockDuration
+                  ? 'От начала до исхода, включая паузы и ожидание кадров. Исправный вывод — полностью подтверждённые завершения.'
+                  : 'Общее — все попытки. Исправный вывод — только завершённые.'}
               </Typography>
             </Box>
             <Box>

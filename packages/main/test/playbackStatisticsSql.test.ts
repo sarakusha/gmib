@@ -112,7 +112,7 @@ describe('SQLite playback reports', () => {
       screen.resolvedDisplayId,
     );
   });
-  it('preserves paused/seek gaps, interruptions and pending/no-progress quality', async () => {
+  it('includes paused/seek wall time and preserves interruption and incomplete outcomes', async () => {
     const id = randomUUID();
     await parity([
       event(id, 'started', '2026-10-08T10:00:00.000Z'),
@@ -133,7 +133,7 @@ describe('SQLite playback reports', () => {
       event(randomUUID(), 'completed', '2026-10-08T10:08:00.000Z'),
     ]);
   });
-  it('clips cross-midnight progress to days and credits overlaps only once', async () => {
+  it('clips cross-midnight attempts and ignores overlapping legacy progress', async () => {
     const records = successful('2026-10-07T23:59:55.000Z', '2026-10-08T00:00:05.000Z');
     records.splice(
       2,
@@ -144,7 +144,7 @@ describe('SQLite playback reports', () => {
       }),
     );
     await parity(records, { ...query, from: '2026-10-08', to: '2026-10-08' });
-    expect((await reader.statistics(query)).totals.playedMs).toBe(13000);
+    expect((await reader.statistics(query)).totals.playedMs).toBe(10000);
   });
   it('does not duplicate an event or infer completion after a restart', async () => {
     const records = successful();
@@ -152,7 +152,7 @@ describe('SQLite playback reports', () => {
     await store.append(records[1]);
     expect((await reader.statistics(query)).totals).toMatchObject({
       completed: 0,
-      playedMs: 10000,
+      playedMs: 0,
       successfulMs: 0,
     });
     await store.append(records[2]);
@@ -318,7 +318,7 @@ describe('SQLite playback reports', () => {
     // Bulk seed realistic cardinality without timing thousands of individual writer transactions.
     const count = 6000;
     const start = Date.parse('2026-10-08T10:00:00.000Z');
-    await store.read(async sql => {
+    await store.write(async sql => {
       await sql.exec(`CREATE TEMP TABLE fixture AS WITH RECURSIVE numbers(n) AS (
         VALUES(1) UNION ALL SELECT n+1 FROM numbers WHERE n<${count}
       ) SELECT CAST(n AS TEXT) AS id,${start}+n*1000 AS at FROM numbers;
@@ -334,6 +334,8 @@ describe('SQLite playback reports', () => {
     });
     const statements: string[] = [];
     let reportPlan: { detail: string }[] = [];
+    let historyStatement = '';
+    let historyParams: (string | number | null)[] = [];
     reader = new PlaybackStatisticsSqlReader(
       {
         read: callback =>
@@ -346,6 +348,10 @@ describe('SQLite playback reports', () => {
               },
               all: async (statement, params) => {
                 statements.push(statement);
+                if (statement.includes('SELECT totals.count,page.*')) {
+                  historyStatement = statement;
+                  historyParams = params ?? [];
+                }
                 reportPlan = await sql.all('EXPLAIN QUERY PLAN ' + statement, params);
                 return sql.all(statement, params);
               },
@@ -371,6 +377,50 @@ describe('SQLite playback reports', () => {
     expect(statements).toHaveLength(3);
     expect(history.total).toBe(1);
     expect(history.entries[0]).toMatchObject({ mediaId: '1', playedMs: 1000, successfulMs: 1000 });
+    // Много попыток одного ролика: total остаётся полным, но длительности
+    // вычисляются только для попыток двадцатистрочной страницы.
+    await store.write(sql => sql.run("UPDATE attempts SET media_id='same-media'"));
+    const many = await reader.history({ ...query, mediaId: 'same-media', limit: 20, offset: 25 });
+    expect(many.total).toBe(count);
+    expect(many.entries).toHaveLength(20);
+    expect(many.entries.every(entry => entry.playedMs === 1000)).toBe(true);
+    const cte = historyStatement.slice(0, historyStatement.indexOf('SELECT totals.count,page.*'));
+    expect(
+      await store.read(sql =>
+        sql.get(cte + 'SELECT COUNT(*) AS count FROM scoped_intervals', historyParams),
+      ),
+    ).toEqual({ count: 20 });
+  });
+
+  it('uses the current host timezone when reporting intervals across midnight', async () => {
+    const records = successful('2026-10-07T23:59:55.000Z', '2026-10-08T00:00:05.000Z');
+    await append(records);
+    expect(await reader.statistics(query)).toEqual(
+      await aggregatePlaybackStatistics(records, query, now),
+    );
+    process.env.TZ = 'America/New_York';
+    expect(await reader.statistics(query)).toEqual(
+      await aggregatePlaybackStatistics(records, query, now),
+    );
+  });
+
+  it('keeps zero-duration and diagnostic-only days distinct from gaps in reports', async () => {
+    const id = randomUUID();
+    await parity([
+      event(id, 'paused', '2026-10-05T10:00:00.000Z'),
+      event(id, 'progress', '2026-10-07T10:00:10.000Z', {
+        segmentStartedAt: '2026-10-07T10:00:00.000Z',
+        playedMs: 0,
+      }),
+      event(id, 'completed', '2026-10-08T10:00:00.000Z'),
+    ]);
+    const report = await reader.statistics(query);
+    expect(report.days.map(day => [day.date, day.hasRecords, day.playedMs])).toEqual([
+      ['2026-10-05', true, 0],
+      ['2026-10-06', false, 0],
+      ['2026-10-07', true, 0],
+      ['2026-10-08', true, 0],
+    ]);
   });
 
   it('uses the host calendar for a DST day instead of fixed 24-hour buckets', async () => {
@@ -386,5 +436,126 @@ describe('SQLite playback reports', () => {
       await aggregatePlaybackStatistics(records, part, dstNow),
     );
     expect((await reader.statistics(part)).totals.playedMs).toBe(25 * 60 * 60 * 1000);
+  });
+});
+
+describe('wall-clock duration without progress', () => {
+  it('counts pause time, ignores arbitrary legacy frame credit and requires full confirmation', async () => {
+    const id = randomUUID();
+    await append([
+      event(id, 'started', '2026-10-08T10:00:00.000Z'),
+      event(id, 'paused', '2026-10-08T10:00:01.000Z'),
+      event(id, 'resumed', '2026-10-08T10:00:04.000Z'),
+      event(id, 'progress', '2026-10-08T10:00:05.000Z', {
+        segmentStartedAt: '2026-10-08T10:00:00.000Z',
+        playedMs: 123,
+      }),
+      event(id, 'completed', '2026-10-08T10:00:05.000Z', {
+        outputResult: {
+          status: 'partial',
+          reasons: ['hidden'],
+          outputs: [{ ...screen, status: 'confirmed', reasons: [] }],
+        },
+      }),
+    ]);
+    const result = await reader.statistics(query);
+    expect(result.durationBasis).toBe('wall-clock');
+    expect(result.totals).toMatchObject({ playedMs: 5000, successfulMs: 0, partial: 1 });
+    expect(result.outputs[0]).toMatchObject({ playedMs: 5000, successfulMs: 5000 });
+    expect((await reader.history({ ...query, mediaId: 'clip' })).entries[0]).toMatchObject({
+      playedMs: 5000,
+      successfulMs: 0,
+    });
+  });
+
+  it('finds a completed wall interval and its outputs on a day without events', async () => {
+    const id = randomUUID();
+    const records = [
+      event(id, 'started', '2026-10-07T23:00:00.000Z'),
+      event(id, 'completed', '2026-10-09T01:00:00.000Z'),
+    ];
+    const part = { ...query, from: '2026-10-08', to: '2026-10-08' };
+    await parity(records, part);
+    const result = await reader.statistics(part);
+    expect(result.totals).toMatchObject({
+      starts: 0,
+      completed: 0,
+      playedMs: 86400000,
+      successfulMs: 86400000,
+    });
+    expect(result.days[0]).toMatchObject({ hasRecords: true, playedMs: 86400000 });
+    expect(result.outputs).toHaveLength(1);
+  });
+
+  it('reconstructs a retained interval from terminal startedAt and clips it again during cleanup', async () => {
+    await store.close();
+    let retention = 2;
+    store = new PlaybackStatisticsStore(':memory:', {
+      now: () => now,
+      retentionDays: () => retention,
+    });
+    reader = new PlaybackStatisticsSqlReader(store, () => now);
+    const startedAt = '2026-10-07T23:59:55.000Z';
+    await append([event(randomUUID(), 'completed', '2026-10-09T00:00:05.000Z', { startedAt })]);
+    let result = await reader.statistics(query);
+    expect(result.available?.from).toBe('2026-10-08T00:00:00.000Z');
+    expect(result.totals).toMatchObject({ playedMs: 86405000, successfulMs: 86405000 });
+    expect(result.quality.incompleteAttempts).toBe(0);
+    retention = 1;
+    await store.cleanup();
+    result = await reader.statistics(query);
+    expect(result.available?.from).toBe('2026-10-09T00:00:00.000Z');
+    expect(result.totals).toMatchObject({ playedMs: 5000, successfulMs: 5000 });
+    const history = await reader.history({ ...query, mediaId: 'clip' });
+    expect(history.entries[0]).toMatchObject({ startedAt, playedMs: 5000, successfulMs: 5000 });
+    expect(history.entries[0].events.map(e => e.event)).toEqual(['completed']);
+  });
+
+  it('does not invent time for pending or reversed attempts and ends interrupted attempts at their outcome', async () => {
+    const pending = randomUUID(),
+      reversed = randomUUID(),
+      interrupted = randomUUID();
+    await parity([
+      event(pending, 'started', '2026-10-08T10:00:00.000Z'),
+      event(reversed, 'completed', '2026-10-08T11:00:00.000Z', {
+        startedAt: '2026-10-08T11:00:01.000Z',
+      }),
+      event(interrupted, 'started', '2026-10-08T12:00:00.000Z'),
+      event(interrupted, 'interrupted', '2026-10-08T12:00:03.000Z'),
+      event(interrupted, 'completed', '2026-10-08T12:00:10.000Z'),
+    ]);
+    expect((await reader.statistics(query)).totals).toMatchObject({
+      playedMs: 3000,
+      successfulMs: 0,
+    });
+    expect((await reader.statistics(query)).quality.incompleteAttempts).toBe(2);
+  });
+});
+
+it('keeps reconstructed wall coverage when later facts become future after clock rollback', async () => {
+  const id = randomUUID();
+  await append([
+    event(id, 'completed', '2026-10-08T10:00:00.000Z', { startedAt: '2026-10-08T09:00:00.000Z' }),
+    event(randomUUID(), 'started', '2026-10-08T11:00:00.000Z'),
+  ]);
+  reader = new PlaybackStatisticsSqlReader(store, () => new Date('2026-10-08T10:30:00.000Z'));
+  const report = await reader.statistics(query);
+  expect(report.available?.from).toBe('2026-10-08T09:00:00.000Z');
+  expect(report.totals).toMatchObject({ playedMs: 3600000, successfulMs: 3600000 });
+  expect((await reader.history({ ...query, mediaId: 'clip' })).entries[0].playedMs).toBe(3600000);
+});
+
+it('keeps an output breakdown for a declared interval with only a later terminal snapshot', async () => {
+  const record = event(randomUUID(), 'completed', '2026-10-09T01:00:00.000Z', {
+    startedAt: '2026-10-07T23:00:00.000Z',
+  });
+  const part = { ...query, from: '2026-10-08', to: '2026-10-08' };
+  await parity([record], part);
+  const report = await reader.statistics(part);
+  expect(report.outputs).toHaveLength(1);
+  expect(report.outputs[0]).toMatchObject({
+    id: screen.id,
+    playedMs: 86400000,
+    successfulMs: 86400000,
   });
 });

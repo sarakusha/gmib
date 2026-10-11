@@ -40,6 +40,8 @@ export type PlaybackOutputStatistics = PlaybackStatisticsMetrics &
 export type PlaybackStatisticsRange = { from: string; to: string };
 
 export type PlaybackStatistics = {
+  /** Missing on older hosts, including early 5.6.6 trials with frame-based duration. */
+  durationBasis?: 'wall-clock';
   playerId: number;
   timeZone: string;
   today: string;

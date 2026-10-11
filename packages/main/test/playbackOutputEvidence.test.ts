@@ -45,22 +45,12 @@ describe('main output evidence', () => {
     expect(tracker.process(make('started', 0, id))[0]?.output?.outputs).toEqual([showing]);
     expect(tracker.process(make('completed', 500, id))[0]?.outputResult?.status).toBe('confirmed');
   });
-  it('splits progress at hide and restoration, without claiming the hidden time', () => {
+  it('preserves hide and restoration quality without requiring progress', () => {
     const { tracker, change } = setup();
     const id = randomUUID();
     tracker.process(make('started', 0, id));
     expect(change([{ ...showing, state: 'hidden' }], 2000)[0]?.event).toBe('output-changed');
     change([showing], 4000);
-    const pieces = tracker.process(
-      make('progress', 6000, id, { segmentStartedAt: new Date(0).toISOString(), playedMs: 3000 }),
-    );
-    expect(pieces.map(item => item.playedMs)).toEqual([1000, 1000, 1000]);
-    expect(pieces.map(item => item.output?.outputs[0]?.state)).toEqual([
-      'showing',
-      'hidden',
-      'showing',
-    ]);
-    expect(new Set(pieces.map(item => item.eventId)).size).toBe(3);
     expect(tracker.process(make('completed', 6000, id))[0]?.outputResult).toMatchObject({
       status: 'partial',
       reasons: ['hidden'],
@@ -146,7 +136,7 @@ it('marks a removed output as partial even when the remaining output keeps showi
   });
 });
 
-it('deduplicates repeated progress before generating split event IDs', () => {
+it('ignores legacy progress without changing terminal output quality', () => {
   const { tracker, change } = setup();
   const id = randomUUID();
   tracker.process(make('started', 0, id));
@@ -155,27 +145,43 @@ it('deduplicates repeated progress before generating split event IDs', () => {
     segmentStartedAt: new Date(0).toISOString(),
     playedMs: 200,
   });
-  expect(tracker.process(progress)).toHaveLength(2);
   expect(tracker.process(progress)).toEqual([]);
+  expect(tracker.process(progress)).toEqual([]);
+  expect(tracker.process(make('completed', 300, id))[0]?.outputResult?.status).toBe('partial');
 });
 
-it('keeps intervals ordered and evidence conservative when the wall clock moves backward', () => {
+it('keeps output evidence conservative when the wall clock moves backward', () => {
   const { tracker, change } = setup();
   const id = randomUUID();
   tracker.process(make('started', 0, id));
   change([{ ...showing, state: 'hidden' }], 150);
   change([showing], 100);
   change([showing], 100);
-  const pieces = tracker.process(
-    make('progress', 200, id, { segmentStartedAt: new Date(0).toISOString(), playedMs: 200 }),
-  );
-  expect(pieces.map(piece => piece.playedMs)).toEqual([100, 50, 50]);
-  expect(
-    pieces.every(piece => piece.output?.outputs.every(output => output.state === 'unknown')),
-  ).toBe(true);
   expect(tracker.process(make('completed', 250, id))[0]?.outputResult).toMatchObject({
     status: 'partial',
     reasons: expect.arrayContaining(['unknown']),
     outputs: [{ status: 'partial' }],
+  });
+});
+
+it('keeps output confirmation through more than 2048 observations without progress', () => {
+  const { tracker, change } = setup();
+  const id = randomUUID();
+  tracker.process(make('started', 0, id));
+  for (let at = 1; at <= 2050; at += 1) change([showing], at);
+  expect(tracker.process(make('completed', 2051, id))[0]?.outputResult).toMatchObject({
+    status: 'confirmed',
+    reasons: [],
+  });
+});
+
+it('marks a terminal clock rollback uncertain even without output changes', () => {
+  const { tracker } = setup();
+  const id = randomUUID();
+  tracker.process(make('started', 1000, id));
+  expect(tracker.process(make('completed', 500, id))[0]?.outputResult).toMatchObject({
+    status: 'partial',
+    reasons: ['unknown'],
+    outputs: [{ status: 'partial', reasons: ['unknown'] }],
   });
 });

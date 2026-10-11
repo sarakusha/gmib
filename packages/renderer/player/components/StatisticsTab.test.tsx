@@ -75,6 +75,7 @@ const data: PlaybackStatistics = {
 describe('StatisticsTab', () => {
   beforeEach(() => {
     remote.version = '5.6.5';
+    remote.isRemoteSession = true;
     statisticsQuery
       .mockReset()
       .mockReturnValue({ currentData: data, isLoading: false, isError: false });
@@ -102,6 +103,41 @@ describe('StatisticsTab', () => {
     expect(html).not.toContain('Качество журнала');
     expect(html).not.toContain('Попыток с неполными данными');
   });
+
+  it.each([
+    { version: '5.6.5', isRemoteSession: true, durationBasis: 'wall-clock', expected: false },
+    { version: '5.6.6', isRemoteSession: true, durationBasis: 'wall-clock', expected: true },
+    { version: '5.7.0', isRemoteSession: true, durationBasis: 'wall-clock', expected: true },
+    { version: '5.6.5', isRemoteSession: false, durationBasis: 'wall-clock', expected: true },
+    {
+      version: '5.6.6-test.20261010.1',
+      isRemoteSession: true,
+      durationBasis: undefined,
+      expected: false,
+    },
+    { version: '5.7.0', isRemoteSession: true, durationBasis: undefined, expected: false },
+  ] as const)(
+    'explains wall duration only when host version and response agree: $version, $isRemoteSession, $durationBasis',
+    ({ version, isRemoteSession, durationBasis, expected }) => {
+      remote.version = version;
+      remote.isRemoteSession = isRemoteSession;
+      statisticsQuery.mockReturnValue({ currentData: { ...data, durationBasis } });
+      const html = renderToStaticMarkup(<StatisticsTab />);
+      const explanation = 'От начала до исхода, включая паузы и ожидание кадров.';
+      if (expected) {
+        expect(html).toContain(explanation);
+        expect(html).toContain('полностью подтверждённые завершения');
+      } else {
+        expect(html).not.toContain(explanation);
+        expect(html).toContain('Общее — все попытки. Исправный вывод — только завершённые.');
+      }
+      expect(statisticsQuery).toHaveBeenCalledWith({ playerId: 7 }, expect.any(Object));
+      expect(historyQuery).toHaveBeenCalledWith(
+        expect.objectContaining({ playerId: 7, mediaId: '' }),
+        expect.objectContaining({ skip: true }),
+      );
+    },
+  );
 
   it('skips both queries when mounted directly on an older remote host', () => {
     remote.version = '5.6.4';

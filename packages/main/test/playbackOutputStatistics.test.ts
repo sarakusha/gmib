@@ -77,7 +77,7 @@ describe('output-aware statistics', () => {
       confirmed: 0,
       partial: 1,
       unconfirmed: 0,
-      successfulMs: 5000,
+      successfulMs: 0,
       playedMs: 10000,
       errors: 0,
     });
@@ -85,7 +85,7 @@ describe('output-aware statistics', () => {
       data.outputs.map(item => [item.id, item.confirmed, item.partial, item.successfulMs]),
     ).toEqual([
       [1, 1, 0, 10000],
-      [2, 0, 1, 5000],
+      [2, 0, 1, 0],
     ]);
     expect(data.outputs[1].reasons).toEqual([{ reason: 'hidden', count: 1 }]);
     const filtered = await aggregatePlaybackStatistics(partial(), { ...query, outputId: 1 });
@@ -122,7 +122,7 @@ describe('output-aware statistics', () => {
     expect(history.entries[0]).toMatchObject({
       outputResult: { status: 'partial' },
       playedMs: 10000,
-      successfulMs: 5000,
+      successfulMs: 0,
     });
     expect(
       history.entries[0].events.find(item => item.event === 'output-changed')?.output?.outputs[1]

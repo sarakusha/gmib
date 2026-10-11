@@ -84,7 +84,7 @@ describe('playback statistics application database lifetime', () => {
     expect(mocks.get).toHaveBeenCalledWith('playbackLogRetentionDays');
   });
 
-  it('drains accepted queued writes before closing and never recreates the database after shutdown', async () => {
+  it('drains accepted readers and writers before closing and never recreates the database after shutdown', async () => {
     const module = await import('../src/playbackStatisticsDatabase');
     const store = module.getPlaybackStatisticsStore();
     stores.push(store);
@@ -104,6 +104,8 @@ describe('playback statistics application database lifetime', () => {
     expect(() => module.getPlaybackStatisticsStore()).toThrow('closing');
     await expect(store.append(makeEvent())).rejects.toThrow('closing');
     await Promise.resolve();
+    expect(finished).toBe(false);
+    await Promise.all(writes);
     expect(finished).toBe(false);
     gate.resolve();
     await active;

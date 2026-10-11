@@ -7,11 +7,10 @@ import type {
   PlaybackOutputState,
 } from '/@common/playbackOutput';
 
-type Observation = { at: number; outputs: PlaybackOutputSnapshot[] };
 type Seen = { output: PlaybackOutputSnapshot; good: boolean; reasons: Set<PlaybackOutputState> };
 type Attempt = {
   event: PlaybackEvent;
-  timeline: Observation[];
+  lastObservedAt: number;
   outputs: Map<number, Seen>;
   good: boolean;
   bad: boolean;
@@ -23,12 +22,23 @@ const resultStatus = (good: boolean, bad: boolean): PlaybackOutputResultStatus =
   good ? (bad ? 'partial' : 'confirmed') : 'unconfirmed';
 const terminal = new Set(['completed', 'interrupted', 'skipped', 'error']);
 
-/** Main-owned evidence; each progress piece and terminal result survives log rotation independently. */
+/** Main-owned output transitions and terminal quality, independent of frame progress. */
 export class PlaybackOutputEvidenceTracker {
   private attempts = new Map<string, Attempt>();
   private seenEvents = new Set<string>();
 
   constructor(private readonly current: (playerId: number) => PlaybackOutputSnapshot[]) {}
+
+  private observeTime(target: Attempt, at: number): void {
+    const attempt = target;
+    if (at < attempt.lastObservedAt) {
+      attempt.clockUncertain = true;
+      attempt.bad = true;
+      attempt.reasons.add('unknown');
+      attempt.outputs.forEach(seen => seen.reasons.add('unknown'));
+    }
+    attempt.lastObservedAt = Math.max(attempt.lastObservedAt, at);
+  }
 
   private observe(target: Attempt, outputs: PlaybackOutputSnapshot[]): void {
     const attempt = target;
@@ -75,19 +85,7 @@ export class PlaybackOutputEvidenceTracker {
     this.attempts.forEach(target => {
       const attempt = target;
       if (attempt.event.playerId !== playerId) return;
-      if (at < (attempt.timeline.at(-1)?.at ?? at)) {
-        attempt.clockUncertain = true;
-        attempt.bad = true;
-        attempt.reasons.add('unknown');
-        attempt.outputs.forEach(seen => seen.reasons.add('unknown'));
-      }
-      attempt.timeline.push({ at, outputs });
-      // A broken or exceptionally long attempt must not retain unlimited transitions.
-      if (attempt.timeline.length > 2048) {
-        attempt.timeline.splice(0, attempt.timeline.length - 2048);
-        attempt.bad = true;
-        attempt.reasons.add('unknown');
-      }
+      this.observeTime(attempt, at);
       this.observe(attempt, outputs);
       events.push({
         ...attempt.event,
@@ -109,7 +107,7 @@ export class PlaybackOutputEvidenceTracker {
   process(input: PlaybackEvent): PlaybackEvent[] {
     // Never accept renderer assertions about native output state.
     const { output: _output, outputResult: _result, ...event } = input;
-    if (event.event === 'output-changed') return [];
+    if (event.event === 'output-changed' || event.event === 'progress') return [];
     if (event.version !== 3) return [event];
     if (event.eventId) {
       if (this.seenEvents.has(event.eventId)) return [];
@@ -122,7 +120,7 @@ export class PlaybackOutputEvidenceTracker {
       const outputs = this.current(event.playerId);
       attempt = {
         event,
-        timeline: [{ at: Date.parse(event.timestamp), outputs }],
+        lastObservedAt: Date.parse(event.timestamp),
         outputs: new Map(),
         good: false,
         bad: false,
@@ -151,37 +149,11 @@ export class PlaybackOutputEvidenceTracker {
             : {}),
         },
       ];
+    this.observeTime(attempt, Date.parse(event.timestamp));
     if (event.event === 'paused') attempt.paused = true;
     if (event.event === 'resumed') {
       attempt.paused = false;
       this.observe(attempt, this.current(event.playerId));
-    }
-    if (event.event === 'progress') {
-      const start = Date.parse(event.segmentStartedAt!);
-      const end = Date.parse(event.timestamp);
-      const transitions = attempt.timeline.filter(item => item.at > start && item.at < end);
-      const boundaries = [...new Set([start, ...transitions.map(item => item.at), end])].sort(
-        (a, b) => a - b,
-      );
-      const pieces = boundaries.slice(1).map((to, index) => {
-        const from = boundaries[index];
-        const snapshot = attempt.timeline.findLast(item => item.at <= from)?.outputs ?? [];
-        const outputs = attempt.clockUncertain
-          ? snapshot.map(output => ({ ...output, state: 'unknown' as const }))
-          : snapshot;
-        return {
-          ...event,
-          eventId: index === 0 ? event.eventId : randomUUID(),
-          segmentStartedAt: new Date(from).toISOString(),
-          timestamp: new Date(to).toISOString(),
-          playedMs:
-            end > start ? Math.min(to - from, (event.playedMs! * (to - from)) / (end - start)) : 0,
-          output: { outputs },
-        };
-      });
-      const lastIndex = attempt.timeline.findLastIndex(item => item.at <= end);
-      if (lastIndex > 0) attempt.timeline.splice(0, lastIndex);
-      return pieces;
     }
     if (terminal.has(event.event)) {
       const result: PlaybackOutputResult = {

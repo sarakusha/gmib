@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { Database } from 'sqlite3';
+import { Database, OPEN_READONLY } from 'sqlite3';
 import { isPlaybackStatisticsEvent, type PlaybackStatisticsEvent } from '/@common/playback';
 import type { PlaybackOutputSnapshot } from '/@common/playbackOutput';
 
@@ -12,6 +12,12 @@ export type PlaybackSqlDatabase = {
   exec(sql: string): Promise<void>;
 };
 
+export type PlaybackSqlReader = Pick<PlaybackSqlDatabase, 'all' | 'get'>;
+
+// attempts — индекс попыток и их исходов; events и segments — исходные факты.
+// Сегменты и результаты выходов вынесены из JSON в связанные таблицы для расчётов.
+// seen_events отвечает за дедупликацию, output_observations — за исторические подписи.
+// Схема связей и последовательность записи: docs/ru/playback-statistics-sql.md.
 const schema = `
 CREATE TABLE IF NOT EXISTS attempts (
   id TEXT PRIMARY KEY, player_id INTEGER NOT NULL, media_id TEXT NOT NULL,
@@ -76,35 +82,51 @@ const reasons = (value: string[] | undefined): string => JSON.stringify(value ??
 const earliest = (column: string): string =>
   `${column} = CASE WHEN ${column} IS NULL OR ? < ${column} THEN ? ELSE ${column} END`;
 
-/** Playback facts have their own database and a queue that owns complete transactions. */
+/** Отдельная база фактов; файловые отчёты читают снимок WAL в своей очереди. */
 export class PlaybackStatisticsStore {
   readonly ready: Promise<void>;
   private database?: Database;
+  private readerDatabase?: Database;
   private sql?: PlaybackSqlDatabase;
+  private readerSql?: PlaybackSqlDatabase;
   private queue: Promise<unknown> = Promise.resolve();
+  private readerQueue: Promise<unknown> = Promise.resolve();
+  private pendingReads = 0;
+  private readonly maxPendingReads: number;
+  private readonly inMemory: boolean;
   private closing = false;
   private closePromise?: Promise<void>;
   private lastCleanupDate?: string;
   private readonly now: () => Date;
   private readonly retentionDays: () => number;
 
-  constructor(filename: string, options: { now?: () => Date; retentionDays?: () => number } = {}) {
+  constructor(
+    filename: string,
+    options: { now?: () => Date; retentionDays?: () => number; maxPendingReads?: number } = {},
+  ) {
     this.now = options.now ?? (() => new Date());
     this.retentionDays = options.retentionDays ?? (() => 30);
+    this.inMemory = filename === ':memory:';
+    this.maxPendingReads = Number.isFinite(options.maxPendingReads)
+      ? Math.max(1, Math.floor(options.maxPendingReads!))
+      : 64;
     this.ready = this.initialize(filename);
     // Callers can await readiness; an unused failed store must not create an unhandled rejection.
     void this.ready.catch(() => undefined);
   }
 
-  private async initialize(filename: string): Promise<void> {
-    if (filename !== ':memory:') await fs.mkdir(path.dirname(filename), { recursive: true });
-    const database = await new Promise<Database>((resolve, reject) => {
-      const connection = new Database(filename, error =>
-        error ? reject(error) : resolve(connection),
-      );
+  private async open(filename: string, mode?: number): Promise<Database> {
+    return new Promise<Database>((resolve, reject) => {
+      const complete = (error: Error | null) => (error ? reject(error) : resolve(connection));
+      const connection =
+        mode === undefined
+          ? new Database(filename, complete)
+          : new Database(filename, mode, complete);
     });
-    this.database = database;
-    const sql: PlaybackSqlDatabase = {
+  }
+
+  private wrap(database: Database): PlaybackSqlDatabase {
+    return {
       all: <T>(statement: string, params: PlaybackSqlValue[] = []) =>
         new Promise<T[]>((resolve, reject) =>
           database.all(statement, params, (error, rows) =>
@@ -129,13 +151,24 @@ export class PlaybackStatisticsStore {
           database.exec(statement, error => (error ? reject(error) : resolve())),
         ),
     };
-    this.sql = sql;
+  }
+
+  private async initialize(filename: string): Promise<void> {
     try {
+      if (!this.inMemory) await fs.mkdir(path.dirname(filename), { recursive: true });
+      this.database = await this.open(filename);
+      const sql = this.wrap(this.database);
+      this.sql = sql;
       await sql.exec(
         'PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;',
       );
       await sql.exec(schema);
       await this.cleanupDirect(sql);
+      if (!this.inMemory) {
+        this.readerDatabase = await this.open(filename, OPEN_READONLY);
+        this.readerSql = this.wrap(this.readerDatabase);
+        await this.readerSql.exec('PRAGMA query_only=ON; PRAGMA busy_timeout=5000;');
+      }
     } catch (error) {
       await this.closeNative().catch(() => undefined);
       throw error;
@@ -143,6 +176,7 @@ export class PlaybackStatisticsStore {
   }
 
   private enqueue<T>(operation: (sql: PlaybackSqlDatabase) => Promise<T>): Promise<T> {
+    // Очередь писателя удерживает целиком append/cleanup/write, включая транзакцию.
     if (this.closing) return Promise.reject(new Error('Playback statistics database is closing'));
     const next = this.queue.then(async () => {
       await this.ready;
@@ -152,24 +186,111 @@ export class PlaybackStatisticsStore {
     return next;
   }
 
-  read<T>(callback: (sql: PlaybackSqlDatabase) => Promise<T>): Promise<T> {
-    return this.enqueue(async sql => {
-      // Prevent an escaped callback handle from outliving its place in the queue.
-      let active = true;
-      const guard = <R>(work: () => Promise<R>): Promise<R> =>
-        active ? work() : Promise.reject(new Error('Playback statistics read has finished'));
-      const scoped: PlaybackSqlDatabase = {
-        all: (statement, params) => guard(() => sql.all(statement, params)),
-        get: (statement, params) => guard(() => sql.get(statement, params)),
-        run: (statement, params) => guard(() => sql.run(statement, params)),
-        exec: statement => guard(() => sql.exec(statement)),
-      };
-      try {
-        return await callback(scoped);
-      } finally {
+  private scope(sql: PlaybackSqlDatabase, readOnly: boolean) {
+    let active = true;
+    const pending: Promise<unknown>[] = [];
+    const guard = <R>(work: () => Promise<R>, mutating = false): Promise<R> => {
+      if (!active) return Promise.reject(new Error('Playback statistics callback has finished'));
+      if (readOnly && mutating)
+        return Promise.reject(new Error('Playback statistics read is read-only; use write()'));
+      const next = work();
+      pending.push(next);
+      // Даже забытый await не оставит необработанное отклонение или команду вне снимка.
+      void next.catch(() => undefined);
+      return next;
+    };
+    const query = <R>(statement: string, work: () => Promise<R>): Promise<R> => {
+      // Запрещаем BEGIN/COMMIT и PRAGMA через get/all: callback не управляет снимком
+      // и не может отключить query_only. WITH с записью дополнительно блокирует SQLite.
+      if (
+        readOnly &&
+        !/^(?:\s|--[^\n]*(?:\n|$)|\/\*[\s\S]*?\*\/)*(?:SELECT|WITH|EXPLAIN)\b/i.test(statement)
+      )
+        return guard(() =>
+          Promise.reject(new Error('Playback statistics read is read-only; use write()')),
+        );
+      return guard(work);
+    };
+    const scoped: PlaybackSqlDatabase = {
+      all: (statement, params) => query(statement, () => sql.all(statement, params)),
+      get: (statement, params) => query(statement, () => sql.get(statement, params)),
+      run: (statement, params) => guard(() => sql.run(statement, params), true),
+      exec: statement => guard(() => sql.exec(statement), true),
+    };
+    return {
+      sql: scoped,
+      finish: async () => {
         active = false;
+        // Дожидаемся всех уже выданных команд до COMMIT/ROLLBACK и следующего callback.
+        const results = await Promise.allSettled(pending);
+        const failure = results.find(result => result.status === 'rejected');
+        if (failure?.status === 'rejected') throw failure.reason;
+      },
+    };
+  }
+
+  read<T>(callback: (sql: PlaybackSqlReader) => Promise<T>): Promise<T> {
+    if (this.closing) return Promise.reject(new Error('Playback statistics database is closing'));
+    if (this.pendingReads >= this.maxPendingReads)
+      return Promise.reject(new Error('Playback statistics read queue is full'));
+    this.pendingReads += 1;
+    const read = async (sql: PlaybackSqlDatabase): Promise<T> => {
+      // BEGIN сам по себе не фиксирует снимок: первый SELECT делает это до callback.
+      // :memory: не поддерживает WAL; тестовая база использует общую очередь писателя.
+      if (this.inMemory) await sql.exec('PRAGMA query_only=ON');
+      try {
+        await sql.exec('BEGIN');
+        try {
+          await sql.get('SELECT id FROM attempts LIMIT 1');
+          const scoped = this.scope(sql, true);
+          let result: T;
+          try {
+            result = await callback(scoped.sql);
+          } finally {
+            await scoped.finish();
+          }
+          await sql.exec('COMMIT');
+          return result;
+        } catch (error) {
+          await sql.exec('ROLLBACK').catch(() => undefined);
+          throw error;
+        }
+      } finally {
+        if (this.inMemory) await sql.exec('PRAGMA query_only=OFF');
       }
+    };
+    let next: Promise<T>;
+    if (this.inMemory) next = this.enqueue(read);
+    else {
+      // Ждём записи, принятые до read(). Последующие записи не ждут этот отчёт.
+      const acceptedWrites = this.queue;
+      next = this.readerQueue.then(async () => {
+        await this.ready;
+        await acceptedWrites;
+        return read(this.readerSql!);
+      });
+    }
+    const result = next.finally(() => {
+      this.pendingReads -= 1;
     });
+    this.readerQueue = result.catch(() => undefined);
+    return result;
+  }
+
+  /** Служебные изменения выполняются в очереди писателя и одной транзакции. */
+  write<T>(callback: (sql: PlaybackSqlDatabase) => Promise<T>): Promise<T> {
+    return this.enqueue(sql =>
+      this.transaction(sql, async () => {
+        const scoped = this.scope(sql, false);
+        let result: T;
+        try {
+          result = await callback(scoped.sql);
+        } finally {
+          await scoped.finish();
+        }
+        return result;
+      }),
+    );
   }
 
   append(event: PlaybackStatisticsEvent): Promise<void> {
@@ -180,6 +301,9 @@ export class PlaybackStatisticsStore {
       const at = Date.parse(event.timestamp);
       if (at < cutoff || at > now.getTime()) return;
       if (this.lastCleanupDate !== now.toISOString().slice(0, 10)) await this.cleanupDirect(sql);
+      // Одно событие — одна транзакция, число команд зависит от его типа и выходов.
+      // Сначала проверка eventId/идентичности попытки, затем индекс attempts и факты.
+      // При ошибке откатывается и seen_events: повторная доставка сможет записать событие.
       await this.transaction(sql, async () => {
         if (await sql.get('SELECT id FROM seen_events WHERE id = ?', [event.eventId])) return;
         const attempt = await sql.get<AttemptIdentity>(
@@ -219,11 +343,12 @@ export class PlaybackStatisticsStore {
         ]);
         if (event.startedAt !== undefined) {
           const declared = Date.parse(event.startedAt);
-          await sql.run(`UPDATE attempts SET ${earliest('declared_started_at')} WHERE id=?`, [
-            declared,
-            declared,
-            event.playbackId,
-          ]);
+          await sql.run(
+            `UPDATE attempts SET ${earliest('declared_started_at')},
+            first_at=CASE WHEN terminal_at>=COALESCE(started_at,?) THEN
+              MIN(first_at,MAX(?,COALESCE(started_at,?))) ELSE first_at END WHERE id=?`,
+            [declared, declared, declared, cutoff, declared, event.playbackId],
+          );
         }
         const timestampColumn: Partial<Record<PlaybackStatisticsEvent['event'], string>> = {
           started: 'started_at',
@@ -239,6 +364,9 @@ export class PlaybackStatisticsStore {
             at,
             event.playbackId,
           ]);
+        // Выбираем первый исход по времени события, а не по порядку доставки.
+        // completed храним отдельно: он нужен для счётчиков завершений даже тогда,
+        // когда первым terminal была ошибка или прерывание. skipped не terminal.
         const terminal =
           ['completed', 'error', 'interrupted'].includes(event.event) &&
           (attempt?.terminal_at == null || at < attempt.terminal_at);
@@ -247,12 +375,16 @@ export class PlaybackStatisticsStore {
           (attempt?.completed_at == null || at < attempt.completed_at);
         if (terminal)
           await sql.run(
-            `UPDATE attempts SET terminal=?,terminal_at=?,result_status=?,result_reasons=? WHERE id=?`,
+            `UPDATE attempts SET terminal=?,terminal_at=?,result_status=?,result_reasons=?,
+            first_at=CASE WHEN ?>=COALESCE(started_at,declared_started_at) THEN
+              MIN(first_at,MAX(?,COALESCE(started_at,declared_started_at))) ELSE first_at END WHERE id=?`,
             [
               event.event,
               at,
               event.outputResult?.status ?? 'unconfirmed',
               reasons(event.outputResult?.reasons),
+              at,
+              cutoff,
               event.playbackId,
             ],
           );
@@ -263,6 +395,8 @@ export class PlaybackStatisticsStore {
             event.playbackId,
           ]);
         await this.recordOutputs(sql, event, at, terminal, completed);
+        // progress хранится только как числовой сегмент + состояния его выходов.
+        // Остальные события попадают в events; обе ветки уже отмечены в seen_events.
         if (event.event === 'progress') {
           const start = Date.parse(event.segmentStartedAt!);
           const played = at > start ? (event.playedMs! * (at - segmentStart)) / (at - start) : 0;
@@ -314,6 +448,8 @@ export class PlaybackStatisticsStore {
     const outputs = new Map<number, PlaybackOutputSnapshot>();
     for (const output of [...(event.output?.outputs ?? []), ...(event.outputResult?.outputs ?? [])])
       outputs.set(output.id, output);
+    // При более раннем исходе заменяем результаты целиком: старые выходы не должны
+    // унаследовать подтверждение от вытесненного, более позднего terminal/completed.
     if (terminal)
       await sql.run(
         'UPDATE attempt_outputs SET result_status=NULL,result_reasons=NULL,result_state=NULL WHERE attempt_id=?',
@@ -352,6 +488,8 @@ export class PlaybackStatisticsStore {
           'UPDATE attempt_outputs SET completed_status=?,completed_reasons=?,completed_state=? WHERE attempt_id=? AND output_id=?',
           [result.status, reasons(result.reasons), result.state, event.playbackId, output.id],
         );
+      // Историческое имя/назначение сохраняем при отличии от предыдущего наблюдения,
+      // а не на каждом progress. Состояние showing хранится отдельно в segments_output.
       const previous = await sql.get<OutputIdentity>(
         `SELECT name,display,resolved_display_id FROM output_observations
         WHERE player_id=? AND output_id=? AND at<=? ORDER BY at DESC LIMIT 1`,
@@ -396,6 +534,9 @@ export class PlaybackStatisticsStore {
   private async cleanupDirect(sql: PlaybackSqlDatabase): Promise<void> {
     const now = this.now();
     const cutoff = this.cutoff(now);
+    // Очистка использует границу суток UTC; отчёт группирует по локальным суткам хоста.
+    // Пересекающий границу сегмент укорачиваем пропорционально, затем пересчитываем
+    // first_at/last_at по оставшимся фактам. Связанные строки удаляются каскадно.
     await this.transaction(sql, async () => {
       await sql.run('DELETE FROM events WHERE at < ?', [cutoff]);
       await sql.run('DELETE FROM segments WHERE end_at < ?', [cutoff]);
@@ -413,7 +554,14 @@ export class PlaybackStatisticsStore {
         last_at=(SELECT MAX(at) FROM (
           SELECT at FROM events WHERE attempt_id=attempts.id UNION ALL
           SELECT end_at AS at FROM segments WHERE attempt_id=attempts.id));`);
-      // One older identity remains as the label for segments crossing the retention boundary.
+      // startedAt в сохранившемся исходе восстанавливает начало длинного показа,
+      // но никогда не возвращает время за пределами срока хранения.
+      await sql.run(
+        `UPDATE attempts SET first_at=MIN(first_at,MAX(?,COALESCE(started_at,declared_started_at)))
+        WHERE terminal_at>=COALESCE(started_at,declared_started_at) AND terminal_at>=?`,
+        [cutoff, cutoff],
+      );
+      // Оставляем последнее старое имя/назначение для сегментов на границе хранения.
       await sql.run(
         `DELETE FROM output_observations WHERE at < ? AND at < (
         SELECT MAX(newer.at) FROM output_observations newer
@@ -427,11 +575,12 @@ export class PlaybackStatisticsStore {
     this.lastCleanupDate = now.toISOString().slice(0, 10);
   }
 
-  private async transaction(sql: PlaybackSqlDatabase, work: () => Promise<void>): Promise<void> {
+  private async transaction<T>(sql: PlaybackSqlDatabase, work: () => Promise<T>): Promise<T> {
     await sql.exec('BEGIN IMMEDIATE');
     try {
-      await work();
+      const result = await work();
       await sql.exec('COMMIT');
+      return result;
     } catch (error) {
       await sql.exec('ROLLBACK').catch(() => undefined);
       throw error;
@@ -439,18 +588,29 @@ export class PlaybackStatisticsStore {
   }
 
   private async closeNative(): Promise<void> {
-    const database = this.database;
-    if (!database) return;
-    await new Promise<void>((resolve, reject) =>
-      database.close(error => (error ? reject(error) : resolve())),
+    // Закрываем оба соединения даже при ошибке одного из них.
+    const results = await Promise.allSettled(
+      [this.readerDatabase, this.database]
+        .filter((db): db is Database => Boolean(db))
+        .map(
+          db =>
+            new Promise<void>((resolve, reject) =>
+              db.close(error => (error ? reject(error) : resolve())),
+            ),
+        ),
     );
+    this.readerDatabase = undefined;
     this.database = undefined;
+    this.readerSql = undefined;
     this.sql = undefined;
+    const failure = results.find(result => result.status === 'rejected');
+    if (failure?.status === 'rejected') throw failure.reason;
   }
 
   close(): Promise<void> {
+    // Сначала запрещаем новые операции, затем дожидаемся обеих принятых очередей.
     this.closing = true;
-    this.closePromise ??= this.queue.then(async () => {
+    this.closePromise ??= Promise.all([this.queue, this.readerQueue]).then(async () => {
       await this.ready.catch(() => undefined);
       await this.closeNative();
     });
