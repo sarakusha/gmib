@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file. See [commit
 
 ## [5.6.6](https://github.com/sarakusha/gmib/compare/v5.6.5...v5.6.6) (2026-10-11)
 
+### Features
+
+* default statistics to today and remember relative periods ([f4d468b](https://github.com/sarakusha/gmib/commit/f4d468b40a31ec0a22e5a74cb5276cf61381745f))
+
 ### Bug Fixes
 
 * preload healthy repeated media safely ([f01f889](https://github.com/sarakusha/gmib/commit/f01f889d6169f94e6e1f38562615b6173a74d1c7))
