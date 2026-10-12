@@ -146,6 +146,7 @@ a one-file tar before import; an existing safe Pritunl tar is passed through unc
 {
   "version": 1,
   "vpnProfile": "BASE64",
+  "timezone": "Europe/Moscow",
   "zabbix": {
     "enabled": true,
     "serverActive": "zabbix.internal:10051",
@@ -261,3 +262,18 @@ image does not require rebuilding or restarting the application.
 When images are built on app-server to avoid a slow multi-gigabyte upload, keep the verified official
 Ubuntu ISO in a private build directory. It can be reused for later GMIB and GGS builds; only replace
 it when the chosen Ubuntu release changes, and always retain its expected SHA-256 check.
+
+## Enrollment timezone and image revisions
+
+Issue codes with `npm run enrollment:create -- gmib 1 60 --organization <ORG_ID> --timezone Asia/Yekaterinburg`.
+The IANA timezone defaults to `Europe/Moscow`. Provisioning applies it before committing completion
+and starting GMIB; failures retain the selected zone and imported profile for retry. Older JSON
+responses without `timezone`, raw VPN responses, and pre-existing pending profiles use Moscow.
+Already provisioned kiosks are not changed by issuing a new code.
+
+For an ISO-only rebuild, pass `--image-revision patch1` to both the builder and publisher (the
+server build-and-publish script forwards it automatically). The filename becomes
+`gmib-kiosk-5.6.6-patch1-ubuntu-24.04.4-amd64.iso`; `gmibVersion` remains `5.6.6`, while the manifest
+and installed `/etc/gmib/image-release` record the image revision separately. Omit the suffix for
+a new GMIB version. Version 5.6.7 fixes supervised updates: installation does not launch a second
+AppImage, and the kiosk service restarts the session with its full arguments and child cleanup.

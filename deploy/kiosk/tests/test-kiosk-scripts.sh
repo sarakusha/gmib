@@ -160,6 +160,19 @@ cat >"$stub_bin/gmib-zabbix-configure" <<'EOF'
 set -euo pipefail
 printf 'zabbix %s\n' "$*" >>"$STUB_STATE/provision.log"
 EOF
+cat >"$stub_bin/timedatectl" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+case "$1" in
+  list-timezones) printf '%s\n' Europe/Moscow Asia/Yekaterinburg Etc/UTC UTC ;;
+  set-timezone)
+    printf 'timezone %s\n' "$2" >>"$STUB_STATE/provision.log"
+    [[ "${STUB_FAIL_TIMEZONE:-0}" != 1 ]] || exit 1
+    printf '%s\n' "$2" >"$STUB_STATE/timezone"
+    ;;
+  *) exit 2 ;;
+esac
+EOF
 cat >"$stub_bin/hostnamectl" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -232,7 +245,9 @@ apply_line="$(grep -n '^zabbix apply ' "$stub_state/provision.log" | cut -d: -f1
 enable_line="$(grep -n '^systemctl enable gmib-cage@tty1.service$' "$stub_state/provision.log" | cut -d: -f1)"
 reboot_line="$(grep -n '^systemctl reboot$' "$stub_state/provision.log" | cut -d: -f1)"
 [[ -n "$apply_line" && -n "$enable_line" && -n "$reboot_line" ]] || fail 'provision service ordering was not logged'
-((apply_line < enable_line && enable_line < reboot_line)) || fail 'completion was not ordered after Zabbix and Cage setup'
+timezone_line="$(grep -n '^timezone Europe/Moscow$' "$stub_state/provision.log" | cut -d: -f1)"
+[[ -n "$timezone_line" ]] || fail 'legacy resume did not apply default Moscow timezone'
+((timezone_line < apply_line && apply_line < enable_line && enable_line < reboot_line)) || fail 'completion was not ordered after Zabbix and Cage setup'
 
 # Simulate power loss after the completion marker but before secret cleanup.
 # With no ConditionPathExists gate, the next run must clean and finish recovery.
@@ -360,6 +375,68 @@ cmp -s "$machine_id_a" "$work_dir/machine-id-a.before" ||
   fail 'provisioning modified the first installed machine ID'
 cmp -s "$machine_id_b" "$work_dir/machine-id-b.before" ||
   fail 'provisioning modified the second installed machine ID'
+
+# Negotiated responses persist and apply the selected IANA zone; older JSON
+# responses without it retain the Moscow default. Rejected zones never import VPN.
+encoded_profile="$(base64 <"$raw_profile" | tr -d '\n')"
+for zone in Asia/Yekaterinburg Europe/Moscow UTC missing; do
+  response="$work_dir/enrollment-${zone//\//-}.json"
+  jq -n --arg profile "$encoded_profile" --arg zone "$zone" \
+    '{version:1,vpnProfile:$profile,zabbix:{enabled:false}} + (if $zone == "missing" then {} else {timezone:$zone} end)' >"$response"
+  : >"$stub_state/provision.log"
+  state="$work_dir/timezone-${zone//\//-}"
+  run_enrollment_import "$response" "$state" "$machine_id_a"
+  expected_zone="$zone"
+  [[ "$zone" != missing ]] || expected_zone=Europe/Moscow
+  assert_contains "$stub_state/timezone" "$expected_zone"
+  [[ ! -e "$state/timezone.pending" ]] || fail 'successful enrollment retained pending timezone'
+done
+for invalid_zone in '../etc/passwd' '--help' 'Mars/Olympus' ''; do
+  response="$work_dir/invalid-timezone.json"
+  jq -n --arg profile "$encoded_profile" --arg zone "$invalid_zone" \
+    '{version:1,vpnProfile:$profile,timezone:$zone}' >"$response"
+  state="$(mktemp -d "$work_dir/invalid-zone.XXXXXXXX")"
+  rm -f "$stub_state/imported-profile" "$stub_state/profile-added"
+  if printf '%s\n' TEST-CODE | STUB_RESPONSE_FILE="$response" \
+    GMIB_PROVISION_CONFIG="$provision_config" GMIB_PROVISION_STATE_DIR="$state" \
+    GMIB_PROVISION_MACHINE_ID_FILE="$machine_id_a" GMIB_PROVISION_MAC_ADDRESSES_JSON='[]' \
+    "$KIOSK_DIR/first-boot-provision.sh" >/dev/null 2>&1; then
+    fail 'invalid timezone completed enrollment'
+  fi
+  [[ ! -e "$state/complete" && ! -e "$stub_state/imported-profile" ]] ||
+    fail 'invalid timezone imported a VPN profile or committed completion'
+done
+
+# A failed timedatectl must retain the chosen zone and profile for a retry;
+# recovery must not silently fall back to Moscow or request another code.
+state="$work_dir/timezone-retry"
+mkdir "$state"
+printf '%s\n' profile-new >"$state/profile-id"
+printf '%s\n' Asia/Yekaterinburg >"$state/timezone.pending"
+touch "$stub_state/profile-added" "$stub_state/profile-connected"
+: >"$stub_state/provision.log"
+if STUB_FAIL_TIMEZONE=1 GMIB_PROVISION_CONFIG="$provision_config" \
+  GMIB_PROVISION_STATE_DIR="$state" GMIB_PROVISION_MACHINE_ID_FILE="$machine_id_a" \
+  GMIB_PROVISION_MAC_ADDRESSES_JSON='[]' "$KIOSK_DIR/first-boot-provision.sh" </dev/null >/dev/null 2>&1; then
+  fail 'failed timezone setting completed enrollment'
+fi
+[[ -s "$state/profile-id" && -s "$state/timezone.pending" && ! -e "$state/complete" ]] ||
+  fail 'timezone failure lost recovery state or marked complete'
+! grep -q 'systemctl enable gmib-cage' "$stub_state/provision.log" || fail 'timezone failure enabled Cage'
+# Failure to enable the kiosk must also preserve retry state.
+if STUB_FAIL_SYSTEMCTL_MATCH='enable gmib-cage@tty1.service' \
+  GMIB_PROVISION_CONFIG="$provision_config" GMIB_PROVISION_STATE_DIR="$state" \
+  GMIB_PROVISION_MACHINE_ID_FILE="$machine_id_a" GMIB_PROVISION_MAC_ADDRESSES_JSON='[]' \
+  "$KIOSK_DIR/first-boot-provision.sh" </dev/null >/dev/null 2>&1; then
+  fail 'failed service enable completed enrollment'
+fi
+[[ -s "$state/profile-id" && -s "$state/timezone.pending" && ! -e "$state/complete" ]] ||
+  fail 'service enable failure lost recovery state or marked complete'
+GMIB_PROVISION_CONFIG="$provision_config" GMIB_PROVISION_STATE_DIR="$state" \
+  GMIB_PROVISION_MACHINE_ID_FILE="$machine_id_a" GMIB_PROVISION_MAC_ADDRESSES_JSON='[]' \
+  "$KIOSK_DIR/first-boot-provision.sh" </dev/null >/dev/null
+assert_contains "$stub_state/timezone" Asia/Yekaterinburg
+[[ -s "$state/complete" ]] || fail 'timezone retry did not complete'
 
 # Static integration checks cover service ordering, response negotiation, and
 # both layers of Cyrillic tty support (UTF-8 decoding and console glyphs).

@@ -7,6 +7,7 @@ COMPLETE_FILE="$STATE_DIR/complete"
 PROFILE_ID_FILE="$STATE_DIR/profile-id"
 PENDING_PROFILE_FILE="$STATE_DIR/vpn-profile.pending"
 PENDING_ZABBIX_FILE="$STATE_DIR/zabbix.pending.json"
+PENDING_TIMEZONE_FILE="$STATE_DIR/timezone.pending"
 TRANSIENT_SECRET_FILE=""
 PRIMARY_PROFILE_SUFFIX="${PRIMARY_PROFILE_SUFFIX:- (main)}"
 
@@ -45,7 +46,7 @@ install -d -m 0700 "$STATE_DIR"
 if [[ -f "$COMPLETE_FILE" ]]; then
   # A power loss can occur after the completion marker is committed but before
   # the best-effort deletion of enrollment material.
-  for stale_secret in "$PENDING_PROFILE_FILE" "$PENDING_ZABBIX_FILE"; do
+  for stale_secret in "$PENDING_PROFILE_FILE" "$PENDING_ZABBIX_FILE" "$PENDING_TIMEZONE_FILE"; do
     [[ ! -f "$stale_secret" ]] || shred -u "$stale_secret" 2>/dev/null || rm -f "$stale_secret"
   done
   systemctl enable gmib-cage@tty1.service >/dev/null
@@ -137,8 +138,34 @@ wrap_raw_ovpn_for_pritunl() {
   chmod 0600 "$raw_profile"
 }
 
+timezone_is_supported() {
+  local timezone="$1"
+  # Reject option/path/control-character input before consulting installed tzdata.
+  [[ "$timezone" =~ ^[A-Za-z0-9_+-]+(/[A-Za-z0-9_+-]+)*$ ]] &&
+    timedatectl list-timezones | grep -Fx -- "$timezone" >/dev/null
+}
+
+apply_timezone() {
+  local timezone="Europe/Moscow"
+  if [[ -f "$PENDING_TIMEZONE_FILE" ]]; then
+    timezone="$(<"$PENDING_TIMEZONE_FILE")"
+  fi
+  if ! timezone_is_supported "$timezone"; then
+    echo "Часовой пояс недоступен в установленной системе; настройка не завершена." >&2
+    return 1
+  fi
+  if ! timedatectl set-timezone "$timezone"; then
+    echo "Не удалось установить часовой пояс; повторите подключение." >&2
+    return 1
+  fi
+  echo "Часовой пояс: $timezone"
+}
+
 finish_provisioning() {
   local profile_id="$1"
+  # Keep the selected zone with the imported profile across interrupted setup.
+  # Do not commit completion until the system has accepted it.
+  apply_timezone || return 1
   # Zabbix is optional. Apply it only after the stable hostname is set and the
   # device VPN is connected; any malformed/unavailable configuration leaves the
   # preinstalled agent disabled and must never block GMIB provisioning.
@@ -153,14 +180,14 @@ finish_provisioning() {
   # Enabling Cage is idempotent and must be durable before committing complete.
   # If power is lost after the marker, the completed recovery path above can
   # clean secrets and reboot into the already-enabled kiosk.
-  systemctl enable gmib-cage@tty1.service >/dev/null
-  complete_tmp="$(mktemp --tmpdir="$STATE_DIR" complete.XXXXXXXX)"
-  printf '%s\n' "$profile_id" >"$complete_tmp"
-  chmod 0600 "$complete_tmp"
-  mv -f "$complete_tmp" "$COMPLETE_FILE"
+  systemctl enable gmib-cage@tty1.service >/dev/null || return 1
+  complete_tmp="$(mktemp --tmpdir="$STATE_DIR" complete.XXXXXXXX)" || return 1
+  printf '%s\n' "$profile_id" >"$complete_tmp" || return 1
+  chmod 0600 "$complete_tmp" || return 1
+  mv -f "$complete_tmp" "$COMPLETE_FILE" || return 1
   [[ ! -f "$PENDING_ZABBIX_FILE" ]] ||
     shred -u "$PENDING_ZABBIX_FILE" 2>/dev/null || rm -f "$PENDING_ZABBIX_FILE"
-  rm -f "$PROFILE_ID_FILE"
+  rm -f "$PROFILE_ID_FILE" "$PENDING_TIMEZONE_FILE"
   systemctl disable gmib-provision.service >/dev/null
   clear
   echo
@@ -179,7 +206,7 @@ resume_profile() {
   for _ in {1..30}; do
     if profile_connected "$profile_id"; then
       finish_provisioning "$profile_id"
-      return 0
+      return $?
     fi
     sleep 2
   done
@@ -204,11 +231,11 @@ while true; do
       exit 0
     fi
     profile_id="$(<"$PROFILE_ID_FILE")"
-    echo "VPN пока не подключился. Enter — повторить; R — удалить профиль и ввести новый код."
+    echo "Настройка не завершена. Enter — повторить; R — удалить профиль и ввести новый код."
     read -r retry_action
     if [[ "$retry_action" =~ ^[Rr]$ ]]; then
       pritunl-client remove "$profile_id" || true
-      rm -f "$PROFILE_ID_FILE" "$PENDING_ZABBIX_FILE"
+      rm -f "$PROFILE_ID_FILE" "$PENDING_TIMEZONE_FILE" "$PENDING_ZABBIX_FILE"
     fi
     echo
     continue
@@ -262,9 +289,21 @@ while true; do
     fi
     unset enrollment_code request_body
 
-    rm -f "$PENDING_ZABBIX_FILE"
+    rm -f "$PENDING_ZABBIX_FILE" "$PENDING_TIMEZONE_FILE"
     if jq -e 'type == "object" and .version == 1 and (.vpnProfile | type == "string")' \
       "$response_file" >/dev/null 2>&1; then
+      if ! selected_timezone="$(jq -er 'if has("timezone") then .timezone | select(type == "string") else "Europe/Moscow" end' "$response_file")" ||
+        ! timezone_is_supported "$selected_timezone"; then
+        echo "API вернул недопустимый часовой пояс; настройка не завершена."
+        cleanup
+        TRANSIENT_SECRET_FILE=""
+        continue
+      fi
+      pending_timezone_tmp="$(mktemp --tmpdir="$STATE_DIR" timezone.XXXXXXXX)"
+      chmod 0600 "$pending_timezone_tmp"
+      printf '%s\n' "$selected_timezone" >"$pending_timezone_tmp"
+      mv -f "$pending_timezone_tmp" "$PENDING_TIMEZONE_FILE"
+
       pending_zabbix_tmp="$(mktemp --tmpdir="$STATE_DIR" zabbix.XXXXXXXX.json)"
       chmod 0600 "$pending_zabbix_tmp"
       jq -c '.zabbix // {enabled:false,error:"configuration_unavailable"}' \
@@ -276,7 +315,7 @@ while true; do
       chmod 0600 "$pending_profile_tmp"
       if ! jq -r '.vpnProfile' "$response_file" | base64 --decode >"$pending_profile_tmp"; then
         echo "API вернул некорректный VPN-профиль."
-        rm -f "$pending_profile_tmp" "$PENDING_ZABBIX_FILE"
+        rm -f "$pending_profile_tmp" "$PENDING_ZABBIX_FILE" "$PENDING_TIMEZONE_FILE"
         cleanup
         TRANSIENT_SECRET_FILE=""
         echo
@@ -311,7 +350,7 @@ while true; do
   else
     echo "API вернул некорректный VPN-профиль."
     shred -u "$PENDING_PROFILE_FILE" 2>/dev/null || rm -f "$PENDING_PROFILE_FILE"
-    rm -f "$PENDING_ZABBIX_FILE"
+    rm -f "$PENDING_ZABBIX_FILE" "$PENDING_TIMEZONE_FILE"
     echo
     continue
   fi
@@ -323,7 +362,7 @@ while true; do
     read -r retry_import
     if [[ "$retry_import" =~ ^[Rr]$ ]]; then
       shred -u "$PENDING_PROFILE_FILE" 2>/dev/null || rm -f "$PENDING_PROFILE_FILE"
-      rm -f "$PENDING_ZABBIX_FILE"
+      rm -f "$PENDING_ZABBIX_FILE" "$PENDING_TIMEZONE_FILE"
     fi
     echo
     continue
@@ -355,7 +394,7 @@ while true; do
   if [[ -z "$profile_id" ]]; then
     echo "В архиве нет основного VPN-профиля с окончанием '$PRIMARY_PROFILE_SUFFIX'."
     shred -u "$PENDING_PROFILE_FILE" 2>/dev/null || rm -f "$PENDING_PROFILE_FILE"
-    rm -f "$PENDING_ZABBIX_FILE"
+    rm -f "$PENDING_ZABBIX_FILE" "$PENDING_TIMEZONE_FILE"
     echo
     continue
   fi
