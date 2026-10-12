@@ -10,6 +10,12 @@ and starts the profile, erases the downloaded archive, and reboots into the GMIB
 image and installed computer never contain the bootstrap API key. Zabbix is installed masked and
 disabled; it is enabled only after the stable hostname and VPN identity are established. The
 generated configuration uses active checks only, so the agent does not listen on TCP port 10050.
+Enrollment uses the installed `/etc/machine-id` as the stable device ID. The hostname is `gmib-`
+followed by the first 12 hexadecimal characters of its SHA-256 hash. Computers with the same OEM
+DMI product UUID therefore receive separate enrollment identities and VPN profiles. A missing,
+uninitialized, or invalid machine ID stops provisioning before changing the hostname or contacting
+the enrollment service. Cloned operating systems must have distinct machine IDs before activation;
+do not regenerate the machine ID on an already activated installation.
 Normal kiosk boots hide kernel and systemd status messages while retaining them in `journalctl`.
 The Ubuntu installer remains verbose so installation failures are visible.
 The installed system uses Ubuntu's `ffmpeg` package and provides `/usr/bin/ffmpeg` and
@@ -126,8 +132,8 @@ Accept: application/vnd.gmib.enrollment+json
 
 {
   "code": "7K4M-P9TX",
-  "device_id": "lowercase-dmi-product-uuid",
-  "hostname": "gmib-identifier",
+  "device_id": "32-character-lowercase-installed-machine-id",
+  "hostname": "gmib-12-character-sha256-prefix",
   "mac_addresses": ["00:11:22:33:44:55"]
 }
 ```

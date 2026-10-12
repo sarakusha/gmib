@@ -162,7 +162,13 @@ printf 'zabbix %s\n' "$*" >>"$STUB_STATE/provision.log"
 EOF
 cat >"$stub_bin/hostnamectl" <<'EOF'
 #!/usr/bin/env bash
-exit 0
+set -euo pipefail
+printf '%s\n' "$2" >"$STUB_STATE/provision-hostname"
+printf 'hostnamectl %s\n' "$*" >>"$STUB_STATE/provision.log"
+EOF
+cat >"$stub_bin/hostname" <<'EOF'
+#!/usr/bin/env bash
+cat "$STUB_STATE/provision-hostname"
 EOF
 cat >"$stub_bin/clear" <<'EOF'
 #!/usr/bin/env bash
@@ -181,13 +187,44 @@ chmod 0755 "$stub_bin"/*
 
 provision_config="$work_dir/provision.conf"
 printf '%s\n' "BOOTSTRAP_URL='https://enroll.example.test'" >"$provision_config"
+machine_id_a="$work_dir/machine-id-a"
+machine_id_b="$work_dir/machine-id-b"
+printf '%s\n' 11111111111111111111111aaaaaaaaa >"$machine_id_a"
+printf '%s\n' 22222222222222222222222aaaaaaaaa >"$machine_id_b"
+cp "$machine_id_a" "$work_dir/machine-id-a.before"
+cp "$machine_id_b" "$work_dir/machine-id-b.before"
+
+# Reject uninitialized or corrupt installed IDs before changing the hostname
+# or starting Pritunl. A missing machine ID must not fall back to shared DMI.
+cat >"$stub_bin/curl" <<'EOF'
+#!/usr/bin/env bash
+printf 'curl %s\n' "$*" >>"$STUB_STATE/provision.log"
+exit 1
+EOF
+chmod 0755 "$stub_bin/curl"
+for bad_id in missing empty zero malformed; do
+  bad_file="$work_dir/machine-id-$bad_id"
+  case "$bad_id" in
+    empty) : >"$bad_file" ;;
+    zero) printf '%032d\n' 0 >"$bad_file" ;;
+    malformed) printf '%s\n' '11111111111111111111111aaaaaaaaZ' >"$bad_file" ;;
+  esac
+  : >"$stub_state/provision.log"
+  if GMIB_PROVISION_CONFIG="$provision_config" \
+    GMIB_PROVISION_STATE_DIR="$work_dir/invalid-state-$bad_id" \
+    GMIB_PROVISION_MACHINE_ID_FILE="$bad_file" GMIB_PROVISION_MAC_ADDRESSES_JSON='[]' \
+    "$KIOSK_DIR/first-boot-provision.sh" </dev/null >"$work_dir/invalid-$bad_id.log" 2>&1; then
+    fail "$bad_id machine ID was accepted"
+  fi
+  [[ ! -s "$stub_state/provision.log" ]] || fail "$bad_id machine ID changed hostname or started a service"
+done
 provision_state="$work_dir/provision-state"
 mkdir -m 0700 "$provision_state"
 printf '%s\n' profile-1 >"$provision_state/profile-id"
 printf '%s\n' '{"enabled":false}' >"$provision_state/zabbix.pending.json"
 : >"$stub_state/provision.log"
 GMIB_PROVISION_CONFIG="$provision_config" GMIB_PROVISION_STATE_DIR="$provision_state" \
-  GMIB_PROVISION_DEVICE_ID='01234567-89ab-cdef' GMIB_PROVISION_MAC_ADDRESSES_JSON='[]' \
+  GMIB_PROVISION_MACHINE_ID_FILE="$machine_id_a" GMIB_PROVISION_MAC_ADDRESSES_JSON='[]' \
   "$KIOSK_DIR/first-boot-provision.sh" >/dev/null
 [[ -s "$provision_state/complete" ]] || fail 'resumed provisioning did not commit completion'
 [[ ! -e "$provision_state/zabbix.pending.json" ]] || fail 'completed provisioning retained Zabbix response'
@@ -204,7 +241,7 @@ mkdir -m 0700 "$recovery_state"
 printf '%s\n' profile-1 >"$recovery_state/complete"
 printf '%s\n' '{"enabled":true,"psk":"must-not-survive"}' >"$recovery_state/zabbix.pending.json"
 GMIB_PROVISION_CONFIG="$provision_config" GMIB_PROVISION_STATE_DIR="$recovery_state" \
-  GMIB_PROVISION_DEVICE_ID='01234567-89ab-cdef' GMIB_PROVISION_MAC_ADDRESSES_JSON='[]' \
+  GMIB_PROVISION_MACHINE_ID_FILE="$work_dir/missing-completed-machine-id" GMIB_PROVISION_MAC_ADDRESSES_JSON='[]' \
   "$KIOSK_DIR/first-boot-provision.sh" >/dev/null
 [[ ! -e "$recovery_state/zabbix.pending.json" ]] || fail 'completed recovery retained pending secret'
 grep -Fqx 'enable gmib-cage@tty1.service' "$stub_state/systemctl.log" || fail 'recovery did not enable Cage'
@@ -228,7 +265,7 @@ while (($# > 0)); do
       ;;
   esac
 done
-cat >/dev/null
+cat >"$STUB_STATE/request-body"
 cp "$STUB_RESPONSE_FILE" "$output"
 EOF
 cat >"$stub_bin/pritunl-client" <<'EOF'
@@ -261,7 +298,7 @@ EOF
 chmod 0755 "$stub_bin/curl" "$stub_bin/pritunl-client"
 
 run_enrollment_import() {
-  local response="$1" state="$2"
+  local response="$1" state="$2" machine_id_file="$3"
   rm -f \
     "$stub_state/profile-added" \
     "$stub_state/profile-connected" \
@@ -270,7 +307,7 @@ run_enrollment_import() {
   printf '%s\n' TEST-CODE |
     STUB_RESPONSE_FILE="$response" \
       GMIB_PROVISION_CONFIG="$provision_config" GMIB_PROVISION_STATE_DIR="$state" \
-      GMIB_PROVISION_DEVICE_ID='01234567-89ab-cdef' GMIB_PROVISION_MAC_ADDRESSES_JSON='[]' \
+      GMIB_PROVISION_MACHINE_ID_FILE="$machine_id_file" GMIB_PROVISION_MAC_ADDRESSES_JSON='[]' \
       "$KIOSK_DIR/first-boot-provision.sh" >/dev/null
   [[ -s "$state/complete" ]] || fail 'fresh enrollment did not complete'
   [[ -s "$stub_state/imported-profile" ]] || fail 'fresh enrollment did not import a profile'
@@ -285,7 +322,12 @@ remote vpn.example.test 1194 udp
 TEST-CA
 </ca>
 EOF
-run_enrollment_import "$raw_profile" "$work_dir/raw-import-state"
+run_enrollment_import "$raw_profile" "$work_dir/raw-import-state" "$machine_id_a"
+cp "$stub_state/request-body" "$work_dir/request-a"
+jq -e --arg id 11111111111111111111111aaaaaaaaa \
+  --arg host "gmib-$(printf %s 11111111111111111111111aaaaaaaaa | sha256sum | cut -c1-12)" \
+  '.device_id == $id and .hostname == $host' "$work_dir/request-a" >/dev/null ||
+  fail 'enrollment request did not use the installed machine ID and full-ID hostname hash'
 mapfile -t wrapped_names < <(tar -tf "$stub_state/imported-profile")
 [[ ${#wrapped_names[@]} -eq 1 && "${wrapped_names[0]}" == gmib.ovpn ]] ||
   fail 'raw OpenVPN profile was not wrapped as one safe gmib.ovpn tar member'
@@ -300,9 +342,24 @@ cp "$raw_profile" "$existing_tar_dir/main.ovpn"
 printf '%s\n' 'secondary profile marker' >"$existing_tar_dir/secondary.ovpn"
 existing_tar="$work_dir/existing-profile.tar"
 tar --format=ustar -cf "$existing_tar" -C "$existing_tar_dir" main.ovpn secondary.ovpn
-run_enrollment_import "$existing_tar" "$work_dir/tar-import-state"
+run_enrollment_import "$existing_tar" "$work_dir/tar-import-state" "$machine_id_a"
+cmp -s "$work_dir/request-a" "$stub_state/request-body" ||
+  fail 'same machine ID did not produce a stable enrollment request on retry'
 cmp -s "$existing_tar" "$stub_state/imported-profile" ||
   fail 'existing safe Pritunl tar was rewritten before import'
+run_enrollment_import "$raw_profile" "$work_dir/second-machine-state" "$machine_id_b"
+jq -e --arg id 22222222222222222222222aaaaaaaaa \
+  '.device_id == $id' "$stub_state/request-body" >/dev/null ||
+  fail 'second installed machine ID was not used'
+[[ "$(jq -r .hostname "$work_dir/request-a")" != \
+   "$(jq -r .hostname "$stub_state/request-body")" ]] ||
+  fail 'distinct machine IDs with the same tail produced the same hostname'
+! grep -Fq '/sys/class/dmi/id/product_uuid' "$KIOSK_DIR/first-boot-provision.sh" ||
+  fail 'provisioning still depends on the shared DMI product UUID'
+cmp -s "$machine_id_a" "$work_dir/machine-id-a.before" ||
+  fail 'provisioning modified the first installed machine ID'
+cmp -s "$machine_id_b" "$work_dir/machine-id-b.before" ||
+  fail 'provisioning modified the second installed machine ID'
 
 # Static integration checks cover service ordering, response negotiation, and
 # both layers of Cyrillic tty support (UTF-8 decoding and console glyphs).

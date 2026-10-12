@@ -54,18 +54,20 @@ if [[ -f "$COMPLETE_FILE" ]]; then
   exit 0
 fi
 
-device_id="${GMIB_PROVISION_DEVICE_ID:-}"
-if [[ -z "$device_id" && -r /sys/class/dmi/id/product_uuid ]]; then
-  device_id="$(tr '[:upper:]' '[:lower:]' </sys/class/dmi/id/product_uuid)"
+# The path override is for isolated provisioning tests; production reads the
+# installed system identity without rewriting it or any activation data.
+machine_id_file="${GMIB_PROVISION_MACHINE_ID_FILE:-/etc/machine-id}"
+device_id=""
+if [[ -r "$machine_id_file" ]]; then
+  device_id="$(cat "$machine_id_file")"
 fi
-if [[ -z "$device_id" && -r /etc/machine-id ]]; then
-  device_id="$(cat /etc/machine-id)"
-fi
-if [[ -z "$device_id" ]]; then
-  echo "Не удалось определить идентификатор устройства." >&2
+# The installed machine ID is persistent across provisioning retries and unique
+# per installation. A DMI UUID can be shared by multiple OEM computers.
+if [[ ! "$device_id" =~ ^[0-9a-f]{32}$ || "$device_id" == 00000000000000000000000000000000 ]]; then
+  echo "Отсутствует корректный /etc/machine-id; первичная настройка остановлена." >&2
   exit 1
 fi
-device_suffix="$(printf '%s' "$device_id" | tr -cd 'a-z0-9' | tail -c 9)"
+device_suffix="$(printf '%s' "$device_id" | sha256sum | cut -c1-12)"
 hostnamectl hostname "gmib-${device_suffix}"
 
 if [[ -n "${GMIB_PROVISION_MAC_ADDRESSES_JSON:-}" ]]; then
