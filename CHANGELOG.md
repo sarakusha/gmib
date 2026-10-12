@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [5.6.7](https://github.com/sarakusha/gmib/compare/v5.6.6...v5.6.7) (2026-10-12)
+
+### Bug Fixes
+
+* Preserve kiosk mode during AppImage updates and restart supervised sessions without leaving old child processes.
+* Use the installed machine ID for kiosk VPN enrollment instead of non-unique OEM DMI identifiers.
+
+### Features
+
+* Apply the timezone selected with the VPN enrollment code, defaulting to Europe/Moscow.
+* Support separately named installer revisions when rebuilding an ISO with the same GMIB version.
+
 ## [5.6.6](https://github.com/sarakusha/gmib/compare/v5.6.5...v5.6.6) (2026-10-11)
 
 ### Features
