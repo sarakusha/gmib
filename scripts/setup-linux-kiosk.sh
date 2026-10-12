@@ -127,6 +127,8 @@ cc -shared -fPIC -O2 -Wall -Wextra \
   -o /usr/local/lib/gmib-hide-cursor.so \
   "$SCRIPT_DIR/gmib-hide-cursor.c"
 chmod 0755 /usr/local/lib/gmib-hide-cursor.so
+install -d -m 0755 /usr/local/libexec
+install -m 0755 "$SCRIPT_DIR/gmib-kiosk-launch.sh" /usr/local/libexec/gmib-kiosk-launch
 
 install -m 0644 /dev/stdin /etc/pam.d/gmib-cage <<'EOF'
 auth           required        pam_unix.so nullok
@@ -152,10 +154,12 @@ Environment="DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/${KIOSK_UID}/bus"
 Environment="XDG_SESSION_TYPE=wayland"
 Environment="XDG_CURRENT_DESKTOP=wlroots"
 Environment="NO_AT_BRIDGE=1"
+Environment="GMIB_KIOSK_MODE=1"
 Environment="LD_PRELOAD=/usr/local/lib/gmib-hide-cursor.so"
 Environment="TERM=linux"
 ExecStartPre=/usr/bin/clear
-ExecStart=/usr/bin/cage -- ${GMIB_EXECUTABLE} --no-sandbox --kiosk-mode --ozone-platform=wayland
+ExecStart=/usr/bin/cage -- /usr/local/libexec/gmib-kiosk-launch ${GMIB_EXECUTABLE} --no-sandbox --kiosk-mode --ozone-platform=wayland
+KillMode=control-group
 Restart=always
 RestartSec=2
 UtmpIdentifier=%I
