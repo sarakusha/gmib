@@ -289,6 +289,7 @@ install -m 0755 "$SCRIPT_DIR/gmib-zabbix-configure" "$payload_dir/"
 install -m 0644 "$SCRIPT_DIR/gmib-provision.service" "$payload_dir/"
 install -m 0755 "$SCRIPT_DIR/install-target.sh" "$payload_dir/"
 install -m 0755 "$REPO_ROOT/scripts/setup-linux-kiosk.sh" "$payload_dir/"
+install -m 0755 "$REPO_ROOT/scripts/gmib-kiosk-launch.sh" "$payload_dir/"
 install -m 0644 "$REPO_ROOT/scripts/gmib-hide-cursor.c" "$payload_dir/"
 
 cat >"$payload_dir/image-release" <<EOF
@@ -380,6 +381,7 @@ manifest="$payload_dir/SHA256SUMS"
   sha256sum \
     first-boot-provision.sh \
     gmib-hide-cursor.c \
+    gmib-kiosk-launch.sh \
     gmib-provision.service \
     gmib.AppImage \
     image-release \

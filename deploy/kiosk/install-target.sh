@@ -24,6 +24,7 @@ for required_file in \
   gmib-zabbix-configure \
   gmib-provision.service \
   setup-linux-kiosk.sh \
+  gmib-kiosk-launch.sh \
   gmib-hide-cursor.c; do
   if [[ ! -f "$PAYLOAD_DIR/$required_file" ]]; then
     echo "Missing payload file: $PAYLOAD_DIR/$required_file" >&2
