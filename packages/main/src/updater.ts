@@ -6,7 +6,7 @@ import { autoUpdater } from 'electron-updater';
 
 import log from './initlog';
 import localConfig from './localConfig';
-import { needRestart } from './relaunch';
+import { isRelaunchManagedBySupervisor, needRestart } from './relaunch';
 
 // let updater: MenuItem | null = null;
 autoUpdater.autoDownload = localConfig.get('autoUpdate');
@@ -54,7 +54,16 @@ autoUpdater.on('update-not-available', () => {
 
 const quitAndRestart = () => {
   needRestart(true);
-  setImmediate(() => autoUpdater.quitAndInstall());
+  setImmediate(() => {
+    if (isRelaunchManagedBySupervisor()) {
+      // Non-silent installs ignore the second argument and use autoRunAppAfterInstall.
+      // Install without spawning another AppImage: Cage must exit with this process so
+      // systemd cleans up its children and restores the full kiosk launch command.
+      autoUpdater.quitAndInstall(true, false);
+    } else {
+      autoUpdater.quitAndInstall();
+    }
+  });
 };
 
 autoUpdater.on('update-downloaded', () => {

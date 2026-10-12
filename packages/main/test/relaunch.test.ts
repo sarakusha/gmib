@@ -52,6 +52,12 @@ describe('relaunch', () => {
     expect(
       isRelaunchManagedBySupervisor(['/opt/gmib/gmib.AppImage'], {
         INVOCATION_ID: 'systemd-invocation',
+        GMIB_KIOSK_MODE: '1',
+      }),
+    ).toBe(true);
+    expect(
+      isRelaunchManagedBySupervisor(['/opt/gmib/gmib.AppImage'], {
+        INVOCATION_ID: 'systemd-invocation',
       }),
     ).toBe(false);
     expect(isRelaunchManagedBySupervisor(['/opt/gmib/gmib.AppImage', '--kiosk-mode'], {})).toBe(
