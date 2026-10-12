@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ISO=""
+IMAGE_REVISION=""
 SERVER="user@app.nata-info.ru"
 PRODUCT="auto"
 REMOTE_DIR=""
@@ -16,6 +17,7 @@ Required:
   --iso PATH             Versioned GMIB or GGS ISO and adjacent .sha256 file.
 
 Optional:
+  --image-revision LABEL  Installer revision used when building, e.g. patch1 (GMIB only).
   --server USER@HOST     SSH/rsync destination. Default: user@app.nata-info.ru.
   --product PRODUCT      auto, gmib-kiosk, or ggs. Default: auto from filename.
   --remote-dir PATH      App-server public download directory.
@@ -25,7 +27,7 @@ Optional:
   -h, --help             Show this help.
 
 The ISO name must match:
-  gmib-kiosk-GMIB_VERSION-ubuntu-UBUNTU_VERSION-amd64.iso
+  gmib-kiosk-GMIB_VERSION[-IMAGE_REVISION]-ubuntu-UBUNTU_VERSION-amd64.iso
 or:
   ggs-GGS_VERSION-ubuntu-UBUNTU_VERSION-amd64.iso
 
@@ -36,6 +38,10 @@ EOF
 
 while (($# > 0)); do
   case "$1" in
+    --image-revision)
+      IMAGE_REVISION="${2:-}"
+      shift 2
+      ;;
     --iso)
       ISO="${2:-}"
       shift 2
@@ -92,6 +98,11 @@ if { [[ "$LOCAL" == false ]] && [[ ! "$SERVER" =~ ^[A-Za-z0-9_.-]+@[A-Za-z0-9_.-
   exit 1
 fi
 
+if [[ -n "$IMAGE_REVISION" && ! "$IMAGE_REVISION" =~ ^[a-z0-9]+([.-][a-z0-9]+)*$ ]]; then
+  echo "--image-revision must be a lowercase label such as patch1." >&2
+  exit 1
+fi
+
 filename="$(basename "$ISO")"
 if [[ "$filename" =~ ^gmib-kiosk-([0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?)-ubuntu-([0-9]+\.[0-9]+(\.[0-9]+)?)-amd64\.iso$ ]]; then
   detected_product=gmib-kiosk
@@ -104,6 +115,18 @@ elif [[ "$filename" =~ ^ggs-([0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?)-ubuntu
 else
   echo "Invalid versioned ISO filename: $filename" >&2
   exit 1
+fi
+# The revision is explicit so existing GMIB prerelease versions retain their meaning.
+if [[ -n "$IMAGE_REVISION" ]]; then
+  if [[ "$detected_product" != gmib-kiosk || "$product_version" != *"-$IMAGE_REVISION" ]]; then
+    echo "Filename does not match --image-revision $IMAGE_REVISION." >&2
+    exit 1
+  fi
+  product_version="${product_version%-"$IMAGE_REVISION"}"
+  if [[ ! "$product_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+    echo "Invalid GMIB version before image revision." >&2
+    exit 1
+  fi
 fi
 if [[ "$PRODUCT" != auto && "$PRODUCT" != "$detected_product" ]]; then
   echo "Filename does not match --product $PRODUCT." >&2
@@ -157,7 +180,9 @@ jq -n \
 # Preserve the field consumed by the existing dynamic GMIB catalog.
 if [[ "$PRODUCT" == gmib-kiosk ]]; then
   temporary_manifest="$work_dir/manifest.json"
-  jq --arg gmibVersion "$product_version" '. + {gmibVersion: $gmibVersion}' \
+  jq --arg gmibVersion "$product_version" --arg imageRevision "$IMAGE_REVISION" \
+    '. + {gmibVersion: $gmibVersion} +
+      (if $imageRevision == "" then {} else {imageRevision: $imageRevision} end)' \
     "$manifest" >"$temporary_manifest"
   mv "$temporary_manifest" "$manifest"
 fi

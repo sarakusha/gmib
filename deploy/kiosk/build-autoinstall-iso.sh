@@ -8,6 +8,7 @@ BASE_ISO=""
 BASE_ISO_SHA256=""
 APPIMAGE=""
 GMIB_VERSION=""
+IMAGE_REVISION=""
 PRITUNL_DEB=""
 ZABBIX_AGENT2_DEB=""
 BOOTSTRAP_URL=""
@@ -36,6 +37,7 @@ Required:
   --output PATH               Output ISO path.
 
 Optional:
+  --image-revision LABEL      Installer revision, e.g. patch1; does not change GMIB version.
   --bootstrap-tls-pin PIN     curl public-key pin, formatted sha256//BASE64.
   --target-disk PATH          Select the installation disk by Linux device path.
   --target-model GLOB         Select the installation disk by udev model glob.
@@ -63,6 +65,10 @@ while (($# > 0)); do
       ;;
     --appimage)
       APPIMAGE="${2:-}"
+      shift 2
+      ;;
+    --image-revision)
+      IMAGE_REVISION="${2:-}"
       shift 2
       ;;
     --gmib-version)
@@ -159,6 +165,10 @@ for value_name in BASE_ISO BASE_ISO_SHA256 APPIMAGE GMIB_VERSION PRITUNL_DEB ZAB
     exit 1
   fi
 done
+if [[ -n "$IMAGE_REVISION" && ! "$IMAGE_REVISION" =~ ^[a-z0-9]+([.-][a-z0-9]+)*$ ]]; then
+  echo "--image-revision must be a lowercase label such as patch1." >&2
+  exit 1
+fi
 if [[ ! "$GMIB_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
   echo "--gmib-version must be a semantic version such as 5.4.1." >&2
   exit 1
@@ -263,7 +273,7 @@ if [[ -z "$ubuntu_version" ]]; then
   echo "Could not determine the Ubuntu version from the base ISO." >&2
   exit 1
 fi
-expected_output_name="gmib-kiosk-${GMIB_VERSION}-ubuntu-${ubuntu_version}-amd64.iso"
+expected_output_name="gmib-kiosk-${GMIB_VERSION}${IMAGE_REVISION:+-$IMAGE_REVISION}-ubuntu-${ubuntu_version}-amd64.iso"
 if [[ "$(basename "$OUTPUT_ISO")" != "$expected_output_name" ]]; then
   echo "Output filename must be: $expected_output_name" >&2
   exit 1
@@ -283,6 +293,7 @@ install -m 0644 "$REPO_ROOT/scripts/gmib-hide-cursor.c" "$payload_dir/"
 
 cat >"$payload_dir/image-release" <<EOF
 GMIB_VERSION='$GMIB_VERSION'
+IMAGE_REVISION='$IMAGE_REVISION'
 UBUNTU_VERSION='$ubuntu_version'
 IMAGE_NAME='$expected_output_name'
 ARCHITECTURE='amd64'

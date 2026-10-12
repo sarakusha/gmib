@@ -6,6 +6,7 @@ REPO_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
 
 BUILD_ROOT="${GMIB_APPLIANCE_BUILD_ROOT:-/home/user/appliance-build}"
 GMIB_VERSION=""
+IMAGE_REVISION=""
 BASE_ISO=""
 PRITUNL_DEB=""
 ZABBIX_AGENT2_DEB=""
@@ -24,6 +25,7 @@ script downloads only the release AppImage; cached Ubuntu and Pritunl inputs are
 reused. By default, the GMIB version is read from the repository package.json.
 
 Options:
+  --image-revision LABEL    Installer revision, e.g. patch1; does not change GMIB version.
   --gmib-version VERSION    GMIB release version. Default: package.json version.
   --build-root PATH         Private build directory. Default: /home/user/appliance-build.
   --base-iso PATH           Cached Ubuntu ISO.
@@ -44,6 +46,10 @@ EOF
 
 while (($# > 0)); do
   case "$1" in
+    --image-revision)
+      IMAGE_REVISION="${2:-}"
+      shift 2
+      ;;
     --gmib-version)
       GMIB_VERSION="${2:-}"
       shift 2
@@ -110,6 +116,10 @@ done
 if [[ -z "$GMIB_VERSION" ]]; then
   GMIB_VERSION="$(jq -er '.version' "$REPO_ROOT/package.json")"
 fi
+if [[ -n "$IMAGE_REVISION" && ! "$IMAGE_REVISION" =~ ^[a-z0-9]+([.-][a-z0-9]+)*$ ]]; then
+  echo "--image-revision must be a lowercase label such as patch1." >&2
+  exit 1
+fi
 if [[ ! "$GMIB_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
   echo "Invalid GMIB version: $GMIB_VERSION" >&2
   exit 1
@@ -126,7 +136,7 @@ ZABBIX_AGENT2_DEB="${ZABBIX_AGENT2_DEB:-$BUILD_ROOT/input/zabbix-agent2.deb}"
 SSH_KEY="${SSH_KEY:-$BUILD_ROOT/input/id_ed25519.pub}"
 APPIMAGE="$BUILD_ROOT/input/gmib-$GMIB_VERSION-x86_64.AppImage"
 OUTPUT_DIR="$BUILD_ROOT/output"
-OUTPUT="$OUTPUT_DIR/gmib-kiosk-$GMIB_VERSION-ubuntu-24.04.4-amd64.iso"
+OUTPUT="$OUTPUT_DIR/gmib-kiosk-${GMIB_VERSION}${IMAGE_REVISION:+-$IMAGE_REVISION}-ubuntu-24.04.4-amd64.iso"
 BASE_ISO_SHA256=e907d92eeec9df64163a7e454cbc8d7755e8ddc7ed42f99dbc80c40f1a138433
 
 for input in "$BASE_ISO" "$PRITUNL_DEB" "$ZABBIX_AGENT2_DEB" "$SSH_KEY"; do
@@ -236,6 +246,7 @@ fi
   --base-iso-sha256 "$BASE_ISO_SHA256" \
   --appimage "$APPIMAGE" \
   --gmib-version "$GMIB_VERSION" \
+  --image-revision "$IMAGE_REVISION" \
   --pritunl-deb "$PRITUNL_DEB" \
   --zabbix-agent2-deb "$ZABBIX_AGENT2_DEB" \
   --bootstrap-url "$BOOTSTRAP_URL" \
@@ -245,6 +256,7 @@ fi
 "$SCRIPT_DIR/publish-image.sh" \
   --local \
   --iso "$OUTPUT" \
+  --image-revision "$IMAGE_REVISION" \
   --remote-dir "$PUBLIC_DIR" \
   --public-base-url "$PUBLIC_BASE_URL"
 
