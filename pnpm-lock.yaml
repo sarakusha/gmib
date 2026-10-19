@@ -10,7 +10,6 @@ overrides:
   prettier: ^3.9.6
 
 patchedDependencies:
-  '@nibus/core@6.0.8': 1c938d343feb89c21ee7a1149c39db65589f9f75255f5a501a883f5da5015c2a
   bonjour-service@1.4.4: cfdf19fed55b1808cfaf9519604784de1f0d1f3cc53911ba19380ae44adc3f02
 
 importers:
@@ -27,17 +26,17 @@ importers:
         specifier: ^4.0.1
         version: 4.0.1
       '@nibus/core':
-        specifier: ^6.0.8
-        version: 6.0.8(patch_hash=1c938d343feb89c21ee7a1149c39db65589f9f75255f5a501a883f5da5015c2a)(@nibus/mibs@6.0.8)(debug@4.4.3)
+        specifier: ^6.0.9
+        version: 6.0.9(@nibus/mibs@6.0.9)(debug@4.4.3)
       '@nibus/detection':
-        specifier: ^6.0.8
-        version: 6.0.8(@nibus/mibs@6.0.8)(debug@4.4.3)
+        specifier: ^6.0.9
+        version: 6.0.9(@nibus/mibs@6.0.9)(debug@4.4.3)
       '@nibus/mibs':
-        specifier: ^6.0.8
-        version: 6.0.8
+        specifier: ^6.0.9
+        version: 6.0.9
       '@nibus/service':
-        specifier: ^6.0.8
-        version: 6.0.8(@nibus/mibs@6.0.8)(debug@4.4.3)
+        specifier: ^6.0.9
+        version: 6.0.9(@nibus/mibs@6.0.9)(debug@4.4.3)
       '@nodable/entities':
         specifier: ^3.0.0
         version: 3.0.0
@@ -1307,20 +1306,20 @@ packages:
       '@emotion/styled':
         optional: true
 
-  '@nibus/core@6.0.8':
-    resolution: {integrity: sha512-H6MiCYDZKz0cdgUkbfK4rTap/l+gf+2q40JA2jMHcAs5o8LKUc0xPZZ18V/5V/Sk0R7zaVw3SiKHlTF49IZZ4Q==}
+  '@nibus/core@6.0.9':
+    resolution: {integrity: sha512-vbubdBMnCciLfq0/56kTM6cTs/PSbl0ZuolF90USrq1YU3wDHdMKQ0SIMz4XH7WdrBjLH/K9HY5T2XryPScw3Q==}
     peerDependencies:
-      '@nibus/mibs': ^6.0.8
+      '@nibus/mibs': ^6.0.9
       debug: ^4.3.0
 
-  '@nibus/detection@6.0.8':
-    resolution: {integrity: sha512-B+fP7n15zPGByz7gcy57+FUEhi6P1vEGp1xRBbAYeQhURR6t+FqkxesLIg1kHFXQ/26g1y/jPUhk0aRdtUSqAA==}
+  '@nibus/detection@6.0.9':
+    resolution: {integrity: sha512-kWQlMR36X1BygtI+U2LhRb3/tNWr9z56jSoWGhhKvvweBpucXp2eZjYwO8hVw6xDifs7KNChFktLOVCrtmdlQQ==}
 
-  '@nibus/mibs@6.0.8':
-    resolution: {integrity: sha512-ci6im8dvWy8OEO/moHQ86r52Dy8/upRPE9/vJp00IncYX4ES4KDiMECTEFjC2eCqGpcTFWBGyA/PYkjYYE/Tfw==}
+  '@nibus/mibs@6.0.9':
+    resolution: {integrity: sha512-DfNtK6SYEFZL/mR1w3D2iusr8D/IYUUVZIlUjPMMaiKhpmShSdvdz8VqKvDXT6IhrqjndUqieIS67SKaDrFFbg==}
 
-  '@nibus/service@6.0.8':
-    resolution: {integrity: sha512-1N3zTbCw8aHUbAKVEaVKZL2DYMuQ0sMBVu6tm6qfw57n+mdkufHAfyEYg1HupXUIxXFk/il0jpgCWEP+aclz4A==}
+  '@nibus/service@6.0.9':
+    resolution: {integrity: sha512-jxmra+B1j0YxEk6YvghTFqugwdeQpfQCYKVBwMxOFIrPS9yDXv1Yl+iapPiSWHZhuDut3vWV6X/+6ent/WXEbA==}
     peerDependencies:
       debug: ^4.3.0
 
@@ -6675,9 +6674,9 @@ snapshots:
     transitivePeerDependencies:
       - '@types/react'
 
-  '@nibus/core@6.0.8(patch_hash=1c938d343feb89c21ee7a1149c39db65589f9f75255f5a501a883f5da5015c2a)(@nibus/mibs@6.0.8)(debug@4.4.3)':
+  '@nibus/core@6.0.9(@nibus/mibs@6.0.9)(debug@4.4.3)':
     dependencies:
-      '@nibus/mibs': 6.0.8
+      '@nibus/mibs': 6.0.9
       conf: 15.1.0
       crc: 4.3.2
       debug: 4.4.3
@@ -6698,9 +6697,9 @@ snapshots:
     transitivePeerDependencies:
       - buffer
 
-  '@nibus/detection@6.0.8(@nibus/mibs@6.0.8)(debug@4.4.3)':
+  '@nibus/detection@6.0.9(@nibus/mibs@6.0.9)(debug@4.4.3)':
     dependencies:
-      '@nibus/core': 6.0.8(patch_hash=1c938d343feb89c21ee7a1149c39db65589f9f75255f5a501a883f5da5015c2a)(@nibus/mibs@6.0.8)(debug@4.4.3)
+      '@nibus/core': 6.0.9(@nibus/mibs@6.0.9)(debug@4.4.3)
       '@types/js-yaml': 4.0.9
       fp-ts: 2.16.11
       io-ts: 2.2.22(fp-ts@2.16.11)
@@ -6710,7 +6709,7 @@ snapshots:
       - buffer
       - debug
 
-  '@nibus/mibs@6.0.8':
+  '@nibus/mibs@6.0.9':
     dependencies:
       debug: 4.4.3
       fp-ts: 2.16.11
@@ -6718,11 +6717,11 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@nibus/service@6.0.8(@nibus/mibs@6.0.8)(debug@4.4.3)':
+  '@nibus/service@6.0.9(@nibus/mibs@6.0.9)(debug@4.4.3)':
     dependencies:
       '@homebridge/ciao': 1.3.10
-      '@nibus/core': 6.0.8(patch_hash=1c938d343feb89c21ee7a1149c39db65589f9f75255f5a501a883f5da5015c2a)(@nibus/mibs@6.0.8)(debug@4.4.3)
-      '@nibus/detection': 6.0.8(@nibus/mibs@6.0.8)(debug@4.4.3)
+      '@nibus/core': 6.0.9(@nibus/mibs@6.0.9)(debug@4.4.3)
+      '@nibus/detection': 6.0.9(@nibus/mibs@6.0.9)(debug@4.4.3)
       '@serialport/bindings-cpp': 13.0.1
       debug: 4.4.3
       fp-ts: 2.16.11
