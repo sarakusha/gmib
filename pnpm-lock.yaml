@@ -10,7 +10,7 @@ overrides:
   prettier: ^3.9.6
 
 patchedDependencies:
-  '@nibus/core@6.0.8': 9d78607cbc31885b3105168710b538c3c3d9e88defd6e3992139db4c5f4fe4c5
+  '@nibus/core@6.0.8': 1c938d343feb89c21ee7a1149c39db65589f9f75255f5a501a883f5da5015c2a
   bonjour-service@1.4.4: cfdf19fed55b1808cfaf9519604784de1f0d1f3cc53911ba19380ae44adc3f02
 
 importers:
@@ -28,7 +28,7 @@ importers:
         version: 4.0.1
       '@nibus/core':
         specifier: ^6.0.8
-        version: 6.0.8(patch_hash=9d78607cbc31885b3105168710b538c3c3d9e88defd6e3992139db4c5f4fe4c5)(@nibus/mibs@6.0.8)(debug@4.4.3)
+        version: 6.0.8(patch_hash=1c938d343feb89c21ee7a1149c39db65589f9f75255f5a501a883f5da5015c2a)(@nibus/mibs@6.0.8)(debug@4.4.3)
       '@nibus/detection':
         specifier: ^6.0.8
         version: 6.0.8(@nibus/mibs@6.0.8)(debug@4.4.3)
@@ -6675,7 +6675,7 @@ snapshots:
     transitivePeerDependencies:
       - '@types/react'
 
-  '@nibus/core@6.0.8(patch_hash=9d78607cbc31885b3105168710b538c3c3d9e88defd6e3992139db4c5f4fe4c5)(@nibus/mibs@6.0.8)(debug@4.4.3)':
+  '@nibus/core@6.0.8(patch_hash=1c938d343feb89c21ee7a1149c39db65589f9f75255f5a501a883f5da5015c2a)(@nibus/mibs@6.0.8)(debug@4.4.3)':
     dependencies:
       '@nibus/mibs': 6.0.8
       conf: 15.1.0
@@ -6700,7 +6700,7 @@ snapshots:
 
   '@nibus/detection@6.0.8(@nibus/mibs@6.0.8)(debug@4.4.3)':
     dependencies:
-      '@nibus/core': 6.0.8(patch_hash=9d78607cbc31885b3105168710b538c3c3d9e88defd6e3992139db4c5f4fe4c5)(@nibus/mibs@6.0.8)(debug@4.4.3)
+      '@nibus/core': 6.0.8(patch_hash=1c938d343feb89c21ee7a1149c39db65589f9f75255f5a501a883f5da5015c2a)(@nibus/mibs@6.0.8)(debug@4.4.3)
       '@types/js-yaml': 4.0.9
       fp-ts: 2.16.11
       io-ts: 2.2.22(fp-ts@2.16.11)
@@ -6721,7 +6721,7 @@ snapshots:
   '@nibus/service@6.0.8(@nibus/mibs@6.0.8)(debug@4.4.3)':
     dependencies:
       '@homebridge/ciao': 1.3.10
-      '@nibus/core': 6.0.8(patch_hash=9d78607cbc31885b3105168710b538c3c3d9e88defd6e3992139db4c5f4fe4c5)(@nibus/mibs@6.0.8)(debug@4.4.3)
+      '@nibus/core': 6.0.8(patch_hash=1c938d343feb89c21ee7a1149c39db65589f9f75255f5a501a883f5da5015c2a)(@nibus/mibs@6.0.8)(debug@4.4.3)
       '@nibus/detection': 6.0.8(@nibus/mibs@6.0.8)(debug@4.4.3)
       '@serialport/bindings-cpp': 13.0.1
       debug: 4.4.3

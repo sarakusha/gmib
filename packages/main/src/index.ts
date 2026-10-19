@@ -109,18 +109,14 @@ if (isDevRuntime) {
 app
   .whenReady()
   .then(bootstrapLicense)
-  .then(async () => {
-    if (getLicenseState().status === 'active') await import('./nibus');
-  })
+  .then(() => import('./nibus'))
   .then(startRuntimeApi)
   .then(() =>
     startPlugins().catch(error => {
       debug(`Failed to start plugins: ${error instanceof Error ? error.message : String(error)}`);
     }),
   )
-  .then(() => {
-    if (getLicenseState().status === 'active') startScheduler();
-  })
+  .then(startScheduler)
   .then(createMainWindow)
   .then(main => {
     installWindowOpenHandler(main.webContents);

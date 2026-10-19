@@ -55,6 +55,7 @@ import {
   getAnnouncedLicenseDocument,
   getLicenseState,
   getSessionLicenseDocument,
+  hasLegacyLicenseSession,
   hasLicenseCapability,
   retryLicense,
 } from './licenseState';
@@ -324,7 +325,7 @@ mountAuthenticatedPluginApi(api);
 let runtimeApiStarted = false;
 
 export const startRuntimeApi = async (): Promise<void> => {
-  if (runtimeApiStarted || getLicenseState().status !== 'active') return;
+  if (runtimeApiStarted) return;
   runtimeApiStarted = true;
   await Promise.all([dbReady, testsDeferred.promise]);
   const screens = await getScreens();
@@ -1013,7 +1014,8 @@ api.get('/announce', async (req, res) => {
     announce,
     iv,
     license: getAnnouncedLicenseDocument(),
-    licenseProtocol: 2,
+    // Keep the existing legacy announce contract until migration succeeds and restarts.
+    ...(!hasLegacyLicenseSession() && { licenseProtocol: 2 }),
     licenseState: getLicenseState(),
     ...(licenseSession && { licenseSession }),
     key: await machineId,

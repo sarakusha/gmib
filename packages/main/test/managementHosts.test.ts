@@ -285,7 +285,7 @@ describe('management hosts runtime mount', () => {
     expect((await fetch(url)).status).toBe(401);
   });
 
-  it('allows authenticated reads before activation but rejects mutation', async () => {
+  it('allows authenticated host management before activation', async () => {
     const { fixture, url } = await startApi(
       true,
       'unlicensed',
@@ -301,8 +301,8 @@ describe('management hosts runtime mount', () => {
       headers: { ...authorization, 'content-type': 'application/json' },
       body: JSON.stringify({ revision: body.revision, hosts: [] }),
     });
-    expect(put.status).toBe(403);
-    expect(fixture.setSavedHosts).not.toHaveBeenCalled();
+    expect(put.status).toBe(200);
+    expect(fixture.setSavedHosts).toHaveBeenCalledOnce();
   });
 
   it('reports dry-run, applies once, and returns a structured stale-revision response', async () => {

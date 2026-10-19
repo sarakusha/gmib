@@ -4,6 +4,8 @@ import type { GmibSchedulerJob, PlayerSchedulerJob, SchedulerJobBase } from '/@c
 import { getRunKey, matchesCron } from '/@common/scheduler';
 
 import { dbReady, onBeforeDatabaseClose } from './db';
+import { getLicenseState } from './licenseState';
+import { canRunLicensedGmibAction } from './licenseConfigPolicy';
 import { executeGmibSchedulerJob } from './gmibScheduler';
 import { executePlayerSchedulerJob } from './playerScheduler';
 import { enqueueSchedulerJob, stopSchedulerQueue } from './schedulerQueue';
@@ -37,6 +39,7 @@ const executeDueJobs = async (): Promise<void> => {
   const dueJobs: DueJob[] = [];
 
   for (const job of gmibJobs) {
+    if (!canRunLicensedGmibAction(job.action, getLicenseState().status === 'active')) continue;
     const scheduledAt = getScheduledAt(job, now);
     if (scheduledAt !== undefined) {
       const occurrenceKey = `gmib:${job.id}:${job.kind === 'once' ? job.runAt : getRunKey(now)}`;
@@ -44,6 +47,8 @@ const executeDueJobs = async (): Promise<void> => {
     }
   }
   for (const job of playerJobs) {
+    // Preserve pending player jobs while only the base runtime is available.
+    if (getLicenseState().status !== 'active') continue;
     const scheduledAt = getScheduledAt(job, now);
     if (scheduledAt !== undefined) {
       const occurrenceKey = `player:${job.id}:${job.kind === 'once' ? job.runAt : getRunKey(now)}`;

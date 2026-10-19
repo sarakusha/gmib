@@ -9,6 +9,7 @@ import { findById } from '/@common/helpers';
 
 import { port } from './config';
 import machineId from './machineId';
+import { getLicenseState } from './licenseState';
 import { createTestWindow } from './mainWindow';
 import {
   arrangeOutputWindows,
@@ -65,7 +66,7 @@ const updateTestImpl = async (scr: Screen, force = false): Promise<void> => {
       break;
   }
   const page = scr.test ? await getPage(scr.test) : undefined;
-  if (!display || !page) {
+  if (!display || !page || (!page.permanent && getLicenseState().status !== 'active')) {
     win?.hide();
     return;
   }

@@ -115,7 +115,7 @@ describe('management API runtime mount', () => {
     },
   );
 
-  it('allows authenticated reads but rejects unlicensed settings mutations', async () => {
+  it('allows authenticated base settings changes without an active license', async () => {
     const baseUrl = await startApi(true, 'unlicensed');
     const get = await fetch(`${baseUrl}/manage/v1/settings`, { headers: authorization });
     expect(get.status).toBe(200);
@@ -131,9 +131,9 @@ describe('management API runtime mount', () => {
       headers: { ...authorization, 'content-type': 'application/json' },
       body: JSON.stringify({ brightness: 60 }),
     });
-    expect(patch.status).toBe(403);
-    expect(mocks.updateConfigStore).not.toHaveBeenCalled();
-    expect(mocks.broadcast).not.toHaveBeenCalled();
+    expect(patch.status).toBe(200);
+    expect(mocks.config.store.brightness).toBe(60);
+    expect(mocks.broadcast).toHaveBeenCalledOnce();
   });
 
   it('writes and broadcasts once, then keeps no-op and dry-run free of side effects', async () => {

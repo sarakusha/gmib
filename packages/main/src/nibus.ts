@@ -13,6 +13,8 @@ import bonjour from './bonjour';
 import getAllDisplays from './getAllDisplays';
 import { getBrightnessHistoryOn } from './history';
 import localConfig from './localConfig';
+import { getEffectiveLicenseConfig, preserveLicensedConfig } from './licenseConfigPolicy';
+import { getLicenseState } from './licenseState';
 import Reader from './reader';
 import secret from './secret';
 import { getGmibServiceHostname, getGmibServiceName } from './serviceIdentity';
@@ -34,10 +36,13 @@ let discoveryService: ReturnType<typeof bonjour.publish> | undefined;
 export default { service } as const;
 
 export const updateConfigStore = (update: (current: Config) => Config): Config => {
-  const next = update(config.store);
-  config.store = next;
-  void service.server.broadcast('config', config.store).catch(handleNibusMessageError);
-  return config.store;
+  const active = getLicenseState().status === 'active';
+  const stored = config.store;
+  const next = update(getEffectiveLicenseConfig(stored, active));
+  config.store = preserveLicensedConfig(stored, next, active);
+  const effective = getEffectiveLicenseConfig(config.store, active);
+  void service.server.broadcast('config', effective).catch(handleNibusMessageError);
+  return effective;
 };
 
 let isClosing = false;
@@ -103,7 +108,13 @@ const quitHandler = (event: Event): void => {
           .catch(handleNibusMessageError);
       }, 3000);
     }
-    void service.server.send(socket, 'config', config.store).catch(handleNibusMessageError);
+    void service.server
+      .send(
+        socket,
+        'config',
+        getEffectiveLicenseConfig(config.store, getLicenseState().status === 'active'),
+      )
+      .catch(handleNibusMessageError);
     void service.server.send(socket, 'displays', getAllDisplays()).catch(handleNibusMessageError);
   });
   service.server.on('client:config', (socket, store) => {
@@ -111,7 +122,13 @@ const quitHandler = (event: Event): void => {
       updateConfigStore(() => store as typeof config.store);
     } catch (err) {
       debug(`Error while save config: ${(err as Error).message}`, true);
-      void service.server.send(socket, 'config', config.store).catch(handleNibusMessageError);
+      void service.server
+        .send(
+          socket,
+          'config',
+          getEffectiveLicenseConfig(config.store, getLicenseState().status === 'active'),
+        )
+        .catch(handleNibusMessageError);
     }
   });
   service.server.on('client:getBrightnessHistory', (socket, dt) => {

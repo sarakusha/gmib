@@ -19,8 +19,8 @@ import { gmibVariables, impScreenProps, isGmib, isPlayer, isScreen } from '/@com
 
 import { initializePritunlClient } from './linux';
 import { decodeLegacyLicense } from './legacyLicense';
-import { applyLicensePresentation, getLicensePresentation } from './licensePresentation';
-import { getLicenseState, getSessionLicensePayload } from './licenseState';
+import { applyLicensePresentation } from './licensePresentation';
+import { getLicenseState, getSessionLicensePresentation } from './licenseState';
 import localConfig from './localConfig';
 import machineIdPromise from './machineId';
 import { getTabbedWindowById } from './tabbedWindow';
@@ -86,6 +86,7 @@ const knockKnock = async (params: GmibWindowParams): Promise<void> => {
   try {
     const result = await fetch(`${import.meta.env.VITE_LICENSE_SERVER}/api/knock`, {
       method: 'PUT',
+      signal: AbortSignal.timeout(10_000),
       headers: {
         'Content-Type': 'application/json',
       },
@@ -174,7 +175,7 @@ export const registerGmib = async (
             arch: os.arch(),
           },
           ...(typeof legacy?.key === 'string' ? { key: legacy.key } : {}),
-          ...getLicensePresentation(getSessionLicensePayload()),
+          ...getSessionLicensePresentation(),
         };
       })()
     : await getAnnounce(host, port + 1);

@@ -80,8 +80,7 @@ import ipcDispatch from '../common/ipcDispatch';
 import { validateConfig } from '/@common/schema';
 import { enqueueSnackbar, setFlashing, setProgress } from '/@renderer/store/flasherSlice';
 import type { GmibWindowParams } from '/@common/WindowParams';
-import type { LicenseRuntimeState } from '/@common/license';
-import { getRuntimeAccessError } from './runtimeAccess';
+import { waitForSessionReady } from './sessionConnection';
 
 export type { Address };
 
@@ -89,6 +88,14 @@ const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:preload`);
 const RESTART_DELAY = 3000;
 
 let isConnected = false;
+let isStarting = false;
+let isDisposed = false;
+let isOnline = false;
+let restartTimeout: ReturnType<typeof setTimeout> | undefined;
+let offlineTimeout: ReturnType<typeof setTimeout> | undefined;
+let startupController: AbortController | undefined;
+let sessionAttempt = 0;
+let connectionError: string | undefined;
 
 const session = getNibusSession(port, host);
 
@@ -262,35 +269,25 @@ const updateStorage = (): void => {
   });
   window.localStorage.setItem('playerListeners', JSON.stringify([...listeners]));
 };
-function openSession() {
-  void ipcRenderer
-    .invoke('getRuntimeLicenseState')
-    .then((license: LicenseRuntimeState) => {
-      const error = getRuntimeAccessError(license, isRemoteSession);
-      if (!error) {
-        startSession();
-        return;
-      }
-      ipcDispatch(
-        setStatus({
-          status: 'failed',
-          portCount: 0,
-          error,
-        }),
-      );
-    })
-    .catch(() => {
-      ipcDispatch(
-        setStatus({
-          status: 'failed',
-          portCount: 0,
-          error: 'Не удалось проверить состояние лицензии',
-        }),
-      );
-    });
+function scheduleSessionStart(): void {
+  if (isDisposed || restartTimeout) return;
+  restartTimeout = setTimeout(() => {
+    restartTimeout = undefined;
+    startSession();
+  }, RESTART_DELAY);
+}
+
+function openSession(): void {
+  if (!isDisposed) startSession();
 }
 
 function startSession() {
+  if (isStarting || isConnected || isDisposed) return;
+  const currentAttempt = ++sessionAttempt;
+  connectionError = undefined;
+  isStarting = true;
+  const controller = new AbortController();
+  startupController = controller;
   const addConnectionHandler = (): void => {
     ipcDispatch(setPortCount(session.ports));
   };
@@ -445,6 +442,20 @@ function startSession() {
   };
 
   const onlineHandler = (online: boolean): void => {
+    if (online) {
+      isOnline = true;
+      connectionError = undefined;
+      clearTimeout(offlineTimeout);
+      offlineTimeout = undefined;
+    } else if (isOnline) {
+      isOnline = false;
+      connectionError = 'Сервер NIBUS перестал отвечать';
+      clearTimeout(offlineTimeout);
+      offlineTimeout = setTimeout(() => {
+        offlineTimeout = undefined;
+        if (!isOnline && !isDisposed) session.close();
+      }, RESTART_DELAY);
+    }
     ipcDispatch(setOnline(online));
   };
 
@@ -526,13 +537,23 @@ function startSession() {
   session.on('informationReport', informationListener);
   if (!isRemoteSession) {
     void addForeign.then(val => {
-      if (val) session.on('foreign', addForeignDeviceHandler);
+      if (val && sessionAttempt === currentAttempt && !isDisposed)
+        session.on('foreign', addForeignDeviceHandler);
     });
   }
   session.on('health', healthHandler);
   session.devices.on('new', newDeviceHandler);
   session.devices.on('delete', deleteDeviceHandler);
   const release = (): void => {
+    if (sessionAttempt !== currentAttempt) return;
+    session.off('close', release);
+    sessionAttempt += 1;
+    isConnected = false;
+    isStarting = false;
+    startupController = undefined;
+    isOnline = false;
+    clearTimeout(offlineTimeout);
+    offlineTimeout = undefined;
     session.off('displays', displaysHandler);
     session.off('online', onlineHandler);
     session.off('add', addConnectionHandler);
@@ -547,6 +568,16 @@ function startSession() {
     session.devices.off('new', newDeviceHandler);
     session.devices.off('delete', deleteDeviceHandler);
     ipcDispatch(releaseSession());
+    if (!isDisposed) {
+      ipcDispatch(
+        setStatus({
+          status: 'failed',
+          portCount: 0,
+          error: connectionError ?? 'Соединение с сервером NIBUS закрыто',
+        }),
+      );
+    }
+    scheduleSessionStart();
   };
   session.once('close', release);
   ipcDispatch(
@@ -556,43 +587,59 @@ function startSession() {
       portCount: 0,
     }),
   );
-  const start = (): void => {
-    if (isConnected) return;
-    session
-      .start()
-      .then(ports => {
-        isConnected = true;
-        ipcDispatch(
-          setStatus({
-            status: 'succeeded',
-            portCount: ports,
-            error: undefined,
-          }),
-        );
-      })
-      .catch((e: Error) => {
-        if (isRemoteSession) {
-          ipcRenderer.send('startLocalNibus');
-        } else {
-          debug(`error while start session: ${e.message}`);
+  void waitForSessionReady(session, controller.signal)
+    .then(ports => {
+      if (isDisposed || sessionAttempt !== currentAttempt) return;
+      isConnected = true;
+      isStarting = false;
+      startupController = undefined;
+      ipcDispatch(
+        setStatus({
+          status: 'succeeded',
+          portCount: ports,
+          error: undefined,
+        }),
+      );
+    })
+    .catch((e: Error) => {
+      if (isDisposed) return;
+      if (sessionAttempt !== currentAttempt) {
+        if (sessionAttempt === currentAttempt + 1) {
+          ipcDispatch(
+            setStatus({
+              status: 'failed',
+              portCount: 0,
+              error: e.message,
+            }),
+          );
         }
-        ipcDispatch(
-          setStatus({
-            status: 'failed',
-            portCount: 0,
-            error: e.message,
-          }),
-        );
-        setTimeout(start, RESTART_DELAY);
-      });
-  };
-  start();
-  window.addEventListener('beforeunload', () => {
-    session.close();
-  });
+        return;
+      }
+      isStarting = false;
+      startupController = undefined;
+      connectionError = e.message;
+      if (isRemoteSession) ipcRenderer.send('startLocalNibus');
+      else debug(`error while start session: ${e.message}`);
+      session.close();
+      if (sessionAttempt === currentAttempt) release();
+    });
 }
 
-window.onload = openSession;
+const closeSession = (): void => {
+  if (isDisposed) return;
+  isDisposed = true;
+  startupController?.abort();
+  startupController = undefined;
+  clearTimeout(restartTimeout);
+  restartTimeout = undefined;
+  clearTimeout(offlineTimeout);
+  offlineTimeout = undefined;
+  session.close();
+};
+
+window.addEventListener('beforeunload', closeSession, { once: true });
+if (document.readyState === 'complete') openSession();
+else window.addEventListener('load', openSession, { once: true });
 
 export const writeToStorage = async (deviceId: DeviceId): Promise<boolean> => {
   const device = findDeviceById(deviceId);

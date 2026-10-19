@@ -528,8 +528,7 @@
           }
         },
         "responses": {
-          "200": { "$ref": "#/components/responses/Screen" },
-          "403": { "$ref": "#/components/responses/LicenseRequired" }
+          "200": { "$ref": "#/components/responses/Screen" }
         }
       },
       "put": {
@@ -542,8 +541,7 @@
         },
         "responses": {
           "200": { "$ref": "#/components/responses/Screen" },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "403": { "$ref": "#/components/responses/LicenseRequired" }
+          "404": { "$ref": "#/components/responses/NotFound" }
         }
       }
     },
@@ -563,8 +561,7 @@
         "parameters": [{ "$ref": "#/components/parameters/NumericId" }],
         "responses": {
           "204": { "$ref": "#/components/responses/NoContent" },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "403": { "$ref": "#/components/responses/LicenseRequired" }
+          "404": { "$ref": "#/components/responses/NotFound" }
         }
       }
     },
@@ -575,8 +572,7 @@
         "parameters": [{ "$ref": "#/components/parameters/NumericId" }],
         "responses": {
           "200": { "$ref": "#/components/responses/EmptySuccess" },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "403": { "$ref": "#/components/responses/LicenseRequired" }
+          "404": { "$ref": "#/components/responses/NotFound" }
         }
       }
     },
@@ -849,8 +845,7 @@
           }
         },
         "responses": {
-          "200": { "$ref": "#/components/responses/GmibSchedulerJob" },
-          "403": { "$ref": "#/components/responses/LicenseRequired" }
+          "200": { "$ref": "#/components/responses/GmibSchedulerJob" }
         }
       }
     },
@@ -870,8 +865,7 @@
         },
         "responses": {
           "200": { "$ref": "#/components/responses/GmibSchedulerJob" },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "403": { "$ref": "#/components/responses/LicenseRequired" }
+          "404": { "$ref": "#/components/responses/NotFound" }
         }
       },
       "delete": {
@@ -880,8 +874,7 @@
         "parameters": [{ "$ref": "#/components/parameters/StringId" }],
         "responses": {
           "204": { "$ref": "#/components/responses/NoContent" },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "403": { "$ref": "#/components/responses/LicenseRequired" }
+          "404": { "$ref": "#/components/responses/NotFound" }
         }
       }
     },
@@ -993,8 +986,7 @@
           }
         },
         "responses": {
-          "200": { "$ref": "#/components/responses/EmptySuccess" },
-          "403": { "$ref": "#/components/responses/LicenseRequired" }
+          "200": { "$ref": "#/components/responses/EmptySuccess" }
         }
       }
     },
@@ -1010,8 +1002,7 @@
           }
         },
         "responses": {
-          "200": { "$ref": "#/components/responses/EmptySuccess" },
-          "403": { "$ref": "#/components/responses/LicenseRequired" }
+          "200": { "$ref": "#/components/responses/EmptySuccess" }
         }
       }
     },
@@ -1021,8 +1012,7 @@
         "operationId": "relaunch",
         "description": "Schedules a GMIB relaunch after returning success.",
         "responses": {
-          "200": { "$ref": "#/components/responses/EmptySuccess" },
-          "403": { "$ref": "#/components/responses/LicenseRequired" }
+          "200": { "$ref": "#/components/responses/EmptySuccess" }
         }
       }
     },
@@ -2118,7 +2108,6 @@
       "Announce": {
         "type": "object",
         "required": [
-          "licenseProtocol",
           "licenseState",
           "key",
           "autostart",
@@ -2129,7 +2118,7 @@
           "announce": { "type": "string", "deprecated": true },
           "iv": { "type": "string", "deprecated": true },
           "license": { "description": "Signed license document; opaque to callers." },
-          "licenseProtocol": { "type": "integer", "const": 2 },
+          "licenseProtocol": { "type": "integer", "const": 2, "description": "Omitted while a saved legacy activation is in use pending signed-license migration and restart." },
           "licenseState": { "type": "object", "additionalProperties": true },
           "licenseSession": { "type": "object", "additionalProperties": true },
           "key": { "type": "string", "description": "Machine id; do not treat as a license key." },

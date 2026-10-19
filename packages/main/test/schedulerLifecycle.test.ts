@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
+  licenseStatus: 'active',
   ready: Promise.resolve() as Promise<void>,
   onClose: vi.fn(),
   gmibJobs: vi.fn(),
@@ -8,6 +9,9 @@ const mocks = vi.hoisted(() => ({
   executeGmib: vi.fn(),
   executePlayer: vi.fn(),
   debug: vi.fn(),
+}));
+vi.mock('../src/licenseState', () => ({
+  getLicenseState: () => ({ status: mocks.licenseStatus }),
 }));
 vi.mock('../src/db', () => ({
   get dbReady() {
@@ -45,6 +49,7 @@ beforeEach(() => {
   vi.resetModules();
   vi.useFakeTimers();
   vi.clearAllMocks();
+  mocks.licenseStatus = 'active';
   mocks.ready = Promise.resolve();
   mocks.gmibJobs.mockReset().mockResolvedValue([]);
   mocks.playerJobs.mockReset().mockResolvedValue([]);
@@ -54,6 +59,39 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 describe('scheduler database shutdown lifecycle', () => {
+  it('keeps base jobs running without consuming player jobs while the license is inactive', async () => {
+    mocks.licenseStatus = 'expired';
+    mocks.gmibJobs.mockResolvedValue([job('base')]);
+    mocks.playerJobs.mockResolvedValue([job('player')]);
+    const { startScheduler, stopScheduler } = await import('../src/scheduler');
+    startScheduler();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(mocks.executeGmib).toHaveBeenCalledOnce();
+    expect(mocks.executePlayer).not.toHaveBeenCalled();
+    mocks.licenseStatus = 'active';
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(mocks.executePlayer).toHaveBeenCalledOnce();
+    await stopScheduler();
+  });
+
+  it('keeps paid GMIB jobs pending while running base jobs, then resumes them after renewal', async () => {
+    mocks.licenseStatus = 'expired';
+    mocks.gmibJobs.mockResolvedValue([
+      job('base'),
+      { ...job('auto'), action: 'set-autobrightness' },
+      { ...job('protection'), action: 'set-overheat-protection' },
+    ]);
+    const { startScheduler, stopScheduler } = await import('../src/scheduler');
+    startScheduler();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(mocks.executeGmib.mock.calls.map(([value]) => value.id)).toEqual(['base']);
+    mocks.licenseStatus = 'active';
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(mocks.executeGmib.mock.calls.map(([value]) => value.id)).toContain('auto');
+    expect(mocks.executeGmib.mock.calls.map(([value]) => value.id)).toContain('protection');
+    await stopScheduler();
+  });
+
   it('does not start a late timer after shutdown while dbReady is pending', async () => {
     const ready = deferred<void>();
     mocks.ready = ready.promise;

@@ -1,19 +1,20 @@
 import type { RequestHandler } from 'express';
 
-const unlicensedMutationPaths = new Set([
-  '/activate',
-  '/announce',
-  '/checkForUpdates',
-  '/handshake',
-  '/identifier',
-  '/login',
-  '/license/retry',
-  '/manage/v1/auth/password',
-  '/update',
+// License restrictions apply to extended features, never to the base runtime,
+// device settings, diagnostics or the ability to recover a remote installation.
+const licensedMutationPaths = new Set([
+  '/plugins',
+  '/novastar',
+  '/media',
+  '/playlist',
+  '/player',
+  '/mapping',
+  '/pages',
+  '/scheduler',
 ]);
 
 export const isUnlicensedMutationPath = (path: string): boolean =>
-  [...unlicensedMutationPaths].some(allowed => path === allowed || path.startsWith(`${allowed}/`));
+  ![...licensedMutationPaths].some(prefix => path === prefix || path.startsWith(`${prefix}/`));
 
 export const createLicenseMutationGate =
   (getStatus: () => string): RequestHandler =>

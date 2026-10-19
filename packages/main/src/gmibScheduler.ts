@@ -6,6 +6,8 @@ import type { GmibSchedulerJob, GmibSchedulerJobInput } from '/@common/scheduler
 import { getNextRunAt, getRunKey } from '/@common/scheduler';
 
 import { getPage } from './page';
+import { canRunLicensedGmibAction, licenseConfigDenied } from './licenseConfigPolicy';
+import { getLicenseState } from './licenseState';
 import {
   createStoredSchedulerJob,
   deleteStoredSchedulerJob,
@@ -125,6 +127,9 @@ export const executeGmibSchedulerJob = async (
   job: GmibSchedulerJob,
   options: { disableOnce: boolean },
 ): Promise<GmibSchedulerJob> => {
+  if (!canRunLicensedGmibAction(job.action, getLicenseState().status === 'active')) {
+    throw licenseConfigDenied();
+  }
   const now = new Date();
   const lastRunAt = now.toISOString();
   const lastRunKey = getRunKey(now);
@@ -161,5 +166,8 @@ export const executeGmibSchedulerJob = async (
 export const runGmibSchedulerJob = async (id: string): Promise<GmibSchedulerJob | undefined> => {
   const job = await getStoredGmibSchedulerJob(id);
   if (!job) return undefined;
+  if (!canRunLicensedGmibAction(job.action, getLicenseState().status === 'active')) {
+    throw licenseConfigDenied();
+  }
   return enqueueSchedulerJob(() => executeGmibSchedulerJob(job, { disableOnce: false }));
 };

@@ -2,7 +2,15 @@ import os from 'node:os';
 
 import debugFactory from 'debug';
 
-import type { LicensePayloadV2, LicenseRuntimeState, SignedLicense } from '/@common/license';
+import {
+  type LicensePayloadV2,
+  type LicensePlan,
+  licensePlans,
+  type LicenseRuntimeState,
+  type SignedLicense,
+} from '/@common/license';
+
+import { getLicensePresentation, type LicensePresentation } from './licensePresentation';
 
 import { decodeLegacyLicense } from './legacyLicense';
 import {
@@ -26,6 +34,8 @@ let state: LicenseRuntimeState = { status: 'checking', capabilities: [] };
 let sessionPayload: LicensePayloadV2 | undefined;
 let sessionDocument: SignedLicense | undefined;
 let announcedDocument: SignedLicense | undefined;
+let legacyPresentation: LicensePresentation | undefined;
+let checkPromise: Promise<LicensePayloadV2 | undefined> | undefined;
 let refreshTimer: NodeJS.Timeout | undefined;
 let retryPromise: Promise<LicenseRetryResult> | undefined;
 const stateListeners = new Set<(nextState: LicenseRuntimeState) => void>();
@@ -57,13 +67,31 @@ const refreshStoredLicense = async (document: SignedLicense): Promise<LicensePay
   return saveVerifiedDocument(refreshed);
 };
 
-const scheduleRefresh = (document: SignedLicense): void => {
+// Serialize automatic checks and explicit retries. A network error never changes
+// the locally verified session or replaces its stored activation.
+const checkStoredLicense = (): Promise<LicensePayloadV2 | undefined> => {
+  if (checkPromise) return checkPromise;
+  const document = localConfig.get('signedLicense');
+  checkPromise = (document ? refreshStoredLicense(document) : activateLegacyLicense()).finally(
+    () => {
+      checkPromise = undefined;
+    },
+  );
+  return checkPromise;
+};
+
+const scheduleRefresh = (delay = REFRESH_INTERVAL_MS): void => {
   clearTimeout(refreshTimer);
   refreshTimer = setTimeout(() => {
-    void refreshStoredLicense(localConfig.get('signedLicense') ?? document)
+    void checkStoredLicense()
       .then(payload => {
-        debug(`refreshed status: ${payload.status}`);
-        if (sessionPayload && sessionTermsChanged(sessionPayload, payload)) {
+        if (!payload) return;
+        const nextState = getPayloadRuntimeState(payload);
+        if (
+          legacyPresentation ||
+          nextState.status !== state.status ||
+          (sessionPayload && sessionTermsChanged(sessionPayload, payload))
+        ) {
           state = {
             ...state,
             restartRequired: true,
@@ -75,13 +103,16 @@ const scheduleRefresh = (document: SignedLicense): void => {
       .catch(error => {
         debug(`refresh failed: ${(error as Error).message}`);
       })
-      .finally(() => {
-        const current = localConfig.get('signedLicense');
-        if (current) scheduleRefresh(current);
-      });
-  }, REFRESH_INTERVAL_MS);
+      .finally(() => scheduleRefresh());
+  }, delay);
   refreshTimer.unref();
 };
+
+const readLegacyLicense = async () =>
+  decodeLegacyLicense(
+    { announce: localConfig.get('announce'), iv: localConfig.get('iv') },
+    await machineIdPromise,
+  );
 
 const activateLegacyLicense = async (): Promise<LicensePayloadV2 | undefined> => {
   const deviceId = await machineIdPromise;
@@ -104,42 +135,55 @@ export const bootstrapLicense = async (): Promise<LicenseRuntimeState> => {
   sessionPayload = undefined;
   sessionDocument = undefined;
   announcedDocument = undefined;
+  legacyPresentation = undefined;
   const document = localConfig.get('signedLicense');
   try {
-    let payload: LicensePayloadV2 | undefined;
     if (document) {
-      payload = await verifyDocument(document);
-      const initial = getPayloadRuntimeState(payload);
-      if (shouldRefreshStoredLicense(initial)) {
-        try {
-          payload = await refreshStoredLicense(document);
-        } catch (error) {
-          debug(`inactive license refresh failed: ${(error as Error).message}`);
-        }
+      const payload = await verifyDocument(document);
+      announcedDocument = document;
+      state = getPayloadRuntimeState(payload);
+      if (state.status === 'active') {
+        sessionPayload = payload;
+        sessionDocument = document;
       }
-    } else {
-      try {
-        payload = await activateLegacyLicense();
-      } catch (error) {
-        state = {
-          status: 'migration-required',
-          capabilities: [],
-          message: (error as Error).message,
-        };
-        return state;
-      }
+      // Even renewal of an expired document must not hold up the base runtime.
+      scheduleRefresh(shouldRefreshStoredLicense(state) ? 0 : REFRESH_INTERVAL_MS);
+      return state;
     }
-    if (!payload) {
+
+    const legacy = await readLegacyLicense();
+    if (!legacy || typeof legacy.key !== 'string' || !legacy.key) {
       state = { status: 'unlicensed', capabilities: [] };
       return state;
     }
-    announcedDocument = localConfig.get('signedLicense');
-    state = getPayloadRuntimeState(payload);
-    if (state.status === 'active') {
-      sessionPayload = payload;
-      sessionDocument = announcedDocument!;
-      scheduleRefresh(sessionDocument);
+    const plan = licensePlans.includes(legacy.plan as LicensePlan)
+      ? (legacy.plan as LicensePlan)
+      : undefined;
+    const expiresAt = typeof legacy.renew === 'string' ? legacy.renew : undefined;
+    const validExpiry =
+      legacy.renew == null || (expiresAt !== undefined && Number.isFinite(Date.parse(expiresAt)));
+    const expired = expiresAt !== undefined && Date.now() >= Date.parse(expiresAt);
+    if (!plan || !validExpiry) {
+      state = { status: 'migration-required', capabilities: [] };
+    } else if (expired) {
+      state = { status: 'expired', plan, expiresAt, capabilities: [] };
+    } else {
+      // Preserve the previous activation until its signed replacement is available.
+      // Do not invent capabilities that were absent from the legacy protocol.
+      state = {
+        status: 'active',
+        plan,
+        expiresAt,
+        capabilities: legacy.useProxy === true ? ['novastar'] : [],
+      };
+      legacyPresentation = {
+        plan,
+        ...(expiresAt && { renew: expiresAt }),
+        ...(typeof legacy.message === 'string' && { message: legacy.message }),
+        useProxy: legacy.useProxy === true,
+      };
     }
+    scheduleRefresh(0);
     return state;
   } catch (error) {
     state = {
@@ -171,15 +215,25 @@ export const getSessionLicenseDocument = (): SignedLicense | undefined => sessio
 
 export const getAnnouncedLicenseDocument = (): SignedLicense | undefined => announcedDocument;
 
+export const getSessionLicensePresentation = (): LicensePresentation =>
+  legacyPresentation ?? getLicensePresentation(sessionPayload);
+
+export const hasLegacyLicenseSession = (): boolean => legacyPresentation !== undefined;
+
 export const retryLicense = (): Promise<LicenseRetryResult> => {
-  if (sessionPayload) {
+  if (sessionPayload || legacyPresentation) {
     return Promise.resolve({ state: getLicenseState(), relaunchRequired: false });
   }
   if (retryPromise) return retryPromise;
-  retryPromise = bootstrapLicense()
+  retryPromise = checkStoredLicense()
+    .then(() => bootstrapLicense())
     .then(nextState => ({
       state: nextState,
       relaunchRequired: nextState.status === 'active',
+    }))
+    .catch(error => ({
+      state: { ...getLicenseState(), message: (error as Error).message },
+      relaunchRequired: false,
     }))
     .finally(() => {
       retryPromise = undefined;
@@ -195,7 +249,9 @@ export const onLicenseStateChange = (
 };
 
 export const hasLicenseCapability = (capability: string): boolean =>
-  sessionPayload !== undefined && allowsCapability(sessionPayload, capability);
+  sessionPayload !== undefined
+    ? allowsCapability(sessionPayload, capability)
+    : legacyPresentation !== undefined && state.capabilities.includes(capability);
 
 export const requireLicenseCapability = (capability: string): void => {
   if (!hasLicenseCapability(capability)) {
