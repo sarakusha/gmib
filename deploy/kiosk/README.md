@@ -24,8 +24,11 @@ The system locale, provisioning tty, and Cage/GMIB service use `ru_RU.UTF-8`. A 
 console font is configured separately: the locale controls byte decoding, while the font provides
 the decoded glyphs on tty1. Provisioning waits for pending udev work and reapplies that font just
 before drawing its prompt, because a late DRM/i915 console takeover can reset the earlier font.
-The installer also grants the kiosk user access to serial ports and direct `libusb` access to the
-supported FTDI adapters `0403:6001` and `0403:6015` through `udev` rules.
+The installer also grants the kiosk user access to serial ports through `dialout` and direct
+`libusb` access to all USB device nodes through `plugdev` (`0660`). This dedicated-kiosk policy
+covers FTDI, Silicon Labs CP210x, and NovaStar controllers without a VID/PID allowlist; it does not
+grant access to every system user. Updating only the AppImage on an existing kiosk does not update
+these system rules.
 NovaStar Taurus USB connections appear as RNDIS network adapters. The kiosk requests an address over
 DHCP and falls back to IPv4 link-local when DHCP is unavailable. It ignores RNDIS-provided gateways
 and DNS servers so the controller cannot take over the primary internet route.

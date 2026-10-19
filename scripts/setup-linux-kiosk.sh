@@ -112,15 +112,15 @@ apt-get install -y \
 getent group plugdev >/dev/null || groupadd --system plugdev
 usermod -aG video,render,dialout,plugdev "$KIOSK_USER"
 
-# NiBUS uses both the serial device and libusb for some adapters. Membership in dialout grants
-# access to /dev/ttyUSB*, while these rules grant the kiosk process write access to the underlying
-# USB device nodes required by libusb.
+# NiBUS reads USB descriptors through libusb while detecting serial adapters. On this dedicated
+# kiosk, grant plugdev access to all USB device nodes so NovaStar and other adapters do not need
+# a VID/PID allowlist. Serial device access still comes from membership in dialout.
+# Final assignments prevent later distribution rules from overriding the kiosk permissions.
 install -m 0644 /dev/stdin /etc/udev/rules.d/100-gmib.rules <<'EOF'
-SUBSYSTEM=="usb", ATTR{idVendor}=="0403", ATTR{idProduct}=="6001", GROUP="plugdev", MODE="0660"
-SUBSYSTEM=="usb", ATTR{idVendor}=="0403", ATTR{idProduct}=="6015", GROUP="plugdev", MODE="0660"
+SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", GROUP:="plugdev", MODE:="0660"
 EOF
 udevadm control --reload-rules
-udevadm trigger --subsystem-match=usb --attr-match=idVendor=0403
+udevadm trigger --subsystem-match=usb --property-match=DEVTYPE=usb_device
 
 install -d -m 0755 /usr/local/lib
 cc -shared -fPIC -O2 -Wall -Wextra \
