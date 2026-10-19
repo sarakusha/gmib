@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [5.6.8](https://github.com/sarakusha/gmib/compare/v5.6.7...v5.6.8) (2026-10-19)
+
+### Bug Fixes
+
+* preserve offline runtime and reconnect NiBUS sessions ([b4badf5](https://github.com/sarakusha/gmib/commit/b4badf5030b072d97d453a47d9431ce3246c288f))
+* use NiBUS 6.0.9 for reliable offline connections ([c7702e3](https://github.com/sarakusha/gmib/commit/c7702e31b5baa53715d4b9614f23dbc436b3d937))
 ## [5.6.7](https://github.com/sarakusha/gmib/compare/v5.6.6...v5.6.7) (2026-10-12)
 
 ### Bug Fixes
