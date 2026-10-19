@@ -25,6 +25,7 @@ import {
 } from './licenseClient';
 import { allowsCapability, parsePublicKeys, verifyLicense } from './licenseVerification';
 import localConfig from './localConfig';
+import { getOperatingSystem } from './operatingSystem';
 import machineIdPromise from './machineId';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:runtime-state`);
@@ -47,7 +48,7 @@ export type LicenseRetryResult = {
 
 const metadata = () => ({
   name: os.hostname().replace(/\.local$/, ''),
-  os: os.version(),
+  os: getOperatingSystem(),
   version: import.meta.env.VITE_APP_VERSION,
 });
 

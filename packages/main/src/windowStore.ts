@@ -22,6 +22,7 @@ import { decodeLegacyLicense } from './legacyLicense';
 import { applyLicensePresentation } from './licensePresentation';
 import { getLicenseState, getSessionLicensePresentation } from './licenseState';
 import localConfig from './localConfig';
+import { getOperatingSystem } from './operatingSystem';
 import machineIdPromise from './machineId';
 import { getTabbedWindowById } from './tabbedWindow';
 
@@ -79,7 +80,7 @@ const knockKnock = async (params: GmibWindowParams): Promise<void> => {
     name: os.hostname().replace(/\.local$/, ''),
     deviceId: machineId,
     version: import.meta.env.VITE_APP_VERSION,
-    os: os.version(),
+    os: getOperatingSystem(),
     knock: localConfig.get('knock'),
   };
 

@@ -51,6 +51,7 @@ import {
 } from './gmibScheduler';
 import { getSensors } from './history';
 import localConfig from './localConfig';
+import { getOperatingSystem } from './operatingSystem';
 import {
   getAnnouncedLicenseDocument,
   getLicenseState,
@@ -1037,7 +1038,7 @@ api.post('/activate', async (req, res) => {
     name,
     deviceId: await machineId,
     version: import.meta.env.VITE_APP_VERSION,
-    os: os.version(),
+    os: getOperatingSystem(),
   };
   // debug(`activate: ${JSON.stringify(data)}`);
   try {

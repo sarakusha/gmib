@@ -21,6 +21,7 @@ vi.mock('../src/localConfig', () => ({
 }));
 vi.mock('../src/legacyLicense', () => ({ decodeLegacyLicense: () => mocks.legacy }));
 vi.mock('../src/machineId', () => ({ default: Promise.resolve('a'.repeat(64)) }));
+vi.mock('../src/operatingSystem', () => ({ getOperatingSystem: () => 'Ubuntu 24.04.3 LTS' }));
 vi.mock('../src/licenseClient', () => ({
   accessDeniedMessage: vi.fn(() => 'denied'),
   requestLicenseActivation: mocks.requestLicenseActivation,
@@ -149,6 +150,10 @@ describe('main license retry', () => {
       relaunchRequired: true,
     });
     expect(mocks.requestLicenseRefresh).toHaveBeenCalledTimes(1);
+    expect(mocks.requestLicenseRefresh).toHaveBeenCalledWith(
+      signedLicense,
+      expect.objectContaining({ os: 'Ubuntu 24.04.3 LTS' }),
+    );
   });
 
   it('boots an active signed license without contacting the server', async () => {
@@ -246,6 +251,9 @@ describe('main license retry', () => {
     const service = await import('../src/licenseState');
     await service.bootstrapLicense();
     await vi.advanceTimersByTimeAsync(0);
+    expect(mocks.requestLicenseActivation).toHaveBeenCalledWith(
+      expect.objectContaining({ os: 'Ubuntu 24.04.3 LTS' }),
+    );
     expect(service.getLicenseState()).toMatchObject({
       status: 'active',
       plan: 'standard',
