@@ -21,9 +21,10 @@ const initialize = async (): Promise<boolean> => {
             'getRemoteCredentials',
             `http://${host}:${port + 1}/api/identifier`,
           )
-    ) as { identifier?: string; apiSecret?: Uint8Array } | null;
+    ) as { identifier?: string; remoteIdentifier?: string; apiSecret?: Uint8Array } | null;
     if (response) {
       credentials.identifier = response.identifier;
+      credentials.remoteIdentifier = response.remoteIdentifier;
       credentials.apiSecret =
         response.apiSecret instanceof Uint8Array
           ? Buffer.from(
@@ -42,7 +43,10 @@ const initialize = async (): Promise<boolean> => {
 
 export const getSecret = () => credentials.apiSecret?.toString('base64');
 
-export const setSecret = (apiSecret: bigint | null, identifier = credentials.identifier) => {
+export const setSecret = (
+  apiSecret: bigint | null,
+  identifier = credentials.remoteIdentifier ?? credentials.identifier,
+) => {
   ipcRenderer.send('setRemoteSecret', identifier, apiSecret);
   if (apiSecret) credentials.apiSecret = srpSessionKeyToBuffer(apiSecret);
 };

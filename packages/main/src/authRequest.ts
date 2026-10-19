@@ -9,11 +9,14 @@ import type { Credentials } from '/@common/Credentials';
 
 // const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:authRequest`);
 
-const waitAuth = () =>
+const waitAuth = (remoteIdentifier?: string) =>
   new Promise<boolean>(resolve => {
-    ipcMain.once('setRemoteSecret', (_e, remoteSecret) => {
-      resolve(!!remoteSecret);
-    });
+    const onSecret = (_e: Electron.IpcMainEvent, identifier: string, apiSecret: bigint | null) => {
+      if (remoteIdentifier && identifier !== remoteIdentifier) return;
+      ipcMain.off('setRemoteSecret', onSecret);
+      resolve(Boolean(apiSecret));
+    };
+    ipcMain.on('setRemoteSecret', onSecret);
   });
 
 type Props = {
@@ -46,7 +49,7 @@ const authRequest = async ({
     let credentials: Credentials | undefined;
     credentials = await getRemoteCredentials(`${baseUrl}/identifier`);
     if (credentials && !credentials.apiSecret) {
-      if (!(await waitAuth())) return undefined;
+      if (!(await waitAuth(credentials.remoteIdentifier))) return undefined;
       credentials = await getRemoteCredentials(`${baseUrl}/identifier`);
     }
     if (!credentials?.apiSecret || !credentials?.identifier) return undefined;

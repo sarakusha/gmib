@@ -1,1 +1,5 @@
-export type Credentials = { identifier?: string; apiSecret?: Buffer };
+export type Credentials = {
+  identifier?: string;
+  remoteIdentifier?: string;
+  apiSecret?: Buffer;
+};

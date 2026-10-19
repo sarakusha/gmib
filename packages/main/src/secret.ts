@@ -22,6 +22,7 @@ const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:secret`);
 
 const isecrets = new Map<string, Buffer>();
 const osecrets = new Map<string, Buffer>();
+const pendingOutgoingSecrets = new Map<string, Promise<unknown>>();
 
 const decodeIncomingSecret = (value: string): { secret: Buffer; revision: number } => {
   const match = value.match(/^v1:(\d+):(.+)$/);
@@ -75,7 +76,7 @@ export const clearIncomingSecrets = async (): Promise<void> => {
   isecrets.clear();
 };
 
-export const setOutgoingSecret = promisifyRun(
+const setOutgoingSecretImpl = promisifyRun(
   `INSERT INTO osecret (id, secret) VALUES ($id, $secret)
     ON CONFLICT(id) DO UPDATE SET secret=$secret`,
   (id: string, secret: bigint) => ({
@@ -83,6 +84,25 @@ export const setOutgoingSecret = promisifyRun(
     $secret: Buffer.from(secret.toString(16), 'hex').toString('base64'),
   }),
 );
+
+export const setOutgoingSecret = (id: string, secret: bigint): Promise<unknown> => {
+  // First-login HTTP requests must not overtake the asynchronous SRP key write.
+  // Serialize replacements for the same host as well, so an older write cannot win.
+  const previous = pendingOutgoingSecrets.get(id) ?? Promise.resolve();
+  const write = previous
+    .catch(() => undefined)
+    .then(async () => {
+      const result = await setOutgoingSecretImpl(id, secret);
+      osecrets.set(id, srpSessionKeyToBuffer(secret));
+      return result;
+    });
+  pendingOutgoingSecrets.set(id, write);
+  const cleanup = (): void => {
+    if (pendingOutgoingSecrets.get(id) === write) pendingOutgoingSecrets.delete(id);
+  };
+  void write.then(cleanup, cleanup);
+  return write;
+};
 
 export const getIncomingSecret = async (id: string) => {
   return (await getIncomingSecretWithRevision(id))?.secret;
@@ -99,8 +119,14 @@ export const getIncomingSecretWithRevision = async (id: string) => {
   return { secret: stored.secret, revision: revisionAfter };
 };
 
-export const getOutgoingSecret = async (id: string) =>
-  osecrets.get(id) ?? (await getOutgoingSecretImpl(id))?.secret;
+export const getOutgoingSecret = async (id: string) => {
+  while (pendingOutgoingSecrets.has(id)) await pendingOutgoingSecrets.get(id);
+  const stored = osecrets.get(id) ?? (await getOutgoingSecretImpl(id))?.secret;
+  // Login can arrive while the database read is in flight. Prefer the committed
+  // key from that login even if the read captured an older database snapshot.
+  while (pendingOutgoingSecrets.has(id)) await pendingOutgoingSecrets.get(id);
+  return osecrets.get(id) ?? stored;
+};
 
 const secret = randomBytes(48);
 
@@ -112,6 +138,7 @@ export const getRemoteCredentials = async (url: string): Promise<Credentials | u
     const remote = await response.text();
     return {
       identifier: localConfig.get('identifier'),
+      remoteIdentifier: remote,
       apiSecret: await getOutgoingSecret(remote),
     };
   } catch (error) {
@@ -127,7 +154,11 @@ void app.whenReady().then(() => {
     apiSecret: secret,
   }));
   ipcMain.on('setRemoteSecret', (_, id: string, apiSecret: bigint | null) => {
-    if (apiSecret) void setOutgoingSecret(id, apiSecret);
+    if (apiSecret) {
+      void setOutgoingSecret(id, apiSecret).catch(() => {
+        debug('Failed to save remote authentication credentials');
+      });
+    }
   });
 });
 
