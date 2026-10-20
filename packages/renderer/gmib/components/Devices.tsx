@@ -18,7 +18,8 @@ import {
 } from '@mui/material';
 import type { Theme } from '@mui/material/styles';
 import { css, styled } from '@mui/material/styles';
-import React, { useCallback, useMemo } from 'react';
+import { useSnackbar } from 'notistack';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { TransitionGroup } from 'react-transition-group';
 
 import { useDiscoverMutation, useNovastars } from '../api/novastar';
@@ -110,21 +111,44 @@ const StyledLanIcon = styled(LanIcon)`
 
 const Devices: React.FC = () => {
   const dispatch = useDispatch();
+  const { enqueueSnackbar } = useSnackbar();
   const devices = useSelector(selectAllDevicesWithParent);
   const current = useSelector(selectCurrentDeviceId);
   const { data: addresses = [] } = useGetAddressesQuery();
   const tab = useSelector(selectCurrentTab);
-  const { novastars = [] } = useNovastars(); // useSelector(selectAllNovastars);
-  const [discoverNovastar, discoveryState] = useDiscoverMutation();
+  const { novastars = [], refetch: refetchNovastars, isUninitialized } = useNovastars();
+  const [discoverNovastar] = useDiscoverMutation();
+  const reloadInProgress = useRef(false);
+  const [reloading, setReloading] = useState(false);
   // const [, setAccordion] = useAccordion();
   const reloadHandler = useCallback<React.EventHandler<React.BaseSyntheticEvent<Event>>>(
     e => {
       e.stopPropagation();
-      if (discoveryState.isLoading) return;
-      window.nibus.reloadDevices();
-      void discoverNovastar();
+      if (reloadInProgress.current) return;
+      reloadInProgress.current = true;
+      setReloading(true);
+      void (async () => {
+        try {
+          window.nibus.reloadDevices();
+        } catch {
+          enqueueSnackbar('Не удалось повторить поиск устройств NiBUS', { variant: 'error' });
+        }
+        try {
+          await discoverNovastar().unwrap();
+        } catch {
+          enqueueSnackbar('Не удалось повторить поиск NovaStar/Taurus', { variant: 'error' });
+        }
+        try {
+          if (!isUninitialized) await refetchNovastars().unwrap();
+        } catch {
+          enqueueSnackbar('Не удалось обновить список NovaStar/Taurus', { variant: 'error' });
+        } finally {
+          reloadInProgress.current = false;
+          setReloading(false);
+        }
+      })();
     },
-    [discoverNovastar, discoveryState.isLoading],
+    [discoverNovastar, enqueueSnackbar, isUninitialized, refetchNovastars],
   );
   // if (!current && (devices.length > 0 || novastars.length > 0)) {
   //   dispatch(setCurrentDevice(devices[0]?.id ?? novastars[0]?.path));
@@ -151,7 +175,7 @@ const Devices: React.FC = () => {
         <Box
           role="button"
           tabIndex={0}
-          aria-disabled={discoveryState.isLoading}
+          aria-disabled={reloading}
           title="Повторить поиск"
           onClick={reloadHandler}
           onKeyDown={e => {
@@ -173,15 +197,11 @@ const Devices: React.FC = () => {
             },
           }}
         >
-          {discoveryState.isLoading ? (
-            <CircularProgress size={24} />
-          ) : (
-            <ReloadIcon fontSize="small" />
-          )}
+          {reloading ? <CircularProgress size={24} /> : <ReloadIcon fontSize="small" />}
         </Box>
       </Box>
     ),
-    [discoveryState.isLoading, reloadHandler],
+    [reloading, reloadHandler],
   );
   const items = getItems(addresses, devices);
   const hasDevices = devices.length + novastars.length > 0;

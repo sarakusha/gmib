@@ -26,6 +26,7 @@ import baseQuery from '../../common/authBaseQuery';
 import createDebouncedAsyncThunk from '../../common/createDebouncedAsyncThunk';
 import schedulerApi from './scheduler';
 import screenApi from './screens';
+import { connectNovastarEvents } from './novastarConnection';
 import type { AppDispatch, AppThunk, AppThunkConfig, RootState } from '../store';
 import {
   setBroadcastDetected,
@@ -366,10 +367,8 @@ export const {
 
 export const sse: Middleware = api => {
   const { getState, dispatch } = api as MiddlewareAPI<AppDispatch, RootState>;
-  const socket = new WebSocket(`ws://${host}:${+port + 1}`);
-  socket.onopen = () => socket.send(JSON.stringify({ sourceId: 0 }));
   const evtSource = new EventTarget();
-  socket.onmessage = (e: MessageEvent<string>) => {
+  const onMessage = (e: MessageEvent<string>) => {
     try {
       const msg: unknown = JSON.parse(e.data);
       if (
@@ -540,6 +539,34 @@ export const sse: Middleware = api => {
       console.error(`error while parse args: ${(err as Error).message}`);
     }
   });
+  let disposed = false;
+  const disconnect = connectNovastarEvents(`ws://${host}:${+port + 1}`, {
+    onMessage,
+    onOpen: () => {
+      void initializeNovastar.then(async enabled => {
+        if (!enabled || disposed) return;
+        // RTK Query deduplicates even forced requests while a query is pending.
+        // Let the pre-reconnect request settle before replacing its snapshot.
+        await dispatch(novastarApi.util.getRunningQueryThunk('getNovastars', undefined));
+        if (disposed) return;
+        // Reconnecting the event stream does not replay missed add/remove events.
+        // Force a fresh snapshot without adding a permanent query subscription.
+        void dispatch(
+          novastarApi.endpoints.getNovastars.initiate(undefined, {
+            subscribe: false,
+            forceRefetch: true,
+          }),
+        );
+      });
+    },
+  });
+  const dispose = () => {
+    disposed = true;
+    disconnect();
+    window.removeEventListener('pagehide', dispose);
+  };
+  window.addEventListener('pagehide', dispose, { once: true });
+  import.meta.hot?.dispose(dispose);
   return next => action => next(action);
 };
 
