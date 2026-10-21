@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [5.6.9](https://github.com/sarakusha/gmib/compare/v5.6.8...v5.6.9) (2026-10-21)
+
+### Bug Fixes
+
+* grant kiosk plugdev access to all USB devices ([32b13dd](https://github.com/sarakusha/gmib/commit/32b13dd46f74316e2f433d267a61e9e054591cf3))
+* report OS product versions in license metadata ([b717d6a](https://github.com/sarakusha/gmib/commit/b717d6a36d2e9d9564456fa3b926588108975328))
+* restore NovaStar device list after reconnect ([46eb5d3](https://github.com/sarakusha/gmib/commit/46eb5d393514dee39ace11446d9ed5fe2832ad82))
+* stage kiosk launcher during ISO installation ([c9b8c98](https://github.com/sarakusha/gmib/commit/c9b8c984caaa4d87f430f8c3e22f7eec31d50a99))
+* wait for remote login secret before authenticated requests ([59881d0](https://github.com/sarakusha/gmib/commit/59881d021c4378794f7fae84adba772b085aa6db))
 ## [5.6.8](https://github.com/sarakusha/gmib/compare/v5.6.7...v5.6.8) (2026-10-19)
 
 ### Bug Fixes
