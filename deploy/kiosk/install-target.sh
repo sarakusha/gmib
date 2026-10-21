@@ -105,7 +105,8 @@ install -m 0755 -o "$KIOSK_USER" -g "$KIOSK_GROUP" \
 
 install -d -m 0755 /usr/local/libexec/gmib-kiosk
 install -m 0644 "$PAYLOAD_DIR/gmib-hide-cursor.c" /usr/local/libexec/gmib-kiosk/
-install -m 0755 "$PAYLOAD_DIR/setup-linux-kiosk.sh" /usr/local/libexec/gmib-kiosk/
+install -m 0755 "$PAYLOAD_DIR/setup-linux-kiosk.sh" \
+  "$PAYLOAD_DIR/gmib-kiosk-launch.sh" /usr/local/libexec/gmib-kiosk/
 /usr/local/libexec/gmib-kiosk/setup-linux-kiosk.sh \
   --user "$KIOSK_USER" \
   --executable /opt/gmib/gmib.AppImage \
