@@ -106,7 +106,7 @@ describe('remote authenticated requests', () => {
 
     const { request } = await startRequest();
     await vi.waitFor(() => expect(fixtures.readStarted).toHaveBeenCalledWith(remoteId));
-    expect(fixtures.ipcMain?.listenerCount('setRemoteSecret')).toBe(1);
+    expect(fixtures.ipcMain?.listenerCount('setRemoteSecret')).toBe(2);
 
     fixtures.ipcMain?.emit('setRemoteSecret', null, remoteId, testSecret);
     await vi.waitFor(() => expect(fixtures.outgoing.has(remoteId)).toBe(true));
@@ -155,6 +155,80 @@ describe('remote authenticated requests', () => {
         Number(headers.get('x-ni-timestamp')),
       ),
     );
+  });
+
+  it.each([false, true])(
+    'retries a rejected saved key after login, including login before the 401 response (%s)',
+    async loginBeforeResponse => {
+      fixtures.outgoing.set(remoteId, Buffer.from('deadbeef', 'hex').toString('base64'));
+      let rejectSavedKey: (() => void) | undefined;
+      const rejected = new Promise<void>(resolve => {
+        rejectSavedKey = resolve;
+      });
+      let requests = 0;
+      fixtures.fetch.mockImplementation(async (url: string) => {
+        if (url === identifierUrl) return new Response(remoteId);
+        if (url === announceUrl && requests++ === 0) {
+          await rejected;
+          return new Response('', { status: 401 });
+        }
+        if (url === announceUrl) return new Response('verified remote license');
+        throw new Error(`Unexpected request: ${url}`);
+      });
+      const { request } = await startRequest();
+      await vi.waitFor(() => expect(signedFetches()).toHaveLength(1));
+      if (!loginBeforeResponse) {
+        rejectSavedKey?.();
+        await new Promise<void>(resolve => setImmediate(resolve));
+      }
+      fixtures.ipcMain?.emit('setRemoteSecret', null, remoteId, testSecret);
+      await vi.waitFor(() => expect(fixtures.writeStarted).toHaveBeenCalledWith(remoteId));
+      rejectSavedKey?.();
+
+      const response = await request;
+      expect(await response?.text()).toBe('verified remote license');
+      expect(signedFetches()).toHaveLength(2);
+      const headers = new Headers(signedFetches()[1][1].headers);
+      expect(headers.get('x-ni-signature')).toBe(
+        generateSignature(
+          Buffer.from(testSecret.toString(16), 'hex'),
+          'GET',
+          announceUrl,
+          Number(headers.get('x-ni-timestamp')),
+        ),
+      );
+      expect(fixtures.ipcMain?.listenerCount('setRemoteSecret')).toBe(1);
+    },
+  );
+
+  it('returns a rejected mutation without waiting for login or retrying it', async () => {
+    fixtures.outgoing.set(remoteId, Buffer.from('deadbeef', 'hex').toString('base64'));
+    fixtures.fetch.mockImplementation(async (url: string) =>
+      url === identifierUrl ? new Response(remoteId) : new Response('', { status: 401 }),
+    );
+    const { default: authRequest } = await import('../src/authRequest');
+    const response = await authRequest({
+      api: '/announce',
+      method: 'POST',
+      host: 'remote-host',
+      port: 9002,
+    });
+    expect(response?.status).toBe(401);
+    expect(signedFetches()).toHaveLength(1);
+    expect(fixtures.ipcMain?.listenerCount('setRemoteSecret')).toBe(1);
+  });
+
+  it('stops waiting for a rejected saved key when login is cancelled', async () => {
+    fixtures.outgoing.set(remoteId, Buffer.from('deadbeef', 'hex').toString('base64'));
+    fixtures.fetch.mockImplementation(async (url: string) =>
+      url === identifierUrl ? new Response(remoteId) : new Response('', { status: 401 }),
+    );
+    const { request } = await startRequest();
+    await vi.waitFor(() => expect(signedFetches()).toHaveLength(1));
+    fixtures.ipcMain?.emit('setRemoteSecret', null, remoteId, null);
+    await expect(request).resolves.toBeUndefined();
+    expect(signedFetches()).toHaveLength(1);
+    expect(fixtures.ipcMain?.listenerCount('setRemoteSecret')).toBe(1);
   });
 
   it('does not fetch announce when login is cancelled', async () => {
