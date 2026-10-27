@@ -21,6 +21,7 @@ const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:db`);
 
 const dbPath = path.join(app.getPath('userData'), 'db.sqlite3');
 
+let openError: Error | undefined;
 const db = new Database(dbPath, createTables);
 const pendingOperations = new Set<Promise<unknown>>();
 
@@ -35,7 +36,9 @@ let closePromise: Promise<void> | undefined;
 let isQuitting = false;
 let isClosed = false;
 
-db.exec('PRAGMA foreign_keys = ON');
+db.exec('PRAGMA foreign_keys = ON', error => {
+  if (error) dbDeferred.reject(error);
+});
 
 const beginTransactionImpl = promisify(db.exec.bind(db, 'BEGIN TRANSACTION'));
 const commitTransactionImpl = promisify(db.exec.bind(db, 'COMMIT'));
@@ -51,6 +54,8 @@ const DATETIME_FORMAT = 'YYYY-MM-DD HH:mm:ss.SSS';
 const dbDeferred = new Deferred();
 
 export const dbReady = dbDeferred.promise;
+// Observe startup failure even when no producer has requested the database yet.
+void dbReady.catch(error => debug(`database initialization failed: ${error}`));
 
 const finalizeStatement = (statement: Statement): Promise<void> =>
   new Promise(resolve => {
@@ -69,21 +74,50 @@ const trackOperation = <T>(operation: Promise<T>): Promise<T> => {
   return operation;
 };
 
-const useStatement = <T>(statement: Statement, operation: Promise<T>): Promise<T> =>
-  trackOperation(operation.finally(() => finalizeStatement(statement)));
+const useStatement = <T>(
+  sql: string,
+  operation: (statement: Statement) => Promise<T>,
+): Promise<T> =>
+  trackOperation(
+    (async () => {
+      // Startup producers may run before the database open callback creates the schema.
+      await dbReady;
+      const statement = await new Promise<Statement>((resolve, reject) => {
+        const prepared = db.prepare(sql, error => {
+          // A failed prepare never calls queued get/all/run callbacks. Reject here so
+          // shutdown cannot wait forever for an operation that will never complete.
+          if (error) reject(error);
+          else resolve(prepared);
+        });
+      });
+      try {
+        return await operation(statement);
+      } finally {
+        await finalizeStatement(statement);
+      }
+    })(),
+  );
 
 const closeDatabaseImpl = async (): Promise<void> => {
-  await Promise.all([...beforeCloseCallbacks].map(async callback => callback()));
+  const results = await Promise.allSettled(
+    [...beforeCloseCallbacks].map(async callback => callback()),
+  );
+  // Failed initialization or a producer must not prevent releasing the connection.
+  results.push(...(await Promise.allSettled([dbReady])));
   while (pendingOperations.size > 0) {
     await Promise.allSettled([...pendingOperations]);
   }
 
+  // sqlite3 does not invoke close callbacks when opening never succeeded.
+  if (openError) throw openError;
   await new Promise<void>((resolve, reject) => {
     db.close(error => {
       if (error) reject(error);
       else resolve();
     });
   });
+  const failed = results.find(result => result.status === 'rejected');
+  if (failed?.status === 'rejected') throw failed.reason;
 };
 
 export const closeDatabase = (): Promise<void> => (closePromise ??= closeDatabaseImpl());
@@ -150,7 +184,18 @@ const ensurePlayerMappingZIndex = async (): Promise<void> => {
   }
 };
 
-function createTables(): void {
+const schemaError = (table: string, error: Error | null): void => {
+  if (!error) return;
+  debug(`error while create ${table}: ${error}`);
+  dbDeferred.reject(error);
+};
+
+function createTables(error: Error | null): void {
+  if (error) {
+    openError = error;
+    dbDeferred.reject(error);
+    return;
+  }
   db.serialize(() => {
     db.run(
       `CREATE TABLE IF NOT EXISTS telemetry (
@@ -161,7 +206,7 @@ function createTables(): void {
             temperature INT (1),
             PRIMARY KEY ( timestamp, address, x, y )
         )`,
-      err => err && debug(`error while create telemetry ${err}`),
+      err => schemaError('telemetry', err),
     );
     db.run(
       `CREATE TABLE IF NOT EXISTS sensors (
@@ -171,7 +216,7 @@ function createTables(): void {
             temperature INT (1),
             PRIMARY KEY ( timestamp, address )
         )`,
-      err => err && debug(`error while create sensors ${err}`),
+      err => schemaError('sensors', err),
     );
     /** Были опечатки в названиях полей в старых версиях БД */
     void checkColumnExists('sensors', 'temperature', 'INT (1)');
@@ -182,7 +227,7 @@ function createTables(): void {
                 brightness INT(1) NOT NULL,
                 actual INT (1)
           )`,
-      err => err && debug(`error while create brightness ${err}`),
+      err => schemaError('brightness', err),
     );
 
     db.run(
@@ -209,7 +254,7 @@ function createTables(): void {
             upload_time TEXT,
             thumbnail TEXT
       )`,
-      err => err && debug(`error while create media ${err}`),
+      err => schemaError('media', err),
     );
 
     db.run(
@@ -220,7 +265,7 @@ function createTables(): void {
             creation_time TEXT,
             last_used TEXT
         )`,
-      err => err && debug(`error while create playlist ${err}`),
+      err => schemaError('playlist', err),
     );
 
     db.run(
@@ -237,7 +282,7 @@ function createTables(): void {
             FOREIGN KEY (media_md5)
                 REFERENCES media (md5) ON DELETE RESTRICT
         )`,
-      err => err && debug(`error while create playlistToMedia ${err}`),
+      err => schemaError('playlistToMedia', err),
     );
 
     db.run(
@@ -257,7 +302,7 @@ function createTables(): void {
           FOREIGN KEY (player)
             REFERENCES player (id) ON DELETE CASCADE
         )`,
-      err => err && debug(`error while create playerMapping: ${err}`),
+      err => schemaError('playerMapping', err),
     );
     void checkColumnExists('playerMapping', 'objectFit', "TEXT DEFAULT 'cover'");
     void ensurePlayerMappingZIndex();
@@ -295,7 +340,7 @@ function createTables(): void {
             zIndex INTEGER DEFAULT 0,
             brightness INTEGER
         )`,
-      err => err && debug(`error while create screen ${err}`),
+      err => schemaError('screen', err),
     );
     void checkColumnExists('screen', 'brightness', 'INTEGER default 60');
     void checkColumnExists('screen', 'zIndex', 'INTEGER DEFAULT 0');
@@ -306,7 +351,7 @@ function createTables(): void {
             FOREIGN KEY (screenId)
                 REFERENCES screen (id) ON DELETE CASCADE
         )`,
-      err => err && debug(`error while create address ${err}`),
+      err => schemaError('address', err),
     );
 
     db.run(
@@ -315,7 +360,7 @@ function createTables(): void {
         secret TEXT NOT NULL,
         created INTEGER NOT NULL
       )`,
-      err => err && debug(`error while create isecret: ${err}`),
+      err => schemaError('isecret', err),
     );
 
     db.run(
@@ -323,7 +368,7 @@ function createTables(): void {
         id TEXT NOT NULL PRIMARY KEY,
         secret TEXT NOT NULL
       )`,
-      err => err && debug(`error while create isecret: ${err}`),
+      err => schemaError('isecret', err),
     );
 
     db.run(
@@ -335,7 +380,7 @@ function createTables(): void {
         preload TEXT,
         userAgent TEXT
       )`,
-      err => err && debug(`error while create pages: ${err}`),
+      err => schemaError('pages', err),
     );
     db.run(
       `CREATE TABLE IF NOT EXISTS player (
@@ -350,7 +395,7 @@ function createTables(): void {
                 REFERENCES playlist (id) ON DELETE SET NULL
         )`,
       err => {
-        if (err) debug(`error while create player ${err}`);
+        schemaError('player', err);
       },
     );
     db.run(
@@ -387,7 +432,7 @@ function createTables(): void {
           REFERENCES page (id) ON DELETE SET NULL
       )`,
       err => {
-        if (err) debug(`error while create schedulerJob: ${err}`);
+        if (err) schemaError('schedulerJob', err);
         else {
           void checkColumnExists('schedulerJob', 'priority', 'INTEGER NOT NULL DEFAULT 0').then(
             () => dbDeferred.resolve(),
@@ -395,7 +440,11 @@ function createTables(): void {
         }
       },
     );
-    db.all('SELECT typeof(current) as current_type FROM player LIMIT 1', (_, rows) => {
+    db.all('SELECT typeof(current) as current_type FROM player LIMIT 1', (err, rows) => {
+      if (err) {
+        dbDeferred.reject(err);
+        return;
+      }
       const [first] = rows;
       if (
         first &&
@@ -428,9 +477,7 @@ export const promisifyGet = <P extends (...params: any[]) => any, R>(
   decoder: Decoder<R>,
 ): ((...params: Parameters<P>) => Promise<R | undefined>) => {
   return (...params) => {
-    const statement = db.prepare(sql);
-    return useStatement(
-      statement,
+    return useStatement(sql, statement =>
       promisify(statement.get.bind(statement))(encoder(...params)),
     ).then(result => (decoder ? result && decoder(result) : result) as R);
   };
@@ -442,9 +489,7 @@ export const promisifyAll = <P extends (...args: any[]) => any, R>(
   decoder?: Decoder<R>,
 ): ((...params: Parameters<P>) => Promise<R[]>) => {
   return (...params) => {
-    const statement = db.prepare(sql);
-    return useStatement(
-      statement,
+    return useStatement(sql, statement =>
       promisify(statement.all.bind(statement))(encoder(...params)),
     ).then(result => (decoder ? (result as NullableOptional).map(decoder) : result) as R[]);
   };
@@ -455,15 +500,15 @@ export const promisifyRun = <P extends (...args: any[]) => any>(
   encoder?: P,
 ): ((...params: Parameters<P>) => Promise<{ changes: number; lastID: number }>) => {
   return (...params) => {
-    const statement = db.prepare(sql);
     return useStatement(
-      statement,
-      new Promise((resolve, reject) => {
-        statement.run(encoder ? encoder(...params) : params, function callback(err) {
-          if (err) reject(err);
-          else resolve({ lastID: this.lastID, changes: this.changes });
-        });
-      }),
+      sql,
+      statement =>
+        new Promise((resolve, reject) => {
+          statement.run(encoder ? encoder(...params) : params, function callback(err) {
+            if (err) reject(err);
+            else resolve({ lastID: this.lastID, changes: this.changes });
+          });
+        }),
     );
   };
 };

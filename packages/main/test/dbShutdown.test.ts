@@ -20,11 +20,53 @@ vi.mock('electron', () => ({
 vi.mock('electron-log', () => ({
   default: { debug: vi.fn(), error: vi.fn(), info: vi.fn(), log: vi.fn(), warn: vi.fn() },
 }));
-import { closeDatabase, dbReady, onBeforeDatabaseClose, promisifyRun } from '../src/db';
+import {
+  closeDatabase,
+  dbReady,
+  onBeforeDatabaseClose,
+  promisifyAll,
+  promisifyGet,
+  promisifyRun,
+} from '../src/db';
+
+// Mirror history cleanup at module initialization, before a new DB creates its tables.
+const startupCleanup = Promise.all([
+  promisifyRun('DELETE FROM brightness WHERE timestamp < ?')(0),
+  promisifyRun('DELETE FROM sensors WHERE timestamp < ?')(0),
+  promisifyGet(
+    'SELECT COUNT(*) AS count FROM brightness',
+    () => [],
+    row => row.count,
+  )(),
+  promisifyAll('SELECT * FROM sensors', () => [])(),
+]);
 
 afterAll(async () => {
   await closeDatabase();
   await fs.rm(mocks.root, { recursive: true, force: true });
+});
+
+it('queues first-run history queries until the schema is ready', async () => {
+  const [, , count, rows] = await startupCleanup;
+  expect(count).toBe(0);
+  expect(rows).toEqual([]);
+});
+
+it('rejects preparation and execution errors without blocking later shutdown', async () => {
+  await expect(promisifyRun('DELETE FROM missing_table')()).rejects.toThrow('no such table');
+  await expect(
+    promisifyGet(
+      'SELECT * FROM missing_table',
+      () => [],
+      row => row,
+    )(),
+  ).rejects.toThrow('no such table');
+  await expect(promisifyAll('SELECT * FROM missing_table', () => [])()).rejects.toThrow(
+    'no such table',
+  );
+  await expect(
+    promisifyRun('INSERT INTO brightness (timestamp, brightness) VALUES (?, ?)')(null, 10),
+  ).rejects.toThrow('NOT NULL constraint failed');
 });
 
 it('waits for producer shutdown and its final SQL write, even on repeated before-quit', async () => {
