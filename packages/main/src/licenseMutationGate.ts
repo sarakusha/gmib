@@ -8,6 +8,7 @@ const licensedMutationPaths = new Set([
   '/media',
   '/playlist',
   '/player',
+  '/player-configuration',
   '/mapping',
   '/pages',
   '/scheduler',

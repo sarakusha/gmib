@@ -12,7 +12,7 @@ const enum MappingFlags {
   AlwaysOnTop = 1 << 4,
 }
 
-const toPlayerMapping = (row: NullableOptional): PlayerMapping => {
+export const toPlayerMapping = (row: NullableOptional): PlayerMapping => {
   const raw = removeNull(row) as Record<string, unknown> | null | undefined;
   const flags = (raw && (raw.flags as number)) || 0;
 
@@ -40,7 +40,9 @@ export const getPlayerMappings = promisifyAll(
   toPlayerMapping,
 );
 
-const playerMappingEncoder = (props: WithRequiredProp<Partial<PlayerMapping>, 'player'>) => ({
+export const playerMappingEncoder = (
+  props: WithRequiredProp<Partial<PlayerMapping>, 'player'>,
+) => ({
   $name: props.name,
   $player: props.player,
   $left: props.left ?? 0,
@@ -57,11 +59,10 @@ const playerMappingEncoder = (props: WithRequiredProp<Partial<PlayerMapping>, 'p
     (props.alwaysOnTop ? 0 : MappingFlags.AlwaysOnTop),
 });
 
-export const insertPlayerMapping = promisifyRun(
-  `INSERT INTO playerMapping (name, player, left, top, width, height, display, zIndex, shader, objectFit, flags)
-  VALUES ($name, $player, $left, $top, $width, $height, $display, $zIndex, $shader, $objectFit, $flags)`,
-  playerMappingEncoder,
-);
+export const insertPlayerMappingSql = `INSERT INTO playerMapping (name, player, left, top, width, height, display, zIndex, shader, objectFit, flags)
+  VALUES ($name, $player, $left, $top, $width, $height, $display, $zIndex, $shader, $objectFit, $flags)`;
+
+export const insertPlayerMapping = promisifyRun(insertPlayerMappingSql, playerMappingEncoder);
 
 export const deletePlayerMapping = promisifyRun(
   'DELETE FROM playerMapping WHERE id = ?',

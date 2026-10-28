@@ -27,6 +27,7 @@ import {
   promisifyAll,
   promisifyGet,
   promisifyRun,
+  withIsolatedDatabaseTransaction,
 } from '../src/db';
 
 // Mirror history cleanup at module initialization, before a new DB creates its tables.
@@ -76,6 +77,22 @@ it('waits for producer shutdown and its final SQL write, even on repeated before
   const pending = new Promise<void>(resolve => {
     release = resolve;
   });
+  let transactionEntered!: () => void;
+  const entered = new Promise<void>(resolve => {
+    transactionEntered = resolve;
+  });
+  const transaction = withIsolatedDatabaseTransaction('IMMEDIATE', async connection => {
+    await new Promise<void>((resolve, reject) => {
+      connection.run(
+        'INSERT INTO shutdown_test(value) VALUES (?)',
+        'isolated transaction',
+        error => (error ? reject(error) : resolve()),
+      );
+    });
+    transactionEntered();
+    await pending;
+  });
+  await entered;
   const producer = vi.fn(async () => {
     await pending;
     await promisifyRun('INSERT INTO shutdown_test(value) VALUES (?)')('saved before close');
@@ -90,6 +107,7 @@ it('waits for producer shutdown and its final SQL write, even on repeated before
   expect(producer).toHaveBeenCalledOnce();
   expect(mocks.quit).not.toHaveBeenCalled();
   release();
+  await transaction;
   await closeDatabase();
   // Let the quit handler finish its catch/finally chain.
   await new Promise<void>(resolve => setImmediate(resolve));
@@ -99,12 +117,15 @@ it('waits for producer shutdown and its final SQL write, even on repeated before
   expect(last.preventDefault).not.toHaveBeenCalled();
   const reopened = new Database(path.join(mocks.root, 'db.sqlite3'));
   try {
-    const row = await new Promise((resolve, reject) =>
-      reopened.get('SELECT value FROM shutdown_test', (error, value) =>
+    const rows = await new Promise((resolve, reject) =>
+      reopened.all('SELECT value FROM shutdown_test ORDER BY rowid', (error, value) =>
         error ? reject(error) : resolve(value),
       ),
     );
-    expect(row).toEqual({ value: 'saved before close' });
+    expect(rows).toEqual([{ value: 'isolated transaction' }, { value: 'saved before close' }]);
+    await expect(
+      withIsolatedDatabaseTransaction('DEFERRED', async () => undefined),
+    ).rejects.toThrow('Database is closing');
   } finally {
     await new Promise<void>((resolve, reject) =>
       reopened.close(error => (error ? reject(error) : resolve())),

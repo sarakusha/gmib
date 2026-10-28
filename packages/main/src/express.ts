@@ -9,6 +9,7 @@ import bodyParser from 'body-parser';
 
 import api, { mediaRoot } from './api';
 import { dbReady } from './db';
+import { playerConfigurationJson } from './playerConfigurationApi';
 import { app } from './server';
 import { localPluginApiHandler, pluginStaticHandler } from './pluginHost';
 
@@ -59,6 +60,9 @@ app.use('/plugins/:pluginId/api', (req, res, next) => {
   }
   bodyParser.json({ limit: '20mb' })(req, res, next);
 });
+// Parse the signed JSON body before API authentication, with a bounded limit
+// for configuration files. Other API requests retain their usual JSON limit.
+app.use('/api/player-configuration', playerConfigurationJson);
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 

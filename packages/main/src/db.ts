@@ -74,6 +74,52 @@ const trackOperation = <T>(operation: Promise<T>): Promise<T> => {
   return operation;
 };
 
+/**
+ * Transactions must own a connection: async operations on the shared connection
+ * could otherwise be committed or rolled back by an unrelated request.
+ * Keep the connection alive in the shutdown drain through COMMIT/ROLLBACK and close.
+ */
+export const withIsolatedDatabaseTransaction = <T>(
+  mode: 'DEFERRED' | 'IMMEDIATE',
+  operation: (connection: Database) => Promise<T>,
+): Promise<T> => {
+  if (closePromise) return Promise.reject(new Error('Database is closing'));
+  return trackOperation(
+    (async () => {
+      await dbReady;
+      const connection = await new Promise<Database>((resolve, reject) => {
+        const opened = new Database(dbPath, error => {
+          if (error) reject(error);
+          else resolve(opened);
+        });
+      });
+      const exec = (sql: string): Promise<void> =>
+        new Promise((resolve, reject) => {
+          connection.exec(sql, error => (error ? reject(error) : resolve()));
+        });
+      let inTransaction = false;
+      try {
+        connection.configure('busyTimeout', 5000);
+        await exec('PRAGMA foreign_keys = ON');
+        await exec(`BEGIN ${mode} TRANSACTION`);
+        inTransaction = true;
+        const result = await operation(connection);
+        await exec('COMMIT');
+        inTransaction = false;
+        return result;
+      } finally {
+        try {
+          if (inTransaction) await exec('ROLLBACK');
+        } finally {
+          await new Promise<void>((resolve, reject) => {
+            connection.close(error => (error ? reject(error) : resolve()));
+          });
+        }
+      }
+    })(),
+  );
+};
+
 const useStatement = <T>(
   sql: string,
   operation: (statement: Statement) => Promise<T>,

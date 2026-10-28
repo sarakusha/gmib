@@ -1,6 +1,7 @@
 export type FeatureName =
   | 'gmibScheduler'
   | 'playerEngine'
+  | 'playerConfiguration'
   | 'playerObjectFit'
   | 'playerScheduler'
   | 'playerSeek'
@@ -18,6 +19,7 @@ export type FeatureName =
 const minimumVersions: Record<FeatureName, string> = {
   gmibScheduler: '5.0.1',
   playerEngine: '4.11.0',
+  playerConfiguration: '5.6.10',
   playerObjectFit: '4.11.1',
   playerScheduler: '5.0.0',
   playerSeek: '4.12.0',

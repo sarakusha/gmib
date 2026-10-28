@@ -64,6 +64,7 @@ import { createLicenseSessionAssertion } from './licenseSessionAssertion';
 import { completeLicenseActivation } from './manualLicenseActivation';
 import { mountManagementSettingsApi } from './managementApi';
 import { mountManagementHostsApi } from './managementHostsApi';
+import { mountPlayerConfigurationApi } from './playerConfigurationApi';
 import machineId from './machineId';
 import updateMenu from './mainMenu';
 import {
@@ -320,6 +321,8 @@ mountApiAuth(api, {
 mountManagementSettingsApi(api);
 
 mountManagementHostsApi(api);
+
+mountPlayerConfigurationApi(api);
 
 mountAuthenticatedPluginApi(api);
 

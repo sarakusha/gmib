@@ -52,7 +52,7 @@ const toScreen = (result: NullableOptional): Omit<Screen, 'addresses'> => {
   };
 };
 
-const toPlayer = (result: NullableOptional): Player => {
+export const toPlayer = (result: NullableOptional): Player => {
   const { id, name, playlistId, current, width, height, flags } = removeNull(result);
   return {
     id,
@@ -120,7 +120,7 @@ const screenEncoder = (screen: Omit<Screen, 'id' | 'addresses'>) => {
   return res;
 };
 
-const playerEncoder = (player: Partial<Omit<Player, 'id'>>) => ({
+export const playerEncoder = (player: Partial<Omit<Player, 'id'>>) => ({
   $name: player.name,
   $playlistId: player.playlistId,
   $current: player.current,
@@ -283,10 +283,11 @@ export const deleteExtraPlayers = (screenId: number, validIds?: number[]) =>
 
 export type CreatePlayer = Partial<Omit<Player, 'id'>>;
 
-export const insertPlayer = promisifyRun(
-  `INSERT INTO player (name, playlistId, current, width, height, flags)
-   VALUES ($name, $playlistId, $current, $width, $height, $flags)`,
-  (player: CreatePlayer) => playerEncoder(player),
+export const insertPlayerSql = `INSERT INTO player (name, playlistId, current, width, height, flags)
+   VALUES ($name, $playlistId, $current, $width, $height, $flags)`;
+
+export const insertPlayer = promisifyRun(insertPlayerSql, (player: CreatePlayer) =>
+  playerEncoder(player),
 );
 
 export const updatePlayer = promisifyRun(

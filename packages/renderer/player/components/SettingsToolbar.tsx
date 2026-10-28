@@ -17,6 +17,7 @@ import { useDispatch } from '../store';
 import { setSettingsNode } from '../store/currentSlice';
 
 import Toolbar from './StyledToolbar';
+import ConfigurationButtons from './ConfigurationButtons';
 
 type Props = {
   group?: string;
@@ -70,6 +71,7 @@ const SettingsToolbar: React.FC<Props> = ({ size, group, id }) => {
   const openPlayerMappingDialog = usePlayerMappingDialog();
   return (
     <Toolbar>
+      <ConfigurationButtons size={size} />
       {group === 'players' && (
         <>
           <IconButton
