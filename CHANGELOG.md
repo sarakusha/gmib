@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [5.6.10](https://github.com/sarakusha/gmib/compare/v5.6.9...v5.6.10) (2026-10-28)
+
+### Features
+
+* import and export player configurations ([2772798](https://github.com/sarakusha/gmib/commit/27727984ea90312ca9c09c48b9cee8edd3b7bb0e))
+
+### Bug Fixes
+
+* disable main-process log IPC broadcasting ([527aef6](https://github.com/sarakusha/gmib/commit/527aef6fc9ec84a91688af1878eca4d104ac873e))
+* prevent first-run database errors from blocking kiosk restart ([38a570c](https://github.com/sarakusha/gmib/commit/38a570c5f3f812ccf40e3536de292a3b7d1147f4))
+* reload remote license after reauthentication ([26648b5](https://github.com/sarakusha/gmib/commit/26648b508ff6a9ea7db05162919084939bc9a87e))
 ## [5.6.9](https://github.com/sarakusha/gmib/compare/v5.6.8...v5.6.9) (2026-10-21)
 
 ### Bug Fixes
