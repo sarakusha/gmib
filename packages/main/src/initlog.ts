@@ -3,6 +3,9 @@ import log from 'electron-log';
 
 import config from './config';
 
+// The tab container has no renderer IPC context. Keep logs in the file instead
+// of broadcasting each main-process message to every BrowserWindow in dev.
+log.transports.ipc.level = false;
 log.initialize();
 log.transports.file.level = 'info';
 log.transports.file.fileName = `${import.meta.env.VITE_APP_NAME}.log`;
