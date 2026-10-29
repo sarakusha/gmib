@@ -135,7 +135,7 @@
     "eslint-config-prettier": "^10.1.8",
     "formik": "^2.4.9",
     "globals": "^17.13.0",
-    "happy-dom": "^20.11.1",
+    "happy-dom": "^21.0.4",
     "highcharts": "^13.1.1",
     "hotkeys-js": "^4.0.8",
     "iput": "^2.0.1",
@@ -162,7 +162,7 @@
     "typescript-eslint": "^8.72.1",
     "vite": "^8.3.5",
     "vite-plugin-checker": "^0.14.5",
-    "vitest": "^4.1.10"
+    "vitest": "^5.0.5"
   },
   "dependencies": {
     "@borewit/text-codec": "^0.2.2",
