@@ -204,8 +204,10 @@ export const initializePritunlClient = async ({
       const name = userPrefix ? `${userPrefix}-${nanoid(6)}` : nanoid(8);
       debug(`create pritunl user: ${name}`);
       userId = await createPritunlUser(orgId, name);
-      localConfig.set('pritunlUserId', userId);
-      userId && (await delay(30));
+      if (userId) {
+        localConfig.set('pritunlUserId', userId);
+        await delay(30);
+      }
     }
     if (!userId) {
       setTimeout(

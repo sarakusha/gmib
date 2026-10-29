@@ -24,7 +24,8 @@ void app.whenReady().then(() => {
   });
   ipcMain.handle('setLocalConfig', (_, name: unknown, value: unknown) => {
     if (!isRendererConfigKey(name)) throw new Error('Unsupported local configuration key');
-    localConfig.set(name, value);
+    // The schema validates the unknown IPC value before persisting it.
+    localConfig.set(name, value as Exclude<LocalConfig[typeof name], undefined>);
   });
 });
 
