@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [5.7.0](https://github.com/sarakusha/gmib/compare/v5.6.10...v5.7.0) (2026-10-29)
+
+### Bug Fixes
+
+* preserve playback events across process clock skew ([2c7e716](https://github.com/sarakusha/gmib/commit/2c7e71647cbe54d7c881dea0c347632736bf7557))
+
 ## [5.6.10](https://github.com/sarakusha/gmib/compare/v5.6.9...v5.6.10) (2026-10-28)
 
 ### Features
