@@ -38,6 +38,18 @@ existing compatibility thresholds without evidence. Check adjacent features for 
 Validate versions below the minimum, at the minimum, a newer version, and local operation.
 Keep the compatibility notes in `README.md` and built-in help synchronized when user-visible.
 
+## GitHub Release Notes
+
+Every GitHub release must include a concise, user-facing description in its Release notes,
+so users can understand what changed without opening `CHANGELOG.md`.
+Write the notes in Russian and summarize the actual changes since the previous release:
+new features, bug fixes, and important compatibility changes or upgrade requirements.
+Use `CHANGELOG.md` and the commits as sources, including relevant changes omitted by the
+changelog generator (for example, dependency upgrades with user-visible effects).
+Do not use only a changelog link or an unedited commit list as the release description.
+Prepare the notes in the draft release and verify that they are present and accurate before
+publication. Preserve the description when retrying builds or updating release assets.
+
 ## Commit Messages
 
 Use Conventional Commits for all commit messages.
