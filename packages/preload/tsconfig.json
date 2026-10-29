@@ -22,6 +22,7 @@
     "./common/*.ts",
     "./gmib/**/*.ts",
     "./player/**/*.ts",
+    "./remote/**/*.ts",
     "../../node_modules/@types/dom-mediacapture-transform/index.d.ts"
   ]
 }

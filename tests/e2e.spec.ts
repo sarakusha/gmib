@@ -4,7 +4,6 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, beforeAll, expect, test } from 'vitest';
-// import '../packages/preload/exposedInMainWorld';
 
 let electronApp: ElectronApplication;
 let mainPage: Page;

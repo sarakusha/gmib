@@ -66,22 +66,15 @@ const discoverScreenDevices = (): AppThunk => async (dispatch, getState) => {
     const needUpdate = new Set<number>();
     await asyncSerial(addresses, async address => {
       if (reAddress.test(address) && !deviceAddressExists(address)) {
-        const [timeout, info] = (await window.nibus.ping(address)) as [
-          number,
-          { type: number; owner?: string; version?: string },
-        ];
+        const [timeout, info] = await window.nibus.ping(address);
         if (
           timeout !== -1 &&
+          info !== undefined &&
           isSlaveMinihostOrMcdvi(info) &&
           info.owner &&
           !deviceAddressExists(address)
         ) {
-          window.nibus.createDevice(
-            info.owner,
-            address,
-            info.type,
-            info.version != null ? Number(info.version) : undefined,
-          );
+          window.nibus.createDevice(info.owner, address, info.type, info.version);
           await delay(5);
           screens &&
             screens

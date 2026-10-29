@@ -9,7 +9,6 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import 'typeface-roboto/index.css';
 import { Provider } from 'react-redux';
-import '../../preload/playerInMainWorld.d';
 // import * as Sentry from '@sentry/electron/renderer';
 
 import Html5DndProvider from '../common/Html5DndProvider';

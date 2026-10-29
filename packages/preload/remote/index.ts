@@ -1,5 +1,3 @@
-import { contextBridge } from 'electron';
-
 import debugFactory from 'debug';
 
 import log from '../common/initlog';
@@ -7,7 +5,7 @@ import ipcDispatch, { setDispatch } from '../common/ipcDispatch';
 import * as identify from '../common/identify';
 
 import type { AnswerMessage, CandidateMessage, RequestMessage, RtcMessage } from '/@common/rtc';
-import expandTypes from '/@common/expandTypes';
+import exposeApi from '../common/exposeApi';
 import { host, port, sourceId } from '/@common/remote';
 import { setOutputHidden } from '/@player/store/currentSlice';
 
@@ -186,13 +184,15 @@ const reconnect = () => {
   connect();
 };
 
-contextBridge.exposeInMainWorld('log', log.log.bind(log));
-contextBridge.exposeInMainWorld('setDispatch', setDispatch);
-contextBridge.exposeInMainWorld('mediaStream', { clearSrcObject, reconnect, updateSrcObject });
-// contextBridge.exposeInMainWorld('server', {
-//   host,
-//   port,
-// });
-contextBridge.exposeInMainWorld('identify', expandTypes(identify));
+const remoteApi = {
+  log: log.log.bind(log),
+  setDispatch,
+  mediaStream: { clearSrcObject, reconnect, updateSrcObject },
+  identify,
+} as const;
+
+export type RemoteApi = typeof remoteApi;
+
+exposeApi(remoteApi);
 
 connect();

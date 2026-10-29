@@ -16,7 +16,6 @@ module.exports = (async () => {
         '**/*.md',
         '**/*.mdx',
         'packages/common/test.js',
-        'packages/preload/*InMainWorld.d.ts',
         '**/vite.config.js',
       ],
     },

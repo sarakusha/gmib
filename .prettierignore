@@ -12,5 +12,4 @@ node_modules
 .github/.vscode
 .electron-vendors.cache.json
 external.js
-packages/preload/*InMainWorld.d.ts
 package.json

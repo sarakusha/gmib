@@ -2,7 +2,7 @@
  * @module preload
  */
 
-import { contextBridge, ipcRenderer } from 'electron';
+import { ipcRenderer } from 'electron';
 
 import type { LogLevel } from '@nibus/core';
 
@@ -20,7 +20,7 @@ import * as plugins from './plugins';
 
 import './hid';
 
-import expandTypes from '/@common/expandTypes';
+import exposeApi from '../common/exposeApi';
 import { hashCode } from '/@common/helpers';
 import type { GmibWindowParams } from '/@common/WindowParams';
 import type { LicenseRuntimeState } from '/@common/license';
@@ -32,48 +32,6 @@ import { setOutputHidden } from '/@renderer/store/currentSlice';
  *
  * @see https://www.electronjs.org/docs/api/context-bridge
  */
-
-/**
- * After analyzing the `exposeInMainWorld` calls,
- * `packages/preload/exposedInMainWorld.d.ts` file will be generated.
- * It contains all interfaces.
- * `packages/preload/exposedInMainWorld.d.ts` file is required for TS is `renderer`
- *
- * @see https://github.com/cawa-93/dts-for-context-bridge
- */
-
-/**
- * Expose Environment versions.
- * @example
- * console.log( window.versions )
- */
-contextBridge.exposeInMainWorld('versions', process.versions);
-contextBridge.exposeInMainWorld('server', {
-  port: +(process.env['NIBUS_PORT'] ?? 9001) + 1,
-});
-contextBridge.exposeInMainWorld('setDispatch', setDispatch);
-// contextBridge.exposeInMainWorld('novastar', expandTypes(novastar));
-contextBridge.exposeInMainWorld('nibus', expandTypes(nibus));
-contextBridge.exposeInMainWorld('config', expandTypes(config));
-contextBridge.exposeInMainWorld('dialogs', expandTypes(dialogs));
-// contextBridge.exposeInMainWorld('db', expandTypes(db));
-contextBridge.exposeInMainWorld('log', log.log.bind(log));
-contextBridge.exposeInMainWorld('setLogLevel', (logLevel: LogLevel) => {
-  setLogLevel(logLevel);
-  nibus.setLogLevel(logLevel);
-});
-// contextBridge.exposeInMainWorld('output', expandTypes(output));
-contextBridge.exposeInMainWorld('identify', expandTypes(identify));
-
-// contextBridge.exposeInMainWorld('activateLicense', (key: string, name?: string): Promise<true | string> =>
-//   ipcRenderer.invoke('activateLicense', key, name),
-// );
-
-// TODO: Возможно убрать?
-// contextBridge.exposeInMainWorld('electronAPI', {
-//   handleHost: (listener: (event: IpcRendererEvent) => void) =>
-//     ipcRenderer.on('get-host-options', listener),
-// });
 
 const gmibParams = new Promise<GmibWindowParams>(resolve => {
   ipcRenderer.once('gmib-params', (_, params: GmibWindowParams) => {
@@ -116,27 +74,34 @@ ipcRenderer
   })
   .catch(() => undefined);
 
-// contextBridge.exposeInMainWorld('license', () =>
-//   gmibParams.then(({ plan, renew, key }) => ({ plan, renew, key })),
-// );
-
-contextBridge.exposeInMainWorld('initializeNovastar', (): Promise<boolean> =>
-  gmibParams.then(params => Boolean(Reflect.get(params, import.meta.env.VITE_ANNOUNCE_NOVASTAR))),
-);
-contextBridge.exposeInMainWorld('getLicenseState', (): Promise<LicenseRuntimeState | undefined> =>
-  gmibParams.then(params => params.licenseState),
-);
-contextBridge.exposeInMainWorld('getDeviceName', (): Promise<string | undefined> =>
-  gmibParams.then(params => params.info?.name),
-);
-contextBridge.exposeInMainWorld(
-  'onLicenseStateChange',
-  (listener: (state: LicenseRuntimeState) => void): (() => void) => {
+// These same objects define both the exposed API and its renderer types.
+const gmibApi = {
+  versions: process.versions,
+  server: { port: +(process.env['NIBUS_PORT'] ?? 9001) + 1 },
+  setDispatch,
+  nibus,
+  config,
+  dialogs,
+  log: log.log.bind(log),
+  setLogLevel: (logLevel: LogLevel): void => {
+    setLogLevel(logLevel);
+    nibus.setLogLevel(logLevel);
+  },
+  identify,
+  initializeNovastar: (): Promise<boolean> =>
+    gmibParams.then(params => Boolean(Reflect.get(params, import.meta.env.VITE_ANNOUNCE_NOVASTAR))),
+  getLicenseState: (): Promise<LicenseRuntimeState | undefined> =>
+    gmibParams.then(params => params.licenseState),
+  getDeviceName: (): Promise<string | undefined> => gmibParams.then(params => params.info?.name),
+  onLicenseStateChange: (listener: (state: LicenseRuntimeState) => void): (() => void) => {
     const handler = (_: Electron.IpcRendererEvent, state: LicenseRuntimeState) => listener(state);
     ipcRenderer.on('runtimeLicenseState', handler);
     return () => ipcRenderer.removeListener('runtimeLicenseState', handler);
   },
-);
+  mediaSource,
+  plugins,
+} as const;
 
-contextBridge.exposeInMainWorld('mediaSource', expandTypes(mediaSource));
-contextBridge.exposeInMainWorld('plugins', expandTypes(plugins));
+export type GmibApi = typeof gmibApi;
+
+exposeApi(gmibApi);

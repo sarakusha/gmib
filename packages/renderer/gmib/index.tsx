@@ -6,7 +6,6 @@ import 'dayjs/locale/ru';
 import debugFactory from 'debug';
 import { SnackbarProvider } from 'notistack';
 import React from 'react';
-import '../../preload/gmibInMainWorld.d';
 // import { DndProvider } from 'react-dnd';
 // import { HTML5Backend } from 'react-dnd-html5-backend';
 import { createRoot } from 'react-dom/client';

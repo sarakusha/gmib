@@ -146,7 +146,7 @@ export const reloadDevices = session.reloadDevices.bind(session);
 export const setLogLevel = session.setLogLevel.bind(session);
 
 type Version = Omit<VersionInfo, 'connection'> & {
-  owner?: string;
+  owner?: DeviceId;
 };
 
 export const ping = async (address: string): Promise<[-1, undefined] | [number, Version]> => {
