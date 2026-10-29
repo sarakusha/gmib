@@ -473,6 +473,9 @@ const openHandler: Handler = ({ url }) => {
     maximizable: false,
     closable: true,
     webPreferences: {
+      // Electron 45 isolates sandboxed children of unsandboxed players. Output windows
+      // must share the player's process for WindowProxy, DOM and media stream access.
+      sandbox: false,
       // nativeWindowOpen: true,
       webviewTag: false, // The webview tag is not recommended. Consider alternatives like iframe or Electron's BrowserView. https://www.electronjs.org/docs/latest/api/webview-tag#warning
       backgroundThrottling: false,

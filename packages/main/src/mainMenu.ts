@@ -658,7 +658,6 @@ app.on('browser-window-focus', () => {
 localConfig.onDidChange('autostart', (autostart = false) => {
   app.setLoginItemSettings({
     openAtLogin: autostart,
-    openAsHidden: true,
   });
   linuxAutostart(autostart);
   updateMenu();

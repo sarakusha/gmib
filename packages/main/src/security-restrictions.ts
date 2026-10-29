@@ -39,7 +39,8 @@ type AllPermissions = (typeof allPermissions)[number];
 
 const fullGrant: Set<AllPermissions> = new Set(allPermissions);
 
-type Permissions = Set<AllPermissions>;
+// New Electron permission names stay denied until explicitly added to the allowlist.
+type Permissions = ReadonlySet<string>;
 /**
  * List of origins that you allow open INSIDE the application and permissions for each of them.
  *

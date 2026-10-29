@@ -29,6 +29,7 @@ vi.mock('../src/windowStore', () => ({
 }));
 
 import {
+  default as openHandler,
   getUnavailablePlayerOutputIds,
   reconcilePlayerOutputWindows,
   setPlayerOutputWindowsVisibility,
@@ -43,6 +44,17 @@ describe('output reconciliation integration', () => {
     state.players = [{ id: 9, playerId: 7, type: 'player', webContentsId: 20 }];
     setOutputHidden(false);
     setPlayerOutputHidden(false);
+  });
+
+  it('keeps output windows in the unsandboxed player process on Electron 45', () => {
+    const result = openHandler({
+      url: 'http://localhost:9002/output/index.html?width=1920&height=1080&display=-1',
+    } as Parameters<typeof openHandler>[0]);
+    expect(result.action).toBe('allow');
+    expect(result.overrideBrowserWindowOptions?.webPreferences?.sandbox).toBe(false);
+    expect(
+      openHandler({ url: 'https://example.com/' } as Parameters<typeof openHandler>[0]).action,
+    ).toBe('deny');
   });
 
   it('detects unavailable mappings even when there are no output windows', () => {

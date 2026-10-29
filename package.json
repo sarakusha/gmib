@@ -129,7 +129,7 @@
     "cspell": "^10.0.1",
     "dnd-core": "^16.0.1",
     "dts-for-context-bridge": "^0.7.1",
-    "electron": "^43.2.0",
+    "electron": "^45.1.0",
     "electron-builder": "^26.15.3",
     "electron-devtools-installer": "^4.0.0",
     "eslint": "^10.8.0",
