@@ -722,10 +722,9 @@ describe('playback SQLite facts', () => {
       });
   });
 
-  it('clips crossing segments on arrival and ignores expired and future timestamps', async () => {
+  it('clips crossing segments on arrival and ignores expired timestamps', async () => {
     const store = create({ retentionDays: () => 1 });
     await store.append(event({ timestamp: '2020-10-08T23:59:59.000Z' }));
-    await store.append(event({ timestamp: iso(61) }));
     await store.append(
       event({
         event: 'progress',

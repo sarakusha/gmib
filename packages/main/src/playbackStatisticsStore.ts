@@ -351,7 +351,10 @@ export class PlaybackStatisticsStore {
       const now = this.now();
       const cutoff = this.cutoff(now);
       const at = Date.parse(event.timestamp);
-      if (at < cutoff || at > now.getTime()) return;
+      if (at < cutoff) return;
+      // Renderer and main clocks can differ even on the same Windows host (observed: 1 ms).
+      // Keep the original fact through clock skew/rollback; report readers filter by their
+      // own `now`. Rejecting a future timestamp here permanently loses starts and outcomes.
       if (this.lastCleanupDate !== now.toISOString().slice(0, 10)) await this.cleanupDirect(sql);
       // Одно событие — одна транзакция, число команд зависит от его типа и выходов.
       // Сначала проверка eventId/идентичности попытки, затем индекс attempts и факты.
