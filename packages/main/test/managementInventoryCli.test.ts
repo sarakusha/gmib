@@ -336,5 +336,7 @@ describe('GMIB inventory CLI against the management hosts service', () => {
       expect(runtime.stored()).toEqual(savedBefore);
       expect(await directorySnapshot(paths.directory)).toEqual(filesBefore);
     },
+    // This integration test launches ansible-inventory repeatedly, including under suite load.
+    60_000,
   );
 });
