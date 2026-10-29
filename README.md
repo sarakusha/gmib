@@ -1255,6 +1255,12 @@ pnpm run lint
 pnpm run typecheck
 ```
 
+Проверка типов (`pnpm run typecheck`, команда `tsc`) использует TypeScript 7. Пакет
+`@typescript/native` — alias стабильного `typescript@7`. Для ESLint и `vite-plugin-checker`,
+которым нужен прежний JavaScript API компилятора, `typescript` установлен как alias
+`@typescript/typescript6`; его отдельная команда — `tsc6`. Эти пакеты нужно обновлять с учетом
+совместимости инструментов с API компилятора.
+
 Dev-запуск ожидает готовности всех трех preload-модулей (`gmib`, `player`, `remote`) перед
 запуском Electron. При изменении main-процесса сначала завершается предыдущий Electron, затем
 запускается новый; несколько изменений во время остановки объединяются в один перезапуск.
