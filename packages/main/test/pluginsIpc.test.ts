@@ -58,6 +58,9 @@ const invoke = (name: string, ...args: unknown[]) =>
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mock.params.mockReset();
+  mock.support.mockReset();
+  mock.capability.mockReset();
   mock.params.mockReturnValue(params);
   mock.factory.mockReturnValue({
     list: mock.remoteList,
@@ -108,7 +111,11 @@ describe('plugin IPC connection ownership', () => {
   });
 
   it('rejects unknown and player senders without falling back to local mutations', () => {
-    for (const value of [undefined, { type: 'player', host: 'selected-host' }]) {
+    for (const value of [
+      undefined,
+      { type: 'player', host: 'selected-host' },
+      { type: 'screen', host: 'localhost' },
+    ]) {
       mock.params.mockReturnValue(value);
       for (const name of [
         'list',
@@ -148,5 +155,102 @@ describe('plugin IPC connection ownership', () => {
     expect(mock.localEnable).toHaveBeenCalledWith('sample', true);
     expect(mock.localRestart).toHaveBeenCalledTimes(1);
     expect(mock.factory).not.toHaveBeenCalled();
+  });
+});
+
+describe('plugin installation IPC routing', () => {
+  it.each(['install', 'installOfficial'] as const)(
+    'uses the local license check and installation dialog for %s',
+    async operation => {
+      mock.params.mockReturnValue({ ...params, host: 'localhost' });
+      const dialog = operation === 'install' ? mock.localInstall : mock.localOfficial;
+      const result = { status: 'cancelled' };
+      dialog.mockResolvedValueOnce(result);
+      const received =
+        operation === 'install' ? await invoke(operation) : await invoke(operation, 'informer');
+      expect(received).toBe(result);
+      expect(mock.params).toHaveBeenCalledWith(sender.id);
+      expect(mock.capability).toHaveBeenCalledExactlyOnceWith('plugins');
+      expect(dialog).toHaveBeenCalledOnce();
+      expect(dialog.mock.calls[0]).toEqual(operation === 'install' ? [] : ['informer']);
+      expect(mock.capability.mock.invocationCallOrder[0]).toBeLessThan(
+        dialog.mock.invocationCallOrder[0],
+      );
+      expect(mock.support).not.toHaveBeenCalled();
+      expect(mock.factory).not.toHaveBeenCalled();
+      expect(mock.remoteInstall).not.toHaveBeenCalled();
+      expect(mock.remoteOfficial).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['install', 'installOfficial'] as const)(
+    'does not open a local %s dialog without a plugin license',
+    operation => {
+      mock.params.mockReturnValue({ ...params, host: 'localhost' });
+      mock.capability.mockImplementationOnce(() => {
+        throw Error('Plus required');
+      });
+      expect(() => invoke(operation, 'informer')).toThrow('Plus required');
+      expect(mock.localInstall).not.toHaveBeenCalled();
+      expect(mock.localOfficial).not.toHaveBeenCalled();
+      expect(mock.factory).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['install', 'installOfficial'] as const)(
+    'routes remote %s through the sender connection after checking support',
+    async operation => {
+      const remote = operation === 'install' ? mock.remoteInstall : mock.remoteOfficial;
+      const result = { status: 'cancelled' };
+      remote.mockResolvedValueOnce(result);
+      const received =
+        operation === 'install' ? await invoke(operation) : await invoke(operation, 'informer');
+      expect(received).toBe(result);
+      expect(mock.support).toHaveBeenCalledExactlyOnceWith(params);
+      expect(mock.factory).toHaveBeenCalledExactlyOnceWith(params);
+      expect(mock.support.mock.invocationCallOrder[0]).toBeLessThan(
+        mock.factory.mock.invocationCallOrder[0],
+      );
+      expect(remote).toHaveBeenCalledOnce();
+      expect(remote.mock.calls[0]).toEqual(operation === 'install' ? [] : ['informer']);
+      expect(mock.capability).not.toHaveBeenCalled();
+      expect(mock.localInstall).not.toHaveBeenCalled();
+      expect(mock.localOfficial).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['install', 'installOfficial'] as const)(
+    'fails closed for unsupported remote %s without a local fallback',
+    operation => {
+      const oldHost = { ...params, info: { version: '5.7.0' } };
+      mock.params.mockReturnValue(oldHost);
+      mock.support.mockImplementationOnce(() => {
+        throw Error('Update remote');
+      });
+      expect(() => invoke(operation, 'informer')).toThrow('Update remote');
+      expect(mock.support).toHaveBeenCalledExactlyOnceWith(oldHost);
+      expect(mock.factory).not.toHaveBeenCalled();
+      expect(mock.localInstall).not.toHaveBeenCalled();
+      expect(mock.localOfficial).not.toHaveBeenCalled();
+      expect(mock.remoteInstall).not.toHaveBeenCalled();
+      expect(mock.remoteOfficial).not.toHaveBeenCalled();
+      expect(mock.capability).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ['unknown', undefined],
+    ['player', { type: 'player', host: 'localhost' }],
+    ['screen', { type: 'screen', host: 'localhost' }],
+  ])('rejects both install methods from a %s sender', (_label, untrustedParams) => {
+    mock.params.mockReturnValue(untrustedParams);
+    for (const operation of ['install', 'installOfficial'])
+      expect(() => invoke(operation, 'informer')).toThrow('подключения GMIB');
+    expect(mock.localInstall).not.toHaveBeenCalled();
+    expect(mock.localOfficial).not.toHaveBeenCalled();
+    expect(mock.remoteInstall).not.toHaveBeenCalled();
+    expect(mock.remoteOfficial).not.toHaveBeenCalled();
+    expect(mock.factory).not.toHaveBeenCalled();
+    expect(mock.capability).not.toHaveBeenCalled();
   });
 });

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## Unreleased
+
+### Bug Fixes
+
+* Устранено пересечение идентификаторов вкладок GMIB и отдельных окон вывода. Оно могло приводить к ошибке «Управление плагинами доступно только из подключения GMIB» при установке из файла или официального каталога, а также к потере параметров подключения после открытия или закрытия экрана. Параметры IPC определяются по отправившей запрос вкладке.
+
 ## [5.7.2](https://github.com/sarakusha/gmib/compare/v5.7.1...v5.7.2) (2026-10-30)
 
 ### Bug Fixes

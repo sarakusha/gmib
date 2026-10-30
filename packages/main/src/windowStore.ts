@@ -321,8 +321,9 @@ export default store as ReadonlyMap<number, WindowParams>;
 
 void app.whenReady().then(() => {
   ipcMain.handle('getParams', (event, name: keyof WindowParams) => {
-    const id = BrowserWindow.fromWebContents(event.sender)?.id;
-    const params = (id && store.get(id)) ?? findParamsByWebContentsId(event.sender.id);
+    // A tab belongs to a shared native window; only its own renderer identifies
+    // the connection. The native owner's id must not select another context.
+    const params = findParamsByWebContentsId(event.sender.id);
     if (params) {
       return params?.[name];
     }

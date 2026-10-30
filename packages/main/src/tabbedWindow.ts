@@ -148,7 +148,9 @@ class TabbedWindow {
   createTab(title: string, webPreferences: WebPreferences): ManagedWindow {
     const view = new WebContentsView({ webPreferences });
     const tab = {
-      id: view.webContents.id,
+      // Tab handles share windowStore with native BrowserWindow handles. Keep
+      // them negative; the positive webContents.id remains the IPC sender ID.
+      id: -view.webContents.id,
       title,
       view,
       hidden: false,
@@ -371,7 +373,7 @@ class TabbedWindow {
       const parsed = new URL(url);
       if (parsed.protocol !== 'gmib-tab:') return;
       const id = Number(parsed.searchParams.get('id'));
-      if (!Number.isInteger(id)) return;
+      if (!Number.isSafeInteger(id) || id >= 0) return;
       if (parsed.hostname === 'activate') this.activate(id);
       if (parsed.hostname === 'close') this.closeTab(id);
     } catch {
