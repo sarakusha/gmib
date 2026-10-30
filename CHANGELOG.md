@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
-## Unreleased
+## [5.7.2](https://github.com/sarakusha/gmib/compare/v5.7.1...v5.7.2) (2026-10-30)
 
 ### Bug Fixes
 
