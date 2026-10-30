@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mock = vi.hoisted(() => ({
+  getLicenseState: vi.fn(),
+  getLocalConfig: vi.fn(),
   getScreen: vi.fn(),
   getScreens: vi.fn(),
   updateScreen: vi.fn(),
@@ -62,6 +64,9 @@ vi.mock('../src/windowStore', () => ({
   getAllGmibParams: mock.getAllGmibParams,
 }));
 vi.mock('../src/server', () => ({ broadcast: mock.broadcast }));
+vi.mock('../src/config', () => ({ port: 19002 }));
+vi.mock('../src/licenseState', () => ({ getLicenseState: mock.getLicenseState }));
+vi.mock('../src/localConfig', () => ({ default: { get: mock.getLocalConfig } }));
 
 import type { PluginManifest } from '/@common/plugins';
 import { createPluginOutput } from '../src/pluginOutput';
@@ -81,6 +86,12 @@ const window = { webContents: { send: mock.send } };
 
 beforeEach(() => {
   vi.resetAllMocks();
+  mock.getLicenseState.mockReturnValue({
+    status: 'active',
+    plan: 'plus',
+    capabilities: ['plugins'],
+  });
+  mock.getLocalConfig.mockImplementation((key: string) => key === 'autostart');
   mock.getOutputVisibilityRevision.mockReturnValue(0);
   mock.holdOutputWindows.mockReturnValue(mock.releaseOutputWindows);
   mock.isScreenOutputHidden.mockReturnValue(false);
@@ -229,16 +240,29 @@ describe('plugin player output', () => {
     expect(mock.revealPlayerOutput).not.toHaveBeenCalled();
   });
 
-  it('checks local server readiness before mutating playback', async () => {
-    mock.findPlayerWindow.mockReturnValue(undefined);
-    mock.getAllGmibParams.mockReturnValue([{ host: 'remote', nibusPort: 9000 }]);
-    const api = await createApi();
-    await expect(api.setPlayerState?.({ playerId: 1, playing: true })).rejects.toThrow(
-      'ещё не готов',
-    );
-    expect(mock.updatePlayer).not.toHaveBeenCalled();
-    expect(mock.openPlayer).not.toHaveBeenCalled();
-  });
+  it.each([{ tabs: [] }, { tabs: [{ host: 'remote-only', nibusPort: 9999 }] }])(
+    'starts locally without a registered local GMIB tab (%j)',
+    async ({ tabs }) => {
+      mock.findPlayerWindow.mockReturnValue(undefined);
+      mock.getAllGmibParams.mockReturnValue(tabs);
+      const api = await createApi();
+      await api.setPlayerState?.({ playerId: 1, playing: true });
+      expect(mock.openPlayer).toHaveBeenCalledWith(1, {
+        hidden: true,
+        gmibParams: expect.objectContaining({
+          host: 'localhost',
+          nibusPort: 19001,
+          type: 'gmib',
+          licenseState: { status: 'active', plan: 'plus', capabilities: ['plugins'] },
+          autostart: true,
+        }),
+      });
+      expect(mock.openPlayer.mock.invocationCallOrder[0]).toBeGreaterThan(
+        mock.updatePlayer.mock.invocationCallOrder[0],
+      );
+      expect(mock.visibility).toHaveBeenCalledWith(true, 1);
+    },
+  );
 
   it('reports both launch and rollback failures', async () => {
     mock.findPlayerWindow.mockReturnValue(undefined);

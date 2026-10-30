@@ -3,7 +3,8 @@ import { revealPlayerOutput } from './outputVisibility';
 import { updatePlayerRuntime } from './playerRuntime';
 import { openPlayer } from './playerWindow';
 import { getPlayer, getPlayers } from './screen';
-import { findPlayerWindow, getAllGmibParams } from './windowStore';
+import { findPlayerWindow } from './windowStore';
+import { getLocalPlayerConnection } from './localPlayerConnection';
 
 export const listPluginPlayers = async () =>
   (await getPlayers()).map(({ id, name, autoPlay }) => ({
@@ -29,13 +30,10 @@ export const setPluginPlayerState = async (state: {
   }
   if (playing && !player.playlistId) throw new Error(`У плеера ${playerId} не выбран плейлист`);
 
-  // openPlayer shows and focuses existing tabs even with hidden: true. Reuse the
-  // local runtime directly, and explicitly select localhost for a new hidden tab.
+  // Reuse the local runtime directly. A new hidden player gets a backend local
+  // connection even when no local GMIB UI tab has been registered.
   const needsWindow = playing && !findPlayerWindow(playerId);
-  const gmibParams = needsWindow
-    ? getAllGmibParams().find(({ host }) => host === 'localhost')
-    : undefined;
-  if (needsWindow && !gmibParams) throw new Error('Локальный сервер gmib ещё не готов');
+  const gmibParams = needsWindow ? getLocalPlayerConnection() : undefined;
 
   // Persist autoplay before loading the renderer: its initial GET must see the
   // new state even if the IPC update arrives before its listeners are ready.

@@ -125,7 +125,10 @@ export const openPlayer = async (
       if (res?.ok) player = await res.json();
     }
   } else {
-    await Promise.all([dbReady, main]);
+    // Plugins may start hidden playback before createMainWindow runs. Waiting
+    // for its UI promise here would deadlock the startup chain.
+    await dbReady;
+    if (!hidden) await main;
     const license = getLicenseState();
     if (
       license.status === 'active' &&
@@ -231,8 +234,10 @@ export const openPlayer = async (
       });
     // browserWindow.setSkipTaskbar(false);
   } else {
-    browserWindow.show();
-    browserWindow.focus();
+    if (!hidden) {
+      browserWindow.show();
+      browserWindow.focus();
+    }
     browserWindow.webContents.send('updateVideoOuts');
   }
   return browserWindow;
