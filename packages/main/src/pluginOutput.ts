@@ -4,6 +4,9 @@ import type { PluginOutputApi, PluginOutputProfile } from '/@common/pluginOutput
 import { DefaultDisplays } from '/@common/video';
 import { getScreen, getScreens, updateScreen } from './screen';
 import { updateTest } from './screenOutput';
+import { listPluginPlayers, setPluginPlayerState } from './pluginPlayerOutput';
+import { clearScreenOutputVisibility, setScreenOutputHidden } from './outputVisibility';
+import { findScreenWindow } from './windowStore';
 
 export async function createPluginOutput(
   manifest: PluginManifest,
@@ -21,20 +24,22 @@ export async function createPluginOutput(
     return next;
   };
   const page = (id: string) => `plugin:${manifest.id}:${id}`;
-  const check = () => {
-    if (!manifest.permissions?.includes('output.control'))
-      throw new Error('Отсутствует разрешение output.control');
+  const check = (permission: 'output.control' | 'player.control' = 'output.control') => {
+    if (!manifest.permissions?.includes(permission))
+      throw new Error(`Отсутствует разрешение ${permission}`);
   };
-  const stop = async () => {
-    if (!profile) return;
-    const scr = await getScreen(profile.screenId);
-    if (scr?.test?.startsWith(`plugin:${manifest.id}:`)) {
-      const next = { ...scr, test: undefined };
-      await updateScreen(next);
-      await updateTest(next);
+  const stop = async (exceptScreenId?: number) => {
+    const screens = await getScreens();
+    for (const scr of screens) {
+      if (scr.id !== exceptScreenId && scr.test?.startsWith(`plugin:${manifest.id}:`)) {
+        const next = { ...scr, test: undefined };
+        await updateScreen(next);
+        clearScreenOutputVisibility(scr.id);
+        await updateTest(next);
+      }
     }
   };
-  const start = async (value: PluginOutputProfile) => {
+  const start = async (value: PluginOutputProfile, explicit = true) => {
     if (
       !Number.isSafeInteger(value.screenId) ||
       typeof value.autoStart !== 'boolean' ||
@@ -46,19 +51,21 @@ export async function createPluginOutput(
       throw new Error('Сначала настройте размер и дисплей в gmib → Вывод');
     if (scr.test?.startsWith('plugin:') && !scr.test.startsWith(`plugin:${manifest.id}:`))
       throw new Error('Экран занят другим плагином');
-    if (profile && profile.screenId !== value.screenId) await stop();
+    await stop(value.screenId);
     profile = { ...value };
     await storage.set('gmib.output', profile);
     const next = { ...scr, test: page(profile.pageId) };
     await updateScreen(next);
+    if (explicit) setScreenOutputHidden(value.screenId, false);
     await updateTest(next);
   };
   const restore = async () => {
-    if (profile?.autoStart) await start(profile);
+    if (!manifest.permissions?.includes('output.control')) return;
+    if (profile?.autoStart) await start(profile, false);
   };
   if (manifest.permissions?.includes('output.control')) {
     if (profile?.autoStart) await restore().catch(() => undefined);
-    else await stop();
+    else if (profile) await stop();
   }
   const added = () => {
     void serial(restore).catch(() => undefined);
@@ -69,6 +76,14 @@ export async function createPluginOutput(
     await queue;
   });
   return {
+    listPlayers: async () => {
+      check('player.control');
+      return listPluginPlayers();
+    },
+    setPlayerState: state => {
+      check('player.control');
+      return serial(() => setPluginPlayerState(state));
+    },
     listScreens: async () => {
       check();
       return (await getScreens()).map(({ id, name, width, height }) => ({
@@ -89,7 +104,14 @@ export async function createPluginOutput(
         (displayId === DefaultDisplays.Secondary
           ? displays.length > 1
           : displays.some(display => display.id === displayId));
-      const active = Boolean(present && scr?.test === page(profile.pageId));
+      const output = findScreenWindow(profile.screenId);
+      const active = Boolean(
+        present &&
+        scr?.test === page(profile.pageId) &&
+        output &&
+        !output.isDestroyed() &&
+        output.isVisible(),
+      );
       return {
         profile: { ...profile },
         active,

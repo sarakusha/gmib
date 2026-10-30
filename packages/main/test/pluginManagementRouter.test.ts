@@ -72,7 +72,11 @@ const service = () => ({
   uninstall: vi.fn(),
 });
 
-const createApp = (lifecycle: ReturnType<typeof service>, requireCapability: () => void) => {
+const createApp = (
+  lifecycle: ReturnType<typeof service>,
+  requireCapability: () => void,
+  restart?: () => void,
+) => {
   const app = express();
   app.use(express.json());
   app.use((_, res, next) => {
@@ -85,6 +89,7 @@ const createApp = (lifecycle: ReturnType<typeof service>, requireCapability: () 
     auth,
     createPluginManagementRouter(lifecycle as never, {
       requireCapability,
+      restart,
     }),
   );
   mountApiAuth(api, {
@@ -156,5 +161,26 @@ describe('plugin management routes', () => {
       error: { code: 'archive_hash_mismatch' },
     });
     expect(lifecycle.inspectArchive).not.toHaveBeenCalled();
+  });
+  it('restarts only after strict authentication and a plugin capability check', async () => {
+    const restart = vi.fn();
+    const server = await listen(createApp(service(), () => undefined, restart));
+    servers.push(server.close);
+    const requestPath = '/api/manage/v1/plugins/restart';
+    const url = `${server.baseUrl}${requestPath}`;
+    expect((await fetch(url, { method: 'POST' })).status).toBe(401);
+    expect(restart).not.toHaveBeenCalled();
+    const timestamp = Date.now();
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'x-ni-identifier': 'remote-client',
+        'x-ni-timestamp': String(timestamp),
+        'x-ni-signature': generateSignature(mocks.remoteSecret, 'POST', requestPath, timestamp),
+      },
+    });
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ restarting: true });
+    expect(restart).toHaveBeenCalledTimes(1);
   });
 });

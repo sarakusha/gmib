@@ -1,4 +1,4 @@
-export const GMIB_PLUGIN_API_VERSION = '1.1.0';
+export const GMIB_PLUGIN_API_VERSION = '1.2.0';
 
 export const pluginPermissions = [
   'http.routes',
@@ -10,6 +10,7 @@ export const pluginPermissions = [
   'services.consume',
   'plugins.read',
   'output.control',
+  'player.control',
   'nibus.read',
   'nibus.write',
 ] as const;

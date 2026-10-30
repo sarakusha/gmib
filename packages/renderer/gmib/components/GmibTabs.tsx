@@ -39,6 +39,7 @@ const Tabs: React.FC = () => {
   const { novastar: currentNovastar } = useNovastar(currentDeviceId); // useSelector(state => selectNovastarByPath(state, currentDeviceId));
   const version = useSelector(selectSessionVersion);
   const isSchedulerSupported = supportsFeature('gmibScheduler', version, isRemoteSession);
+  const remotePluginsSupported = supportsFeature('remotePlugins', version, isRemoteSession);
   if (currentDevice) {
     const curChild = devChildren.find(({ props }) => props.id === currentDeviceId);
     /**
@@ -93,7 +94,7 @@ const Tabs: React.FC = () => {
       <TabContainer id="overheat" selected={tab === 'overheat'}>
         <OverheatProtectionTab />
       </TabContainer>
-      {!isRemoteSession && (
+      {remotePluginsSupported && (
         <TabContainer id="plugins" selected={tab === 'plugins'} unmount>
           <Plugins />
         </TabContainer>

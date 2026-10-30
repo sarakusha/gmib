@@ -14,7 +14,9 @@ export type FeatureName =
   | 'remotePlayerOutputVisibility'
   | 'remotePlayerOutputClose'
   | 'schedulerSecondsAndPriority'
-  | 'windowZIndex';
+  | 'windowZIndex'
+  | 'pluginPlayerControl'
+  | 'remotePlugins';
 
 const minimumVersions: Record<FeatureName, string> = {
   gmibScheduler: '5.0.1',
@@ -33,6 +35,8 @@ const minimumVersions: Record<FeatureName, string> = {
   remotePlayerOutputClose: '5.1.1',
   schedulerSecondsAndPriority: '5.3.0',
   windowZIndex: '5.0.1',
+  pluginPlayerControl: '5.7.1',
+  remotePlugins: '5.7.1',
 };
 
 const parseVersion = (version?: string): number[] | undefined => {

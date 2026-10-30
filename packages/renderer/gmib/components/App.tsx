@@ -95,6 +95,7 @@ const App: React.FC = () => {
   const hasLink = links.length > 0;
   const version = useSelector(selectSessionVersion);
   const isSchedulerSupported = supportsFeature('gmibScheduler', version, isRemoteSession);
+  const remotePluginsSupported = supportsFeature('remotePlugins', version, isRemoteSession);
   const pluginsAvailable =
     licenseState?.status === 'active' &&
     ['plus', 'premium', 'enterprise'].includes(licenseState.plan ?? '') &&
@@ -329,7 +330,7 @@ const App: React.FC = () => {
                 <ListItemText primary="Планировщик" />
               </Item>
             )}
-            {!isRemoteSession && (
+            {remotePluginsSupported && (
               <Item
                 disabled={!pluginsAvailable}
                 onClick={() => pluginsAvailable && dispatch(setCurrentTab('plugins'))}

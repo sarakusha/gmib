@@ -1,4 +1,5 @@
 import { createRequire } from 'node:module';
+import { EventEmitter } from 'node:events';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -47,6 +48,8 @@ export { buildPluginStatus } from './pluginStatus';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:plugins`);
 const PLUGIN_PAGE_PREFIX = 'plugin:';
+const remoteControlEvents = new EventEmitter();
+remoteControlEvents.setMaxListeners(100);
 const REGISTRY_FILENAME = '.registry.json';
 const STAGING_DIRECTORY = '.staging';
 const DATA_DIRECTORY = '.data';
@@ -596,8 +599,10 @@ const createPluginContext = async (plugin: RuntimePlugin): Promise<PluginContext
         if (!/^[a-zA-Z0-9][a-zA-Z0-9:._-]{0,127}$/.test(event)) {
           throw new Error(`Недопустимое имя события: ${event}`);
         }
+        const notification = { event: `plugin:${manifest.id}:${event}`, data: [data] };
+        if (!manifest.localOnly) remoteControlEvents.emit(manifest.id, notification);
         broadcast({
-          event: `plugin:${manifest.id}:${event}`,
+          event: notification.event,
           data: [data],
           all: true,
           localOnly: manifest.localOnly,
@@ -738,7 +743,7 @@ const sendPluginResult = (res: Response, value: unknown): void => {
 };
 
 const dispatchPluginRoute =
-  (access: PluginHttpAccess): RequestHandler =>
+  (access: PluginHttpAccess | readonly PluginHttpAccess[]): RequestHandler =>
   (req, res, next) => {
     const pluginId = firstParam(req.params.pluginId);
     const plugin = pluginId ? runtimePlugins.get(pluginId) : undefined;
@@ -749,7 +754,10 @@ const dispatchPluginRoute =
     const method = req.method.toUpperCase() as PluginHttpMethod;
     const requestPath = normalizeRoute(req.path || '/');
     const route = plugin?.routes.find(
-      item => item.access === access && item.method === method && item.path === requestPath,
+      item =>
+        (Array.isArray(access) ? access.includes(item.access) : item.access === access) &&
+        item.method === method &&
+        item.path === requestPath,
     );
     if (!route) {
       next();
@@ -820,6 +828,81 @@ export const pluginStaticHandler: RequestHandler = (req, res, next) => {
     index: false,
     redirect: false,
   })(req, res, next);
+};
+
+// This gateway is mounted behind strict authentication, independently of unsafeMode.
+// localOnly is an explicit policy: a tunnel's loopback address never overrides it.
+const requireRemoteControl: RequestHandler = (req, res, next) => {
+  if (!hasLicenseCapability('plugins')) {
+    res.sendStatus(403);
+    return;
+  }
+  const plugin = runtimePlugins.get(firstParam(req.params.pluginId) ?? '');
+  if (!plugin) {
+    res.sendStatus(404);
+    return;
+  }
+  if (plugin.manifest.localOnly) {
+    res.status(403).json({ error: 'Пульт доступен только локально' });
+    return;
+  }
+  if (!plugin.ready) {
+    res.sendStatus(503);
+    return;
+  }
+  next();
+};
+
+export const remotePluginApiHandler: RequestHandler = (req, res, next) => {
+  requireRemoteControl(req, res, error => {
+    if (error) {
+      next(error);
+      return;
+    }
+    dispatchPluginRoute(['local', 'authenticated'])(req, res, next);
+  });
+};
+
+export const remotePluginStaticHandler: RequestHandler = (req, res, next) => {
+  requireRemoteControl(req, res, error => {
+    if (error) {
+      next(error);
+      return;
+    }
+    pluginStaticHandler(req, res, next);
+  });
+};
+
+export const remotePluginEventsHandler: RequestHandler = (req, res, next) => {
+  requireRemoteControl(req, res, error => {
+    if (error) {
+      next(error);
+      return;
+    }
+    const id = firstParam(req.params.pluginId)!;
+    res.setHeader('Content-Type', 'application/x-ndjson');
+    res.setHeader('Cache-Control', 'no-store');
+    res.flushHeaders();
+    const publish = (event: unknown) => {
+      const plugin = runtimePlugins.get(id);
+      if (!plugin?.ready || plugin.manifest.localOnly) {
+        res.end();
+        return;
+      }
+      // Disconnect slow readers instead of retaining an unbounded event queue.
+      if (!res.write(`${JSON.stringify(event)}\n`)) res.destroy();
+    };
+    remoteControlEvents.on(id, publish);
+    const heartbeat = setInterval(() => {
+      const plugin = runtimePlugins.get(id);
+      if (!plugin?.ready || plugin.manifest.localOnly) res.end();
+      else if (!res.write('\n')) res.destroy();
+    }, 15000);
+    res.on('close', () => {
+      clearInterval(heartbeat);
+      remoteControlEvents.off(id, publish);
+    });
+  });
 };
 
 const installedStatus = (

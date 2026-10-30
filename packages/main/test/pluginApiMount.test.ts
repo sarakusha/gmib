@@ -14,16 +14,26 @@ vi.mock('../src/localConfig', () => ({
 }));
 vi.mock('../src/secret', () => ({
   default: mocks.localSecret,
-  getIncomingSecretWithRevision: vi.fn(async () => ({
-    revision: 0,
-    secret: mocks.remoteSecret,
-  })),
+  getIncomingSecretWithRevision: vi.fn(() =>
+    Promise.resolve({
+      revision: 0,
+      secret: mocks.remoteSecret,
+    }),
+  ),
 }));
-vi.mock('../src/pluginHost', () => ({ authenticatedPluginApiHandler: vi.fn() }));
+vi.mock('../src/pluginHost', () => ({
+  authenticatedPluginApiHandler: vi.fn(),
+  remotePluginApiHandler: vi.fn(),
+  remotePluginStaticHandler: vi.fn(),
+  remotePluginEventsHandler: vi.fn(),
+}));
 
 import auth from '../src/auth';
 import { mountApiAuth } from '../src/apiAuth';
-import { mountAuthenticatedPluginApi } from '../src/pluginApiMount';
+import {
+  mountAuthenticatedPluginApi,
+  mountRemotePluginControlGateway,
+} from '../src/pluginApiMount';
 
 const servers: Server[] = [];
 const authorization = { authorization: `Bearer ${mocks.localSecret.toString('base64')}` };
@@ -32,6 +42,7 @@ const startApi = async (
   unsafeMode: boolean,
   status: 'active' | 'unlicensed',
   handler: RequestHandler,
+  gatewayHandlers?: Parameters<typeof mountRemotePluginControlGateway>[1],
 ) => {
   const app = express();
   app.use(express.json());
@@ -40,6 +51,7 @@ const startApi = async (
     next();
   });
   const api = express.Router();
+  if (gatewayHandlers) mountRemotePluginControlGateway(api, gatewayHandlers);
   mountApiAuth(api, {
     auth,
     getLicenseStatus: () => status,
@@ -110,5 +122,59 @@ describe('authenticated plugin API mount', () => {
     });
     expect(allowed.status).toBe(200);
     expect(handler).toHaveBeenCalledOnce();
+  });
+});
+
+describe('remote plugin control gateway mount', () => {
+  const resources = [
+    ['api/settings', '/settings'],
+    ['static/control.html', '/control.html'],
+    ['events', '/events'],
+  ] as const;
+
+  describe.each([false, true])('unsafeMode=%s', unsafeMode => {
+    it.each(resources)('always requires authentication for %s', async (resource, forwardedPath) => {
+      const apiHandler = vi.fn<RequestHandler>((req, res) => {
+        res.json({ pluginId: req.params['pluginId'], path: req.path });
+      });
+      const staticHandler = vi.fn<RequestHandler>((req, res) => {
+        res.json({ pluginId: req.params['pluginId'], path: req.path });
+      });
+      const eventsHandler = vi.fn<RequestHandler>((req, res) => {
+        res.json({ pluginId: req.params['pluginId'], path: req.path });
+      });
+      const fallback = vi.fn<RequestHandler>((_req, res) => res.sendStatus(500));
+      const ordinary = await startApi(unsafeMode, 'active', fallback, {
+        apiHandler,
+        staticHandler,
+        eventsHandler,
+      });
+      const url = ordinary.replace(
+        '/plugins/sample/settings',
+        `/manage/v1/plugins/sample/control/${resource}`,
+      );
+      const unauthenticated = await fetch(url);
+      expect(unauthenticated.status).toBe(401);
+      expect(apiHandler).not.toHaveBeenCalled();
+      expect(staticHandler).not.toHaveBeenCalled();
+      expect(eventsHandler).not.toHaveBeenCalled();
+      expect(fallback).not.toHaveBeenCalled();
+
+      const authorized = await fetch(url, { headers: authorization });
+      expect(authorized.status).toBe(200);
+      await expect(authorized.json()).resolves.toEqual({ pluginId: 'sample', path: forwardedPath });
+      const selected = resource.startsWith('api/')
+        ? apiHandler
+        : resource.startsWith('static/')
+          ? staticHandler
+          : eventsHandler;
+      expect(selected).toHaveBeenCalledOnce();
+      expect(
+        apiHandler.mock.calls.length +
+          staticHandler.mock.calls.length +
+          eventsHandler.mock.calls.length,
+      ).toBe(1);
+      expect(fallback).not.toHaveBeenCalled();
+    });
   });
 });

@@ -11,12 +11,9 @@ import { port } from './config';
 import machineId from './machineId';
 import { getLicenseState } from './licenseState';
 import { createTestWindow } from './mainWindow';
-import {
-  arrangeOutputWindows,
-  configureOutputWindowInteractivity,
-  isOutputWindowsHidden,
-} from './openHandler';
+import { arrangeOutputWindows, configureOutputWindowInteractivity } from './openHandler';
 import { getPage } from './page';
+import { isScreenOutputHidden } from './outputVisibility';
 import {
   createSearchParams,
   findScreenParams,
@@ -126,9 +123,9 @@ const updateTestImpl = async (scr: Screen, force = false): Promise<void> => {
         );
       });
   }
-  if (isOutputWindowsHidden()) testWindow.hide();
+  if (isScreenOutputHidden(scr.id)) testWindow.hide();
   else {
-    testWindow.show();
+    testWindow.showInactive();
     arrangeOutputWindows();
   }
 };

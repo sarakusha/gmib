@@ -16,6 +16,7 @@ import {
 
 import { requireLicenseCapability } from './licenseState';
 import { MAX_PLUGIN_ARCHIVE_SIZE } from './pluginArchive';
+import relaunch from './relaunch';
 import { type OfficialPluginPin, pluginLifecycle, PluginLifecycleError } from './pluginLifecycle';
 
 const ID_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/;
@@ -157,6 +158,7 @@ export const createPluginManagementRouter = (
   options: {
     createTemporaryDirectory?: () => Promise<string>;
     requireCapability?: () => void;
+    restart?: () => void;
   } = {},
 ): express.Router => {
   const router = express.Router();
@@ -179,6 +181,10 @@ export const createPluginManagementRouter = (
     }
   });
 
+  router.post('/restart', (_req, res) => {
+    res.json({ restarting: true });
+    (options.restart ?? (() => setTimeout(relaunch, 100)))();
+  });
   router.get(
     '/',
     asyncRoute(async (_req, res) => res.json({ plugins: await service.list() })),

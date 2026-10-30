@@ -318,4 +318,80 @@ describe('remote authenticated requests', () => {
     await expect(request).resolves.toBeUndefined();
     expect(signedFetches()).toHaveLength(0);
   });
+  it('sends archive bytes unchanged and signs the SHA-256 query without a JSON body', async () => {
+    fixtures.outgoing.set(remoteId, Buffer.from(testSecret.toString(16), 'hex').toString('base64'));
+    const { default: authRequest } = await import('../src/authRequest');
+    const archive = Uint8Array.from([0, 255, 27, 192]);
+    const api = '/manage/v1/plugins/archive/inspect?sha256=' + 'a'.repeat(64);
+    const url = `${remote}${api}`;
+    fixtures.fetch.mockImplementation(async (target: string) => {
+      if (target === identifierUrl) return new Response(remoteId);
+      if (target === url) return new Response('{}');
+      throw new Error(`Unexpected request: ${target}`);
+    });
+    await authRequest({
+      api,
+      host: 'remote-host',
+      port: 9002,
+      method: 'POST',
+      binaryBody: archive,
+    });
+    const [, request] = fixtures.fetch.mock.calls.find(([target]) => target === url)!;
+    expect(request.body).toEqual(archive);
+    const headers = new Headers(request.headers);
+    expect(headers.get('content-type')).toBe('application/octet-stream');
+    expect(headers.get('x-ni-signature')).toBe(
+      generateSignature(
+        Buffer.from(testSecret.toString(16), 'hex'),
+        'POST',
+        url,
+        Number(headers.get('x-ni-timestamp')),
+      ),
+    );
+    await expect(authRequest({ api, body: {}, binaryBody: archive })).rejects.toThrow(
+      'одновременно',
+    );
+  });
+  it('aborts a pending login and removes its request authentication listener', async () => {
+    const { default: authRequest } = await import('../src/authRequest');
+    const controller = new AbortController();
+    const request = authRequest({
+      api: '/announce',
+      host: 'remote-host',
+      port: 9002,
+      signal: controller.signal,
+    });
+    await vi.waitFor(() => expect(fixtures.ipcMain?.listenerCount('setRemoteSecret')).toBe(2));
+    await vi.waitFor(() => expect(fixtures.fetch).toHaveBeenCalledWith(identifierUrl));
+    controller.abort();
+    await expect(request).rejects.toMatchObject({ name: 'AbortError' });
+    // secret.ts keeps its one global listener; the request observer is gone.
+    expect(fixtures.ipcMain?.listenerCount('setRemoteSecret')).toBe(1);
+    fixtures.ipcMain?.emit('setRemoteSecret', null, remoteId, testSecret);
+    await new Promise<void>(resolve => setImmediate(resolve));
+    expect(signedFetches()).toHaveLength(0);
+  });
+
+  it('aborts during an in-flight credential read without later sending the request', async () => {
+    fixtures.outgoing.set(remoteId, Buffer.from(testSecret.toString(16), 'hex').toString('base64'));
+    let release!: () => void;
+    fixtures.readGate = new Promise<void>(resolve => {
+      release = resolve;
+    });
+    const { default: authRequest } = await import('../src/authRequest');
+    const controller = new AbortController();
+    const request = authRequest({
+      api: '/announce',
+      host: 'remote-host',
+      port: 9002,
+      signal: controller.signal,
+    });
+    await vi.waitFor(() => expect(fixtures.readStarted).toHaveBeenCalledWith(remoteId));
+    controller.abort();
+    await expect(request).rejects.toMatchObject({ name: 'AbortError' });
+    expect(fixtures.ipcMain?.listenerCount('setRemoteSecret')).toBe(1);
+    release();
+    await new Promise<void>(resolve => setImmediate(resolve));
+    expect(signedFetches()).toHaveLength(0);
+  });
 });

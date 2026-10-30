@@ -39,26 +39,67 @@ const observeAuth = () => {
   };
 };
 
+// Credentials can wait for a database read or a login dialog. Race those waits
+// as well as fetch, so closing a connection removes its authentication observer.
+const withAbort = <T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> => {
+  if (!signal) return promise;
+  signal.throwIfAborted();
+  return new Promise<T>((resolve, reject) => {
+    const cleanup = () => signal.removeEventListener('abort', aborted);
+    const aborted = () => {
+      cleanup();
+      const reason: unknown = signal.reason;
+      reject(reason instanceof Error ? reason : new Error('Запрос отменён', { cause: reason }));
+    };
+    signal.addEventListener('abort', aborted, { once: true });
+    promise.then(
+      value => {
+        cleanup();
+        resolve(value);
+      },
+      (error: unknown) => {
+        cleanup();
+        reject(error instanceof Error ? error : new Error('Ошибка авторизации', { cause: error }));
+      },
+    );
+  });
+};
+
 type Props = {
   api: string;
   host?: string;
   port?: number;
   method?: string;
   body?: unknown;
+  binaryBody?: Uint8Array;
   headers?: HeadersInit;
+  signal?: AbortSignal;
+  redirect?: RequestRedirect;
 };
 const authRequest = async ({
   api,
   host = 'localhost',
   port = Number(process.env['NIBUS_PORT'] ?? 9001) + 1,
   body: originalBody,
+  binaryBody,
   headers: originalHeaders,
   method = 'GET',
+  signal,
+  redirect,
 }: Props): Promise<Response | undefined> => {
+  signal?.throwIfAborted();
   const baseUrl = `http://${host}:${port}/api`;
   const url = `${baseUrl}${api.startsWith('/') ? '' : '/'}${api}`;
   const headers = new Headers(originalHeaders);
-  let body: string | undefined;
+  if (binaryBody !== undefined && originalBody !== undefined)
+    throw new Error('JSON и двоичное тело нельзя передавать одновременно');
+  let body: string | Uint8Array<ArrayBuffer> | undefined;
+  if (binaryBody !== undefined) {
+    // Archive requests authenticate the expected SHA-256 in the URL; the server
+    // streams bytes after auth and verifies that digest before inspect/install.
+    body = new Uint8Array(binaryBody);
+    headers.set('Content-Type', 'application/octet-stream');
+  }
   if (originalBody !== undefined) {
     if (typeof originalBody !== 'string') {
       body = JSON.stringify(originalBody);
@@ -69,24 +110,32 @@ const authRequest = async ({
     const auth = observeAuth();
     try {
       let revision = auth.revision;
-      let credentials: Credentials | undefined = await getRemoteCredentials(
-        `${baseUrl}/identifier`,
+      let credentials: Credentials | undefined = await withAbort(
+        getRemoteCredentials(`${baseUrl}/identifier`),
+        signal,
       );
       if (credentials?.remoteIdentifier && !credentials.apiSecret) {
-        if (!(await auth.wait(credentials.remoteIdentifier, revision))) return undefined;
+        if (!(await withAbort(auth.wait(credentials.remoteIdentifier, revision), signal)))
+          return undefined;
         revision = auth.revision;
-        credentials = await getRemoteCredentials(`${baseUrl}/identifier`);
+        credentials = await withAbort(getRemoteCredentials(`${baseUrl}/identifier`), signal);
       }
       for (let attempt = 0; attempt < 2; attempt += 1) {
         if (!credentials?.apiSecret || !credentials.identifier) return undefined;
         const now = Date.now();
-        const signature = generateSignature(credentials.apiSecret, method, url, now, body);
+        const signature = generateSignature(
+          credentials.apiSecret,
+          method,
+          url,
+          now,
+          binaryBody === undefined ? body : undefined,
+        );
         if (signature) {
           headers.set('x-ni-identifier', credentials.identifier);
           headers.set('x-ni-timestamp', now.toString());
           headers.set('x-ni-signature', signature);
         }
-        const response = await fetch(url, { headers, body, method });
+        const response = await fetch(url, { headers, body, method, signal, redirect });
         if (
           response.status !== 401 ||
           attempt > 0 ||
@@ -99,8 +148,9 @@ const authRequest = async ({
         // A saved key can become stale after host reinstallation or a password
         // change. Keep the initial announce pending until the login dialog supplies
         // a new key, rather than permanently registering the tab without a license.
-        if (!(await auth.wait(credentials.remoteIdentifier, revision))) return undefined;
-        credentials = await getRemoteCredentials(`${baseUrl}/identifier`);
+        if (!(await withAbort(auth.wait(credentials.remoteIdentifier, revision), signal)))
+          return undefined;
+        credentials = await withAbort(getRemoteCredentials(`${baseUrl}/identifier`), signal);
       }
       return undefined;
     } finally {
@@ -108,7 +158,7 @@ const authRequest = async ({
     }
   }
   headers.set('authorization', `Bearer ${secret.toString('base64')}`);
-  return fetch(url, { headers, body, method });
+  return fetch(url, { headers, body, method, signal, redirect });
 };
 
 export default authRequest;

@@ -53,3 +53,33 @@ describe('playback statistics period presets compatibility', () => {
     expect(supportsFeature('playbackStatisticsPeriodPreset', '5.6.5', false)).toBe(true);
   });
 });
+
+describe('plugin player control compatibility', () => {
+  it.each([
+    ['5.7.0', false],
+    ['5.7.1', true],
+    ['5.8.0', true],
+    [undefined, true],
+  ])('uses the remote version %s', (version, supported) => {
+    expect(supportsFeature('pluginPlayerControl', version, true)).toBe(supported);
+  });
+
+  it('keeps local plugin player control available under the existing policy', () => {
+    expect(supportsFeature('pluginPlayerControl', '5.7.0', false)).toBe(true);
+  });
+});
+
+describe('remote plugins compatibility', () => {
+  it.each([
+    ['5.7.0', false],
+    ['5.7.1', true],
+    ['5.8.0', true],
+    [undefined, true],
+  ])('uses the remote version %s', (version, supported) => {
+    expect(supportsFeature('remotePlugins', version, true)).toBe(supported);
+  });
+
+  it('keeps local plugins available under the existing policy', () => {
+    expect(supportsFeature('remotePlugins', '5.7.0', false)).toBe(true);
+  });
+});

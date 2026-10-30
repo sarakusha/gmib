@@ -19,12 +19,14 @@ const permissionLabels: Record<PluginPermission, string> = {
   'services.consume': 'использование сервисов зависимостей',
   'plugins.read': 'список установленных видов спорта',
   'output.control': 'управление привязанным выводом',
+  'player.control': 'список плееров, запуск и остановка воспроизведения и их окон вывода',
   'nibus.read': 'чтение событий NiBUS',
   'nibus.write': 'отправка состояния табло NiBUS',
 };
 
-const confirmInstall = async (
+export const confirmInstall = async (
   inspection: PluginArchiveInspection,
+  target?: string,
 ): Promise<PluginInstallConsent | undefined> => {
   const { manifest } = inspection;
   const permissionText =
@@ -38,7 +40,7 @@ const confirmInstall = async (
     type: manifest.main ? 'warning' : 'question',
     title: inspection.installed ? 'Обновление плагина' : 'Установка плагина',
     message: `${inspection.installed ? 'Обновить' : 'Установить'} «${manifest.name}» ${manifest.version}?`,
-    detail: `${manifest.description ? `${manifest.description}\n\n` : ''}Разрешения:\n${permissionText}${backendWarning}`,
+    detail: `${target ? `Удалённый GMIB: ${target}\n\n` : ''}${manifest.description ? `${manifest.description}\n\n` : ''}Разрешения:\n${permissionText}${backendWarning}`,
     buttons: [inspection.installed ? 'Обновить' : 'Установить', 'Отмена'],
     defaultId: 1,
     cancelId: 1,
@@ -81,20 +83,24 @@ export const installOfficialPluginFromDialog = async (id: string): Promise<Plugi
   return installResult(await pluginLifecycle.installOfficial(pin, consent, true));
 };
 
-export const uninstallPluginFromDialog = async (id: string): Promise<boolean> => {
-  const installed = (await pluginLifecycle.list()).find(item => item.manifest.id === id);
-  if (!installed) return false;
+export const confirmUninstall = async (name: string, target?: string): Promise<boolean> => {
   const confirmation = await dialog.showMessageBox({
     type: 'warning',
     title: 'Удаление плагина',
-    message: `Удалить «${installed.manifest.name}»?`,
+    message: `Удалить «${name}»?`,
     detail:
+      `${target ? `Удалённый GMIB: ${target}\n\n` : ''}` +
       'Файлы плагина будут удалены. Сохранённые данные останутся, чтобы их можно было восстановить при повторной установке.',
     buttons: ['Удалить', 'Отмена'],
     defaultId: 1,
     cancelId: 1,
     noLink: true,
   });
-  if (confirmation.response !== 0) return false;
+  return confirmation.response === 0;
+};
+
+export const uninstallPluginFromDialog = async (id: string): Promise<boolean> => {
+  const installed = (await pluginLifecycle.list()).find(item => item.manifest.id === id);
+  if (!installed || !(await confirmUninstall(installed.manifest.name))) return false;
   return (await pluginLifecycle.uninstall(id)).changed;
 };

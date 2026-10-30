@@ -119,7 +119,7 @@ import {
   uniquePlaylistName,
   updatePlaylist,
 } from './playlist';
-import { mountAuthenticatedPluginApi } from './pluginApiMount';
+import { mountAuthenticatedPluginApi, mountRemotePluginControlGateway } from './pluginApiMount';
 import { pluginManagementRouter } from './pluginManagementRouter';
 import relaunch from './relaunch';
 import {
@@ -310,6 +310,7 @@ const loadMedia = async (file: File, force = false): Promise<MediaInfo> => {
 const api = express.Router();
 
 api.use('/manage/v1/plugins', auth, pluginManagementRouter);
+mountRemotePluginControlGateway(api);
 
 mountApiAuth(api, {
   auth,

@@ -27,6 +27,10 @@ import { useSnackbar } from 'notistack';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import semver from 'semver';
 
+import { supportsFeature } from '/@common/capabilities';
+import { host, isRemoteSession, port } from '/@common/remote';
+import { useSelector } from '../store';
+import { selectSessionVersion } from '../store/selectors';
 import type { PluginCatalogEntry, PluginPermission, PluginStatus } from '/@common/plugins';
 
 const permissionLabels: Record<PluginPermission, string> = {
@@ -37,6 +41,7 @@ const permissionLabels: Record<PluginPermission, string> = {
   'services.consume': 'Сервисы зависимостей',
   'plugins.read': 'Виды спорта',
   'output.control': 'Управление выводом',
+  'player.control': 'Управление плеером',
   'nibus.read': 'Чтение NiBUS',
   'nibus.write': 'Табло NiBUS',
   realtime: 'События',
@@ -79,8 +84,16 @@ const Plugins: React.FC = () => {
   const [busyId, setBusyId] = useState<string>();
   const [restartAfterRemoval, setRestartAfterRemoval] = useState(false);
   const { enqueueSnackbar } = useSnackbar();
+  const version = useSelector(selectSessionVersion);
+  const remotePluginsSupported = supportsFeature('remotePlugins', version, isRemoteSession);
+  const playerControlSupported = supportsFeature('pluginPlayerControl', version, isRemoteSession);
+  const compatible = (manifest: PluginCatalogEntry['manifest']) =>
+    playerControlSupported || !manifest.permissions?.includes('player.control');
+  const compatibilityMessage =
+    'Для плагинов с управлением плеером обновите удалённый GMIB до 5.7.1 или новее.';
 
   const loadInstalled = useCallback(async () => {
+    if (!remotePluginsSupported) return;
     try {
       setPlugins(await window.plugins.list());
     } catch (error) {
@@ -88,9 +101,10 @@ const Plugins: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [enqueueSnackbar]);
+  }, [enqueueSnackbar, remotePluginsSupported]);
 
   const loadCatalog = useCallback(async () => {
+    if (!remotePluginsSupported) return;
     setCatalogLoading(true);
     setCatalogError(undefined);
     try {
@@ -100,7 +114,7 @@ const Plugins: React.FC = () => {
     } finally {
       setCatalogLoading(false);
     }
-  }, []);
+  }, [remotePluginsSupported]);
 
   useEffect(() => {
     void loadInstalled();
@@ -113,6 +127,7 @@ const Plugins: React.FC = () => {
   );
 
   const installFromFile = async () => {
+    if (!remotePluginsSupported) return;
     setBusyId('file');
     try {
       const result = await window.plugins.install();
@@ -133,6 +148,7 @@ const Plugins: React.FC = () => {
   };
 
   const installOfficial = async (entry: PluginCatalogEntry) => {
+    if (!remotePluginsSupported || !compatible(entry.manifest)) return;
     setBusyId(`catalog:${entry.manifest.id}`);
     try {
       const result = await window.plugins.installOfficial(entry.manifest.id);
@@ -153,6 +169,7 @@ const Plugins: React.FC = () => {
   };
 
   const setEnabled = async (plugin: PluginStatus, enabled: boolean) => {
+    if (enabled && !compatible(plugin.manifest)) return;
     setBusyId(plugin.manifest.id);
     try {
       const updated = await window.plugins.setEnabled(plugin.manifest.id, enabled);
@@ -184,6 +201,13 @@ const Plugins: React.FC = () => {
     }
   };
 
+  if (!remotePluginsSupported)
+    return (
+      <Alert severity="info">
+        Для удалённого управления плагинами обновите GMIB до 5.7.1 или новее.
+      </Alert>
+    );
+
   return (
     <Box sx={{ width: 1, height: 1, overflow: 'auto', p: 3 }}>
       <Stack direction="row" spacing={2} sx={{ mb: 2, alignItems: 'center' }}>
@@ -191,7 +215,9 @@ const Plugins: React.FC = () => {
         <Box sx={{ flex: 1 }}>
           <Typography variant="h5">Плагины</Typography>
           <Typography color="text.secondary">
-            Официальный каталог и локальные расширения gmib
+            {isRemoteSession
+              ? `Плагины удалённого GMIB: ${host}:${port + 1}`
+              : 'Официальный каталог и локальные расширения gmib'}
           </Typography>
         </Box>
         <Button
@@ -203,6 +229,12 @@ const Plugins: React.FC = () => {
           Установить из файла
         </Button>
       </Stack>
+
+      {!playerControlSupported && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          {compatibilityMessage}
+        </Alert>
+      )}
 
       {restartRequired && (
         <Alert
@@ -301,7 +333,9 @@ const Plugins: React.FC = () => {
                       secondaryAction={
                         <Button
                           variant={updateAvailable ? 'contained' : 'outlined'}
-                          disabled={busyId !== undefined || installedCurrent}
+                          disabled={
+                            busyId !== undefined || installedCurrent || !compatible(manifest)
+                          }
                           onClick={() => void installOfficial(entry)}
                           startIcon={busy ? <CircularProgress size={18} /> : undefined}
                         >
@@ -331,6 +365,7 @@ const Plugins: React.FC = () => {
                             extra={
                               <Typography variant="caption" color="text.secondary">
                                 Издатель: {entry.publisher.name}
+                                {!compatible(manifest) && ` · ${compatibilityMessage}`}
                               </Typography>
                             }
                           />
@@ -373,12 +408,22 @@ const Plugins: React.FC = () => {
                           <Button
                             size="small"
                             startIcon={<LaunchIcon />}
-                            disabled={!plugin.loaded || busy}
-                            onClick={() =>
+                            disabled={
+                              !plugin.loaded ||
+                              busy ||
+                              !compatible(manifest) ||
+                              (isRemoteSession && manifest.localOnly === true)
+                            }
+                            onClick={() => {
+                              if (
+                                !compatible(manifest) ||
+                                (isRemoteSession && manifest.localOnly === true)
+                              )
+                                return;
                               void window.plugins.openControl(manifest.id).catch(error => {
                                 enqueueSnackbar(errorMessage(error), { variant: 'error' });
-                              })
-                            }
+                              });
+                            }}
                           >
                             {manifest.control.title ?? 'Управление'}
                           </Button>
@@ -387,7 +432,7 @@ const Plugins: React.FC = () => {
                           control={
                             <Switch
                               checked={plugin.enabled}
-                              disabled={busy}
+                              disabled={busy || (!plugin.enabled && !compatible(manifest))}
                               onChange={(_, checked) => void setEnabled(plugin, checked)}
                             />
                           }
@@ -421,11 +466,23 @@ const Plugins: React.FC = () => {
                         <PluginDescription
                           manifest={manifest}
                           extra={
-                            plugin.error ? (
-                              <Alert severity="error" sx={{ py: 0 }}>
-                                {plugin.error}
-                              </Alert>
-                            ) : undefined
+                            <>
+                              {isRemoteSession && manifest.localOnly === true && (
+                                <Alert severity="info" sx={{ py: 0 }}>
+                                  Страница управления доступна только на компьютере с этим плагином.
+                                </Alert>
+                              )}
+                              {!compatible(manifest) && (
+                                <Alert severity="info" sx={{ py: 0 }}>
+                                  {compatibilityMessage}
+                                </Alert>
+                              )}
+                              {plugin.error && (
+                                <Alert severity="error" sx={{ py: 0 }}>
+                                  {plugin.error}
+                                </Alert>
+                              )}
+                            </>
                           }
                         />
                       }
