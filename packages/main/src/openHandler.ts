@@ -16,7 +16,7 @@ import {
   setPlayerOutputHidden,
 } from './outputVisibility';
 import { reconcileOutputWindow } from './reconcileOutputWindow';
-import { compareOutputWindowOrder } from './outputWindowOrder';
+import { compareOutputWindowOrder, macOutputRelativeLevel } from './outputWindowOrder';
 import { wss } from './server';
 import {
   findManagedWindow,
@@ -230,7 +230,7 @@ const getOutputWindowZIndex = (window: BrowserWindow): number => {
 };
 
 export const arrangeOutputWindows = (): void => {
-  getOutputWindows()
+  const windows = getOutputWindows()
     .filter(window => !window.isDestroyed() && window.isVisible())
     .sort((a, b) =>
       compareOutputWindowOrder(
@@ -245,10 +245,18 @@ export const arrangeOutputWindows = (): void => {
           zIndex: getOutputWindowZIndex(b),
         },
       ),
-    )
-    .forEach(window => {
-      window.moveTop();
-    });
+    );
+  const topmost = windows.filter(window => shouldKeepOnTop(getOutputWindowUrl(window)));
+  windows.forEach(window => {
+    if (isMacOS && topmost.includes(window)) {
+      window.setAlwaysOnTop(
+        true,
+        TOPMOST_LEVEL,
+        macOutputRelativeLevel(topmost.indexOf(window), topmost.length),
+      );
+    }
+    window.moveTop();
+  });
 };
 
 const refreshOutputWindowStack = (): void => {

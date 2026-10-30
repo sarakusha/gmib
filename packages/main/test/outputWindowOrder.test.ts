@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { compareOutputWindowOrder, type OutputWindowOrder } from '../src/outputWindowOrder';
+import {
+  compareOutputWindowOrder,
+  macOutputRelativeLevel,
+  type OutputWindowOrder,
+} from '../src/outputWindowOrder';
 
 const orderedIds = (windows: OutputWindowOrder[]): number[] =>
   [...windows].sort(compareOutputWindowOrder).map(({ id }) => id);
@@ -32,5 +36,16 @@ describe('compareOutputWindowOrder', () => {
         { alwaysOnTop: true, id: 41, zIndex: 0 },
       ]),
     ).toEqual([41, 42]);
+  });
+});
+
+describe('macOutputRelativeLevel', () => {
+  it('assigns higher native levels to higher sorted outputs without exceeding screen-saver', () => {
+    expect([0, 1, 2].map(index => macOutputRelativeLevel(index, 3))).toEqual([-2, -1, 0]);
+    expect(macOutputRelativeLevel(0, 1)).toBe(0);
+  });
+
+  it('bounds the native level for unusually large output counts', () => {
+    expect(macOutputRelativeLevel(0, 1000)).toBe(-900);
   });
 });
