@@ -19,6 +19,15 @@ const mock = vi.hoisted(() => ({
   setScreenOutputHidden: vi.fn(),
   clearScreenOutputVisibility: vi.fn(),
   revealPlayerOutput: vi.fn(),
+  holdOutputWindows: vi.fn(),
+  releaseOutputWindows: vi.fn(),
+  waitForPluginPlayerReady: vi.fn(),
+  waitForPluginOutputFrame: vi.fn(),
+  getOutputVisibilityRevision: vi.fn(),
+  clearPlayerOutputReveal: vi.fn(),
+  reconcilePlayerOutputWindows: vi.fn(),
+  isScreenOutputHidden: vi.fn(),
+  isPlayerOutputHidden: vi.fn(),
 }));
 vi.mock('electron', () => ({
   screen: { on: vi.fn(), off: vi.fn(), getAllDisplays: () => [{ id: 1 }] },
@@ -26,7 +35,11 @@ vi.mock('electron', () => ({
 vi.mock('../src/outputVisibility', () => ({
   setScreenOutputHidden: mock.setScreenOutputHidden,
   clearScreenOutputVisibility: mock.clearScreenOutputVisibility,
+  clearPlayerOutputReveal: mock.clearPlayerOutputReveal,
+  getOutputVisibilityRevision: mock.getOutputVisibilityRevision,
   revealPlayerOutput: mock.revealPlayerOutput,
+  isScreenOutputHidden: mock.isScreenOutputHidden,
+  isPlayerOutputHidden: mock.isPlayerOutputHidden,
 }));
 vi.mock('../src/screen', () => mock);
 vi.mock('../src/screenOutput', () => ({
@@ -35,6 +48,12 @@ vi.mock('../src/screenOutput', () => ({
 }));
 vi.mock('../src/openHandler', () => ({
   setPlayerOutputWindowsVisibility: mock.visibility,
+  holdOutputWindows: mock.holdOutputWindows,
+  reconcilePlayerOutputWindows: mock.reconcilePlayerOutputWindows,
+}));
+vi.mock('../src/pluginOutputTransition', () => ({
+  waitForPluginPlayerReady: mock.waitForPluginPlayerReady,
+  waitForPluginOutputFrame: mock.waitForPluginOutputFrame,
 }));
 vi.mock('../src/playerWindow', () => ({ openPlayer: mock.openPlayer }));
 vi.mock('../src/windowStore', () => ({
@@ -62,6 +81,11 @@ const window = { webContents: { send: mock.send } };
 
 beforeEach(() => {
   vi.resetAllMocks();
+  mock.getOutputVisibilityRevision.mockReturnValue(0);
+  mock.holdOutputWindows.mockReturnValue(mock.releaseOutputWindows);
+  mock.isScreenOutputHidden.mockReturnValue(false);
+  mock.isPlayerOutputHidden.mockReturnValue(false);
+  mock.findScreenWindow.mockReturnValue({ isDestroyed: () => false, isVisible: () => true });
   mock.getScreens.mockResolvedValue([]);
   mock.getPlayer.mockResolvedValue(player);
   mock.getPlayers.mockResolvedValue([player, { id: 2, autoPlay: true }]);
@@ -240,7 +264,7 @@ describe('plugin player output', () => {
     expect(mock.visibility).toHaveBeenCalledWith(false, 1);
   });
 
-  it('clears every stale owned output before enabling the selected screen', async () => {
+  it('prepares the selected screen before clearing every stale owned output', async () => {
     const target = { id: 3, display: 1, width: 100, height: 100 };
     const stale = [
       { id: 1, test: 'plugin:test:main' },
@@ -253,9 +277,9 @@ describe('plugin player output', () => {
     mock.getScreens.mockResolvedValue([...stale, target, { id: 4, test: 'plugin:other:main' }]);
     await api.start({ screenId: 3, pageId: 'main', autoStart: false });
     expect(mock.updateTest.mock.calls).toEqual([
+      [{ ...target, test: 'plugin:test:main' }],
       [{ ...stale[0], test: undefined }],
       [{ ...stale[1], test: undefined }],
-      [{ ...target, test: 'plugin:test:main' }],
     ]);
     mock.updateTest.mockClear();
     mock.updateScreen.mockClear();
@@ -302,7 +326,7 @@ describe('plugin player output', () => {
     );
     expect(await api.getStatus()).toMatchObject({
       active: false,
-      message: expect.stringContaining('HTTP 404'),
+      message: 'Экран ещё не выбран',
     });
     mock.getScreenOutputError.mockReturnValue(undefined);
     await api.start({ screenId: 1, pageId: 'main', autoStart: false });
@@ -336,5 +360,355 @@ describe('plugin player output', () => {
     expect(mock.updateTest.mock.invocationCallOrder[1]).toBeGreaterThan(
       mock.visibility.mock.invocationCallOrder[0],
     );
+  });
+});
+
+describe('atomic plugin output layouts', () => {
+  const priorProfile = { screenId: 1, pageId: 'main', autoStart: false };
+  const nextProfile = { screenId: 3, pageId: 'main', autoStart: true };
+  const setup = async (pluginManifest = manifest) => {
+    const storage = { get: async () => priorProfile as never, set: vi.fn() };
+    const api = await createPluginOutput(pluginManifest, storage, vi.fn());
+    const screens = new Map([
+      [
+        1,
+        {
+          id: 1,
+          display: 1,
+          width: 100,
+          height: 100,
+          test: 'plugin:test:main' as string | undefined,
+        },
+      ],
+      [3, { id: 3, display: 1, width: 50, height: 100, test: undefined as string | undefined }],
+    ]);
+    mock.getScreens.mockImplementation(async () =>
+      [...screens.values()].map(value => ({ ...value })),
+    );
+    mock.getScreen.mockImplementation(async (id: number) => {
+      const value = screens.get(id);
+      return value && { ...value };
+    });
+    mock.updateScreen.mockImplementation(async value => {
+      screens.set(value.id, { ...value });
+    });
+    const players = new Map([
+      [7, { ...player, id: 7, autoPlay: false }],
+      [8, { ...player, id: 8, autoPlay: true }],
+    ]);
+    mock.getPlayer.mockImplementation(async (id: number) => {
+      const value = players.get(id);
+      return value && { ...value };
+    });
+    mock.updatePlayer.mockImplementation(async value => {
+      players.set(value.id, { ...value });
+    });
+    return { api, storage, screens, players };
+  };
+
+  it('keeps prior output pinned until the new screen and started player are ready', async () => {
+    const state = await setup();
+    let ready!: () => void;
+    mock.waitForPluginPlayerReady.mockImplementationOnce(
+      () =>
+        new Promise<void>(resolve => {
+          ready = resolve;
+        }),
+    );
+    const transition = state.api.applyLayout!({
+      profile: nextProfile,
+      players: [
+        { playerId: 8, playing: false },
+        { playerId: 7, playing: true },
+      ],
+    });
+    await vi.waitFor(() => expect(mock.waitForPluginPlayerReady).toHaveBeenCalledWith(7));
+    expect(state.screens.get(1)?.test).toBe('plugin:test:main');
+    expect(state.players.get(8)?.autoPlay).toBe(true);
+    expect(state.storage.set).not.toHaveBeenCalled();
+    expect(mock.releaseOutputWindows).not.toHaveBeenCalled();
+    expect(mock.holdOutputWindows).toHaveBeenCalledTimes(1);
+    ready();
+    await transition;
+    expect(state.screens.get(1)?.test).toBeUndefined();
+    expect(state.screens.get(3)?.test).toBe('plugin:test:main');
+    expect(state.players.get(7)?.autoPlay).toBe(true);
+    expect(state.players.get(8)?.autoPlay).toBe(false);
+    expect(state.storage.set).toHaveBeenCalledWith('gmib.output', nextProfile);
+    expect(mock.releaseOutputWindows).toHaveBeenCalledTimes(1);
+    const firstScreen = mock.updateTest.mock.calls[0][0];
+    expect(firstScreen.id).toBe(3);
+  });
+
+  it('retains the previous screen and restores touched playback after readiness fails', async () => {
+    const state = await setup();
+    mock.waitForPluginPlayerReady.mockRejectedValueOnce(new Error('player not ready'));
+    await expect(
+      state.api.applyLayout!({ profile: nextProfile, players: [{ playerId: 7, playing: true }] }),
+    ).rejects.toThrow('player not ready');
+    expect(state.screens.get(1)?.test).toBe('plugin:test:main');
+    expect(state.screens.get(3)?.test).toBeUndefined();
+    expect(state.players.get(7)?.autoPlay).toBe(false);
+    expect((await state.api.getStatus()).profile).toEqual(priorProfile);
+    expect(mock.releaseOutputWindows).toHaveBeenCalledTimes(1);
+  });
+
+  it('restores cleared screens if committing the saved profile fails', async () => {
+    const state = await setup();
+    state.storage.set.mockRejectedValueOnce(new Error('storage failed'));
+    await expect(state.api.applyLayout!({ profile: nextProfile })).rejects.toThrow(
+      'storage failed',
+    );
+    expect(state.screens.get(1)?.test).toBe('plugin:test:main');
+    expect(state.screens.get(3)?.test).toBeUndefined();
+    expect((await state.api.getStatus()).profile).toEqual(priorProfile);
+    expect(mock.releaseOutputWindows).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects page errors without clearing or replacing the saved previous output', async () => {
+    const state = await setup();
+    mock.getScreenOutputError.mockImplementation((id: number) =>
+      id === 3 ? 'HTTP 404' : undefined,
+    );
+    await expect(state.api.start(nextProfile)).rejects.toThrow('HTTP 404');
+    expect(state.screens.get(1)?.test).toBe('plugin:test:main');
+    expect(state.screens.get(3)?.test).toBeUndefined();
+    expect((await state.api.getStatus()).profile).toEqual(priorProfile);
+    expect(mock.releaseOutputWindows).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects a disconnected target display before affecting the previous output', async () => {
+    const state = await setup();
+    state.screens.set(3, { ...state.screens.get(3)!, display: 99 });
+    await expect(state.api.applyLayout!({ profile: nextProfile })).rejects.toThrow('Дисплей');
+    expect(mock.updateScreen).not.toHaveBeenCalled();
+    expect(mock.updatePlayer).not.toHaveBeenCalled();
+    expect(state.screens.get(1)?.test).toBe('plugin:test:main');
+  });
+
+  it('requires player.control only when player operations are requested', async () => {
+    const api = await createApi({ ...manifest, permissions: ['output.control'] });
+    expect(() =>
+      api.applyLayout!({ profile: nextProfile, players: [{ playerId: 1, playing: true }] }),
+    ).toThrow('player.control');
+    expect(mock.updateScreen).not.toHaveBeenCalled();
+    expect(mock.updatePlayer).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [{ playerId: NaN, playing: true }],
+    [{ playerId: 7, playing: 'true' }],
+    [
+      { playerId: 7, playing: true },
+      { playerId: 7, playing: false },
+    ],
+    [
+      { playerId: 7, playing: true },
+      { playerId: 99, playing: false },
+    ],
+  ])('validates the complete player list before any mutation (%j)', async players => {
+    const state = await setup();
+    await expect(
+      state.api.applyLayout!({ profile: nextProfile, players } as never),
+    ).rejects.toThrow();
+    expect(mock.updateScreen).not.toHaveBeenCalled();
+    expect(mock.updatePlayer).not.toHaveBeenCalled();
+    expect(state.screens.get(1)?.test).toBe('plugin:test:main');
+  });
+
+  it('requires output.control before inspecting any player or screen', async () => {
+    const api = await createApi({ ...manifest, permissions: ['player.control'] });
+    expect(() =>
+      api.applyLayout!({ profile: nextProfile, players: [{ playerId: 1, playing: true }] }),
+    ).toThrow('output.control');
+    expect(mock.getPlayer).not.toHaveBeenCalled();
+    expect(mock.getScreen).not.toHaveBeenCalled();
+  });
+
+  it('allows a screen-only atomic layout without player.control', async () => {
+    const state = await setup({ ...manifest, permissions: ['output.control'] });
+    await state.api.applyLayout!({ profile: nextProfile, players: [] });
+    expect(state.screens.get(3)?.test).toBe('plugin:test:main');
+    expect(mock.updatePlayer).not.toHaveBeenCalled();
+  });
+
+  it('retains the previous output when the prepared target is not visible', async () => {
+    const state = await setup();
+    mock.findScreenWindow.mockImplementation((id: number) => ({
+      isDestroyed: () => false,
+      isVisible: () => id !== 3,
+    }));
+    await expect(state.api.applyLayout!({ profile: nextProfile })).rejects.toThrow('не появился');
+    expect(state.screens.get(1)?.test).toBe('plugin:test:main');
+    expect(state.screens.get(3)?.test).toBeUndefined();
+    expect(mock.updatePlayer).not.toHaveBeenCalled();
+    expect(mock.releaseOutputWindows).toHaveBeenCalledTimes(1);
+  });
+
+  it('restores full original player rows when stopping an old player fails', async () => {
+    const state = await setup();
+    mock.updatePlayer.mockImplementation(async value => {
+      if (value.id === 8 && !value.autoPlay) throw new Error('stop failed');
+      state.players.set(value.id, { ...value });
+    });
+    await expect(
+      state.api.applyLayout!({
+        profile: nextProfile,
+        players: [
+          { playerId: 7, playing: true },
+          { playerId: 8, playing: false },
+        ],
+      }),
+    ).rejects.toThrow('stop failed');
+    expect(state.players.get(7)).toEqual({ ...player, id: 7, autoPlay: false });
+    expect(state.players.get(8)).toEqual({ ...player, id: 8, autoPlay: true });
+    expect(state.screens.get(1)?.test).toBe('plugin:test:main');
+    expect(mock.releaseOutputWindows).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports rollback errors while still restoring screens and releasing the pin', async () => {
+    const state = await setup();
+    const initialError = new Error('not ready');
+    const rollbackError = new Error('rollback player failed');
+    mock.waitForPluginPlayerReady.mockRejectedValueOnce(initialError);
+    mock.updatePlayer
+      .mockImplementationOnce(async value => {
+        state.players.set(value.id, { ...value });
+      })
+      .mockRejectedValueOnce(rollbackError);
+    await expect(
+      state.api.applyLayout!({ profile: nextProfile, players: [{ playerId: 7, playing: true }] }),
+    ).rejects.toMatchObject({ errors: [initialError, rollbackError] });
+    expect(state.screens.get(1)?.test).toBe('plugin:test:main');
+    expect(state.screens.get(3)?.test).toBeUndefined();
+    expect(mock.releaseOutputWindows).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not re-show output after a newer global hide while waiting for readiness', async () => {
+    const state = await setup();
+    let rejectReady!: (error: Error) => void;
+    mock.waitForPluginPlayerReady.mockImplementationOnce(
+      () =>
+        new Promise<void>((_, reject) => {
+          rejectReady = reject;
+        }),
+    );
+    const transition = state.api.applyLayout!({
+      profile: nextProfile,
+      players: [{ playerId: 7, playing: true }],
+    });
+    const failed = expect(transition).rejects.toThrow('not ready');
+    await vi.waitFor(() => expect(mock.waitForPluginPlayerReady).toHaveBeenCalled());
+    mock.getOutputVisibilityRevision.mockReturnValue(1);
+    mock.isScreenOutputHidden.mockReturnValue(true);
+    mock.isPlayerOutputHidden.mockReturnValue(true);
+    mock.revealPlayerOutput.mockClear();
+    mock.setScreenOutputHidden.mockClear();
+    mock.visibility.mockClear();
+    rejectReady(new Error('not ready'));
+    await failed;
+    expect(mock.revealPlayerOutput).not.toHaveBeenCalled();
+    expect(mock.setScreenOutputHidden).not.toHaveBeenCalled();
+    expect(mock.clearScreenOutputVisibility).toHaveBeenCalledWith(3);
+    expect(mock.clearPlayerOutputReveal).toHaveBeenCalledWith(7);
+    expect(mock.reconcilePlayerOutputWindows).toHaveBeenCalledWith(7);
+    expect(mock.visibility).not.toHaveBeenCalled();
+    expect(state.screens.get(1)?.test).toBe('plugin:test:main');
+  });
+
+  it('aborts before handoff after global visibility changes while preparing a frame', async () => {
+    const state = await setup();
+    let ready!: () => void;
+    mock.waitForPluginOutputFrame.mockImplementationOnce(
+      () =>
+        new Promise<void>(resolve => {
+          ready = resolve;
+        }),
+    );
+    const transition = state.api.applyLayout!({
+      profile: nextProfile,
+      players: [{ playerId: 8, playing: false }],
+    });
+    const failed = expect(transition).rejects.toThrow('общей командой');
+    await vi.waitFor(() => expect(mock.waitForPluginOutputFrame).toHaveBeenCalled());
+    expect(state.players.get(8)?.autoPlay).toBe(true);
+    mock.getOutputVisibilityRevision.mockReturnValue(1);
+    ready();
+    await failed;
+    expect(state.players.get(8)?.autoPlay).toBe(true);
+    expect(state.screens.get(1)?.test).toBe('plugin:test:main');
+  });
+
+  it('snapshots queued applyLayout input before the caller can append player operations', async () => {
+    const state = await setup({ ...manifest, permissions: ['output.control'] });
+    let frame!: () => void;
+    mock.waitForPluginOutputFrame.mockImplementationOnce(
+      () =>
+        new Promise<void>(resolve => {
+          frame = resolve;
+        }),
+    );
+    const first = state.api.start(nextProfile);
+    await vi.waitFor(() => expect(mock.waitForPluginOutputFrame).toHaveBeenCalled());
+    const layout = {
+      profile: { ...nextProfile },
+      players: [] as Array<{ playerId: number; playing: boolean }>,
+    };
+    const queued = state.api.applyLayout!(layout);
+    layout.players.push({ playerId: 7, playing: true });
+    layout.profile.screenId = 99;
+    frame();
+    await Promise.all([first, queued]);
+    expect(mock.updatePlayer).not.toHaveBeenCalled();
+    expect(state.storage.set).toHaveBeenLastCalledWith('gmib.output', nextProfile);
+  });
+
+  it('allows idempotent cleanup of an already deleted player', async () => {
+    const state = await setup();
+    await state.api.applyLayout!({
+      profile: nextProfile,
+      players: [{ playerId: 99, playing: false }],
+    });
+    expect(mock.send).toHaveBeenCalledWith('stop', 99);
+    expect(mock.visibility).toHaveBeenCalledWith(false, 99);
+    expect(state.screens.get(3)?.test).toBe('plugin:test:main');
+  });
+
+  it('keeps the prepared picture and reports rollback load errors if the old page cannot return', async () => {
+    const state = await setup();
+    state.storage.set.mockRejectedValueOnce(new Error('storage failed'));
+    mock.getScreenOutputError.mockImplementation((id: number) =>
+      id === 1 ? 'HTTP 503' : undefined,
+    );
+    await expect(state.api.applyLayout!({ profile: nextProfile })).rejects.toMatchObject({
+      errors: [
+        expect.objectContaining({ message: 'storage failed' }),
+        expect.objectContaining({ message: expect.stringContaining('HTTP 503') }),
+      ],
+    });
+    expect(state.screens.get(3)?.test).toBe('plugin:test:main');
+    expect(mock.releaseOutputWindows).toHaveBeenCalledTimes(1);
+  });
+
+  it('shares the operation queue with stop while waiting for readiness', async () => {
+    const state = await setup();
+    let ready!: () => void;
+    mock.waitForPluginPlayerReady.mockImplementationOnce(
+      () =>
+        new Promise<void>(resolve => {
+          ready = resolve;
+        }),
+    );
+    const transition = state.api.applyLayout!({
+      profile: nextProfile,
+      players: [{ playerId: 7, playing: true }],
+    });
+    await vi.waitFor(() => expect(mock.waitForPluginPlayerReady).toHaveBeenCalled());
+    const stopping = state.api.stop();
+    expect(state.screens.get(1)?.test).toBe('plugin:test:main');
+    ready();
+    await Promise.all([transition, stopping]);
+    expect(state.screens.get(3)?.test).toBeUndefined();
+    expect((await state.api.getStatus()).profile?.autoStart).toBe(false);
   });
 });

@@ -45,6 +45,7 @@ const OUTPUT_Z_ORDER_REFRESH_INTERVAL_MS = 30_000;
 const isWindows = process.platform === 'win32';
 const isMacOS = process.platform === 'darwin';
 const configuredOutputUrls = new WeakMap<BrowserWindow, string>();
+const heldOutputWindows = new Map<BrowserWindow, number>();
 
 const getOutputWindowUrl = (window: BrowserWindow): string =>
   configuredOutputUrls.get(window) ?? window.webContents.getURL();
@@ -238,11 +239,13 @@ export const arrangeOutputWindows = (): void => {
           alwaysOnTop: shouldKeepOnTop(getOutputWindowUrl(a)),
           id: a.id,
           zIndex: getOutputWindowZIndex(a),
+          held: heldOutputWindows.has(a),
         },
         {
           alwaysOnTop: shouldKeepOnTop(getOutputWindowUrl(b)),
           id: b.id,
           zIndex: getOutputWindowZIndex(b),
+          held: heldOutputWindows.has(b),
         },
       ),
     );
@@ -257,6 +260,25 @@ export const arrangeOutputWindows = (): void => {
     }
     window.moveTop();
   });
+};
+
+// Temporary ordering only: saved zIndex values and window focus never change.
+export const holdOutputWindows = (windows: BrowserWindow[]): (() => void) => {
+  const held = [...new Set(windows)].filter(window => !window.isDestroyed() && window.isVisible());
+  for (const window of held)
+    heldOutputWindows.set(window, (heldOutputWindows.get(window) ?? 0) + 1);
+  arrangeOutputWindows();
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    for (const window of held) {
+      const count = heldOutputWindows.get(window) ?? 1;
+      if (count > 1) heldOutputWindows.set(window, count - 1);
+      else heldOutputWindows.delete(window);
+    }
+    arrangeOutputWindows();
+  };
 };
 
 const refreshOutputWindowStack = (): void => {

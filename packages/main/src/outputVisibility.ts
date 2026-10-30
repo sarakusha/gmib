@@ -1,6 +1,8 @@
 import { getPlaybackOutputPlayerIds, invalidatePlaybackOutputs } from './playbackOutputState';
 
 let hidden = false;
+let visibilityRevision = 0;
+export const getOutputVisibilityRevision = (): number => visibilityRevision;
 let playersHidden = false;
 const playerOverrides = new Map<number, boolean>();
 const screenOverrides = new Map<number, boolean>();
@@ -21,9 +23,19 @@ export const revealPlayerOutput = (playerId: number): void => {
   invalidatePlaybackOutputs(playerId, 'unknown');
 };
 
+// Remove only an explicit plugin reveal; retain the newer global/per-player intent.
+export const clearPlayerOutputReveal = (playerId: number): void => {
+  const wasHidden = isPlayerOutputHidden(playerId);
+  explicitPlayerShows.delete(playerId);
+  const nowHidden = isPlayerOutputHidden(playerId);
+  if (wasHidden !== nowHidden)
+    invalidatePlaybackOutputs(playerId, nowHidden ? 'hidden' : 'unknown');
+};
+
 export const isOutputHidden = (): boolean => hidden;
 
 export const setOutputHidden = (value: boolean): boolean => {
+  visibilityRevision += 1;
   const previous = new Map(getPlaybackOutputPlayerIds().map(id => [id, isPlayerOutputHidden(id)]));
   hidden = value;
   screenOverrides.clear();

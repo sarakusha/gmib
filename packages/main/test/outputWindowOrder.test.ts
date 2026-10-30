@@ -29,6 +29,14 @@ describe('compareOutputWindowOrder', () => {
     ).toEqual([32, 31]);
   });
 
+  it('keeps the old layout above new high-zIndex output only while held', () => {
+    const old = { alwaysOnTop: true, id: 1, zIndex: 0, held: true };
+    const next = { alwaysOnTop: true, id: 2, zIndex: 100 };
+    expect(orderedIds([old, next])).toEqual([2, 1]);
+    expect(orderedIds([{ ...old, held: false }, next])).toEqual([1, 2]);
+    expect(old.zIndex).toBe(0);
+  });
+
   it('uses the stable window id as the final tie breaker', () => {
     expect(
       orderedIds([

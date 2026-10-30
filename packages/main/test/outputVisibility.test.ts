@@ -4,7 +4,9 @@ vi.mock('../src/playbackOutputState', () => ({
   invalidatePlaybackOutputs: vi.fn(),
 }));
 import {
+  clearPlayerOutputReveal,
   clearScreenOutputVisibility,
+  getOutputVisibilityRevision,
   isOutputHidden,
   isPlayerOutputHidden,
   isScreenOutputHidden,
@@ -47,5 +49,23 @@ describe('explicit plugin output visibility', () => {
     expect(isPlayerOutputHidden(1)).toBe(true);
     setOutputHidden(false);
     expect(isPlayerOutputHidden(1)).toBe(true);
+  });
+  it('advances the global revision even when the hidden value is unchanged', () => {
+    const initial = getOutputVisibilityRevision();
+    setOutputHidden(true);
+    const firstHide = getOutputVisibilityRevision();
+    setOutputHidden(true);
+    expect(firstHide).toBe(initial + 1);
+    expect(getOutputVisibilityRevision()).toBe(firstHide + 1);
+  });
+  it('cancels a late plugin reveal without creating a persistent per-player hide', () => {
+    setOutputHidden(true);
+    revealPlayerOutput(1);
+    setPlayerOutputHidden(false, 1);
+    expect(isPlayerOutputHidden(1)).toBe(false);
+    clearPlayerOutputReveal(1);
+    expect(isPlayerOutputHidden(1)).toBe(true);
+    setOutputHidden(false);
+    expect(isPlayerOutputHidden(1)).toBe(false);
   });
 });
