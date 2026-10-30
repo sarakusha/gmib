@@ -13,6 +13,7 @@ import { getLicenseState } from './licenseState';
 import { createTestWindow } from './mainWindow';
 import { arrangeOutputWindows, configureOutputWindowInteractivity } from './openHandler';
 import { getPage } from './page';
+import { getScreen } from './screen';
 import { isScreenOutputHidden } from './outputVisibility';
 import {
   createSearchParams,
@@ -37,6 +38,24 @@ const isLoadAborted = (error: unknown): boolean =>
   error instanceof Error && error.message.includes('ERR_ABORTED');
 
 const pendingUpdates = new Map<number, Promise<void>>();
+const loadErrors = new WeakMap<BrowserWindow, string>();
+
+export const getScreenOutputError = (screenId: number): string | undefined => {
+  const params = findScreenParams(screenId);
+  const window = params && BrowserWindow.fromId(params.id);
+  return window && !window.isDestroyed() ? loadErrors.get(window) : undefined;
+};
+
+const queueUpdate = (id: number, work: () => Promise<void>): Promise<void> => {
+  const previous = pendingUpdates.get(id) ?? Promise.resolve();
+  const current = previous.catch(() => undefined).then(work);
+  pendingUpdates.set(id, current);
+  const cleanup = () => {
+    if (pendingUpdates.get(id) === current) pendingUpdates.delete(id);
+  };
+  void current.then(cleanup, cleanup);
+  return current;
+};
 
 const updateTestImpl = async (scr: Screen, force = false): Promise<void> => {
   const primary = screen.getPrimaryDisplay();
@@ -63,12 +82,13 @@ const updateTestImpl = async (scr: Screen, force = false): Promise<void> => {
       break;
   }
   const page = scr.test ? await getPage(scr.test) : undefined;
+  if (win?.isDestroyed()) return;
   if (!display || !page || (!page.permanent && getLicenseState().status !== 'active')) {
     win?.hide();
     return;
   }
 
-  const needReload = force || !win || !prev || !isEqualOptions(scr, prev);
+  const needReload = force || !win || !prev || !isEqualOptions(scr, prev) || loadErrors.has(win);
   const params = createSearchParams(scr);
   params.append('port', port.toString());
   const url = (page.permanent ? `${page.url}?${params}` : page.url)?.replaceAll(
@@ -88,15 +108,41 @@ const updateTestImpl = async (scr: Screen, force = false): Promise<void> => {
   configureOutputWindowInteractivity(testWindow);
   registerScreen(testWindow, scr);
   const contents = testWindow.webContents;
+  const unavailable = () => testWindow.isDestroyed() || contents.isDestroyed();
+  const recordError = (message: string) => {
+    if (unavailable()) return;
+    loadErrors.set(testWindow, message);
+    testWindow.hide();
+    debug(`Loading error. url: ${contents.getURL()}, error: ${message}`);
+  };
   if (isNewWindow) {
-    contents.on('did-fail-load', (event, errorCode, errorDescription) => {
-      if (errorCode === -3 || testWindow.isDestroyed() || contents.isDestroyed()) return;
-      debug(
-        `Loading error. url: ${contents.getURL()}, errorCode: ${errorCode}, errorDescription: ${errorDescription}`,
-      );
-      setTimeout(() => {
-        if (!testWindow.isDestroyed() && !contents.isDestroyed()) contents.reload();
-      }, 5000).unref();
+    let retryTimer: NodeJS.Timeout | undefined;
+    contents.on('did-navigate', (event, navigationUrl, status, statusText) => {
+      // HTTP error documents still resolve loadURL(), unlike transport failures.
+      if (status >= 400) recordError(`HTTP ${status}${statusText ? ` ${statusText}` : ''}`);
+    });
+    contents.on(
+      'did-fail-load',
+      (event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+        if (!isMainFrame || errorCode === -3 || unavailable()) return;
+        recordError(errorDescription || `Ошибка загрузки (${errorCode})`);
+        if (retryTimer) clearTimeout(retryTimer);
+        const failedTest = findScreenParams(id)?.test;
+        retryTimer = setTimeout(() => {
+          retryTimer = undefined;
+          void queueUpdate(id, async () => {
+            if (unavailable() || !loadErrors.has(testWindow)) return;
+            const current = await getScreen(id);
+            if (!unavailable() && current && current.test === failedTest) {
+              await updateTestImpl(current, true);
+            }
+          }).catch(error => debug(`Retry error: ${String(error)}`));
+        }, 5000);
+        retryTimer.unref();
+      },
+    );
+    testWindow.once('closed', () => {
+      if (retryTimer) clearTimeout(retryTimer);
     });
   }
   testWindow.setKiosk(false);
@@ -105,24 +151,27 @@ const updateTestImpl = async (scr: Screen, force = false): Promise<void> => {
   testWindow.setSize(windowBounds.width, windowBounds.height);
   if (page.userAgent && !contents.userAgent.includes(page.userAgent)) {
     void machineId.then(mid => {
+      if (unavailable()) return;
       contents.userAgent = `${contents.userAgent} ${page.userAgent} machineid/${mid}`;
     });
   }
   if (needReload && url) {
-    void testWindow
-      .loadURL(url)
-      .then(() =>
-        testWindow.webContents.insertCSS(
-          scr.outputTransparent ? `${hideCursorCSS}\n${transparentOutputCSS}` : hideCursorCSS,
-        ),
-      )
-      .catch(error => {
-        if (isLoadAborted(error) || testWindow.isDestroyed() || contents.isDestroyed()) return;
-        debug(
-          `Loading error. url: ${url}, error: ${error instanceof Error ? error.message : error}`,
-        );
-      });
+    testWindow.hide();
+    loadErrors.delete(testWindow);
+    try {
+      await testWindow.loadURL(url);
+      if (unavailable() || loadErrors.has(testWindow)) return;
+      await contents.insertCSS(
+        scr.outputTransparent ? `${hideCursorCSS}\n${transparentOutputCSS}` : hideCursorCSS,
+      );
+    } catch (error) {
+      if (!isLoadAborted(error) && !loadErrors.has(testWindow)) {
+        recordError(error instanceof Error ? error.message : String(error));
+      }
+      return;
+    }
   }
+  if (unavailable() || loadErrors.has(testWindow)) return;
   if (isScreenOutputHidden(scr.id)) testWindow.hide();
   else {
     testWindow.showInactive();
@@ -130,17 +179,5 @@ const updateTestImpl = async (scr: Screen, force = false): Promise<void> => {
   }
 };
 
-export const updateTest = (scr: Screen, force = false): Promise<void> => {
-  const previous = pendingUpdates.get(scr.id) ?? Promise.resolve();
-  const current = previous.catch(() => undefined).then(() => updateTestImpl(scr, force));
-  pendingUpdates.set(scr.id, current);
-  void current.then(
-    () => {
-      if (pendingUpdates.get(scr.id) === current) pendingUpdates.delete(scr.id);
-    },
-    () => {
-      if (pendingUpdates.get(scr.id) === current) pendingUpdates.delete(scr.id);
-    },
-  );
-  return current;
-};
+export const updateTest = (scr: Screen, force = false): Promise<void> =>
+  queueUpdate(scr.id, () => updateTestImpl(scr, force));

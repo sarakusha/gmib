@@ -5,6 +5,7 @@ const mock = vi.hoisted(() => ({
   getScreens: vi.fn(),
   updateScreen: vi.fn(),
   updateTest: vi.fn(),
+  getScreenOutputError: vi.fn(),
   getPlayer: vi.fn(),
   getPlayers: vi.fn(),
   updatePlayer: vi.fn(),
@@ -28,7 +29,10 @@ vi.mock('../src/outputVisibility', () => ({
   revealPlayerOutput: mock.revealPlayerOutput,
 }));
 vi.mock('../src/screen', () => mock);
-vi.mock('../src/screenOutput', () => ({ updateTest: mock.updateTest }));
+vi.mock('../src/screenOutput', () => ({
+  updateTest: mock.updateTest,
+  getScreenOutputError: mock.getScreenOutputError,
+}));
 vi.mock('../src/openHandler', () => ({
   setPlayerOutputWindowsVisibility: mock.visibility,
 }));
@@ -285,6 +289,27 @@ describe('plugin player output', () => {
     expect((await api.getStatus()).active).toBe(false);
     mock.findScreenWindow.mockReturnValue(undefined);
     expect((await api.getStatus()).active).toBe(false);
+  });
+
+  it('rejects a failed page load and does not report its visible error window as active', async () => {
+    const api = await createApi();
+    const scr = { id: 1, display: 1, width: 100, height: 100, test: 'plugin:test:main' };
+    mock.getScreen.mockResolvedValue(scr);
+    mock.findScreenWindow.mockReturnValue({ isDestroyed: () => false, isVisible: () => true });
+    mock.getScreenOutputError.mockReturnValue('Не удалось загрузить страницу вывода (HTTP 404)');
+    await expect(api.start({ screenId: 1, pageId: 'main', autoStart: false })).rejects.toThrow(
+      'HTTP 404',
+    );
+    expect(await api.getStatus()).toMatchObject({
+      active: false,
+      message: expect.stringContaining('HTTP 404'),
+    });
+    mock.getScreenOutputError.mockReturnValue(undefined);
+    await api.start({ screenId: 1, pageId: 'main', autoStart: false });
+    expect(await api.getStatus()).toMatchObject({ active: true, message: 'Вывод включён' });
+    mock.getScreenOutputError.mockReturnValue('Old failure');
+    mock.getScreen.mockResolvedValue({ ...scr, test: undefined });
+    expect(await api.getStatus()).toMatchObject({ active: false, message: 'Вывод выключен' });
   });
 
   it('serializes player state changes with screen start and stop operations', async () => {

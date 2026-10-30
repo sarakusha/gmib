@@ -3,7 +3,7 @@ import type { PluginManifest } from '/@common/plugins';
 import type { PluginOutputApi, PluginOutputProfile } from '/@common/pluginOutput';
 import { DefaultDisplays } from '/@common/video';
 import { getScreen, getScreens, updateScreen } from './screen';
-import { updateTest } from './screenOutput';
+import { getScreenOutputError, updateTest } from './screenOutput';
 import { listPluginPlayers, setPluginPlayerState } from './pluginPlayerOutput';
 import { clearScreenOutputVisibility, setScreenOutputHidden } from './outputVisibility';
 import { findScreenWindow } from './windowStore';
@@ -58,6 +58,8 @@ export async function createPluginOutput(
     await updateScreen(next);
     if (explicit) setScreenOutputHidden(value.screenId, false);
     await updateTest(next);
+    const loadError = getScreenOutputError(value.screenId);
+    if (loadError) throw new Error(loadError);
   };
   const restore = async () => {
     if (!manifest.permissions?.includes('output.control')) return;
@@ -104,9 +106,12 @@ export async function createPluginOutput(
         (displayId === DefaultDisplays.Secondary
           ? displays.length > 1
           : displays.some(display => display.id === displayId));
+      const loadError =
+        scr?.test === page(profile.pageId) ? getScreenOutputError(profile.screenId) : undefined;
       const output = findScreenWindow(profile.screenId);
       const active = Boolean(
         present &&
+        !loadError &&
         scr?.test === page(profile.pageId) &&
         output &&
         !output.isDestroyed() &&
@@ -119,9 +124,7 @@ export async function createPluginOutput(
           ? 'Экран удалён из gmib'
           : !present
             ? 'Дисплей не подключён'
-            : active
-              ? 'Вывод включён'
-              : 'Вывод выключен',
+            : (loadError ?? (active ? 'Вывод включён' : 'Вывод выключен')),
       };
     },
     start: value => {

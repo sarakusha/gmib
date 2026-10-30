@@ -334,7 +334,10 @@ export const startRuntimeApi = async (): Promise<void> => {
   runtimeApiStarted = true;
   await Promise.all([dbReady, testsDeferred.promise]);
   const screens = await getScreens();
-  await Promise.all(screens.map(scr => updateTest(scr)));
+  // Plugin public routes are registered by startPlugins, which restores these screens later.
+  await Promise.all(
+    screens.filter(scr => !scr.test?.startsWith('plugin:')).map(scr => updateTest(scr)),
+  );
   if (!hasLicenseCapability('novastar')) return;
   const [{ default: proxyMiddleware }, { default: novastarApi }] = await Promise.all([
     import('./proxyMiddleware'),
