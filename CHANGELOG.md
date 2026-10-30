@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [5.7.1](https://github.com/sarakusha/gmib/compare/v5.7.0...v5.7.1) (2026-10-30)
+
+### Features
+
+* add authenticated plugin management and player control ([e12fc69](https://github.com/sarakusha/gmib/commit/e12fc693afbf3c4fa72c0885c81db0a87be2c62c))
+
+### Bug Fixes
+
+* stabilize output window stacking on macOS ([c3f33f0](https://github.com/sarakusha/gmib/commit/c3f33f01389f50b303c604454fa7f0a39b7bc107))
+
 ## [5.7.0](https://github.com/sarakusha/gmib/compare/v5.6.10...v5.7.0) (2026-10-29)
 
 ### Bug Fixes
