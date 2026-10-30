@@ -19,7 +19,7 @@ import {
   reconcilePlayerOutputWindows,
   setPlayerOutputWindowsVisibility,
 } from './openHandler';
-import { waitForPluginOutputFrame, waitForPluginPlayerReady } from './pluginOutputTransition';
+import { waitForPluginOutputSettle, waitForPluginPlayerReady } from './pluginOutputTransition';
 import { updatePlayerRuntime } from './playerRuntime';
 import { findPlayerWindow, findScreenWindow } from './windowStore';
 
@@ -160,7 +160,7 @@ export async function createPluginOutput(
       }
       const preparedOutput = findScreenWindow(target.id);
       if (preparedOutput && !preparedOutput.isDestroyed() && preparedOutput.isVisible()) {
-        await waitForPluginOutputFrame(preparedOutput);
+        await waitForPluginOutputSettle(preparedOutput);
       }
       checkVisibility();
       for (const change of changes.filter(item => !item.playing)) {

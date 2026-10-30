@@ -13,7 +13,7 @@ vi.mock('../src/playbackOutputState', () => ({
   getPlaybackOutputs: mock.get,
   onPlaybackOutputsChanged: mock.changed,
 }));
-import { waitForPluginOutputFrame, waitForPluginPlayerReady } from '../src/pluginOutputTransition';
+import { waitForPluginOutputSettle, waitForPluginPlayerReady } from '../src/pluginOutputTransition';
 let changed: (id: number) => void;
 const state = (...states: PlaybackOutputSnapshot['state'][]) =>
   states.map((value, id) => ({ id, name: String(id), state: value }));
@@ -29,50 +29,66 @@ beforeEach(() => {
 });
 afterEach(() => vi.useRealTimers());
 
-describe('plugin screen transition readiness', () => {
+describe('plugin screen transition settling', () => {
   const output = () => ({
     isDestroyed: vi.fn(() => false),
     isVisible: vi.fn(() => true),
-    webContents: { capturePage: vi.fn().mockResolvedValue({ isEmpty: () => false }) },
+    webContents: {
+      isDestroyed: vi.fn(() => false),
+      executeJavaScript: vi.fn().mockRejectedValue(new Error('Renderer execution must not run')),
+      capturePage: vi.fn().mockRejectedValue(new Error('Unknown Viz Error')),
+    },
   });
+  const expectNoRendererRequests = (window: ReturnType<typeof output>) => {
+    expect(window.webContents.capturePage).not.toHaveBeenCalled();
+    expect(window.webContents.executeJavaScript).not.toHaveBeenCalled();
+  };
+  const invalidate = (window: ReturnType<typeof output>, state: string) => {
+    if (state === 'hidden') window.isVisible.mockReturnValue(false);
+    else if (state === 'window destroyed') window.isDestroyed.mockReturnValue(true);
+    else window.webContents.isDestroyed.mockReturnValue(true);
+  };
 
-  it('waits for a captured surface and an additional compositor settling period', async () => {
+  it('keeps the cover for a full 500 ms without capture or renderer execution', async () => {
     const window = output();
     const done = vi.fn();
-    const wait = waitForPluginOutputFrame(window as unknown as BrowserWindow).then(done);
-    await vi.advanceTimersByTimeAsync(249);
+    const wait = waitForPluginOutputSettle(window as unknown as BrowserWindow).then(done);
+    await vi.advanceTimersByTimeAsync(499);
     expect(done).not.toHaveBeenCalled();
+    expectNoRendererRequests(window);
     await vi.advanceTimersByTimeAsync(1);
     await wait;
-    expect(window.webContents.capturePage).toHaveBeenCalledWith(undefined, { stayHidden: true });
+    expect(done).toHaveBeenCalledOnce();
+    expectNoRendererRequests(window);
     expect(vi.getTimerCount()).toBe(0);
   });
 
-  it('does not retire the cover if the target is hidden while settling', async () => {
-    const window = output();
-    const result = expect(
-      waitForPluginOutputFrame(window as unknown as BrowserWindow),
-    ).rejects.toThrow('скрыт');
-    await vi.advanceTimersByTimeAsync(100);
-    window.isVisible.mockReturnValue(false);
-    await vi.advanceTimersByTimeAsync(150);
-    await result;
-  });
+  it.each(['hidden', 'window destroyed', 'webContents destroyed'])(
+    'rejects an initially unavailable output (%s) without starting the wait',
+    async state => {
+      const window = output();
+      invalidate(window, state);
+      await expect(waitForPluginOutputSettle(window as unknown as BrowserWindow)).rejects.toThrow();
+      expectNoRendererRequests(window);
+      expect(vi.getTimerCount()).toBe(0);
+    },
+  );
 
-  it('rejects empty frames and bounds an unresponsive compositor', async () => {
-    const window = output();
-    window.webContents.capturePage.mockResolvedValueOnce({ isEmpty: () => true });
-    await expect(waitForPluginOutputFrame(window as unknown as BrowserWindow)).rejects.toThrow(
-      'не подготовил',
-    );
-    window.webContents.capturePage.mockReturnValueOnce(new Promise(() => {}));
-    const result = expect(
-      waitForPluginOutputFrame(window as unknown as BrowserWindow),
-    ).rejects.toThrow('не подготовил');
-    await vi.advanceTimersByTimeAsync(8000);
-    await result;
-    expect(vi.getTimerCount()).toBe(0);
-  });
+  it.each(['hidden', 'window destroyed', 'webContents destroyed'])(
+    'does not retire the cover when availability changes during settling (%s)',
+    async state => {
+      const window = output();
+      const result = expect(
+        waitForPluginOutputSettle(window as unknown as BrowserWindow),
+      ).rejects.toThrow();
+      await vi.advanceTimersByTimeAsync(100);
+      invalidate(window, state);
+      await vi.advanceTimersByTimeAsync(400);
+      await result;
+      expectNoRendererRequests(window);
+      expect(vi.getTimerCount()).toBe(0);
+    },
+  );
 });
 
 describe('plugin player transition readiness', () => {

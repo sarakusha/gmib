@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## Unreleased
+
+### Bug Fixes
+
+* Исправлена ошибка `Unknown Viz Error` при первом показе или переключении вывода плагина на Windows. Готовность экрана больше не зависит от снятия картинки через GPU: после загрузки страницы и готовности плеера выдерживается пауза 500 мс на всех платформах. Прежний вывод остаётся видимым до окончания паузы.
+
 ## [5.7.1](https://github.com/sarakusha/gmib/compare/v5.7.0...v5.7.1) (2026-10-30)
 
 ### Features

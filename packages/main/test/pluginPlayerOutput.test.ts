@@ -22,7 +22,7 @@ const mock = vi.hoisted(() => ({
   holdOutputWindows: vi.fn(),
   releaseOutputWindows: vi.fn(),
   waitForPluginPlayerReady: vi.fn(),
-  waitForPluginOutputFrame: vi.fn(),
+  waitForPluginOutputSettle: vi.fn(),
   getOutputVisibilityRevision: vi.fn(),
   clearPlayerOutputReveal: vi.fn(),
   reconcilePlayerOutputWindows: vi.fn(),
@@ -53,7 +53,7 @@ vi.mock('../src/openHandler', () => ({
 }));
 vi.mock('../src/pluginOutputTransition', () => ({
   waitForPluginPlayerReady: mock.waitForPluginPlayerReady,
-  waitForPluginOutputFrame: mock.waitForPluginOutputFrame,
+  waitForPluginOutputSettle: mock.waitForPluginOutputSettle,
 }));
 vi.mock('../src/playerWindow', () => ({ openPlayer: mock.openPlayer }));
 vi.mock('../src/windowStore', () => ({
@@ -619,7 +619,7 @@ describe('atomic plugin output layouts', () => {
   it('aborts before handoff after global visibility changes while preparing a frame', async () => {
     const state = await setup();
     let ready!: () => void;
-    mock.waitForPluginOutputFrame.mockImplementationOnce(
+    mock.waitForPluginOutputSettle.mockImplementationOnce(
       () =>
         new Promise<void>(resolve => {
           ready = resolve;
@@ -630,7 +630,7 @@ describe('atomic plugin output layouts', () => {
       players: [{ playerId: 8, playing: false }],
     });
     const failed = expect(transition).rejects.toThrow('общей командой');
-    await vi.waitFor(() => expect(mock.waitForPluginOutputFrame).toHaveBeenCalled());
+    await vi.waitFor(() => expect(mock.waitForPluginOutputSettle).toHaveBeenCalled());
     expect(state.players.get(8)?.autoPlay).toBe(true);
     mock.getOutputVisibilityRevision.mockReturnValue(1);
     ready();
@@ -642,14 +642,14 @@ describe('atomic plugin output layouts', () => {
   it('snapshots queued applyLayout input before the caller can append player operations', async () => {
     const state = await setup({ ...manifest, permissions: ['output.control'] });
     let frame!: () => void;
-    mock.waitForPluginOutputFrame.mockImplementationOnce(
+    mock.waitForPluginOutputSettle.mockImplementationOnce(
       () =>
         new Promise<void>(resolve => {
           frame = resolve;
         }),
     );
     const first = state.api.start(nextProfile);
-    await vi.waitFor(() => expect(mock.waitForPluginOutputFrame).toHaveBeenCalled());
+    await vi.waitFor(() => expect(mock.waitForPluginOutputSettle).toHaveBeenCalled());
     const layout = {
       profile: { ...nextProfile },
       players: [] as Array<{ playerId: number; playing: boolean }>,

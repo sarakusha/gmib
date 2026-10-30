@@ -4,32 +4,18 @@ import { getPlaybackOutputs, onPlaybackOutputsChanged } from './playbackOutputSt
 
 const PLAYER_READY_TIMEOUT_MS = 8000;
 
-/** Keep the cover while Chromium produces a surface and the native compositor settles. */
-export const waitForPluginOutputFrame = async (window: BrowserWindow): Promise<void> => {
-  let timeout: NodeJS.Timeout | undefined;
+/** Allow the loaded page and native compositor to settle before removing the cover. */
+export const waitForPluginOutputSettle = async (window: BrowserWindow): Promise<void> => {
   const checkVisible = () => {
-    if (window.isDestroyed() || !window.isVisible())
-      throw new Error('Новый вывод скрыт. Прежний вывод сохранён.');
+    if (window.isDestroyed() || window.webContents.isDestroyed() || !window.isVisible())
+      throw new Error('Новый вывод скрыт или закрыт. Прежний вывод сохранён.');
   };
-  try {
-    checkVisible();
-    const image = await Promise.race([
-      window.webContents.capturePage(undefined, { stayHidden: true }),
-      new Promise<never>((_, reject) => {
-        timeout = setTimeout(
-          () => reject(new Error('Новый вывод не подготовил изображение. Прежний вывод сохранён.')),
-          PLAYER_READY_TIMEOUT_MS,
-        );
-      }),
-    ]);
-    if (image.isEmpty()) throw new Error('Новый вывод не подготовил изображение.');
-    // A ready Chromium surface can precede native presentation. Keep this grace
-    // period on every platform, including macOS WindowServer and Windows DWM.
-    await new Promise<void>(resolve => setTimeout(resolve, 250));
-    checkVisible();
-  } finally {
-    clearTimeout(timeout);
-  }
+  checkVisible();
+  // loadURL and player frame readiness have already completed. A short grace
+  // period works on every platform without depending on GPU screenshot support
+  // (capturePage can fail with Unknown Viz Error for an otherwise healthy window).
+  await new Promise<void>(resolve => setTimeout(resolve, 500));
+  checkVisible();
 };
 
 /** Wait for fresh frame evidence after setPluginPlayerState invalidates old evidence. */
