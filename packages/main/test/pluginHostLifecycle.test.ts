@@ -36,6 +36,8 @@ vi.mock('../src/screen', () => ({ getScreens: vi.fn(async () => []) }));
 vi.mock('../src/screenOutput', () => ({ updateTest: vi.fn() }));
 vi.mock('../src/server', () => ({ broadcast: vi.fn() }));
 vi.mock('../src/pluginOutput', () => ({ createPluginOutput: vi.fn() }));
+vi.mock('../src/pluginEnvironment', () => ({ createPluginEnvironment: vi.fn() }));
+vi.mock('../src/pluginSerial', () => ({ createPluginSerial: vi.fn() }));
 vi.mock('../src/pluginNibus', () => ({ createPluginNibus: vi.fn() }));
 vi.mock('../src/pluginDatabase', () => ({ openPluginDatabase: vi.fn() }));
 vi.mock('../src/pluginRuntime', () => ({

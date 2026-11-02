@@ -10,6 +10,8 @@ import type {
 import { pluginLifecycle } from './pluginLifecycle';
 
 const permissionLabels: Record<PluginPermission, string> = {
+  'serial.control': 'доступ к последовательным USB-портам',
+  'environment.read': 'координаты, солнечные события и освещённость GMIB',
   'http.routes': 'локальные и авторизованные HTTP-маршруты',
   'output.pages': 'страницы в разделе «Вывод»',
   realtime: 'события реального времени',

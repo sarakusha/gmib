@@ -43,6 +43,8 @@ const permissionLabels: Record<PluginPermission, string> = {
   'output.control': 'Управление выводом',
   'player.control': 'Управление плеером',
   'nibus.read': 'Чтение NiBUS',
+  'serial.control': 'Доступ к последовательным USB-портам',
+  'environment.read': 'Координаты, солнечные события и освещённость GMIB',
   'nibus.write': 'Табло NiBUS',
   realtime: 'События',
   storage: 'Хранилище',

@@ -12,6 +12,10 @@ import debugFactory from 'debug';
 import { nanoid } from 'nanoid';
 import semver from 'semver';
 import { createPluginOutput } from './pluginOutput';
+import { createPluginEnvironment } from './pluginEnvironment';
+import type { PluginEnvironmentApi } from '/@common/pluginEnvironment';
+import { createPluginSerial } from './pluginSerial';
+import type { PluginSerialApi } from '/@common/pluginSerial';
 import { createPluginNibus } from './pluginNibus';
 import type { PluginOutputApi } from '/@common/pluginOutput';
 import type { PluginNibusApi } from '/@common/pluginNibus';
@@ -124,6 +128,8 @@ type PluginContext = PluginServicesContext & {
     publish: (event: string, data?: unknown) => void;
   };
   nibus: PluginNibusApi;
+  serial: PluginSerialApi;
+  environment: PluginEnvironmentApi;
   output: PluginOutputApi & {
     registerPage: (page: { id: string; title: string; path: string }) => Promise<void>;
   };
@@ -497,6 +503,8 @@ const createPluginContext = async (plugin: RuntimePlugin): Promise<PluginContext
   };
   return Object.freeze<PluginContext>({
     apiVersion: GMIB_PLUGIN_API_VERSION,
+    environment: createPluginEnvironment(manifest),
+    serial: createPluginSerial(manifest, handler => plugin.disposers.push(handler)),
     database: {
       open: async (name, migrations) => {
         requirePermission(manifest, 'database');

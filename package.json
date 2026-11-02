@@ -242,6 +242,7 @@
     "reflect-metadata": "^0.2.2",
     "require-from-string": "^2.0.2",
     "semver": "^7.8.5",
+    "serialport": "^13.0.0",
     "setprototypeof": "~1.2.0",
     "side-channel": "^1.1.1",
     "side-channel-list": "^1.0.1",
