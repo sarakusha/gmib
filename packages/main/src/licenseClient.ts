@@ -1,5 +1,7 @@
 import type { LicenseRuntimeState, SignedLicense } from '/@common/license';
 
+import { externalRequest } from './externalRequest';
+
 type ClientMetadata = {
   name: string;
   os: string;
@@ -23,21 +25,26 @@ const request = async (
   outerSignal?: AbortSignal,
 ): Promise<SignedLicense> => {
   const timeoutSignal = AbortSignal.timeout(10_000);
-  const response = await fetch(`${import.meta.env.VITE_LICENSE_SERVER}${path}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-    signal: outerSignal ? AbortSignal.any([outerSignal, timeoutSignal]) : timeoutSignal,
-  });
-  if (!response.ok) {
-    const message = await response.text();
-    throw Object.assign(new Error(message || response.statusText), { status: response.status });
-  }
-  const value: unknown = await response.json();
-  const license =
-    typeof value === 'object' && value !== null ? Reflect.get(value, 'license') : undefined;
-  if (!isSignedLicense(license)) throw new Error('License server returned an invalid response');
-  return license;
+  return externalRequest(
+    `${import.meta.env.VITE_LICENSE_SERVER}${path}`,
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: outerSignal ? AbortSignal.any([outerSignal, timeoutSignal]) : timeoutSignal,
+    },
+    async response => {
+      if (!response.ok) {
+        const message = await response.text();
+        throw Object.assign(new Error(message || response.statusText), { status: response.status });
+      }
+      const value: unknown = await response.json();
+      const license =
+        typeof value === 'object' && value !== null ? Reflect.get(value, 'license') : undefined;
+      if (!isSignedLicense(license)) throw new Error('License server returned an invalid response');
+      return license;
+    },
+  );
 };
 
 export const requestLicenseActivation = (

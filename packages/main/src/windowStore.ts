@@ -6,6 +6,7 @@ import pick from 'lodash/pick';
 
 import type { Screen } from '/@common/video';
 
+import { externalRequest } from './externalRequest';
 import getAnnounce from './getAnnounce';
 
 import type {
@@ -85,45 +86,50 @@ const knockKnock = async (params: GmibWindowParams): Promise<void> => {
   };
 
   try {
-    const result = await fetch(`${import.meta.env.VITE_LICENSE_SERVER}/api/knock`, {
-      method: 'PUT',
-      signal: AbortSignal.timeout(10_000),
-      headers: {
-        'Content-Type': 'application/json',
+    await externalRequest(
+      `${import.meta.env.VITE_LICENSE_SERVER}/api/knock`,
+      {
+        method: 'PUT',
+        signal: AbortSignal.timeout(10_000),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
       },
-      body: JSON.stringify(data),
-    });
-    if (result.ok) {
-      const update = parseLegacyLicenseUpdate(await result.json());
-      if (update.autoUpdate && !localConfig.get('autoUpdate')) {
-        checkForUpdatesNoInteractive()
-          .then(info => {
-            if (info) {
-              debug(`update-available: ${info.version}`);
-              void updateAndRestart();
-            }
-          })
-          .catch(err => {
-            debug(`error while autoUpdate: ${err}`);
-          });
-      }
-      if (update.pritunl) {
-        initializePritunlClient(update.pritunl).catch(err => {
-          debug(`error while initialize pritunl: ${err}`);
-        });
-        delete update.pritunl;
-      }
-      applyLegacyLicenseUpdate(localConfig, update);
-      // setTimeout(() => knockKnock(params), 6 * HOUR).unref();
-      attempts = 0;
-    } else {
-      attempts += 1;
-      if (attempts < MAX_KNOCK_ATTEMPTS)
-        setTimeout(() => {
-          void knockKnock(params);
-        }, 10 * MINUTE).unref();
-      debug(`error while knocking: ${await result.text()}`);
-    }
+      async result => {
+        if (result.ok) {
+          const update = parseLegacyLicenseUpdate(await result.json());
+          if (update.autoUpdate && !localConfig.get('autoUpdate')) {
+            checkForUpdatesNoInteractive()
+              .then(info => {
+                if (info) {
+                  debug(`update-available: ${info.version}`);
+                  void updateAndRestart();
+                }
+              })
+              .catch(err => {
+                debug(`error while autoUpdate: ${err}`);
+              });
+          }
+          if (update.pritunl) {
+            initializePritunlClient(update.pritunl).catch(err => {
+              debug(`error while initialize pritunl: ${err}`);
+            });
+            delete update.pritunl;
+          }
+          applyLegacyLicenseUpdate(localConfig, update);
+          // setTimeout(() => knockKnock(params), 6 * HOUR).unref();
+          attempts = 0;
+        } else {
+          attempts += 1;
+          if (attempts < MAX_KNOCK_ATTEMPTS)
+            setTimeout(() => {
+              void knockKnock(params);
+            }, 10 * MINUTE).unref();
+          debug(`error while knocking: ${await result.text()}`);
+        }
+      },
+    );
   } catch (error) {
     debug(`error while knocking: ${(error as Error).message}`);
     attempts += 1;

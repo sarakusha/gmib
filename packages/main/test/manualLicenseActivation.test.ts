@@ -1,3 +1,11 @@
+vi.mock('../src/externalRequest', () => ({
+  externalRequest: async <T>(
+    url: string,
+    init: RequestInit,
+    consume: (response: Response) => Promise<T>,
+  ): Promise<T> => consume(await globalThis.fetch(url, init)),
+}));
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({

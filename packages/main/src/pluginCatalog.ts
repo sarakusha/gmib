@@ -9,6 +9,7 @@ import type {
 } from '/@common/plugins';
 import { GMIB_PLUGIN_API_VERSION } from '/@common/plugins';
 
+import { externalRequest } from './externalRequest';
 import { MAX_PLUGIN_ARCHIVE_SIZE } from './pluginArchive';
 import { parsePluginManifest } from './pluginManifest';
 
@@ -134,73 +135,80 @@ export const parsePluginCatalog = (value: unknown): PluginCatalogEntry[] => {
 };
 
 export const downloadOfficialPluginArchive = async (entry: PluginCatalogEntry): Promise<Buffer> => {
-  let response: Response;
   try {
-    response = await fetch(entry.release.url, {
-      redirect: 'follow',
-      signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT),
-    });
+    return await externalRequest(
+      entry.release.url,
+      {
+        redirect: 'follow',
+        signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT),
+      },
+      async response => {
+        if (!response.ok) {
+          throw new Error(`Не удалось скачать плагин: HTTP ${response.status}`);
+        }
+        const contentLength = Number(response.headers.get('content-length'));
+        if (Number.isFinite(contentLength) && contentLength > MAX_PLUGIN_ARCHIVE_SIZE) {
+          throw new Error('Размер скачиваемого плагина превышает 50 МБ');
+        }
+        if (!response.body) throw new Error('Сервер вернул пустой файл плагина');
+
+        const chunks: Uint8Array[] = [];
+        let size = 0;
+        const reader = response.body.getReader();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          size += value.byteLength;
+          if (size > MAX_PLUGIN_ARCHIVE_SIZE) {
+            await reader.cancel();
+            throw new Error('Размер скачиваемого плагина превышает 50 МБ');
+          }
+          chunks.push(value);
+        }
+        const archive = Buffer.concat(chunks, size);
+        if (archive.byteLength !== entry.release.size) {
+          throw new Error('Размер скачанного плагина не совпадает с официальным каталогом');
+        }
+        const actualHash = createHash('sha256').update(archive).digest();
+        const expectedHash = Buffer.from(entry.release.sha256, 'hex');
+        if (!timingSafeEqual(actualHash, expectedHash)) {
+          throw new Error('SHA-256 скачанного плагина не совпадает с официальным каталогом');
+        }
+        return archive;
+      },
+    );
   } catch (error) {
     throw new Error(
-      `Не удалось скачать плагин по адресу ${entry.release.url}: ${
+      `Не удалось скачать плагин (${new URL(entry.release.url).origin}): ${
         error instanceof Error ? error.message : String(error)
       }`,
     );
   }
-  if (!response.ok) {
-    throw new Error(
-      `Не удалось скачать плагин по адресу ${entry.release.url}: HTTP ${response.status}`,
-    );
-  }
-  const contentLength = Number(response.headers.get('content-length'));
-  if (Number.isFinite(contentLength) && contentLength > MAX_PLUGIN_ARCHIVE_SIZE) {
-    throw new Error('Размер скачиваемого плагина превышает 50 МБ');
-  }
-  if (!response.body) throw new Error('Сервер вернул пустой файл плагина');
-
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  const reader = response.body.getReader();
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    size += value.byteLength;
-    if (size > MAX_PLUGIN_ARCHIVE_SIZE) {
-      await reader.cancel();
-      throw new Error('Размер скачиваемого плагина превышает 50 МБ');
-    }
-    chunks.push(value);
-  }
-  const archive = Buffer.concat(chunks, size);
-  if (archive.byteLength !== entry.release.size) {
-    throw new Error('Размер скачанного плагина не совпадает с официальным каталогом');
-  }
-  const actualHash = createHash('sha256').update(archive).digest();
-  const expectedHash = Buffer.from(entry.release.sha256, 'hex');
-  if (!timingSafeEqual(actualHash, expectedHash)) {
-    throw new Error('SHA-256 скачанного плагина не совпадает с официальным каталогом');
-  }
-  return archive;
 };
 
 export const listOfficialPlugins = async (): Promise<PluginCatalogEntry[]> => {
   try {
-    const response = await fetch(OFFICIAL_PLUGIN_CATALOG_URL, {
-      cache: 'no-store',
-      headers: { accept: 'application/json' },
-      signal: AbortSignal.timeout(CATALOG_TIMEOUT),
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const contentLength = Number(response.headers.get('content-length'));
-    if (Number.isFinite(contentLength) && contentLength > MAX_CATALOG_SIZE) {
-      throw new Error('размер каталога превышает 1 МБ');
-    }
-    const text = await response.text();
-    if (Buffer.byteLength(text, 'utf8') > MAX_CATALOG_SIZE) {
-      throw new Error('размер каталога превышает 1 МБ');
-    }
-    cachedCatalog = parsePluginCatalog(JSON.parse(text) as unknown);
-    return cachedCatalog;
+    return await externalRequest(
+      OFFICIAL_PLUGIN_CATALOG_URL,
+      {
+        cache: 'no-store',
+        headers: { accept: 'application/json' },
+        signal: AbortSignal.timeout(CATALOG_TIMEOUT),
+      },
+      async response => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const contentLength = Number(response.headers.get('content-length'));
+        if (Number.isFinite(contentLength) && contentLength > MAX_CATALOG_SIZE) {
+          throw new Error('размер каталога превышает 1 МБ');
+        }
+        const text = await response.text();
+        if (Buffer.byteLength(text, 'utf8') > MAX_CATALOG_SIZE) {
+          throw new Error('размер каталога превышает 1 МБ');
+        }
+        cachedCatalog = parsePluginCatalog(JSON.parse(text) as unknown);
+        return cachedCatalog;
+      },
+    );
   } catch (error) {
     if (cachedCatalog) {
       debug(`Failed to refresh official plugin catalog: ${(error as Error).message}`);

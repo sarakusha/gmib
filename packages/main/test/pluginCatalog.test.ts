@@ -1,3 +1,11 @@
+vi.mock('../src/externalRequest', () => ({
+  externalRequest: async <T>(
+    url: string,
+    init: RequestInit,
+    consume: (response: Response) => Promise<T>,
+  ): Promise<T> => consume(await globalThis.fetch(url, init)),
+}));
+
 import { createHash } from 'node:crypto';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -83,11 +91,30 @@ describe('downloadOfficialPluginArchive', () => {
     await expect(listOfficialPlugins()).rejects.toThrow(OFFICIAL_PLUGIN_CATALOG_URL);
   });
 
-  it('includes the release URL in download errors', async () => {
+  it('includes only the release origin in download errors', async () => {
     const entry = catalogEntry('unavailable');
+    entry.release.url += '?token=private-token#private-fragment';
     vi.stubGlobal('fetch', vi.fn().mockRejectedValueOnce(new Error('fetch failed')));
 
-    await expect(downloadOfficialPluginArchive(entry)).rejects.toThrow(entry.release.url);
+    await expect(downloadOfficialPluginArchive(entry)).rejects.toThrow('https://github.com');
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValueOnce(new Error('fetch failed')));
+    await expect(downloadOfficialPluginArchive(entry)).rejects.not.toThrow(
+      /private-token|private-fragment/,
+    );
+  });
+
+  it('reports errors while reading an archive body', async () => {
+    const entry = catalogEntry('interrupted');
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.error(new Error('connection reset while downloading'));
+      },
+    });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(new Response(body)));
+
+    await expect(downloadOfficialPluginArchive(entry)).rejects.toThrow(
+      'connection reset while downloading',
+    );
   });
 
   it('returns an archive only after verifying its size and SHA-256', async () => {

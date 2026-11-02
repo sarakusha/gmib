@@ -2,6 +2,7 @@ import debugFactory from 'debug';
 
 import type { SignedLicense } from '/@common/license';
 
+import { externalRequest } from './externalRequest';
 import { applyLegacyLicenseUpdate, parseLegacyLicenseUpdate } from './legacyLicenseStorage';
 import { requestLicenseActivation } from './licenseClient';
 import { saveActiveLicenseDocument } from './licenseState';
@@ -33,22 +34,29 @@ const readWithSignal = async <T>(body: Promise<T>, signal: AbortSignal): Promise
 };
 
 const updateLegacyFields = async (input: ActivationInput, signal: AbortSignal): Promise<void> => {
-  const response = await fetch(`${import.meta.env.VITE_LICENSE_SERVER}/api/licenses`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
-    signal,
-  });
-  if (!response.ok) {
-    const message = await readWithSignal(response.text(), signal);
-    throw new Error(`${response.statusText} - ${message}`);
-  }
-  const value = await readWithSignal(response.json(), signal);
-  const legacy = parseLegacyLicenseUpdate(value);
-  if (typeof legacy.announce !== 'string' || typeof legacy.iv !== 'string') {
-    throw new Error('License server returned an invalid compatibility response');
-  }
-  applyLegacyLicenseUpdate(localConfig, legacy);
+  await externalRequest(
+    `${import.meta.env.VITE_LICENSE_SERVER}/api/licenses`,
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+      signal,
+    },
+    async response => {
+      if (!response.ok) {
+        const message = await readWithSignal(response.text(), signal);
+        throw Object.assign(new Error(`${response.statusText} - ${message}`), {
+          status: response.status,
+        });
+      }
+      const value = await readWithSignal(response.json(), signal);
+      const legacy = parseLegacyLicenseUpdate(value);
+      if (typeof legacy.announce !== 'string' || typeof legacy.iv !== 'string') {
+        throw new Error('License server returned an invalid compatibility response');
+      }
+      applyLegacyLicenseUpdate(localConfig, legacy);
+    },
+  );
 };
 
 export const completeLicenseActivation = async (
