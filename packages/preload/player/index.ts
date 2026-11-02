@@ -24,6 +24,9 @@ const sourceId = +(search.get('source_id') ?? 1);
 
 const playerApi = {
   mediaStream: { seek, updateSrcObject },
+  media: {
+    download: (filename: string): Promise<boolean> => ipcRenderer.invoke('downloadMedia', filename),
+  },
   log: log.log.bind(log),
   setDispatch,
   identify,

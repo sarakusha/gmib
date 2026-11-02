@@ -15,7 +15,7 @@ beforeEach(() => {
   state.remote = true;
   state.version = '3.6.5';
   save.mockReset().mockResolvedValue(true);
-  Object.defineProperty(window, 'dialogs', { configurable: true, value: { downloadMedia: save } });
+  Object.defineProperty(window, 'media', { configurable: true, value: { download: save } });
 });
 
 describe('media downloads compatibility and local destination', () => {

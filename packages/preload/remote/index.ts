@@ -8,6 +8,7 @@ import type { AnswerMessage, CandidateMessage, RequestMessage, RtcMessage } from
 import exposeApi from '../common/exposeApi';
 import { host, port, sourceId } from '/@common/remote';
 import { setOutputHidden } from '/@player/store/currentSlice';
+import { ipcRenderer } from 'electron';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:remote`);
 
@@ -188,6 +189,9 @@ const remoteApi = {
   log: log.log.bind(log),
   setDispatch,
   mediaStream: { clearSrcObject, reconnect, updateSrcObject },
+  media: {
+    download: (filename: string): Promise<boolean> => ipcRenderer.invoke('downloadMedia', filename),
+  },
   identify,
 } as const;
 

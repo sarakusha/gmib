@@ -7,7 +7,7 @@ import { pipeline } from 'node:stream/promises';
 import { Readable, Transform } from 'node:stream';
 import type { ReadableStream as WebReadableStream } from 'node:stream/web';
 
-import { isGmib } from '/@common/WindowParams';
+import { isGmib, isPlayer } from '/@common/WindowParams';
 import { supportsFeature } from '/@common/capabilities';
 import { findParamsByWebContentsId } from './windowStore';
 
@@ -156,7 +156,8 @@ export const downloadMedia = async (
 void app.whenReady().then(() => {
   ipcMain.handle('downloadMedia', async (event, filename: string) => {
     const params = findParamsByWebContentsId(event.sender.id);
-    if (!isGmib(params)) throw new Error('Загрузка доступна только из окна GMIB');
-    return downloadMedia(filename, event.sender, params);
+    const owner = isGmib(params) ? params : isPlayer(params) ? params.parent : undefined;
+    if (!owner) throw new Error('Загрузка доступна только из окна GMIB или плеера');
+    return downloadMedia(filename, event.sender, owner);
   });
 });
