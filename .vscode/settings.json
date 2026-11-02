@@ -20,7 +20,7 @@
       "database": "/Users/sarakusha/Library/Application Support/gmib/db.sqlite3"
     }
   ],
-  "sqltools.useNodeRuntime": true,
+  "sqltools.useNodeRuntime": false,
   "npm.exclude": "",
   "prettier.enable": true,
   "prettier.requireConfig": true,
