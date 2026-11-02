@@ -1,11 +1,8 @@
+import type { SunEvent } from './config';
+
 export type PluginEnvironmentSnapshot = {
   timeZone: string;
-  solar: {
-    sunrise: string | null;
-    day: string | null;
-    sunset: string | null;
-    night: string | null;
-  };
+  solar: Record<SunEvent | 'day' | 'night', string | null>;
   solarDays?: PluginEnvironmentSnapshot['solar'][];
   sensors: { id: string; name: string; lux: number; updatedAt: string }[];
 };

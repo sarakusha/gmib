@@ -3,6 +3,8 @@ import * as SunCalc from 'suncalc';
 import config from './config';
 import master from './MasterBrowser';
 import sensorsSlice, { calculate, pushSensorValue } from '../../renderer/gmib/store/sensorsSlice';
+import { sunEvents } from '/@common/config';
+import type { PluginEnvironmentSnapshot } from '/@common/pluginEnvironment';
 import type { PluginManifest } from '/@common/plugins';
 import type { PluginEnvironmentApi } from '/@common/pluginEnvironment';
 
@@ -40,7 +42,9 @@ export const createPluginEnvironment = (manifest: PluginManifest): PluginEnviron
         date.setDate(date.getDate() + offset);
         const times = valid ? SunCalc.getTimes(date, latitude, longitude) : undefined;
         return {
-          sunrise: iso(times?.sunrise),
+          ...(Object.fromEntries(
+            sunEvents.map(event => [event, iso(times?.[event])]),
+          ) as PluginEnvironmentSnapshot['solar']),
           day: iso(times?.goldenHourEnd),
           sunset: iso(times?.sunset),
           night: iso(times?.dusk),

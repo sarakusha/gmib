@@ -12,6 +12,8 @@ vi.mock('../src/MasterBrowser', () => ({
 }));
 vi.mock('../src/config', () => ({ default: { get: () => mocks.location } }));
 import { createPluginEnvironment } from '../src/pluginEnvironment';
+import { sunEvents } from '/@common/config';
+import * as SunCalc from 'suncalc';
 import type { PluginManifest } from '/@common/plugins';
 const api = () => createPluginEnvironment({ permissions: ['environment.read'] } as PluginManifest);
 beforeEach(() => {
@@ -43,4 +45,19 @@ it('shares auto brightness source selection and expires lost sensors', async () 
   vi.advanceTimersByTime(61000);
   expect((await api().snapshot()).sensors).toEqual([]);
   vi.useRealTimers();
+});
+
+it('exports every auto-brightness solar point for three days and preserves legacy aliases', async () => {
+  mocks.location = { latitude: 55.75, longitude: 37.62 };
+  const state = await api().snapshot();
+  expect(state.solarDays).toHaveLength(3);
+  for (const [index, day] of state.solarDays!.entries()) {
+    const date = new Date();
+    date.setHours(12, 0, 0, 0);
+    date.setDate(date.getDate() + index - 1);
+    const expected = SunCalc.getTimes(date, 55.75, 37.62);
+    for (const key of sunEvents) expect(day[key]).toBe(expected[key]?.toISOString() ?? null);
+    expect(day.day).toBe(day.goldenHourEnd);
+    expect(day.night).toBe(day.dusk);
+  }
 });
