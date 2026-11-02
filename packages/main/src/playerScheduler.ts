@@ -1,3 +1,5 @@
+import { isFinitePlaybackActive } from './finitePlaybackRegistry';
+import { startFinitePlaylist } from './finitePlaylistPlayback';
 import debugFactory from 'debug';
 
 import type { PlayerSchedulerJob, PlayerSchedulerJobInput } from '/@common/scheduler';
@@ -82,6 +84,11 @@ const runJob = async (job: PlayerSchedulerJob): Promise<string | undefined> => {
   if (!player) throw new Error(`Плеер ${job.playerId} не найден`);
 
   switch (job.action) {
+    case 'play-playlist-times': {
+      if (job.playlistId == null || job.repeatCount == null || !job.completionAction) throw new Error('Не заданы параметры конечного воспроизведения');
+      await startFinitePlaylist(player, job.playlistId, job.repeatCount, job.completionAction);
+      return `Запущено проигрывание плейлиста ${job.repeatCount} раз`;
+    }
     case 'load-playlist': {
       if (job.playlistId == null) throw new Error('Плейлист не выбран');
       const playlist = await getPlaylist(job.playlistId);
@@ -101,8 +108,8 @@ const runJob = async (job: PlayerSchedulerJob): Promise<string | undefined> => {
     }
     case 'toggle-play':
       await updatePlayerRuntime(
-        { ...player, autoPlay: !player.autoPlay },
-        { openHidden: !player.autoPlay },
+        { ...player, autoPlay: !(player.autoPlay || isFinitePlaybackActive(player.id)) },
+        { openHidden: !(player.autoPlay || isFinitePlaybackActive(player.id)) },
       );
       break;
     case 'play':

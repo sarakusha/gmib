@@ -590,6 +590,19 @@
         }
       }
     },
+    "/api/player-observation": {
+      "put": {
+        "tags": ["Screens and players"],
+        "summary": "Report the naturally selected playlist item (GMIB 5.7.4+)",
+        "description": "Observation only: never changes autoplay or sends a playback command. Ignored during finite playback. Older hosts may return 404; clients should discard the observation.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": {
+          "type": "object", "required": ["id"], "properties": {
+            "id": { "type": "integer", "minimum": 1 }, "current": { "type": "string" }
+          }
+        } } } },
+        "responses": { "204": { "description": "Observation accepted" }, "400": { "description": "Invalid observation" } }
+      }
+    },
     "/api/player": {
       "get": {
         "tags": ["Screens and players"],

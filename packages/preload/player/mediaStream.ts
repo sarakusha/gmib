@@ -1,3 +1,4 @@
+import { FinitePlaybackCounter, type FinitePlaybackPlan } from '/@common/finitePlayback';
 import { type MergeableStream, mergeStreams } from '@sarakusha/ebml';
 
 import { ipcRenderer } from 'electron';
@@ -25,6 +26,26 @@ import { resolvePlaybackEngine, shouldFallbackAfterDecoderError } from './playba
 import PlaybackWatchdog from './playbackWatchdog';
 import PlaybackRecovery, { type PlaybackAttempt } from './playbackRecovery';
 
+let finitePlayback: FinitePlaybackCounter | undefined;
+let finiteRuntimeFeedback = false;
+const observation = <T extends { type: string }>(action: T) => ({
+  ...action,
+  meta: { runtimeOnly: finiteRuntimeFeedback, runtimeObservation: true },
+});
+const finishFinitePlayback = (result: 'complete' | 'cancelled' | 'error'): void => {
+  const token = finitePlayback?.plan.token;
+  finitePlayback = undefined;
+  if (!token) return;
+  stopPlayback();
+  ipcRenderer.send('finite-playback:finished', token, result);
+};
+const completedFiniteItem = (itemId: string): boolean => {
+  if (!finitePlayback) return false;
+  const result = finitePlayback.completed(itemId);
+  if (result === 'continue') return false;
+  finishFinitePlayback(result === 'complete' ? 'complete' : 'error');
+  return true;
+};
 let playlist: Playlist | undefined;
 let player: Player;
 let playbackState: MediaSessionPlaybackState = 'none';
@@ -45,6 +66,7 @@ const PLAYBACK_STALL_CHECK_INTERVAL = 5_000;
 const playbackWatchdog = new PlaybackWatchdog();
 
 const recovery = new PlaybackRecovery();
+const attemptFiniteTokens = new WeakMap<PlaybackAttempt, string>();
 const sourceAttempts = new WeakMap<VideoSource, PlaybackAttempt>();
 const endedSources = new WeakSet<VideoSource>();
 // Do not burn a proven file's retry budget on repeated background preloads
@@ -132,6 +154,8 @@ const recordFailure = (attempt: PlaybackAttempt, error: unknown): void => {
   const quarantined = recovery.blocked(attempt.mediaId);
   reportAttempt(attempt, 'error', message, quarantined);
   if (quarantined) reportAttempt(attempt, 'quarantined', message, true);
+  if (finitePlayback && attemptFiniteTokens.get(attempt) === finitePlayback.plan.token)
+    finishFinitePlayback('error');
 };
 
 const withTimeout = async <T>(promise: Promise<T>, message: string): Promise<T> => {
@@ -168,7 +192,7 @@ const updatePlaybackState = (next: MediaSessionPlaybackState): void => {
   }
   playbackState = next;
   playbackWatchdog.setActive(next === 'playing');
-  ipcDispatch(setPlaybackState(next));
+  ipcDispatch(observation(setPlaybackState(next)));
 };
 
 type CaptureStreamVideo = HTMLVideoElement & {
@@ -220,6 +244,7 @@ const createSourceVideo = (uri: string): HTMLVideoElement => {
       finishAttempt(captureAttempt, 'completed');
       recovery.succeeded(captureAttempt.mediaId);
       deferredPreloads.clear();
+      if (completedFiniteItem(captureAttempt.itemId)) return;
     }
     clearSource();
     playNextItem();
@@ -388,7 +413,7 @@ const selectItem = (advance = false): PlaylistItem | undefined =>
 const selectCurrent = (item: PlaylistItem): void => {
   if (player.current === item.id) return;
   player = { ...player, current: item.id };
-  ipcDispatch(setCurrentPlaylistItem({ itemId: item.id, mediaId: item.md5 }));
+  ipcDispatch(observation(setCurrentPlaylistItem({ itemId: item.id, mediaId: item.md5 })));
 };
 
 const playNextItem = (): void => {
@@ -441,6 +466,7 @@ const failDecoder = (source: VideoSource, error: unknown): void => {
   if (!attempt || attempt.failed) return;
   const wasCurrent = source === currentSource;
   recordFailure(attempt, error);
+  if (playbackState !== 'playing') return;
   reportSkipped(attempt, wasCurrent, true);
   // После ошибки текущего файла повтор проверяем последовательно. Уже подготовленная
   // копия того же файла не должна обойти этот запрет при следующем updateDecoder().
@@ -575,6 +601,7 @@ const activateDecoder = (source: VideoSource): void => {
         finishAttempt(attempt, 'completed');
         recovery.succeeded(attempt.mediaId);
         deferredPreloads.clear();
+        if (completedFiniteItem(attempt.itemId)) return;
       }
       currentSource = undefined;
       playNextItem();
@@ -582,8 +609,14 @@ const activateDecoder = (source: VideoSource): void => {
     .catch(err => failDecoder(source, err));
 };
 
-const beginAttempt = (item: PlaylistItem): PlaybackAttempt =>
-  recovery.begin(item, undefined, { playlistId: playlist?.id, engine: activeEngine });
+const beginAttempt = (item: PlaylistItem): PlaybackAttempt => {
+  const attempt = recovery.begin(item, undefined, {
+    playlistId: playlist?.id,
+    engine: activeEngine,
+  });
+  if (finitePlayback) attemptFiniteTokens.set(attempt, finitePlayback.plan.token);
+  return attempt;
+};
 
 const loadMedia = async (
   item: PlaylistItem,
@@ -773,6 +806,7 @@ function requestPlaybackRecovery(reason: string): void {
   else if (activeEngine === 'capture' && captureAttempt) {
     const { mediaId } = captureAttempt;
     recordFailure(captureAttempt, reason);
+    if (playbackState !== 'playing') return;
     reportSkipped(captureAttempt, true, true);
     clearSource();
     if (recovery.hasPlayed(mediaId)) {
@@ -842,6 +876,10 @@ const reportSeek = (
 
 export const seek = (position: number): void => {
   if (!Number.isFinite(position)) return;
+  if (finitePlayback) {
+    finishFinitePlayback('cancelled');
+    return;
+  }
   const nextPosition = clampSeekPosition(position, getActiveDuration());
   if (activeEngine === 'capture' && sourceVideo) {
     const previousPosition = sourceVideo.currentTime;
@@ -869,7 +907,17 @@ export const seek = (position: number): void => {
 };
 
 let playerRequest = 0;
-const applyPlayer = async (value: Player, restart = false): Promise<void> => {
+const applyPlayer = async (
+  value: Player,
+  restart = false,
+  plan?: FinitePlaybackPlan,
+): Promise<void> => {
+  if (finitePlayback) finishFinitePlayback('cancelled');
+  finiteRuntimeFeedback = Boolean(plan);
+  if (plan) {
+    stopPlayback();
+    finitePlayback = new FinitePlaybackCounter(plan);
+  }
   const request = ++playerRequest;
   revision += 1;
   player = value;
@@ -892,11 +940,21 @@ const applyPlayer = async (value: Player, restart = false): Promise<void> => {
       disposeDecoder('playlist-changed');
     }
     playlist = loaded;
+    if (plan) loaded?.items.forEach(item => recovery.reset(item.md5));
+    if (
+      plan &&
+      (loaded?.id !== plan.playlistId ||
+        JSON.stringify(loaded.items.map(item => item.id)) !== JSON.stringify(plan.itemIds))
+    ) {
+      finishFinitePlayback('error');
+      return;
+    }
     updatePlaybackState(value.autoPlay ? 'playing' : loaded?.items.length ? 'paused' : 'none');
     await update();
-    if (restart && request === playerRequest) seek(0);
+    if (restart && !plan && request === playerRequest) seek(0);
   } catch (error) {
     // Keep the requested state. A later player/playlist update can restore unavailable metadata.
+    if (plan && request === playerRequest) finishFinitePlayback('error');
     debug(`playlist lookup failed: ${String(error)}`);
   }
 };
@@ -916,12 +974,16 @@ const initialize = async (): Promise<void> => {
   }
 };
 
-ipcRenderer.on('player', (_, value: Player, options?: { restart?: boolean }) => {
-  void applyPlayer(value, options?.restart);
-});
+ipcRenderer.on(
+  'player',
+  (_, value: Player, options?: { restart?: boolean; finitePlayback?: FinitePlaybackPlan }) => {
+    void applyPlayer(value, options?.restart, options?.finitePlayback);
+  },
+);
 
 ipcRenderer.on('updatePlaylist', (_, updatedPlaylist: Playlist) => {
   if (updatedPlaylist.id !== player?.playlistId) return;
+  if (finitePlayback) finishFinitePlayback('cancelled');
   playlist = updatedPlaylist;
   scheduleUpdate();
 });
@@ -932,7 +994,7 @@ ipcRenderer.on('playback:retry', (_, mediaId: string) => {
   scheduleUpdate();
 });
 
-ipcRenderer.on('stop', () => {
+const stopPlayback = (): void => {
   playerRequest += 1;
   revision += 1;
   const duration = getActiveDuration();
@@ -942,6 +1004,13 @@ ipcRenderer.on('stop', () => {
   blankConsumers();
   ipcDispatch(setDuration(duration));
   ipcDispatch(setPosition(0));
+};
+ipcRenderer.on('finite-playback:cancel', (_, token: string) => {
+  if (finitePlayback?.plan.token === token) finishFinitePlayback('cancelled');
+});
+ipcRenderer.on('stop', () => {
+  if (finitePlayback) finishFinitePlayback('cancelled');
+  else stopPlayback();
 });
 
 type PeerEntry = {

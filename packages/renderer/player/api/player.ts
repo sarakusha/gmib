@@ -33,6 +33,14 @@ const playerApi = createApi({
     // getPlayer: build.query<Player, number>({
     //   query: id => `/player/${id}`,
     // }),
+    observePlayer: build.mutation<void, Pick<Player, 'id' | 'current'>>({
+      async queryFn(body, _api, _extra, query) {
+        const result = await query({ url: '/player-observation', method: 'PUT', body });
+        // Unknown older hosts may lack this endpoint. Never turn telemetry into a command.
+        if (result.error && result.error.status !== 404) return { error: result.error };
+        return { data: undefined };
+      },
+    }),
     updatePlayer: build.mutation<Player, Player>({
       query: player => ({
         url: '/player',

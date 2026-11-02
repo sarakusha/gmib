@@ -2,6 +2,8 @@ import type { Middleware, MiddlewareAPI } from '@reduxjs/toolkit';
 import debugFactory from 'debug';
 import type { SetStateAction } from 'react';
 
+import { supportsFeature } from '/@common/capabilities';
+import { isRemoteSession, version } from '/@common/remote';
 import { host, port } from '/@common/remote';
 import type { Player } from '/@common/video';
 
@@ -78,7 +80,7 @@ const isValidItemFactory =
     return index !== -1;
   };
 const updatePlayer =
-  (id: number, update: SetStateAction<Player>): AppThunk =>
+  (id: number, update: SetStateAction<Player>, observation = false): AppThunk =>
   (dispatch, getState) => {
     dispatch(
       playerApi.util.updateQueryData('getPlayers', undefined, draft => {
@@ -88,7 +90,11 @@ const updatePlayer =
         if (isValidItemFactory(getState)(player.playlistId, player.current) === false) {
           player = { ...player, current: getFirstItemFactory(getState)(player.playlistId) };
         }
-        void dispatch(debouncedUpdatePlayer(player));
+        if (observation && supportsFeature('playerPlaylistRepeat', version, isRemoteSession))
+          void dispatch(
+            playerApi.endpoints.observePlayer.initiate({ id, current: player.current }),
+          );
+        else void dispatch(debouncedUpdatePlayer(player));
         playerAdapter.setOne(draft, player);
       }),
     );
@@ -159,11 +165,12 @@ export const socketMiddleware: Middleware = api => {
           case 'setDuration':
             dispatch(setDuration(data[1] as number));
             break;
+          case 'finiteCurrentPlaylistItem':
           case 'setCurrentPlaylistItem':
             {
               const [, itemId, mediaId] = data;
-              dispatch(
-                setCurrentPlaylistItem(
+              dispatch({
+                ...setCurrentPlaylistItem(
                   typeof itemId === 'string'
                     ? {
                         itemId,
@@ -171,7 +178,11 @@ export const socketMiddleware: Middleware = api => {
                       }
                     : undefined,
                 ),
-              );
+                meta: {
+                  runtimeOnly: event === 'finiteCurrentPlaylistItem',
+                  runtimeObservation: true,
+                },
+              });
             }
             break;
           case 'setPosition':
@@ -181,8 +192,12 @@ export const socketMiddleware: Middleware = api => {
               if (typeof position === 'number') dispatch(setPosition(position));
             }
             break;
+          case 'finitePlaybackState':
           case 'setPlaybackState':
-            dispatch(setPlaybackState(data[1] as Parameters<typeof setPlaybackState>[0]));
+            dispatch({
+              ...setPlaybackState(data[1] as Parameters<typeof setPlaybackState>[0]),
+              meta: { runtimeOnly: event === 'finitePlaybackState', runtimeObservation: true },
+            });
             break;
           case 'media':
             void dispatch(

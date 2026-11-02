@@ -1,3 +1,5 @@
+import { updateObservedPlayerCurrent } from './screen';
+import { cancelFinitePlayback, isFinitePlaybackActive } from './finitePlaybackRegistry';
 import { invalidatePlaybackOutputs } from './playbackOutputState';
 import { BrowserWindow, app as electronApp } from 'electron';
 import fs from 'fs';
@@ -575,8 +577,22 @@ api.post('/player', async (req, res, next) => {
   }
 });
 
+// Playback observations never become commands or change persisted autoplay.
+api.put('/player-observation', async (req, res, next) => {
+  try {
+    const { id, current } = req.body;
+    if (!Number.isSafeInteger(id) || id < 1 || (current !== undefined && typeof current !== 'string')) {
+      res.sendStatus(400);
+      return;
+    }
+    if (!isFinitePlaybackActive(id)) await updateObservedPlayerCurrent(id, current);
+    res.sendStatus(204);
+  } catch (error) { next(error); }
+});
+
 api.put('/player', async (req, res, next) => {
   try {
+    cancelFinitePlayback(req.body.id);
     const { changes } = await updatePlayer(await uniquePlayerName(req.body));
     if (!changes) res.sendStatus(404);
     else {

@@ -1,3 +1,4 @@
+import { cancelFinitePlayback } from './finitePlaybackRegistry';
 import type { Player } from '/@common/video';
 
 import { openPlayer } from './playerWindow';
@@ -26,6 +27,7 @@ export const updatePlayerRuntime = async (
   player: Player,
   options: PlayerRuntimeOptions = {},
 ): Promise<void> => {
+  cancelFinitePlayback(player.id);
   await updatePlayer(player);
   const updatedPlayer = await sendPlayerToRuntime(player.id, options);
   if (options.openHidden && !findPlayerWindow(player.id) && updatedPlayer) {

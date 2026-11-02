@@ -917,3 +917,102 @@ it('counts only the abandoned slot when lookup retries fail for a previously pla
   expect(records('skipped')).toHaveLength(1);
   expect(records('skipped')[0].playbackId).toBe(records('error')[5].playbackId);
 });
+
+describe('finite playlist playback', () => {
+  const start = async (engine: string, count: number, single = false) => {
+    mock.player.playbackEngine = engine;
+    mock.player.autoPlay = false;
+    if (single) mock.playlist.items = [mock.playlist.items[0]];
+    await import('./mediaStream');
+    await flush();
+    event(
+      'player',
+      { ...mock.player, current: undefined, autoPlay: true },
+      {
+        restart: true,
+        finitePlayback: {
+          token: 'run',
+          playlistId: 1,
+          itemIds: mock.playlist.items.map(item => item.id),
+          repeatCount: count,
+        },
+      },
+    );
+    await flush();
+  };
+  const completions = () =>
+    mock.send.mock.calls.filter(([name]) => name === 'finite-playback:finished');
+  const end = async (engine: string) => {
+    if (engine === 'decoder') {
+      const source = current();
+      source.emit({ frame: { timestamp: 1000 } });
+      source.end();
+    } else mock.videos.at(-1).emit('ended');
+    await flush();
+  };
+  for (const engine of ['decoder', 'capture']) {
+    it(`${engine}: completes exactly two one-item cycles and stops`, async () => {
+      await start(engine, 2, true);
+      await end(engine);
+      expect(completions()).toHaveLength(0);
+      await end(engine);
+      expect(completions()).toEqual([['finite-playback:finished', 'run', 'complete']]);
+      mock.videos[0]?.emit('ended');
+      await flush();
+      expect(completions()).toHaveLength(1);
+      expect(
+        mock.dispatch.mock.calls.findLast(([a]) => a.type.endsWith('/setPlaybackState'))?.[0],
+      ).toMatchObject({ payload: 'none', meta: { runtimeOnly: true } });
+    });
+    it(`${engine}: counts whole ordered playlists`, async () => {
+      await start(engine, 1);
+      await end(engine);
+      expect(completions()).toHaveLength(0);
+      await end(engine);
+      expect(completions()).toEqual([['finite-playback:finished', 'run', 'complete']]);
+    });
+  }
+  it('aborts on decoder failure without retrying or counting the failed item', async () => {
+    await start('decoder', 2, true);
+    current().emit({ err: { message: 'broken' } });
+    await flush();
+    expect(completions()).toEqual([['finite-playback:finished', 'run', 'error']]);
+    expect(current()).toBeUndefined();
+  });
+  it('capture errors abort instead of advancing to another item', async () => {
+    await start('capture', 2);
+    mock.videos.at(-1).emit('error');
+    await flush();
+    expect(completions()).toEqual([['finite-playback:finished', 'run', 'error']]);
+    expect(mock.dispatch.mock.calls.findLast(([a]) => a.type.endsWith('/setPlaybackState'))?.[0].payload).toBe('none');
+  });
+  it('stale decoder completion and failure cannot finish a newer run', async () => {
+    await start('decoder', 2, true);
+    const stale = current();
+    event('player', { ...mock.player, current: undefined, autoPlay: true }, {
+      finitePlayback: { token: 'new', playlistId: 1, itemIds: ['bad'], repeatCount: 1 },
+    });
+    await flush();
+    stale.emit({ err: { message: 'late failure' } });
+    stale.end();
+    await flush();
+    expect(completions()).toEqual([['finite-playback:finished', 'run', 'cancelled']]);
+    await end('decoder');
+    expect(completions().at(-1)).toEqual(['finite-playback:finished', 'new', 'complete']);
+  });
+  it('manual seek cancels and blanks the finite run', async () => {
+    await start('decoder', 2, true);
+    const { seek } = await import('./mediaStream');
+    seek(8);
+    await flush();
+    expect(completions()).toEqual([['finite-playback:finished', 'run', 'cancelled']]);
+    expect(current()).toBeUndefined();
+  });
+  it('manual player command cancels the old token and ignores stale cancellation', async () => {
+    await start('decoder', 2, true);
+    event('player', { ...mock.player, autoPlay: false });
+    await flush();
+    event('finite-playback:cancel', 'run');
+    expect(completions()).toEqual([['finite-playback:finished', 'run', 'cancelled']]);
+  });
+});

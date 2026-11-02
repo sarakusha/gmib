@@ -1,6 +1,6 @@
 import { isAnyOf } from '@reduxjs/toolkit';
 
-import playerApi, { selectPlayer } from '../api/player';
+import playerApi, { playerAdapter, selectPlayer } from '../api/player';
 import updatePlayer, { playerPause, playerPlay, playerStop } from '../api/updatePlayer';
 import { sourceId } from '../utils';
 
@@ -18,6 +18,11 @@ import type { AppDispatch, RootState } from './index';
 
 import { supportsFeature } from '/@common/capabilities';
 import { isRemoteSession, version } from '/@common/remote';
+
+const runtimeObservation = (action: unknown): boolean =>
+  Boolean((action as { meta?: { runtimeObservation?: boolean } }).meta?.runtimeObservation);
+const runtimeOnly = (action: unknown): boolean =>
+  Boolean((action as { meta?: { runtimeOnly?: boolean } }).meta?.runtimeOnly);
 
 const selectPlayersData = playerApi.endpoints.getPlayers.select();
 // const selectPlaylistsData = playlistApi.endpoints.getPlaylists.select();
@@ -100,7 +105,7 @@ if (!isRemoteSession) {
     actionCreator: setCurrentPlaylistItem,
     effect: action => {
       window.socket.broadcast(
-        'setCurrentPlaylistItem',
+        runtimeOnly(action) ? 'finiteCurrentPlaylistItem' : 'setCurrentPlaylistItem',
         action.payload?.itemId,
         action.payload?.mediaId,
       );
@@ -116,11 +121,16 @@ if (!isRemoteSession) {
 
 startAppListening({
   matcher: isAnyOf(setPlaybackState, togglePlaybackState),
-  effect(_, { dispatch, getState }) {
+  effect(action, { dispatch, getState }) {
     const playbackState = selectPlaybackState(getState());
     // window.mediaStream.updatePlaybackState(playbackState);
     navigator.mediaSession.playbackState = playbackState;
-    if (!isRemoteSession) window.socket.broadcast('setPlaybackState', playbackState);
+    if (!isRemoteSession)
+      window.socket.broadcast(
+        runtimeOnly(action) ? 'finitePlaybackState' : 'setPlaybackState',
+        playbackState,
+      );
+    if (runtimeOnly(action) || runtimeObservation(action)) return;
     switch (playbackState) {
       case 'none':
         setTimeout(() => dispatch(playerStop()), 0);
@@ -153,12 +163,25 @@ startAppListening({
 
 startAppListening({
   actionCreator: setCurrentPlaylistItem,
-  effect: ({ payload: current }, { dispatch }) => {
+  effect: (action, { dispatch }) => {
+    const current = action.payload;
+    if (runtimeOnly(action)) {
+      dispatch(
+        playerApi.util.updateQueryData('getPlayers', undefined, draft => {
+          playerAdapter.updateOne(draft, { id: sourceId, changes: { current: current?.itemId } });
+        }),
+      );
+      return;
+    }
     dispatch(
-      updatePlayer(sourceId, props => ({
-        ...props,
-        current: current?.itemId,
-      })),
+      updatePlayer(
+        sourceId,
+        props => ({
+          ...props,
+          current: current?.itemId,
+        }),
+        runtimeObservation(action),
+      ),
     );
   },
 });
