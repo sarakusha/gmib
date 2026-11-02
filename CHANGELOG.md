@@ -2,11 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
-## Unreleased
+## [5.7.4](https://github.com/sarakusha/gmib/compare/v5.7.3...v5.7.4) (2026-11-02)
+
+### Features
+
+* add serial and environment plugin APIs ([bdacdd9](https://github.com/sarakusha/gmib/commit/bdacdd92854d9348259a693656e6a4662187c61a))
+* configure finite playlist runs in player scheduler ([fd27a2f](https://github.com/sarakusha/gmib/commit/fd27a2f3c1ecfa1d267ce0111eb63a0913537c4e))
+* execute finite playlist runs with safe completion actions ([b400f15](https://github.com/sarakusha/gmib/commit/b400f1559d79a57824d35c18e11acd9e6cd617e6))
+* expose all auto-brightness solar events to plugins ([53512fa](https://github.com/sarakusha/gmib/commit/53512fa93befc676187f6c0ae99387af30c6c005))
+* persist finite playlist scheduler parameters ([4653b64](https://github.com/sarakusha/gmib/commit/4653b64a9ec7d15a62dcf68c4cf1adabb881893e))
 
 ### Bug Fixes
 
-* Защита импорта больших изображений: проверка разрешения без распаковки до отправки и повторно на сервере, понятная ошибка с размером и оценкой памяти. Сервер проверяет доступную память, обрабатывает загрузки последовательно и ограничивает ресурсы преобразования изображения в видео. Сбой обработки отдельного файла не останавливает очередь; незавершённые файлы удаляются, сообщение об ошибке видно полностью. Серверная защита рассчитана на следующую версию 5.7.4; номер версии проекта пока не изменён.
+* guard image imports against excessive memory use ([6990819](https://github.com/sarakusha/gmib/commit/69908199c46c8c02981ada23e2b9a3e87c3fefd3))
+* patch KeUSB-24R detection for macOS and Windows ([bbba3a1](https://github.com/sarakusha/gmib/commit/bbba3a19ae8acfcbc6aa441c9907b8a0d61af119))
+* persist plugin autostart without changing active output ([d21de05](https://github.com/sarakusha/gmib/commit/d21de051071be7d228524d0b4b2dc9091b4df17c))
 
 ## [5.7.3](https://github.com/sarakusha/gmib/compare/v5.7.2...v5.7.3) (2026-10-30)
 
