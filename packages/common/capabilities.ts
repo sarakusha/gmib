@@ -16,7 +16,8 @@ export type FeatureName =
   | 'schedulerSecondsAndPriority'
   | 'windowZIndex'
   | 'pluginPlayerControl'
-  | 'remotePlugins';
+  | 'remotePlugins'
+  | 'safeImageImport';
 
 const minimumVersions: Record<FeatureName, string> = {
   gmibScheduler: '5.0.1',
@@ -37,6 +38,7 @@ const minimumVersions: Record<FeatureName, string> = {
   windowZIndex: '5.0.1',
   pluginPlayerControl: '5.7.1',
   remotePlugins: '5.7.1',
+  safeImageImport: '5.7.4',
 };
 
 const parseVersion = (version?: string): number[] | undefined => {

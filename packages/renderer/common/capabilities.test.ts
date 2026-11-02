@@ -2,6 +2,21 @@ import { describe, expect, it } from 'vitest';
 
 import { supportsFeature } from '/@common/capabilities';
 
+describe('safe image import compatibility', () => {
+  it.each([
+    ['5.7.3', false],
+    ['5.7.4', true],
+    ['5.8.0', true],
+    [undefined, true],
+  ])('uses the remote version %s', (version, supported) => {
+    expect(supportsFeature('safeImageImport', version, true)).toBe(supported);
+  });
+
+  it('keeps local protection enabled regardless of the connection version', () => {
+    expect(supportsFeature('safeImageImport', '5.7.3', false)).toBe(true);
+  });
+});
+
 describe('SQLite playback statistics compatibility', () => {
   it.each([
     ['5.6.3', false],

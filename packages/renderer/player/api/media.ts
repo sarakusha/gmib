@@ -5,6 +5,7 @@ import type { MediaInfo } from '/@common/mediaInfo';
 import { host, isRemoteSession, port, sourceId } from '/@common/remote';
 
 import baseQuery from '../../common/authBaseQuery';
+import { preflightImage } from './imagePreflight';
 
 export const mediaAdapter = createEntityAdapter<MediaInfo, string>({
   selectId: ({ md5 }) => md5,
@@ -73,6 +74,7 @@ const xhrUpload = async (
   onProgress?: (progress: MediaUploadProgress) => void,
   signal?: AbortSignal,
 ): Promise<MediaInfo[]> => {
+  await preflightImage(file, signal);
   const formData = new FormData();
   formData.append(file.name, file);
 
@@ -166,21 +168,27 @@ const mediaApi = createApi({
       },
     }),
     uploadMedia: build.mutation<MediaInfo[], File[] | FileList>({
-      query: files => {
-        const formData = new FormData();
-        [...files].forEach(file => {
-          formData.append(file.name, file);
-        });
-        return {
-          url: 'media',
-          method: 'POST',
-          body: formData,
-        };
+      async queryFn(files, { signal }) {
+        try {
+          let media: MediaInfo[] = [];
+          // Each response contains the complete library; retain the latest snapshot.
+          for (const file of files) media = await xhrUpload(file, undefined, signal);
+          return { data: media };
+        } catch (error) {
+          return {
+            error: {
+              status: 'CUSTOM_ERROR',
+              error: error instanceof Error ? error.message : String(error),
+            },
+          };
+        }
       },
       async onQueryStarted(files, { dispatch, queryFulfilled }) {
         const now = Date.now();
+        const temporaryIds: string[] = [];
         [...files].forEach((file, index) => {
           const md5 = `temp-${now + index}`;
+          temporaryIds.push(md5);
           const item = {
             md5,
             filename: file.name,
@@ -201,12 +209,21 @@ const mediaApi = createApi({
             }),
           );
         });
-        const { data: result } = await queryFulfilled;
-        dispatch(
-          mediaApi.util.updateQueryData('getMedia', undefined, draft => {
-            mediaAdapter.setAll(draft, result);
-          }),
-        );
+        try {
+          const { data: result } = await queryFulfilled;
+          dispatch(
+            mediaApi.util.updateQueryData('getMedia', undefined, draft => {
+              mediaAdapter.removeMany(draft, temporaryIds);
+              mediaAdapter.upsertMany(draft, result);
+            }),
+          );
+        } catch {
+          dispatch(
+            mediaApi.util.updateQueryData('getMedia', undefined, draft => {
+              mediaAdapter.removeMany(draft, temporaryIds);
+            }),
+          );
+        }
       },
     }),
   }),

@@ -1,5 +1,4 @@
 import { invalidatePlaybackOutputs } from './playbackOutputState';
-import crypto from 'crypto';
 import { BrowserWindow, app as electronApp } from 'electron';
 import fs from 'fs';
 import os from 'node:os';
@@ -7,40 +6,16 @@ import path from 'path';
 
 import debugFactory from 'debug';
 import express from 'express';
-import type { File } from 'formidable';
-import formidable from 'formidable';
 import { nanoid } from 'nanoid';
 
-import type { MediaInfo } from '/@common/mediaInfo';
 import { asyncSerial, notEmpty } from '/@common/helpers';
 import type { CreatePlaylist, Playlist, PlaylistItem } from '/@common/playlist';
 
 import auth from './auth';
 import { mountApiAuth } from './apiAuth';
 import { testsDeferred } from './config';
-import {
-  beginTransaction,
-  commitTransaction,
-  dbReady,
-  incrementCounterString,
-  rollback,
-} from './db';
-import {
-  convertCopy,
-  doesPlayerSupportFile,
-  generateFromImage,
-  getAudioStreams,
-  getRealVideoStreams,
-  getSmarterOutFormat,
-  getStreamFps,
-  getTimecodeFromStreams,
-  html5ify,
-  isDurationValid,
-  outExt,
-  readFileMeta,
-  renderThumbnail,
-  renderThumbnailFromImage,
-} from './ffmpeg';
+import { beginTransaction, commitTransaction, dbReady, rollback } from './db';
+import { createMediaUploadHandler } from './mediaUpload';
 import getAllDisplays from './getAllDisplays';
 import {
   createGmibSchedulerJob,
@@ -67,13 +42,7 @@ import { mountManagementHostsApi } from './managementHostsApi';
 import { mountPlayerConfigurationApi } from './playerConfigurationApi';
 import machineId from './machineId';
 import updateMenu from './mainMenu';
-import {
-  deleteMedia,
-  getAllMedia,
-  getMediaByMD5,
-  getMediaByOriginalMD5,
-  insertMedia,
-} from './media';
+import { deleteMedia, getAllMedia, getMediaByMD5 } from './media';
 import {
   deletePage,
   getPage,
@@ -192,121 +161,6 @@ fs.mkdir(mediaRoot, { recursive: true }, err => {
   }
 });
 
-const noop = (): void => {};
-
-type MediaUploadError = {
-  filename: string;
-  message: string;
-};
-
-const getHash = (filepath: string): Promise<string> =>
-  new Promise<string>((resolve, reject) => {
-    const hashSum = crypto.createHash('md5');
-    const stream = fs.createReadStream(filepath);
-    stream.on('data', chunk => hashSum.update(chunk));
-    stream.once('end', () => resolve(hashSum.digest('hex')));
-    stream.once('error', err => reject(err));
-  });
-
-const loadMedia = async (file: File, force = false): Promise<MediaInfo> => {
-  let { hash } = file;
-  if (!hash) hash = await getHash(file.filepath);
-  const media = await getMediaByOriginalMD5(hash);
-  if (media) {
-    if (!force) {
-      fs.unlinkSync(file.filepath);
-      return media;
-    }
-    await deleteMedia(hash);
-    fs.unlinkSync(resolveMedia(media.filename));
-  }
-  let md5 = hash;
-  let fileMeta = await readFileMeta(file.filepath);
-  const fileFormatNew = await getSmarterOutFormat(file.filepath, fileMeta.format);
-  debug(`fileFormatNew: ${fileFormatNew}`);
-  if (!fileFormatNew) throw new Error('Unable to determine file format');
-  let outPath = file.filepath;
-  let duration = fileMeta.format.duration !== undefined && parseFloat(fileMeta.format.duration);
-  const validDuration = duration && isDurationValid(duration);
-  const isImage = file.mimetype?.startsWith('image/');
-  if (!validDuration && !isImage) throw new Error('Unknown duration');
-  const original = file.originalFilename ?? file.newFilename;
-  let unlink = false;
-  const isVideoJsSupported = ['matroska', 'webm'].includes(fileFormatNew);
-  const isPlayerSupport = doesPlayerSupportFile(fileMeta.streams);
-  if (!isPlayerSupport || !isVideoJsSupported || isImage) {
-    debug(`convert ${file.originalFilename} ${file.newFilename}`);
-    let { name } = path.parse(original);
-    while (fs.existsSync(resolveMedia(`${name}.${outExt}`))) {
-      name = incrementCounterString(name);
-    }
-    outPath = resolveMedia(`${name}.${outExt}`);
-    if (isImage) {
-      await generateFromImage({ outPath, filePath: file.filepath });
-    } else if (!isPlayerSupport) {
-      await html5ify({ outPath, filePath: file.filepath, speed: 'slowest', onProgress: noop });
-    } else {
-      await convertCopy(file.filepath, outPath);
-    }
-    [fileMeta, md5] = await Promise.all([readFileMeta(outPath), getHash(outPath)]);
-    duration = fileMeta.format.duration !== undefined && parseFloat(fileMeta.format.duration);
-    unlink = true;
-  }
-  if (!duration) throw new Error('Unknown duration');
-  const { format, streams } = fileMeta;
-  const timecode = getTimecodeFromStreams(streams);
-  const videoStreams = getRealVideoStreams(streams);
-  const audioStreams = getAudioStreams(fileMeta.streams);
-
-  const videoStream = videoStreams[0];
-  const audioStream = audioStreams[0];
-
-  const haveVideoStream = !!videoStream;
-  // const haveAudioStream = !!audioStream;
-
-  const {
-    codec_name: codecName,
-    codec_long_name: codecLongName,
-    profile,
-    width,
-    height,
-    field_order: fieldOrder,
-  } = videoStream ?? {};
-
-  const fps = haveVideoStream ? getStreamFps(videoStream) : undefined;
-  const thumbnail = isImage
-    ? await renderThumbnailFromImage(file.filepath, thumbFromName(outPath))
-    : await renderThumbnail(outPath, 3, thumbFromName(outPath));
-  const mediaInfo: MediaInfo = {
-    md5,
-    filename: path.basename(outPath),
-    original: {
-      md5: hash,
-      filename: original,
-    },
-    formatName: format.format_name,
-    formatLongName: format.format_long_name,
-    timecode,
-    fps,
-    duration,
-    size: Number(format.size),
-    streams: streams.length,
-    video: videoStream?.index,
-    audio: audioStream?.index,
-    codecName,
-    codecLongName,
-    profile,
-    width: Number(width),
-    height: Number(height),
-    fieldOrder,
-    uploadTime: new Date().toISOString(),
-    thumbnail: path.basename(thumbnail),
-  };
-  await insertMedia(mediaInfo);
-  unlink && fs.unlinkSync(file.filepath);
-  return mediaInfo;
-};
-
 const api = express.Router();
 
 api.use('/manage/v1/plugins', auth, pluginManagementRouter);
@@ -405,76 +259,13 @@ api.get('/media/:id', (req, res, next) => {
   }, next);
 });
 
-api.post('/media', (req, res, next) => {
-  const form = formidable({
-    uploadDir: mediaRoot,
-    keepExtensions: true,
-    multiples: true,
-    hashAlgorithm: 'md5',
-    maxFileSize: Number.MAX_SAFE_INTEGER,
-    filename: (original, ext) => {
-      let name = original;
-      if (import.meta.env.PROD) {
-        while (fs.existsSync(path.join(mediaRoot, `${name}${ext}`))) {
-          name = incrementCounterString(name);
-        }
-      }
-      return `${name}${ext}`;
-    },
-    filter: ({ mimetype, name }) =>
-      (mimetype != null && (mimetype.startsWith('image/') || mimetype.startsWith('video/'))) ||
-      (name != null && ['.mkv'].includes(path.extname(name))),
-  });
-  form.parse(req, (err, fields, files) => {
-    void (async () => {
-      if (err) {
-        next(err);
-      } else {
-        // debug(JSON.stringify(files));
-        const errors: MediaUploadError[] = [];
-        const loaded = (
-          await asyncSerial(
-            Object.values(files)
-              .map(file => (Array.isArray(file) ? file[0] : file))
-              .filter(notEmpty),
-            async file => {
-              try {
-                return await loadMedia(file);
-              } catch (e) {
-                const message = e instanceof Error ? e.message : String(e);
-                try {
-                  fs.existsSync(file.filepath) && fs.unlinkSync(file.filepath);
-                } catch (unlinkError) {
-                  debug(
-                    `error while removing failed upload ${file.originalFilename}: ${
-                      unlinkError instanceof Error ? unlinkError.message : String(unlinkError)
-                    }`,
-                  );
-                }
-                errors.push({
-                  filename: file.originalFilename ?? file.newFilename,
-                  message,
-                });
-                debug(`error while loading ${file.originalFilename}: ${message}`);
-                return undefined;
-              }
-            },
-          )
-        ).filter(notEmpty);
-        debug(`files uploaded: ${JSON.stringify(loaded)}`);
-        getAllMedia().then(result => {
-          if (errors.length > 0) {
-            res.status(207).json({ media: result, errors });
-            return;
-          }
-          res.json(result);
-        }, next);
-        const sourceId = req.headers['x-ni-source-id'];
-        broadcast({ event: 'media', remote: req.ip, ...(sourceId && { sourceId: +sourceId }) });
-      }
-    })();
-  });
-});
+api.post(
+  '/media',
+  createMediaUploadHandler(mediaRoot, req => {
+    const sourceId = req.headers['x-ni-source-id'];
+    broadcast({ event: 'media', remote: req.ip, ...(sourceId && { sourceId: +sourceId }) });
+  }),
+);
 
 api.delete('/media/:md5', async (req, res, next) => {
   const { md5 } = req.params;

@@ -298,7 +298,8 @@ const MediaItem = React.forwardRef<HTMLLIElement, MediaItemProps>((props, ref) =
                       ? 'error'
                       : 'text.secondary'
                   }
-                  noWrap
+                  noWrap={uploadProgress?.phase !== 'failed'}
+                  sx={uploadProgress?.phase === 'failed' ? { overflowWrap: 'anywhere' } : undefined}
                 >
                   {statusText ?? playbackStatusText}
                 </Typography>

@@ -14,6 +14,8 @@ import type { FileTypeResult } from 'file-type';
 import type { FRAMERATE } from 'smpte-timecode';
 import Timecode from 'smpte-timecode';
 
+import { MAX_IMAGE_PIXELS } from '/@common/imageImportLimits';
+
 export const platform = os.platform();
 export const arch = os.arch();
 export const isWindows = platform === 'win32';
@@ -172,22 +174,22 @@ export async function runFfprobe(
   // debug(JSON.stringify(process.env));
   // debug(getFfCommandLine(ffprobePath, args));
   const { PATH } = process.env;
-  const ps = execa(ffprobePath, args, {
+  return execa(ffprobePath, args, {
     env: { ...process.env, ...(isMac && { PATH: `${PATH}:/usr/local/bin` }) },
+    timeout,
+    maxBuffer: 2 * 1024 ** 2,
+    forceKillAfterDelay: 1000,
   });
-  const timer = setTimeout(() => {
-    debug('WARN: killing timed out ffprobe');
-    ps.kill();
-  }, timeout);
-  return ps.finally(() => clearTimeout(timer));
 }
 
-export function runFfmpeg(args: string[]) {
+export function runFfmpeg(args: string[], limits: { timeout?: number; maxBuffer?: number } = {}) {
   const ffmpegPath = getFfmpegPath();
   debug(getFfCommandLine('ffmpeg', args));
   const { PATH } = process.env;
   return execa(ffmpegPath, args, {
     env: { ...process.env, ...(isMac && { PATH: `${PATH}:/usr/local/bin` }) },
+    ...limits,
+    forceKillAfterDelay: 1000,
   });
   // return execa(ffmpegPath, args);
 }
@@ -196,9 +198,27 @@ export async function renderThumbnailFromImage(
   filePath: string,
   thumbPath: string,
 ): Promise<string> {
-  const args = ['-i', filePath, '-vf', 'scale=-2:100', thumbPath];
-  const ffmpegPath = getFfmpegPath();
-  await execa(ffmpegPath, args);
+  const args = [
+    '-hide_banner',
+    '-loglevel',
+    'error',
+    '-threads',
+    '1',
+    '-filter_threads',
+    '1',
+    '-max_pixels',
+    String(MAX_IMAGE_PIXELS),
+    '-i',
+    filePath,
+    '-vf',
+    'scale=-2:100',
+    '-frames:v',
+    '1',
+    '-threads',
+    '1',
+    thumbPath,
+  ];
+  await runFfmpeg(args, { timeout: 30_000, maxBuffer: 512 * 1024 });
   return thumbPath;
 }
 
@@ -301,24 +321,18 @@ export async function generateFromImage({
   duration = 5,
 }: ImgOpts): Promise<void> {
   debug(`Generate video from image. filePath: ${filePath}, outPath: ${outPath}`);
-  // const fps = 1 / duration;
-  // const videoArgs = [
-  //   '-r',
-  //   fps.toFixed(3),
-  //   '-loop',
-  //   '1',
-  //   '-vcodec',
-  //   'libx264',
-  //   '-t',
-  //   duration.toFixed(),
-  //   '-pix_fmt',
-  //   'yuv420p',
-  // ];
   const videoArgs = [
     '-r',
     '25',
     '-vcodec',
     'libx264',
+    // Keep only a small number of frames; default lookahead/thread pools multiply image RAM.
+    '-threads',
+    '1',
+    '-tune',
+    'zerolatency',
+    '-refs',
+    '1',
     '-t',
     duration.toFixed(),
     '-pix_fmt',
@@ -328,9 +342,27 @@ export async function generateFromImage({
     'loop=-1:1,crop=iw-mod(iw\\,2):ih-mod(ih\\,2)',
   ];
 
-  const ffmpegArgs = ['-hide_banner', '-i', filePath, ...videoArgs, '-an', '-sn', '-y', outPath];
+  const ffmpegArgs = [
+    '-hide_banner',
+    '-loglevel',
+    'error',
+    '-nostats',
+    '-threads',
+    '1',
+    '-filter_threads',
+    '1',
+    '-max_pixels',
+    String(MAX_IMAGE_PIXELS),
+    '-i',
+    filePath,
+    ...videoArgs,
+    '-an',
+    '-sn',
+    '-y',
+    outPath,
+  ];
 
-  const process = runFfmpeg(ffmpegArgs);
+  const process = runFfmpeg(ffmpegArgs, { timeout: 120_000, maxBuffer: 512 * 1024 });
 
   const { stdout } = await process;
   debug(stdout);
@@ -502,9 +534,13 @@ export async function html5ify({
 
 export async function readFileMeta(
   filePath: string,
+  maxPixels?: number,
 ): Promise<{ streams: FfprobeStream[]; format: FfprobeFormat }> {
   try {
     const { stdout } = await runFfprobe([
+      ...(maxPixels === undefined ? [] : ['-max_pixels', String(maxPixels)]),
+      '-threads',
+      '1',
       '-of',
       'json',
       '-show_format',
@@ -529,11 +565,12 @@ export async function readFileMeta(
       typeof err === 'object' && err !== null && 'code' in err
         ? (err as { code?: string }).code
         : undefined;
-    const message = err instanceof Error ? err.message : String(err);
-
     // Windows will throw error with code ENOENT if format detection fails.
     if (exitCode === 1 || (isWindows && code === 'ENOENT')) {
-      throw new Error(`Unsupported file: ${message}`);
+      throw new Error(
+        'Не удалось прочитать медиафайл. Проверьте файл или сохраните его в другом формате.',
+        { cause: err },
+      );
     }
     throw err;
   }
