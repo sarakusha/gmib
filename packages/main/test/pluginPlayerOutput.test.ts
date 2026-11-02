@@ -736,3 +736,16 @@ describe('atomic plugin output layouts', () => {
     expect((await state.api.getStatus()).profile?.autoStart).toBe(false);
   });
 });
+
+it('updates startup policy without changing current output and keeps it after failed save', async () => {
+  const saved = { screenId: 1, pageId: 'main', autoStart: false };
+  const storage = { get: async () => saved as never, set: vi.fn() };
+  const api = await createPluginOutput(manifest, storage, vi.fn());
+  vi.clearAllMocks();
+  await api.setAutoStart?.(true);
+  expect(storage.set).toHaveBeenLastCalledWith('gmib.output', { ...saved, autoStart: true });
+  expect(mock.updateScreen).not.toHaveBeenCalled();
+  storage.set.mockRejectedValueOnce(new Error('disk failed'));
+  await expect(api.setAutoStart?.(false)).rejects.toThrow('disk failed');
+  expect((await api.getStatus()).profile?.autoStart).toBe(true);
+});

@@ -279,6 +279,16 @@ export async function createPluginOutput(
     await queue;
   });
   return {
+    setAutoStart: enabled => {
+      check();
+      return serial(async () => {
+        if (typeof enabled !== 'boolean') throw new Error('Некорректный флаг автозапуска');
+        if (!profile) return;
+        const next = { ...profile, autoStart: enabled };
+        await storage.set('gmib.output', next);
+        profile = next;
+      });
+    },
     applyLayout: layout => {
       check();
       // Snapshot before queueing: callers can otherwise append player operations

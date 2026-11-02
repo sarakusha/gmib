@@ -1,5 +1,6 @@
 export type PluginOutputProfile = { screenId: number; pageId: string; autoStart: boolean };
 export type PluginOutputApi = {
+  setAutoStart?: (enabled: boolean) => Promise<void>;
   applyLayout?: (layout: {
     profile: PluginOutputProfile;
     players?: Array<{ playerId: number; playing: boolean }>;
