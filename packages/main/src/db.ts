@@ -462,6 +462,8 @@ function createTables(error: Error | null): void {
         playerId INTEGER,
         playlistId INTEGER,
         itemNumber INTEGER,
+        repeatCount INTEGER,
+        completionAction TEXT,
         hideOutputOnStop INTEGER,
         outputAll INTEGER,
         screenId INTEGER,
@@ -480,9 +482,10 @@ function createTables(error: Error | null): void {
       err => {
         if (err) schemaError('schedulerJob', err);
         else {
-          void checkColumnExists('schedulerJob', 'priority', 'INTEGER NOT NULL DEFAULT 0').then(
-            () => dbDeferred.resolve(),
-          );
+          void checkColumnExists('schedulerJob', 'priority', 'INTEGER NOT NULL DEFAULT 0')
+            .then(() => checkColumnExists('schedulerJob', 'repeatCount', 'INTEGER'))
+            .then(() => checkColumnExists('schedulerJob', 'completionAction', 'TEXT'))
+            .then(() => dbDeferred.resolve());
         }
       },
     );

@@ -112,3 +112,7 @@ actions требуют `enabledValue`.
 Plugin API намеренно не входит в этот helper: plugin-owned schemas и маршруты могут развиваться без
 новой версии host. Для них используйте raw `scripts/gmib-api.mjs request` по документации
 конкретного плагина.
+
+Действие планировщика плеера `play-playlist-times` (GMIB 5.7.4+) требует `playlistId`,
+положительное целое `repeatCount` и `completionAction`: `stop` (чёрный экран) либо
+`hide` (остановить и скрыть плеер). Поля сохраняются при создании и изменении задания.

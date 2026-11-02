@@ -1,6 +1,7 @@
 export type ScheduleKind = 'once' | 'cron';
 export type PlayerSchedulerAction =
   | 'load-playlist'
+  | 'play-playlist-times'
   | 'toggle-play'
   | 'play'
   | 'stop'
@@ -55,6 +56,8 @@ export type PlayerSchedulerJob = SchedulerJobBase & {
   action: PlayerSchedulerAction;
   playlistId?: number;
   itemNumber?: number;
+  repeatCount?: number;
+  completionAction?: 'stop' | 'hide';
   hideOutputOnStop?: boolean;
   outputAll?: boolean;
 };

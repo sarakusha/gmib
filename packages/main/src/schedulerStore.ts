@@ -35,6 +35,8 @@ type SchedulerJobRow = {
   playerId?: number;
   playlistId?: number;
   itemNumber?: number;
+  repeatCount?: number;
+  completionAction?: 'stop' | 'hide';
   hideOutputOnStop?: number;
   outputAll?: number;
   screenId?: number;
@@ -92,6 +94,19 @@ const sanitizeCron = (cron: CronSchedule | undefined): CronSchedule | undefined 
     : undefined;
 
 const sanitizeJob = <T extends StoredSchedulerJob>(job: T): T => {
+  if (job.action === 'play-playlist-times') {
+    const finite = job as PlayerSchedulerJob;
+    if (
+      !Number.isSafeInteger(finite.playlistId) ||
+      finite.playlistId! < 1 ||
+      !Number.isSafeInteger(finite.repeatCount) ||
+      finite.repeatCount! < 1 ||
+      !['stop', 'hide'].includes(finite.completionAction ?? '')
+    )
+      throw new TypeError(
+        'Укажите плейлист, целое число повторов больше нуля и действие завершения',
+      );
+  }
   const { nextRunAt: _, ...storedJob } = job;
   const nextJob = {
     ...storedJob,
@@ -135,6 +150,8 @@ const toSchedulerJob = (result: NullableOptional): StoredSchedulerJob => {
       playerId: row.playerId,
       playlistId: row.playlistId,
       itemNumber: row.itemNumber,
+      repeatCount: row.repeatCount,
+      completionAction: row.completionAction,
       hideOutputOnStop: toBoolean(row.hideOutputOnStop),
       outputAll: toBoolean(row.outputAll),
     } as PlayerSchedulerJob;
@@ -165,6 +182,8 @@ const encodeSchedulerJob = (scope: SchedulerScope, job: StoredSchedulerJob) => (
   $action: job.action,
   $playerId: 'playerId' in job ? job.playerId : null,
   $playlistId: 'playlistId' in job ? (job.playlistId ?? null) : null,
+  $repeatCount: 'repeatCount' in job ? (job.repeatCount ?? null) : null,
+  $completionAction: 'completionAction' in job ? (job.completionAction ?? null) : null,
   $itemNumber: 'itemNumber' in job ? (job.itemNumber ?? null) : null,
   $hideOutputOnStop:
     'hideOutputOnStop' in job && job.hideOutputOnStop != null
@@ -210,6 +229,8 @@ const insertSchedulerJob = promisifyRun(
     playerId,
     playlistId,
     itemNumber,
+    repeatCount,
+    completionAction,
     hideOutputOnStop,
     outputAll,
     screenId,
@@ -233,6 +254,8 @@ const insertSchedulerJob = promisifyRun(
     $playerId,
     $playlistId,
     $itemNumber,
+    $repeatCount,
+    $completionAction,
     $hideOutputOnStop,
     $outputAll,
     $screenId,
@@ -259,6 +282,8 @@ const updateSchedulerJobRow = promisifyRun(
       playerId = $playerId,
       playlistId = $playlistId,
       itemNumber = $itemNumber,
+      repeatCount = $repeatCount,
+      completionAction = $completionAction,
       hideOutputOnStop = $hideOutputOnStop,
       outputAll = $outputAll,
       screenId = $screenId,

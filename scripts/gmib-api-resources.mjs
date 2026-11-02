@@ -160,6 +160,8 @@ const definitions = {
       'action',
       'playlistId',
       'itemNumber',
+      'repeatCount',
+      'completionAction',
       'hideOutputOnStop',
       'outputAll',
     ],
@@ -332,6 +334,7 @@ const normalizeScheduler = (type, desired, { complete = false } = {}) => {
     }
     const actions = [
       'load-playlist',
+      'play-playlist-times',
       'toggle-play',
       'play',
       'stop',
@@ -343,12 +346,23 @@ const normalizeScheduler = (type, desired, { complete = false } = {}) => {
     if (hasOwn(desired, 'action') && !actions.includes(desired.action))
       fail('scheduler: неизвестное action', 'invalid_scheduler');
     if (
-      desired.action === 'load-playlist' &&
+      ['load-playlist', 'play-playlist-times'].includes(desired.action) &&
       (complete || hasOwn(desired, 'playlistId')) &&
       (!Number.isSafeInteger(desired.playlistId) || desired.playlistId <= 0)
     ) {
       fail('load-playlist требует playlistId', 'invalid_scheduler');
     }
+    if (
+      desired.action === 'play-playlist-times' &&
+      complete &&
+      (!Number.isSafeInteger(desired.repeatCount) ||
+        desired.repeatCount < 1 ||
+        !['stop', 'hide'].includes(desired.completionAction))
+    )
+      fail(
+        'Укажите положительное целое repeatCount и completionAction stop/hide',
+        'invalid_scheduler',
+      );
     if (
       hasOwn(desired, 'itemNumber') &&
       (!Number.isSafeInteger(desired.itemNumber) || desired.itemNumber < 1)
@@ -660,7 +674,7 @@ const validateReferences = async (client, type, candidate, requested) => {
   }
   if (type === 'scheduler') {
     await requireReference(client, `/api/player/${candidate.playerId}`, 'playerId');
-    if (candidate.action === 'load-playlist') {
+    if (['load-playlist', 'play-playlist-times'].includes(candidate.action)) {
       await requireReference(client, `/api/playlist/${candidate.playlistId}`, 'playlistId');
     }
   }
