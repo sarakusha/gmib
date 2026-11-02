@@ -80,3 +80,6 @@ stats.html
 .pnpm-store/
 scripts/merge-releases.sh
 *.gmib-plugin
+
+# Local browser verification artifacts
+/.playwright-mcp/
