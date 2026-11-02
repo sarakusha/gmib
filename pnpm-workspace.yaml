@@ -38,6 +38,7 @@ allowBuilds:
   utf-8-validate: true
 
 patchedDependencies:
+  '@nibus/detection@6.0.9': patches/@nibus__detection@6.0.9.patch
   bonjour-service@1.4.4: patches/bonjour-service@1.4.4.patch
 
 minimumReleaseAgeExclude:
