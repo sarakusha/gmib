@@ -1,5 +1,6 @@
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
+import DownloadIcon from '@mui/icons-material/Download';
 import DeleteIcon from '@mui/icons-material/Delete';
 import RemoveIcon from '@mui/icons-material/Remove';
 import ReplayIcon from '@mui/icons-material/Replay';
@@ -71,15 +72,18 @@ const ListItemHover = styled(ListItem)(({ theme }) => ({
   '& .MuiListItemSecondaryAction-root svg': {
     opacity: 0,
   },
-  '&:hover .MuiListItemSecondaryAction-root svg, & .MuiListItemSecondaryAction-root:hover svg': {
-    opacity: 1,
-  },
+  '&:hover .MuiListItemSecondaryAction-root svg, &:focus-within .MuiListItemSecondaryAction-root svg, & .MuiListItemSecondaryAction-root:hover svg':
+    {
+      opacity: 1,
+    },
 }));
 
 export type MediaItemProps = {
   id?: string;
   media: MediaInfo;
   onDelete?: (id: string) => void;
+  onDownload?: (media: MediaInfo) => void;
+  downloading?: boolean;
   // style?: CSSProperties;
   selected?: boolean;
   onSelect?: (md5: string, selected: boolean) => void;
@@ -175,6 +179,8 @@ const MediaItem = React.forwardRef<HTMLLIElement, MediaItemProps>((props, ref) =
     id,
     // style,
     onDelete,
+    onDownload,
+    downloading,
     selected,
     onSelect,
     count,
@@ -261,6 +267,7 @@ const MediaItem = React.forwardRef<HTMLLIElement, MediaItemProps>((props, ref) =
         }}
         sx={{
           ...(onMove && { cursor: 'move' }),
+          ...(onDownload && id && { pr: playbackIssue ? 11 : 8 }),
           ...((selected || Boolean(count)) && {
             backgroundColor: 'action.selected',
           }),
@@ -329,7 +336,7 @@ const MediaItem = React.forwardRef<HTMLLIElement, MediaItemProps>((props, ref) =
             primary: { noWrap: true },
           }}
         />
-        {((onDelete && id) || (playbackIssue && onRetryPlayback)) && (
+        {(((onDelete || onDownload) && id) || (playbackIssue && onRetryPlayback)) && (
           <ListItemSecondaryAction onClick={stopPropagation} onMouseDown={stopPropagation}>
             <Stack direction="row">
               {playbackIssue && onRetryPlayback && (
@@ -343,6 +350,18 @@ const MediaItem = React.forwardRef<HTMLLIElement, MediaItemProps>((props, ref) =
                   title="Повторить воспроизведение"
                 >
                   <ReplayIcon fontSize="inherit" />
+                </IconButton>
+              )}
+              {onDownload && id && (
+                <IconButton
+                  aria-label={`Скачать ${filename} на компьютер`}
+                  onClick={() => onDownload(info)}
+                  disabled={downloading}
+                  sx={{ color: 'secondary.main' }}
+                  size="small"
+                  title={downloading ? 'Скачивание...' : 'Скачать на компьютер'}
+                >
+                  <DownloadIcon fontSize="inherit" />
                 </IconButton>
               )}
               {onDelete && id && (

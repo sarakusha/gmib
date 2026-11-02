@@ -27,6 +27,8 @@ import {
 
 import MediaItem from './MediaItem';
 import MediaTabToolbar from './MediaTabToolbar';
+import { canDownloadMedia, downloadMedia } from '../api/mediaDownload';
+import { toErrorMessage } from '/@common/helpers';
 import type { MediaInfo } from '/@common/mediaInfo';
 
 // const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:media`);
@@ -63,6 +65,29 @@ const MediaTab: React.FC = () => {
   const controllers = useRef(new Map<string, AbortController>());
   const { issues: playbackIssues } = usePlaybackIssues();
   const retryPlayback = useRetryPlayback();
+  const [downloads, setDownloads] = useState<Set<string>>(new Set());
+  const activeDownloads = useRef(new Set<string>());
+  const downloadHandler = useCallback(
+    (media: MediaInfo) => {
+      if (activeDownloads.current.has(media.md5)) return;
+      activeDownloads.current.add(media.md5);
+      setDownloads(new Set(activeDownloads.current));
+      void downloadMedia(media.filename)
+        .then(saved => {
+          if (saved) enqueueSnackbar(`Файл сохранён: ${media.filename}`, { variant: 'success' });
+        })
+        .catch((error: unknown) => {
+          enqueueSnackbar(`Не удалось скачать файл: ${toErrorMessage(error)}`, {
+            variant: 'error',
+          });
+        })
+        .finally(() => {
+          activeDownloads.current.delete(media.md5);
+          setDownloads(new Set(activeDownloads.current));
+        });
+    },
+    [enqueueSnackbar],
+  );
 
   const updateUpload = useCallback((tempId: string, update: Partial<UploadEntry>) => {
     setUploads(items =>
@@ -285,6 +310,8 @@ const MediaTab: React.FC = () => {
                       id={item.media.md5.startsWith('temp-') ? undefined : item.media.md5}
                       media={item.media}
                       onDelete={deleteHandler}
+                      onDownload={canDownloadMedia() ? downloadHandler : undefined}
+                      downloading={downloads.has(item.media.md5)}
                       deleteTitle="Удалить безвозвратно"
                       uploadProgress={item.uploadProgress}
                       onCancelUpload={

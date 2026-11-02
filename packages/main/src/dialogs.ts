@@ -1,5 +1,6 @@
 /* eslint no-param-reassign: ["error", { "props": true, "ignorePropertyModificationsFor": ["event"] }] */
 import { dialog, ipcMain } from 'electron';
+import './mediaDownload';
 
 ipcMain.on('showOpenDialogSync', (event, options: Electron.OpenDialogSyncOptions) => {
   event.returnValue = dialog.showOpenDialogSync(options);

@@ -18,7 +18,8 @@ export type FeatureName =
   | 'windowZIndex'
   | 'pluginPlayerControl'
   | 'remotePlugins'
-  | 'safeImageImport';
+  | 'safeImageImport'
+  | 'mediaFileDownload';
 
 const minimumVersions: Record<FeatureName, string> = {
   gmibScheduler: '5.0.1',
@@ -41,6 +42,8 @@ const minimumVersions: Record<FeatureName, string> = {
   pluginPlayerControl: '5.7.1',
   remotePlugins: '5.7.1',
   safeImageImport: '5.7.4',
+  // Existing /public media route, verified in the first extracted GMIB release.
+  mediaFileDownload: '3.6.5',
 };
 
 const parseVersion = (version?: string): number[] | undefined => {

@@ -4,6 +4,9 @@ import { readFileSync, writeFileSync } from 'fs';
 
 import { setActivateDialogOpen, setRemoteDialogOpen } from '/@renderer/store/currentSlice';
 
+export const downloadMedia = (filename: string): Promise<boolean> =>
+  ipcRenderer.invoke('downloadMedia', filename);
+
 import ipcDispatch from '../common/ipcDispatch';
 
 export const showOpenDialogSync: Dialog['showOpenDialogSync'] = (options): string[] | undefined =>
