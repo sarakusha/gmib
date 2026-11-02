@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [5.7.5](https://github.com/sarakusha/gmib/compare/v5.7.4...v5.7.5) (2026-11-02)
+
+### Bug Fixes
+
+* include suncalc in packaged runtime dependencies ([6502e62](https://github.com/sarakusha/gmib/commit/6502e62044ee3056c0d0a5c1dee522e60b257dea))
+
 ## [5.7.4](https://github.com/sarakusha/gmib/compare/v5.7.3...v5.7.4) (2026-11-02)
 
 ### Features
