@@ -98,3 +98,19 @@ describe('remote plugins compatibility', () => {
     expect(supportsFeature('remotePlugins', '5.7.0', false)).toBe(true);
   });
 });
+
+describe('finite playlist scheduler compatibility', () => {
+  it.each([
+    ['5.7.3', false],
+    ['5.7.4', true],
+    ['5.8.0', true],
+    [undefined, true],
+  ])('uses remote host %s', (version, expected) => {
+    expect(supportsFeature('playerPlaylistRepeat', version as string | undefined, true)).toBe(
+      expected,
+    );
+  });
+  it('keeps local operations available', () => {
+    expect(supportsFeature('playerPlaylistRepeat', '5.7.3', false)).toBe(true);
+  });
+});

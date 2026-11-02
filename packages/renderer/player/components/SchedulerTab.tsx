@@ -60,6 +60,7 @@ const labels: SchedulerTabLabels = {
 
 const actionLabels: Record<PlayerSchedulerAction, string> = {
   'load-playlist': 'Загрузить и воспроизвести',
+  'play-playlist-times': 'Проиграть плейлист N раз',
   'toggle-play': 'Переключить воспроизведение',
   play: 'Начать воспроизведение',
   stop: 'Остановить воспроизведение',
@@ -87,6 +88,8 @@ const createInitialValues = (
   action: initialJob?.action ?? 'play',
   playlistId: initialJob?.playlistId,
   itemNumber: initialJob?.itemNumber,
+  repeatCount: initialJob?.repeatCount ?? 1,
+  completionAction: initialJob?.completionAction ?? 'stop',
   hideOutputOnStop: initialJob?.hideOutputOnStop ?? false,
   outputAll: initialJob?.outputAll ?? false,
   runAt: initialJob?.runAt ?? toDateTimeLocal(new Date(Date.now() + 60 * 60 * 1000)),
@@ -103,6 +106,8 @@ const toJobInput = (job: PlayerSchedulerJob): DialogValues => ({
   action: job.action,
   playlistId: job.playlistId,
   itemNumber: job.itemNumber,
+  repeatCount: job.repeatCount,
+  completionAction: job.completionAction,
   hideOutputOnStop: job.hideOutputOnStop,
   outputAll: job.outputAll,
   runAt: job.runAt,
@@ -114,10 +119,20 @@ const toJobInput = (job: PlayerSchedulerJob): DialogValues => ({
 const getActionName = (
   job: Pick<
     DialogValues,
-    'action' | 'playlistId' | 'itemNumber' | 'hideOutputOnStop' | 'outputAll'
+    | 'action'
+    | 'playlistId'
+    | 'itemNumber'
+    | 'hideOutputOnStop'
+    | 'outputAll'
+    | 'repeatCount'
+    | 'completionAction'
   >,
   playlists: Playlist[],
 ): string => {
+  if (job.action === 'play-playlist-times') {
+    const playlist = playlists.find(item => item.id === job.playlistId);
+    return `Проиграть ${playlist?.name ?? 'плейлист'} ${job.repeatCount ?? 1} раз; затем ${job.completionAction === 'hide' ? 'скрыть плеер' : 'чёрный экран'}`;
+  }
   if (job.action === 'load-playlist') {
     const playlist = playlists.find(item => item.id === job.playlistId);
     return `${actionLabels[job.action]}${playlist ? `: ${playlist.name}` : ''}`;
@@ -140,7 +155,13 @@ const normalizeActionChange = (
 ): DialogValues => ({
   ...current,
   action: nextAction,
-  playlistId: nextAction === 'load-playlist' ? current.playlistId : undefined,
+  playlistId:
+    nextAction === 'load-playlist' || nextAction === 'play-playlist-times'
+      ? current.playlistId
+      : undefined,
+  repeatCount: nextAction === 'play-playlist-times' ? (current.repeatCount ?? 1) : undefined,
+  completionAction:
+    nextAction === 'play-playlist-times' ? (current.completionAction ?? 'stop') : undefined,
   itemNumber: nextAction === 'play-item' ? (current.itemNumber ?? 1) : undefined,
   hideOutputOnStop: nextAction === 'stop' ? (current.hideOutputOnStop ?? false) : undefined,
   outputAll:
@@ -159,7 +180,8 @@ const renderActionFields = ({
   kind: ScheduleKind;
   related: Playlist[];
 }): React.ReactNode => {
-  const needsPlaylist = values.action === 'load-playlist';
+  const needsPlaylist =
+    values.action === 'load-playlist' || values.action === 'play-playlist-times';
   const needsItemNumber = values.action === 'play-item';
   const canHideOutputOnStop = values.action === 'stop';
   const canSelectAllOutputs = values.action === 'hide-output' || values.action === 'show-output';
@@ -187,6 +209,44 @@ const renderActionFields = ({
             ))}
           </Select>
         </FormControl>
+      )}
+      {values.action === 'play-playlist-times' && (
+        <>
+          <TextField
+            label="Число полных проигрываний"
+            type="number"
+            variant="standard"
+            fullWidth
+            value={values.repeatCount ?? ''}
+            slotProps={{ htmlInput: { min: 1, step: 1, max: Number.MAX_SAFE_INTEGER } }}
+            error={!Number.isSafeInteger(values.repeatCount) || (values.repeatCount ?? 0) < 1}
+            helperText="Целое число от 1. Воспроизведение начинается с первого ролика."
+            onChange={event =>
+              setValues(current => ({
+                ...current,
+                repeatCount: event.target.value === '' ? undefined : Number(event.target.value),
+                name: '',
+              }))
+            }
+          />
+          <FormControl fullWidth variant="standard">
+            <InputLabel id="scheduler-completion-label">По окончании</InputLabel>
+            <Select
+              labelId="scheduler-completion-label"
+              value={values.completionAction ?? 'stop'}
+              onChange={event =>
+                setValues(current => ({
+                  ...current,
+                  completionAction: event.target.value,
+                  name: '',
+                }))
+              }
+            >
+              <MenuItem value="stop">Остановить — чёрный экран</MenuItem>
+              <MenuItem value="hide">Остановить и скрыть плеер</MenuItem>
+            </Select>
+          </FormControl>
+        </>
       )}
       {needsItemNumber && (
         <TextField
@@ -244,9 +304,14 @@ const renderActionFields = ({
 };
 
 const isSubmitEnabled = (values: DialogValues): boolean => {
-  const needsPlaylist = values.action === 'load-playlist';
+  const needsPlaylist =
+    values.action === 'load-playlist' || values.action === 'play-playlist-times';
   const needsItemNumber = values.action === 'play-item';
   return (
+    (values.action !== 'play-playlist-times' ||
+      (Number.isSafeInteger(values.repeatCount) &&
+        (values.repeatCount ?? 0) >= 1 &&
+        ['stop', 'hide'].includes(values.completionAction ?? ''))) &&
     (!needsPlaylist || values.playlistId != null) &&
     (!needsItemNumber || (values.itemNumber ?? 0) > 0) &&
     (values.kind === 'cron' || Boolean(values.runAt))
@@ -260,6 +325,12 @@ const StatusIcon: React.FC<{ job: PlayerSchedulerJob }> = ({ job }) => {
 };
 
 const SchedulerTab: React.FC = () => {
+  const repeatSupported = supportsFeature('playerPlaylistRepeat', version, isRemoteSession);
+  const availableActions = Object.fromEntries(
+    Object.entries(actionLabels).filter(
+      ([action]) => repeatSupported || action !== 'play-playlist-times',
+    ),
+  ) as Record<PlayerSchedulerAction, string>;
   const isSchedulerSupported = supportsFeature('playerScheduler', version, isRemoteSession);
   const supportsSecondsAndPriority = supportsFeature(
     'schedulerSecondsAndPriority',
@@ -308,6 +379,7 @@ const SchedulerTab: React.FC = () => {
   );
 
   const openEdit = (job: PlayerSchedulerJob): void => {
+    if (job.action === 'play-playlist-times' && !repeatSupported) return;
     setEditingJob(job);
     setDialogKind(job.kind);
   };
@@ -324,7 +396,7 @@ const SchedulerTab: React.FC = () => {
       toolbar={toolbar}
       jobs={jobs}
       related={playlists}
-      actionLabels={actionLabels}
+      actionLabels={availableActions}
       labels={labels}
       maxWidth="md"
       supportsSecondsAndPriority={supportsSecondsAndPriority}
@@ -335,8 +407,14 @@ const SchedulerTab: React.FC = () => {
       toJobInput={toJobInput}
       normalizeActionChange={normalizeActionChange}
       getActionName={getActionName}
-      renderActionFields={renderActionFields}
-      isSubmitEnabled={isSubmitEnabled}
+      renderActionFields={args =>
+        args.values.action === 'play-playlist-times' && !repeatSupported
+          ? null
+          : renderActionFields(args)
+      }
+      isSubmitEnabled={values =>
+        (values.action !== 'play-playlist-times' || repeatSupported) && isSubmitEnabled(values)
+      }
       onCreate={async job => {
         await createJob(job).unwrap();
       }}
@@ -349,7 +427,9 @@ const SchedulerTab: React.FC = () => {
         await deleteJob(id).unwrap();
       }}
       onRun={async id => {
-        await runJob(id).unwrap();
+        const job = jobs.find(item => item.id === id);
+        if (!job) throw new Error('Задание не найдено');
+        await runJob({ id, action: job.action }).unwrap();
       }}
       renderStatusIcon={job => <StatusIcon job={job} />}
       getStatusTooltip={job => job.lastMessage ?? ''}

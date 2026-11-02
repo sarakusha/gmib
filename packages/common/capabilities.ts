@@ -4,6 +4,7 @@ export type FeatureName =
   | 'playerConfiguration'
   | 'playerObjectFit'
   | 'playerScheduler'
+  | 'playerPlaylistRepeat'
   | 'playerSeek'
   | 'playerShaders'
   | 'playbackStatistics'
@@ -25,6 +26,7 @@ const minimumVersions: Record<FeatureName, string> = {
   playerConfiguration: '5.6.10',
   playerObjectFit: '4.11.1',
   playerScheduler: '5.0.0',
+  playerPlaylistRepeat: '5.7.4',
   playerSeek: '4.12.0',
   playerShaders: '5.0.0',
   playbackStatistics: '5.6.5',
