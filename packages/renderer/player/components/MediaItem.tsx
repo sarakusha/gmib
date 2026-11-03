@@ -267,7 +267,7 @@ const MediaItem = React.forwardRef<HTMLLIElement, MediaItemProps>((props, ref) =
         }}
         sx={{
           ...(onMove && { cursor: 'move' }),
-          ...(onDownload && id && { pr: playbackIssue ? 11 : 8 }),
+          ...(onDownload && id && { pr: playbackIssue ? 12 : 9 }),
           ...((selected || Boolean(count)) && {
             backgroundColor: 'action.selected',
           }),
@@ -338,7 +338,7 @@ const MediaItem = React.forwardRef<HTMLLIElement, MediaItemProps>((props, ref) =
         />
         {(((onDelete || onDownload) && id) || (playbackIssue && onRetryPlayback)) && (
           <ListItemSecondaryAction onClick={stopPropagation} onMouseDown={stopPropagation}>
-            <Stack direction="row">
+            <Stack direction="row" spacing={1}>
               {playbackIssue && onRetryPlayback && (
                 <IconButton
                   className="playback-retry"
