@@ -7,6 +7,8 @@ import debugFactory from 'debug';
 import kioskMode from './kioskMode';
 import { getLicenseState } from './licenseState';
 import localConfig from './localConfig';
+import { port as localHttpPort } from './config';
+import { getGmibWindowUrl } from './mainWindowUrl';
 import { shouldShowLocalWindow } from './mainWindowVisibility';
 import type { CloseEvent, ManagedWindow } from './managedWindow';
 import relaunch, { needRestart } from './relaunch';
@@ -101,13 +103,12 @@ export const createAppWindow = (
       });
     });
   }
-  const query = `port=${nibusPort}${address ? `&host=${address}` : ''}`;
-  const pageUrl =
-    isDevRuntime && import.meta.env.VITE_DEV_SERVER_URL !== undefined
-      ? `${import.meta.env.VITE_DEV_SERVER_URL}?${query}`
-      : `http://localhost:${nibusPort + 1}/index.html?${query}`;
-  // : new URL(`../renderer/dist/index.html?${query}`, `file://${__dirname}`).toString();
-
+  const pageUrl = getGmibWindowUrl(
+    localHttpPort,
+    nibusPort,
+    address,
+    isDevRuntime ? import.meta.env.VITE_DEV_SERVER_URL : undefined,
+  );
   browserWindow.loadURL(pageUrl).catch((err: unknown) => {
     const msg = err instanceof Error ? err.message : String(err);
     debug(`error while load main window ${pageUrl}: ${msg}`);

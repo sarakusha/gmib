@@ -15,6 +15,7 @@ if (process.env.VITE_APP_VERSION === undefined) {
  * @see https://www.electron.build/configuration/configuration
  */
 const config = {
+  protocols: [{ name: 'GMIB remote connection', schemes: ['gmib'] }],
   buildDependenciesFromSource: true,
   nodeGypRebuild: false,
   npmRebuild: false,

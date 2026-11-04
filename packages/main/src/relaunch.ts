@@ -24,8 +24,9 @@ export const buildRelaunchOptions = (
     args: [
       ...args.filter(
         arg =>
-          preserveOzonePlatform ||
-          (arg !== '--ozone-platform' && !arg.startsWith('--ozone-platform=')),
+          !/^gmib:/i.test(arg) &&
+          (preserveOzonePlatform ||
+            (arg !== '--ozone-platform' && !arg.startsWith('--ozone-platform='))),
       ),
       '--relaunch',
     ],

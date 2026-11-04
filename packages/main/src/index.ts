@@ -22,7 +22,14 @@ import './displayTopology';
 import './hid';
 // import './channels';
 import kioskMode from './kioskMode';
-import { activateMainWindow, createMainWindow, persistLocalWindowState } from './mainWindow';
+import {
+  activateMainWindow,
+  createAppWindow,
+  createMainWindow,
+  persistLocalWindowState,
+} from './mainWindow';
+import { createGmibLinkOpener, installGmibProtocol } from './gmibProtocol';
+import { findManagedWindow, getAllGmibParams } from './windowStore';
 import { installWindowOpenHandler, toggleOutputWindowsVisibility } from './openHandler';
 import outputVisibilityAccelerator from './outputVisibilityAccelerator';
 import { startScheduler } from './scheduler';
@@ -53,7 +60,23 @@ if (!isSingleInstance) {
   app.quit();
   process.exit(0);
 }
-app.on('second-instance', activateMainWindow);
+const gmibProtocol = installGmibProtocol(app, {
+  argv: process.argv,
+  kiosk: kioskMode,
+  activate: activateMainWindow,
+  onError: message => debug(message),
+  open: createGmibLinkOpener({
+    localPort: +(process.env['NIBUS_PORT'] ?? 9001),
+    activateLocal: activateMainWindow,
+    find: ({ host, port }) => {
+      const existing = getAllGmibParams().find(
+        params => params.host.toLowerCase() === host && params.nibusPort === port,
+      );
+      return existing ? findManagedWindow(existing.id) : undefined;
+    },
+    create: ({ host, port }) => createAppWindow(port, host),
+  }),
+});
 
 /**
  * Disable Hardware Acceleration for more power-save
@@ -120,6 +143,7 @@ app
   .then(createMainWindow)
   .then(main => {
     installWindowOpenHandler(main.webContents);
+    gmibProtocol.ready();
     if (getLicenseState().status === 'active') void launchPlayers();
     if (
       !kioskMode &&

@@ -21,6 +21,11 @@ import {
 } from '../src/relaunch';
 
 describe('relaunch', () => {
+  it('does not replay a consumed external link after restart', () => {
+    expect(
+      buildRelaunchOptions(['gmib://host:1234', '--kiosk-mode'], false, '/opt/gmib').args,
+    ).toEqual(['--kiosk-mode', '--relaunch']);
+  });
   it('uses the AppImage path while preserving the kiosk launch arguments', () => {
     expect(
       buildRelaunchOptions(
