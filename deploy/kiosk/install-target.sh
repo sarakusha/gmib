@@ -44,7 +44,8 @@ passwd --lock "$KIOSK_USER" >/dev/null
 clone_packages=()
 if [[ -f "$PAYLOAD_DIR/clone.conf" ]]; then
   for clone_file in gmib-prepare-clone gmib-clone-personalize \
-    gmib-clone-personalize.service gmib-clone-identity.conf; do
+    gmib-clone-personalize.service gmib-clone-identity.conf \
+    gmib-kiosk-setup gmib-kiosk-setup.conf setup.conf; do
     if [[ ! -f "$PAYLOAD_DIR/$clone_file" ]]; then
       echo "Missing clone payload file: $clone_file" >&2
       exit 1
@@ -140,7 +141,9 @@ EOF
 # gates services on clone identity. The ordinary installer retains its boot flow.
 if [[ -f "$PAYLOAD_DIR/clone.conf" ]]; then
   install -m 0644 "$PAYLOAD_DIR/clone.conf" /etc/gmib/clone.conf
-  install -m 0755 "$PAYLOAD_DIR/gmib-prepare-clone" "$PAYLOAD_DIR/gmib-clone-personalize" /usr/local/sbin/
+  install -m 0644 "$PAYLOAD_DIR/setup.conf" /etc/gmib/setup.conf
+  install -m 0755 "$PAYLOAD_DIR/gmib-prepare-clone" "$PAYLOAD_DIR/gmib-clone-personalize" \
+    "$PAYLOAD_DIR/gmib-kiosk-setup" /usr/local/sbin/
   install -m 0644 "$PAYLOAD_DIR/gmib-clone-personalize.service" /etc/systemd/system/
   for clone_unit in systemd-networkd.service NetworkManager.service networking.service \
     ssh.service ssh.socket pritunl-client.service gmib-provision.service \
@@ -149,6 +152,8 @@ if [[ -f "$PAYLOAD_DIR/clone.conf" ]]; then
     install -m 0644 "$PAYLOAD_DIR/gmib-clone-identity.conf" \
       "/etc/systemd/system/$clone_unit.d/clone-identity.conf"
   done
+  install -m 0644 "$PAYLOAD_DIR/gmib-kiosk-setup.conf" \
+    /etc/systemd/system/gmib-provision.service.d/setup-menu.conf
 fi
 
 # Keep the kiosk boot clean while retaining diagnostics in journalctl. The Ubuntu installer itself

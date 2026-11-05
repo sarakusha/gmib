@@ -129,7 +129,7 @@ if [[ "$CLONE_IMAGE" == true ]]; then
     echo "--clone-image cannot be combined with --replace-current." >&2
     exit 1
   fi
-  IMAGE_REVISION="${IMAGE_REVISION:-clone1}"
+  IMAGE_REVISION="${IMAGE_REVISION:-clone3}"
   if [[ ! "$IMAGE_REVISION" =~ ^clone[0-9]+([.-][a-z0-9]+)*$ ]]; then
     echo "Clone images require a revision such as clone1 or clone1.patch1." >&2
     exit 1

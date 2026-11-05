@@ -3,8 +3,8 @@
 ## Separate clone-ready installer
 
 The ordinary installer remains unchanged. Use `build-and-publish-on-server.sh --clone-image
---gmib-version 5.7.6` for a separate installer with revision `clone1` (or pass another
-`--image-revision clone2`). It publishes under `downloads/gmib-kiosk-clone`, preserving the
+--gmib-version 5.7.6` for a separate installer with revision `clone3` (or pass another
+`--image-revision clone4`). It publishes under `downloads/gmib-kiosk-clone`, preserving the
 ordinary ISO; `--replace-current` is rejected. The clone ISO uses a direct download link,
 separate from the ordinary `/gmib/kiosk` catalog. The low-level builder also accepts `--clone-image`.
 The existing app-server download handler only accepts ordinary GMIB/GGS products. Include
@@ -12,7 +12,15 @@ The existing app-server download handler only accepts ordinary GMIB/GGS products
 block, check its alias path, validate with `nginx -t`, and reload nginx. This separate static
 route exposes only the ISO, checksum and manifest, supports Range requests and hides partial files.
 
-After installing and testing customer software, run `sudo gmib-prepare-clone --poweroff` and
+Clone3 shows a reference setup menu with IP/SSH instructions and a choice between VPN enrollment
+and preparation for cloning. Install customer software over LAN SSH without entering a VPN code,
+then select preparation and confirm with `CLONE`. Use `sudo gmib-kiosk-setup` to reopen the menu
+even after enrollment/activation. The manual SSH menu directs VPN enrollment to the local console
+without starting a competing enrollment process. Personalized copies and completed-enrollment
+recovery bypass the menu. Ordinary installers keep their existing service entry point.
+Pass `--keep-existing` when publishing clone3 to preserve an existing clone2 ISO.
+
+After installing and testing customer software, the direct command `sudo gmib-prepare-clone --poweroff` also remains available;
 wait for shutdown before capturing the entire disk externally. Preparation runs as a detached
 system service, clears GMIB/VPN/monitoring identity, preserves administrator authorized keys,
 and arms a fail-closed first-boot identity service. Each clone gets a random persistent machine
@@ -22,7 +30,8 @@ responsibility. Do not boot an armed reference before capturing it.
 
 See the [Russian client guide](CLONING.ru.md) for installation, capture and rollout steps.
 Run `python3 deploy/kiosk/tests/test-clone-runtime.py` and
-`python3 deploy/kiosk/tests/test-clone-builder.py` for isolated lifecycle and staging checks.
+`python3 deploy/kiosk/tests/test-clone-builder.py`, plus
+`python3 deploy/kiosk/tests/test-kiosk-setup.py` for isolated lifecycle, menu and staging checks.
 Test two real cloned computers, including interrupted boot, before mass rollout.
 
 This directory builds an Ubuntu Server 24.04 amd64 installer for dedicated GMIB players. The image

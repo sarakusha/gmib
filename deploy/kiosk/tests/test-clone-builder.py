@@ -67,7 +67,7 @@ class CloneBuilderTest(unittest.TestCase):
                        check=True, capture_output=True)
 
     def build(self, variant=False, revision=None):
-        suffix = '-clone1' if variant and revision is None else (f'-{revision}' if revision else '')
+        suffix = '-clone3' if variant and revision is None else (f'-{revision}' if revision else '')
         output = self.root / f'gmib-kiosk-5.7.6{suffix}-ubuntu-24.04.4-amd64.iso'
         args = ['bash', str(KIOSK / 'build-autoinstall-iso.sh'),
                 '--base-iso', str(self.base), '--base-iso-sha256', hashlib.sha256(self.base.read_bytes()).hexdigest(),
@@ -87,6 +87,8 @@ class CloneBuilderTest(unittest.TestCase):
         payload = self.capture / 'payload'
         self.assertFalse((payload / 'clone.conf').exists())
         self.assertFalse((payload / 'gmib-clone-personalize').exists())
+        self.assertFalse((payload / 'gmib-kiosk-setup').exists())
+        self.assertFalse((payload / 'setup.conf').exists())
         self.assertNotIn('gmib-clone-', (payload / 'SHA256SUMS').read_text())
 
     def test_multiple_public_keys_are_separate_yaml_entries(self):
@@ -122,11 +124,13 @@ class CloneBuilderTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         payload = self.capture / 'payload'
         for name in ('clone.conf', 'gmib-prepare-clone', 'gmib-clone-personalize',
-                     'gmib-clone-personalize.service', 'gmib-clone-identity.conf'):
+                     'gmib-clone-personalize.service', 'gmib-clone-identity.conf',
+                     'gmib-kiosk-setup', 'gmib-kiosk-setup.conf', 'setup.conf'):
             self.assertTrue((payload / name).is_file(), name)
             self.assertIn(f'  {name}\n', (payload / 'SHA256SUMS').read_text())
         self.assertIn('CLONE_IMAGE=1', (payload / 'clone.conf').read_text())
-        self.assertIn("IMAGE_REVISION='clone1'", (payload / 'image-release').read_text())
+        self.assertIn("IMAGE_REVISION='clone3'", (payload / 'image-release').read_text())
+        self.assertEqual((payload / 'setup.conf').read_text(), "ADMIN_USER='admin'\n")
         subprocess.run(['sha256sum', '-c', 'SHA256SUMS'], cwd=payload, check=True, capture_output=True)
 
     def test_clone_install_stages_gates_only_when_opted_in(self):
@@ -151,6 +155,10 @@ class CloneBuilderTest(unittest.TestCase):
             dropin = target / f'etc/systemd/system/{unit}.d/clone-identity.conf'
             self.assertEqual(dropin.read_bytes(), (payload / 'gmib-clone-identity.conf').read_bytes())
         self.assertEqual((target / 'usr/local/sbin/gmib-clone-personalize').stat().st_mode & 0o777, 0o755)
+        self.assertEqual((target / 'usr/local/sbin/gmib-kiosk-setup').stat().st_mode & 0o777, 0o755)
+        self.assertEqual((target / 'etc/gmib/setup.conf').read_bytes(), (payload / 'setup.conf').read_bytes())
+        self.assertEqual((target / 'etc/systemd/system/gmib-provision.service.d/setup-menu.conf').read_bytes(),
+                         (payload / 'gmib-kiosk-setup.conf').read_bytes())
         shutil.rmtree(target)
         (payload / 'clone.conf').unlink()
         subprocess.run(['bash', '-euc', block], env=env, check=True)

@@ -10,8 +10,8 @@
 deploy/kiosk/build-and-publish-on-server.sh --clone-image --gmib-version 5.7.6
 ```
 
-По умолчанию ревизия равна `clone1`, файл имеет имя
-`gmib-kiosk-5.7.6-clone1-ubuntu-24.04.4-amd64.iso`. Публикация идёт в отдельный каталог
+По умолчанию ревизия равна `clone3`, файл имеет имя
+`gmib-kiosk-5.7.6-clone3-ubuntu-24.04.4-amd64.iso`. Публикация идёт в отдельный каталог
 `public/downloads/gmib-kiosk-clone`; существующий обычный ISO и его каталог не затрагиваются.
 Clone-ISO доступен по прямой ссылке, отдельно от обычного каталога `/gmib/kiosk`.
 На сервере скачивания нужен отдельный статический маршрут: текущий обработчик `app-server`
@@ -20,8 +20,16 @@ Clone-ISO доступен по прямой ссылке, отдельно от
 и перечитайте конфигурацию nginx. Фрагмент разрешает только ISO и его checksum/manifest,
 скрывает `.part` и не меняет обычные загрузки. После публикации сборщик проверяет HTTP Range (206).
 `--replace-current` для такой сборки запрещён: при недостатке места сборка останавливается.
-Для повторной сборки с изменениями используйте `--image-revision clone2` или `clone1.patch1`.
+Для повторной сборки с изменениями используйте `--image-revision clone4` или `clone3.patch1`.
+Чтобы сохранить опубликованный clone2 при выпуске clone3, передайте `--keep-existing`.
 При низкоуровневой сборке `build-autoinstall-iso.sh` также передайте `--clone-image`.
+
+Ревизия clone3 добавляет меню `gmib-kiosk-setup` на первый запуск эталона: IP и SSH, подключение
+VPN либо подготовка с подтверждением `CLONE` и выключением. `sudo gmib-kiosk-setup` открывает меню
+повторно, в том числе после регистрации и активации. При запуске по SSH подключение VPN открывается
+на локальном экране; параллельный процесс регистрации не создаётся. Подготовленные копии и
+восстановление завершённой регистрации пропускают меню и используют прежний provisioning.
+Меню подключается drop-in только в clone-варианте; обычный установщик не меняется.
 
 Вариант устанавливает `gmib-prepare-clone`, раннюю службу `gmib-clone-personalize` и зависимости
 сетевых служб, SSH, Pritunl, первичной регистрации, Cage и Zabbix от успешной персонализации.
@@ -41,6 +49,7 @@ Clone-ISO доступен по прямой ссылке, отдельно от
 ```sh
 python3 deploy/kiosk/tests/test-clone-runtime.py
 python3 deploy/kiosk/tests/test-clone-builder.py
+python3 deploy/kiosk/tests/test-kiosk-setup.py
 bash deploy/kiosk/tests/test-kiosk-scripts.sh
 ```
 

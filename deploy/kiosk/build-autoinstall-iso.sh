@@ -157,7 +157,7 @@ while (($# > 0)); do
 done
 
 if [[ "$CLONE_IMAGE" == true ]]; then
-  IMAGE_REVISION="${IMAGE_REVISION:-clone1}"
+  IMAGE_REVISION="${IMAGE_REVISION:-clone3}"
   if [[ ! "$IMAGE_REVISION" =~ ^clone[0-9]+([.-][a-z0-9]+)*$ ]]; then
     echo "Clone images require a revision such as clone1 or clone1.patch1." >&2
     exit 1
@@ -303,8 +303,12 @@ install -m 0755 "$REPO_ROOT/scripts/gmib-kiosk-launch.sh" "$payload_dir/"
 install -m 0644 "$REPO_ROOT/scripts/gmib-hide-cursor.c" "$payload_dir/"
 
 if [[ "$CLONE_IMAGE" == true ]]; then
-  install -m 0755 "$SCRIPT_DIR/gmib-prepare-clone" "$SCRIPT_DIR/gmib-clone-personalize" "$payload_dir/"
-  install -m 0644 "$SCRIPT_DIR/gmib-clone-personalize.service" "$SCRIPT_DIR/gmib-clone-identity.conf" "$payload_dir/"
+  install -m 0755 "$SCRIPT_DIR/gmib-prepare-clone" "$SCRIPT_DIR/gmib-clone-personalize" \
+    "$SCRIPT_DIR/gmib-kiosk-setup" "$payload_dir/"
+  install -m 0644 "$SCRIPT_DIR/gmib-clone-personalize.service" "$SCRIPT_DIR/gmib-clone-identity.conf" \
+    "$SCRIPT_DIR/gmib-kiosk-setup.conf" "$payload_dir/"
+  printf "ADMIN_USER='%s'\n" "$ADMIN_USER" >"$payload_dir/setup.conf"
+  chmod 0644 "$payload_dir/setup.conf"
   cat >"$payload_dir/clone.conf" <<EOF
 CLONE_IMAGE=1
 KIOSK_USER='$KIOSK_USER'
@@ -415,7 +419,8 @@ manifest="$payload_dir/SHA256SUMS"
     zabbix-agent2.deb
   if [[ "$CLONE_IMAGE" == true ]]; then
     sha256sum clone.conf gmib-prepare-clone gmib-clone-personalize \
-      gmib-clone-personalize.service gmib-clone-identity.conf
+      gmib-clone-personalize.service gmib-clone-identity.conf \
+      gmib-kiosk-setup gmib-kiosk-setup.conf setup.conf
   fi
 ) >"$manifest"
 
