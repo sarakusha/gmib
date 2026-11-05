@@ -42,9 +42,6 @@ const config = {
     conditions: ['node', 'require', 'default', 'browser'],
     mainFields: ['main'],
   },
-  ssr: {
-    format: 'cjs',
-  },
   build: {
     ssr: true,
     sourcemap: false,

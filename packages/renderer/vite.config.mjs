@@ -101,8 +101,4 @@ export default defineConfig({
     include: ['react/jsx-runtime'],
     // exclude: ['@mui/material/zero-styled'],
   },
-  // https://github.com/vitejs/vite/issues/8644#issuecomment-1159308803
-  esbuild: {
-    logOverride: { 'this-is-undefined-in-esm': 'silent' },
-  },
 });
