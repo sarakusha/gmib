@@ -93,9 +93,12 @@ const sanitizeCron = (cron: CronSchedule | undefined): CronSchedule | undefined 
       }
     : undefined;
 
+const isFinitePlaylistJob = (job: StoredSchedulerJob): job is PlayerSchedulerJob =>
+  job.action === 'play-playlist-times';
+
 const sanitizeJob = <T extends StoredSchedulerJob>(job: T): T => {
-  if (job.action === 'play-playlist-times') {
-    const finite = job as PlayerSchedulerJob;
+  if (isFinitePlaylistJob(job)) {
+    const finite = job;
     if (
       !Number.isSafeInteger(finite.playlistId) ||
       finite.playlistId! < 1 ||

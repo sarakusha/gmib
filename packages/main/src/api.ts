@@ -592,11 +592,11 @@ api.put('/player-observation', async (req, res, next) => {
 
 api.put('/player', async (req, res, next) => {
   try {
-    cancelFinitePlayback(req.body.id);
+    const { id } = req.body;
+    cancelFinitePlayback(id);
     const { changes } = await updatePlayer(await uniquePlayerName(req.body));
     if (!changes) res.sendStatus(404);
     else {
-      const { id } = req.body;
       if (!id || typeof id !== 'number') {
         res.sendStatus(400);
         return;
