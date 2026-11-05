@@ -14,6 +14,11 @@ deploy/kiosk/build-and-publish-on-server.sh --clone-image --gmib-version 5.7.6
 `gmib-kiosk-5.7.6-clone1-ubuntu-24.04.4-amd64.iso`. Публикация идёт в отдельный каталог
 `public/downloads/gmib-kiosk-clone`; существующий обычный ISO и его каталог не затрагиваются.
 Clone-ISO доступен по прямой ссылке, отдельно от обычного каталога `/gmib/kiosk`.
+На сервере скачивания нужен отдельный статический маршрут: текущий обработчик `app-server`
+принимает только обычные продукты GMIB/GGS. Включите [nginx-clone-downloads.conf](nginx-clone-downloads.conf)
+внутри блока `server` для `app.nata-info.ru`, проверьте путь `alias`, выполните `nginx -t`
+и перечитайте конфигурацию nginx. Фрагмент разрешает только ISO и его checksum/manifest,
+скрывает `.part` и не меняет обычные загрузки. После публикации сборщик проверяет HTTP Range (206).
 `--replace-current` для такой сборки запрещён: при недостатке места сборка останавливается.
 Для повторной сборки с изменениями используйте `--image-revision clone2` или `clone1.patch1`.
 При низкоуровневой сборке `build-autoinstall-iso.sh` также передайте `--clone-image`.

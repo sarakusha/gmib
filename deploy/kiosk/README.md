@@ -7,6 +7,10 @@ The ordinary installer remains unchanged. Use `build-and-publish-on-server.sh --
 `--image-revision clone2`). It publishes under `downloads/gmib-kiosk-clone`, preserving the
 ordinary ISO; `--replace-current` is rejected. The clone ISO uses a direct download link,
 separate from the ordinary `/gmib/kiosk` catalog. The low-level builder also accepts `--clone-image`.
+The existing app-server download handler only accepts ordinary GMIB/GGS products. Include
+[`nginx-clone-downloads.conf`](nginx-clone-downloads.conf) in the download host's nginx server
+block, check its alias path, validate with `nginx -t`, and reload nginx. This separate static
+route exposes only the ISO, checksum and manifest, supports Range requests and hides partial files.
 
 After installing and testing customer software, run `sudo gmib-prepare-clone --poweroff` and
 wait for shutdown before capturing the entire disk externally. Preparation runs as a detached
