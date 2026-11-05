@@ -1,0 +1,282 @@
+#!/usr/bin/env python3
+"""Fail-closed clone preparation and boot identity for the opt-in kiosk image."""
+import fcntl
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+
+ROOT = Path('/')
+STATE = Path('/var/lib/gmib-clone/state.json')
+LOCAL_KEYS = (
+    'announce', 'iv', 'signedLicense', 'pritunlUserId', 'knock', 'identifier',
+    'salt', 'verifier', 'remoteAuth', 'hosts', 'health', 'taurusPasswords',
+    'taurusConfigurationBackups',
+)
+
+
+def path(name):
+    return ROOT / str(name).lstrip('/')
+
+
+def safe(name):
+    target = path(name)
+    # Refuse redirection outside known image files, including parent symlinks.
+    for part in [target, *target.parents]:
+        if part == ROOT:
+            break
+        if part.is_symlink():
+            raise RuntimeError(f'Refusing symlink: {part}')
+    return target
+
+
+def run(*args, capture=False):
+    return subprocess.run(args, check=True, text=True, timeout=120,
+                          stdout=subprocess.PIPE if capture else subprocess.DEVNULL).stdout
+
+
+def atomic(name, contents, mode=0o600, owner=None):
+    target = safe(name)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    fd, temporary = tempfile.mkstemp(prefix='.' + target.name + '.', dir=target.parent)
+    try:
+        os.fchmod(fd, mode)
+        if owner:
+            os.fchown(fd, *owner)
+        with os.fdopen(fd, 'w') as output:
+            output.write(contents)
+            output.flush()
+            os.fsync(output.fileno())
+        os.replace(temporary, target)
+        descriptor = os.open(target.parent, os.O_RDONLY)
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
+def save(state):
+    atomic(STATE, json.dumps(state) + '\n')
+
+
+def remove(name):
+    target = safe(name)
+    if target.is_dir():
+        shutil.rmtree(target)
+    else:
+        target.unlink(missing_ok=True)
+
+
+def configuration():
+    config = safe('/etc/gmib/clone.conf')
+    if not config.is_file():
+        raise RuntimeError('This is not a cloning image: /etc/gmib/clone.conf is missing')
+    values = {}
+    for line in config.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith('#'):
+            continue
+        key, separator, value = line.partition('=')
+        if not separator or key not in ('CLONE_IMAGE', 'KIOSK_USER', 'KIOSK_HOME'):
+            raise RuntimeError('Invalid clone.conf')
+        values[key] = value.strip("\"'")
+    user = values.get('KIOSK_USER', '')
+    home = values.get('KIOSK_HOME', '')
+    if values.get('CLONE_IMAGE') != '1' or not re.fullmatch(r'[a-z_][a-z0-9_-]*', user):
+        raise RuntimeError('Invalid clone image/user configuration')
+    if home != '/home/' + user:
+        raise RuntimeError('Clone images require the kiosk home at /home/<kiosk-user>')
+    safe(home)
+    return user, home
+
+
+def generate_id():
+    # Linux getrandom blocks until the kernel CSPRNG is initialized; do not derive
+    # early-boot identity from a cloned seed or a possibly duplicated DMI UUID.
+    return os.urandom(16).hex()
+
+
+def machine_id():
+    value = safe('/etc/machine-id').read_text().strip()
+    if not re.fullmatch('[0-9a-f]{32}', value) or value == '0' * 32:
+        raise RuntimeError('Invalid installed machine-id')
+    return value
+
+
+def state_read():
+    state_file = safe(STATE)
+    if not state_file.exists():
+        return None
+    state = json.loads(state_file.read_text())
+    if state.get('phase') not in ('preparing', 'armed', 'reboot'):
+        raise RuntimeError('Invalid clone preparation state')
+    return state
+
+
+def prepare():
+    user, home = configuration()
+    # Validate every local identity source before stopping services or changing files.
+    parent_id = machine_id()
+    if state_read() is None:
+        run('cloud-init', 'status', '--wait')
+    local_file = safe(home + '/.config/gmib/gmib-local.json')
+    if local_file.exists() and not isinstance(json.loads(local_file.read_text()), dict):
+        raise RuntimeError('Invalid GMIB local configuration')
+    for name in (STATE, '/var/lib/gmib-provision', '/etc/ssh', '/etc/hostname',
+                 '/etc/zabbix', '/var/lib/gmib-zabbix'):
+        safe(name)
+    # A durable guard precedes all destructive changes. Interrupted preparation must
+    # be rerun from the local recovery console; it must never boot as a clone.
+    save({'phase': 'preparing', 'parent_id': parent_id})
+    # Invalidate the successful boot gate before cleanup. Requires= propagates
+    # this stop to managed consumers; the detached preparation job is independent.
+    run('systemctl', 'stop', 'gmib-clone-personalize.service')
+    run('systemctl', 'stop', 'gmib-provision.service', 'gmib-cage@tty1.service')
+    subprocess.run(('loginctl', 'terminate-user', user), check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    if subprocess.run(('pgrep', '-u', user), stdout=subprocess.DEVNULL).returncode != 1:
+        raise RuntimeError('Kiosk processes are still running; preparation stopped')
+    # Recovery after an interrupted preparation may have a failed identity gate.
+    # Start only the local VPN daemon for cleanup, without lifting that gate for
+    # networking, SSH or GMIB. The command is available only to this root job.
+    run('systemctl', '--job-mode=ignore-dependencies', 'start', 'pritunl-client.service')
+    for attempt in range(10):
+        try:
+            profiles = json.loads(run('pritunl-client', 'list', '--json', capture=True))
+            break
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, json.JSONDecodeError):
+            if attempt == 9:
+                raise
+            time.sleep(2)
+    if not isinstance(profiles, list):
+        raise RuntimeError('Cannot verify VPN profiles')
+    for profile in profiles:
+        profile_id = profile.get('id', '')
+        if not re.fullmatch('[a-zA-Z0-9_-]+', profile_id):
+            raise RuntimeError('Invalid VPN profile ID')
+        run('pritunl-client', 'disable', profile_id)
+        run('pritunl-client', 'stop', profile_id)
+        run('pritunl-client', 'remove', profile_id)
+    if json.loads(run('pritunl-client', 'list', '--json', capture=True)) != []:
+        raise RuntimeError('VPN profile cleanup was not completed')
+    run('systemctl', 'stop', 'pritunl-client.service')
+    run('gmib-zabbix-configure', 'disable')
+    remove('/var/lib/gmib-provision')
+    # Only GMIB's own known identity/credential fields are changed. Client software
+    # is deliberately outside this tool's ownership.
+    if local_file.exists():
+        local = json.loads(local_file.read_text())
+        stat = local_file.stat()
+        for key in LOCAL_KEYS:
+            local.pop(key, None)
+        atomic(home + '/.config/gmib/gmib-local.json', json.dumps(local, ensure_ascii=False) + '\n',
+               mode=0o600, owner=(stat.st_uid, stat.st_gid))
+    for name in ('logs', 'Crashpad', 'Cookies', 'Cookies-journal', 'Network',
+                 'Session Storage', 'Local Storage', 'IndexedDB'):
+        remove(home + '/.config/gmib/' + name)
+    run('systemctl', 'disable', 'gmib-cage@tty1.service')
+    run('systemctl', 'enable', 'gmib-provision.service', 'gmib-clone-personalize.service')
+    # Keys are removed last; authorized_keys belongs to admins and is preserved.
+    for key in safe('/etc/ssh').glob('ssh_host_*'):
+        remove(str(key.relative_to(ROOT)))
+    atomic('/etc/hostname', 'gmib-template\n', 0o644)
+    # The detached job can stop networking without depending on its SSH caller.
+    for service in ('systemd-networkd.socket', 'systemd-networkd.service', 'NetworkManager.service', 'networking.service',
+                    'dhcpcd.service', 'systemd-random-seed.service'):
+        active = subprocess.run(('systemctl', 'is-active', '--quiet', service),
+                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if active.returncode == 0:
+            run('systemctl', 'stop', service)
+    remove('/var/lib/systemd/random-seed')
+    # Prevent cached installer cloud-init state from being replayed on each clone.
+    atomic('/etc/cloud/cloud-init.disabled', '# Prepared GMIB clone: identity is managed by gmib-clone-personalize.\n', 0o644)
+    remove('/var/lib/cloud')
+    remove('/var/log/cloud-init.log')
+    remove('/var/log/cloud-init-output.log')
+    for lease_dir in ('/var/lib/dhcp', '/var/lib/systemd/network'):
+        directory = safe(lease_dir)
+        if directory.is_dir():
+            for lease in directory.glob('*lease*'):
+                remove(str(lease.relative_to(ROOT)))
+    save({'phase': 'armed', 'parent_id': parent_id})
+    run('sync')
+    print('Эталон подготовлен. После выключения снимите образ диска. Не загружайте эталон перед копированием.', flush=True)
+    run('systemctl', 'poweroff')
+
+
+def personalize():
+    configuration()
+    state = state_read()
+    if state is None:
+        return  # Fresh reference installation or an already personalized device.
+    if state['phase'] == 'preparing':
+        raise RuntimeError('Clone preparation was interrupted. Rerun gmib-prepare-clone --poweroff from recovery console.')
+    boot_id = path('/proc/sys/kernel/random/boot_id').read_text().strip()
+    if state['phase'] == 'reboot':
+        if state.get('boot_id') == boot_id:
+            raise RuntimeError('Identity was generated in this boot; reboot is required')
+        if machine_id() != state.get('device_id'):
+            raise RuntimeError('Personalized machine-id changed unexpectedly')
+        # Keep the audit record separate from the pending guard.
+        atomic('/var/lib/gmib-clone/personalized.json', json.dumps(state) + '\n')
+        remove(STATE)
+        run('sync')
+        return
+    new_id = state.get('device_id')
+    if new_id is None:
+        # Never derive a clone identity from DMI UUID (OEM batches can share it).
+        new_id = generate_id()
+        if not re.fullmatch('[0-9a-f]{32}', new_id) or new_id in ('0' * 32, state.get('parent_id')):
+            raise RuntimeError('Cannot generate a unique machine-id')
+        state['device_id'] = new_id
+        save(state)  # Resume the same ID after power loss.
+    elif not re.fullmatch('[0-9a-f]{32}', new_id) or new_id in ('0' * 32, state.get('parent_id')):
+        raise RuntimeError('Invalid pending machine-id')
+    atomic('/etc/machine-id', new_id + '\n', 0o444)
+    dbus_id = path('/var/lib/dbus/machine-id')
+    if dbus_id.is_symlink():
+        link = os.readlink(dbus_id)
+        resolved = os.path.normpath(link if link.startswith('/') else '/var/lib/dbus/' + link)
+        if resolved != '/etc/machine-id':
+            raise RuntimeError('Unexpected D-Bus machine-id symlink')
+    else:
+        atomic('/var/lib/dbus/machine-id', new_id + '\n', 0o444)
+    # Prepared images have no keys. On retry, keep keys already generated for this ID.
+    run('ssh-keygen', '-A')
+    import hashlib
+    atomic('/etc/hostname', 'gmib-' + hashlib.sha256(new_id.encode()).hexdigest()[:12] + '\n', 0o644)
+    save({'phase': 'reboot', 'device_id': new_id, 'boot_id': boot_id})
+    run('sync')
+    run('systemctl', '--no-block', 'reboot')
+    # Fail the gate until the reboot completes. systemd's in-memory machine ID and
+    # DHCP identity must not be inherited from the reference system for this boot.
+    raise RuntimeError('New clone identity saved; reboot scheduled')
+
+
+def main():
+    if os.geteuid() != 0:
+        raise RuntimeError('This command must run as root')
+    if sys.argv[1:] not in ([], ['--prepare', '--poweroff']):
+        raise RuntimeError('Usage: gmib-clone-personalize | gmib-clone-personalize --prepare --poweroff')
+    lock_file = safe('/run/gmib-clone.lock')
+    with lock_file.open('w') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        if sys.argv[1:]:
+            prepare()
+        else:
+            personalize()
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except Exception as error:
+        print(f'GMIB clone: {error}', file=sys.stderr)
+        sys.exit(1)

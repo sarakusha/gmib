@@ -7,12 +7,13 @@ REPO_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
 BUILD_ROOT="${GMIB_APPLIANCE_BUILD_ROOT:-/home/user/appliance-build}"
 GMIB_VERSION=""
 IMAGE_REVISION=""
+CLONE_IMAGE=false
 BASE_ISO=""
 PRITUNL_DEB=""
 ZABBIX_AGENT2_DEB=""
 SSH_KEY=""
-PUBLIC_DIR="${GMIB_APPLIANCE_PUBLIC_DIR:-/home/user/src/app-server/public/downloads/gmib-kiosk}"
-PUBLIC_BASE_URL="${GMIB_APPLIANCE_PUBLIC_URL:-https://app.nata-info.ru/downloads/gmib-kiosk}"
+PUBLIC_DIR="${GMIB_APPLIANCE_PUBLIC_DIR:-}"
+PUBLIC_BASE_URL="${GMIB_APPLIANCE_PUBLIC_URL:-}"
 BOOTSTRAP_URL="${GMIB_BOOTSTRAP_URL:-https://app.nata-info.ru/api/vpn/enroll/gmib}"
 REPLACE_CURRENT=false
 
@@ -25,6 +26,7 @@ script downloads only the release AppImage; cached Ubuntu and Pritunl inputs are
 reused. By default, the GMIB version is read from the repository package.json.
 
 Options:
+  --clone-image            Build a clone-ready installer in a separate download directory.
   --image-revision LABEL    Installer revision, e.g. patch1; does not change GMIB version.
   --gmib-version VERSION    GMIB release version. Default: package.json version.
   --build-root PATH         Private build directory. Default: /home/user/appliance-build.
@@ -46,6 +48,10 @@ EOF
 
 while (($# > 0)); do
   case "$1" in
+    --clone-image)
+      CLONE_IMAGE=true
+      shift
+      ;;
     --image-revision)
       IMAGE_REVISION="${2:-}"
       shift 2
@@ -102,6 +108,36 @@ while (($# > 0)); do
   esac
 done
 
+builder_variant_args=()
+if [[ "$CLONE_IMAGE" == true ]]; then
+  if [[ "$REPLACE_CURRENT" == true ]]; then
+    echo "--clone-image cannot be combined with --replace-current." >&2
+    exit 1
+  fi
+  IMAGE_REVISION="${IMAGE_REVISION:-clone1}"
+  if [[ ! "$IMAGE_REVISION" =~ ^clone[0-9]+([.-][a-z0-9]+)*$ ]]; then
+    echo "Clone images require a revision such as clone1 or clone1.patch1." >&2
+    exit 1
+  fi
+  PUBLIC_DIR="${PUBLIC_DIR:-/home/user/src/app-server/public/downloads/gmib-kiosk-clone}"
+  PUBLIC_BASE_URL="${PUBLIC_BASE_URL:-https://app.nata-info.ru/downloads/gmib-kiosk-clone}"
+  # The publisher prunes old images in its destination. Never allow clone builds
+  # to share the ordinary kiosk directory, including via an existing symlink.
+  if [[ "${PUBLIC_DIR%/}" != */gmib-kiosk-clone ]] ||
+    [[ "${PUBLIC_BASE_URL%/}" != */gmib-kiosk-clone ]]; then
+    echo "Clone publication requires a separate gmib-kiosk-clone directory and URL." >&2
+    exit 1
+  fi
+  builder_variant_args+=(--clone-image)
+else
+  if [[ "$IMAGE_REVISION" == clone* ]]; then
+    echo "Clone revisions require --clone-image." >&2
+    exit 1
+  fi
+  PUBLIC_DIR="${PUBLIC_DIR:-/home/user/src/app-server/public/downloads/gmib-kiosk}"
+  PUBLIC_BASE_URL="${PUBLIC_BASE_URL:-https://app.nata-info.ru/downloads/gmib-kiosk}"
+fi
+
 if [[ "$(uname -s)" != Linux ]]; then
   echo "This script must run on the Linux app-server host." >&2
   exit 1
@@ -112,6 +148,17 @@ for command in awk curl df dpkg-deb file find grep jq mktemp openssl sed sha256s
     exit 1
   fi
 done
+
+if [[ "$CLONE_IMAGE" == true ]]; then
+  if ! command -v realpath >/dev/null 2>&1; then
+    echo "Clone publication requires realpath to verify its isolated destination." >&2
+    exit 1
+  fi
+  if [[ "$(realpath -m "$PUBLIC_DIR")" != */gmib-kiosk-clone ]]; then
+    echo "Clone publication directory resolves outside the gmib-kiosk-clone namespace." >&2
+    exit 1
+  fi
+fi
 
 if [[ -z "$GMIB_VERSION" ]]; then
   GMIB_VERSION="$(jq -er '.version' "$REPO_ROOT/package.json")"
@@ -230,7 +277,11 @@ if ((available_bytes < required_bytes)); then
     printf 'Insufficient free space: need %.1f GiB, have %.1f GiB.\n' \
       "$(awk -v value="$required_bytes" 'BEGIN {print value / 1024 / 1024 / 1024}')" \
       "$(awk -v value="$available_bytes" 'BEGIN {print value / 1024 / 1024 / 1024}')" >&2
-    echo "Free space or rerun with --replace-current to remove only the old GMIB kiosk image." >&2
+    if [[ "$CLONE_IMAGE" == true ]]; then
+      echo "Free space before retrying; existing images will not be removed." >&2
+    else
+      echo "Free space or rerun with --replace-current to remove only the old GMIB kiosk image." >&2
+    fi
     exit 1
   fi
   unpublish_current_image
@@ -241,7 +292,7 @@ if ((available_bytes < required_bytes)); then
   fi
 fi
 
-"$SCRIPT_DIR/build-autoinstall-iso.sh" \
+"$SCRIPT_DIR/build-autoinstall-iso.sh" "${builder_variant_args[@]}" \
   --base-iso "$BASE_ISO" \
   --base-iso-sha256 "$BASE_ISO_SHA256" \
   --appimage "$APPIMAGE" \

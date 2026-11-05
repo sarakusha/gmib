@@ -8,6 +8,7 @@ PRODUCT="auto"
 REMOTE_DIR=""
 PUBLIC_BASE_URL=""
 LOCAL=false
+CLONE_IMAGE=false
 
 usage() {
   cat <<'EOF'
@@ -33,6 +34,8 @@ or:
 
 Files are first uploaded with a .part suffix. After atomic publication, older
 ISO, checksum, manifest, and partial files for the same product are deleted.
+Clone revisions (clone1, clone2, ...) use a separate gmib-kiosk-clone directory
+and URL, including when --image-revision is omitted.
 EOF
 }
 
@@ -116,7 +119,19 @@ else
   echo "Invalid versioned ISO filename: $filename" >&2
   exit 1
 fi
-# The revision is explicit so existing GMIB prerelease versions retain their meaning.
+# Clone revisions are reserved by the builder and must be recognized even when
+# a standalone publisher caller omits --image-revision. Otherwise retention in
+# the ordinary kiosk directory could remove the existing installer.
+if [[ "$detected_product" == gmib-kiosk && "$product_version" =~ ^(.+)-(clone[0-9]+([.-][a-z0-9]+)*)$ ]]; then
+  detected_revision="${BASH_REMATCH[2]}"
+  if [[ -n "$IMAGE_REVISION" && "$IMAGE_REVISION" != "$detected_revision" ]]; then
+    echo "Filename clone revision does not match --image-revision." >&2
+    exit 1
+  fi
+  IMAGE_REVISION="$detected_revision"
+  CLONE_IMAGE=true
+fi
+# Other revisions remain explicit so existing prereleases retain their meaning.
 if [[ -n "$IMAGE_REVISION" ]]; then
   if [[ "$detected_product" != gmib-kiosk || "$product_version" != *"-$IMAGE_REVISION" ]]; then
     echo "Filename does not match --image-revision $IMAGE_REVISION." >&2
@@ -133,12 +148,37 @@ if [[ "$PRODUCT" != auto && "$PRODUCT" != "$detected_product" ]]; then
   exit 1
 fi
 PRODUCT="$detected_product"
-REMOTE_DIR="${REMOTE_DIR:-/home/user/src/app-server/public/downloads/$PRODUCT}"
-PUBLIC_BASE_URL="${PUBLIC_BASE_URL:-https://app.nata-info.ru/downloads/$PRODUCT}"
+publication_namespace="$PRODUCT"
+retention_prefix="$PRODUCT-*"
+if [[ "$CLONE_IMAGE" == true ]]; then
+  publication_namespace=gmib-kiosk-clone
+  retention_prefix='gmib-kiosk-*-clone[0-9]*-ubuntu-*'
+fi
+REMOTE_DIR="${REMOTE_DIR:-/home/user/src/app-server/public/downloads/$publication_namespace}"
+PUBLIC_BASE_URL="${PUBLIC_BASE_URL:-https://app.nata-info.ru/downloads/$publication_namespace}"
 if [[ ! "$REMOTE_DIR" =~ ^/[A-Za-z0-9_./-]+$ ]] ||
   [[ "$PUBLIC_BASE_URL" != https://* ]] || [[ "$PUBLIC_BASE_URL" =~ [[:space:]] ]]; then
   echo "Invalid remote directory or public URL." >&2
   exit 1
+fi
+
+if [[ "$CLONE_IMAGE" == true ]]; then
+  if [[ "${REMOTE_DIR%/}" != */gmib-kiosk-clone ]] ||
+    [[ "${PUBLIC_BASE_URL%/}" != */gmib-kiosk-clone ]]; then
+    echo "Clone publication requires a separate gmib-kiosk-clone directory and URL." >&2
+    exit 1
+  fi
+  # Check on the destination host before mkdir, upload, move, or retention.
+  if [[ "$LOCAL" == true ]]; then
+    resolved_clone_dir="$(realpath -m "$REMOTE_DIR")"
+  else
+    # REMOTE_DIR is restricted to shell-safe path characters above.
+    resolved_clone_dir="$(ssh "$SERVER" "realpath -m '$REMOTE_DIR'")"
+  fi
+  if [[ "$resolved_clone_dir" != */gmib-kiosk-clone ]]; then
+    echo "Clone publication directory resolves outside the gmib-kiosk-clone namespace." >&2
+    exit 1
+  fi
 fi
 
 expected_sha256="$(awk 'NR == 1 { print tolower($1) }' "$ISO.sha256")"
@@ -188,9 +228,9 @@ if [[ "$PRODUCT" == gmib-kiosk ]]; then
 fi
 
 remote_retention_find="find '$REMOTE_DIR' -maxdepth 1 -type f \
-  \( -name '$PRODUCT-*.iso' -o -name '$PRODUCT-*.iso.sha256' -o \
-     -name '$PRODUCT-*.iso.json' -o -name '$PRODUCT-*.iso.part' -o \
-     -name '$PRODUCT-*.iso.sha256.part' -o -name '$PRODUCT-*.iso.json.part' \) \
+  \( -name '$retention_prefix.iso' -o -name '$retention_prefix.iso.sha256' -o \
+     -name '$retention_prefix.iso.json' -o -name '$retention_prefix.iso.part' -o \
+     -name '$retention_prefix.iso.sha256.part' -o -name '$retention_prefix.iso.json.part' \) \
   ! -name '$filename' ! -name '$filename.sha256' ! -name '$filename.json' -delete"
 
 if [[ "$LOCAL" == true ]]; then
@@ -216,9 +256,9 @@ if [[ "$LOCAL" == true ]]; then
   mv "$REMOTE_DIR/$filename.sha256.part" "$REMOTE_DIR/$filename.sha256"
   mv "$REMOTE_DIR/$filename.json.part" "$REMOTE_DIR/$filename.json"
   find "$REMOTE_DIR" -maxdepth 1 -type f \
-    \( -name "$PRODUCT-*.iso" -o -name "$PRODUCT-*.iso.sha256" -o \
-       -name "$PRODUCT-*.iso.json" -o -name "$PRODUCT-*.iso.part" -o \
-       -name "$PRODUCT-*.iso.sha256.part" -o -name "$PRODUCT-*.iso.json.part" \) \
+    \( -name "$retention_prefix.iso" -o -name "$retention_prefix.iso.sha256" -o \
+       -name "$retention_prefix.iso.json" -o -name "$retention_prefix.iso.part" -o \
+       -name "$retention_prefix.iso.sha256.part" -o -name "$retention_prefix.iso.json.part" \) \
     ! -name "$filename" ! -name "$filename.sha256" ! -name "$filename.json" -delete
 else
   # All interpolated values are restricted to the safe character sets validated above.

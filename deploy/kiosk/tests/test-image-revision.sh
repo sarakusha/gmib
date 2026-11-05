@@ -11,7 +11,10 @@ cat >"$work_dir/bin/ssh" <<'STUB'
 #!/usr/bin/env bash
 set -euo pipefail
 shift
-if [[ "$*" == df\ -Pk* ]]; then
+if [[ "$*" == *"/home/user/src/app-server/public/downloads/"* ]]; then
+  printf '%s\n' "$*" >"$TEST_DEFAULT_PUBLICATION_CALL"
+  exit 83
+elif [[ "$*" == df\ -Pk* ]]; then
   echo 99999999
 else
   bash -c "$*"
@@ -23,7 +26,16 @@ set -euo pipefail
 while [[ "$1" == --* ]]; do shift; done
 cp "$1" "${2#*:}"
 STUB
-chmod +x "$work_dir/bin/ssh" "$work_dir/bin/rsync"
+# The remote host is Linux; model its realpath -m on macOS test hosts too.
+cat >"$work_dir/bin/realpath" <<'STUB'
+#!/usr/bin/env python3
+from pathlib import Path
+import sys
+assert sys.argv[1] == '-m'
+print(Path(sys.argv[2]).resolve())
+STUB
+chmod +x "$work_dir/bin/ssh" "$work_dir/bin/rsync" "$work_dir/bin/realpath"
+export TEST_DEFAULT_PUBLICATION_CALL="$work_dir/default-call"
 export PATH="$work_dir/bin:$PATH"
 
 publish() {
@@ -55,5 +67,46 @@ for revision in patch2 '../patch1' 'patch1;touch injected'; do
     echo "Unexpectedly accepted invalid/mismatched revision: $revision" >&2
     exit 1
   fi
+done
+# Standalone clone publication auto-detects the reserved revision even without
+# --image-revision, retains ordinary artifacts, and refuses namespace aliases.
+clone_dir="$work_dir/gmib-kiosk-clone"
+mkdir -p "$clone_dir"
+ordinary_name=gmib-kiosk-5.6.9-ubuntu-24.04.4-amd64.iso
+printf 'ordinary sentinel\n' >"$clone_dir/$ordinary_name"
+for revision in clone1 clone2.patch1; do
+  clone_name="gmib-kiosk-5.7.6-$revision-ubuntu-24.04.4-amd64.iso"
+  printf 'synthetic clone ISO\n' >"$work_dir/input/$clone_name"
+  sha256sum "$work_dir/input/$clone_name" >"$work_dir/input/$clone_name.sha256"
+  bash "$PUBLISHER" --iso "$work_dir/input/$clone_name" --server test@example.test \
+    --remote-dir "$clone_dir" >"$work_dir/clone-output"
+  jq -e --arg revision "$revision" '.gmibVersion == "5.7.6" and .imageRevision == $revision' \
+    "$clone_dir/$clone_name.json" >/dev/null
+  [[ -f "$clone_dir/$ordinary_name" ]]
+  grep -q 'https://app.nata-info.ru/downloads/gmib-kiosk-clone/' "$work_dir/clone-output"
+done
+[[ ! -f "$clone_dir/gmib-kiosk-5.7.6-clone1-ubuntu-24.04.4-amd64.iso" ]]
+
+# No explicit destination: observe the first remote call, refuse to execute it.
+if bash "$PUBLISHER" --iso "$work_dir/input/$clone_name" --server test@example.test >"$work_dir/error" 2>&1; then
+  echo 'Default-destination transport should stop before touching real paths' >&2
+  exit 1
+fi
+grep -q "realpath -m '/home/user/src/app-server/public/downloads/gmib-kiosk-clone'" "$TEST_DEFAULT_PUBLICATION_CALL"
+
+mkdir -p "$work_dir/alias"
+ln -s "$work_dir/public" "$work_dir/alias/gmib-kiosk-clone"
+for mode in remote local; do
+  mode_args=(--server test@example.test)
+  [[ "$mode" != local ]] || mode_args=(--local)
+  for destination in "$work_dir/public" "$work_dir/alias/gmib-kiosk-clone"; do
+    if bash "$PUBLISHER" --iso "$work_dir/input/$clone_name" "${mode_args[@]}" \
+      --remote-dir "$destination" >"$work_dir/error" 2>&1; then
+      echo "Clone publication unexpectedly accepted $destination ($mode)" >&2
+      exit 1
+    fi
+    grep -q 'Clone publication' "$work_dir/error"
+    [[ -f "$work_dir/input/$clone_name" ]]
+  done
 done
 printf 'Image revision tests passed.\n'

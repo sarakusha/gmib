@@ -1,5 +1,26 @@
 # GMIB kiosk image
 
+## Separate clone-ready installer
+
+The ordinary installer remains unchanged. Use `build-and-publish-on-server.sh --clone-image
+--gmib-version 5.7.6` for a separate installer with revision `clone1` (or pass another
+`--image-revision clone2`). It publishes under `downloads/gmib-kiosk-clone`, preserving the
+ordinary ISO; `--replace-current` is rejected. The clone ISO uses a direct download link,
+separate from the ordinary `/gmib/kiosk` catalog. The low-level builder also accepts `--clone-image`.
+
+After installing and testing customer software, run `sudo gmib-prepare-clone --poweroff` and
+wait for shutdown before capturing the entire disk externally. Preparation runs as a detached
+system service, clears GMIB/VPN/monitoring identity, preserves administrator authorized keys,
+and arms a fail-closed first-boot identity service. Each clone gets a random persistent machine
+ID and new SSH host keys, reboots before network access, then requests its own VPN enrollment
+code. GMIB licensing follows separately. Customer software identity remains the customer's
+responsibility. Do not boot an armed reference before capturing it.
+
+See the [Russian client guide](CLONING.ru.md) for installation, capture and rollout steps.
+Run `python3 deploy/kiosk/tests/test-clone-runtime.py` and
+`python3 deploy/kiosk/tests/test-clone-builder.py` for isolated lifecycle and staging checks.
+Test two real cloned computers, including interrupted boot, before mass rollout.
+
 This directory builds an Ubuntu Server 24.04 amd64 installer for dedicated GMIB players. The image
 contains the GMIB AppImage plus pinned Pritunl Client and Zabbix Agent 2 7.4 packages. Installation erases one explicitly
 selected disk, installs the Cage service, and powers the computer off.

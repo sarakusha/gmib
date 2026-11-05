@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ "${1:-}" != --poweroff || $# != 1 ]]; then
+  echo 'Usage: sudo gmib-prepare-clone --poweroff' >&2
+  echo 'Удаляет индивидуальные данные GMIB/VPN и выключает эталон для снятия образа.' >&2
+  exit 2
+fi
+if [[ $EUID != 0 || ! -f /etc/gmib/clone.conf ]]; then
+  echo 'Требуются права root и специальный образ GMIB для клонирования.' >&2
+  exit 1
+fi
+# A system service survives disconnection of the SSH/VPN session that requested it.
+systemd-run --unit=gmib-prepare-clone --collect --no-block \
+  /usr/local/sbin/gmib-clone-personalize --prepare --poweroff
+printf '%s\n' 'Подготовка запущена. Дождитесь выключения компьютера перед снятием образа.' \
+  'Если компьютер не выключился, проверьте: journalctl -u gmib-prepare-clone.service'
