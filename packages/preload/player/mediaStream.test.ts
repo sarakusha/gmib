@@ -984,14 +984,20 @@ describe('finite playlist playback', () => {
     mock.videos.at(-1).emit('error');
     await flush();
     expect(completions()).toEqual([['finite-playback:finished', 'run', 'error']]);
-    expect(mock.dispatch.mock.calls.findLast(([a]) => a.type.endsWith('/setPlaybackState'))?.[0].payload).toBe('none');
+    expect(
+      mock.dispatch.mock.calls.findLast(([a]) => a.type.endsWith('/setPlaybackState'))?.[0].payload,
+    ).toBe('none');
   });
   it('stale decoder completion and failure cannot finish a newer run', async () => {
     await start('decoder', 2, true);
     const stale = current();
-    event('player', { ...mock.player, current: undefined, autoPlay: true }, {
-      finitePlayback: { token: 'new', playlistId: 1, itemIds: ['bad'], repeatCount: 1 },
-    });
+    event(
+      'player',
+      { ...mock.player, current: undefined, autoPlay: true },
+      {
+        finitePlayback: { token: 'new', playlistId: 1, itemIds: ['bad'], repeatCount: 1 },
+      },
+    );
     await flush();
     stale.emit({ err: { message: 'late failure' } });
     stale.end();

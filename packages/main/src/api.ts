@@ -581,13 +581,19 @@ api.post('/player', async (req, res, next) => {
 api.put('/player-observation', async (req, res, next) => {
   try {
     const { id, current } = req.body;
-    if (!Number.isSafeInteger(id) || id < 1 || (current !== undefined && typeof current !== 'string')) {
+    if (
+      !Number.isSafeInteger(id) ||
+      id < 1 ||
+      (current !== undefined && typeof current !== 'string')
+    ) {
       res.sendStatus(400);
       return;
     }
     if (!isFinitePlaybackActive(id)) await updateObservedPlayerCurrent(id, current);
     res.sendStatus(204);
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 });
 
 api.put('/player', async (req, res, next) => {

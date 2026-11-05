@@ -85,7 +85,8 @@ const runJob = async (job: PlayerSchedulerJob): Promise<string | undefined> => {
 
   switch (job.action) {
     case 'play-playlist-times': {
-      if (job.playlistId == null || job.repeatCount == null || !job.completionAction) throw new Error('Не заданы параметры конечного воспроизведения');
+      if (job.playlistId == null || job.repeatCount == null || !job.completionAction)
+        throw new Error('Не заданы параметры конечного воспроизведения');
       await startFinitePlaylist(player, job.playlistId, job.repeatCount, job.completionAction);
       return `Запущено проигрывание плейлиста ${job.repeatCount} раз`;
     }
