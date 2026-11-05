@@ -61,7 +61,7 @@ const start = async () => {
   const preloadWatcher = await build({
     mode,
     logLevel,
-    configFile: 'packages/preload/vite.config.js',
+    configFile: 'packages/preload/vite.config.mjs',
     build: { ...preloadBuild, watch: {} },
     plugins: [
       { name: 'reload-page-on-preload-change', writeBundle: () => preloadReload.written() },
@@ -92,7 +92,7 @@ const start = async () => {
   const mainWatcher = await build({
     mode,
     logLevel,
-    configFile: 'packages/main/vite.config.js',
+    configFile: 'packages/main/vite.config.mjs',
     build: { watch: {} },
     plugins: [
       {

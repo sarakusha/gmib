@@ -13,7 +13,7 @@ import { playerConfigurationJson } from './playerConfigurationApi';
 import { app } from './server';
 import { localPluginApiHandler, pluginStaticHandler } from './pluginHost';
 
-import preventLoadSourceMap from '/@common/preventLoadSourceMap';
+import preventLoadSourceMap from '/@common/preventLoadSourceMap.mjs';
 
 // const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:express`);
 const isDevRuntime = import.meta.env.DEV && !electronApp.isPackaged;

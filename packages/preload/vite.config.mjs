@@ -1,10 +1,12 @@
-import { join } from 'path';
-import { chrome } from '../../.electron-vendors.cache.json';
+import { createRequire } from 'node:module';
+import { join } from 'node:path';
 
 // import external from '../../external';
 // import { dependencies as external } from '../../package.json';
 
-const PACKAGE_ROOT = __dirname;
+const require = createRequire(import.meta.url);
+const { chrome } = require('../../.electron-vendors.cache.json');
+const PACKAGE_ROOT = import.meta.dirname;
 const APP_ROOT = join(PACKAGE_ROOT, '../..');
 
 process.env.VITE_APP_NAME = process.env['npm_package_name'];

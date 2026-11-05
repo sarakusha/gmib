@@ -22,6 +22,7 @@
   },
   "include": [
     "*.ts",
+    "*.mts",
     "*.tsx",
     "../../types/**/*.d.ts",
     "../../node_modules/@types/dom-webcodecs/webcodecs.generated.d.ts",

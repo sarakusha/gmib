@@ -11,7 +11,7 @@
  */
 interface ImportMetaEnv {
   /**
-   * The value of the variable is set in scripts/watch.js and depend on packages/main/vite.config.js
+   * The value of the variable is set in scripts/watch.mjs and depend on packages/main/vite.config.mjs
    */
   readonly VITE_DEV_SERVER_URL: undefined | string;
   readonly VITE_PLAYER_DEV_SERVER_URL: undefined | string;

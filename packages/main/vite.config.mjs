@@ -1,7 +1,9 @@
-import { node } from '../../.electron-vendors.cache.json';
-import path from 'path';
+import { createRequire } from 'node:module';
+import path from 'node:path';
 
-const PACKAGE_ROOT = __dirname;
+const require = createRequire(import.meta.url);
+const { node } = require('../../.electron-vendors.cache.json');
+const PACKAGE_ROOT = import.meta.dirname;
 const APP_ROOT = path.resolve(PACKAGE_ROOT, '../..');
 
 process.env.VITE_APP_NAME = process.env['npm_package_name'];

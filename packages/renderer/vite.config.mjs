@@ -8,7 +8,7 @@ import checker from 'vite-plugin-checker';
 import { createRequire } from 'module'; // Bring in the ability to create the 'require' method
 import helmet from 'helmet';
 // import { renderer } from 'unplugin-auto-expose';
-import preventLoadSourceMap from '../common/preventLoadSourceMap';
+import preventLoadSourceMap from '../common/preventLoadSourceMap.mts';
 
 const require = createRequire(import.meta.url);
 const { chrome } = require('../../.electron-vendors.cache.json');

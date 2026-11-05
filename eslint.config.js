@@ -16,7 +16,7 @@ module.exports = (async () => {
         '**/*.md',
         '**/*.mdx',
         'packages/common/test.js',
-        '**/vite.config.js',
+        '**/vite.config.mjs',
       ],
     },
 
@@ -24,7 +24,7 @@ module.exports = (async () => {
     ...typescriptEslint.configs.recommendedTypeChecked,
 
     {
-      files: ['**/*.{js,jsx,ts,tsx}'],
+      files: ['**/*.{js,jsx,mts,ts,tsx}'],
       languageOptions: {
         ecmaVersion: 2022,
         sourceType: 'module',
