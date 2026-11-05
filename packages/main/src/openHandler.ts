@@ -5,6 +5,9 @@ import type { Display as DisplayType } from '@nibus/core';
 import debugFactory from 'debug';
 import find from 'lodash/find';
 
+import type { WebSocket } from 'ws';
+
+import type { PlayerOutputState, PlayerOutputStateMessage } from '/@common/rtc';
 import { DefaultDisplays, type PlayerMapping } from '/@common/video';
 
 import { invalidatePlaybackOutputs } from './playbackOutputState';
@@ -21,6 +24,7 @@ import { wss } from './server';
 import {
   findManagedWindow,
   findParamsByWebContentsId,
+  findPlayerWindow,
   getAllScreenParams,
   getPlayerParams,
 } from './windowStore';
@@ -103,6 +107,42 @@ const getPlayerOutputWindows = (playerId?: number): BrowserWindow[] =>
     .filter(isVideoOutputWindow)
     .filter(window => playerId == null || getVideoOutputPlayer(window) === playerId);
 
+const getPlayerOutputState = (playerId: number): PlayerOutputState => ({
+  hidden: isPlayerOutputHidden(playerId),
+  visible: getPlayerOutputWindows(playerId).some(
+    window => window.isVisible() && !window.isMinimized(),
+  ),
+});
+
+const getPlayerOutputStateMessage = (playerId: number): PlayerOutputStateMessage => ({
+  event: 'playerOutputState',
+  playerId,
+  ...getPlayerOutputState(playerId),
+});
+
+const playerOutputSubscribers = new WeakMap<WebSocket, number>();
+export const subscribePlayerOutputState = (socket: WebSocket, playerId: number): void => {
+  playerOutputSubscribers.set(socket, playerId);
+  socket.send(JSON.stringify(getPlayerOutputStateMessage(playerId)));
+};
+
+const pendingPlayerOutputStates = new Set<number>();
+export const schedulePlayerOutputState = (playerId: number): void => {
+  if (pendingPlayerOutputStates.has(playerId)) return;
+  pendingPlayerOutputStates.add(playerId);
+  setImmediate(() => {
+    pendingPlayerOutputStates.delete(playerId);
+    const message = getPlayerOutputStateMessage(playerId);
+    const window = findPlayerWindow(playerId);
+    if (window && !window.isDestroyed()) window.webContents.send('playerOutputState', message);
+    const payload = JSON.stringify(message);
+    wss.clients.forEach(socket => {
+      if (socket.readyState === socket.OPEN && playerOutputSubscribers.get(socket) === playerId)
+        socket.send(payload);
+    });
+  });
+};
+
 export const closePlayerOutputWindows = (playerId?: number): boolean => {
   invalidatePlaybackOutputs(playerId);
   const outputs = getPlayerOutputWindows(playerId);
@@ -118,14 +158,13 @@ const broadcastOutputVisibility = (hidden: boolean): void => {
   broadcastToTabbedWindows('outputVisibility', hidden);
 };
 
-const broadcastPlayerOutputVisibility = (playerId?: number): void => {
-  const params = getPlayerParams().filter(
-    player => playerId == null || player.playerId === playerId,
-  );
-  params.forEach(({ id, playerId: idOfPlayer }) => {
-    const window = findManagedWindow(id);
-    if (!window?.isDestroyed())
-      window?.webContents.send('outputVisibility', isPlayerOutputHidden(idOfPlayer));
+const scheduleAllPlayerOutputStates = (): void => {
+  getPlayerParams().forEach(({ playerId, host }) => {
+    if (host === 'localhost') schedulePlayerOutputState(playerId);
+  });
+  wss.clients.forEach(socket => {
+    const playerId = playerOutputSubscribers.get(socket);
+    if (playerId != null) schedulePlayerOutputState(playerId);
   });
 };
 
@@ -340,6 +379,16 @@ export const configureOutputWindow = (window: BrowserWindow, url: string): void 
       scheduleArrangeOutputWindows();
     });
   }
+  const playerId = getVideoOutputPlayer(window);
+  if (playerId != null) {
+    const onVisibilityChange = () => schedulePlayerOutputState(playerId);
+    window.on('show', onVisibilityChange);
+    window.on('hide', onVisibilityChange);
+    window.on('minimize', onVisibilityChange);
+    window.on('restore', onVisibilityChange);
+    window.once('closed', onVisibilityChange);
+    onVisibilityChange();
+  }
   if (isWindowOutputHidden(window)) window.hide();
   else if (!window.isVisible()) {
     window.showInactive();
@@ -435,14 +484,14 @@ export const toggleOutputWindowsVisibility = (): boolean => {
       ?.focus();
   }
   broadcastOutputVisibility(hidden);
-  broadcastPlayerOutputVisibility();
+  scheduleAllPlayerOutputStates();
   return true;
 };
 
 export const hideOutputWindows = (): boolean => {
   getOutputWindows().forEach(window => window.hide());
   broadcastOutputVisibility(setOutputHidden(true));
-  broadcastPlayerOutputVisibility();
+  scheduleAllPlayerOutputStates();
   return true;
 };
 
@@ -457,7 +506,8 @@ export const setPlayerOutputWindowsVisibility = (visible: boolean, playerId?: nu
     );
   });
   if (visible) arrangeOutputWindows();
-  broadcastPlayerOutputVisibility(playerId);
+  if (playerId == null) scheduleAllPlayerOutputStates();
+  else schedulePlayerOutputState(playerId);
   return outputs.length > 0;
 };
 
@@ -519,6 +569,11 @@ const openHandler: Handler = ({ url }) => {
 export default openHandler;
 
 void app.whenReady().then(() => {
+  ipcMain.handle('getPlayerOutputState', event => {
+    const params = findParamsByWebContentsId(event.sender.id);
+    if (params?.type === 'player') return getPlayerOutputState(params.playerId);
+    return undefined;
+  });
   ipcMain.handle('getOutputVisibility', event => {
     const params = findParamsByWebContentsId(event.sender.id);
     return params?.type === 'player' ? isPlayerOutputHidden(params.playerId) : isOutputHidden();

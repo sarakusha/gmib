@@ -4,10 +4,17 @@ import log from '../common/initlog';
 import ipcDispatch, { setDispatch } from '../common/ipcDispatch';
 import * as identify from '../common/identify';
 
-import type { AnswerMessage, CandidateMessage, RequestMessage, RtcMessage } from '/@common/rtc';
+import type {
+  AnswerMessage,
+  CandidateMessage,
+  PlayerOutputStateMessage,
+  RequestMessage,
+  RtcMessage,
+} from '/@common/rtc';
 import exposeApi from '../common/exposeApi';
-import { host, port, sourceId } from '/@common/remote';
-import { setOutputHidden } from '/@player/store/currentSlice';
+import { supportsFeature } from '/@common/capabilities';
+import { host, port, sourceId, version } from '/@common/remote';
+import { setOutputHidden, setPlayerOutputState } from '/@player/store/currentSlice';
 import { ipcRenderer } from 'electron';
 
 const debug = debugFactory(`${import.meta.env.VITE_APP_NAME}:remote`);
@@ -134,7 +141,7 @@ const connect = () => {
       else if (ev.data instanceof Blob) payload = await ev.data.text();
       else payload = String(ev.data);
 
-      const msg = JSON.parse(payload) as RtcMessage;
+      const msg = JSON.parse(payload) as RtcMessage | PlayerOutputStateMessage;
       switch (msg.event) {
         case 'candidate':
           if (msg.sourceId === sourceId && 'candidate' in msg) {
@@ -157,6 +164,13 @@ const connect = () => {
               socket.send(JSON.stringify(answer));
             }
           }
+          break;
+        case 'playerOutputState':
+          if (
+            msg.playerId === sourceId &&
+            supportsFeature('remotePlayerOutputState', version, true)
+          )
+            ipcDispatch(setPlayerOutputState({ hidden: msg.hidden, visible: msg.visible }));
           break;
         case 'outputVisibility':
           ipcDispatch(setOutputHidden(msg.hidden));

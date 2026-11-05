@@ -31,6 +31,16 @@ export type OutputVisibilityMessage = {
   hidden: boolean;
 };
 
+export type PlayerOutputState = {
+  hidden: boolean;
+  visible: boolean;
+};
+
+export type PlayerOutputStateMessage = PlayerOutputState & {
+  event: 'playerOutputState';
+  playerId: number;
+};
+
 export type DisplayTopologyChangedMessage = {
   event: 'displayTopologyChanged';
 };

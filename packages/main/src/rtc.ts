@@ -13,6 +13,7 @@ import { openPlayer } from './playerWindow';
 import { findPlayerWindow } from './windowStore';
 import master from './MasterBrowser';
 import { getMainWindow } from './mainWindow';
+import { subscribePlayerOutputState } from './openHandler';
 import { isOutputHidden } from './outputVisibility';
 
 const sockets = new Map<string, WebSocket>();
@@ -63,6 +64,8 @@ wss.on('connection', (ws: AliveWebSocket, req) => {
         const msg = JSON.parse(rawDataToString(data)) as RtcMessage;
         // console.log({ message: msg });
         if (msg.event === 'candidate' || msg.event === 'answer' || msg.event === 'request') {
+          if (msg.event === 'request' && msg.sourceType === 'player')
+            subscribePlayerOutputState(ws, msg.sourceId);
           const win =
             msg.sourceType === 'player'
               ? (findPlayerWindow(msg.sourceId) ??

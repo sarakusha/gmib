@@ -52,6 +52,7 @@ vi.mock('../src/openHandler', () => ({
   setPlayerOutputWindowsVisibility: mock.visibility,
   holdOutputWindows: mock.holdOutputWindows,
   reconcilePlayerOutputWindows: mock.reconcilePlayerOutputWindows,
+  schedulePlayerOutputState: vi.fn(),
 }));
 vi.mock('../src/pluginOutputTransition', () => ({
   waitForPluginPlayerReady: mock.waitForPluginPlayerReady,

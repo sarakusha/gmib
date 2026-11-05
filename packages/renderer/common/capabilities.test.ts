@@ -114,3 +114,18 @@ describe('finite playlist scheduler compatibility', () => {
     expect(supportsFeature('playerPlaylistRepeat', '5.7.3', false)).toBe(true);
   });
 });
+
+describe('remote player output state compatibility', () => {
+  it.each([
+    ['5.7.5', false],
+    ['5.7.6', true],
+    ['5.8.0', true],
+    [undefined, true],
+  ])('uses remote host %s', (version, supported) => {
+    expect(supportsFeature('remotePlayerOutputState', version, true)).toBe(supported);
+  });
+
+  it('keeps local output state available', () => {
+    expect(supportsFeature('remotePlayerOutputState', '5.7.5', false)).toBe(true);
+  });
+});

@@ -35,4 +35,10 @@ export const selectDescending = (state: RootState): boolean => selectCurrent(sta
 export const selectSearch = (state: RootState): string => selectCurrent(state).search;
 export const selectSettingsNode = (state: RootState): string => selectCurrent(state).settingsNode;
 
-export const selectOutputHidden = (state: RootState): boolean => selectCurrent(state).outputHidden;
+export const selectOutputHidden = (state: RootState): boolean =>
+  state.current.playerOutputState?.hidden ?? state.current.outputHidden;
+
+export const selectOutputNotVisible = (state: RootState): boolean =>
+  state.current.playerOutputState
+    ? !state.current.playerOutputState.visible
+    : state.current.outputHidden;

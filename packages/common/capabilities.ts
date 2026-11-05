@@ -12,6 +12,7 @@ export type FeatureName =
   | 'playbackWallClockDuration'
   | 'playbackDiagnostics'
   | 'playbackLogPath'
+  | 'remotePlayerOutputState'
   | 'remotePlayerOutputVisibility'
   | 'remotePlayerOutputClose'
   | 'schedulerSecondsAndPriority'
@@ -35,6 +36,7 @@ const minimumVersions: Record<FeatureName, string> = {
   playbackWallClockDuration: '5.6.6',
   playbackDiagnostics: '5.6.0',
   playbackLogPath: '5.6.1',
+  remotePlayerOutputState: '5.7.6',
   remotePlayerOutputVisibility: '5.4.1',
   remotePlayerOutputClose: '5.1.1',
   schedulerSecondsAndPriority: '5.3.0',

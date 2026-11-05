@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { PlayerOutputState } from '/@common/rtc';
+
 import type { GmibApi } from '../gmib';
 import type { PlayerApi } from '../player';
 import type { RemoteApi } from '../remote';
@@ -58,12 +60,22 @@ vi.mock('/@renderer/store/currentSlice', () => ({
 }));
 vi.mock('/@player/store/currentSlice', () => ({
   setOutputHidden: (hidden: boolean) => ({ type: 'outputHidden', payload: hidden }),
+  setPlayerOutputState: (state: PlayerOutputState) => ({
+    type: 'playerOutputState',
+    payload: state,
+  }),
 }));
-vi.mock('/@common/remote', () => ({ host: 'preview-host', port: 9001, sourceId: 7 }));
+vi.mock('/@common/remote', () => ({
+  host: 'preview-host',
+  port: 9001,
+  sourceId: 7,
+  version: '5.7.6',
+}));
 
 class PreviewSocket {
   static instances: PreviewSocket[] = [];
   close = vi.fn();
+  onmessage?: (event: { data: string }) => Promise<void>;
 
   constructor(public url: string) {
     PreviewSocket.instances.push(this);
@@ -138,7 +150,15 @@ describe('preload entrypoint bridge contracts', () => {
   it('exposes local playback controls and broadcasts with the selected source ID', async () => {
     await import('../player');
     expect([...mock.exposed.keys()].sort()).toEqual(
-      ['mediaStream', 'log', 'setDispatch', 'identify', 'socket', 'onUpdatePlaylist'].sort(),
+      [
+        'mediaStream',
+        'media',
+        'log',
+        'setDispatch',
+        'identify',
+        'socket',
+        'onUpdatePlaylist',
+      ].sort(),
     );
     const api = Object.fromEntries(mock.exposed) as PlayerApi;
     expect(Object.keys(api.mediaStream).sort()).toEqual(['seek', 'updateSrcObject']);
@@ -151,14 +171,16 @@ describe('preload entrypoint bridge contracts', () => {
     api.onUpdatePlaylist(update);
     mock.listeners.get('updatePlaylist')?.({}, undefined);
     expect(update).toHaveBeenCalledOnce();
-    mock.listeners.get('outputVisibility')?.({}, true);
-    expect(mock.dispatch).toHaveBeenCalledWith({ type: 'outputHidden', payload: true });
+    expect(mock.invoke).toHaveBeenCalledWith('getPlayerOutputState');
+    const state = { hidden: true, visible: false };
+    mock.listeners.get('playerOutputState')?.({}, state);
+    expect(mock.dispatch).toHaveBeenCalledWith({ type: 'playerOutputState', payload: state });
   });
 
   it('exposes remote preview controls and reconnects without exposing local playback APIs', async () => {
     await import('../remote');
     expect([...mock.exposed.keys()].sort()).toEqual(
-      ['log', 'setDispatch', 'mediaStream', 'identify'].sort(),
+      ['log', 'setDispatch', 'mediaStream', 'identify', 'media'].sort(),
     );
     const api = Object.fromEntries(mock.exposed) as RemoteApi;
     expect(Object.keys(api.mediaStream).sort()).toEqual([
@@ -168,6 +190,16 @@ describe('preload entrypoint bridge contracts', () => {
     ]);
     expect(PreviewSocket.instances).toHaveLength(1);
     expect(PreviewSocket.instances[0].url).toBe('ws://preview-host:9002');
+    const onMessage = PreviewSocket.instances[0].onmessage!;
+    await onMessage({ data: JSON.stringify({ event: 'outputVisibility', hidden: false }) });
+    expect(mock.dispatch).toHaveBeenCalledExactlyOnceWith({ type: 'outputHidden', payload: false });
+    const state = { hidden: true, visible: false };
+    const message = { event: 'playerOutputState', playerId: 8, ...state };
+    await onMessage({ data: JSON.stringify(message) });
+    expect(mock.dispatch).toHaveBeenCalledTimes(1);
+    await onMessage({ data: JSON.stringify({ ...message, playerId: 7 }) });
+    expect(mock.dispatch).toHaveBeenLastCalledWith({ type: 'playerOutputState', payload: state });
+
     api.mediaStream.reconnect();
     expect(PreviewSocket.instances[0].close).toHaveBeenCalledOnce();
     expect(PreviewSocket.instances).toHaveLength(2);

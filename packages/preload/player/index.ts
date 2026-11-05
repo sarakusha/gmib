@@ -13,7 +13,8 @@ import { seek, updateSrcObject } from './mediaStream';
 // import * as nodeCrypto from './nodeCrypto';
 
 import './videoOuts';
-import { setOutputHidden } from '/@player/store/currentSlice';
+import type { PlayerOutputState } from '/@common/rtc';
+import { setPlayerOutputState } from '/@player/store/currentSlice';
 
 const search = new URLSearchParams(window.location.search);
 const sourceId = +(search.get('source_id') ?? 1);
@@ -41,13 +42,15 @@ export type PlayerApi = typeof playerApi;
 
 exposeApi(playerApi);
 
-ipcRenderer.on('outputVisibility', (_, hidden: boolean) => {
-  ipcDispatch(setOutputHidden(hidden));
+let receivedOutputState = false;
+ipcRenderer.on('playerOutputState', (_, { hidden, visible }: PlayerOutputState) => {
+  receivedOutputState = true;
+  ipcDispatch(setPlayerOutputState({ hidden, visible }));
 });
 
 ipcRenderer
-  .invoke('getOutputVisibility')
-  .then(hidden => {
-    ipcDispatch(setOutputHidden(Boolean(hidden)));
+  .invoke('getPlayerOutputState')
+  .then((state: PlayerOutputState | undefined) => {
+    if (!receivedOutputState && state) ipcDispatch(setPlayerOutputState(state));
   })
   .catch(() => undefined);

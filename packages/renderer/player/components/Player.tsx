@@ -8,7 +8,7 @@ import { usePlayerMappings } from '../api/mapping';
 import { useGetPlaylistById } from '../api/playlists';
 import { useDispatch, useSelector } from '../store';
 import { setPosition } from '../store/currentSlice';
-import { selectCurrent, selectOutputHidden, selectPosition } from '../store/selectors';
+import { selectCurrent, selectOutputNotVisible, selectPosition } from '../store/selectors';
 
 import { supportsFeature } from '/@common/capabilities';
 import type { MediaInfo } from '/@common/mediaInfo';
@@ -33,7 +33,7 @@ const Player: React.FC<Props> = ({ className, playerId = 0 }) => {
   const { duration, playbackState } = useSelector(selectCurrent);
   const position = useSelector(selectPosition);
   const dispatch = useDispatch();
-  const outputHidden = useSelector(selectOutputHidden);
+  const outputNotVisible = useSelector(selectOutputNotVisible);
   const isSeekSupported = supportsFeature('playerSeek', version, isRemoteSession);
   const { width = 320, height = 240 } = player ?? {};
   const previewObjectFit: ObjectFitMode =
@@ -129,7 +129,7 @@ const Player: React.FC<Props> = ({ className, playerId = 0 }) => {
         >
           {current?.filename}
         </video>
-        {outputHidden && (
+        {outputNotVisible && (
           <VisibilityOffIcon
             aria-label="Вывод отключен"
             sx={{

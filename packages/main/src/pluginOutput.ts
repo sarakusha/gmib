@@ -17,6 +17,7 @@ import {
 import {
   holdOutputWindows,
   reconcilePlayerOutputWindows,
+  schedulePlayerOutputState,
   setPlayerOutputWindowsVisibility,
 } from './openHandler';
 import { waitForPluginOutputSettle, waitForPluginPlayerReady } from './pluginOutputTransition';
@@ -243,7 +244,7 @@ export async function createPluginOutput(
           } else {
             clearPlayerOutputReveal(id);
             reconcilePlayerOutputWindows(id);
-            findPlayerWindow(id)?.webContents.send('outputVisibility', isPlayerOutputHidden(id));
+            schedulePlayerOutputState(id);
           }
         });
       if (savingProfile)

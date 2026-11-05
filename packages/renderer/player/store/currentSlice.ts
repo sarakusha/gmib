@@ -1,6 +1,7 @@
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { createSlice } from '@reduxjs/toolkit';
 
+import type { PlayerOutputState } from '/@common/rtc';
 import type { SortOrder } from '/@common/mediaInfo';
 
 export const tabNames = ['player', 'media', 'scheduler', 'settings', 'statistics'] as const;
@@ -17,6 +18,7 @@ export type CurrentState = MediaPositionState & {
   search: string;
   settingsNode: string;
   outputHidden: boolean;
+  playerOutputState?: PlayerOutputState;
 };
 
 export const tabs: Record<TabNames, string> = {
@@ -84,6 +86,9 @@ const currentSlice = createSlice({
        * see startAppListening
        */
     },
+    setPlayerOutputState(state, { payload }: PayloadAction<PlayerOutputState | undefined>) {
+      state.playerOutputState = payload;
+    },
     setOutputHidden(state, { payload: outputHidden }: PayloadAction<boolean>) {
       state.outputHidden = outputHidden;
     },
@@ -105,6 +110,7 @@ export const {
   setCurrentPlaylistItem,
   setDuration,
   setOutputHidden,
+  setPlayerOutputState,
 } = currentSlice.actions;
 
 export default currentSlice.reducer;
