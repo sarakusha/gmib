@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../src/localConfig', () => ({
   default: { get: vi.fn(() => mocks.identifier), set: vi.fn() },
 }));
+vi.mock('../src/mdns', () => ({ getRemoteHosts: () => [] }));
 vi.mock('../src/secret', () => ({
   default: mocks.localSecret,
   getIncomingSecretWithRevision: vi.fn(async () => ({

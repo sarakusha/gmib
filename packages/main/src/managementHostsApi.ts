@@ -4,11 +4,12 @@ import auth from './auth';
 import localConfig from './localConfig';
 import { createManagementHostsService, type ManagementHostsService } from './managementHosts';
 import { createManagementHostsRouter } from './managementHostsRouter';
+import { getRemoteHosts } from './mdns';
 
 const runtimeHostsService = createManagementHostsService({
   getSavedHosts: () => localConfig.get('hosts'),
   setSavedHosts: hosts => localConfig.set('hosts', hosts),
-  getDiscoveredHosts: async () => (await import('./mdns')).getRemoteHosts(),
+  getDiscoveredHosts: getRemoteHosts,
 });
 
 export const mountManagementHostsApi = (
