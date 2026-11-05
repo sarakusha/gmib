@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [5.7.6](https://github.com/sarakusha/gmib/compare/v5.7.5...v5.7.6) (2026-11-05)
+
+### Features
+
+* add clone-ready kiosk images and first-boot personalization ([e5b1eb9](https://github.com/sarakusha/gmib/commit/e5b1eb902a72b79b4b90740b3f63c02ad629b98d))
+* download media library files to local computer ([684fb8d](https://github.com/sarakusha/gmib/commit/684fb8d5bd596c3f832359b5fe3deb86799c9320))
+* open remote connections from gmib links ([805db8b](https://github.com/sarakusha/gmib/commit/805db8b04977a48410e15304c7cb3b90fc274b52))
+
+### Bug Fixes
+
+* expose media download in player windows ([2870e24](https://github.com/sarakusha/gmib/commit/2870e243ca8cf214905f5b6373f054b80a0576b9))
+* make Vite configs compatible with native loading ([0457bfb](https://github.com/sarakusha/gmib/commit/0457bfb82675abcb0d6e890a191b667ee835dcf9))
+* reflect actual player output visibility in previews ([70aa639](https://github.com/sarakusha/gmib/commit/70aa6398cc7debde7389c4ec67e2fac87be154d6))
+* remove obsolete Vite config options ([6ea20f0](https://github.com/sarakusha/gmib/commit/6ea20f0e9c95f0c0256f599bbeaaf9f0e7749383))
+* resolve player and scheduler type lint errors ([66c08d4](https://github.com/sarakusha/gmib/commit/66c08d4563d40150cf253c9aecbcba3c2fb40f68))
+* use static mDNS import in management API ([4d46afd](https://github.com/sarakusha/gmib/commit/4d46afd11ea26f6dfbf1a208738dedde942d6857))
+* use system proxy for licensing and plugin downloads ([ae92b6a](https://github.com/sarakusha/gmib/commit/ae92b6ac4c75c4119acb5615b03fa29f959e7833))
+
 ## [5.7.5](https://github.com/sarakusha/gmib/compare/v5.7.4...v5.7.5) (2026-11-02)
 
 ### Bug Fixes
