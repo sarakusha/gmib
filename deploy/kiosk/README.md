@@ -305,3 +305,9 @@ server build-and-publish script forwards it automatically). The filename becomes
 and installed `/etc/gmib/image-release` record the image revision separately. Omit the suffix for
 a new GMIB version. Version 5.6.7 fixes supervised updates: installation does not launch a second
 AppImage, and the kiosk service restarts the session with its full arguments and child cleanup.
+
+The `--ssh-authorized-key` file may contain multiple public keys, one per line, to retain
+both customer and maintenance access. Blank/comment lines are ignored, duplicates removed,
+and each key validated with `ssh-keygen`; comments are not embedded. Private keys and
+`authorized_keys` options are rejected. Use `--keep-existing` when publishing to retain
+previous ISO versions; it cannot be combined with `--replace-current`.

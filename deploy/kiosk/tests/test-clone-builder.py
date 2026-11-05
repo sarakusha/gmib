@@ -63,7 +63,8 @@ class CloneBuilderTest(unittest.TestCase):
         self.base.write_bytes(b'synthetic base')
         for filename in ('gmib.AppImage', 'pritunl.deb', 'zabbix.deb'):
             (self.root / filename).write_bytes(b'fixture')
-        (self.root / 'key.pub').write_text('ssh-ed25519 AAAATEST fixture\n')
+        subprocess.run(['ssh-keygen', '-q', '-t', 'ed25519', '-N', '', '-f', str(self.root / 'key')],
+                       check=True, capture_output=True)
 
     def build(self, variant=False, revision=None):
         suffix = '-clone1' if variant and revision is None else (f'-{revision}' if revision else '')
@@ -87,6 +88,34 @@ class CloneBuilderTest(unittest.TestCase):
         self.assertFalse((payload / 'clone.conf').exists())
         self.assertFalse((payload / 'gmib-clone-personalize').exists())
         self.assertNotIn('gmib-clone-', (payload / 'SHA256SUMS').read_text())
+
+    def test_multiple_public_keys_are_separate_yaml_entries(self):
+        first = (self.root / 'key.pub').read_text().split()[:2]
+        second_path = self.root / 'second'
+        subprocess.run(['ssh-keygen', '-q', '-t', 'ed25519', '-N', '', '-f', str(second_path)],
+                       check=True, capture_output=True)
+        second = second_path.with_suffix('.pub').read_text().split()[:2]
+        (self.root / 'key.pub').write_bytes((
+            "# customer and maintenance keys\r\n\r\n" + ' '.join(first) + " user's key\r\n"
+            + ' '.join(second) + " second\r\n" + ' '.join(first) + " duplicate\r\n").encode())
+        result = self.build(variant=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        yaml = (self.capture / 'autoinstall.yaml').read_text()
+        entries = yaml.split('    authorized-keys:\n', 1)[1].split('  storage:', 1)[0].splitlines()
+        self.assertEqual(entries, ["      - '" + ' '.join(key) + "'" for key in (first, second)])
+
+    def test_public_key_validation_rejects_unsafe_or_invalid_input(self):
+        valid = (self.root / 'key.pub').read_text()
+        invalid = ['', '# only a comment\n', 'ssh-ed25519 AAAATEST invalid\n',
+                   '-----BEGIN OPENSSH PRIVATE KEY-----\n',
+                   'command="echo unsafe" ' + valid, valid + 'not a key\n']
+        for contents in invalid:
+            with self.subTest(contents=contents[:35]):
+                (self.root / 'key.pub').write_text(contents)
+                result = subprocess.run(['bash', str(KIOSK / 'read-ssh-public-keys.sh'), str(self.root / 'key.pub')],
+                                        text=True, capture_output=True)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(result.stdout, '')
 
     def test_clone_payload_complete_and_checksummed(self):
         result = self.build(variant=True)
@@ -135,7 +164,7 @@ class CloneBuilderTest(unittest.TestCase):
                 self.assertIn('Clone', result.stderr)
 
     def test_clone_publisher_rejects_old_namespace_and_deletion(self):
-        for options in (['--replace-current'],
+        for options in (['--replace-current'], ['--keep-existing', '--replace-current'],
                         ['--public-dir', '/home/user/src/app-server/public/downloads/gmib-kiosk'],
                         ['--public-base-url', 'https://example.test/downloads/gmib-kiosk']):
             with self.subTest(options=options):

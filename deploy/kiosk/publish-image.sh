@@ -9,6 +9,7 @@ REMOTE_DIR=""
 PUBLIC_BASE_URL=""
 LOCAL=false
 CLONE_IMAGE=false
+KEEP_EXISTING=false
 
 usage() {
   cat <<'EOF'
@@ -23,6 +24,7 @@ Optional:
   --product PRODUCT      auto, gmib-kiosk, or ggs. Default: auto from filename.
   --remote-dir PATH      App-server public download directory.
   --public-base-url URL  Public URL matching the remote directory.
+  --keep-existing        Keep previously published images and their sidecars.
   --local                Publish on this host without SSH or rsync. The ISO and
                          destination must be on the same filesystem.
   -h, --help             Show this help.
@@ -33,7 +35,8 @@ or:
   ggs-GGS_VERSION-ubuntu-UBUNTU_VERSION-amd64.iso
 
 Files are first uploaded with a .part suffix. After atomic publication, older
-ISO, checksum, manifest, and partial files for the same product are deleted.
+ISO, checksum, manifest, and partial files for the same product are deleted
+unless --keep-existing is supplied.
 Clone revisions (clone1, clone2, ...) use a separate gmib-kiosk-clone directory
 and URL, including when --image-revision is omitted.
 EOF
@@ -41,6 +44,10 @@ EOF
 
 while (($# > 0)); do
   case "$1" in
+    --keep-existing)
+      KEEP_EXISTING=true
+      shift
+      ;;
     --image-revision)
       IMAGE_REVISION="${2:-}"
       shift 2
@@ -232,6 +239,9 @@ remote_retention_find="find '$REMOTE_DIR' -maxdepth 1 -type f \
      -name '$retention_prefix.iso.json' -o -name '$retention_prefix.iso.part' -o \
      -name '$retention_prefix.iso.sha256.part' -o -name '$retention_prefix.iso.json.part' \) \
   ! -name '$filename' ! -name '$filename.sha256' ! -name '$filename.json' -delete"
+if [[ "$KEEP_EXISTING" == true ]]; then
+  remote_retention_find=:
+fi
 
 if [[ "$LOCAL" == true ]]; then
   if [[ "$(uname -s)" != Linux ]]; then
@@ -255,11 +265,13 @@ if [[ "$LOCAL" == true ]]; then
   mv "$REMOTE_DIR/$filename.part" "$REMOTE_DIR/$filename"
   mv "$REMOTE_DIR/$filename.sha256.part" "$REMOTE_DIR/$filename.sha256"
   mv "$REMOTE_DIR/$filename.json.part" "$REMOTE_DIR/$filename.json"
-  find "$REMOTE_DIR" -maxdepth 1 -type f \
+  if [[ "$KEEP_EXISTING" == false ]]; then
+    find "$REMOTE_DIR" -maxdepth 1 -type f \
     \( -name "$retention_prefix.iso" -o -name "$retention_prefix.iso.sha256" -o \
        -name "$retention_prefix.iso.json" -o -name "$retention_prefix.iso.part" -o \
        -name "$retention_prefix.iso.sha256.part" -o -name "$retention_prefix.iso.json.part" \) \
     ! -name "$filename" ! -name "$filename.sha256" ! -name "$filename.json" -delete
+  fi
 else
   # All interpolated values are restricted to the safe character sets validated above.
   # shellcheck disable=SC2029

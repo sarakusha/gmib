@@ -45,7 +45,7 @@ publish() {
   sha256sum "$work_dir/input/$filename" >"$work_dir/input/$filename.sha256"
   bash "$PUBLISHER" --iso "$work_dir/input/$filename" --image-revision "$revision" \
     --server test@example.test --remote-dir "$work_dir/public" \
-    --public-base-url https://example.test/downloads/gmib-kiosk >/dev/null
+    --public-base-url https://example.test/downloads/gmib-kiosk "${@:3}" >/dev/null
   jq -e --arg version "$version" --arg revision "$revision" --arg filename "$filename" \
     '.gmibVersion == $version and .productVersion == $version and .filename == $filename and
       (if $revision == "" then has("imageRevision") | not else .imageRevision == $revision end)' \
@@ -59,6 +59,15 @@ publish 5.6.6 patch2
 publish 5.7.0-rc.1 patch1
 # Existing prerelease names must not be reinterpreted as installer revisions.
 publish 5.6.6-patch1 ''
+
+# Explicit retention preserves the previous ISO and its checksum/manifest.
+previous_name=gmib-kiosk-5.6.6-patch1-ubuntu-24.04.4-amd64.iso
+publish 5.7.6 client1 --keep-existing
+for suffix in '' .sha256 .json; do
+  [[ -f "$work_dir/public/$previous_name$suffix" ]]
+done
+publish 5.7.6 client2
+[[ ! -e "$work_dir/public/$previous_name" ]]
 
 for revision in patch2 '../patch1' 'patch1;touch injected'; do
   if bash "$PUBLISHER" --iso "$work_dir/input/gmib-kiosk-5.6.6-patch1-ubuntu-24.04.4-amd64.iso" \
@@ -109,4 +118,18 @@ for mode in remote local; do
     [[ -f "$work_dir/input/$clone_name" ]]
   done
 done
+if [[ "$(uname -s)" == Linux ]]; then
+  local_dir="$work_dir/local-public"
+  mkdir -p "$local_dir"
+  for revision in client1 client2; do
+    local_name="gmib-kiosk-5.7.6-$revision-ubuntu-24.04.4-amd64.iso"
+    printf 'synthetic local ISO\n' >"$work_dir/input/$local_name"
+    sha256sum "$work_dir/input/$local_name" >"$work_dir/input/$local_name.sha256"
+    bash "$PUBLISHER" --local --keep-existing --iso "$work_dir/input/$local_name" \
+      --image-revision "$revision" --remote-dir "$local_dir" >/dev/null
+  done
+  for suffix in '' .sha256 .json; do
+    [[ -f "$local_dir/gmib-kiosk-5.7.6-client1-ubuntu-24.04.4-amd64.iso$suffix" ]]
+  done
+fi
 printf 'Image revision tests passed.\n'

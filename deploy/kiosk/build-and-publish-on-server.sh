@@ -16,6 +16,7 @@ PUBLIC_DIR="${GMIB_APPLIANCE_PUBLIC_DIR:-}"
 PUBLIC_BASE_URL="${GMIB_APPLIANCE_PUBLIC_URL:-}"
 BOOTSTRAP_URL="${GMIB_BOOTSTRAP_URL:-https://app.nata-info.ru/api/vpn/enroll/gmib}"
 REPLACE_CURRENT=false
+KEEP_EXISTING=false
 
 usage() {
   cat <<'EOF'
@@ -33,10 +34,11 @@ Options:
   --base-iso PATH           Cached Ubuntu ISO.
   --pritunl-deb PATH        Cached amd64 Pritunl Client package.
   --zabbix-agent2-deb PATH  Cached Zabbix Agent 2 7.4 Ubuntu 24.04 amd64 package.
-  --ssh-authorized-key PATH Public SSH key embedded for the admin account.
+  --ssh-authorized-key PATH Public SSH key(s), one per line, for the admin account.
   --public-dir PATH         App-server GMIB kiosk download directory.
   --public-base-url URL     Public URL corresponding to --public-dir.
   --bootstrap-url URL       Device enrollment endpoint.
+  --keep-existing          Preserve previously published images after publication.
   --replace-current        If space is insufficient, unpublish the current GMIB
                            kiosk image before building its replacement.
   -h, --help               Show this help.
@@ -92,6 +94,10 @@ while (($# > 0)); do
       BOOTSTRAP_URL="${2:-}"
       shift 2
       ;;
+    --keep-existing)
+      KEEP_EXISTING=true
+      shift
+      ;;
     --replace-current)
       REPLACE_CURRENT=true
       shift
@@ -107,6 +113,15 @@ while (($# > 0)); do
       ;;
   esac
 done
+
+publisher_retention_args=()
+if [[ "$KEEP_EXISTING" == true ]]; then
+  if [[ "$REPLACE_CURRENT" == true ]]; then
+    echo "--keep-existing cannot be combined with --replace-current." >&2
+    exit 1
+  fi
+  publisher_retention_args+=(--keep-existing)
+fi
 
 builder_variant_args=()
 if [[ "$CLONE_IMAGE" == true ]]; then
@@ -212,11 +227,8 @@ if [[ "$(dpkg-deb --field "$PRITUNL_DEB" Package)" != pritunl-client ]] ||
   echo "Cached Pritunl package is not pritunl-client for amd64: $PRITUNL_DEB" >&2
   exit 1
 fi
-ssh_key="$(tr -d '\r\n' <"$SSH_KEY")"
-if [[ ! "$ssh_key" =~ ^(ssh-(ed25519|rsa)|ecdsa-sha2-nistp(256|384|521))[[:space:]] ]]; then
-  echo "Cached SSH public key has an unsupported format: $SSH_KEY" >&2
-  exit 1
-fi
+bash "$SCRIPT_DIR/read-ssh-public-keys.sh" "$SSH_KEY" >/dev/null
+
 if [[ "$(stat -c %d "$OUTPUT_DIR")" != "$(stat -c %d "$PUBLIC_DIR")" ]]; then
   echo "Build output and public directory must be on the same filesystem." >&2
   exit 1
@@ -304,7 +316,7 @@ fi
   --ssh-authorized-key "$SSH_KEY" \
   --output "$OUTPUT"
 
-"$SCRIPT_DIR/publish-image.sh" \
+"$SCRIPT_DIR/publish-image.sh" "${publisher_retention_args[@]}" \
   --local \
   --iso "$OUTPUT" \
   --image-revision "$IMAGE_REVISION" \

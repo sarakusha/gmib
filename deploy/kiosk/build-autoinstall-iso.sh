@@ -34,7 +34,7 @@ Required:
   --pritunl-deb PATH          Pinned amd64 pritunl-client Debian package.
   --zabbix-agent2-deb PATH    Pinned Zabbix Agent 2 7.4 Ubuntu 24.04 amd64 package.
   --bootstrap-url URL         HTTPS endpoint returning enrollment JSON, raw OVPN, or Pritunl tar.
-  --ssh-authorized-key PATH   Public SSH key for the admin account.
+  --ssh-authorized-key PATH   Public SSH key(s), one per line, for the admin account.
   --output PATH               Output ISO path.
 
 Optional:
@@ -264,15 +264,8 @@ if [[ "$actual_base_iso_sha256" != "${BASE_ISO_SHA256,,}" ]]; then
   exit 1
 fi
 
-ssh_key="$(tr -d '\r\n' <"$SSH_KEY_FILE")"
-if [[ ! "$ssh_key" =~ ^(ssh-(ed25519|rsa)|ecdsa-sha2-nistp(256|384|521))[[:space:]] ]]; then
-  echo "The SSH public key has an unsupported format." >&2
-  exit 1
-fi
-if [[ "$ssh_key" == *\'* ]]; then
-  echo "The SSH public key comment must not contain a single quote." >&2
-  exit 1
-fi
+ssh_keys="$(bash "$SCRIPT_DIR/read-ssh-public-keys.sh" "$SSH_KEY_FILE")"
+ssh_authorized_keys="$(while IFS= read -r key; do printf "      - '%s'\n" "$key"; done <<<"$ssh_keys")"
 
 work_dir="$(mktemp -d)"
 cleanup() {
@@ -374,7 +367,7 @@ autoinstall:
     install-server: true
     allow-pw: false
     authorized-keys:
-      - '$ssh_key'
+$ssh_authorized_keys
   storage:
     layout:
       name: direct
