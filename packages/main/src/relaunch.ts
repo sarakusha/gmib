@@ -1,4 +1,9 @@
-import { app, type RelaunchOptions } from 'electron';
+import { mkdirSync } from 'node:fs';
+import path from 'node:path';
+import { app, dialog, type RelaunchOptions } from 'electron';
+import log from 'electron-log';
+
+import { scheduleAppImageRelaunch } from './appImageRelaunch';
 
 import localConfig from './localConfig';
 import { isKioskMode } from './kioskMode';
@@ -25,6 +30,7 @@ export const buildRelaunchOptions = (
       ...args.filter(
         arg =>
           !/^gmib:/i.test(arg) &&
+          arg !== '--relaunch' &&
           (preserveOzonePlatform ||
             (arg !== '--ozone-platform' && !arg.startsWith('--ozone-platform='))),
       ),
@@ -41,31 +47,64 @@ export const createRelaunchScheduler = (
 
   return (options: RelaunchOptions): boolean => {
     if (scheduled) return false;
-    scheduled = true;
     schedule(options);
+    scheduled = true;
     return true;
   };
 };
 
 const scheduleRelaunch = createRelaunchScheduler();
 
+export const isLinuxAppImage = () =>
+  process.platform === 'linux' && app.isPackaged && Boolean(process.env.APPIMAGE);
+
 let restart = false;
 
-export const needRestart = (val?: true) => {
-  if (val) restart = val;
+export const needRestart = (val?: boolean) => {
+  if (val !== undefined) restart = val;
   return restart;
 };
 
-export default () => {
-  if (import.meta.env.PROD) {
-    needRestart(true);
-    if (!isRelaunchManagedBySupervisor()) {
-      // app.relaunch waits for this instance to exit before starting the next one. This is
-      // important for AppImage too: spawning it directly races the single-instance lock.
-      scheduleRelaunch(buildRelaunchOptions());
+let restartPending = false;
+
+export const restartWithOptions = async (options = buildRelaunchOptions()): Promise<void> => {
+  if (restartPending) return;
+  restartPending = true;
+  try {
+    if (import.meta.env.PROD && !isRelaunchManagedBySupervisor()) {
+      if (isLinuxAppImage()) {
+        const logDirectory = app.getPath('logs');
+        mkdirSync(logDirectory, { recursive: true });
+        await scheduleAppImageRelaunch({
+          execPath: options.execPath ?? resolveRelaunchExecPath(),
+          args: options.args ?? [],
+          logFile: path.join(logDirectory, 'gmib-relaunch.log'),
+        });
+      } else {
+        scheduleRelaunch(options);
+      }
     }
+    needRestart(true);
+    // Supervised kiosks use Restart=always; other AppImages have a ready waiter.
+    app.quit();
+  } catch (error) {
+    restartPending = false;
+    needRestart(false);
+    throw error;
   }
-  // A supervised kiosk is restarted by gmib-cage@.service (Restart=always), which also
-  // restores Cage and the exact kiosk command line without starting a competing instance.
-  app.quit();
+};
+
+export default () => {
+  void restartWithOptions().catch(error => {
+    log.error('Failed to restart GMIB; application remains open', error);
+    void dialog
+      .showMessageBox({
+        type: 'error',
+        title: 'Ошибка перезапуска',
+        message:
+          'Не удалось подготовить перезапуск. Приложение остаётся открытым; повторите перезапуск или запустите GMIB вручную.',
+        detail: error instanceof Error ? error.message : String(error),
+      })
+      .catch(dialogError => log.error('Failed to show restart error', dialogError));
+  });
 };

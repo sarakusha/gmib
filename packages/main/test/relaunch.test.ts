@@ -1,8 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
 
+const restartMocks = vi.hoisted(() => ({ schedule: vi.fn(), quit: vi.fn() }));
+vi.mock('../src/appImageRelaunch', () => ({ scheduleAppImageRelaunch: restartMocks.schedule }));
+
+vi.mock('electron-log', () => ({ default: { error: vi.fn() } }));
+
 vi.mock('electron', () => ({
   app: {
-    isPackaged: false,
+    isPackaged: true,
+    quit: restartMocks.quit,
+    getPath: () => '/tmp',
     relaunch: vi.fn(),
   },
 }));
@@ -23,7 +30,11 @@ import {
 describe('relaunch', () => {
   it('does not replay a consumed external link after restart', () => {
     expect(
-      buildRelaunchOptions(['gmib://host:1234', '--kiosk-mode'], false, '/opt/gmib').args,
+      buildRelaunchOptions(
+        ['gmib://host:1234', '--relaunch', '--relaunch', '--kiosk-mode'],
+        false,
+        '/opt/gmib',
+      ).args,
     ).toEqual(['--kiosk-mode', '--relaunch']);
   });
   it('uses the AppImage path while preserving the kiosk launch arguments', () => {
@@ -80,4 +91,43 @@ describe('relaunch', () => {
     expect(schedule).toHaveBeenCalledOnce();
     expect(schedule).toHaveBeenCalledWith(options);
   });
+});
+
+it('waits for helper readiness, schedules once, and keeps the app open on startup failure', async () => {
+  const platform = process.platform;
+  Object.defineProperty(process, 'platform', { value: 'linux' });
+  vi.stubEnv('PROD', true);
+  vi.stubEnv('APPIMAGE', '/opt/gmib/gmib.AppImage');
+  vi.stubEnv('INVOCATION_ID', '');
+  try {
+    vi.resetModules();
+    restartMocks.quit.mockClear();
+    restartMocks.schedule.mockReset();
+    const { restartWithOptions } = await import('../src/relaunch');
+    restartMocks.schedule.mockRejectedValueOnce(new Error('cannot open log'));
+    await expect(
+      restartWithOptions({ execPath: '/opt/gmib/gmib.AppImage', args: [] }),
+    ).rejects.toThrow('cannot open log');
+    expect(restartMocks.quit).not.toHaveBeenCalled();
+    let ready!: () => void;
+    restartMocks.schedule.mockImplementationOnce(
+      () =>
+        new Promise<void>(resolve => {
+          ready = resolve;
+        }),
+    );
+    const pending = restartWithOptions({
+      execPath: '/opt/gmib/gmib.AppImage',
+      args: ['--no-sandbox'],
+    });
+    await restartWithOptions();
+    expect(restartMocks.schedule).toHaveBeenCalledTimes(2);
+    expect(restartMocks.quit).not.toHaveBeenCalled();
+    ready();
+    await pending;
+    expect(restartMocks.quit).toHaveBeenCalledOnce();
+  } finally {
+    Object.defineProperty(process, 'platform', { value: platform });
+    vi.unstubAllEnvs();
+  }
 });

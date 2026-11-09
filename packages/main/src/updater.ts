@@ -2,13 +2,23 @@ import type { MenuItem } from 'electron';
 import { dialog } from 'electron';
 
 import type { UpdateInfo } from 'electron-updater';
-import { autoUpdater } from 'electron-updater';
+import { AppImageUpdater, autoUpdater as defaultUpdater } from 'electron-updater';
+import RestartableAppImageUpdater from './restartableAppImageUpdater';
 
 import log from './initlog';
 import localConfig from './localConfig';
-import { isRelaunchManagedBySupervisor, needRestart } from './relaunch';
+import {
+  buildRelaunchOptions,
+  isLinuxAppImage,
+  isRelaunchManagedBySupervisor,
+  needRestart,
+  restartWithOptions,
+} from './relaunch';
 
-// let updater: MenuItem | null = null;
+const autoUpdater =
+  isLinuxAppImage() && !isRelaunchManagedBySupervisor()
+    ? new RestartableAppImageUpdater()
+    : defaultUpdater;
 autoUpdater.autoDownload = localConfig.get('autoUpdate');
 autoUpdater.logger = log;
 
@@ -17,8 +27,14 @@ localConfig.onDidChange('autoUpdate', value => {
 });
 
 let interactive = true;
+let updateRestartPending = false;
+let installedAppImagePath: string | undefined;
 
 autoUpdater.on('error', error => {
+  if (updateRestartPending) {
+    updateRestartPending = false;
+    needRestart(false);
+  }
   if (!interactive) return;
   // A synchronous error dialog blocks the HTTP API and discovery on a headless kiosk.
   void dialog
@@ -53,16 +69,44 @@ autoUpdater.on('update-not-available', () => {
 });
 
 const quitAndRestart = () => {
-  needRestart(true);
+  if (updateRestartPending) return;
+  updateRestartPending = true;
   setImmediate(() => {
-    if (isRelaunchManagedBySupervisor()) {
-      // Non-silent installs ignore the second argument and use autoRunAppAfterInstall.
-      // Install without spawning another AppImage: Cage must exit with this process so
-      // systemd cleans up its children and restores the full kiosk launch command.
-      autoUpdater.quitAndInstall(true, false);
-    } else {
-      autoUpdater.quitAndInstall();
-    }
+    void (async () => {
+      if (isRelaunchManagedBySupervisor()) {
+        needRestart(true);
+        autoUpdater.quitAndInstall(true, false);
+      } else if (isLinuxAppImage() && autoUpdater instanceof AppImageUpdater) {
+        // Use the updater's public install operation, but start the replacement
+        // only after this process exits, preserving the original kiosk arguments.
+        if (!installedAppImagePath) {
+          let destination = process.env.APPIMAGE;
+          const filenameUpdated = (filename: string) => {
+            destination = filename;
+            process.env.APPIMAGE = filename;
+          };
+          autoUpdater.on('appimage-filename-updated', filenameUpdated);
+          try {
+            if (!autoUpdater.install(true, false)) {
+              updateRestartPending = false;
+              return;
+            }
+          } finally {
+            autoUpdater.off('appimage-filename-updated', filenameUpdated);
+          }
+          installedAppImagePath = destination;
+        }
+        await restartWithOptions(buildRelaunchOptions(undefined, undefined, installedAppImagePath));
+      } else {
+        needRestart(true);
+        autoUpdater.quitAndInstall();
+      }
+    })().catch(error => {
+      updateRestartPending = false;
+      needRestart(false);
+      log.error('Update restart failed; the installed AppImage can be started manually', error);
+      autoUpdater.emit('error', error);
+    });
   });
 };
 
@@ -83,9 +127,12 @@ autoUpdater.on('update-downloaded', () => {
 function checkForUpdates(menuItem: MenuItem): void {
   const updater = menuItem;
   updater.enabled = false;
-  void autoUpdater.checkForUpdates().then(() => {
-    updater.enabled = true;
-  });
+  void autoUpdater
+    .checkForUpdates()
+    .catch(error => log.error('Update check failed', error))
+    .finally(() => {
+      updater.enabled = true;
+    });
 }
 
 export const checkForUpdatesNoInteractive = () =>
