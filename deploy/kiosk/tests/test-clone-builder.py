@@ -77,7 +77,7 @@ class CloneBuilderTest(unittest.TestCase):
                        check=True, capture_output=True)
 
     def build(self, variant=False, revision=None):
-        suffix = '-patch2' if revision is None else (f'-{revision}' if revision else '')
+        suffix = '-patch3' if revision is None else (f'-{revision}' if revision else '')
         output = self.root / f'gmib-kiosk-5.7.6{suffix}-ubuntu-24.04.4-amd64.iso'
         args = ['bash', str(KIOSK / 'build-autoinstall-iso.sh'),
                 '--base-iso', str(self.base), '--base-iso-sha256', hashlib.sha256(self.base.read_bytes()).hexdigest(),
@@ -138,7 +138,7 @@ class CloneBuilderTest(unittest.TestCase):
             self.assertTrue((payload / name).is_file(), name)
             self.assertIn(f'  {name}\n', (payload / 'SHA256SUMS').read_text())
         self.assertIn('CLONE_IMAGE=1', (payload / 'clone.conf').read_text())
-        self.assertIn("IMAGE_REVISION='patch2'", (payload / 'image-release').read_text())
+        self.assertIn("IMAGE_REVISION='patch3'", (payload / 'image-release').read_text())
         self.assertEqual((payload / 'setup.conf').read_text(), "ADMIN_USER='admin'\n")
         subprocess.run(['sha256sum', '-c', 'SHA256SUMS'], cwd=payload, check=True, capture_output=True)
 
@@ -192,10 +192,10 @@ class CloneBuilderTest(unittest.TestCase):
         result = self.build(variant=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('--clone-image is deprecated', result.stderr)
-        self.assertTrue((self.root / 'gmib-kiosk-5.7.6-patch2-ubuntu-24.04.4-amd64.iso').is_file())
+        self.assertTrue((self.root / 'gmib-kiosk-5.7.6-patch3-ubuntu-24.04.4-amd64.iso').is_file())
 
     def test_legacy_clone_and_invalid_revision_labels_are_rejected(self):
-        for revision, error in (('clone1', 'reserved for legacy images'), ('../patch2', 'lowercase label')):
+        for revision, error in (('clone1', 'reserved for legacy images'), ('../patch3', 'lowercase label')):
             with self.subTest(revision=revision):
                 result = self.build(revision=revision)
                 self.assertNotEqual(result.returncode, 0)

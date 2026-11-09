@@ -2,18 +2,32 @@
 
 ## Configure or prepare a clone
 
-The single published image, `gmib-kiosk-5.7.6-patch2-ubuntu-24.04.4-amd64.iso`, is listed in the
-normal [GMIB kiosk catalog](https://app.nata-info.ru/gmib/kiosk). The `patch2` suffix is the image
+The single published image, `gmib-kiosk-5.7.6-patch3-ubuntu-24.04.4-amd64.iso`, is listed in the
+normal [GMIB kiosk catalog](https://app.nata-info.ru/gmib/kiosk). The `patch3` suffix is the image
 revision; GMIB itself is version 5.7.6. New builds use the normal `downloads/gmib-kiosk` publication
 route and do not use a separate clone download namespace. Existing clone3 download URLs remain
 available for devices or instructions that already use them.
 
-After installation, the boot menu shows the kiosk IP and a short SSH command. Run
+After installation, the boot menu shows the kiosk IP, a short SSH command, and a visible text cursor
+at the input prompt. Run
 `sudo gmib-configure` in the current terminal to begin VPN enrollment and enter the code there.
 `sudo gmib-configure --advanced` opens a menu to choose VPN enrollment or preparation for cloning;
 the latter requires typing `CLONE` and shuts the system down. `gmib-configure --help` displays usage.
 The compatibility wrapper `sudo gmib-kiosk-setup` opens the advanced menu by default. Prepared copies
 skip this menu and enroll directly on first boot.
+
+For unattended VPN enrollment, run `sudo gmib-configure --code CODE`. For example:
+
+```sh
+ssh admin@192.168.0.120 'sudo -n gmib-configure --code ABCD-1234'
+```
+
+No PTY, prompts, or interactive retries are required. Codes contain 4–20 ASCII letters, digits, or
+hyphens. Exit status is 0 on success or an already configured device, and nonzero on failure. The
+existing pending/imported profile is resumed without redeeming the supplied code again. Successful
+enrollment schedules a reboot in 5 seconds, allowing the command to return status 0 over SSH before
+the kiosk restarts. This command configures VPN; GMIB licensing remains separate. A code supplied on the command line can appear in
+shell history or process listings; configure automation logging accordingly.
 
 An SSH configuration session uses its own terminal for code entry. The local screen waits while it
 runs and restores its prompt if the SSH setup is cancelled or disconnected before completion. SSH
@@ -149,7 +163,8 @@ they are. Retain the `stage` directory until the new ISO has been verified.
   enrollment code and Zabbix PSK are never logged. Pending response files are root-only and erased
   after provisioning; the installed PSK is readable only by root and the `zabbix` service group.
 
-The administrator account accepts only the SSH public key embedded at image-build time. Its random
+The administrator account accepts the single public SSH key embedded at image-build time and all
+customer keys imported from the installer USB. Its random
 password is discarded, and it has passwordless sudo. The unprivileged `gmib` account owns the GMIB
 configuration and cannot use sudo.
 
@@ -237,7 +252,7 @@ deploy/kiosk/build-autoinstall-iso.sh \
   --zabbix-agent2-deb zabbix-agent2_1_7.4.14-1+ubuntu24.04_amd64.deb \
   --bootstrap-url https://app.nata-info.ru/api/vpn/enroll/gmib \
   --ssh-authorized-key id_ed25519.pub \
-  --output gmib-kiosk-5.7.6-patch2-ubuntu-24.04.4-amd64.iso
+  --output gmib-kiosk-5.7.6-patch3-ubuntu-24.04.4-amd64.iso
 ```
 
 The build verifies the Ubuntu ISO checksum and writes `gmib-kiosk-24.04.iso.sha256`. Every embedded
@@ -273,7 +288,10 @@ and reads keys only from this partition on the installation USB. It does not imp
 already installed OS. Prepared clones keep the reference machine's keys, because the importer does not
 run again on cloned targets. No manual formatting or second USB is needed. Verify the ISO checksum
 before writing; editing `authorized_keys` changes USB data, so its checksum will no longer match the
-ISO checksum. Partition visibility on Windows and macOS has not been physically verified.
+ISO checksum. Partition 3 has the GPT No Block IO attribute (bit 1), which prevents UEFI from
+exposing it as a filesystem while keeping it available to the OS. The extra boot-menu entry
+disappeared on the tested AMI firmware; reading the partition was verified on macOS and Linux.
+Windows visibility and other firmware implementations have not been physically verified.
 
 Writing this ISO to USB and booting it starts an unattended install that **erases the selected target
 disk without confirmation**. By default, Autoinstall selects the largest disk that is not the
@@ -296,8 +314,8 @@ Publish the versioned ISO and its checksum to app-server with:
 
 ```bash
 deploy/kiosk/publish-image.sh \
-  --image-revision patch2 \
-  --iso gmib-kiosk-5.7.6-patch2-ubuntu-24.04.4-amd64.iso
+  --image-revision patch3 \
+  --iso gmib-kiosk-5.7.6-patch3-ubuntu-24.04.4-amd64.iso
 ```
 
 The public catalog is `https://app.nata-info.ru/gmib/kiosk`. The publisher validates the checksum,
@@ -318,8 +336,8 @@ and starting GMIB; failures retain the selected zone and imported profile for re
 responses without `timezone`, raw VPN responses, and pre-existing pending profiles use Moscow.
 Already provisioned kiosks are not changed by issuing a new code.
 
-Image revision `patch2` is the default. The current release is
-`gmib-kiosk-5.7.6-patch2-ubuntu-24.04.4-amd64.iso`; `gmibVersion` is `5.7.6`, while the manifest
+Image revision `patch3` is the default. The current release is
+`gmib-kiosk-5.7.6-patch3-ubuntu-24.04.4-amd64.iso`; `gmibVersion` is `5.7.6`, while the manifest
 and installed `/etc/gmib/image-release` record the image revision separately. Version 5.6.7 fixes
 supervised updates: installation does not launch a second AppImage, and the kiosk service restarts
 the session with its full arguments and child cleanup.
@@ -338,7 +356,7 @@ changing the built ISO:
 ```sh
 python3 deploy/kiosk/tests/test-installer-ssh-keys.py
 python3 deploy/kiosk/tests/test-iso-padding.py
-python3 deploy/kiosk/tests/verify-setup-partition.py /path/to/gmib-kiosk-5.7.6-patch2-ubuntu-24.04.4-amd64.iso
+python3 deploy/kiosk/tests/verify-setup-partition.py /path/to/gmib-kiosk-5.7.6-patch3-ubuntu-24.04.4-amd64.iso
 ```
 
 The final check requires `sfdisk` (util-linux), `mcopy` (mtools), and `ssh-keygen`.

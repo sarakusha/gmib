@@ -231,6 +231,46 @@ class MenuTests(unittest.TestCase):
                     enroll.assert_called_once_with(False)
                     menu.assert_not_called()
 
+
+    def test_code_validated_before_service_mutations(self):
+        for args in (['--code'], ['--code', 'abc'], ['--code', 'a b c'],
+                     ['--code', 'CODE\n'], ['--code', 'КОД123'],
+                     ['--code', 'A' * 21], ['--code', 'CODE', '--advanced']):
+            with self.subTest(args=args), patch.object(sys, 'argv', ['gmib-configure', *args]):
+                with self.assertRaises(RuntimeError):
+                    setup.main()
+        self.assertEqual(self.mutations(), [])
+
+    def test_code_cli_dispatches_without_menu(self):
+        with patch.object(sys, 'argv', ['gmib-configure', '--code', 'TEST-CODE']), \
+             patch.object(setup.os, 'geteuid', return_value=0), \
+             patch.object(setup.signal, 'signal'), \
+             patch.object(setup, 'menu') as menu, \
+             patch.object(setup, 'enroll_on_console') as enroll:
+            setup.main()
+        menu.assert_not_called()
+        enroll.assert_called_once_with(False, code='TEST-CODE')
+
+    def test_code_duplicate_owner_never_stops_screen(self):
+        with setup.action_lock('gmib-configure-manual.lock'):
+            with self.assertRaisesRegex(RuntimeError, 'Другая операция'):
+                setup.enroll_on_console(False, code='TEST-CODE')
+        self.assertEqual(self.mutations(), [])
+
+    def test_code_already_complete_does_not_redeem(self):
+        self.write('/var/lib/gmib-provision/complete', 'vpn')
+        with contextlib.redirect_stdout(self.output):
+            setup.enroll_on_console(False, code='TEST-CODE')
+        self.assertEqual(self.mutations(), [])
+
+    def test_cursor_restored_on_terminal_only(self):
+        with patch.object(self.output, 'isatty', return_value=True):
+            self.run_menu(['0'])
+        self.assertIn('\033[?25h', self.output.getvalue())
+        self.output = io.StringIO()
+        self.run_menu(['0'])
+        self.assertNotIn('\033', self.output.getvalue())
+
     def test_ip_refresh(self):
         self.run_menu(['r', '0'])
         self.assertEqual(len([call for call in self.calls if call[0] == 'ip']), 2)

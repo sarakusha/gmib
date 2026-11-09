@@ -304,6 +304,7 @@ case "$1" in
     fi
     ;;
   add)
+    [[ "${STUB_FAIL_IMPORT:-0}" != 1 ]] || exit 1
     cp "$2" "$STUB_STATE/imported-profile"
     touch "$STUB_STATE/profile-added"
     ;;
@@ -444,6 +445,59 @@ GMIB_PROVISION_CONFIG="$provision_config" GMIB_PROVISION_STATE_DIR="$state" \
   "$KIOSK_DIR/first-boot-provision.sh" </dev/null >/dev/null
 assert_contains "$stub_state/timezone" Asia/Yekaterinburg
 [[ -s "$state/complete" ]] || fail 'timezone retry did not complete'
+
+# The automated path runs with redirected stdin/stdout and TERM absent. It must
+# complete normally, or exit on the first failure without asking retry questions.
+cat >"$stub_bin/systemd-run" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >>"$STUB_STATE/scheduled-reboot"
+[[ "${STUB_FAIL_REBOOT:-0}" != 1 ]]
+EOF
+chmod 0755 "$stub_bin/systemd-run"
+export GMIB_CONFIGURE_NONINTERACTIVE=1
+unset TERM
+run_enrollment_import "$raw_profile" "$work_dir/automated-success" "$machine_id_a"
+assert_contains "$stub_state/scheduled-reboot" '--quiet --on-active=5s /usr/bin/systemctl reboot'
+for failure in invalid-zone invalid-profile import timezone resume reboot; do
+  state="$(mktemp -d "$work_dir/automated-failure.XXXXXXXX")"
+  response="$raw_profile"
+  rm -f "$stub_state/profile-added" "$stub_state/profile-connected" "$stub_state/imported-profile"
+  case "$failure" in
+    invalid-zone) response="$work_dir/invalid-timezone.json" ;;
+    invalid-profile) response="$provision_config" ;;
+    import) export STUB_FAIL_IMPORT=1 ;;
+    timezone) export STUB_FAIL_TIMEZONE=1 ;;
+    reboot)
+      export STUB_FAIL_REBOOT=1
+      printf '%s\n' profile-new >"$state/profile-id"
+      touch "$stub_state/profile-added" "$stub_state/profile-connected"
+      rm -f "$stub_state/request-body"
+      ;;
+    resume)
+      export STUB_FAIL_TIMEZONE=1
+      printf '%s\n' profile-new >"$state/profile-id"
+      touch "$stub_state/profile-added" "$stub_state/profile-connected"
+      ;;
+  esac
+  log="$work_dir/automated-$failure.log"
+  if printf '%s\n' TEST-CODE | STUB_RESPONSE_FILE="$response" \
+    GMIB_PROVISION_CONFIG="$provision_config" GMIB_PROVISION_STATE_DIR="$state" \
+    GMIB_PROVISION_MACHINE_ID_FILE="$machine_id_a" GMIB_PROVISION_MAC_ADDRESSES_JSON='[]' \
+    timeout 10 "$KIOSK_DIR/first-boot-provision.sh" >"$log" 2>&1; then
+    fail "automated $failure incorrectly succeeded"
+  else
+    result=$?
+    [[ "$result" == 1 ]] || fail "automated $failure did not exit promptly with failure: $result"
+  fi
+  ! grep -Eq 'Enter|Код:|TEST-CODE' "$log" || fail "automated $failure prompted or leaked code"
+  if [[ "$failure" == reboot ]]; then
+    [[ -e "$state/complete" && ! -e "$stub_state/request-body" ]] || fail 'reboot failure lost completion or redeemed code again'
+  else
+    [[ ! -e "$state/complete" ]] || fail "automated $failure marked complete"
+  fi
+  unset STUB_FAIL_IMPORT STUB_FAIL_TIMEZONE STUB_FAIL_REBOOT
+done
+unset GMIB_CONFIGURE_NONINTERACTIVE
 
 # Static integration checks cover service ordering, response negotiation, and
 # both layers of Cyrillic tty support (UTF-8 decoding and console glyphs).

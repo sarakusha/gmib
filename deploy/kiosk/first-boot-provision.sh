@@ -14,6 +14,26 @@ PRIMARY_PROFILE_SUFFIX="${PRIMARY_PROFILE_SUFFIX:- (main)}"
 enrollment_code=""
 retry_action=""
 retry_import=""
+NONINTERACTIVE="${GMIB_CONFIGURE_NONINTERACTIVE:-0}"
+
+# Automation has one attempt per invocation. Never read retry answers or loop
+# indefinitely after an API/import/connectivity failure.
+retry_or_fail() {
+  [[ "$NONINTERACTIVE" != 1 ]] || exit 1
+}
+
+show_cursor() {
+  if [[ -t 1 ]]; then
+    printf '\033[?25h'
+  fi
+}
+
+clear_screen() {
+  if [[ "$NONINTERACTIVE" != 1 && -t 1 && -n "${TERM:-}" ]]; then
+    clear || true
+    show_cursor
+  fi
+}
 
 cleanup() {
   if [[ -n "$TRANSIENT_SECRET_FILE" && -f "$TRANSIENT_SECRET_FILE" ]]; then
@@ -87,6 +107,8 @@ acquire_transaction() {
 }
 read_input() {
   local result=0
+  retry_or_fail
+  show_cursor
   flock -u 9
   read -r "$@" || result=$?
   if ((result != 0)); then
@@ -216,6 +238,16 @@ apply_timezone() {
   echo "Часовой пояс: $timezone"
 }
 
+reboot_after_provisioning() {
+  if [[ "$NONINTERACTIVE" == 1 ]]; then
+    # Let the SSH command deliver its exit status before the machine goes away.
+    systemd-run --quiet --on-active=5s /usr/bin/systemctl reboot
+  else
+    sleep 3
+    systemctl reboot
+  fi
+}
+
 finish_provisioning() {
   local profile_id="$1"
   # Keep the selected zone with the imported profile across interrupted setup.
@@ -243,13 +275,12 @@ finish_provisioning() {
   [[ ! -f "$PENDING_ZABBIX_FILE" ]] ||
     shred -u "$PENDING_ZABBIX_FILE" 2>/dev/null || rm -f "$PENDING_ZABBIX_FILE"
   rm -f "$PROFILE_ID_FILE" "$PENDING_TIMEZONE_FILE"
-  systemctl disable gmib-provision.service >/dev/null
-  clear
+  systemctl disable gmib-provision.service >/dev/null || return 1
+  clear_screen
   echo
   echo "VPN подключён. Настройка устройства завершена."
   echo "Устройство будет перезагружено и запустит GMIB."
-  sleep 3
-  systemctl reboot
+  reboot_after_provisioning
 }
 
 resume_profile() {
@@ -270,14 +301,19 @@ resume_profile() {
 
 systemctl start pritunl-client.service
 
-clear
+clear_screen
 echo "GMIB — первичная настройка"
 echo "Идентификатор устройства: $device_id"
 echo "Раскладка клавиатуры: US (латиница)"
 echo
 
-if resume_profile; then
-  exit 0
+if [[ -s "$PROFILE_ID_FILE" ]]; then
+  if resume_profile; then
+    exit 0
+  fi
+  # A late completion/reboot failure may already have removed profile-id.
+  # Still fail this invocation instead of exchanging a second enrollment code.
+  retry_or_fail
 fi
 
 while true; do
@@ -285,6 +321,7 @@ while true; do
     if resume_profile; then
       exit 0
     fi
+    retry_or_fail
     profile_id="$(<"$PROFILE_ID_FILE")"
     echo "Настройка не завершена. Enter — повторить; R — удалить профиль и ввести новый код."
     read_input retry_action
@@ -293,16 +330,26 @@ while true; do
       rm -f "$PROFILE_ID_FILE" "$PENDING_TIMEZONE_FILE" "$PENDING_ZABBIX_FILE"
     fi
     echo
+    retry_or_fail
     continue
   fi
 
   if [[ ! -s "$PENDING_PROFILE_FILE" ]]; then
-    echo "Получите одноразовый код для этого идентификатора в панели развёртывания."
-    read_input -p "Код: " enrollment_code
+    if [[ "$NONINTERACTIVE" == 1 ]]; then
+      # Private pipe from gmib-configure; retain transaction ownership throughout.
+      if ! IFS= read -r enrollment_code; then
+        echo "Не передан код подключения." >&2
+        exit 1
+      fi
+    else
+      echo "Получите одноразовый код для этого идентификатора в панели развёртывания."
+      read_input -p "Код: " enrollment_code
+    fi
 
     if [[ ! "$enrollment_code" =~ ^[A-Za-z0-9-]{4,20}$ ]]; then
       echo "Код должен содержать 4–20 латинских букв, цифр или дефисов."
       echo
+      retry_or_fail
       continue
     fi
 
@@ -340,6 +387,7 @@ while true; do
       cleanup
       TRANSIENT_SECRET_FILE=""
       echo
+      retry_or_fail
       continue
     fi
     unset enrollment_code request_body
@@ -352,6 +400,7 @@ while true; do
         echo "API вернул недопустимый часовой пояс; настройка не завершена."
         cleanup
         TRANSIENT_SECRET_FILE=""
+        retry_or_fail
         continue
       fi
       pending_timezone_tmp="$(mktemp --tmpdir="$STATE_DIR" timezone.XXXXXXXX)"
@@ -374,6 +423,7 @@ while true; do
         cleanup
         TRANSIENT_SECRET_FILE=""
         echo
+        retry_or_fail
         continue
       fi
       mv -f "$pending_profile_tmp" "$PENDING_PROFILE_FILE"
@@ -400,6 +450,7 @@ while true; do
     if ! wrap_raw_ovpn_for_pritunl "$PENDING_PROFILE_FILE"; then
       echo "Не удалось подготовить VPN-профиль для импорта."
       echo
+      retry_or_fail
       continue
     fi
   else
@@ -407,12 +458,14 @@ while true; do
     shred -u "$PENDING_PROFILE_FILE" 2>/dev/null || rm -f "$PENDING_PROFILE_FILE"
     rm -f "$PENDING_ZABBIX_FILE" "$PENDING_TIMEZONE_FILE"
     echo
+    retry_or_fail
     continue
   fi
 
   before_ids="$(pritunl-client list --json | jq -r '.[].id' | sort)"
   if ! pritunl-client add "$PENDING_PROFILE_FILE"; then
     echo "Pritunl не смог импортировать профиль."
+    retry_or_fail
     echo "Enter — повторить импорт; R — удалить ответ и ввести новый код."
     read_input retry_import
     if [[ "$retry_import" =~ ^[Rr]$ ]]; then
@@ -420,6 +473,7 @@ while true; do
       rm -f "$PENDING_ZABBIX_FILE" "$PENDING_TIMEZONE_FILE"
     fi
     echo
+    retry_or_fail
     continue
   fi
   profiles_json="$(pritunl-client list --json)"
@@ -451,6 +505,7 @@ while true; do
     shred -u "$PENDING_PROFILE_FILE" 2>/dev/null || rm -f "$PENDING_PROFILE_FILE"
     rm -f "$PENDING_ZABBIX_FILE" "$PENDING_TIMEZONE_FILE"
     echo
+    retry_or_fail
     continue
   fi
 
@@ -462,5 +517,6 @@ while true; do
   fi
 
   echo "Профиль импортирован, но VPN пока не подключился."
+  retry_or_fail
   echo
 done

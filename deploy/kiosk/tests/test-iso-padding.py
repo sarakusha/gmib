@@ -23,13 +23,62 @@ class PaddingTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.iso = Path(self.temp.name) / 'new.iso'
 
-    def test_only_zero_tail_removed_and_result_is_idempotent(self):
+    def test_only_setup_attribute_checksums_and_tail_change_and_result_is_idempotent(self):
         end = make_iso(self.iso)
         prefix = self.iso.read_bytes()[:end]
         padding.trim(self.iso)
-        self.assertEqual(self.iso.read_bytes(), prefix)
+        result = self.iso.read_bytes()
+        self.assertEqual(len(result), end)
+        allowed = set()
+        for lba, table in ((1, 2), (127, 95)):
+            for offset, size in ((lba * 512 + 16, 4), (lba * 512 + 88, 4),
+                                 (table * 512 + 256 + 48, 8)):
+                allowed.update(range(offset, offset + size))
+        self.assertTrue(all(a == b or i in allowed for i, (a, b) in enumerate(zip(prefix, result))))
+        with self.iso.open('rb') as stream:
+            for lba in (1, 127):
+                _, entries = padding.header(stream, lba)
+                self.assertEqual(struct.unpack_from('<Q', entries, 256 + 48)[0], 2)
         padding.trim(self.iso)
-        self.assertEqual(self.iso.read_bytes(), prefix)
+        self.assertEqual(self.iso.read_bytes(), result)
+
+    def test_other_attribute_bits_are_preserved(self):
+        make_iso(self.iso)
+        data = bytearray(self.iso.read_bytes())
+        for lba, table in ((1, 2), (127, 95)):
+            struct.pack_into('<Q', data, table * 512 + 256 + 48, 1 << 48)
+        self.rechecksum(data)
+        self.iso.write_bytes(data)
+        padding.trim(self.iso)
+        with self.iso.open('rb') as stream:
+            for lba in (1, 127):
+                _, entries = padding.header(stream, lba)
+                self.assertEqual(struct.unpack_from('<Q', entries, 256 + 48)[0], (1 << 48) | 2)
+
+    @staticmethod
+    def rechecksum(data):
+        for lba, table in ((1, 2), (127, 95)):
+            crc = zlib.crc32(data[table * 512:table * 512 + 128 * 128])
+            struct.pack_into('<I', data, lba * 512 + 88, crc)
+            struct.pack_into('<I', data, lba * 512 + 16, 0)
+            struct.pack_into('<I', data, lba * 512 + 16, zlib.crc32(data[lba * 512:lba * 512 + 92]))
+
+    def test_wrong_setup_partition_never_changes_file(self):
+        for corruption in ('type', 'label', 'filesystem', 'signature'):
+            with self.subTest(corruption=corruption):
+                make_iso(self.iso)
+                data = bytearray(self.iso.read_bytes())
+                if corruption == 'type':
+                    for table in (2, 95):
+                        data[table * 512 + 256] ^= 1
+                    self.rechecksum(data)
+                else:
+                    offset = {'label': 43, 'filesystem': 54, 'signature': 510}[corruption]
+                    data[80 * 512 + offset] ^= 1
+                self.iso.write_bytes(data)
+                with self.assertRaises(ValueError):
+                    padding.trim(self.iso)
+                self.assertEqual(self.iso.read_bytes(), data)
 
     def test_corrupt_metadata_never_changes_the_file(self):
         for offset in (512, 512 + 16, 1024, 127 * 512 + 16, 32768, 32768 + 84):

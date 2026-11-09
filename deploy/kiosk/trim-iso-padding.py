@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Remove only verified zero write padding after a new ISO's backup GPT."""
+"""Finalize a new ISO: suppress setup-partition UEFI discovery and trim padding."""
 from pathlib import Path
 import os
 import struct
 import sys
 import zlib
+import uuid
 
 
 def header(stream, lba):
@@ -70,10 +71,47 @@ def trim(filename):
         stream.seek(end)
         if any(stream.read()):
             raise ValueError('Refusing to truncate nonzero data after the GPT')
+        # The firmware must not expose this data partition via Block IO. This
+        # does not hide it from operating systems or mark it read-only. Verify
+        # the expected partition before modifying either copy of its GPT entry.
+        offset = 2 * 128
+        setup = entries[offset:offset + 128]
+        basic_data = uuid.UUID('ebd0a0a2-b9e5-4433-87c0-68b6b72699c7').bytes_le
+        if len(setup) != 128 or setup[:16] != basic_data:
+            raise ValueError('Expected GPT partition 3 to contain setup data')
+        start = struct.unpack_from('<Q', setup, 32)[0]
+        stream.seek(start * 512)
+        boot = stream.read(512)
+        if (boot[43:54] != b'GMIB-SETUP ' or boot[54:62] != b'FAT16   '
+                or boot[510:512] != b'\x55\xaa'):
+            raise ValueError('Expected GMIB-SETUP FAT16 partition')
+        updated = bytearray(entries)
+        flags = struct.unpack_from('<Q', updated, offset + 48)[0]
+        struct.pack_into('<Q', updated, offset + 48, flags | 2)
+        writes = []
+        for lba, original, array_lba in ((backup_lba, backup, backup_table), (1, primary, table)):
+            revised = bytearray(original)
+            struct.pack_into('<I', revised, 88, zlib.crc32(updated))
+            struct.pack_into('<I', revised, 16, 0)
+            header_size = struct.unpack_from('<I', revised, 12)[0]
+            struct.pack_into('<I', revised, 16, zlib.crc32(revised[:header_size]))
+            writes.extend(((array_lba * 512, bytes(updated)), (lba * 512, bytes(revised))))
+        # All validation precedes writes. This is only a build output file;
+        # callers must never publish it if finalization fails.
+        for position, data in writes:
+            stream.seek(position)
+            if stream.write(data) != len(data):
+                raise OSError('Short GPT write')
         stream.truncate(end)
         stream.flush()
         os.fsync(stream.fileno())
-    print(f'ISO/GPT end verified; removed {size - end} bytes of zero write padding.')
+        for position, data in writes:
+            stream.seek(position)
+            if stream.read(len(data)) != data:
+                raise OSError('GPT read-back mismatch')
+        header(stream, 1)
+        header(stream, backup_lba)
+    print(f'GMIB-SETUP UEFI discovery disabled; removed {size - end} bytes of zero write padding.')
 
 
 if __name__ == '__main__':

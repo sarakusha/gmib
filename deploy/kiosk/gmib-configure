@@ -95,24 +95,33 @@ def complete():
     return path('/var/lib/gmib-provision/complete').is_file()
 
 
-def run_provision(manual=False):
+def run_provision(manual=False, code=None):
     # Separate process group lets cancellation reap the shell AND curl/other
     # foreground children before releasing ownership and restoring the console.
     environment = os.environ.copy()
     if manual:
         environment['GMIB_CONFIGURE_MANUAL'] = '1'
+    if code is not None:
+        environment['GMIB_CONFIGURE_NONINTERACTIVE'] = '1'
     watched = {signal.SIGINT, signal.SIGHUP, signal.SIGTERM}
     mask = signal.pthread_sigmask(signal.SIG_BLOCK, watched)
     try:
         # This standalone program is single-threaded. Restore the child's mask
         # before exec; keep the parent protected until its cleanup is installed.
         child = subprocess.Popen([PROVISION], env=environment, start_new_session=True,
+                                 stdin=subprocess.PIPE if code is not None else None,
                                  preexec_fn=lambda: signal.pthread_sigmask(signal.SIG_SETMASK, mask))
     except BaseException:
         signal.pthread_sigmask(signal.SIG_SETMASK, mask)
         raise
     try:
         signal.pthread_sigmask(signal.SIG_SETMASK, mask)
+        if code is not None:
+            try:
+                child.stdin.write((code + '\n').encode('ascii'))
+                child.stdin.close()
+            except BrokenPipeError:
+                pass  # Inspect the child result below if it failed before reading.
         # Observe exit without reaping: the zombie group leader keeps its PGID
         # reserved until cleanup. This avoids signalling a reused process ID.
         os.waitid(os.P_PID, child.pid, os.WEXITED | os.WNOWAIT)
@@ -138,7 +147,7 @@ def run_provision(manual=False):
             result = child.wait()
         finally:
             signal.pthread_sigmask(signal.SIG_SETMASK, mask)
-    if result not in (0, 130):
+    if result not in ((0,) if code is not None else (0, 130)):
         raise RuntimeError('Подключение не завершено; повторите настройку.')
     return result
 
@@ -176,11 +185,14 @@ def manual_session(enrollment=False):
             command('systemctl', 'start', '--no-block', SERVICE)
 
 
-def enroll_on_console(boot):
+def enroll_on_console(boot, code=None):
     if not boot:
         with manual_session(enrollment=True) as active:
             if active:
-                run_provision(manual=True)
+                if code is None:
+                    run_provision(manual=True)
+                else:
+                    run_provision(manual=True, code=code)
         return
     with action_lock():
         with action_lock('gmib-configure-manual.lock'):
@@ -208,6 +220,7 @@ def confirm_prepare(boot, read=input):
     print('После подготовки компьютер выключится. Снимите образ с внешнего носителя,')
     print('не загружая установленную систему. Идентичность своего ПО подготовьте сами.')
     try:
+        show_cursor()
         answer = read('Для подтверждения введите CLONE (латиницей), Enter — отмена: ')
     except (EOFError, KeyboardInterrupt):
         print('Подготовка отменена.')
@@ -233,6 +246,13 @@ def idle_after_eof():
         signal.pause()
 
 
+def show_cursor():
+    # The kiosk kernel may start tty1 with its cursor hidden. Restore it whenever
+    # showing input; keep redirected automation output free of terminal escapes.
+    if sys.stdout.isatty():
+        print('\033[?25h', end='', flush=True)
+
+
 def menu(boot, read=input):
     user = admin_user()
     if boot and (path('/var/lib/gmib-clone/personalized.json').is_file() or
@@ -245,6 +265,7 @@ def menu(boot, read=input):
         except (RuntimeError, OSError, subprocess.SubprocessError) as error:
             print(f'Настройка не выполнена: {error}', file=sys.stderr)
     while True:
+        show_cursor()
         print('\nGMIB kiosk — настройка')
         print('Раскладка клавиатуры: US (латиница)')
         ips = addresses()
@@ -294,17 +315,29 @@ def interrupted(signum, frame):
 def main():
     args = sys.argv[1:]
     if args in (['--help'], ['-h']):
-        print('Использование: sudo gmib-configure [--advanced]')
+        print('Использование: sudo gmib-configure [--advanced | --code КОД]')
         print('Без аргументов: подключение VPN по коду в текущем терминале.')
+        print('--code КОД: подключение без вопросов и повторов, в том числе по SSH без TTY.')
+        print('Код: 4–20 латинских букв, цифр или дефисов; успех — 0, ошибка — ненулевой код.')
         print('--advanced: меню подключения и подготовки к клонированию.')
         print('VPN-код не является лицензией GMIB. После подключения — перезагрузка.')
         return
-    if args not in ([], ['--advanced'], ['--boot']):
-        raise RuntimeError('Использование: sudo gmib-configure [--advanced|--help]')
+    code = None
+    if len(args) == 2 and args[0] == '--code':
+        code = args[1]
+        if not re.fullmatch(r'[A-Za-z0-9-]{4,20}', code):
+            raise RuntimeError('Код должен содержать 4–20 латинских букв, цифр или дефисов.')
+    elif args not in ([], ['--advanced'], ['--boot']):
+        raise RuntimeError('Использование: sudo gmib-configure [--advanced | --code КОД | --help]')
     if os.geteuid() != 0:
         raise RuntimeError('Запустите команду через sudo: sudo gmib-configure')
     signal.signal(signal.SIGHUP, interrupted)
     signal.signal(signal.SIGTERM, interrupted)
+    if code is not None:
+        def automation_interrupted(signum, frame):
+            raise SystemExit(128 + signum)
+        for signum in (signal.SIGHUP, signal.SIGTERM, signal.SIGINT):
+            signal.signal(signum, automation_interrupted)
     admin_user()
     if args == ['--boot']:
         # A service restart during an SSH session must exit without displaying a
@@ -319,6 +352,8 @@ def main():
         menu(True)
     elif args == ['--advanced']:
         menu(False)
+    elif code is not None:
+        enroll_on_console(False, code=code)
     else:
         enroll_on_console(False)
 

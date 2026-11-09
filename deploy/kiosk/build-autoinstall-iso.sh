@@ -8,7 +8,7 @@ BASE_ISO=""
 BASE_ISO_SHA256=""
 APPIMAGE=""
 GMIB_VERSION=""
-IMAGE_REVISION="patch2"
+IMAGE_REVISION="patch3"
 PRITUNL_DEB=""
 ZABBIX_AGENT2_DEB=""
 BOOTSTRAP_URL=""
@@ -38,7 +38,7 @@ Required:
 
 Optional:
   --clone-image              Deprecated alias. All images support preparation for cloning.
-  --image-revision LABEL      Installer revision. Default: patch2. Does not change GMIB version.
+  --image-revision LABEL      Installer revision. Default: patch3. Does not change GMIB version.
   --bootstrap-tls-pin PIN     curl public-key pin, formatted sha256//BASE64.
   --target-disk PATH          Select the installation disk by Linux device path.
   --target-model GLOB         Select the installation disk by udev model glob.
@@ -447,7 +447,8 @@ xorriso \
 
 # Native xorriso may round the final output write up to a block boundary even
 # with padding disabled. The ISO volume and both GPT copies must agree before
-# removing that zero-only tail; no boot or filesystem bytes are rewritten.
+# removing that zero-only tail. The finalizer also sets No Block IO only on
+# GMIB-SETUP, preventing an extra UEFI boot entry without hiding it from the OS.
 python3 "$SCRIPT_DIR/trim-iso-padding.py" "$OUTPUT_ISO"
 
 (

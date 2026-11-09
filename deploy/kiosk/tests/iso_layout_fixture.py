@@ -1,12 +1,18 @@
 """Small checksummed GPT/ISO metadata fixture; never a bootable disk image."""
 import struct
 import zlib
+import uuid
 
 
 def make_iso(path, tail=bytes(112 * 512)):
     end_lba = 127
     image = bytearray((end_lba + 1) * 512)
-    entries = bytes(128 * 128)
+    entries = bytearray(128 * 128)
+    entries[256:272] = uuid.UUID('ebd0a0a2-b9e5-4433-87c0-68b6b72699c7').bytes_le
+    struct.pack_into('<QQ', entries, 256 + 32, 80, 87)
+    image[80 * 512 + 43:80 * 512 + 54] = b'GMIB-SETUP '
+    image[80 * 512 + 54:80 * 512 + 62] = b'FAT16   '
+    image[80 * 512 + 510:80 * 512 + 512] = b'\x55\xaa'
     for current, alternate, table in ((1, end_lba, 2), (end_lba, 1, 95)):
         header = bytearray(512)
         header[:8] = b'EFI PART'
@@ -16,6 +22,7 @@ def make_iso(path, tail=bytes(112 * 512)):
         struct.pack_into('<QIII', header, 72, table, 128, 128, zlib.crc32(entries))
         struct.pack_into('<I', header, 16, zlib.crc32(header[:92]))
         image[current * 512:(current + 1) * 512] = header
+        image[table * 512:table * 512 + len(entries)] = entries
     image[32768:32775] = b'\x01CD001\x01'
     struct.pack_into('<I', image, 32768 + 80, len(image) // 2048)
     struct.pack_into('>I', image, 32768 + 84, len(image) // 2048)

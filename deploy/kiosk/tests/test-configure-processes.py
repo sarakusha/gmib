@@ -208,6 +208,52 @@ wait
         os.kill(boot.pid, signal.SIGTERM)
         self.assertEqual(boot.wait(timeout=5), 0)
 
+
+    def test_code_without_tty_single_http_attempt_and_nonzero_failure(self):
+        self.env.pop('TERM', None)
+        (self.root / 'release').touch()
+        ssh = self.configure(['--code', 'TEST-CODE'])
+        self.assertNotEqual(ssh.wait(timeout=5), 0)
+        output = ssh.stdout.read().decode()
+        self.assertTrue((self.root / 'request').exists())
+        self.assertNotIn('TEST-CODE', output)
+        self.assertNotIn('Код: ', output)
+        self.assertNotIn('Enter', output)
+        self.assertNotIn('\033', output)
+        self.assertIn('start --no-block gmib-provision.service', (self.root / 'commands').read_text())
+        self.assertEqual(list((self.root / 'state').glob('response.*')), [])
+        self.assertTrue(self.available('gmib-configure-manual.lock'))
+
+    def test_code_keeps_transaction_and_rejects_second_caller(self):
+        first = self.configure(['--code', 'TEST-CODE'])
+        wait_until(lambda: (self.root / 'request').exists())
+        self.assertFalse(self.available('gmib-kiosk-setup.lock'))
+        second = self.configure(['--code', 'OTHER-CODE'])
+        self.assertNotEqual(second.wait(timeout=5), 0)
+        self.assertEqual((self.root / 'commands').read_text().count('stop gmib-provision.service'), 1)
+        os.kill(first.pid, signal.SIGHUP)
+        self.assertEqual(first.wait(timeout=5), 129)
+        self.assertTrue(self.available('gmib-configure-manual.lock'))
+        self.assertTrue(self.available('gmib-kiosk-setup.lock'))
+
+    def test_code_child_cancel_is_failure(self):
+        child_script = self.script('cancelled', 'exit 130\n')
+        ssh = self.configure(['--code', 'TEST-CODE'], child_script)
+        self.assertNotEqual(ssh.wait(timeout=5), 0)
+
+    def test_code_pipe_delivers_input_without_child_argv_or_environment(self):
+        child_script = self.script('capture', '''read code
+[ "$code" = TEST-CODE ] || exit 2
+[ "$#" = 0 ] || exit 3
+env | grep -q TEST-CODE && exit 4
+[ "$GMIB_CONFIGURE_NONINTERACTIVE" = 1 ] || exit 5
+mkdir -p "$FIXTURE/var/lib/gmib-provision"
+touch "$FIXTURE/var/lib/gmib-provision/complete"
+''')
+        ssh = self.configure(['--code', 'TEST-CODE'], child_script)
+        self.assertEqual(ssh.wait(timeout=5), 0, ssh.stdout.read())
+        self.assertNotIn('start --no-block', (self.root / 'commands').read_text())
+
     def test_personalized_eof_idles_without_restarting_provision(self):
         (self.root / 'var/lib/gmib-clone').mkdir(parents=True)
         (self.root / 'var/lib/gmib-clone/personalized.json').write_text('{}')

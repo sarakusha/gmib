@@ -6,7 +6,7 @@ REPO_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
 
 BUILD_ROOT="${GMIB_APPLIANCE_BUILD_ROOT:-/home/user/appliance-build}"
 GMIB_VERSION=""
-IMAGE_REVISION="patch2"
+IMAGE_REVISION="patch3"
 BASE_ISO=""
 PRITUNL_DEB=""
 ZABBIX_AGENT2_DEB=""
@@ -28,7 +28,7 @@ reused. By default, the GMIB version is read from the repository package.json.
 
 Options:
   --clone-image            Deprecated alias. All images support preparation for cloning.
-  --image-revision LABEL    Installer revision. Default: patch2. Does not change GMIB version.
+  --image-revision LABEL    Installer revision. Default: patch3. Does not change GMIB version.
   --gmib-version VERSION    GMIB release version. Default: package.json version.
   --build-root PATH         Private build directory. Default: /home/user/appliance-build.
   --base-iso PATH           Cached Ubuntu ISO.

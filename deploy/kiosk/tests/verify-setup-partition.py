@@ -5,6 +5,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import struct
 
 
 def run(*args):
@@ -17,7 +18,13 @@ def verify(iso):
     assert partitions[1]['type'].upper() == 'C12A7328-F81F-11D2-BA4B-00A0C93EC93B'
     setup = partitions[2]
     assert setup['type'].upper() == 'EBD0A0A2-B9E5-4433-87C0-68B6B72699C7'
-    assert not setup.get('attrs'), 'Setup partition must not be hidden or read-only'
+    # Inspect the numeric GPT attribute rather than sfdisk's version-dependent
+    # spelling. Only No Block IO is permitted, never OS hidden/read-only bits.
+    with iso.open('rb') as stream:
+        stream.seek(512 + 72)
+        table, _, entry_size = struct.unpack('<QII', stream.read(16))
+        stream.seek(table * 512 + 2 * entry_size + 48)
+        assert struct.unpack('<Q', stream.read(8))[0] == 2, 'Expected only No Block IO'
     assert setup['size'] * 512 == 16 * 1024 * 1024
     for left, right in zip(partitions, partitions[1:]):
         assert left['start'] + left['size'] <= right['start'], 'Overlapping partitions'
@@ -51,7 +58,7 @@ def verify(iso):
         validator = Path(__file__).resolve().parents[1] / 'read-ssh-public-keys.sh'
         normalized = run('bash', str(validator), str(retrieved)).splitlines()
         assert normalized == [' '.join(key.split()[:2]) for key in keys]
-    print('Verified: EFI + writable 16 MiB GMIB-SETUP FAT16, commented template, two-key write/read.')
+    print('Verified: EFI + writable 16 MiB GMIB-SETUP FAT16 with No Block IO, commented template, two-key write/read.')
 
 
 if __name__ == '__main__':
