@@ -6,7 +6,7 @@ REPO_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
 
 BUILD_ROOT="${GMIB_APPLIANCE_BUILD_ROOT:-/home/user/appliance-build}"
 GMIB_VERSION=""
-IMAGE_REVISION="patch1"
+IMAGE_REVISION="patch2"
 BASE_ISO=""
 PRITUNL_DEB=""
 ZABBIX_AGENT2_DEB=""
@@ -28,13 +28,13 @@ reused. By default, the GMIB version is read from the repository package.json.
 
 Options:
   --clone-image            Deprecated alias. All images support preparation for cloning.
-  --image-revision LABEL    Installer revision. Default: patch1. Does not change GMIB version.
+  --image-revision LABEL    Installer revision. Default: patch2. Does not change GMIB version.
   --gmib-version VERSION    GMIB release version. Default: package.json version.
   --build-root PATH         Private build directory. Default: /home/user/appliance-build.
   --base-iso PATH           Cached Ubuntu ISO.
   --pritunl-deb PATH        Cached amd64 Pritunl Client package.
   --zabbix-agent2-deb PATH  Cached Zabbix Agent 2 7.4 Ubuntu 24.04 amd64 package.
-  --ssh-authorized-key PATH Public SSH key(s), one per line, for the admin account.
+  --ssh-authorized-key PATH Exactly one built-in administrator public SSH key.
   --public-dir PATH         App-server GMIB kiosk download directory.
   --public-base-url URL     Public URL corresponding to --public-dir.
   --bootstrap-url URL       Device enrollment endpoint.
@@ -145,7 +145,7 @@ if [[ "$(uname -s)" != Linux ]]; then
   echo "This script must run on the Linux app-server host." >&2
   exit 1
 fi
-for command in awk curl df dpkg-deb file find grep jq mktemp openssl realpath sed sha256sum stat tr xorriso; do
+for command in awk curl dd df dpkg-deb file find grep jq mcopy mkfs.vfat mktemp openssl python3 realpath sed sha256sum stat tr xorriso; do
   if ! command -v "$command" >/dev/null 2>&1; then
     echo "Missing required command: $command" >&2
     exit 1
@@ -210,7 +210,11 @@ if [[ "$(dpkg-deb --field "$PRITUNL_DEB" Package)" != pritunl-client ]] ||
   echo "Cached Pritunl package is not pritunl-client for amd64: $PRITUNL_DEB" >&2
   exit 1
 fi
-bash "$SCRIPT_DIR/read-ssh-public-keys.sh" "$SSH_KEY" >/dev/null
+ssh_keys="$(bash "$SCRIPT_DIR/read-ssh-public-keys.sh" "$SSH_KEY")"
+if [[ "$ssh_keys" == *$'\n'* ]]; then
+  echo 'Exactly one built-in SSH key is required; add customer keys through GMIB-SETUP/authorized_keys.' >&2
+  exit 1
+fi
 
 if [[ "$(stat -c %d "$OUTPUT_DIR")" != "$(stat -c %d "$PUBLIC_DIR")" ]]; then
   echo "Build output and public directory must be on the same filesystem." >&2

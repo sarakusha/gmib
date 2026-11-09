@@ -1,0 +1,201 @@
+#!/usr/bin/env python3
+"""Import customer SSH keys once, from the installation USB's own FAT partition."""
+import argparse
+import json
+import os
+from pathlib import Path
+import re
+import stat
+import subprocess
+import sys
+import tempfile
+
+LABEL = 'GMIB-SETUP'
+MAX_BYTES = 65536
+VALIDATOR = Path(__file__).resolve().with_name('read-ssh-public-keys.sh')
+
+
+def command(*args):
+    return subprocess.run(args, check=True, text=True, stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE, timeout=30).stdout
+
+
+def flatten(devices):
+    for device in devices:
+        yield device
+        yield from flatten(device.get('children', []))
+
+
+def select_partition(mount, devices):
+    """Match the mounted ISO by kernel device ID, never by a global volume label."""
+    mounted = mount.get('filesystems', [])
+    if len(mounted) != 1 or mounted[0].get('fstype') != 'iso9660':
+        raise RuntimeError('Cannot identify the ISO mounted at /cdrom.')
+    if not re.fullmatch(r'[0-9]+:[0-9]+', mounted[0].get('maj:min', '')):
+        raise RuntimeError('Cannot identify the installation media kernel device ID.')
+    rows = list(flatten(devices.get('blockdevices', [])))
+    source = [row for row in rows if row.get('maj:min') == mounted[0].get('maj:min')]
+    if len(source) != 1:
+        raise RuntimeError('Cannot uniquely identify the installation media device.')
+    source = source[0]
+    if source.get('type') not in ('disk', 'part'):
+        # Optical drives and ISO-file boot (e.g. loop/Ventoy) have no supported
+        # writable sibling. Never search unrelated USB disks as a fallback.
+        return None
+    if source['type'] == 'part':
+        parent = source.get('pkname')
+        disks = [row for row in rows if row.get('name') == parent and row.get('type') == 'disk']
+        if len(disks) != 1:
+            raise RuntimeError('Cannot identify the installation USB parent disk.')
+        disk = disks[0]
+    else:
+        disk = source
+    candidates = [row for row in rows if row.get('type') == 'part'
+                  and row.get('pkname') == disk.get('name') and row.get('label') == LABEL]
+    if not candidates:
+        return None
+    if len(candidates) != 1:
+        raise RuntimeError('Multiple GMIB-SETUP partitions exist on the installation media.')
+    candidate = candidates[0]
+    if candidate.get('fstype') != 'vfat':
+        raise RuntimeError('GMIB-SETUP must be a FAT filesystem.')
+    name = candidate.get('name', '')
+    if not re.fullmatch(r'/dev/[A-Za-z0-9_./-]+', name) or '..' in Path(name).parts:
+        raise RuntimeError('Invalid setup partition device path.')
+    return name
+
+
+def discover_partition():
+    mount = json.loads(command('findmnt', '--json', '--mountpoint', '/cdrom',
+                              '--output', 'SOURCE,MAJ:MIN,FSTYPE'))
+    devices = json.loads(command('lsblk', '--json', '--paths', '--output',
+                                'NAME,TYPE,PKNAME,MAJ:MIN,FSTYPE,LABEL'))
+    return select_partition(mount, devices)
+
+
+def read_keys(source):
+    """Validate the entire file before touching the installed account."""
+    try:
+        fd = os.open(source, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    except FileNotFoundError:
+        return []
+    with os.fdopen(fd, 'rb') as stream:
+        info = os.fstat(stream.fileno())
+        if not stat.S_ISREG(info.st_mode) or info.st_size > MAX_BYTES:
+            raise RuntimeError('authorized_keys must be a regular file of at most 64 KiB.')
+        raw = stream.read(MAX_BYTES + 1)
+    if len(raw) > MAX_BYTES:
+        raise RuntimeError('authorized_keys exceeds 64 KiB.')
+    try:
+        contents = raw.decode('utf-8-sig')
+    except UnicodeDecodeError as error:
+        raise RuntimeError('authorized_keys must be UTF-8 text.') from error
+    if '\x00' in contents:
+        raise RuntimeError('authorized_keys contains invalid text.')
+    lines = [line for line in contents.splitlines() if line.strip() and not line.lstrip().startswith('#')]
+    if not lines:
+        return []
+    with tempfile.TemporaryDirectory(prefix='gmib-public-keys-') as temporary:
+        normalized = Path(temporary) / 'authorized_keys'
+        normalized.write_text('\n'.join(lines) + '\n')
+        normalized.chmod(0o600)
+        try:
+            result = command('bash', str(VALIDATOR), str(normalized))
+        except subprocess.CalledProcessError as error:
+            raise RuntimeError('Invalid authorized_keys: provide bare public keys only, without key options or private keys.') from error
+    return result.splitlines()
+
+
+def safe_path(root, relative):
+    candidate = root / relative.lstrip('/')
+    if '..' in candidate.parts:
+        raise RuntimeError('Invalid target path.')
+    for part in (candidate, *candidate.parents):
+        if part == root:
+            break
+        if part.is_symlink():
+            raise RuntimeError('Refusing a symlink in the target account path.')
+    return candidate
+
+
+def merge_keys(target, user, keys):
+    if not keys:
+        return 0
+    if not re.fullmatch(r'[a-z_][a-z0-9_-]*', user):
+        raise RuntimeError('Invalid administrator account name.')
+    rows = [line.split(':') for line in safe_path(target, '/etc/passwd').read_text().splitlines()
+            if line.split(':', 1)[0] == user]
+    if len(rows) != 1 or len(rows[0]) != 7:
+        raise RuntimeError('Administrator account is missing from the target system.')
+    entry = rows[0]
+    uid, gid = int(entry[2]), int(entry[3])
+    if uid < 0 or gid < 0:
+        raise RuntimeError('Invalid administrator account ownership.')
+    if not entry[5].startswith('/home/') or '..' in Path(entry[5]).parts:
+        raise RuntimeError('Unexpected administrator home directory.')
+    home = safe_path(target, entry[5])
+    if not home.is_dir():
+        raise RuntimeError('Administrator home directory does not exist.')
+    ssh_dir = safe_path(target, entry[5] + '/.ssh')
+    destination = safe_path(target, entry[5] + '/.ssh/authorized_keys')
+    if destination.exists() and not destination.is_file():
+        raise RuntimeError('Target authorized_keys is not a regular file.')
+    old = destination.read_text() if destination.exists() else ''
+    existing = {' '.join(line.split()[:2]) for line in old.splitlines()}
+    additions = [key for key in dict.fromkeys(keys) if key not in existing]
+    # Preserve built-in credentials byte-for-byte; only append validated keys.
+    new = old + ('\n' if old and not old.endswith('\n') else '') + ''.join(key + '\n' for key in additions)
+    ssh_dir.mkdir(mode=0o700, exist_ok=True)
+    os.chmod(ssh_dir, 0o700)
+    os.chown(ssh_dir, uid, gid)
+    fd, temporary = tempfile.mkstemp(prefix='.authorized_keys.', dir=ssh_dir)
+    try:
+        os.fchmod(fd, 0o600)
+        os.fchown(fd, uid, gid)
+        with os.fdopen(fd, 'w') as stream:
+            stream.write(new)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, destination)
+        directory = os.open(ssh_dir, os.O_RDONLY)
+        try:
+            os.fsync(directory)
+        finally:
+            os.close(directory)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+    return len(additions)
+
+
+def import_keys(target, user):
+    device = discover_partition()
+    if device is None:
+        print('GMIB-SETUP partition not present on the installation media; built-in SSH keys retained.')
+        return
+    with tempfile.TemporaryDirectory(prefix='gmib-setup-') as temporary:
+        command('mount', '-t', 'vfat', '-o', 'ro,nosuid,nodev,noexec', device, temporary)
+        try:
+            keys = read_keys(Path(temporary) / 'authorized_keys')
+        finally:
+            command('umount', temporary)
+    added = merge_keys(target, user, keys)
+    print(f'Added {added} customer SSH public key(s); customer access is preserved when cloning.')
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--target', choices=['/target'], required=True)
+    parser.add_argument('--admin-user', default='admin')
+    args = parser.parse_args()
+    if os.geteuid() != 0:
+        raise RuntimeError('This installer helper must run as root.')
+    import_keys(Path(args.target), args.admin_user)
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except (RuntimeError, OSError, ValueError, subprocess.SubprocessError) as error:
+        print(f'GMIB customer SSH keys: {error}', file=sys.stderr)
+        sys.exit(1)

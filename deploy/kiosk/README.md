@@ -2,8 +2,8 @@
 
 ## Configure or prepare a clone
 
-The single published image, `gmib-kiosk-5.7.6-patch1-ubuntu-24.04.4-amd64.iso`, is listed in the
-normal [GMIB kiosk catalog](https://app.nata-info.ru/gmib/kiosk). The `patch1` suffix is the image
+The single published image, `gmib-kiosk-5.7.6-patch2-ubuntu-24.04.4-amd64.iso`, is listed in the
+normal [GMIB kiosk catalog](https://app.nata-info.ru/gmib/kiosk). The `patch2` suffix is the image
 revision; GMIB itself is version 5.7.6. New builds use the normal `downloads/gmib-kiosk` publication
 route and do not use a separate clone download namespace. Existing clone3 download URLs remain
 available for devices or instructions that already use them.
@@ -220,12 +220,13 @@ For a manual build, obtain the amd64 Pritunl Client and Zabbix Agent 2 Debian pa
 using the helpers described above and pass their paths as `--pritunl-deb` and `--zabbix-agent2-deb`.
 The helpers use isolated APT state and do not add repositories to the builder permanently.
 
-Then build the installation ISO on Linux or macOS. On Ubuntu install `xorriso`; on macOS install
-`xorriso`, `dpkg`, GNU coreutils, and OpenSSL 3 with Homebrew:
+Then build the installation ISO on Linux or macOS. On Ubuntu install `xorriso`, `dosfstools`, and
+`mtools`; on macOS install `xorriso`, `dosfstools`, `mtools`, `dpkg`, GNU coreutils, and OpenSSL 3
+with Homebrew:
 
 ```bash
-sudo apt-get install xorriso
-# or: brew install xorriso dpkg coreutils openssl@3
+sudo apt-get install xorriso dosfstools mtools
+# or: brew install xorriso dosfstools mtools dpkg coreutils openssl@3
 
 deploy/kiosk/build-autoinstall-iso.sh \
   --base-iso ubuntu-24.04.4-live-server-amd64.iso \
@@ -236,7 +237,7 @@ deploy/kiosk/build-autoinstall-iso.sh \
   --zabbix-agent2-deb zabbix-agent2_1_7.4.14-1+ubuntu24.04_amd64.deb \
   --bootstrap-url https://app.nata-info.ru/api/vpn/enroll/gmib \
   --ssh-authorized-key id_ed25519.pub \
-  --output gmib-kiosk-5.7.6-patch1-ubuntu-24.04.4-amd64.iso
+  --output gmib-kiosk-5.7.6-patch2-ubuntu-24.04.4-amd64.iso
 ```
 
 The build verifies the Ubuntu ISO checksum and writes `gmib-kiosk-24.04.iso.sha256`. Every embedded
@@ -262,6 +263,18 @@ Let's Encrypt key: an installer kept in storage would stop enrolling after certi
 
 ## Installation
 
+Write the ISO to the installer USB in raw/DD mode (for example, with Rufus or Etcher). After the raw
+write, the same USB automatically exposes a 16 MiB FAT partition labeled `GMIB-SETUP` with
+`authorized_keys`. Add customer public keys there before booting or installing. The customer private
+keys stay on their laptop. An empty or comments-only file keeps the built-in administrator key. A bad,
+malformed, or private key stops installation with an explicit error; correct the file and retry.
+Password SSH login is disabled. The installer merges customer keys with built-in administrator key,
+and reads keys only from this partition on the installation USB. It does not import USB keys on an
+already installed OS. Prepared clones keep the reference machine's keys, because the importer does not
+run again on cloned targets. No manual formatting or second USB is needed. Verify the ISO checksum
+before writing; editing `authorized_keys` changes USB data, so its checksum will no longer match the
+ISO checksum. Partition visibility on Windows and macOS has not been physically verified.
+
 Writing this ISO to USB and booting it starts an unattended install that **erases the selected target
 disk without confirmation**. By default, Autoinstall selects the largest disk that is not the
 installation medium. This works for a player with one internal SATA, NVMe, or eMMC disk and does not
@@ -283,8 +296,8 @@ Publish the versioned ISO and its checksum to app-server with:
 
 ```bash
 deploy/kiosk/publish-image.sh \
-  --image-revision patch1 \
-  --iso gmib-kiosk-5.7.6-patch1-ubuntu-24.04.4-amd64.iso
+  --image-revision patch2 \
+  --iso gmib-kiosk-5.7.6-patch2-ubuntu-24.04.4-amd64.iso
 ```
 
 The public catalog is `https://app.nata-info.ru/gmib/kiosk`. The publisher validates the checksum,
@@ -305,14 +318,27 @@ and starting GMIB; failures retain the selected zone and imported profile for re
 responses without `timezone`, raw VPN responses, and pre-existing pending profiles use Moscow.
 Already provisioned kiosks are not changed by issuing a new code.
 
-Image revision `patch1` is the default. The current release is
-`gmib-kiosk-5.7.6-patch1-ubuntu-24.04.4-amd64.iso`; `gmibVersion` is `5.7.6`, while the manifest
+Image revision `patch2` is the default. The current release is
+`gmib-kiosk-5.7.6-patch2-ubuntu-24.04.4-amd64.iso`; `gmibVersion` is `5.7.6`, while the manifest
 and installed `/etc/gmib/image-release` record the image revision separately. Version 5.6.7 fixes
 supervised updates: installation does not launch a second AppImage, and the kiosk service restarts
 the session with its full arguments and child cleanup.
 
-The `--ssh-authorized-key` file may contain multiple public keys, one per line, to retain
-both customer and maintenance access. Blank/comment lines are ignored, duplicates removed,
+The `--ssh-authorized-key` file must contain exactly one unique administrator public key.
+All customer keys are supplied through `authorized_keys` on GMIB-SETUP. Blank/comment lines are ignored, duplicates removed,
 and each key validated with `ssh-keygen`; comments are not embedded. Private keys and
 `authorized_keys` options are rejected. Use `--keep-existing` when publishing to retain
 previous ISO versions; it cannot be combined with `--replace-current`.
+
+## Image verification
+
+Verify GPT, the FAT partition and multiple-key writes on a temporary partition copy, without
+changing the built ISO:
+
+```sh
+python3 deploy/kiosk/tests/test-installer-ssh-keys.py
+python3 deploy/kiosk/tests/test-iso-padding.py
+python3 deploy/kiosk/tests/verify-setup-partition.py /path/to/gmib-kiosk-5.7.6-patch2-ubuntu-24.04.4-amd64.iso
+```
+
+The final check requires `sfdisk` (util-linux), `mcopy` (mtools), and `ssh-keygen`.

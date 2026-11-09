@@ -8,7 +8,7 @@ BASE_ISO=""
 BASE_ISO_SHA256=""
 APPIMAGE=""
 GMIB_VERSION=""
-IMAGE_REVISION="patch1"
+IMAGE_REVISION="patch2"
 PRITUNL_DEB=""
 ZABBIX_AGENT2_DEB=""
 BOOTSTRAP_URL=""
@@ -33,12 +33,12 @@ Required:
   --pritunl-deb PATH          Pinned amd64 pritunl-client Debian package.
   --zabbix-agent2-deb PATH    Pinned Zabbix Agent 2 7.4 Ubuntu 24.04 amd64 package.
   --bootstrap-url URL         HTTPS endpoint returning enrollment JSON, raw OVPN, or Pritunl tar.
-  --ssh-authorized-key PATH   Public SSH key(s), one per line, for the admin account.
+  --ssh-authorized-key PATH   Exactly one built-in administrator public SSH key.
   --output PATH               Output ISO path.
 
 Optional:
   --clone-image              Deprecated alias. All images support preparation for cloning.
-  --image-revision LABEL      Installer revision. Default: patch1. Does not change GMIB version.
+  --image-revision LABEL      Installer revision. Default: patch2. Does not change GMIB version.
   --bootstrap-tls-pin PIN     curl public-key pin, formatted sha256//BASE64.
   --target-disk PATH          Select the installation disk by Linux device path.
   --target-model GLOB         Select the installation disk by udev model glob.
@@ -51,6 +51,8 @@ Optional:
 By default, the installer selects the largest disk that is not the installation
 media. The generated installer erases that disk without confirmation and powers
 off when complete. Remove the USB drive before the first boot.
+After writing the ISO in raw/DD mode, put customer public SSH keys in
+authorized_keys on the GMIB-SETUP partition of the same USB drive.
 EOF
 }
 
@@ -160,7 +162,7 @@ if [[ "$IMAGE_REVISION" == clone* ]]; then
   exit 1
 fi
 
-for command in awk dpkg-deb file xorriso sha256sum openssl sed; do
+for command in awk dd dpkg-deb file mcopy mkfs.vfat python3 xorriso sha256sum openssl sed; do
   if ! command -v "$command" >/dev/null 2>&1; then
     echo "Missing required command: $command" >&2
     exit 1
@@ -258,6 +260,10 @@ if [[ "$actual_base_iso_sha256" != "${BASE_ISO_SHA256,,}" ]]; then
 fi
 
 ssh_keys="$(bash "$SCRIPT_DIR/read-ssh-public-keys.sh" "$SSH_KEY_FILE")"
+if [[ "$ssh_keys" == *$'\n'* ]]; then
+  echo 'Exactly one built-in SSH key is required; add customer keys through GMIB-SETUP/authorized_keys.' >&2
+  exit 1
+fi
 ssh_authorized_keys="$(while IFS= read -r key; do printf "      - '%s'\n" "$key"; done <<<"$ssh_keys")"
 
 work_dir="$(mktemp -d)"
@@ -288,6 +294,7 @@ install -m 0755 "$APPIMAGE" "$payload_dir/gmib.AppImage"
 install -m 0644 "$PRITUNL_DEB" "$payload_dir/pritunl-client.deb"
 install -m 0644 "$ZABBIX_AGENT2_DEB" "$payload_dir/zabbix-agent2.deb"
 install -m 0755 "$SCRIPT_DIR/first-boot-provision.sh" "$payload_dir/"
+install -m 0755 "$SCRIPT_DIR/import-installer-ssh-keys" "$SCRIPT_DIR/read-ssh-public-keys.sh" "$payload_dir/"
 install -m 0755 "$SCRIPT_DIR/gmib-zabbix-configure" "$payload_dir/"
 install -m 0644 "$SCRIPT_DIR/gmib-provision.service" "$payload_dir/"
 install -m 0755 "$SCRIPT_DIR/install-target.sh" "$payload_dir/"
@@ -315,6 +322,7 @@ UBUNTU_VERSION='$ubuntu_version'
 IMAGE_NAME='$expected_output_name'
 ARCHITECTURE='amd64'
 CLONE_IMAGE='true'
+SETUP_PARTITION_LABEL='GMIB-SETUP'
 EOF
 chmod 0644 "$payload_dir/image-release"
 
@@ -377,6 +385,7 @@ $storage_match
   late-commands:
     - mkdir -p /target/usr/local/libexec/gmib-installer
     - cp -a /cdrom/gmib-installer/. /target/usr/local/libexec/gmib-installer/
+    - python3 /cdrom/gmib-installer/import-installer-ssh-keys --target /target --admin-user '$ADMIN_USER'
     - curtin in-target -- env GMIB_ADMIN_USER='$ADMIN_USER' GMIB_KIOSK_USER='$KIOSK_USER' /usr/local/libexec/gmib-installer/install-target.sh
   shutdown: poweroff
 EOF
@@ -397,6 +406,8 @@ manifest="$payload_dir/SHA256SUMS"
   cd "$payload_dir"
   sha256sum \
     first-boot-provision.sh \
+    import-installer-ssh-keys \
+    read-ssh-public-keys.sh \
     gmib-hide-cursor.c \
     gmib-kiosk-launch.sh \
     gmib-provision.service \
@@ -413,6 +424,14 @@ manifest="$payload_dir/SHA256SUMS"
     gmib-configure gmib-kiosk-setup gmib-kiosk-setup.conf setup.conf
 ) >"$manifest"
 
+# A normal GPT data partition remains writable after a raw/DD USB write. Keep
+# it separate from Ubuntu's EFI partition (2) and the read-only ISO filesystem.
+# Do not add customer keys to the downloadable ISO: only the commented template
+# is shipped, and each customer edits their own physical installation media.
+dd if=/dev/zero of="$work_dir/setup.fat" bs=1048576 count=16 2>/dev/null
+mkfs.vfat -F 16 -n GMIB-SETUP "$work_dir/setup.fat" >/dev/null
+mcopy -i "$work_dir/setup.fat" "$SCRIPT_DIR/setup-authorized_keys" ::authorized_keys
+
 xorriso \
   -indev "$BASE_ISO" \
   -outdev "$OUTPUT_ISO" \
@@ -421,7 +440,15 @@ xorriso \
   -map "$payload_dir" /gmib-installer \
   -map "$work_dir/grub.cfg" /boot/grub/grub.cfg \
   -volid GMIB_KIOSK_2404 \
-  -boot_image any replay
+  -boot_image any replay \
+  -append_partition 3 0x0c "$work_dir/setup.fat" \
+  -boot_image any appended_part_as=gpt \
+  -padding 0
+
+# Native xorriso may round the final output write up to a block boundary even
+# with padding disabled. The ISO volume and both GPT copies must agree before
+# removing that zero-only tail; no boot or filesystem bytes are rewritten.
+python3 "$SCRIPT_DIR/trim-iso-padding.py" "$OUTPUT_ISO"
 
 (
   cd "$(dirname "$OUTPUT_ISO")"

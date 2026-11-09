@@ -169,6 +169,17 @@ class CloneTests(unittest.TestCase):
                 self.assertNotEqual(clone.path('/etc/ssh/ssh_host_ed25519_key').read_text(), first_key)
             self.assertEqual(clone.machine_id(), CHILD)
 
+    def test_customer_administrator_keys_survive_preparation_and_clone_boot(self):
+        keys = 'public-maintenance\npublic-customer-one\npublic-customer-two\n'
+        self.write('/home/admin/.ssh/authorized_keys', keys)
+        clone.prepare()
+        self.assertEqual(clone.path('/home/admin/.ssh/authorized_keys').read_text(), keys)
+        with self.assertRaisesRegex(RuntimeError, 'reboot scheduled'):
+            clone.personalize()
+        self.write('/proc/sys/kernel/random/boot_id', 'boot-two')
+        clone.personalize()
+        self.assertEqual(clone.path('/home/admin/.ssh/authorized_keys').read_text(), keys)
+
     def test_missing_opt_in_refused(self):
         clone.path('/etc/gmib/clone.conf').unlink()
         with self.assertRaisesRegex(RuntimeError, 'not a cloning image'):

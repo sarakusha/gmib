@@ -21,6 +21,13 @@ if name == 'file':
 elif name == 'dpkg-deb':
     package = 'zabbix-agent2' if 'zabbix' in args[1] else 'pritunl-client'
     print({'Package': package, 'Architecture': 'amd64', 'Version': '1:7.4.14-1+ubuntu24.04'}[args[2]])
+elif name == 'mkfs.vfat':
+    assert '-F' in args and args[args.index('-F') + 1] == '16'
+    assert '-n' in args and args[args.index('-n') + 1] == 'GMIB-SETUP'
+    assert Path(args[-1]).stat().st_size == 16 * 1024 * 1024
+elif name == 'mcopy':
+    assert args[-1] == '::authorized_keys'
+    shutil.copyfile(args[-2], Path(os.environ['CAPTURE']) / 'setup-authorized_keys')
 elif name == 'xorriso':
     if '-extract' in args:
         pos = args.index('-extract')
@@ -29,7 +36,11 @@ elif name == 'xorriso':
             else 'linux /casper/vmlinuz ---\n')
     else:
         output = Path(args[args.index('-outdev') + 1])
-        output.write_text('synthetic ISO\n')
+        sys.path.insert(0, str(Path(os.environ['TEST_KIOSK_DIR']) / 'tests'))
+        from iso_layout_fixture import make_iso
+        make_iso(output)
+        import json
+        (Path(os.environ['CAPTURE']) / 'xorriso-args.json').write_text(json.dumps(args))
         capture = Path(os.environ['CAPTURE'])
         for i, arg in enumerate(args):
             if arg == '-map':
@@ -50,14 +61,14 @@ class CloneBuilderTest(unittest.TestCase):
         self.root = Path(self.temporary.name)
         self.bin = self.root / 'bin'
         self.bin.mkdir()
-        for name in ('file', 'dpkg-deb', 'xorriso'):
+        for name in ('file', 'dpkg-deb', 'xorriso', 'mkfs.vfat', 'mcopy'):
             script = self.bin / name
             script.write_text(STUB)
             script.chmod(0o755)
         self.capture = self.root / 'capture'
         self.capture.mkdir()
         self.env = dict(os.environ, PATH=str(self.bin) + os.pathsep + os.environ['PATH'],
-                        CAPTURE=str(self.capture))
+                        CAPTURE=str(self.capture), TEST_KIOSK_DIR=str(KIOSK), PYTHONDONTWRITEBYTECODE='1')
         self.base = self.root / 'ubuntu.iso'
         self.base.write_bytes(b'synthetic base')
         for filename in ('gmib.AppImage', 'pritunl.deb', 'zabbix.deb'):
@@ -66,7 +77,7 @@ class CloneBuilderTest(unittest.TestCase):
                        check=True, capture_output=True)
 
     def build(self, variant=False, revision=None):
-        suffix = '-patch1' if revision is None else (f'-{revision}' if revision else '')
+        suffix = '-patch2' if revision is None else (f'-{revision}' if revision else '')
         output = self.root / f'gmib-kiosk-5.7.6{suffix}-ubuntu-24.04.4-amd64.iso'
         args = ['bash', str(KIOSK / 'build-autoinstall-iso.sh'),
                 '--base-iso', str(self.base), '--base-iso-sha256', hashlib.sha256(self.base.read_bytes()).hexdigest(),
@@ -80,7 +91,7 @@ class CloneBuilderTest(unittest.TestCase):
             args += ['--image-revision', revision]
         return subprocess.run(args, env=self.env, text=True, capture_output=True)
 
-    def test_multiple_public_keys_are_separate_yaml_entries(self):
+    def test_multiple_built_in_keys_are_rejected(self):
         first = (self.root / 'key.pub').read_text().split()[:2]
         second_path = self.root / 'second'
         subprocess.run(['ssh-keygen', '-q', '-t', 'ed25519', '-N', '', '-f', str(second_path)],
@@ -90,10 +101,18 @@ class CloneBuilderTest(unittest.TestCase):
             "# customer and maintenance keys\r\n\r\n" + ' '.join(first) + " user's key\r\n"
             + ' '.join(second) + " second\r\n" + ' '.join(first) + " duplicate\r\n").encode())
         result = self.build()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('Exactly one built-in SSH key', result.stderr)
+        self.assertFalse((self.capture / 'payload').exists())
+
+    def test_duplicate_administrator_key_embeds_only_one_entry(self):
+        key = ' '.join((self.root / 'key.pub').read_text().split()[:2])
+        (self.root / 'key.pub').write_text('# administrator\n' + key + '\n' + key + ' duplicate\n')
+        result = self.build()
         self.assertEqual(result.returncode, 0, result.stderr)
         yaml = (self.capture / 'autoinstall.yaml').read_text()
         entries = yaml.split('    authorized-keys:\n', 1)[1].split('  storage:', 1)[0].splitlines()
-        self.assertEqual(entries, ["      - '" + ' '.join(key) + "'" for key in (first, second)])
+        self.assertEqual(entries, ["      - '" + key + "'"])
 
     def test_public_key_validation_rejects_unsafe_or_invalid_input(self):
         valid = (self.root / 'key.pub').read_text()
@@ -114,13 +133,31 @@ class CloneBuilderTest(unittest.TestCase):
         payload = self.capture / 'payload'
         for name in ('clone.conf', 'gmib-prepare-clone', 'gmib-clone-personalize',
                      'gmib-clone-personalize.service', 'gmib-clone-identity.conf',
-                     'gmib-configure', 'gmib-kiosk-setup', 'gmib-kiosk-setup.conf', 'setup.conf'):
+                     'gmib-configure', 'gmib-kiosk-setup', 'gmib-kiosk-setup.conf', 'setup.conf',
+                     'import-installer-ssh-keys', 'read-ssh-public-keys.sh'):
             self.assertTrue((payload / name).is_file(), name)
             self.assertIn(f'  {name}\n', (payload / 'SHA256SUMS').read_text())
         self.assertIn('CLONE_IMAGE=1', (payload / 'clone.conf').read_text())
-        self.assertIn("IMAGE_REVISION='patch1'", (payload / 'image-release').read_text())
+        self.assertIn("IMAGE_REVISION='patch2'", (payload / 'image-release').read_text())
         self.assertEqual((payload / 'setup.conf').read_text(), "ADMIN_USER='admin'\n")
         subprocess.run(['sha256sum', '-c', 'SHA256SUMS'], cwd=payload, check=True, capture_output=True)
+
+    def test_customer_partition_and_import_are_wired_into_default_image(self):
+        import json
+        result = self.build()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        template = (self.capture / 'setup-authorized_keys').read_text()
+        self.assertTrue(all(not line.strip() or line.startswith('#') for line in template.splitlines()))
+        self.assertIn('authorized_keys', template)
+        args = json.loads((self.capture / 'xorriso-args.json').read_text())
+        index = args.index('-append_partition')
+        self.assertEqual(args[index + 1:index + 3], ['3', '0x0c'])
+        self.assertLess(args.index('replay'), index)
+        self.assertIn('appended_part_as=gpt', args)
+        yaml = (self.capture / 'autoinstall.yaml').read_text()
+        self.assertIn("--target /target --admin-user 'admin'", yaml)
+        self.assertLess(yaml.index('python3 /cdrom/gmib-installer/import-installer-ssh-keys'),
+                        yaml.index('curtin in-target -- env'))
 
     def test_default_install_stages_configuration_and_identity_gates(self):
         result = self.build()
@@ -155,10 +192,10 @@ class CloneBuilderTest(unittest.TestCase):
         result = self.build(variant=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('--clone-image is deprecated', result.stderr)
-        self.assertTrue((self.root / 'gmib-kiosk-5.7.6-patch1-ubuntu-24.04.4-amd64.iso').is_file())
+        self.assertTrue((self.root / 'gmib-kiosk-5.7.6-patch2-ubuntu-24.04.4-amd64.iso').is_file())
 
     def test_legacy_clone_and_invalid_revision_labels_are_rejected(self):
-        for revision, error in (('clone1', 'reserved for legacy images'), ('../patch1', 'lowercase label')):
+        for revision, error in (('clone1', 'reserved for legacy images'), ('../patch2', 'lowercase label')):
             with self.subTest(revision=revision):
                 result = self.build(revision=revision)
                 self.assertNotEqual(result.returncode, 0)
