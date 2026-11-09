@@ -47,7 +47,7 @@ publish() {
     --server test@example.test --remote-dir "$work_dir/public" \
     --public-base-url https://example.test/downloads/gmib-kiosk "${@:3}" >/dev/null
   jq -e --arg version "$version" --arg revision "$revision" --arg filename "$filename" \
-    '.gmibVersion == $version and .productVersion == $version and .filename == $filename and
+    '.product == "gmib-kiosk" and .gmibVersion == $version and .productVersion == $version and .filename == $filename and
       (if $revision == "" then has("imageRevision") | not else .imageRevision == $revision end)' \
     "$work_dir/public/$filename.json" >/dev/null
   (cd "$work_dir/public" && sha256sum -c "$filename.sha256" >/dev/null)
@@ -117,6 +117,25 @@ for mode in remote local; do
     grep -q 'Clone publication' "$work_dir/error"
     [[ -f "$work_dir/input/$clone_name" ]]
   done
+done
+# The unified image defaults to the regular catalog and cannot prune legacy images.
+publish 5.7.6 patch1
+unified_iso="$work_dir/input/gmib-kiosk-5.7.6-patch1-ubuntu-24.04.4-amd64.iso"
+if bash "$PUBLISHER" --iso "$unified_iso" --image-revision patch1 --server test@example.test \
+  >"$work_dir/error" 2>&1; then
+  echo 'Default-destination transport should stop before touching real paths' >&2
+  exit 1
+fi
+grep -q "realpath -m '/home/user/src/app-server/public/downloads/gmib-kiosk'" "$TEST_DEFAULT_PUBLICATION_CALL"
+ln -s "$clone_dir" "$work_dir/alias/gmib-kiosk"
+for destination in "$clone_dir" "$work_dir/alias/gmib-kiosk"; do
+  if bash "$PUBLISHER" --iso "$unified_iso" --image-revision patch1 --server test@example.test \
+    --remote-dir "$destination" >"$work_dir/error" 2>&1; then
+    echo "Unified image publication unexpectedly accepted $destination" >&2
+    exit 1
+  fi
+  grep -q 'legacy' "$work_dir/error"
+  [[ -f "$clone_dir/$clone_name" ]]
 done
 if [[ "$(uname -s)" == Linux ]]; then
   local_dir="$work_dir/local-public"

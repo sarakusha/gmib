@@ -25,7 +25,16 @@ for required_file in \
   gmib-provision.service \
   setup-linux-kiosk.sh \
   gmib-kiosk-launch.sh \
-  gmib-hide-cursor.c; do
+  gmib-hide-cursor.c \
+  clone.conf \
+  gmib-prepare-clone \
+  gmib-clone-personalize \
+  gmib-clone-personalize.service \
+  gmib-clone-identity.conf \
+  gmib-configure \
+  gmib-kiosk-setup \
+  gmib-kiosk-setup.conf \
+  setup.conf; do
   if [[ ! -f "$PAYLOAD_DIR/$required_file" ]]; then
     echo "Missing payload file: $PAYLOAD_DIR/$required_file" >&2
     exit 1
@@ -40,19 +49,6 @@ if ! id "$KIOSK_USER" >/dev/null 2>&1; then
   useradd --create-home --shell /bin/bash "$KIOSK_USER"
 fi
 passwd --lock "$KIOSK_USER" >/dev/null
-
-clone_packages=()
-if [[ -f "$PAYLOAD_DIR/clone.conf" ]]; then
-  for clone_file in gmib-prepare-clone gmib-clone-personalize \
-    gmib-clone-personalize.service gmib-clone-identity.conf \
-    gmib-configure gmib-kiosk-setup gmib-kiosk-setup.conf setup.conf; do
-    if [[ ! -f "$PAYLOAD_DIR/$clone_file" ]]; then
-      echo "Missing clone payload file: $clone_file" >&2
-      exit 1
-    fi
-  done
-  clone_packages+=(python3)
-fi
 
 export DEBIAN_FRONTEND=noninteractive
 # Neither package is allowed to start a network service while the image is being
@@ -87,7 +83,9 @@ apt-get install -y \
   jq \
   kbd \
   locales \
-  openssh-server util-linux "${clone_packages[@]}" \
+  openssh-server \
+  python3 \
+  util-linux \
   "$PAYLOAD_DIR/pritunl-client.deb" \
   "$PAYLOAD_DIR/zabbix-agent2.deb"
 cleanup_policy_rc_d
@@ -137,24 +135,21 @@ cat >/etc/systemd/system/gmib-cage@.service.d/locale.conf <<'EOF'
 EnvironmentFile=-/etc/default/locale
 EOF
 
-# Only the explicitly selected clone installer installs preparation commands or
-# gates services on clone identity. The ordinary installer retains its boot flow.
-if [[ -f "$PAYLOAD_DIR/clone.conf" ]]; then
-  install -m 0644 "$PAYLOAD_DIR/clone.conf" /etc/gmib/clone.conf
-  install -m 0644 "$PAYLOAD_DIR/setup.conf" /etc/gmib/setup.conf
-  install -m 0755 "$PAYLOAD_DIR/gmib-prepare-clone" "$PAYLOAD_DIR/gmib-clone-personalize" \
-    "$PAYLOAD_DIR/gmib-configure" "$PAYLOAD_DIR/gmib-kiosk-setup" /usr/local/sbin/
-  install -m 0644 "$PAYLOAD_DIR/gmib-clone-personalize.service" /etc/systemd/system/
-  for clone_unit in systemd-networkd.service NetworkManager.service networking.service \
-    ssh.service ssh.socket pritunl-client.service gmib-provision.service \
-    gmib-cage@.service zabbix-agent2.service; do
-    install -d -m 0755 "/etc/systemd/system/$clone_unit.d"
-    install -m 0644 "$PAYLOAD_DIR/gmib-clone-identity.conf" \
-      "/etc/systemd/system/$clone_unit.d/clone-identity.conf"
-  done
-  install -m 0644 "$PAYLOAD_DIR/gmib-kiosk-setup.conf" \
-    /etc/systemd/system/gmib-provision.service.d/setup-menu.conf
-fi
+# Install configuration and gate boot services on clone identity.
+install -m 0644 "$PAYLOAD_DIR/clone.conf" /etc/gmib/clone.conf
+install -m 0644 "$PAYLOAD_DIR/setup.conf" /etc/gmib/setup.conf
+install -m 0755 "$PAYLOAD_DIR/gmib-prepare-clone" "$PAYLOAD_DIR/gmib-clone-personalize" \
+  "$PAYLOAD_DIR/gmib-configure" "$PAYLOAD_DIR/gmib-kiosk-setup" /usr/local/sbin/
+install -m 0644 "$PAYLOAD_DIR/gmib-clone-personalize.service" /etc/systemd/system/
+for clone_unit in systemd-networkd.service NetworkManager.service networking.service \
+  ssh.service ssh.socket pritunl-client.service gmib-provision.service \
+  gmib-cage@.service zabbix-agent2.service; do
+  install -d -m 0755 "/etc/systemd/system/$clone_unit.d"
+  install -m 0644 "$PAYLOAD_DIR/gmib-clone-identity.conf" \
+    "/etc/systemd/system/$clone_unit.d/clone-identity.conf"
+done
+install -m 0644 "$PAYLOAD_DIR/gmib-kiosk-setup.conf" \
+  /etc/systemd/system/gmib-provision.service.d/setup-menu.conf
 
 # Keep the kiosk boot clean while retaining diagnostics in journalctl. The Ubuntu installer itself
 # remains verbose so installation failures are still visible.
@@ -179,9 +174,7 @@ visudo --check --file=/etc/sudoers.d/90-gmib-admin >/dev/null
 
 systemctl daemon-reload
 systemctl enable ssh.service pritunl-client.service gmib-provision.service >/dev/null
-if [[ -f "$PAYLOAD_DIR/clone.conf" ]]; then
-  systemctl enable gmib-clone-personalize.service >/dev/null
-fi
+systemctl enable gmib-clone-personalize.service >/dev/null
 systemctl disable zabbix-agent2.service >/dev/null 2>&1 || true
 systemctl mask zabbix-agent2.service >/dev/null 2>&1 || true
 systemctl disable gmib-cage@tty1.service >/dev/null 2>&1 || true

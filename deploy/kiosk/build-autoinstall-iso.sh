@@ -8,8 +8,7 @@ BASE_ISO=""
 BASE_ISO_SHA256=""
 APPIMAGE=""
 GMIB_VERSION=""
-IMAGE_REVISION=""
-CLONE_IMAGE=false
+IMAGE_REVISION="patch1"
 PRITUNL_DEB=""
 ZABBIX_AGENT2_DEB=""
 BOOTSTRAP_URL=""
@@ -38,8 +37,8 @@ Required:
   --output PATH               Output ISO path.
 
 Optional:
-  --clone-image              Include reference-image preparation and clone personalization.
-  --image-revision LABEL      Installer revision, e.g. patch1; does not change GMIB version.
+  --clone-image              Deprecated alias. All images support preparation for cloning.
+  --image-revision LABEL      Installer revision. Default: patch1. Does not change GMIB version.
   --bootstrap-tls-pin PIN     curl public-key pin, formatted sha256//BASE64.
   --target-disk PATH          Select the installation disk by Linux device path.
   --target-model GLOB         Select the installation disk by udev model glob.
@@ -70,7 +69,7 @@ while (($# > 0)); do
       shift 2
       ;;
     --clone-image)
-      CLONE_IMAGE=true
+      echo "Warning: --clone-image is deprecated. All GMIB kiosk images support preparation for cloning." >&2
       shift
       ;;
     --image-revision)
@@ -156,14 +155,8 @@ while (($# > 0)); do
   esac
 done
 
-if [[ "$CLONE_IMAGE" == true ]]; then
-  IMAGE_REVISION="${IMAGE_REVISION:-clone3}"
-  if [[ ! "$IMAGE_REVISION" =~ ^clone[0-9]+([.-][a-z0-9]+)*$ ]]; then
-    echo "Clone images require a revision such as clone1 or clone1.patch1." >&2
-    exit 1
-  fi
-elif [[ "$IMAGE_REVISION" == clone* ]]; then
-  echo "Clone revisions require --clone-image." >&2
+if [[ "$IMAGE_REVISION" == clone* ]]; then
+  echo "Clone revisions are reserved for legacy images. Use a revision such as patch1." >&2
   exit 1
 fi
 
@@ -302,20 +295,18 @@ install -m 0755 "$REPO_ROOT/scripts/setup-linux-kiosk.sh" "$payload_dir/"
 install -m 0755 "$REPO_ROOT/scripts/gmib-kiosk-launch.sh" "$payload_dir/"
 install -m 0644 "$REPO_ROOT/scripts/gmib-hide-cursor.c" "$payload_dir/"
 
-if [[ "$CLONE_IMAGE" == true ]]; then
-  install -m 0755 "$SCRIPT_DIR/gmib-prepare-clone" "$SCRIPT_DIR/gmib-clone-personalize" \
-    "$SCRIPT_DIR/gmib-configure" "$SCRIPT_DIR/gmib-kiosk-setup" "$payload_dir/"
-  install -m 0644 "$SCRIPT_DIR/gmib-clone-personalize.service" "$SCRIPT_DIR/gmib-clone-identity.conf" \
-    "$SCRIPT_DIR/gmib-kiosk-setup.conf" "$payload_dir/"
-  printf "ADMIN_USER='%s'\n" "$ADMIN_USER" >"$payload_dir/setup.conf"
-  chmod 0644 "$payload_dir/setup.conf"
-  cat >"$payload_dir/clone.conf" <<EOF
+install -m 0755 "$SCRIPT_DIR/gmib-prepare-clone" "$SCRIPT_DIR/gmib-clone-personalize" \
+  "$SCRIPT_DIR/gmib-configure" "$SCRIPT_DIR/gmib-kiosk-setup" "$payload_dir/"
+install -m 0644 "$SCRIPT_DIR/gmib-clone-personalize.service" "$SCRIPT_DIR/gmib-clone-identity.conf" \
+  "$SCRIPT_DIR/gmib-kiosk-setup.conf" "$payload_dir/"
+printf "ADMIN_USER='%s'\n" "$ADMIN_USER" >"$payload_dir/setup.conf"
+chmod 0644 "$payload_dir/setup.conf"
+cat >"$payload_dir/clone.conf" <<EOF
 CLONE_IMAGE=1
 KIOSK_USER='$KIOSK_USER'
 KIOSK_HOME='/home/$KIOSK_USER'
 EOF
-  chmod 0644 "$payload_dir/clone.conf"
-fi
+chmod 0644 "$payload_dir/clone.conf"
 
 cat >"$payload_dir/image-release" <<EOF
 GMIB_VERSION='$GMIB_VERSION'
@@ -323,7 +314,7 @@ IMAGE_REVISION='$IMAGE_REVISION'
 UBUNTU_VERSION='$ubuntu_version'
 IMAGE_NAME='$expected_output_name'
 ARCHITECTURE='amd64'
-CLONE_IMAGE='$CLONE_IMAGE'
+CLONE_IMAGE='true'
 EOF
 chmod 0644 "$payload_dir/image-release"
 
@@ -417,11 +408,9 @@ manifest="$payload_dir/SHA256SUMS"
     setup-linux-kiosk.sh \
     gmib-zabbix-configure \
     zabbix-agent2.deb
-  if [[ "$CLONE_IMAGE" == true ]]; then
-    sha256sum clone.conf gmib-prepare-clone gmib-clone-personalize \
-      gmib-clone-personalize.service gmib-clone-identity.conf \
-      gmib-configure gmib-kiosk-setup gmib-kiosk-setup.conf setup.conf
-  fi
+  sha256sum clone.conf gmib-prepare-clone gmib-clone-personalize \
+    gmib-clone-personalize.service gmib-clone-identity.conf \
+    gmib-configure gmib-kiosk-setup gmib-kiosk-setup.conf setup.conf
 ) >"$manifest"
 
 xorriso \

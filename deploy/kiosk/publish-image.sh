@@ -37,8 +37,8 @@ or:
 Files are first uploaded with a .part suffix. After atomic publication, older
 ISO, checksum, manifest, and partial files for the same product are deleted
 unless --keep-existing is supplied.
-Clone revisions (clone1, clone2, ...) use a separate gmib-kiosk-clone directory
-and URL, including when --image-revision is omitted.
+Legacy clone revisions (clone1, clone2, ...) use the gmib-kiosk-clone directory
+and URL. Current GMIB kiosk images use the gmib-kiosk directory by default.
 EOF
 }
 
@@ -175,15 +175,27 @@ if [[ "$CLONE_IMAGE" == true ]]; then
     echo "Clone publication requires a separate gmib-kiosk-clone directory and URL." >&2
     exit 1
   fi
+fi
+if [[ "$PRODUCT" == gmib-kiosk ]]; then
+  if [[ "$CLONE_IMAGE" == false ]] &&
+    { [[ "${REMOTE_DIR%/}" == */gmib-kiosk-clone ]] || [[ "${PUBLIC_BASE_URL%/}" == */gmib-kiosk-clone ]]; }; then
+    echo "The gmib-kiosk-clone directory and URL are reserved for legacy images." >&2
+    exit 1
+  fi
   # Check on the destination host before mkdir, upload, move, or retention.
   if [[ "$LOCAL" == true ]]; then
-    resolved_clone_dir="$(realpath -m "$REMOTE_DIR")"
+    resolved_dir="$(realpath -m "$REMOTE_DIR")"
   else
     # REMOTE_DIR is restricted to shell-safe path characters above.
-    resolved_clone_dir="$(ssh "$SERVER" "realpath -m '$REMOTE_DIR'")"
+    # shellcheck disable=SC2029
+    resolved_dir="$(ssh "$SERVER" "realpath -m '$REMOTE_DIR'")"
   fi
-  if [[ "$resolved_clone_dir" != */gmib-kiosk-clone ]]; then
+  if [[ "$CLONE_IMAGE" == true && "$resolved_dir" != */gmib-kiosk-clone ]]; then
     echo "Clone publication directory resolves outside the gmib-kiosk-clone namespace." >&2
+    exit 1
+  fi
+  if [[ "$CLONE_IMAGE" == false && "$resolved_dir" == */gmib-kiosk-clone ]]; then
+    echo "The public directory resolves to the legacy gmib-kiosk-clone namespace." >&2
     exit 1
   fi
 fi

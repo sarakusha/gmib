@@ -1,45 +1,41 @@
 # GMIB kiosk image
 
-## Separate clone-ready installer
+## Configure or prepare a clone
 
-The ordinary installer remains unchanged. Use `build-and-publish-on-server.sh --clone-image
---gmib-version 5.7.6` for a separate installer with revision `clone3` (or pass another
-`--image-revision clone4`). It publishes under `downloads/gmib-kiosk-clone`, preserving the
-ordinary ISO; `--replace-current` is rejected. The clone ISO uses a direct download link,
-separate from the ordinary `/gmib/kiosk` catalog. The low-level builder also accepts `--clone-image`.
-The existing app-server download handler only accepts ordinary GMIB/GGS products. Include
-[`nginx-clone-downloads.conf`](nginx-clone-downloads.conf) in the download host's nginx server
-block, check its alias path, validate with `nginx -t`, and reload nginx. This separate static
-route exposes only the ISO, checksum and manifest, supports Range requests and hides partial files.
+The single published image, `gmib-kiosk-5.7.6-patch1-ubuntu-24.04.4-amd64.iso`, is listed in the
+normal [GMIB kiosk catalog](https://app.nata-info.ru/gmib/kiosk). The `patch1` suffix is the image
+revision; GMIB itself is version 5.7.6. New builds use the normal `downloads/gmib-kiosk` publication
+route and do not use a separate clone download namespace. Existing clone3 download URLs remain
+available for devices or instructions that already use them.
 
-Clone3 shows a reference setup menu with IP/SSH instructions and a choice between VPN enrollment
-and preparation for cloning. Install customer software over LAN SSH without entering a VPN code,
-then select preparation and confirm with `CLONE`. Use `sudo gmib-kiosk-setup` to reopen the menu
-even after enrollment/activation. The manual SSH menu directs VPN enrollment to the local console
-without starting a competing enrollment process. Personalized copies and completed-enrollment
-recovery bypass the menu. Ordinary installers keep their existing service entry point.
-Pass `--keep-existing` when publishing clone3 to preserve an existing clone2 ISO.
+After installation, the boot menu shows the kiosk IP and a short SSH command. Run
+`sudo gmib-configure` in the current terminal to begin VPN enrollment and enter the code there.
+`sudo gmib-configure --advanced` opens a menu to choose VPN enrollment or preparation for cloning;
+the latter requires typing `CLONE` and shuts the system down. `gmib-configure --help` displays usage.
+The compatibility wrapper `sudo gmib-kiosk-setup` opens the advanced menu by default. Prepared copies
+skip this menu and enroll directly on first boot.
 
-After installing and testing customer software, the direct command `sudo gmib-prepare-clone --poweroff` also remains available;
-wait for shutdown before capturing the entire disk externally. Preparation runs as a detached
-system service, clears GMIB/VPN/monitoring identity, preserves administrator authorized keys,
-and arms a fail-closed first-boot identity service. Each clone gets a random persistent machine
-ID and new SSH host keys, reboots before network access, then requests its own VPN enrollment
+An SSH configuration session uses its own terminal for code entry. The local screen waits while it
+runs and restores its prompt if the SSH setup is cancelled or disconnected before completion. SSH
+never interrupts an enrollment exchange already in progress, and a second concurrent SSH invocation
+is rejected. Existing installations do not receive these scripts from an AppImage update; install
+the new kiosk image to get them.
+
+After installing and testing customer software, prepare the reference and wait for shutdown before
+capturing the entire disk externally. Preparation clears GMIB/VPN/monitoring identity, preserves
+administrator authorized keys, and arms first-boot identity personalization. Each copy gets a new
+machine ID and SSH host keys, reboots before network access, then requests its own VPN enrollment
 code. GMIB licensing follows separately. Customer software identity remains the customer's
-responsibility. Do not boot an armed reference before capturing it.
+responsibility. See the [Russian client guide](CLONING.ru.md) for the rollout procedure.
 
-See the [Russian client guide](CLONING.ru.md) for installation, capture and rollout steps.
-Run `python3 deploy/kiosk/tests/test-clone-runtime.py` and
-`python3 deploy/kiosk/tests/test-clone-builder.py`, plus
-`python3 deploy/kiosk/tests/test-kiosk-setup.py` for isolated lifecycle, menu and staging checks.
-Test two real cloned computers, including interrupted boot, before mass rollout.
+The image and configure scripts have not been physically validated on a pair of cloned computers.
 
 This directory builds an Ubuntu Server 24.04 amd64 installer for dedicated GMIB players. The image
 contains the GMIB AppImage plus pinned Pritunl Client and Zabbix Agent 2 7.4 packages. Installation erases one explicitly
 selected disk, installs the Cage service, and powers the computer off.
 
-On the first boot, `gmib-provision.service` owns `tty1` and asks the operator for a short one-time
-enrollment code. It exchanges the code for a device-specific Pritunl profile over HTTPS, imports
+On the first boot, `gmib-provision.service` owns `tty1` and opens the configuration menu.
+Choose VPN enrollment to enter a short one-time code. It exchanges the code for a device-specific Pritunl profile over HTTPS, imports
 and starts the profile, erases the downloaded archive, and reboots into the GMIB Cage kiosk. The
 image and installed computer never contain the bootstrap API key. Zabbix is installed masked and
 disabled; it is enabled only after the stable hostname and VPN identity are established. The
@@ -235,12 +231,12 @@ deploy/kiosk/build-autoinstall-iso.sh \
   --base-iso ubuntu-24.04.4-live-server-amd64.iso \
   --base-iso-sha256 e907d92eeec9df64163a7e454cbc8d7755e8ddc7ed42f99dbc80c40f1a138433 \
   --appimage gmib-x86_64.AppImage \
-  --gmib-version 5.6.1 \
+  --gmib-version 5.7.6 \
   --pritunl-deb pritunl-client_amd64.deb \
   --zabbix-agent2-deb zabbix-agent2_1_7.4.14-1+ubuntu24.04_amd64.deb \
   --bootstrap-url https://app.nata-info.ru/api/vpn/enroll/gmib \
   --ssh-authorized-key id_ed25519.pub \
-  --output gmib-kiosk-5.6.1-ubuntu-24.04.4-amd64.iso
+  --output gmib-kiosk-5.7.6-patch1-ubuntu-24.04.4-amd64.iso
 ```
 
 The build verifies the Ubuntu ISO checksum and writes `gmib-kiosk-24.04.iso.sha256`. Every embedded
@@ -287,7 +283,8 @@ Publish the versioned ISO and its checksum to app-server with:
 
 ```bash
 deploy/kiosk/publish-image.sh \
-  --iso gmib-kiosk-5.6.1-ubuntu-24.04.4-amd64.iso
+  --image-revision patch1 \
+  --iso gmib-kiosk-5.7.6-patch1-ubuntu-24.04.4-amd64.iso
 ```
 
 The public catalog is `https://app.nata-info.ru/gmib/kiosk`. The publisher validates the checksum,
@@ -308,12 +305,11 @@ and starting GMIB; failures retain the selected zone and imported profile for re
 responses without `timezone`, raw VPN responses, and pre-existing pending profiles use Moscow.
 Already provisioned kiosks are not changed by issuing a new code.
 
-For an ISO-only rebuild, pass `--image-revision patch1` to both the builder and publisher (the
-server build-and-publish script forwards it automatically). The filename becomes
-`gmib-kiosk-5.6.6-patch1-ubuntu-24.04.4-amd64.iso`; `gmibVersion` remains `5.6.6`, while the manifest
-and installed `/etc/gmib/image-release` record the image revision separately. Omit the suffix for
-a new GMIB version. Version 5.6.7 fixes supervised updates: installation does not launch a second
-AppImage, and the kiosk service restarts the session with its full arguments and child cleanup.
+Image revision `patch1` is the default. The current release is
+`gmib-kiosk-5.7.6-patch1-ubuntu-24.04.4-amd64.iso`; `gmibVersion` is `5.7.6`, while the manifest
+and installed `/etc/gmib/image-release` record the image revision separately. Version 5.6.7 fixes
+supervised updates: installation does not launch a second AppImage, and the kiosk service restarts
+the session with its full arguments and child cleanup.
 
 The `--ssh-authorized-key` file may contain multiple public keys, one per line, to retain
 both customer and maintenance access. Blank/comment lines are ignored, duplicates removed,
