@@ -1,0 +1,333 @@
+#!/usr/bin/env python3
+"""Configure a kiosk from the console or SSH with exclusive mutation ownership."""
+import contextlib
+import fcntl
+import ipaddress
+import os
+from pathlib import Path
+import re
+import signal
+import subprocess
+import sys
+import time
+
+ROOT = Path('/')
+PROVISION = '/usr/local/sbin/gmib-first-boot-provision'
+PREPARE = '/usr/local/sbin/gmib-prepare-clone'
+SERVICE = 'gmib-provision.service'
+
+
+def path(name):
+    return ROOT / name.lstrip('/')
+
+
+def command(*args, capture=False):
+    return subprocess.run(args, check=True, text=True, timeout=30,
+                          stdout=subprocess.PIPE if capture else None).stdout
+
+
+def admin_user():
+    if not path('/etc/gmib/clone.conf').is_file():
+        raise RuntimeError('Команда требует универсальный установочный образ GMIB kiosk.')
+    values = {}
+    for line in path('/etc/gmib/setup.conf').read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith('#'):
+            continue
+        key, separator, value = line.partition('=')
+        if not separator or key != 'ADMIN_USER':
+            raise RuntimeError('Некорректный /etc/gmib/setup.conf.')
+        values[key] = value.strip("\"'")
+    user = values.get('ADMIN_USER', '')
+    if not re.fullmatch(r'[a-z_][a-z0-9_-]*', user):
+        raise RuntimeError('Некорректное имя администратора в setup.conf.')
+    return user
+
+
+def addresses():
+    try:
+        output = command('ip', '-4', '-o', 'addr', 'show', 'scope', 'global', capture=True)
+    except (OSError, subprocess.SubprocessError):
+        return []
+    result = []
+    for line in output.splitlines():
+        words = line.split()
+        try:
+            address = str(ipaddress.IPv4Interface(words[words.index('inet') + 1]).ip)
+        except (ValueError, IndexError):
+            continue
+        if address not in result:
+            result.append(address)
+    return result
+
+
+def preparing():
+    # A pending identity is not a usable reference. The transient job check also
+    # covers the short interval before preparation writes its durable guard.
+    if path('/var/lib/gmib-clone/state.json').exists():
+        return True
+    try:
+        output = command('systemctl', 'show', 'gmib-prepare-clone.service',
+                         '--property=ActiveState', '--property=Job', capture=True)
+    except (OSError, subprocess.SubprocessError) as error:
+        raise RuntimeError('Не удалось проверить состояние подготовки эталона.') from error
+    values = dict(line.split('=', 1) for line in output.splitlines() if '=' in line)
+    if not values.get('ActiveState') or 'Job' not in values:
+        raise RuntimeError('Не удалось определить состояние подготовки эталона.')
+    job = values['Job'].strip()
+    return values['ActiveState'] not in ('inactive', 'failed') or job not in ('', '0')
+
+
+@contextlib.contextmanager
+def action_lock(name="gmib-kiosk-setup.lock"):
+    fd = os.open(path('/run/' + name), os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+    try:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise RuntimeError('Другая операция настройки уже выполняется.') from None
+        yield
+    finally:
+        os.close(fd)
+
+
+def complete():
+    return path('/var/lib/gmib-provision/complete').is_file()
+
+
+def run_provision(manual=False):
+    # Separate process group lets cancellation reap the shell AND curl/other
+    # foreground children before releasing ownership and restoring the console.
+    environment = os.environ.copy()
+    if manual:
+        environment['GMIB_CONFIGURE_MANUAL'] = '1'
+    watched = {signal.SIGINT, signal.SIGHUP, signal.SIGTERM}
+    mask = signal.pthread_sigmask(signal.SIG_BLOCK, watched)
+    try:
+        # This standalone program is single-threaded. Restore the child's mask
+        # before exec; keep the parent protected until its cleanup is installed.
+        child = subprocess.Popen([PROVISION], env=environment, start_new_session=True,
+                                 preexec_fn=lambda: signal.pthread_sigmask(signal.SIG_SETMASK, mask))
+    except BaseException:
+        signal.pthread_sigmask(signal.SIG_SETMASK, mask)
+        raise
+    try:
+        signal.pthread_sigmask(signal.SIG_SETMASK, mask)
+        # Observe exit without reaping: the zombie group leader keeps its PGID
+        # reserved until cleanup. This avoids signalling a reused process ID.
+        os.waitid(os.P_PID, child.pid, os.WEXITED | os.WNOWAIT)
+    finally:
+        # Defer further terminal signals while reaping the owned group. Give the
+        # shell's TERM/EXIT trap time to erase transient enrollment credentials.
+        signal.pthread_sigmask(signal.SIG_BLOCK, watched)
+        try:
+            try:
+                os.killpg(child.pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+            deadline = time.monotonic() + 5
+            while os.waitid(os.P_PID, child.pid, os.WEXITED | os.WNOWAIT | os.WNOHANG) is None:
+                if time.monotonic() >= deadline:
+                    break
+                time.sleep(.05)
+            # The unreaped child reserves the group ID even if it exited already.
+            try:
+                os.killpg(child.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            result = child.wait()
+        finally:
+            signal.pthread_sigmask(signal.SIG_SETMASK, mask)
+    if result not in (0, 130):
+        raise RuntimeError('Подключение не завершено; повторите настройку.')
+    return result
+
+
+@contextlib.contextmanager
+def manual_session(enrollment=False):
+    stopped = False
+    restore = False
+    succeeded = False
+    # This lock is taken BEFORE touching the screen. A second SSH caller cannot
+    # stop/restart services belonging to the first caller.
+    try:
+        with action_lock('gmib-configure-manual.lock'):
+            try:
+                with action_lock():
+                    if preparing():
+                        raise RuntimeError('Идёт подготовка эталона. Дождитесь выключения компьютера.')
+                    if enrollment and complete():
+                        print('VPN уже настроен. Повторно вводить код не нужно.')
+                        active = False
+                    else:
+                        # The shell releases this lock only while waiting for
+                        # input. Never stop it during an enrollment transaction.
+                        stopped = True
+                        command('systemctl', 'stop', SERVICE)
+                        active = True
+                yield active
+                succeeded = True
+            finally:
+                if stopped and (not complete() or (enrollment and not succeeded)) and not preparing():
+                    restore = True
+    finally:
+        # Release the manual owner before a new boot process checks that lock.
+        if restore:
+            command('systemctl', 'start', '--no-block', SERVICE)
+
+
+def enroll_on_console(boot):
+    if not boot:
+        with manual_session(enrollment=True) as active:
+            if active:
+                run_provision(manual=True)
+        return
+    with action_lock():
+        with action_lock('gmib-configure-manual.lock'):
+            if preparing():
+                raise RuntimeError('Идёт подготовка эталона. Дождитесь выключения компьютера.')
+    try:
+        result = run_provision()
+    except (KeyboardInterrupt, RuntimeError):
+        if complete() and not preparing():
+            # Completion is durable before the final reboot request. A signal
+            # in that small interval must still reach the recovery/reboot path.
+            command('systemctl', 'restart', '--no-block', SERVICE)
+            raise SystemExit(0)
+        if sys.exc_info()[0] is RuntimeError:
+            raise
+        return False
+    if result == 130:
+        idle_after_eof()
+    return True
+
+
+def confirm_prepare(boot, read=input):
+    print('\nБудут удалены VPN, активация GMIB и индивидуальные данные устройства.')
+    print('Клиентское ПО и публичные SSH-ключи доступа сохранятся.')
+    print('После подготовки компьютер выключится. Снимите образ с внешнего носителя,')
+    print('не загружая установленную систему. Идентичность своего ПО подготовьте сами.')
+    try:
+        answer = read('Для подтверждения введите CLONE (латиницей), Enter — отмена: ')
+    except (EOFError, KeyboardInterrupt):
+        print('Подготовка отменена.')
+        return False
+    if answer.strip() != 'CLONE':
+        print('Подготовка отменена.')
+        return False
+    session = contextlib.nullcontext(True) if boot else manual_session()
+    with session:
+        with action_lock(), (action_lock('gmib-configure-manual.lock') if boot else contextlib.nullcontext()):
+            if preparing():
+                raise RuntimeError('Подготовка уже запущена или не завершена. Проверьте журнал gmib-prepare-clone.service.')
+            command(PREPARE, '--poweroff')
+    print('Подготовка запущена. Дождитесь выключения; SSH может отключиться.', flush=True)
+    return True
+
+
+def idle_after_eof():
+    # The service must not repeatedly restart or erase its display on closed input.
+    print('\nВвод закрыт. По SSH доступна команда sudo gmib-configure --advanced.', flush=True)
+    print('Для возврата меню на экран: sudo systemctl restart gmib-provision.service', flush=True)
+    while True:
+        signal.pause()
+
+
+def menu(boot, read=input):
+    user = admin_user()
+    if boot and (path('/var/lib/gmib-clone/personalized.json').is_file() or
+                 path('/var/lib/gmib-provision/complete').is_file()):
+        # A deployed clone goes straight to code entry; complete also retains the
+        # existing enrollment script's interrupted-finish recovery behavior.
+        try:
+            if enroll_on_console(True):
+                return
+        except (RuntimeError, OSError, subprocess.SubprocessError) as error:
+            print(f'Настройка не выполнена: {error}', file=sys.stderr)
+    while True:
+        print('\nGMIB kiosk — настройка')
+        print('Раскладка клавиатуры: US (латиница)')
+        ips = addresses()
+        if ips:
+            print('Подключение по SSH для установки своего ПО:')
+            for address in ips:
+                print(f'  ssh {user}@{address}')
+        else:
+            print('IPv4-адрес пока не получен. Проверьте кабель и DHCP.')
+        print('Для эталона: установите своё ПО по SSH, затем выберите пункт 2.')
+        print('1. Подключить VPN по коду в этом терминале')
+        print('2. Подготовить к клонированию и выключить')
+        print('R. Обновить IP-адреса')
+        if not boot:
+            print('0. Выход')
+        try:
+            choice = read('Выберите пункт: ').strip().lower()
+        except EOFError:
+            if boot:
+                idle_after_eof()
+            return
+        except KeyboardInterrupt:
+            if boot:
+                print('\nДля работы выберите пункт меню.')
+                continue
+            return
+        if choice == '0' and not boot:
+            return
+        try:
+            if choice == '1':
+                enroll_on_console(boot)
+            elif choice == '2':
+                if confirm_prepare(boot, read):
+                    return
+            elif choice != 'r':
+                print('Выберите 1, 2 или R.' if boot else 'Выберите 1, 2, R или 0.')
+        except (RuntimeError, OSError, subprocess.SubprocessError) as error:
+            print(f'Настройка не выполнена: {error}', file=sys.stderr)
+
+
+def interrupted(signum, frame):
+    # Unlike Ctrl-C, termination/disconnect must also exit menu confirmation and
+    # the boot menu, which deliberately catch KeyboardInterrupt.
+    raise SystemExit(0)
+
+
+def main():
+    args = sys.argv[1:]
+    if args in (['--help'], ['-h']):
+        print('Использование: sudo gmib-configure [--advanced]')
+        print('Без аргументов: подключение VPN по коду в текущем терминале.')
+        print('--advanced: меню подключения и подготовки к клонированию.')
+        print('VPN-код не является лицензией GMIB. После подключения — перезагрузка.')
+        return
+    if args not in ([], ['--advanced'], ['--boot']):
+        raise RuntimeError('Использование: sudo gmib-configure [--advanced|--help]')
+    if os.geteuid() != 0:
+        raise RuntimeError('Запустите команду через sudo: sudo gmib-configure')
+    signal.signal(signal.SIGHUP, interrupted)
+    signal.signal(signal.SIGTERM, interrupted)
+    admin_user()
+    if args == ['--boot']:
+        # A service restart during an SSH session must exit without displaying a
+        # second prompt. Manual cleanup will start the service again if needed.
+        try:
+            with action_lock('gmib-configure-manual.lock'):
+                pass
+        except RuntimeError:
+            # Restart=on-failure also closes the race where a manual takeover
+            # was rejected while this freshly restarted screen checked its owner.
+            raise RuntimeError('Настройка выполняется по SSH; экран ожидает освобождения.') from None
+        menu(True)
+    elif args == ['--advanced']:
+        menu(False)
+    else:
+        enroll_on_console(False)
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        sys.exit(0)
+    except (RuntimeError, OSError, subprocess.SubprocessError) as error:
+        print(f'GMIB configure: {error}', file=sys.stderr)
+        sys.exit(1)

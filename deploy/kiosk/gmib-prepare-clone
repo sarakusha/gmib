@@ -6,7 +6,7 @@ if [[ "${1:-}" != --poweroff || $# != 1 ]]; then
   exit 2
 fi
 if [[ $EUID != 0 || ! -f /etc/gmib/clone.conf ]]; then
-  echo 'Требуются права root и специальный образ GMIB для клонирования.' >&2
+  echo 'Требуются права root и универсальный образ GMIB kiosk.' >&2
   exit 1
 fi
 # A system service survives disconnection of the SSH/VPN session that requested it.

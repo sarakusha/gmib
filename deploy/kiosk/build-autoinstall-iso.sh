@@ -304,7 +304,7 @@ install -m 0644 "$REPO_ROOT/scripts/gmib-hide-cursor.c" "$payload_dir/"
 
 if [[ "$CLONE_IMAGE" == true ]]; then
   install -m 0755 "$SCRIPT_DIR/gmib-prepare-clone" "$SCRIPT_DIR/gmib-clone-personalize" \
-    "$SCRIPT_DIR/gmib-kiosk-setup" "$payload_dir/"
+    "$SCRIPT_DIR/gmib-configure" "$SCRIPT_DIR/gmib-kiosk-setup" "$payload_dir/"
   install -m 0644 "$SCRIPT_DIR/gmib-clone-personalize.service" "$SCRIPT_DIR/gmib-clone-identity.conf" \
     "$SCRIPT_DIR/gmib-kiosk-setup.conf" "$payload_dir/"
   printf "ADMIN_USER='%s'\n" "$ADMIN_USER" >"$payload_dir/setup.conf"
@@ -420,7 +420,7 @@ manifest="$payload_dir/SHA256SUMS"
   if [[ "$CLONE_IMAGE" == true ]]; then
     sha256sum clone.conf gmib-prepare-clone gmib-clone-personalize \
       gmib-clone-personalize.service gmib-clone-identity.conf \
-      gmib-kiosk-setup gmib-kiosk-setup.conf setup.conf
+      gmib-configure gmib-kiosk-setup gmib-kiosk-setup.conf setup.conf
   fi
 ) >"$manifest"
 

@@ -29,6 +29,8 @@ root="$work_dir/root"
 stub_bin="$work_dir/bin"
 stub_state="$work_dir/stub-state"
 mkdir -p "$root" "$stub_bin" "$stub_state"
+export GMIB_PROVISION_LOCK_DIR="$work_dir"
+export GMIB_PROVISION_CLONE_STATE="$work_dir/clone-state.json"
 
 cat >"$stub_bin/systemctl" <<'EOF'
 #!/usr/bin/env bash
@@ -45,6 +47,9 @@ if [[ -n "${STUB_FAIL_SYSTEMCTL_MATCH:-}" && "$*" == *"$STUB_FAIL_SYSTEMCTL_MATC
   exit 1
 fi
 case "$1" in
+  show)
+    printf 'ActiveState=inactive\nJob=\n'
+    ;;
   enable)
     touch "$STUB_STATE/active"
     ;;
@@ -194,6 +199,7 @@ exit 0
 EOF
 cat >"$stub_bin/timeout" <<'EOF'
 #!/usr/bin/env bash
+[[ "${1:-}" != --foreground ]] || shift
 shift
 exec "$@"
 EOF
@@ -230,7 +236,7 @@ for bad_id in missing empty zero malformed; do
     "$KIOSK_DIR/first-boot-provision.sh" </dev/null >"$work_dir/invalid-$bad_id.log" 2>&1; then
     fail "$bad_id machine ID was accepted"
   fi
-  [[ ! -s "$stub_state/provision.log" ]] || fail "$bad_id machine ID changed hostname or started a service"
+  ! grep -v '^systemctl show ' "$stub_state/provision.log" | grep -q . || fail "$bad_id machine ID changed hostname or started a service"
 done
 provision_state="$work_dir/provision-state"
 mkdir -m 0700 "$provision_state"

@@ -45,7 +45,7 @@ clone_packages=()
 if [[ -f "$PAYLOAD_DIR/clone.conf" ]]; then
   for clone_file in gmib-prepare-clone gmib-clone-personalize \
     gmib-clone-personalize.service gmib-clone-identity.conf \
-    gmib-kiosk-setup gmib-kiosk-setup.conf setup.conf; do
+    gmib-configure gmib-kiosk-setup gmib-kiosk-setup.conf setup.conf; do
     if [[ ! -f "$PAYLOAD_DIR/$clone_file" ]]; then
       echo "Missing clone payload file: $clone_file" >&2
       exit 1
@@ -87,7 +87,7 @@ apt-get install -y \
   jq \
   kbd \
   locales \
-  openssh-server "${clone_packages[@]}" \
+  openssh-server util-linux "${clone_packages[@]}" \
   "$PAYLOAD_DIR/pritunl-client.deb" \
   "$PAYLOAD_DIR/zabbix-agent2.deb"
 cleanup_policy_rc_d
@@ -143,7 +143,7 @@ if [[ -f "$PAYLOAD_DIR/clone.conf" ]]; then
   install -m 0644 "$PAYLOAD_DIR/clone.conf" /etc/gmib/clone.conf
   install -m 0644 "$PAYLOAD_DIR/setup.conf" /etc/gmib/setup.conf
   install -m 0755 "$PAYLOAD_DIR/gmib-prepare-clone" "$PAYLOAD_DIR/gmib-clone-personalize" \
-    "$PAYLOAD_DIR/gmib-kiosk-setup" /usr/local/sbin/
+    "$PAYLOAD_DIR/gmib-configure" "$PAYLOAD_DIR/gmib-kiosk-setup" /usr/local/sbin/
   install -m 0644 "$PAYLOAD_DIR/gmib-clone-personalize.service" /etc/systemd/system/
   for clone_unit in systemd-networkd.service NetworkManager.service networking.service \
     ssh.service ssh.socket pritunl-client.service gmib-provision.service \

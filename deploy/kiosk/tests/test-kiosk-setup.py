@@ -13,7 +13,7 @@ import unittest
 from unittest.mock import patch
 
 sys.dont_write_bytecode = True
-SOURCE = Path(__file__).resolve().parents[1] / 'gmib-kiosk-setup'
+SOURCE = Path(__file__).resolve().parents[1] / 'gmib-configure'
 loader = importlib.machinery.SourceFileLoader('kiosk_setup', str(SOURCE))
 spec = importlib.util.spec_from_loader(loader.name, loader)
 setup = importlib.util.module_from_spec(spec)
@@ -38,7 +38,7 @@ class MenuTests(unittest.TestCase):
         self.service_state = 'ActiveState=inactive\nJob=\n'
         self.output = io.StringIO()
         patch.object(setup, 'command', self.command).start()
-        patch.object(setup.os, 'execv', self.execv).start()
+        patch.object(setup, 'run_provision', self.run_provision).start()
 
     def write(self, name, content):
         p = setup.path(name)
@@ -51,11 +51,14 @@ class MenuTests(unittest.TestCase):
             return '2: eth0    inet 192.168.1.22/24 brd 192.168.1.255 scope global eth0\n'
         if args[:2] == ('systemctl', 'show'):
             return self.service_state
+        if args[0] == setup.PREPARE:
+            self.service_state = 'ActiveState=activating\nJob=123\n'
         return ''
 
-    def execv(self, executable, args):
-        self.calls.append(('exec', executable, *args))
-        raise ExecCalled()
+    def run_provision(self, manual=False):
+        self.calls.append(('provision', manual))
+        if not manual:
+            raise ExecCalled()
 
     def run_menu(self, choices, boot=False):
         values = iter(choices)
@@ -79,7 +82,7 @@ class MenuTests(unittest.TestCase):
     def test_initial_boot_choice_enters_existing_enrollment(self):
         with self.assertRaises(ExecCalled):
             self.run_menu(['1'], boot=True)
-        self.assertEqual(self.mutations(), [('exec', setup.PROVISION, setup.PROVISION)])
+        self.assertEqual(self.mutations(), [('provision', False)])
 
     def test_personalized_boot_bypasses_menu(self):
         self.write('/var/lib/gmib-clone/personalized.json', '{}')
@@ -87,13 +90,13 @@ class MenuTests(unittest.TestCase):
             self.run_menu([], boot=True)
         self.assertNotIn('Выберите', self.output.getvalue())
         self.assertNotIn('Раскладка', self.output.getvalue())
-        self.assertEqual(self.mutations(), [('exec', setup.PROVISION, setup.PROVISION)])
+        self.assertEqual(self.mutations(), [('provision', False)])
 
     def test_complete_boot_retains_original_recovery(self):
         self.write('/var/lib/gmib-provision/complete', 'vpn-profile')
         with self.assertRaises(ExecCalled):
             self.run_menu([], boot=True)
-        self.assertEqual(self.mutations(), [('exec', setup.PROVISION, setup.PROVISION)])
+        self.assertEqual(self.mutations(), [('provision', False)])
 
     def test_manual_menu_after_enrollment_can_prepare(self):
         self.write('/var/lib/gmib-provision/complete', 'vpn-profile')
@@ -124,10 +127,12 @@ class MenuTests(unittest.TestCase):
         idle.assert_called_once_with()
         self.assertEqual(self.mutations(), [])
 
-    def test_manual_vpn_handoff_does_not_create_second_enrollment(self):
+    def test_manual_vpn_runs_in_current_terminal_and_restores_console(self):
         self.run_menu(['1', '0'])
-        self.assertEqual(self.mutations(), [('systemctl', 'start', setup.SERVICE)])
-        self.assertIn('на экране компьютера', self.output.getvalue())
+        self.assertEqual(self.mutations(), [('systemctl', 'stop', setup.SERVICE),
+                                            ('provision', True),
+                                            ('systemctl', 'start', '--no-block', setup.SERVICE)])
+        self.assertIn('в этом терминале', self.output.getvalue())
 
     def test_already_enrolled_manual_vpn_is_read_only(self):
         self.write('/var/lib/gmib-provision/complete', 'vpn-profile')
@@ -169,9 +174,62 @@ class MenuTests(unittest.TestCase):
 
     def test_missing_clone_opt_in_refused(self):
         setup.path('/etc/gmib/clone.conf').unlink()
-        with self.assertRaisesRegex(RuntimeError, 'клонирования'):
+        with self.assertRaisesRegex(RuntimeError, 'универсальный'):
             self.run_menu(['2', 'CLONE'])
         self.assertEqual(self.mutations(), [])
+
+    def test_second_manual_session_does_not_touch_screen(self):
+        with setup.action_lock('gmib-configure-manual.lock'):
+            self.run_menu(['1', '0'])
+        self.assertEqual(self.mutations(), [])
+
+    def test_cancel_provision_restores_console(self):
+        with patch.object(setup, 'run_provision', side_effect=KeyboardInterrupt):
+            with self.assertRaises(KeyboardInterrupt):
+                setup.enroll_on_console(False)
+        self.assertEqual(self.mutations(), [('systemctl', 'stop', setup.SERVICE),
+                                            ('systemctl', 'start', '--no-block', setup.SERVICE)])
+
+    def test_interrupted_new_completion_starts_recovery(self):
+        def completed_then_interrupted(manual=False):
+            self.write('/var/lib/gmib-provision/complete', 'vpn')
+            raise SystemExit(0)
+        with patch.object(setup, 'run_provision', completed_then_interrupted):
+            with self.assertRaises(SystemExit):
+                setup.enroll_on_console(False)
+        self.assertEqual(self.mutations(), [('systemctl', 'stop', setup.SERVICE),
+                                            ('systemctl', 'start', '--no-block', setup.SERVICE)])
+
+    def test_success_does_not_restore_console(self):
+        def completed(manual=False):
+            self.write('/var/lib/gmib-provision/complete', 'vpn')
+        with patch.object(setup, 'run_provision', completed):
+            setup.enroll_on_console(False)
+        self.assertEqual(self.mutations(), [('systemctl', 'stop', setup.SERVICE)])
+
+    def test_boot_restart_during_manual_session_exits_without_prompt(self):
+        with setup.action_lock('gmib-configure-manual.lock'):
+            with patch.object(sys, 'argv', ['gmib-configure', '--boot']), \
+                 patch.object(setup.os, 'geteuid', return_value=0), \
+                 patch.object(setup, 'menu') as menu:
+                with self.assertRaisesRegex(RuntimeError, 'по SSH'):
+                    setup.main()
+        menu.assert_not_called()
+        self.assertEqual(self.mutations(), [])
+
+    def test_cli_defaults_to_vpn_and_advanced_to_menu(self):
+        for args, advanced in (([], False), (['--advanced'], True)):
+            with patch.object(sys, 'argv', ['gmib-configure', *args]), \
+                 patch.object(setup.os, 'geteuid', return_value=0), \
+                 patch.object(setup, 'menu') as menu, \
+                 patch.object(setup, 'enroll_on_console') as enroll:
+                setup.main()
+                if advanced:
+                    menu.assert_called_once_with(False)
+                    enroll.assert_not_called()
+                else:
+                    enroll.assert_called_once_with(False)
+                    menu.assert_not_called()
 
     def test_ip_refresh(self):
         self.run_menu(['r', '0'])

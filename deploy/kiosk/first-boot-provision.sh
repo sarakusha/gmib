@@ -10,6 +10,10 @@ PENDING_ZABBIX_FILE="$STATE_DIR/zabbix.pending.json"
 PENDING_TIMEZONE_FILE="$STATE_DIR/timezone.pending"
 TRANSIENT_SECRET_FILE=""
 PRIMARY_PROFILE_SUFFIX="${PRIMARY_PROFILE_SUFFIX:- (main)}"
+# read_input assigns these caller variables through bash read.
+enrollment_code=""
+retry_action=""
+retry_import=""
 
 cleanup() {
   if [[ -n "$TRANSIENT_SECRET_FILE" && -f "$TRANSIENT_SECRET_FILE" ]]; then
@@ -20,6 +24,7 @@ cleanup() {
 trap cleanup EXIT
 trap 'cleanup; exit 130' INT
 trap 'cleanup; exit 143' TERM
+trap 'cleanup; exit 129' HUP
 
 if [[ ! -r "$CONFIG_FILE" ]]; then
   echo "Cannot read $CONFIG_FILE" >&2
@@ -41,6 +46,56 @@ if [[ -n "$BOOTSTRAP_TLS_PIN" && "$BOOTSTRAP_TLS_PIN" != sha256//* ]]; then
   echo "BOOTSTRAP_TLS_PIN must be a curl sha256 public-key pin." >&2
   exit 1
 fi
+
+# Configure and the detached clone-preparation worker share this transaction
+# lock. Release it ONLY while reading input, so SSH can take over an idle screen
+# without killing a request, importing a profile twice, or racing identity reset.
+# Overrides are used by isolated tests, never by the installed service.
+LOCK_DIR="${GMIB_PROVISION_LOCK_DIR:-/run}"
+CLONE_STATE="${GMIB_PROVISION_CLONE_STATE:-/var/lib/gmib-clone/state.json}"
+# Keep one reader even for legacy direct script callers. SSH stops the idle
+# screen first, so its shell and this session lock are gone before we start.
+exec 7>"$LOCK_DIR/gmib-provision-session.lock"
+if ! flock -n 7; then
+  echo "Мастер подключения уже открыт в другом терминале." >&2
+  exit 1
+fi
+exec 9>"$LOCK_DIR/gmib-kiosk-setup.lock"
+exec 8>"$LOCK_DIR/gmib-configure-manual.lock"
+acquire_transaction() {
+  if ! flock -n 9; then
+    echo "Другая операция настройки уже выполняется; повторите позже." >&2
+    exit 1
+  fi
+  if [[ "${GMIB_CONFIGURE_MANUAL:-0}" != 1 ]]; then
+    if ! flock -sn 8; then
+      echo "Настройка выполняется в другом терминале." >&2
+      exit 1
+    fi
+    flock -u 8
+  fi
+  # A queued preparation job protects the interval before its durable state is
+  # written. It will acquire this same lock before changing any device state.
+  local preparation
+  preparation="$(systemctl show gmib-prepare-clone.service --property=ActiveState --property=Job)"
+  if [[ -e "$CLONE_STATE" ]] ||
+    ! grep -Eq '^ActiveState=(inactive|failed)$' <<<"$preparation" ||
+    ! grep -Eq '^Job=(0)?$' <<<"$preparation"; then
+    echo "Подготовка к клонированию выполняется либо её состояние неизвестно." >&2
+    exit 1
+  fi
+}
+read_input() {
+  local result=0
+  flock -u 9
+  read -r "$@" || result=$?
+  if ((result != 0)); then
+    exit 130
+  fi
+  acquire_transaction
+  [[ ! -f "$COMPLETE_FILE" ]] || exit 0
+}
+acquire_transaction
 
 install -d -m 0700 "$STATE_DIR"
 if [[ -f "$COMPLETE_FILE" ]]; then
@@ -202,7 +257,7 @@ resume_profile() {
   [[ -s "$PROFILE_ID_FILE" ]] || return 1
   profile_id="$(<"$PROFILE_ID_FILE")"
   echo "Продолжаю подключение ранее импортированного VPN-профиля..."
-  timeout 120 pritunl-client start "$profile_id" --mode=ovpn || return 1
+  timeout --foreground 120 pritunl-client start "$profile_id" --mode=ovpn || return 1
   for _ in {1..30}; do
     if profile_connected "$profile_id"; then
       finish_provisioning "$profile_id"
@@ -232,7 +287,7 @@ while true; do
     fi
     profile_id="$(<"$PROFILE_ID_FILE")"
     echo "Настройка не завершена. Enter — повторить; R — удалить профиль и ввести новый код."
-    read -r retry_action
+    read_input retry_action
     if [[ "$retry_action" =~ ^[Rr]$ ]]; then
       pritunl-client remove "$profile_id" || true
       rm -f "$PROFILE_ID_FILE" "$PENDING_TIMEZONE_FILE" "$PENDING_ZABBIX_FILE"
@@ -243,7 +298,7 @@ while true; do
 
   if [[ ! -s "$PENDING_PROFILE_FILE" ]]; then
     echo "Получите одноразовый код для этого идентификатора в панели развёртывания."
-    read -r -p "Код: " enrollment_code
+    read_input -p "Код: " enrollment_code
 
     if [[ ! "$enrollment_code" =~ ^[A-Za-z0-9-]{4,20}$ ]]; then
       echo "Код должен содержать 4–20 латинских букв, цифр или дефисов."
@@ -359,7 +414,7 @@ while true; do
   if ! pritunl-client add "$PENDING_PROFILE_FILE"; then
     echo "Pritunl не смог импортировать профиль."
     echo "Enter — повторить импорт; R — удалить ответ и ввести новый код."
-    read -r retry_import
+    read_input retry_import
     if [[ "$retry_import" =~ ^[Rr]$ ]]; then
       shred -u "$PENDING_PROFILE_FILE" 2>/dev/null || rm -f "$PENDING_PROFILE_FILE"
       rm -f "$PENDING_ZABBIX_FILE" "$PENDING_TIMEZONE_FILE"

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail-closed clone preparation and boot identity for the opt-in kiosk image."""
+"""Fail-closed clone preparation and boot identity for the universal kiosk image."""
 import fcntl
 import json
 import os
@@ -269,7 +269,12 @@ def main():
     with lock_file.open('w') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         if sys.argv[1:]:
-            prepare()
+            # The requesting menu releases this lock after the detached job is
+            # queued. Wait here before changing identity; enrollment takes the
+            # same lock for every transaction, including direct script callers.
+            with safe('/run/gmib-kiosk-setup.lock').open('a') as transaction:
+                fcntl.flock(transaction, fcntl.LOCK_EX)
+                prepare()
         else:
             personalize()
 
