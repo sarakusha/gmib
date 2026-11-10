@@ -38,6 +38,15 @@ existing compatibility thresholds without evidence. Check adjacent features for 
 Validate versions below the minimum, at the minimum, a newer version, and local operation.
 Keep the compatibility notes in `README.md` and built-in help synchronized when user-visible.
 
+## Release Versioning
+
+Change the application version only through `commit-and-tag-version` (the repository's
+`pnpm run version` / `pnpm run version:patch` scripts). Never manually edit the version in
+`package.json` or other version files while implementing a feature. Run the versioning tool
+only as part of the requested release workflow. A new feature's compatibility threshold in
+`packages/common/capabilities.ts` may reference the agreed upcoming release before the
+application version is bumped.
+
 ## GitHub Release Notes
 
 Every GitHub release must include a concise, user-facing description in its Release notes,
