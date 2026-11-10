@@ -54,7 +54,6 @@ const makeJob = (overrides: Partial<PlayerSchedulerJob> = {}): PlayerSchedulerJo
   priority: 0,
   cron: defaultCron(),
   expiresAt: deadline,
-  stopOnExpiry: true,
   ...overrides,
 });
 
@@ -72,7 +71,7 @@ afterEach(() => vi.useRealTimers());
 describe('player scheduler expiry', () => {
   it('does not start playback when the deadline passes while playlist metadata loads', async () => {
     vi.setSystemTime(new Date('2026-11-14T13:59:59Z'));
-    const job = makeJob({ action: 'load-playlist', playlistId: 2, stopOnExpiry: false });
+    const job = makeJob({ action: 'load-playlist', playlistId: 2 });
     mocks.jobs.set(job.id, job);
     mocks.playlist.mockResolvedValue({ id: 2, name: 'Open day' });
     mocks.items.mockImplementation(async () => {
@@ -86,17 +85,17 @@ describe('player scheduler expiry', () => {
     expect(mocks.updatePlayer).not.toHaveBeenCalled();
   });
 
-  it('disables and stops at the exact deadline only once, including a startup after expiry', async () => {
+  it('disables at the exact deadline without changing playback, including a startup after expiry', async () => {
     const job = makeJob();
     mocks.jobs.set(job.id, job);
     const { executePlayerSchedulerJob } = await import('../src/playerScheduler');
     const expired = await executePlayerSchedulerJob(job, { disableOnce: true, expiryOnly: true });
     expect(expired).toMatchObject({ enabled: false, lastStatus: 'success', nextRunAt: undefined });
-    expect(mocks.updatePlayer).toHaveBeenCalledWith(expect.objectContaining({ autoPlay: false }));
-    expect(mocks.stop).toHaveBeenCalledWith('stop', 1);
+    expect(mocks.updatePlayer).not.toHaveBeenCalled();
+    expect(mocks.stop).not.toHaveBeenCalled();
     vi.setSystemTime(new Date('2026-11-15T10:00:00Z'));
     await executePlayerSchedulerJob(job, { disableOnce: true });
-    expect(mocks.updatePlayer).toHaveBeenCalledOnce();
+    expect(mocks.updatePlayer).not.toHaveBeenCalled();
   });
 
   it('expires a missed deadline after restarting, without another matching cron occurrence', async () => {
@@ -107,11 +106,11 @@ describe('player scheduler expiry', () => {
     expect(
       await executePlayerSchedulerJob(job, { disableOnce: true, expiryOnly: true }),
     ).toMatchObject({ enabled: false });
-    expect(mocks.stop).toHaveBeenCalledWith('stop', 1);
+    expect(mocks.stop).not.toHaveBeenCalled();
   });
 
-  it('disables without stopping when the option is unchecked', async () => {
-    const job = makeJob({ stopOnExpiry: false });
+  it('ignores a legacy enabled stop flag at expiration', async () => {
+    const job = { ...makeJob(), stopOnExpiry: true };
     mocks.jobs.set(job.id, job);
     const { executePlayerSchedulerJob } = await import('../src/playerScheduler');
     expect(await executePlayerSchedulerJob(job, { disableOnce: true })).toMatchObject({
@@ -149,8 +148,8 @@ describe('player scheduler expiry', () => {
     vi.setSystemTime(new Date(deadline));
     release();
     await Promise.all([first, automatic, manual]);
-    expect(mocks.updatePlayer).toHaveBeenCalledOnce();
-    expect(mocks.updatePlayer).toHaveBeenCalledWith(expect.objectContaining({ autoPlay: false }));
+    expect(mocks.updatePlayer).not.toHaveBeenCalled();
+    expect(mocks.updatePlayer).not.toHaveBeenCalled();
   });
 
   it('does not execute a stale expiry after the user extends the deadline', async () => {
@@ -161,19 +160,6 @@ describe('player scheduler expiry', () => {
       await executePlayerSchedulerJob(queued, { disableOnce: true, expiryOnly: true }),
     ).toMatchObject({ enabled: true });
     expect(mocks.updatePlayer).not.toHaveBeenCalled();
-  });
-
-  it('keeps the task disabled and reports an error if stopping fails', async () => {
-    const job = makeJob();
-    mocks.jobs.set(job.id, job);
-    mocks.updatePlayer.mockRejectedValueOnce(new Error('output failed'));
-    const { executePlayerSchedulerJob } = await import('../src/playerScheduler');
-    expect(await executePlayerSchedulerJob(job, { disableOnce: true })).toMatchObject({
-      enabled: false,
-      lastStatus: 'error',
-    });
-    await executePlayerSchedulerJob(job, { disableOnce: true });
-    expect(mocks.updatePlayer).toHaveBeenCalledOnce();
   });
 });
 

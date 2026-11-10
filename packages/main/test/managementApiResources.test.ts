@@ -351,8 +351,7 @@ describe('management API resource helper', () => {
           if (path === '/api/player/8') return response({ id: 8 });
           if (path === `/api/${type}/expiry-job` && options.method === 'PUT') {
             expect(options.body).toMatchObject({ expiresAt: '' });
-            if (type === 'scheduler') expect(options.body.stopOnExpiry).toBe(false);
-            else expect(options.body).not.toHaveProperty('stopOnExpiry');
+            expect(options.body).not.toHaveProperty('stopOnExpiry');
             current = { ...current, ...options.body, expiresAt: undefined, stopOnExpiry: false };
             return response(current);
           }
@@ -371,6 +370,12 @@ describe('management API resource helper', () => {
       ).toHaveLength(1);
     },
   );
+
+  it('rejects the removed stopOnExpiry flag instead of sending it to a remote host', () => {
+    expect(() => normalizeDesired('scheduler', { id: 'legacy', stopOnExpiry: true })).toThrow(
+      'stopOnExpiry',
+    );
+  });
 
   it('deletes only an explicitly absent resource and rejects invalid scheduler time', async () => {
     const client = {

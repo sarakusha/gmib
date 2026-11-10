@@ -1,4 +1,5 @@
 import { expect, it, vi } from 'vitest';
+const legacy = vi.hoisted(() => ({ setStop: (_id: string) => {} }));
 vi.mock('../src/db', async () => {
   const { DatabaseSync } = await import('node:sqlite');
   const { readFileSync } = await import('node:fs');
@@ -7,6 +8,9 @@ vi.mock('../src/db', async () => {
   const source = readFileSync(new URL('../src/db.ts', import.meta.url), 'utf8');
   const schema = source.match(/CREATE TABLE IF NOT EXISTS schedulerJob \([\s\S]*?\n      \)/)![0];
   db.exec(schema);
+  legacy.setStop = id => {
+    db.prepare('UPDATE schedulerJob SET stopOnExpiry = 1 WHERE id = ?').run(id);
+  };
   const query =
     (method: string) =>
     (sql: string, encode: (...args: any[]) => any, decode = (v: any) => v) =>
@@ -86,39 +90,33 @@ it('persists, clears and atomically claims player task expiry', async () => {
     ...input,
     kind: 'cron' as const,
     expiresAt: '2026-11-14T14:00:00',
-    stopOnExpiry: true,
   };
   const job = await createStoredSchedulerJob('player', expiry);
   expect(await getStoredPlayerSchedulerJob(job.id)).toMatchObject({
     expiresAt: expiry.expiresAt,
-    stopOnExpiry: true,
   });
   expect(await claimExpiredPlayerSchedulerJob(job)).toBe(true);
   expect(await claimExpiredPlayerSchedulerJob(job)).toBe(false);
   await updateStoredSchedulerJob('player', job.id, {
     ...expiry,
     expiresAt: '',
-    stopOnExpiry: false,
   });
   expect(await getStoredPlayerSchedulerJob(job.id)).toMatchObject({
     expiresAt: undefined,
-    stopOnExpiry: false,
   });
 });
-it.each([
-  { expiresAt: 'garbage' },
-  { expiresAt: 123 },
-  { expiresAt: '2026-11-14T14:00:00', stopOnExpiry: 'yes' },
-  { stopOnExpiry: true },
-])('rejects invalid expiry parameters %j', async parameters => {
-  await expect(
-    createStoredSchedulerJob('player', {
-      ...input,
-      kind: 'cron',
-      ...parameters,
-    } as PlayerSchedulerJobInput),
-  ).rejects.toThrow();
-});
+it.each([{ expiresAt: 'garbage' }, { expiresAt: 123 }])(
+  'rejects invalid expiry parameters %j',
+  async parameters => {
+    await expect(
+      createStoredSchedulerJob('player', {
+        ...input,
+        kind: 'cron',
+        ...parameters,
+      } as PlayerSchedulerJobInput),
+    ).rejects.toThrow();
+  },
+);
 it('rejects expiry on a single occurrence', async () => {
   await expect(
     createStoredSchedulerJob('player', { ...input, expiresAt: '2026-11-14T14:00:00' }),
@@ -170,4 +168,22 @@ it('persists, atomically expires and clears GMIB deadlines without touching othe
     createStoredSchedulerJob('gmib', { ...input, expiresAt: 'invalid' }),
   ).rejects.toThrow();
   await expect(createStoredSchedulerJob('gmib', { ...input, kind: 'once' })).rejects.toThrow();
+});
+
+it('ignores legacy stop flags in requests and stored rows', async () => {
+  const oldInput = {
+    ...input,
+    kind: 'cron' as const,
+    expiresAt: '2026-11-14T14:00:00',
+    stopOnExpiry: true,
+  };
+  const job = await createStoredSchedulerJob('player', oldInput);
+  expect(job).not.toHaveProperty('stopOnExpiry');
+  legacy.setStop(job.id);
+  const saved = await getStoredPlayerSchedulerJob(job.id);
+  expect(saved).not.toHaveProperty('stopOnExpiry');
+  expect(await claimExpiredPlayerSchedulerJob(saved!)).toBe(true);
+  const updated = await updateStoredSchedulerJob('player', job.id, { ...oldInput, expiresAt: '' });
+  expect(updated).not.toHaveProperty('stopOnExpiry');
+  expect(await getStoredPlayerSchedulerJob(job.id)).not.toHaveProperty('stopOnExpiry');
 });

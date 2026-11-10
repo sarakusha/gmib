@@ -161,7 +161,6 @@ const definitions = {
       'playlistId',
       'itemNumber',
       'expiresAt',
-      'stopOnExpiry',
       'repeatCount',
       'completionAction',
       'hideOutputOnStop',
@@ -339,13 +338,6 @@ const normalizeScheduler = (type, desired, { complete = false } = {}) => {
     fail('Срок окончания доступен только для повторяющихся заданий', 'invalid_scheduler');
 
   if (type === 'scheduler') {
-    if (desired.expiresAt === '') desired.stopOnExpiry = false;
-    if (hasOwn(desired, 'stopOnExpiry') && typeof desired.stopOnExpiry !== 'boolean')
-      fail('stopOnExpiry должен быть boolean', 'invalid_scheduler');
-    if (complete && desired.kind !== 'cron' && (desired.expiresAt || desired.stopOnExpiry))
-      fail('Срок окончания доступен только для повторяющихся заданий', 'invalid_scheduler');
-    if (complete && desired.stopOnExpiry && !desired.expiresAt)
-      fail('Для остановки по окончании нужен expiresAt', 'invalid_scheduler');
     if (
       (complete || hasOwn(desired, 'playerId')) &&
       (!Number.isSafeInteger(desired.playerId) || desired.playerId <= 0)
@@ -786,7 +778,6 @@ const buildPayload = (type, current, desired, creating) => {
 const sameValue = (type, field, actual, desired) => {
   if (['scheduler', 'gmib-scheduler'].includes(type) && field === 'expiresAt')
     return (actual || '') === (desired || '');
-  if (type === 'scheduler' && field === 'stopOnExpiry') return Boolean(actual) === Boolean(desired);
   if (actual == null && desired == null) return true;
   if (type === 'playlist' && field === 'items') {
     if (!Array.isArray(actual) || !Array.isArray(desired) || actual.length !== desired.length)

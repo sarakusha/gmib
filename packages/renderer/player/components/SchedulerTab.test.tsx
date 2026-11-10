@@ -60,7 +60,7 @@ it.each([
   state.version = version;
   const html = renderToStaticMarkup(<SchedulerTab />);
   expect(html.includes('Действует до')).toBe(supported);
-  expect(html.includes('Остановить воспроизведение по окончании')).toBe(supported);
+  expect(html).not.toContain('Остановить воспроизведение по окончании');
 });
 it('keeps local expiry controls available before release versioning', () => {
   state.version = '5.7.6';

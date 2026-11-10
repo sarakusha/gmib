@@ -116,21 +116,17 @@ const sanitizeJob = <T extends StoredSchedulerJob>(job: T): T => {
     throw new TypeError('Некорректная дата окончания задания');
   if (job.expiresAt && (job.kind !== 'cron' || !Number.isFinite(Date.parse(job.expiresAt))))
     throw new TypeError('Укажите корректную дату окончания повторяющегося задания');
-  if ('playerId' in job) {
-    if (job.stopOnExpiry != null && typeof job.stopOnExpiry !== 'boolean')
-      throw new TypeError('Некорректный параметр остановки по окончании');
-    if (job.stopOnExpiry && !job.expiresAt)
-      throw new TypeError('Для остановки по окончании укажите дату окончания задания');
-  }
-  const { nextRunAt: _, ...storedJob } = job;
+  // Ignore the retired flag, including values sent by older clients.
+  const {
+    nextRunAt: _,
+    stopOnExpiry: _legacyStop,
+    ...storedJob
+  } = job as T & {
+    stopOnExpiry?: unknown;
+  };
   const nextJob = {
     ...storedJob,
     expiresAt: job.expiresAt || undefined,
-    ...('playerId' in job
-      ? {
-          stopOnExpiry: Boolean(job.expiresAt && job.stopOnExpiry),
-        }
-      : {}),
     priority: Number.isFinite(storedJob.priority) ? Math.trunc(storedJob.priority) : 0,
     cron: sanitizeCron(storedJob.cron),
   };
@@ -174,7 +170,6 @@ const toSchedulerJob = (result: NullableOptional): StoredSchedulerJob => {
       itemNumber: row.itemNumber,
       repeatCount: row.repeatCount,
       completionAction: row.completionAction,
-      stopOnExpiry: toBoolean(row.stopOnExpiry),
       hideOutputOnStop: toBoolean(row.hideOutputOnStop),
       outputAll: toBoolean(row.outputAll),
     } as PlayerSchedulerJob;
@@ -208,7 +203,8 @@ const encodeSchedulerJob = (scope: SchedulerScope, job: StoredSchedulerJob) => (
   $repeatCount: 'repeatCount' in job ? (job.repeatCount ?? null) : null,
   $completionAction: 'completionAction' in job ? (job.completionAction ?? null) : null,
   $expiresAt: 'expiresAt' in job ? (job.expiresAt ?? null) : null,
-  $stopOnExpiry: 'stopOnExpiry' in job ? (job.stopOnExpiry ? 1 : 0) : null,
+  // Retain the legacy SQLite column, but never persist its previous behavior.
+  $stopOnExpiry: null,
   $itemNumber: 'itemNumber' in job ? (job.itemNumber ?? null) : null,
   $hideOutputOnStop:
     'hideOutputOnStop' in job && job.hideOutputOnStop != null
@@ -459,15 +455,14 @@ const updateSchedulerJobResultRow = promisifyRun(
 const claimExpiredJob = promisifyRun(
   `UPDATE schedulerJob SET enabled = 0
    WHERE id = $id AND scope = 'player' AND enabled = 1 AND kind = 'cron'
-     AND expiresAt = $expiresAt AND COALESCE(stopOnExpiry, 0) = $stopOnExpiry`,
+     AND expiresAt = $expiresAt`,
   (job: PlayerSchedulerJob) => ({
     $id: job.id,
     $expiresAt: job.expiresAt ?? null,
-    $stopOnExpiry: job.stopOnExpiry ? 1 : 0,
   }),
 );
 
-/** Claim expiry before side effects so other queued occurrences cannot stop the player twice. */
+/** Claim expiry once; expiration only disables the task. */
 export const claimExpiredPlayerSchedulerJob = async (job: PlayerSchedulerJob): Promise<boolean> =>
   (await claimExpiredJob(job)).changes > 0;
 

@@ -54,7 +54,6 @@ export type SchedulerJobBase = {
 
 export type PlayerSchedulerJob = SchedulerJobBase & {
   playerId: number;
-  stopOnExpiry?: boolean;
   action: PlayerSchedulerAction;
   playlistId?: number;
   itemNumber?: number;

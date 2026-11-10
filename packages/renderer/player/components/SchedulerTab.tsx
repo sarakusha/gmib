@@ -93,7 +93,6 @@ const createInitialValues = (
   hideOutputOnStop: initialJob?.hideOutputOnStop ?? false,
   outputAll: initialJob?.outputAll ?? false,
   expiresAt: initialJob?.expiresAt ?? '',
-  stopOnExpiry: initialJob?.stopOnExpiry ?? false,
   runAt: initialJob?.runAt ?? toDateTimeLocal(new Date(Date.now() + 60 * 60 * 1000)),
   cron: initialJob?.cron ? normalizeCronSchedule(initialJob.cron) : defaultCron(),
   enabled: initialJob?.enabled ?? true,
@@ -113,7 +112,6 @@ const toJobInput = (job: PlayerSchedulerJob): DialogValues => ({
   hideOutputOnStop: job.hideOutputOnStop,
   outputAll: job.outputAll,
   expiresAt: job.expiresAt,
-  stopOnExpiry: job.stopOnExpiry,
   runAt: job.runAt,
   cron: job.cron,
   enabled: job.enabled,
@@ -333,20 +331,7 @@ const ExpiryFields = ({
           setValues(current => ({
             ...current,
             expiresAt: event.target.value,
-            stopOnExpiry: event.target.value ? current.stopOnExpiry : false,
           }))
-        }
-      />
-      <FormControlLabel
-        label="Остановить воспроизведение по окончании"
-        disabled={!values.expiresAt}
-        control={
-          <Checkbox
-            checked={Boolean(values.expiresAt && values.stopOnExpiry)}
-            onChange={event =>
-              setValues(current => ({ ...current, stopOnExpiry: event.target.checked }))
-            }
-          />
         }
       />
     </>
@@ -487,12 +472,7 @@ const SchedulerTab: React.FC = () => {
       }}
       renderStatusIcon={job => <StatusIcon job={job} />}
       getStatusTooltip={job =>
-        [
-          job.lastMessage,
-          job.expiresAt
-            ? `Действует до: ${job.expiresAt.replace('T', ' ')}${job.stopOnExpiry ? '; остановить плеер' : ''}`
-            : '',
-        ]
+        [job.lastMessage, job.expiresAt ? `Действует до: ${job.expiresAt.replace('T', ' ')}` : '']
           .filter(Boolean)
           .join(' · ')
       }

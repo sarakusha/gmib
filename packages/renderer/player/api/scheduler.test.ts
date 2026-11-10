@@ -31,7 +31,7 @@ const load = async (hostVersion?: string, local = false, responseStatus = 200) =
   });
   const fetchMock = vi.fn().mockImplementation(() =>
     Promise.resolve(
-      new Response(JSON.stringify({ id: 'job', ...job }), {
+      new Response(JSON.stringify({ id: 'job', ...job, stopOnExpiry: true }), {
         status: responseStatus,
         headers: { 'content-type': 'application/json' },
       }),
@@ -96,6 +96,7 @@ it.each([
   ['5.7.7', false, true],
   ['5.8.0', false, true],
   [undefined, true, true],
+  [undefined, false, true],
 ])('gates expiry payload on %s local=%s', async (version, local, supported) => {
   const { api, store, fetchMock } = await load(version as string | undefined, local as boolean);
   const input = {
@@ -104,13 +105,15 @@ it.each([
     expiresAt: '2026-11-14T14:00:00',
     stopOnExpiry: true,
   };
-  await store.dispatch(api.endpoints.createSchedulerJob.initiate(input)).unwrap();
+  const created = await store.dispatch(api.endpoints.createSchedulerJob.initiate(input)).unwrap();
+  expect(created).not.toHaveProperty('stopOnExpiry');
   await store
     .dispatch(api.endpoints.updateSchedulerJob.initiate({ id: 'job', job: input }))
     .unwrap();
   for (const call of fetchMock.mock.calls) {
     const body = await (call[0] as Request).json();
-    if (supported) expect(body).toMatchObject({ expiresAt: input.expiresAt, stopOnExpiry: true });
+    expect(body).not.toHaveProperty('stopOnExpiry');
+    if (supported) expect(body).toMatchObject({ expiresAt: input.expiresAt });
     else {
       expect(body).not.toHaveProperty('expiresAt');
       expect(body).not.toHaveProperty('stopOnExpiry');
@@ -123,13 +126,12 @@ it('explicitly clears expiry over JSON when the date is removed', async () => {
     .dispatch(
       api.endpoints.updateSchedulerJob.initiate({
         id: 'job',
-        job: { ...job, kind: 'cron', expiresAt: undefined, stopOnExpiry: true },
+        job: { ...job, kind: 'cron', expiresAt: undefined },
       }),
     )
     .unwrap();
   expect(await (fetchMock.mock.calls[0][0] as Request).json()).toMatchObject({
     expiresAt: '',
-    stopOnExpiry: false,
   });
 });
 it('clears expiry for once jobs', async () => {
@@ -139,12 +141,27 @@ it('clears expiry for once jobs', async () => {
       api.endpoints.createSchedulerJob.initiate({
         ...job,
         expiresAt: '2026-11-14T14:00:00',
-        stopOnExpiry: true,
       }),
     )
     .unwrap();
   expect(await (fetchMock.mock.calls[0][0] as Request).json()).toMatchObject({
     expiresAt: '',
-    stopOnExpiry: false,
   });
 });
+
+it.each(['5.7.7', '5.7.8', '5.8.0', undefined])(
+  'ignores legacy stop flag in jobs returned by %s',
+  async version => {
+    const { api, store, fetchMock } = await load(version);
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(
+        new Response(JSON.stringify([{ ...job, id: 'legacy', stopOnExpiry: true }]), {
+          headers: { 'content-type': 'application/json' },
+        }),
+      ),
+    );
+    const result = await store.dispatch(api.endpoints.getSchedulerJobs.initiate(1)).unwrap();
+    expect(result[0]).not.toHaveProperty('stopOnExpiry');
+    store.dispatch(api.util.resetApiState());
+  },
+);

@@ -13,13 +13,17 @@ const canUseAction = (action: PlayerSchedulerJobInput['action']): boolean =>
 const unsupported = () => ({
   error: { status: 404 as const, data: 'Удалённый GMIB не поддерживает это действие планировщика' },
 });
+// Old hosts may still return this field. Never expose or send it, regardless of version.
+const withoutLegacyExpiryStop = <T extends object>(job: T): Omit<T, 'stopOnExpiry'> => {
+  const { stopOnExpiry: _, ...clean } = job as T & { stopOnExpiry?: unknown };
+  return clean;
+};
 const prepareJob = (job: PlayerSchedulerJobInput): PlayerSchedulerJobInput => {
-  const { repeatCount, completionAction, expiresAt, stopOnExpiry, ...rest } = job;
+  const { repeatCount, completionAction, expiresAt, ...rest } = withoutLegacyExpiryStop(job);
   const base = supportsFeature('playerSchedulerExpiry', version, isRemoteSession)
     ? {
         ...rest,
         expiresAt: job.kind === 'cron' ? (expiresAt ?? '') : '',
-        stopOnExpiry: job.kind === 'cron' && Boolean(expiresAt) && Boolean(stopOnExpiry),
       }
     : rest;
   return job.action === 'play-playlist-times' &&
@@ -38,6 +42,7 @@ const schedulerApi = createApi({
         url: 'scheduler',
         params: playerId == null ? undefined : { playerId },
       }),
+      transformResponse: (jobs: PlayerSchedulerJob[]) => jobs.map(withoutLegacyExpiryStop),
       providesTags: result =>
         result
           ? [
@@ -50,7 +55,9 @@ const schedulerApi = createApi({
       queryFn: async (job, _api, _options, query) => {
         if (!canUseAction(job.action)) return unsupported();
         const result = await query({ url: 'scheduler', method: 'POST', body: prepareJob(job) });
-        return result.error ? { error: result.error } : { data: result.data as PlayerSchedulerJob };
+        return result.error
+          ? { error: result.error }
+          : { data: withoutLegacyExpiryStop(result.data as PlayerSchedulerJob) };
       },
       invalidatesTags: [{ type: 'scheduler', id: 'LIST' }],
     }),
@@ -65,7 +72,9 @@ const schedulerApi = createApi({
           method: 'PUT',
           body: prepareJob(job),
         });
-        return result.error ? { error: result.error } : { data: result.data as PlayerSchedulerJob };
+        return result.error
+          ? { error: result.error }
+          : { data: withoutLegacyExpiryStop(result.data as PlayerSchedulerJob) };
       },
       invalidatesTags: (_result, _error, { id }) => [
         { type: 'scheduler' as const, id },
@@ -76,7 +85,9 @@ const schedulerApi = createApi({
       queryFn: async ({ id, action }, _api, _options, query) => {
         if (!canUseAction(action)) return unsupported();
         const result = await query({ url: `scheduler/${id}/run`, method: 'POST' });
-        return result.error ? { error: result.error } : { data: result.data as PlayerSchedulerJob };
+        return result.error
+          ? { error: result.error }
+          : { data: withoutLegacyExpiryStop(result.data as PlayerSchedulerJob) };
       },
       invalidatesTags: (_result, _error, { id }) => [
         { type: 'scheduler' as const, id },

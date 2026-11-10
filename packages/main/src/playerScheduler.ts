@@ -82,13 +82,9 @@ const getNextItem = async (
 
 class SchedulerExpiryError extends Error {}
 
-const runJob = async (
-  job: PlayerSchedulerJob,
-  enforceExpiry = true,
-): Promise<string | undefined> => {
+const runJob = async (job: PlayerSchedulerJob): Promise<string | undefined> => {
   const checkDeadline = (): void => {
-    if (enforceExpiry && isSchedulerJobExpired(job))
-      throw new SchedulerExpiryError('Срок действия задания истёк');
+    if (isSchedulerJobExpired(job)) throw new SchedulerExpiryError('Срок действия задания истёк');
   };
   const player = await getPlayer(job.playerId);
   if (!player) throw new Error(`Плеер ${job.playerId} не найден`);
@@ -200,15 +196,6 @@ const expireJob = async (job: PlayerSchedulerJob): Promise<PlayerSchedulerJob> =
     lastStatus: 'success',
     lastMessage: 'Срок действия задания истёк',
   };
-  try {
-    if (job.stopOnExpiry) {
-      await runJob({ ...job, action: 'stop', hideOutputOnStop: false }, false);
-      result.lastMessage = 'Срок действия задания истёк; воспроизведение остановлено';
-    }
-  } catch (error) {
-    result.lastStatus = 'error';
-    result.lastMessage = `Срок действия задания истёк; не удалось остановить воспроизведение: ${error instanceof Error ? error.message : String(error)}`;
-  }
   // The claim already disabled this occurrence. Do not overwrite a concurrent user edit.
   await setJobResult(job, {
     lastRunAt: result.lastRunAt,
