@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [5.7.7](https://github.com/sarakusha/gmib/compare/v5.7.6...v5.7.7) (2026-11-10)
+
+### Features
+
+* add kiosk setup menu for clone preparation ([190eb3e](https://github.com/sarakusha/gmib/commit/190eb3ef03bed2bad4fbdbfe2e3d2266d21e5fef))
+* configure kiosk VPN from SSH and console ([43b842b](https://github.com/sarakusha/gmib/commit/43b842b504f833a4bd185129a42d2596a7dc98f9))
+* expire recurring player scheduler jobs ([e7a4ac8](https://github.com/sarakusha/gmib/commit/e7a4ac8a55acaa9962d9be2813df88a9ea8c5aa4))
+* import customer SSH keys from installer USB ([05517f4](https://github.com/sarakusha/gmib/commit/05517f4a26c436bef8a4358ae73311d64e999edb))
+* release kiosk patch3 with unattended VPN setup ([0af9f89](https://github.com/sarakusha/gmib/commit/0af9f89e3d4d36273860a3b868db08a7c7dd0888))
+* support multiple SSH keys in kiosk images ([b82021e](https://github.com/sarakusha/gmib/commit/b82021e8a01bd21d02284a860d1c36e6d8ba662e))
+* unify GMIB kiosk installer and publication ([a1d7c7b](https://github.com/sarakusha/gmib/commit/a1d7c7b94c14d1370fb267361368ab31700dcffb))
+
+### Bug Fixes
+
+* preserve AppImage restart privileges and launch arguments ([fb4afbc](https://github.com/sarakusha/gmib/commit/fb4afbc62e7065b77b23b5733dcbe796fa7ddd8d))
+* serve clone kiosk downloads separately through nginx ([7839071](https://github.com/sarakusha/gmib/commit/7839071e06bbcf3fcb35459ee345174de542ee82))
+
 ## [5.7.6](https://github.com/sarakusha/gmib/compare/v5.7.5...v5.7.6) (2026-11-05)
 
 ### Features
