@@ -1,11 +1,11 @@
 import type { MenuItem } from 'electron';
-import { dialog } from 'electron';
 
 import type { UpdateInfo } from 'electron-updater';
 import { AppImageUpdater, autoUpdater as defaultUpdater } from 'electron-updater';
 import RestartableAppImageUpdater from './restartableAppImageUpdater';
 
 import log from './initlog';
+import { showUpdateDialog } from './updateDialog';
 import localConfig from './localConfig';
 import {
   buildRelaunchOptions,
@@ -37,34 +37,33 @@ autoUpdater.on('error', error => {
   }
   if (!interactive) return;
   // A synchronous error dialog blocks the HTTP API and discovery on a headless kiosk.
-  void dialog
-    .showMessageBox({
-      type: 'error',
-      title: 'Ошибка обновления',
-      message: error == null ? 'unknown' : (error.stack || error).toString(),
-    })
-    .catch(dialogError => log.error('Failed to show update error', dialogError));
+  void showUpdateDialog({
+    type: 'error',
+    title: 'Ошибка обновления',
+    message: error == null ? 'unknown' : (error.stack || error).toString(),
+  }).catch(dialogError => log.error('Failed to show update error', dialogError));
 });
 
 autoUpdater.on('update-available', () => {
   if (interactive) {
-    void dialog
-      .showMessageBox({
-        type: 'info',
-        title: 'Найдено обновление',
-        message: 'Найдено обновление, хотите установить его сейчас?',
-        buttons: ['Да', 'Нет'],
-      })
-      .then(buttonIndex => (buttonIndex.response === 0 ? autoUpdater.downloadUpdate() : []));
+    void showUpdateDialog({
+      type: 'info',
+      title: 'Найдено обновление',
+      message: 'Найдено обновление, хотите установить его сейчас?',
+      buttons: ['Да', 'Нет'],
+      cancelId: 1,
+    })
+      .then(buttonIndex => (buttonIndex.response === 0 ? autoUpdater.downloadUpdate() : []))
+      .catch(error => log.error('Update confirmation failed', error));
   }
 });
 
 autoUpdater.on('update-not-available', () => {
   if (interactive) {
-    void dialog.showMessageBox({
+    void showUpdateDialog({
       title: 'Обновления нет',
       message: 'У Вас последняя версия.',
-    });
+    }).catch(error => log.error('Failed to show update result', error));
   }
 });
 
@@ -114,12 +113,16 @@ autoUpdater.on('update-downloaded', () => {
   if (interactive) {
     if (localConfig.get('autoUpdate')) quitAndRestart();
     else
-      void dialog
-        .showMessageBox({
-          title: 'Установка обновления',
-          message: 'Обновления загружаются, приложение закроется для обновления...',
+      void showUpdateDialog({
+        title: 'Установка обновления',
+        message: 'Обновление загружено. Установить его и перезапустить приложение?',
+        buttons: ['Установить', 'Не сейчас'],
+        cancelId: 1,
+      })
+        .then(result => {
+          if (result.response === 0) quitAndRestart();
         })
-        .then(quitAndRestart);
+        .catch(error => log.error('Update installation confirmation failed', error));
   }
 });
 

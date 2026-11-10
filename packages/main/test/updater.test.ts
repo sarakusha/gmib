@@ -15,7 +15,7 @@ const mocks = vi.hoisted(() => ({
   isRelaunchManagedBySupervisor: vi.fn(() => false),
   needRestart: vi.fn(),
 }));
-vi.mock('electron', () => ({ dialog: mocks }));
+vi.mock('../src/updateDialog', () => ({ showUpdateDialog: mocks.showMessageBox }));
 vi.mock('electron-updater', async () => {
   const { EventEmitter } = await import('node:events');
   class AppImageUpdater extends EventEmitter {
@@ -63,6 +63,7 @@ beforeEach(async () => {
   autoUpdater.removeAllListeners();
   vi.clearAllMocks();
   vi.stubEnv('APPIMAGE', '/opt/gmib/gmib.AppImage');
+  mocks.showMessageBox.mockResolvedValue({ response: 0 });
   mocks.isLinuxAppImage.mockReturnValue(false);
   mocks.isRelaunchManagedBySupervisor.mockReturnValue(false);
   mocks.install.mockReturnValue(true);
@@ -142,4 +143,35 @@ it('can retry helper startup without destructively installing a second time', as
   await tick();
   expect(mocks.install).toHaveBeenCalledTimes(1);
   expect(mocks.restartWithOptions).toHaveBeenCalledTimes(2);
+});
+
+it('does not download when the update confirmation is cancelled', async () => {
+  mocks.showMessageBox.mockResolvedValueOnce({ response: 1 });
+  const { autoUpdater } = await import('electron-updater');
+  await import('../src/updater');
+  autoUpdater.emit('update-available');
+  await tick();
+  expect(mocks.showMessageBox).toHaveBeenCalledWith(expect.objectContaining({ cancelId: 1 }));
+  expect(mocks.downloadUpdate).not.toHaveBeenCalled();
+});
+
+it('does not restart when installation confirmation is cancelled or deferred', async () => {
+  mocks.showMessageBox.mockResolvedValueOnce({ response: 1 });
+  const { autoUpdater } = await import('electron-updater');
+  await import('../src/updater');
+  autoUpdater.emit('update-downloaded');
+  await tick();
+  expect(mocks.showMessageBox).toHaveBeenCalledWith(expect.objectContaining({ cancelId: 1 }));
+  expect(mocks.quitAndInstall).not.toHaveBeenCalled();
+  expect(mocks.needRestart).not.toHaveBeenCalled();
+});
+
+it('logs dialog failures without starting an update', async () => {
+  mocks.showMessageBox.mockRejectedValueOnce(new Error('Window closed'));
+  const { autoUpdater } = await import('electron-updater');
+  await import('../src/updater');
+  autoUpdater.emit('update-available');
+  await tick();
+  expect(mocks.downloadUpdate).not.toHaveBeenCalled();
+  expect(mocks.error).toHaveBeenCalledWith('Update confirmation failed', expect.any(Error));
 });

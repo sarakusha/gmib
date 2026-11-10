@@ -1,10 +1,9 @@
 import { notEmpty } from '/@common/helpers';
 
 import type { MenuItemConstructorOptions } from 'electron';
-import { app, BrowserWindow, dialog, Menu, shell } from 'electron';
+import { app, BrowserWindow, Menu, shell } from 'electron';
 
 // import debugFactory from 'debug';
-import type { UpdateInfo } from 'electron-updater';
 import uniqBy from 'lodash/uniqBy';
 import semverGt from 'semver/functions/gte';
 import debounce from 'lodash/debounce';
@@ -18,6 +17,7 @@ import { openPlayer } from './playerWindow';
 import { hasPlayers, insertPlayer, uniquePlayerName } from './screen';
 import { dbReady } from './db';
 import checkForUpdates from './updater';
+import { checkHostUpdates } from './checkHostUpdates';
 // import type { WindowParams } from './windowStore';
 import store, { findManagedWindow, getAllGmibParams, onWindowStoreChange } from './windowStore';
 import authRequest from './authRequest';
@@ -311,53 +311,12 @@ const helpMenu = async (params?: WindowParams): Promise<AppMenuItem> => {
         label: 'Проверить обновления',
         // enabled: import.meta.env.PROD,
         click: isModernGmib
-          ? async () => {
-              const updateAndRestart = async () => {
-                const resp = await authRequest({
-                  api: '/update',
-                  method: 'POST',
-                  host: gmibParams.host,
-                  port: gmibParams.nibusPort + 1,
-                });
-                if (!resp) return;
-                if (resp.ok) {
-                  void dialog.showMessageBox({
-                    title: 'Обновление установлено',
-                    message: 'Программа перезапущена',
-                  });
-                } else {
-                  dialog.showErrorBox('Что-то пошло не так', await resp.text());
-                }
-              };
-              const res = await authRequest({
-                api: '/checkForUpdates',
-                method: 'POST',
-                host: gmibParams.host,
-                port: gmibParams.nibusPort + 1,
-              });
-              if (!res) return;
-              if (res.ok) {
-                const info = (await res.json()) as undefined | UpdateInfo;
-                if (info) {
-                  void dialog
-                    .showMessageBox({
-                      type: 'info',
-                      title: 'Найдено обновление',
-                      message: `Найдено обновление ${info.version} для ${gmibParams.host}, хотите установить?`,
-                      buttons: ['Установить', 'Не сейчас'],
-                    })
-                    .then(buttonIndex => {
-                      if (buttonIndex.response === 0) void updateAndRestart();
-                    });
-                } else {
-                  void dialog.showMessageBox({
-                    title: 'Обновления не найдены',
-                    message: 'Установлена последняя версия',
-                  });
-                }
-              } else {
-                dialog.showErrorBox('Что-то пошло не так', await res.text());
-              }
+          ? () => {
+              void checkHostUpdates(
+                gmibParams.host,
+                gmibParams.nibusPort + 1,
+                BrowserWindow.getFocusedWindow() ?? getTabbedBrowserWindow(),
+              );
             }
           : checkForUpdates,
       },
