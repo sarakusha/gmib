@@ -53,6 +53,8 @@ export type SchedulerJobBase = {
 
 export type PlayerSchedulerJob = SchedulerJobBase & {
   playerId: number;
+  expiresAt?: string;
+  stopOnExpiry?: boolean;
   action: PlayerSchedulerAction;
   playlistId?: number;
   itemNumber?: number;
@@ -182,8 +184,20 @@ export const describeCron = (cron: CronSchedule): string => {
   return `Повторять ${seconds}, ${minutes}, ${hours}${days}${months}${weekdays}`;
 };
 
-export const getNextRunAt = (job: SchedulerJobBase, from = new Date()): string | undefined => {
-  if (!job.enabled) return undefined;
+/** The deadline is exclusive: no player action may start at or after it. */
+export const isSchedulerJobExpired = (
+  job: SchedulerJobBase & { expiresAt?: string },
+  now = new Date(),
+): boolean =>
+  job.kind === 'cron' &&
+  Boolean(job.expiresAt) &&
+  new Date(job.expiresAt!).getTime() <= now.getTime();
+
+export const getNextRunAt = (
+  job: SchedulerJobBase & { expiresAt?: string },
+  from = new Date(),
+): string | undefined => {
+  if (!job.enabled || isSchedulerJobExpired(job, from)) return undefined;
   if (job.kind === 'once') {
     if (!job.runAt) return undefined;
     const runAt = new Date(job.runAt);
@@ -192,11 +206,14 @@ export const getNextRunAt = (job: SchedulerJobBase, from = new Date()): string |
   if (!job.cron) return undefined;
   const next = new Date(from.getTime() + 1000);
   next.setMilliseconds(0);
+  const deadline = job.expiresAt ? new Date(job.expiresAt).getTime() : Infinity;
   for (let i = 0; i < 60 * 24 * 366; i += 1) {
+    if (next.getTime() >= deadline) return undefined;
     const firstSecond = i === 0 ? next.getSeconds() : 0;
     if (matchesCronMinute(job.cron, next)) {
       for (let second = firstSecond; second < 60; second += 1) {
         next.setSeconds(second);
+        if (next.getTime() >= deadline) return undefined;
         if (matchesPart(job.cron.seconds, second)) return next.toISOString();
       }
     }

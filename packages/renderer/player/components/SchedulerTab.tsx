@@ -92,6 +92,8 @@ const createInitialValues = (
   completionAction: initialJob?.completionAction ?? 'stop',
   hideOutputOnStop: initialJob?.hideOutputOnStop ?? false,
   outputAll: initialJob?.outputAll ?? false,
+  expiresAt: initialJob?.expiresAt ?? '',
+  stopOnExpiry: initialJob?.stopOnExpiry ?? false,
   runAt: initialJob?.runAt ?? toDateTimeLocal(new Date(Date.now() + 60 * 60 * 1000)),
   cron: initialJob?.cron ? normalizeCronSchedule(initialJob.cron) : defaultCron(),
   enabled: initialJob?.enabled ?? true,
@@ -110,6 +112,8 @@ const toJobInput = (job: PlayerSchedulerJob): DialogValues => ({
   completionAction: job.completionAction,
   hideOutputOnStop: job.hideOutputOnStop,
   outputAll: job.outputAll,
+  expiresAt: job.expiresAt,
+  stopOnExpiry: job.stopOnExpiry,
   runAt: job.runAt,
   cron: job.cron,
   enabled: job.enabled,
@@ -303,11 +307,58 @@ const renderActionFields = ({
   );
 };
 
+const ExpiryFields = ({
+  values,
+  setValues,
+}: {
+  values: DialogValues;
+  setValues: React.Dispatch<React.SetStateAction<DialogValues>>;
+}): React.ReactNode => {
+  if (values.kind !== 'cron' || !supportsFeature('playerSchedulerExpiry', version, isRemoteSession))
+    return null;
+  const invalid =
+    Boolean(values.expiresAt) && !Number.isFinite(new Date(values.expiresAt!).getTime());
+  return (
+    <>
+      <TextField
+        label="Действует до"
+        type="datetime-local"
+        variant="standard"
+        fullWidth
+        value={values.expiresAt ?? ''}
+        slotProps={{ inputLabel: { shrink: true }, htmlInput: { step: 1 } }}
+        error={invalid}
+        helperText="Необязательно. Время на хосте плеера. Начиная с этого момента задание больше не запускается."
+        onChange={event =>
+          setValues(current => ({
+            ...current,
+            expiresAt: event.target.value,
+            stopOnExpiry: event.target.value ? current.stopOnExpiry : false,
+          }))
+        }
+      />
+      <FormControlLabel
+        label="Остановить воспроизведение по окончании"
+        disabled={!values.expiresAt}
+        control={
+          <Checkbox
+            checked={Boolean(values.expiresAt && values.stopOnExpiry)}
+            onChange={event =>
+              setValues(current => ({ ...current, stopOnExpiry: event.target.checked }))
+            }
+          />
+        }
+      />
+    </>
+  );
+};
+
 const isSubmitEnabled = (values: DialogValues): boolean => {
   const needsPlaylist =
     values.action === 'load-playlist' || values.action === 'play-playlist-times';
   const needsItemNumber = values.action === 'play-item';
   return (
+    (!values.expiresAt || Number.isFinite(new Date(values.expiresAt).getTime())) &&
     (values.action !== 'play-playlist-times' ||
       (Number.isSafeInteger(values.repeatCount) &&
         (values.repeatCount ?? 0) >= 1 &&
@@ -408,9 +459,12 @@ const SchedulerTab: React.FC = () => {
       normalizeActionChange={normalizeActionChange}
       getActionName={getActionName}
       renderActionFields={args =>
-        args.values.action === 'play-playlist-times' && !repeatSupported
-          ? null
-          : renderActionFields(args)
+        args.values.action === 'play-playlist-times' && !repeatSupported ? null : (
+          <>
+            {renderActionFields(args)}
+            <ExpiryFields {...args} />
+          </>
+        )
       }
       isSubmitEnabled={values =>
         (values.action !== 'play-playlist-times' || repeatSupported) && isSubmitEnabled(values)
@@ -432,7 +486,16 @@ const SchedulerTab: React.FC = () => {
         await runJob({ id, action: job.action }).unwrap();
       }}
       renderStatusIcon={job => <StatusIcon job={job} />}
-      getStatusTooltip={job => job.lastMessage ?? ''}
+      getStatusTooltip={job =>
+        [
+          job.lastMessage,
+          job.expiresAt
+            ? `Действует до: ${job.expiresAt.replace('T', ' ')}${job.stopOnExpiry ? '; остановить плеер' : ''}`
+            : '',
+        ]
+          .filter(Boolean)
+          .join(' · ')
+      }
       getRunTooltip={job =>
         job.enabled ? 'Запустить сейчас' : 'Включите задание, чтобы запустить'
       }

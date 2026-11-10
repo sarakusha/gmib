@@ -3,13 +3,14 @@ import { startFinitePlaylist } from './finitePlaylistPlayback';
 import debugFactory from 'debug';
 
 import type { PlayerSchedulerJob, PlayerSchedulerJobInput } from '/@common/scheduler';
-import { getNextRunAt, getRunKey } from '/@common/scheduler';
+import { getNextRunAt, getRunKey, isSchedulerJobExpired } from '/@common/scheduler';
 
 import { setPlayerOutputWindowsVisibility } from './openHandler';
 import { getPlaylist, getPlaylistItems } from './playlist';
 import { updatePlayerRuntime } from './playerRuntime';
 import { checkPlayerOutput } from './playerOutputHealth';
 import {
+  claimExpiredPlayerSchedulerJob,
   createStoredSchedulerJob,
   deleteStoredSchedulerJob,
   getStoredPlayerSchedulerJob,
@@ -79,15 +80,31 @@ const getNextItem = async (
   return items[(index + 1) % items.length]?.id;
 };
 
-const runJob = async (job: PlayerSchedulerJob): Promise<string | undefined> => {
+class SchedulerExpiryError extends Error {}
+
+const runJob = async (
+  job: PlayerSchedulerJob,
+  enforceExpiry = true,
+): Promise<string | undefined> => {
+  const checkDeadline = (): void => {
+    if (enforceExpiry && isSchedulerJobExpired(job))
+      throw new SchedulerExpiryError('Срок действия задания истёк');
+  };
   const player = await getPlayer(job.playerId);
   if (!player) throw new Error(`Плеер ${job.playerId} не найден`);
+  checkDeadline();
 
   switch (job.action) {
     case 'play-playlist-times': {
       if (job.playlistId == null || job.repeatCount == null || !job.completionAction)
         throw new Error('Не заданы параметры конечного воспроизведения');
-      await startFinitePlaylist(player, job.playlistId, job.repeatCount, job.completionAction);
+      await startFinitePlaylist(
+        player,
+        job.playlistId,
+        job.repeatCount,
+        job.completionAction,
+        checkDeadline,
+      );
       return `Запущено проигрывание плейлиста ${job.repeatCount} раз`;
     }
     case 'load-playlist': {
@@ -96,6 +113,7 @@ const runJob = async (job: PlayerSchedulerJob): Promise<string | undefined> => {
       if (!playlist) throw new Error(`Плейлист ${job.playlistId} не найден`);
       const items = await getPlaylistItems(job.playlistId);
       if (items.length === 0) throw new Error(`Плейлист "${playlist.name}" пуст`);
+      checkDeadline();
       await updatePlayerRuntime(
         {
           ...player,
@@ -135,16 +153,19 @@ const runJob = async (job: PlayerSchedulerJob): Promise<string | undefined> => {
       setPlayerOutputWindowsVisibility(true, job.outputAll ? undefined : player.id);
       break;
     }
-    case 'next':
+    case 'next': {
+      const current = await getNextItem(player.playlistId, player.current);
+      checkDeadline();
       await updatePlayerRuntime(
         {
           ...player,
-          current: await getNextItem(player.playlistId, player.current),
+          current,
           autoPlay: true,
         },
         { openHidden: true },
       );
       break;
+    }
     case 'play-item': {
       const playlistId = player.playlistId;
       if (!playlistId) throw new Error('Текущий плейлист не выбран');
@@ -156,6 +177,7 @@ const runJob = async (job: PlayerSchedulerJob): Promise<string | undefined> => {
           `В плейлисте "${playlist?.name ?? playlistId}" нет ролика ${job.itemNumber ?? 1}`,
         );
       }
+      checkDeadline();
       await updatePlayerRuntime(
         { ...player, current: item.id, autoPlay: true },
         { openHidden: true },
@@ -168,11 +190,54 @@ const runJob = async (job: PlayerSchedulerJob): Promise<string | undefined> => {
   return undefined;
 };
 
+const expireJob = async (job: PlayerSchedulerJob): Promise<PlayerSchedulerJob> => {
+  if (!(await claimExpiredPlayerSchedulerJob(job))) {
+    return withNextRunAt((await getStoredPlayerSchedulerJob(job.id)) ?? { ...job, enabled: false });
+  }
+  const result: PlayerSchedulerJob = {
+    ...job,
+    enabled: false,
+    lastStatus: 'success',
+    lastMessage: 'Срок действия задания истёк',
+  };
+  try {
+    if (job.stopOnExpiry) {
+      await runJob({ ...job, action: 'stop', hideOutputOnStop: false }, false);
+      result.lastMessage = 'Срок действия задания истёк; воспроизведение остановлено';
+    }
+  } catch (error) {
+    result.lastStatus = 'error';
+    result.lastMessage = `Срок действия задания истёк; не удалось остановить воспроизведение: ${error instanceof Error ? error.message : String(error)}`;
+  }
+  // The claim already disabled this occurrence. Do not overwrite a concurrent user edit.
+  await setJobResult(job, {
+    lastRunAt: result.lastRunAt,
+    lastRunKey: result.lastRunKey,
+    lastStatus: result.lastStatus,
+    lastMessage: result.lastMessage,
+  });
+  notifyJobResult(result);
+  return withNextRunAt(result);
+};
+
 export const executePlayerSchedulerJob = async (
-  job: PlayerSchedulerJob,
-  options: { disableOnce: boolean },
-): Promise<PlayerSchedulerJob> => {
+  queuedJob: PlayerSchedulerJob,
+  options: { disableOnce: boolean; expiryOnly?: boolean },
+): Promise<PlayerSchedulerJob | undefined> => {
+  // Jobs may wait in the shared queue: use the latest enablement, deadline and parameters.
+  const job = await getStoredPlayerSchedulerJob(queuedJob.id);
+  if (!job) return undefined;
+  if (!job.enabled) return withNextRunAt(job);
   const now = new Date();
+  if (isSchedulerJobExpired(job, now)) return expireJob(job);
+  if (options.expiryOnly) return withNextRunAt(job);
+  if (
+    options.disableOnce &&
+    (job.kind !== queuedJob.kind ||
+      job.runAt !== queuedJob.runAt ||
+      JSON.stringify(job.cron) !== JSON.stringify(queuedJob.cron))
+  )
+    return withNextRunAt(job);
   const lastRunAt = now.toISOString();
   const lastRunKey = getRunKey(now);
   try {
@@ -189,6 +254,12 @@ export const executePlayerSchedulerJob = async (
     notifyJobResult(nextJob);
     return withNextRunAt(nextJob);
   } catch (error) {
+    if (error instanceof SchedulerExpiryError) {
+      const current = await getStoredPlayerSchedulerJob(job.id);
+      return current?.enabled && isSchedulerJobExpired(current)
+        ? expireJob(current)
+        : current && withNextRunAt(current);
+    }
     const message = error instanceof Error ? error.message : String(error);
     debug(`error while run job ${job.name}: ${message}`);
     const nextJob = {

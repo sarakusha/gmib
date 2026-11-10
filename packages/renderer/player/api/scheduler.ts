@@ -14,7 +14,14 @@ const unsupported = () => ({
   error: { status: 404 as const, data: 'Удалённый GMIB не поддерживает это действие планировщика' },
 });
 const prepareJob = (job: PlayerSchedulerJobInput): PlayerSchedulerJobInput => {
-  const { repeatCount, completionAction, ...base } = job;
+  const { repeatCount, completionAction, expiresAt, stopOnExpiry, ...rest } = job;
+  const base = supportsFeature('playerSchedulerExpiry', version, isRemoteSession)
+    ? {
+        ...rest,
+        expiresAt: job.kind === 'cron' ? (expiresAt ?? '') : '',
+        stopOnExpiry: job.kind === 'cron' && Boolean(expiresAt) && Boolean(stopOnExpiry),
+      }
+    : rest;
   return job.action === 'play-playlist-times' &&
     supportsFeature('playerPlaylistRepeat', version, isRemoteSession)
     ? { ...base, repeatCount, completionAction }

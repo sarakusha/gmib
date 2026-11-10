@@ -37,6 +37,8 @@ type SchedulerJobRow = {
   itemNumber?: number;
   repeatCount?: number;
   completionAction?: 'stop' | 'hide';
+  expiresAt?: string;
+  stopOnExpiry?: number;
   hideOutputOnStop?: number;
   outputAll?: number;
   screenId?: number;
@@ -110,9 +112,25 @@ const sanitizeJob = <T extends StoredSchedulerJob>(job: T): T => {
         'Укажите плейлист, целое число повторов больше нуля и действие завершения',
       );
   }
+  if ('playerId' in job) {
+    if (job.expiresAt != null && typeof job.expiresAt !== 'string')
+      throw new TypeError('Некорректная дата окончания задания');
+    if (job.stopOnExpiry != null && typeof job.stopOnExpiry !== 'boolean')
+      throw new TypeError('Некорректный параметр остановки по окончании');
+    if (job.expiresAt && (job.kind !== 'cron' || !Number.isFinite(Date.parse(job.expiresAt))))
+      throw new TypeError('Укажите корректную дату окончания повторяющегося задания');
+    if (job.stopOnExpiry && !job.expiresAt)
+      throw new TypeError('Для остановки по окончании укажите дату окончания задания');
+  }
   const { nextRunAt: _, ...storedJob } = job;
   const nextJob = {
     ...storedJob,
+    ...('playerId' in job
+      ? {
+          expiresAt: job.expiresAt || undefined,
+          stopOnExpiry: Boolean(job.expiresAt && job.stopOnExpiry),
+        }
+      : {}),
     priority: Number.isFinite(storedJob.priority) ? Math.trunc(storedJob.priority) : 0,
     cron: sanitizeCron(storedJob.cron),
   };
@@ -155,6 +173,8 @@ const toSchedulerJob = (result: NullableOptional): StoredSchedulerJob => {
       itemNumber: row.itemNumber,
       repeatCount: row.repeatCount,
       completionAction: row.completionAction,
+      expiresAt: row.expiresAt,
+      stopOnExpiry: toBoolean(row.stopOnExpiry),
       hideOutputOnStop: toBoolean(row.hideOutputOnStop),
       outputAll: toBoolean(row.outputAll),
     } as PlayerSchedulerJob;
@@ -187,6 +207,8 @@ const encodeSchedulerJob = (scope: SchedulerScope, job: StoredSchedulerJob) => (
   $playlistId: 'playlistId' in job ? (job.playlistId ?? null) : null,
   $repeatCount: 'repeatCount' in job ? (job.repeatCount ?? null) : null,
   $completionAction: 'completionAction' in job ? (job.completionAction ?? null) : null,
+  $expiresAt: 'expiresAt' in job ? (job.expiresAt ?? null) : null,
+  $stopOnExpiry: 'stopOnExpiry' in job ? (job.stopOnExpiry ? 1 : 0) : null,
   $itemNumber: 'itemNumber' in job ? (job.itemNumber ?? null) : null,
   $hideOutputOnStop:
     'hideOutputOnStop' in job && job.hideOutputOnStop != null
@@ -234,6 +256,8 @@ const insertSchedulerJob = promisifyRun(
     itemNumber,
     repeatCount,
     completionAction,
+    expiresAt,
+    stopOnExpiry,
     hideOutputOnStop,
     outputAll,
     screenId,
@@ -259,6 +283,8 @@ const insertSchedulerJob = promisifyRun(
     $itemNumber,
     $repeatCount,
     $completionAction,
+    $expiresAt,
+    $stopOnExpiry,
     $hideOutputOnStop,
     $outputAll,
     $screenId,
@@ -287,6 +313,8 @@ const updateSchedulerJobRow = promisifyRun(
       itemNumber = $itemNumber,
       repeatCount = $repeatCount,
       completionAction = $completionAction,
+      expiresAt = $expiresAt,
+      stopOnExpiry = $stopOnExpiry,
       hideOutputOnStop = $hideOutputOnStop,
       outputAll = $outputAll,
       screenId = $screenId,
@@ -393,7 +421,8 @@ export const updateStoredSchedulerJobResult = async <T extends StoredSchedulerJo
   result: Pick<T, 'lastRunAt' | 'lastRunKey' | 'lastStatus' | 'lastMessage'> &
     Partial<Pick<T, 'enabled'>>,
 ): Promise<void> => {
-  await updateSchedulerJobRow(scope, sanitizeJob({ ...job, ...result }));
+  // Runtime completion must never overwrite concurrent edits to the task or re-enable it.
+  await updateSchedulerJobResultRow(scope, job.id, result);
 };
 
 export const deleteStoredSchedulerJob = async (
@@ -403,3 +432,41 @@ export const deleteStoredSchedulerJob = async (
   const { changes } = await deleteSchedulerJobRow(id, scope);
   return changes > 0;
 };
+
+const updateSchedulerJobResultRow = promisifyRun(
+  `UPDATE schedulerJob SET
+    lastRunAt = $lastRunAt, lastRunKey = $lastRunKey,
+    lastStatus = $lastStatus, lastMessage = $lastMessage,
+    enabled = CASE WHEN $disable = 1 THEN 0 ELSE enabled END
+  WHERE id = $id AND scope = $scope`,
+  (
+    scope: SchedulerScope,
+    id: string,
+    result: Pick<StoredSchedulerJob, 'lastRunAt' | 'lastRunKey' | 'lastStatus' | 'lastMessage'> & {
+      enabled?: boolean;
+    },
+  ) => ({
+    $scope: scope,
+    $id: id,
+    $lastRunAt: result.lastRunAt ?? null,
+    $lastRunKey: result.lastRunKey ?? null,
+    $lastStatus: result.lastStatus ?? null,
+    $lastMessage: result.lastMessage ?? null,
+    $disable: result.enabled === false ? 1 : 0,
+  }),
+);
+
+const claimExpiredJob = promisifyRun(
+  `UPDATE schedulerJob SET enabled = 0
+   WHERE id = $id AND scope = 'player' AND enabled = 1 AND kind = 'cron'
+     AND expiresAt = $expiresAt AND COALESCE(stopOnExpiry, 0) = $stopOnExpiry`,
+  (job: PlayerSchedulerJob) => ({
+    $id: job.id,
+    $expiresAt: job.expiresAt ?? null,
+    $stopOnExpiry: job.stopOnExpiry ? 1 : 0,
+  }),
+);
+
+/** Claim expiry before side effects so other queued occurrences cannot stop the player twice. */
+export const claimExpiredPlayerSchedulerJob = async (job: PlayerSchedulerJob): Promise<boolean> =>
+  (await claimExpiredJob(job)).changes > 0;

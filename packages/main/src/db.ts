@@ -464,6 +464,8 @@ function createTables(error: Error | null): void {
         itemNumber INTEGER,
         repeatCount INTEGER,
         completionAction TEXT,
+        expiresAt TEXT,
+        stopOnExpiry INTEGER,
         hideOutputOnStop INTEGER,
         outputAll INTEGER,
         screenId INTEGER,
@@ -485,6 +487,8 @@ function createTables(error: Error | null): void {
           void checkColumnExists('schedulerJob', 'priority', 'INTEGER NOT NULL DEFAULT 0')
             .then(() => checkColumnExists('schedulerJob', 'repeatCount', 'INTEGER'))
             .then(() => checkColumnExists('schedulerJob', 'completionAction', 'TEXT'))
+            .then(() => checkColumnExists('schedulerJob', 'expiresAt', 'TEXT'))
+            .then(() => checkColumnExists('schedulerJob', 'stopOnExpiry', 'INTEGER'))
             .then(() => dbDeferred.resolve());
         }
       },

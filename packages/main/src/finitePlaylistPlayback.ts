@@ -21,6 +21,7 @@ export const startFinitePlaylist = async (
   playlistId: number,
   repeatCount: number,
   completionAction: 'stop' | 'hide',
+  assertCanStart?: () => void,
 ): Promise<void> => {
   if (
     !Number.isSafeInteger(repeatCount) ||
@@ -40,6 +41,7 @@ export const startFinitePlaylist = async (
   });
   const check = () => {
     if (cancelled) throw new Error('Конечное воспроизведение отменено');
+    assertCanStart?.();
   };
   try {
     const items = await getPlaylistItems(playlistId);

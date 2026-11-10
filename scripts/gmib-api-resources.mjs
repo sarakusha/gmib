@@ -160,6 +160,8 @@ const definitions = {
       'action',
       'playlistId',
       'itemNumber',
+      'expiresAt',
+      'stopOnExpiry',
       'repeatCount',
       'completionAction',
       'hideOutputOnStop',
@@ -326,6 +328,20 @@ const normalizeScheduler = (type, desired, { complete = false } = {}) => {
   }
 
   if (type === 'scheduler') {
+    if (desired.expiresAt === '') desired.stopOnExpiry = false;
+    if (
+      hasOwn(desired, 'expiresAt') &&
+      desired.expiresAt !== '' &&
+      (typeof desired.expiresAt !== 'string' ||
+        !Number.isFinite(new Date(desired.expiresAt).getTime()))
+    )
+      fail('expiresAt должен содержать дату и время', 'invalid_schedule_time');
+    if (hasOwn(desired, 'stopOnExpiry') && typeof desired.stopOnExpiry !== 'boolean')
+      fail('stopOnExpiry должен быть boolean', 'invalid_scheduler');
+    if (complete && desired.kind !== 'cron' && (desired.expiresAt || desired.stopOnExpiry))
+      fail('Срок окончания доступен только для повторяющихся заданий', 'invalid_scheduler');
+    if (complete && desired.stopOnExpiry && !desired.expiresAt)
+      fail('Для остановки по окончании нужен expiresAt', 'invalid_scheduler');
     if (
       (complete || hasOwn(desired, 'playerId')) &&
       (!Number.isSafeInteger(desired.playerId) || desired.playerId <= 0)
@@ -764,6 +780,8 @@ const buildPayload = (type, current, desired, creating) => {
 };
 
 const sameValue = (type, field, actual, desired) => {
+  if (type === 'scheduler' && field === 'expiresAt') return (actual || '') === (desired || '');
+  if (type === 'scheduler' && field === 'stopOnExpiry') return Boolean(actual) === Boolean(desired);
   if (actual == null && desired == null) return true;
   if (type === 'playlist' && field === 'items') {
     if (!Array.isArray(actual) || !Array.isArray(desired) || actual.length !== desired.length)

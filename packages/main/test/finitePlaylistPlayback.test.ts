@@ -49,6 +49,20 @@ const token = () =>
 const finish = (result: unknown, value = token(), frame = sender.mainFrame) =>
   ipcMain.emit('finite-playback:finished', { sender, senderFrame: frame }, value, result);
 describe('finite playlist main lifecycle', () => {
+  it('rechecks a scheduler deadline after asynchronous player preparation', async () => {
+    let expired = false;
+    mock.update.mockImplementationOnce(async () => {
+      expired = true;
+    });
+    await expect(
+      startFinitePlaylist(player, 2, 1, 'stop', () => {
+        if (expired) throw new Error('Expired');
+      }),
+    ).rejects.toThrow('Expired');
+    expect(sender.send).not.toHaveBeenCalled();
+    expect(isFinitePlaybackActive(1)).toBe(false);
+  });
+
   it('persists stopped state, sends transient playing plan, hides once on completion', async () => {
     await startFinitePlaylist(player, 2, 3, 'hide');
     expect(mock.update).toHaveBeenCalledWith(

@@ -32,6 +32,8 @@ import {
   createStoredSchedulerJob,
   getStoredPlayerSchedulerJob,
   updateStoredSchedulerJob,
+  updateStoredSchedulerJobResult,
+  claimExpiredPlayerSchedulerJob,
 } from '../src/schedulerStore';
 import type { PlayerSchedulerJobInput } from '/@common/scheduler';
 const input: PlayerSchedulerJobInput = {
@@ -75,4 +77,65 @@ it('rejects missing playlist and invalid completion action', async () => {
   await expect(
     createStoredSchedulerJob('player', { ...input, completionAction: 'invalid' as never }),
   ).rejects.toThrow();
+});
+
+it('persists, clears and atomically claims player task expiry', async () => {
+  const expiry = {
+    ...input,
+    kind: 'cron' as const,
+    expiresAt: '2026-11-14T14:00:00',
+    stopOnExpiry: true,
+  };
+  const job = await createStoredSchedulerJob('player', expiry);
+  expect(await getStoredPlayerSchedulerJob(job.id)).toMatchObject({
+    expiresAt: expiry.expiresAt,
+    stopOnExpiry: true,
+  });
+  expect(await claimExpiredPlayerSchedulerJob(job)).toBe(true);
+  expect(await claimExpiredPlayerSchedulerJob(job)).toBe(false);
+  await updateStoredSchedulerJob('player', job.id, {
+    ...expiry,
+    expiresAt: '',
+    stopOnExpiry: false,
+  });
+  expect(await getStoredPlayerSchedulerJob(job.id)).toMatchObject({
+    expiresAt: undefined,
+    stopOnExpiry: false,
+  });
+});
+it.each([
+  { expiresAt: 'garbage' },
+  { expiresAt: 123 },
+  { expiresAt: '2026-11-14T14:00:00', stopOnExpiry: 'yes' },
+  { stopOnExpiry: true },
+])('rejects invalid expiry parameters %j', async parameters => {
+  await expect(
+    createStoredSchedulerJob('player', {
+      ...input,
+      kind: 'cron',
+      ...parameters,
+    } as PlayerSchedulerJobInput),
+  ).rejects.toThrow();
+});
+it('rejects expiry on a single occurrence', async () => {
+  await expect(
+    createStoredSchedulerJob('player', { ...input, expiresAt: '2026-11-14T14:00:00' }),
+  ).rejects.toThrow();
+});
+it('does not restore stale task parameters or enablement when a running action finishes', async () => {
+  const job = await createStoredSchedulerJob('player', { ...input, kind: 'cron' });
+  await updateStoredSchedulerJob('player', job.id, {
+    ...input,
+    kind: 'cron',
+    name: 'Edited',
+    enabled: false,
+    expiresAt: '2026-11-14T14:00:00',
+  });
+  await updateStoredSchedulerJobResult('player', job, { enabled: true, lastStatus: 'success' });
+  expect(await getStoredPlayerSchedulerJob(job.id)).toMatchObject({
+    name: 'Edited',
+    enabled: false,
+    expiresAt: '2026-11-14T14:00:00',
+    lastStatus: 'success',
+  });
 });

@@ -129,3 +129,17 @@ describe('remote player output state compatibility', () => {
     expect(supportsFeature('remotePlayerOutputState', '5.7.5', false)).toBe(true);
   });
 });
+
+describe('player scheduler expiry compatibility', () => {
+  it.each([
+    ['5.7.6', false],
+    ['5.7.7', true],
+    ['5.8.0', true],
+    [undefined, true],
+  ])('uses remote host %s', (version, supported) => {
+    expect(supportsFeature('playerSchedulerExpiry', version, true)).toBe(supported);
+  });
+  it('keeps local expiry available', () => {
+    expect(supportsFeature('playerSchedulerExpiry', '5.7.6', false)).toBe(true);
+  });
+});
