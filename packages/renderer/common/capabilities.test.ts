@@ -143,3 +143,17 @@ describe('player scheduler expiry compatibility', () => {
     expect(supportsFeature('playerSchedulerExpiry', '5.7.6', false)).toBe(true);
   });
 });
+
+describe('GMIB scheduler expiry compatibility', () => {
+  it.each([
+    ['5.7.7', false],
+    ['5.7.8', true],
+    ['5.8.0', true],
+    [undefined, true],
+  ])('uses remote host %s', (version, supported) => {
+    expect(supportsFeature('gmibSchedulerExpiry', version, true)).toBe(supported);
+  });
+  it('keeps local expiry available before release versioning', () => {
+    expect(supportsFeature('gmibSchedulerExpiry', '5.7.7', false)).toBe(true);
+  });
+});

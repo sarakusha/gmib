@@ -29,6 +29,8 @@ vi.mock('../src/db', async () => {
   };
 });
 import {
+  claimExpiredGmibSchedulerJob,
+  getStoredGmibSchedulerJob,
   createStoredSchedulerJob,
   getStoredPlayerSchedulerJob,
   updateStoredSchedulerJob,
@@ -138,4 +140,34 @@ it('does not restore stale task parameters or enablement when a running action f
     expiresAt: '2026-11-14T14:00:00',
     lastStatus: 'success',
   });
+});
+
+it('persists, atomically expires and clears GMIB deadlines without touching other parameters', async () => {
+  const input = {
+    kind: 'cron' as const,
+    name: 'Output',
+    enabled: true,
+    priority: 0,
+    action: 'show-test' as const,
+    screenId: 1,
+    testId: 'test',
+    expiresAt: '2026-11-14T14:00:00',
+  };
+  const job = await createStoredSchedulerJob('gmib', input);
+  expect(await getStoredGmibSchedulerJob(job.id)).toMatchObject(input);
+  await updateStoredSchedulerJob('gmib', job.id, { ...input, expiresAt: '2026-11-15T14:00:00' });
+  expect(await claimExpiredGmibSchedulerJob(job)).toBe(false);
+  await updateStoredSchedulerJob('gmib', job.id, input);
+  expect(await claimExpiredGmibSchedulerJob(job)).toBe(true);
+  expect(await claimExpiredGmibSchedulerJob(job)).toBe(false);
+  expect(await getStoredGmibSchedulerJob(job.id)).toMatchObject({ enabled: false, testId: 'test' });
+  await updateStoredSchedulerJob('gmib', job.id, { ...input, expiresAt: '' });
+  expect(await getStoredGmibSchedulerJob(job.id)).toMatchObject({
+    expiresAt: undefined,
+    enabled: true,
+  });
+  await expect(
+    createStoredSchedulerJob('gmib', { ...input, expiresAt: 'invalid' }),
+  ).rejects.toThrow();
+  await expect(createStoredSchedulerJob('gmib', { ...input, kind: 'once' })).rejects.toThrow();
 });

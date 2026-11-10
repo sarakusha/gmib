@@ -40,6 +40,7 @@ export type SchedulerJobBase = {
   kind: ScheduleKind;
   name: string;
   runAt?: string;
+  expiresAt?: string;
   cron?: CronSchedule;
   enabled: boolean;
   priority: number;
@@ -53,7 +54,6 @@ export type SchedulerJobBase = {
 
 export type PlayerSchedulerJob = SchedulerJobBase & {
   playerId: number;
-  expiresAt?: string;
   stopOnExpiry?: boolean;
   action: PlayerSchedulerAction;
   playlistId?: number;
@@ -184,19 +184,13 @@ export const describeCron = (cron: CronSchedule): string => {
   return `Повторять ${seconds}, ${minutes}, ${hours}${days}${months}${weekdays}`;
 };
 
-/** The deadline is exclusive: no player action may start at or after it. */
-export const isSchedulerJobExpired = (
-  job: SchedulerJobBase & { expiresAt?: string },
-  now = new Date(),
-): boolean =>
+/** The deadline is exclusive: no scheduled action may start at or after it. */
+export const isSchedulerJobExpired = (job: SchedulerJobBase, now = new Date()): boolean =>
   job.kind === 'cron' &&
   Boolean(job.expiresAt) &&
   new Date(job.expiresAt!).getTime() <= now.getTime();
 
-export const getNextRunAt = (
-  job: SchedulerJobBase & { expiresAt?: string },
-  from = new Date(),
-): string | undefined => {
+export const getNextRunAt = (job: SchedulerJobBase, from = new Date()): string | undefined => {
   if (!job.enabled || isSchedulerJobExpired(job, from)) return undefined;
   if (job.kind === 'once') {
     if (!job.runAt) return undefined;

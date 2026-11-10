@@ -322,49 +322,55 @@ describe('management API resource helper', () => {
     expect(client.request.mock.calls.some(([, options]) => options?.method === 'PUT')).toBe(false);
   });
 
-  it('clears task expiry and confirms a subsequent run is unchanged', async () => {
-    let current = {
-      id: 'expiry-job',
-      kind: 'cron',
-      name: 'Start',
-      enabled: true,
-      priority: 0,
-      action: 'play',
-      playerId: 8,
-      expiresAt: '2026-11-14T14:00:00',
-      stopOnExpiry: true,
-      cron: {
-        seconds: { mode: 'select', every: 1, selected: [0] },
-        minutes: { mode: 'all', every: 1, selected: [] },
-        hours: { mode: 'all', every: 1, selected: [] },
-        days: { mode: 'all', selected: [] },
-        months: { mode: 'all', selected: [] },
-        weekdays: { mode: 'all', selected: [] },
-      },
-    };
-    const client = {
-      request: vi.fn(async (path, options = {}) => {
-        if (path === '/api/scheduler') return response([current]);
-        if (path === '/api/player/8') return response({ id: 8 });
-        if (path === '/api/scheduler/expiry-job' && options.method === 'PUT') {
-          expect(options.body).toMatchObject({ expiresAt: '', stopOnExpiry: false });
-          current = { ...current, ...options.body, expiresAt: undefined, stopOnExpiry: false };
-          return response(current);
-        }
-        throw new Error(`Unexpected ${path}`);
-      }),
-    };
-    const desired = { id: 'expiry-job', expiresAt: '' };
-    await expect(ensureResource(client, 'scheduler', desired)).resolves.toMatchObject({
-      changed: true,
-    });
-    await expect(ensureResource(client, 'scheduler', desired)).resolves.toMatchObject({
-      changed: false,
-    });
-    expect(
-      client.request.mock.calls.filter(([, options]) => options?.method === 'PUT'),
-    ).toHaveLength(1);
-  });
+  it.each(['scheduler', 'gmib-scheduler'])(
+    'clears %s expiry and confirms a subsequent run is unchanged',
+    async type => {
+      let current = {
+        id: 'expiry-job',
+        kind: 'cron',
+        name: 'Start',
+        enabled: true,
+        priority: 0,
+        action: type === 'scheduler' ? 'play' : 'set-brightness',
+        brightness: 50,
+        playerId: 8,
+        expiresAt: '2026-11-14T14:00:00',
+        stopOnExpiry: true,
+        cron: {
+          seconds: { mode: 'select', every: 1, selected: [0] },
+          minutes: { mode: 'all', every: 1, selected: [] },
+          hours: { mode: 'all', every: 1, selected: [] },
+          days: { mode: 'all', selected: [] },
+          months: { mode: 'all', selected: [] },
+          weekdays: { mode: 'all', selected: [] },
+        },
+      };
+      const client = {
+        request: vi.fn(async (path, options = {}) => {
+          if (path === `/api/${type}`) return response([current]);
+          if (path === '/api/player/8') return response({ id: 8 });
+          if (path === `/api/${type}/expiry-job` && options.method === 'PUT') {
+            expect(options.body).toMatchObject({ expiresAt: '' });
+            if (type === 'scheduler') expect(options.body.stopOnExpiry).toBe(false);
+            else expect(options.body).not.toHaveProperty('stopOnExpiry');
+            current = { ...current, ...options.body, expiresAt: undefined, stopOnExpiry: false };
+            return response(current);
+          }
+          throw new Error(`Unexpected ${path}`);
+        }),
+      };
+      const desired = { id: 'expiry-job', expiresAt: '' };
+      await expect(ensureResource(client, type, desired)).resolves.toMatchObject({
+        changed: true,
+      });
+      await expect(ensureResource(client, type, desired)).resolves.toMatchObject({
+        changed: false,
+      });
+      expect(
+        client.request.mock.calls.filter(([, options]) => options?.method === 'PUT'),
+      ).toHaveLength(1);
+    },
+  );
 
   it('deletes only an explicitly absent resource and rejects invalid scheduler time', async () => {
     const client = {

@@ -59,6 +59,29 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 describe('scheduler database shutdown lifecycle', () => {
+  it('queues expired GMIB tasks on startup without matching cron or an active license', async () => {
+    mocks.licenseStatus = 'expired';
+    mocks.gmibJobs.mockResolvedValue([
+      {
+        ...job('expired-gmib'),
+        kind: 'cron',
+        expiresAt: '2020-01-01T00:00:00Z',
+        action: 'set-overheat-protection',
+      },
+    ]);
+    const { startScheduler, stopScheduler } = await import('../src/scheduler');
+    startScheduler();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(mocks.executeGmib).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'expired-gmib' }),
+      {
+        disableOnce: true,
+        expiryOnly: true,
+      },
+    );
+    await stopScheduler();
+  });
+
   it('queues expired player tasks on startup even when their cron does not match', async () => {
     const expiresAt = '2020-01-01T00:00:00Z';
     mocks.playerJobs.mockResolvedValue([

@@ -179,6 +179,7 @@ const definitions = {
       'kind',
       'name',
       'runAt',
+      'expiresAt',
       'cron',
       'enabled',
       'priority',
@@ -327,15 +328,18 @@ const normalizeScheduler = (type, desired, { complete = false } = {}) => {
     delete desired.runAt;
   }
 
+  if (
+    hasOwn(desired, 'expiresAt') &&
+    desired.expiresAt !== '' &&
+    (typeof desired.expiresAt !== 'string' ||
+      !Number.isFinite(new Date(desired.expiresAt).getTime()))
+  )
+    fail('expiresAt должен содержать дату и время', 'invalid_schedule_time');
+  if (complete && desired.kind !== 'cron' && desired.expiresAt)
+    fail('Срок окончания доступен только для повторяющихся заданий', 'invalid_scheduler');
+
   if (type === 'scheduler') {
     if (desired.expiresAt === '') desired.stopOnExpiry = false;
-    if (
-      hasOwn(desired, 'expiresAt') &&
-      desired.expiresAt !== '' &&
-      (typeof desired.expiresAt !== 'string' ||
-        !Number.isFinite(new Date(desired.expiresAt).getTime()))
-    )
-      fail('expiresAt должен содержать дату и время', 'invalid_schedule_time');
     if (hasOwn(desired, 'stopOnExpiry') && typeof desired.stopOnExpiry !== 'boolean')
       fail('stopOnExpiry должен быть boolean', 'invalid_scheduler');
     if (complete && desired.kind !== 'cron' && (desired.expiresAt || desired.stopOnExpiry))
@@ -780,7 +784,8 @@ const buildPayload = (type, current, desired, creating) => {
 };
 
 const sameValue = (type, field, actual, desired) => {
-  if (type === 'scheduler' && field === 'expiresAt') return (actual || '') === (desired || '');
+  if (['scheduler', 'gmib-scheduler'].includes(type) && field === 'expiresAt')
+    return (actual || '') === (desired || '');
   if (type === 'scheduler' && field === 'stopOnExpiry') return Boolean(actual) === Boolean(desired);
   if (actual == null && desired == null) return true;
   if (type === 'playlist' && field === 'items') {

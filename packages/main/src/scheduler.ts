@@ -13,7 +13,13 @@ import { compareSchedulerOrder } from './schedulerOrder';
 import { getStoredGmibSchedulerJobs, getStoredPlayerSchedulerJobs } from './schedulerStore';
 
 type DueJob =
-  | { scope: 'gmib'; job: GmibSchedulerJob; scheduledAt: number; occurrenceKey: string }
+  | {
+      scope: 'gmib';
+      job: GmibSchedulerJob;
+      scheduledAt: number;
+      occurrenceKey: string;
+      expiryOnly?: boolean;
+    }
   | {
       scope: 'player';
       job: PlayerSchedulerJob;
@@ -45,6 +51,16 @@ const executeDueJobs = async (): Promise<void> => {
   const dueJobs: DueJob[] = [];
 
   for (const job of gmibJobs) {
+    if (job.enabled && isSchedulerJobExpired(job, now)) {
+      dueJobs.push({
+        scope: 'gmib',
+        job,
+        scheduledAt: new Date(job.expiresAt!).getTime(),
+        occurrenceKey: `gmib:${job.id}:expiry:${job.expiresAt}`,
+        expiryOnly: true,
+      });
+      continue;
+    }
     if (!canRunLicensedGmibAction(job.action, getLicenseState().status === 'active')) continue;
     const scheduledAt = getScheduledAt(job, now);
     if (scheduledAt !== undefined) {
@@ -78,7 +94,7 @@ const executeDueJobs = async (): Promise<void> => {
     let execution: Promise<GmibSchedulerJob | PlayerSchedulerJob | undefined>;
     if (item.scope === 'gmib') {
       execution = enqueueSchedulerJob(() =>
-        executeGmibSchedulerJob(item.job, { disableOnce: true }),
+        executeGmibSchedulerJob(item.job, { disableOnce: true, expiryOnly: item.expiryOnly }),
       );
     } else {
       execution = enqueueSchedulerJob(() =>

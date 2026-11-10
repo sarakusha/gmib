@@ -3,12 +3,13 @@ import debugFactory from 'debug';
 import type { Config } from '/@common/config';
 import { DEFAULT_OVERHEAD_PROTECTION } from '/@common/config';
 import type { GmibSchedulerJob, GmibSchedulerJobInput } from '/@common/scheduler';
-import { getNextRunAt, getRunKey } from '/@common/scheduler';
+import { getNextRunAt, getRunKey, isSchedulerJobExpired } from '/@common/scheduler';
 
 import { getPage } from './page';
 import { canRunLicensedGmibAction, licenseConfigDenied } from './licenseConfigPolicy';
 import { getLicenseState } from './licenseState';
 import {
+  claimExpiredGmibSchedulerJob,
   createStoredSchedulerJob,
   deleteStoredSchedulerJob,
   getStoredGmibSchedulerJob,
@@ -65,12 +66,21 @@ const notifyJobResult = (job: GmibSchedulerJob): void => {
   });
 };
 
-const setConfig = async (update: (current: Config) => Config): Promise<void> => {
+const setConfig = async (
+  update: (current: Config) => Config,
+  checkDeadline: () => void,
+): Promise<void> => {
   const { updateConfigStore } = await import('./nibus');
+  checkDeadline();
   updateConfigStore(update);
 };
 
+class SchedulerExpiryError extends Error {}
+
 const runJob = async (job: GmibSchedulerJob): Promise<void> => {
+  const checkDeadline = (): void => {
+    if (isSchedulerJobExpired(job)) throw new SchedulerExpiryError('Срок действия задания истёк');
+  };
   switch (job.action) {
     case 'show-test': {
       if (job.screenId == null) throw new Error('Экран не выбран');
@@ -80,6 +90,7 @@ const runJob = async (job: GmibSchedulerJob): Promise<void> => {
       const screen = await getScreen(job.screenId);
       if (!screen) throw new Error(`Экран ${job.screenId} не найден`);
       const nextScreen = { ...screen, test: job.testId };
+      checkDeadline();
       await updateScreen(nextScreen);
       await updateTest(nextScreen, true);
       broadcast({ event: 'screen', all: true });
@@ -90,6 +101,7 @@ const runJob = async (job: GmibSchedulerJob): Promise<void> => {
       const screen = await getScreen(job.screenId);
       if (!screen) throw new Error(`Экран ${job.screenId} не найден`);
       const nextScreen = { ...screen, test: undefined };
+      checkDeadline();
       await updateScreen(nextScreen);
       await updateTest(nextScreen, true);
       broadcast({ event: 'screen', all: true });
@@ -97,36 +109,64 @@ const runJob = async (job: GmibSchedulerJob): Promise<void> => {
     }
     case 'set-brightness':
       if (typeof job.brightness !== 'number') throw new Error('Яркость не задана');
-      await setConfig(current => ({
-        ...current,
-        brightness: job.brightness ?? current.brightness,
-      }));
+      await setConfig(
+        current => ({
+          ...current,
+          brightness: job.brightness ?? current.brightness,
+        }),
+        checkDeadline,
+      );
       break;
     case 'set-autobrightness':
       if (typeof job.enabledValue !== 'boolean') throw new Error('Состояние автояркости не задано');
-      await setConfig(current => ({ ...current, autobrightness: Boolean(job.enabledValue) }));
+      await setConfig(
+        current => ({ ...current, autobrightness: Boolean(job.enabledValue) }),
+        checkDeadline,
+      );
       break;
     case 'set-overheat-protection':
       if (typeof job.enabledValue !== 'boolean') {
         throw new Error('Состояние защиты от перегрева не задано');
       }
-      await setConfig(current => ({
-        ...current,
-        overheatProtection: {
-          ...(current.overheatProtection ?? DEFAULT_OVERHEAD_PROTECTION),
-          enabled: Boolean(job.enabledValue),
-        },
-      }));
+      await setConfig(
+        current => ({
+          ...current,
+          overheatProtection: {
+            ...(current.overheatProtection ?? DEFAULT_OVERHEAD_PROTECTION),
+            enabled: Boolean(job.enabledValue),
+          },
+        }),
+        checkDeadline,
+      );
       break;
     default:
       break;
   }
 };
 
+const expireJob = async (job: GmibSchedulerJob): Promise<GmibSchedulerJob | undefined> => {
+  const claimed = await claimExpiredGmibSchedulerJob(job);
+  const current = await getStoredGmibSchedulerJob(job.id);
+  if (claimed && current) notifyJobResult(current);
+  return current && withNextRunAt(current);
+};
+
 export const executeGmibSchedulerJob = async (
-  job: GmibSchedulerJob,
-  options: { disableOnce: boolean },
-): Promise<GmibSchedulerJob> => {
+  queuedJob: GmibSchedulerJob,
+  options: { disableOnce: boolean; expiryOnly?: boolean },
+): Promise<GmibSchedulerJob | undefined> => {
+  const job = await getStoredGmibSchedulerJob(queuedJob.id);
+  if (!job) return undefined;
+  if (!job.enabled) return withNextRunAt(job);
+  if (isSchedulerJobExpired(job)) return expireJob(job);
+  if (options.expiryOnly) return withNextRunAt(job);
+  if (
+    options.disableOnce &&
+    (job.kind !== queuedJob.kind ||
+      job.runAt !== queuedJob.runAt ||
+      JSON.stringify(job.cron) !== JSON.stringify(queuedJob.cron))
+  )
+    return withNextRunAt(job);
   if (!canRunLicensedGmibAction(job.action, getLicenseState().status === 'active')) {
     throw licenseConfigDenied();
   }
@@ -147,6 +187,12 @@ export const executeGmibSchedulerJob = async (
     notifyJobResult(nextJob);
     return withNextRunAt(nextJob);
   } catch (error) {
+    if (error instanceof SchedulerExpiryError) {
+      const current = await getStoredGmibSchedulerJob(job.id);
+      return current?.enabled && isSchedulerJobExpired(current)
+        ? expireJob(current)
+        : current && withNextRunAt(current);
+    }
     const message = error instanceof Error ? error.message : String(error);
     debug(`error while run job ${job.name}: ${message}`);
     const nextJob = {
@@ -166,8 +212,5 @@ export const executeGmibSchedulerJob = async (
 export const runGmibSchedulerJob = async (id: string): Promise<GmibSchedulerJob | undefined> => {
   const job = await getStoredGmibSchedulerJob(id);
   if (!job) return undefined;
-  if (!canRunLicensedGmibAction(job.action, getLicenseState().status === 'active')) {
-    throw licenseConfigDenied();
-  }
   return enqueueSchedulerJob(() => executeGmibSchedulerJob(job, { disableOnce: false }));
 };

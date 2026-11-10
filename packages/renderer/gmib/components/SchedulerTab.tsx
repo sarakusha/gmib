@@ -39,7 +39,7 @@ import { selectCurrentTab, selectSessionVersion } from '../store/selectors';
 import SchedulerTabCommon, { type SchedulerTabLabels } from '../../common/SchedulerTab';
 
 import { supportsFeature } from '/@common/capabilities';
-import { isRemoteSession } from '/@common/remote';
+import { isRemoteSession, version as remoteVersion } from '/@common/remote';
 
 type DialogValues = GmibSchedulerJobInput;
 
@@ -84,6 +84,7 @@ const createInitialValues = (kind: ScheduleKind, initialJob?: GmibSchedulerJob):
   testId: initialJob?.testId,
   brightness: initialJob?.brightness ?? 50,
   enabledValue: initialJob?.enabledValue ?? true,
+  expiresAt: initialJob?.expiresAt ?? '',
   runAt: initialJob?.runAt ?? toDateTimeLocal(new Date(Date.now() + 60 * 60 * 1000)),
   cron: initialJob?.cron ? normalizeCronSchedule(initialJob.cron) : defaultCron(),
   enabled: initialJob?.enabled ?? true,
@@ -99,6 +100,7 @@ const toJobInput = (job: GmibSchedulerJob): DialogValues => ({
   testId: job.testId,
   brightness: job.brightness,
   enabledValue: job.enabledValue,
+  expiresAt: job.expiresAt,
   runAt: job.runAt,
   cron: job.cron,
   enabled: job.enabled,
@@ -258,7 +260,8 @@ const StatusIcon: React.FC<{ job: GmibSchedulerJob }> = ({ job }) => {
 };
 
 const SchedulerTab: React.FC = () => {
-  const version = useSelector(selectSessionVersion);
+  const version = useSelector(selectSessionVersion) ?? remoteVersion;
+  const expirySupported = supportsFeature('gmibSchedulerExpiry', version, isRemoteSession);
   const isSchedulerSupported = supportsFeature('gmibScheduler', version, isRemoteSession);
   const supportsSecondsAndPriority = supportsFeature(
     'schedulerSecondsAndPriority',
@@ -352,8 +355,29 @@ const SchedulerTab: React.FC = () => {
       toJobInput={toJobInput}
       normalizeActionChange={normalizeActionChange}
       getActionName={getActionName}
-      renderActionFields={renderActionFields}
-      isSubmitEnabled={isSubmitEnabled}
+      renderActionFields={args => (
+        <>
+          {renderActionFields(args)}
+          {expirySupported && args.values.kind === 'cron' && (
+            <TextField
+              label="Действует до"
+              type="datetime-local"
+              variant="standard"
+              fullWidth
+              value={args.values.expiresAt ?? ''}
+              slotProps={{ inputLabel: { shrink: true }, htmlInput: { step: 1 } }}
+              helperText="Необязательно. Время на хосте вывода. По окончании срока задание отключится; последнее состояние вывода сохранится."
+              onChange={event =>
+                args.setValues(current => ({ ...current, expiresAt: event.target.value }))
+              }
+            />
+          )}
+        </>
+      )}
+      isSubmitEnabled={values =>
+        (!values.expiresAt || Number.isFinite(new Date(values.expiresAt).getTime())) &&
+        isSubmitEnabled(values)
+      }
       onCreate={async job => {
         await createJob(job).unwrap();
       }}
@@ -369,7 +393,14 @@ const SchedulerTab: React.FC = () => {
         await runJob(id).unwrap();
       }}
       renderStatusIcon={job => <StatusIcon job={job} />}
-      getStatusTooltip={job => job.lastMessage ?? (job.enabled ? 'Ожидает' : 'Отключено')}
+      getStatusTooltip={job =>
+        [
+          job.lastMessage ?? (job.enabled ? 'Ожидает' : 'Отключено'),
+          job.expiresAt ? `Действует до: ${job.expiresAt.replace('T', ' ')}` : '',
+        ]
+          .filter(Boolean)
+          .join(' · ')
+      }
       getRunTooltip={job =>
         job.enabled ? 'Запустить сейчас' : 'Включите задание, чтобы запустить'
       }

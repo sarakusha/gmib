@@ -1,6 +1,17 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 
 import baseQuery from '../../common/authBaseQuery';
+import { supportsFeature } from '/@common/capabilities';
+import { isRemoteSession, version } from '/@common/remote';
+import type { RootState } from '../store';
+
+const prepareJob = (job: GmibSchedulerJobInput, state: unknown): GmibSchedulerJobInput => {
+  const hostVersion = (state as RootState).config?.version ?? version;
+  const { expiresAt, ...base } = job;
+  return supportsFeature('gmibSchedulerExpiry', hostVersion, isRemoteSession)
+    ? { ...base, expiresAt: job.kind === 'cron' ? (expiresAt ?? '') : '' }
+    : base;
+};
 
 import type { GmibSchedulerJob, GmibSchedulerJobInput } from '/@common/scheduler';
 
@@ -20,22 +31,28 @@ const schedulerApi = createApi({
           : [{ type: 'gmibScheduler' as const, id: 'LIST' }],
     }),
     createSchedulerJob: build.mutation<GmibSchedulerJob, GmibSchedulerJobInput>({
-      query: job => ({
-        url: 'gmib-scheduler',
-        method: 'POST',
-        body: job,
-      }),
+      queryFn: async (job, api, _options, query) => {
+        const result = await query({
+          url: 'gmib-scheduler',
+          method: 'POST',
+          body: prepareJob(job, api.getState()),
+        });
+        return result.error ? { error: result.error } : { data: result.data as GmibSchedulerJob };
+      },
       invalidatesTags: [{ type: 'gmibScheduler', id: 'LIST' }],
     }),
     updateSchedulerJob: build.mutation<
       GmibSchedulerJob,
       { id: string; job: GmibSchedulerJobInput }
     >({
-      query: ({ id, job }) => ({
-        url: `gmib-scheduler/${id}`,
-        method: 'PUT',
-        body: job,
-      }),
+      queryFn: async ({ id, job }, api, _options, query) => {
+        const result = await query({
+          url: `gmib-scheduler/${id}`,
+          method: 'PUT',
+          body: prepareJob(job, api.getState()),
+        });
+        return result.error ? { error: result.error } : { data: result.data as GmibSchedulerJob };
+      },
       invalidatesTags: (_result, _error, { id }) => [
         { type: 'gmibScheduler' as const, id },
         { type: 'gmibScheduler' as const, id: 'LIST' },

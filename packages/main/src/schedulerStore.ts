@@ -112,22 +112,22 @@ const sanitizeJob = <T extends StoredSchedulerJob>(job: T): T => {
         'Укажите плейлист, целое число повторов больше нуля и действие завершения',
       );
   }
+  if (job.expiresAt != null && typeof job.expiresAt !== 'string')
+    throw new TypeError('Некорректная дата окончания задания');
+  if (job.expiresAt && (job.kind !== 'cron' || !Number.isFinite(Date.parse(job.expiresAt))))
+    throw new TypeError('Укажите корректную дату окончания повторяющегося задания');
   if ('playerId' in job) {
-    if (job.expiresAt != null && typeof job.expiresAt !== 'string')
-      throw new TypeError('Некорректная дата окончания задания');
     if (job.stopOnExpiry != null && typeof job.stopOnExpiry !== 'boolean')
       throw new TypeError('Некорректный параметр остановки по окончании');
-    if (job.expiresAt && (job.kind !== 'cron' || !Number.isFinite(Date.parse(job.expiresAt))))
-      throw new TypeError('Укажите корректную дату окончания повторяющегося задания');
     if (job.stopOnExpiry && !job.expiresAt)
       throw new TypeError('Для остановки по окончании укажите дату окончания задания');
   }
   const { nextRunAt: _, ...storedJob } = job;
   const nextJob = {
     ...storedJob,
+    expiresAt: job.expiresAt || undefined,
     ...('playerId' in job
       ? {
-          expiresAt: job.expiresAt || undefined,
           stopOnExpiry: Boolean(job.expiresAt && job.stopOnExpiry),
         }
       : {}),
@@ -155,6 +155,7 @@ const toSchedulerJob = (result: NullableOptional): StoredSchedulerJob => {
     kind: row.kind,
     name: row.name,
     runAt: row.runAt,
+    expiresAt: row.expiresAt,
     cron: parseCron(row.cron),
     enabled: Boolean(row.enabled),
     priority: row.priority ?? 0,
@@ -173,7 +174,6 @@ const toSchedulerJob = (result: NullableOptional): StoredSchedulerJob => {
       itemNumber: row.itemNumber,
       repeatCount: row.repeatCount,
       completionAction: row.completionAction,
-      expiresAt: row.expiresAt,
       stopOnExpiry: toBoolean(row.stopOnExpiry),
       hideOutputOnStop: toBoolean(row.hideOutputOnStop),
       outputAll: toBoolean(row.outputAll),
@@ -470,3 +470,12 @@ const claimExpiredJob = promisifyRun(
 /** Claim expiry before side effects so other queued occurrences cannot stop the player twice. */
 export const claimExpiredPlayerSchedulerJob = async (job: PlayerSchedulerJob): Promise<boolean> =>
   (await claimExpiredJob(job)).changes > 0;
+
+const claimExpiredGmibJob = promisifyRun(
+  `UPDATE schedulerJob SET enabled = 0, lastStatus = 'success', lastMessage = 'Срок действия задания истёк'
+   WHERE id = $id AND scope = 'gmib' AND enabled = 1 AND kind = 'cron' AND expiresAt = $expiresAt`,
+  (job: GmibSchedulerJob) => ({ $id: job.id, $expiresAt: job.expiresAt ?? null }),
+);
+
+export const claimExpiredGmibSchedulerJob = async (job: GmibSchedulerJob): Promise<boolean> =>
+  (await claimExpiredGmibJob(job)).changes > 0;
