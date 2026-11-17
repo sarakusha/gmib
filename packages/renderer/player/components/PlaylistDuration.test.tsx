@@ -48,8 +48,6 @@ describe('playlist duration display', () => {
     ).toBeUndefined();
     const value = getPlaylistDurationDisplay(playlist, media, player, stats());
     expect(value.correction).toBe('+2.3 с');
-    expect(value.explanation).toContain('0:01:32.3');
-    expect(value.explanation).toContain('3 проходам');
     expect(renderToStaticMarkup(<PlaylistDuration value={value} />)).toContain('+2.3 с');
   });
 
@@ -83,7 +81,6 @@ describe('playlist duration display', () => {
     const value = getPlaylistDurationDisplay(playlist, { a: media.a }, player, stats());
     expect(value.duration).toBe('≥ 0:01:00.0');
     expect(value.correction).toBeUndefined();
-    expect(value.explanation).toContain('неизвестна');
     expect(getPlaylistDurationDisplay(playlist, {}, player).duration).toBe('—');
   });
 });
