@@ -17,14 +17,19 @@ import {
   Typography,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
+import { createSelector } from '@reduxjs/toolkit';
 import { useSnackbar } from 'notistack';
 import React, { useCallback, useEffect, useState } from 'react';
 
 import nata from '../../assets/nata.svg';
+import novastarApi from '../api/novastar';
 import ActivateDialog from '../dialogs/ActivateDialog';
 import RemoteHostsDialog from '../dialogs/RemoteHostsDialog';
 import SearchDialog from '../dialogs/SearchDialog';
 import WindowsFirewallDialog from '../dialogs/WindowsFirewallDialog';
+import WindowsTaurusRoutesDialog, {
+  canCheckTaurusRoutes,
+} from '../dialogs/WindowsTaurusRoutesDialog';
 import { useToolbar } from '../providers/ToolbarProvider';
 import { useDispatch, useSelector } from '../store';
 import { setAutobrightness, setProtectionProp } from '../store/configSlice';
@@ -62,6 +67,20 @@ import HttpPages from './HttpPages';
 
 const drawerWidth = 240;
 
+const selectTaurusConnections = createSelector(
+  novastarApi.endpoints.getNovastars.select(),
+  ({ data }) =>
+    JSON.stringify(
+      Object.values(data?.entities ?? {})
+        .flatMap(device =>
+          device?.taurus
+            ? [JSON.stringify([device.path, device.taurus.serialNumber, device.connected])]
+            : [],
+        )
+        .sort(),
+    ),
+);
+
 const Item = styled(ListItemButton)(({ theme }) => ({
   minHeight: 56,
   borderStyle: 'solid',
@@ -76,6 +95,7 @@ const App: React.FC = () => {
   const handleDrawerOpen = useCallback(() => setOpen(true), []);
   const handleDrawerClose = useCallback(() => setOpen(false), []);
   const [isSearchOpen, setSearchOpen] = useState(false);
+  const [taurusRoutesOpen, setTaurusRoutesOpen] = useState(false);
   const [licenseState, setLicenseState] = useState<LicenseRuntimeState>();
   const searchOpen = useCallback(() => setSearchOpen(true), [setSearchOpen]);
   const searchClose = useCallback(() => setSearchOpen(false), [setSearchOpen]);
@@ -84,6 +104,7 @@ const App: React.FC = () => {
   const dispatch = useDispatch();
   const tab = useSelector(selectCurrentTab);
   const online = useSelector(selectIsOnline);
+  const taurusConnections = useSelector(selectTaurusConnections);
   const loading = useSelector(selectLoading);
   const { status: sessionStatus, error: sessionError } = useSelector(selectSession);
   const isRemoteDialogOpen = useSelector(selectIsRemoteDialogOpen);
@@ -349,6 +370,11 @@ const App: React.FC = () => {
             <Item onClick={() => dispatch(setCurrentTab('help'))} selected={tab === 'help'}>
               <ListItemText primary="Справка" />
             </Item>
+            {canCheckTaurusRoutes() && (
+              <Item onClick={() => setTaurusRoutesOpen(true)}>
+                <ListItemText primary="USB-сеть Taurus" />
+              </Item>
+            )}
           </List>
         </Drawer>
         <Box
@@ -364,6 +390,11 @@ const App: React.FC = () => {
           }}
         >
           <Offset sx={{ flex: '0 0 auto' }} />
+          <WindowsTaurusRoutesDialog
+            requestedOpen={taurusRoutesOpen}
+            connectionState={JSON.stringify([online, taurusConnections])}
+            onClose={() => setTaurusRoutesOpen(false)}
+          />
           <Box
             sx={{
               flex: 1,

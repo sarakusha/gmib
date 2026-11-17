@@ -126,6 +126,7 @@ describe('preload entrypoint bridge contracts', () => {
         'onLicenseStateChange',
         'mediaSource',
         'plugins',
+        'windowsTaurusRoutes',
       ].sort(),
     );
     const api = Object.fromEntries(mock.exposed) as GmibApi;
@@ -145,6 +146,38 @@ describe('preload entrypoint bridge contracts', () => {
     api.setLogLevel('nibus');
     expect(mock.setLogLevel).toHaveBeenCalledExactlyOnceWith('nibus');
     expect(mock.nibusLogLevel).toHaveBeenCalledExactlyOnceWith('nibus');
+  });
+
+  it('uses dedicated IPC channels for the local Windows route controls', async () => {
+    await import('../gmib');
+    const { windowsTaurusRoutes } = Object.fromEntries(mock.exposed) as GmibApi;
+    const deviceId = 'usb-parent-id';
+    const status = { supported: true, elevated: false, platform: 'win32', adapters: [] };
+    mock.invoke.mockResolvedValueOnce(status);
+    await expect(windowsTaurusRoutes.inspect()).resolves.toBe(status);
+    expect(mock.invoke).toHaveBeenLastCalledWith('windowsTaurusRoutes:inspect');
+    mock.invoke.mockResolvedValueOnce(undefined);
+    await expect(windowsTaurusRoutes.repair(deviceId)).resolves.toBeUndefined();
+    expect(mock.invoke).toHaveBeenLastCalledWith('windowsTaurusRoutes:repair', deviceId);
+    mock.invoke.mockResolvedValueOnce('PowerShell command');
+    await expect(windowsTaurusRoutes.commands(deviceId)).resolves.toBe('PowerShell command');
+    expect(mock.invoke).toHaveBeenLastCalledWith('windowsTaurusRoutes:commands', deviceId);
+    mock.invoke.mockResolvedValueOnce(undefined);
+    await expect(windowsTaurusRoutes.setAutomatic(deviceId, true)).resolves.toBeUndefined();
+    expect(mock.invoke).toHaveBeenLastCalledWith(
+      'windowsTaurusRoutes:setAutomatic',
+      deviceId,
+      true,
+    );
+    mock.invoke.mockResolvedValueOnce('Disable scheduled task');
+    await expect(windowsTaurusRoutes.automaticCommands(deviceId, false)).resolves.toBe(
+      'Disable scheduled task',
+    );
+    expect(mock.invoke).toHaveBeenLastCalledWith(
+      'windowsTaurusRoutes:automaticCommands',
+      deviceId,
+      false,
+    );
   });
 
   it('exposes local playback controls and broadcasts with the selected source ID', async () => {

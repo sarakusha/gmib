@@ -17,6 +17,7 @@ import * as nibus from './nibus';
 // import * as output from './output';
 import * as mediaSource from './mediaSource';
 import * as plugins from './plugins';
+import * as windowsTaurusRoutes from './windowsTaurusRoutes';
 
 import './hid';
 
@@ -100,6 +101,7 @@ const gmibApi = {
   },
   mediaSource,
   plugins,
+  windowsTaurusRoutes,
 } as const;
 
 export type GmibApi = typeof gmibApi;

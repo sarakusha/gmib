@@ -1265,6 +1265,10 @@ class MasterBrowser extends TypedEmitter<MasterBrowserEvents> {
     return true;
   }
 
+  /** Read the existing discovery cache without opening control connections. */
+  getDiscoveredTaurusSerials = (): string[] =>
+    [...this.taurusControls.values()].map(control => control.info.sn);
+
   getAll = (): Promise<Novastar[]> => {
     debug(`getAll: ${[...this.novastarControls.keys(), ...this.taurusControls.keys()].join(', ')}`);
     const controllers = Promise.all(

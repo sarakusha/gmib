@@ -14,6 +14,7 @@ import { showLast } from './tray';
 import './linux';
 import './dialogs';
 import './pluginsIpc';
+import './taurusRoutesIpc';
 import './express';
 import './ipc';
 import './playbackEvents';
