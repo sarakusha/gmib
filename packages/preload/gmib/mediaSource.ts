@@ -1,6 +1,5 @@
 import { ipcRenderer } from 'electron';
 import { delay } from '/@common/helpers';
-import debounce from 'lodash/debounce';
 import debugFactory from 'debug';
 
 import { host, isRemoteSession, port } from '/@common/remote';
@@ -46,6 +45,7 @@ const createStream = async (sourceId?: string): Promise<MediaStream | undefined>
       });
     } catch (err) {
       console.error('error while create stream', err);
+      if (!(err instanceof Error) || err.name !== 'AbortError') throw err;
     }
   return undefined;
 };
@@ -53,20 +53,34 @@ const createStream = async (sourceId?: string): Promise<MediaStream | undefined>
 const getVideo = (screenId: number): HTMLVideoElement | null =>
   document.querySelector(`video#screen-${screenId}`);
 
-const activeScreens = new Set<number>();
+const activeScreens = new Map<number, symbol>();
 
-const playLocal = debounce(async (screenId: number): Promise<void> => {
-  if (!activeScreens.has(screenId)) return;
-  const sourceId = await getMediaSourceId(screenId);
-  const stream = await createStream(sourceId);
-  const video = getVideo(screenId);
-  if (stream && video && activeScreens.has(screenId)) {
-    video.srcObject = stream;
-    video.onloadedmetadata = () => video.play();
-  } else {
-    stream?.getTracks().forEach(track => track.stop());
+const playLocal = async (screenId: number, session: symbol): Promise<void> => {
+  const isCurrent = () => activeScreens.get(screenId) === session;
+  const deadline = Date.now() + 60000;
+  let captureAttempts = 0;
+  await delay(0.25);
+  while (isCurrent() && Date.now() < deadline && captureAttempts < 3) {
+    const sourceId = await getMediaSourceId(screenId, 0);
+    if (!isCurrent()) return;
+    if (sourceId) {
+      captureAttempts += 1;
+      const stream = await createStream(sourceId);
+      if (stream) {
+        const video = getVideo(screenId);
+        if (video && isCurrent()) {
+          video.srcObject = stream;
+          void video.play().catch(error => debug(String(error)));
+        } else {
+          stream.getTracks().forEach(track => track.stop());
+        }
+        return;
+      }
+    }
+    await delay(1);
   }
-}, 250);
+  if (isCurrent()) console.error('Screen preview startup timed out', screenId);
+};
 
 const stopPreview = (screenId: number): void => {
   const video = getVideo(screenId);
@@ -249,14 +263,20 @@ if (!isRemoteSession) {
 
 ipcRenderer.on('displayTopologyChanged', () => {
   if (isRemoteSession) return;
-  activeScreens.forEach(screenId => {
+  activeScreens.forEach((_, screenId) => {
     stopPreview(screenId);
-    void playLocal(screenId);
+    play(screenId);
   });
 });
 
 export const play = (screenId: number): void => {
-  activeScreens.add(screenId);
+  const session = Symbol();
+  activeScreens.set(screenId, session);
   if (isRemoteSession) playRemote(screenId);
-  else void playLocal(screenId);
+  else {
+    stopPreview(screenId);
+    void playLocal(screenId, session).catch(error =>
+      console.error('Screen preview startup failed', error),
+    );
+  }
 };

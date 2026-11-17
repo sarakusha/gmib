@@ -66,11 +66,62 @@ beforeEach(async () => {
   await import('./mediaSource');
 });
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   vi.useRealTimers();
 });
 
 describe('screen window capture', () => {
+  it('waits for a loaded output and retries a transient capture failure', async () => {
+    const video = { srcObject: null, play: vi.fn().mockResolvedValue(undefined) };
+    vi.stubGlobal('document', { querySelector: () => video });
+    vi.stubGlobal('MediaStream', class {});
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    mock.invoke.mockResolvedValue(undefined);
+    const { play, close } = await import('./mediaSource');
+    play(1);
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(mock.capture).not.toHaveBeenCalled();
+    mock.invoke.mockResolvedValue('window:1:0');
+    mock.capture.mockRejectedValueOnce(new DOMException('timeout', 'AbortError'));
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(mock.capture).toHaveBeenCalledTimes(2);
+    expect(video.srcObject).toBe(stream);
+    close(1);
+  });
+
+  it('bounds waiting and capture retries and cancels stale sessions', async () => {
+    const video = { srcObject: null, play: vi.fn().mockResolvedValue(undefined) };
+    vi.stubGlobal('document', { querySelector: () => video });
+    vi.stubGlobal('MediaStream', class {});
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    mock.invoke.mockResolvedValue(undefined);
+    const { play, close } = await import('./mediaSource');
+    play(1);
+    await vi.advanceTimersByTimeAsync(61000);
+    const calls = mock.invoke.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(mock.invoke).toHaveBeenCalledTimes(calls);
+    mock.invoke.mockResolvedValue('window:1:0');
+    mock.capture.mockRejectedValue(new DOMException('timeout', 'AbortError'));
+    play(1);
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(mock.capture).toHaveBeenCalledTimes(3);
+    let resolve!: (value: typeof stream) => void;
+    mock.capture.mockReturnValueOnce(
+      new Promise<typeof stream>(done => {
+        resolve = done;
+      }),
+    );
+    play(1);
+    await vi.advanceTimersByTimeAsync(250);
+    close(1);
+    resolve(stream);
+    await flush();
+    expect(stop).toHaveBeenCalledOnce();
+    expect(video.srcObject).toBeNull();
+  });
+
   it('keeps native window geometry instead of forcing a 16:9 frame', async () => {
     request();
     await flush();

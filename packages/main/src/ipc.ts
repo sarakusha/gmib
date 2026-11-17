@@ -25,7 +25,15 @@ void app.whenReady().then(() => {
     const params = findScreenParams(screenId);
     if (params) {
       const win = BrowserWindow.fromId(params.id);
-      if (win) return win.getMediaSourceId();
+      if (
+        win &&
+        !win.isDestroyed() &&
+        !win.webContents.isDestroyed() &&
+        win.isVisible() &&
+        !win.isMinimized() &&
+        !win.webContents.isLoadingMainFrame()
+      )
+        return win.getMediaSourceId();
     }
     return undefined;
   });
