@@ -51,6 +51,24 @@ describe('playlist duration display', () => {
     expect(renderToStaticMarkup(<PlaylistDuration value={value} />)).toContain('+2.3 с');
   });
 
+  it('shows fading separately from the sum of clip durations', () => {
+    expect(getPlaylistDurationDisplay(playlist, media, {})).toEqual({
+      duration: '0:01:30.0',
+      correction: '+1.0 с',
+    });
+  });
+
+  it('replaces estimated fading with the full observed correction without counting it twice', () => {
+    const observations = stats();
+    observations.samples[0].signature = getPlaylistTimingSignature(playlist, {});
+    expect(getPlaylistDurationDisplay(playlist, media, {}, observations)).toEqual({
+      duration: '0:01:30.0',
+      correction: '+2.3 с',
+    });
+    observations.samples[0].sampleCount = 2;
+    expect(getPlaylistDurationDisplay(playlist, media, {}, observations).correction).toBe('+1.0 с');
+  });
+
   it('does not reuse observations after changing order or settings', () => {
     expect(
       getPlaylistDurationDisplay(
@@ -62,7 +80,7 @@ describe('playlist duration display', () => {
     ).toBeUndefined();
     expect(
       getPlaylistDurationDisplay(playlist, media, { disableFadeOut: false }, stats()).correction,
-    ).toBeUndefined();
+    ).toBe('+1.0 с');
     expect(
       getPlaylistDurationDisplay({ ...playlist, id: 2 }, media, player, stats()).correction,
     ).toBeUndefined();

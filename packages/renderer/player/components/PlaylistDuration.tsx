@@ -21,7 +21,7 @@ export const getPlaylistDurationDisplay = (
   player: Pick<Player, 'playbackEngine' | 'disableFadeIn' | 'disableFadeOut'>,
   statistics?: PlaylistTimingStatistics,
 ): PlaylistDurationDisplay => {
-  const { totalMs, mediaMs, unknownItems } = calculatePlaylistDuration(playlist, media, player);
+  const { fadeMs, mediaMs, unknownItems } = calculatePlaylistDuration(playlist, media, player);
   if (unknownItems > 0) {
     return {
       duration: mediaMs > 0 ? `≥ ${formatPlaylistDuration(mediaMs)}` : '—',
@@ -36,15 +36,17 @@ export const getPlaylistDurationDisplay = (
       Number.isFinite(item.medianElapsedMs) &&
       item.medianElapsedMs > 0,
   );
-  if (!sample) {
+  if (!sample && fadeMs === 0) {
     return {
-      duration: formatPlaylistDuration(totalMs),
+      duration: formatPlaylistDuration(mediaMs),
     };
   }
   // Round before choosing the sign so a small negative correction never reads “−0.0”.
-  const correction = Math.round((sample.medianElapsedMs - totalMs) / 100) / 10;
+  // Observed elapsed time already includes fading; do not add it a second time.
+  const correctionMs = sample ? sample.medianElapsedMs - mediaMs : fadeMs;
+  const correction = Math.round(correctionMs / 100) / 10;
   return {
-    duration: formatPlaylistDuration(totalMs),
+    duration: formatPlaylistDuration(mediaMs),
     correction: `${correction < 0 ? '−' : '+'}${Math.abs(correction).toFixed(1)} с`,
   };
 };
