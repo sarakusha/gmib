@@ -4,6 +4,7 @@ import {
   type PlaybackOutputEvidence,
   type PlaybackOutputResult,
 } from './playbackOutput';
+import { isPlaylistTimingSample, type PlaylistTimingSample } from './playlistTimingStatistics';
 
 export const playbackEventNames = [
   'started',
@@ -23,6 +24,7 @@ export const playbackEventNames = [
 export type PlaybackEventName = (typeof playbackEventNames)[number];
 
 export type PlaybackEvent = {
+  playlistTiming?: PlaylistTimingSample;
   version?: 3;
   output?: PlaybackOutputEvidence;
   outputResult?: PlaybackOutputResult;
@@ -95,6 +97,11 @@ export const isPlaybackEvent = (value: unknown): value is PlaybackEvent => {
       : value['version'] === 3 && isUuid(value['eventId']) && isUuid(value['playbackId'])) &&
     (value['output'] === undefined || isPlaybackOutputEvidence(value['output'])) &&
     (value['outputResult'] === undefined || isPlaybackOutputResult(value['outputResult'])) &&
+    (value['playlistTiming'] === undefined ||
+      (value['version'] === 3 &&
+        event === 'completed' &&
+        isInteger(value['playlistId']) &&
+        isPlaylistTimingSample(value['playlistTiming']))) &&
     isOptionalString(value['reason'], 512) &&
     (event !== 'seeked'
       ? value['position'] === undefined && value['previousPosition'] === undefined

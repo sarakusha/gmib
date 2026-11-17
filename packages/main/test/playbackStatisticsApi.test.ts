@@ -44,6 +44,20 @@ describe('playback statistics API', () => {
     if (!address || typeof address === 'string') throw new Error('No test server address');
     const base = `http://127.0.0.1:${address.port}/api/playback/statistics`;
     const headers = { Authorization: 'Bearer test-only' };
+    const timingUrl = `http://127.0.0.1:${address.port}/api/playback/playlist-timing`;
+    expect((await fetch(`${timingUrl}?playerId=1`)).status).toBe(401);
+    const timing = await fetch(`${timingUrl}?playerId=1`, { headers });
+    expect(timing.status).toBe(200);
+    expect(await timing.json()).toEqual({ playerId: 1, samples: [] });
+    for (const query of [
+      '',
+      '?playerId=-1',
+      '?playerId=1.5',
+      '?playerId=NaN',
+      '?playerId=1&playerId=2',
+      '?playerId=9007199254740992',
+    ])
+      expect((await fetch(`${timingUrl}${query}`, { headers })).status).toBe(400);
     expect((await fetch(`${base}?playerId=1`)).status).toBe(401);
     const response = await fetch(`${base}?playerId=1`, { headers });
     expect(response.status).toBe(200);

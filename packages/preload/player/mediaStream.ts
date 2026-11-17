@@ -8,6 +8,7 @@ import debugFactory from 'debug';
 import type { PlaybackEvent } from '/@common/playback';
 import type { MediaInfo } from '/@common/mediaInfo';
 import type { Playlist, PlaylistItem } from '/@common/playlist';
+import { getPlaylistTimingSignature, PLAYLIST_FADE_OUT_MS } from '/@common/playlistTiming';
 import { getUrl } from '/@common/remote';
 import type { CandidateMessage, OfferMessage, RtcMessage, WithWebSocketKey } from '/@common/rtc';
 import type { Player } from '/@common/video';
@@ -24,6 +25,7 @@ import ipcDispatch from '../common/ipcDispatch';
 import VideoSource from './VideoSource';
 import { resolvePlaybackEngine, shouldFallbackAfterDecoderError } from './playbackEngine';
 import PlaybackWatchdog from './playbackWatchdog';
+import { PlaylistTimingTracker } from './PlaylistTimingTracker';
 import PlaybackRecovery, { type PlaybackAttempt } from './playbackRecovery';
 
 let finitePlayback: FinitePlaybackCounter | undefined;
@@ -66,6 +68,7 @@ const PLAYBACK_STALL_CHECK_INTERVAL = 5_000;
 const playbackWatchdog = new PlaybackWatchdog();
 
 const recovery = new PlaybackRecovery();
+const playlistTiming = new PlaylistTimingTracker();
 const attemptFiniteTokens = new WeakMap<PlaybackAttempt, string>();
 const sourceAttempts = new WeakMap<VideoSource, PlaybackAttempt>();
 const endedSources = new WeakSet<VideoSource>();
@@ -89,7 +92,7 @@ const reportAttempt = (
   try {
     const timestamp =
       event === 'started' && attempt.startedAt ? attempt.startedAt : new Date().toISOString();
-    ipcRenderer.send('playback:event', {
+    const record: PlaybackEvent = {
       version: 3,
       eventId: crypto.randomUUID(),
       event,
@@ -106,7 +109,10 @@ const reportAttempt = (
       error,
       quarantined,
       ...details,
-    } satisfies PlaybackEvent);
+    };
+    const timing = playlistTiming.observe(record, playlist, player ?? {});
+    if (timing) record.playlistTiming = timing;
+    ipcRenderer.send('playback:event', record);
   } catch {
     /* Logging must not prevent playback recovery. */
   }
@@ -182,6 +188,7 @@ const getPlaybackEngine = (): NonNullable<Player['playbackEngine']> =>
 
 const updatePlaybackState = (next: MediaSessionPlaybackState): void => {
   if (playbackState === next) return;
+  if (next !== 'playing') playlistTiming.reset();
   const attempt =
     activeEngine === 'capture'
       ? captureAttempt
@@ -660,7 +667,7 @@ const createDecoder = (
     fade: {
       disableIn: seeking || same || player.disableFadeIn,
       disableOut: seeking || same || player.disableFadeOut,
-      duration: seeking ? 0 : 500,
+      duration: seeking ? 0 : PLAYLIST_FADE_OUT_MS,
     },
     onMessage: ({ data }: { data: DecoderSourceMessage }) =>
       handleDecoderSourceMessage(source, data),
@@ -920,6 +927,16 @@ const applyPlayer = async (
   }
   const request = ++playerRequest;
   revision += 1;
+  if (
+    restart ||
+    plan ||
+    player?.current !== value.current ||
+    player?.playlistId !== value.playlistId ||
+    (playlist &&
+      getPlaylistTimingSignature(playlist, player ?? {}) !==
+        getPlaylistTimingSignature(playlist, value))
+  )
+    playlistTiming.reset();
   player = value;
   // Pause immediately, before awaiting playlist IPC, so late play/decoder events cannot resume it.
   if (!value.autoPlay) {
@@ -939,6 +956,12 @@ const applyPlayer = async (
       clearSource('playlist-changed');
       disposeDecoder('playlist-changed');
     }
+    if (
+      playlist &&
+      (!loaded ||
+        getPlaylistTimingSignature(playlist, value) !== getPlaylistTimingSignature(loaded, value))
+    )
+      playlistTiming.reset();
     playlist = loaded;
     if (plan) loaded?.items.forEach(item => recovery.reset(item.md5));
     if (

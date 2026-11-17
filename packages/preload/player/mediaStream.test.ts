@@ -185,6 +185,26 @@ afterEach(() => {
 });
 
 describe('mediaStream recovery orchestration', () => {
+  it('attaches a timing observation only to the completion of a clean full pass', async () => {
+    const clock = vi.spyOn(performance, 'now');
+    clock.mockReturnValue(100);
+    await import('./mediaStream');
+    await flush();
+    current().emit({ frame: { timestamp: 0 } });
+    clock.mockReturnValue(1100);
+    current().end();
+    await flush();
+    expect(records('completed')[0].playlistTiming).toBeUndefined();
+    clock.mockReturnValue(1300);
+    current().emit({ frame: { timestamp: 0 } });
+    clock.mockReturnValue(2300);
+    current().end();
+    await flush();
+    expect(records('completed')[1].playlistTiming).toMatchObject({ elapsedMs: 2200 });
+    expect(records('started').every(record => !record.playlistTiming)).toBe(true);
+    clock.mockRestore();
+  });
+
   it('retries a corrupt current decoder three times, ignores duplicate callbacks, then advances', async () => {
     await import('./mediaStream');
     await flush();

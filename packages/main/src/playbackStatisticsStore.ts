@@ -3,6 +3,7 @@ import path from 'node:path';
 import { Database, OPEN_READONLY } from 'sqlite3';
 import { isPlaybackStatisticsEvent, type PlaybackStatisticsEvent } from '/@common/playback';
 import type { PlaybackOutputSnapshot } from '/@common/playbackOutput';
+import type { PlaylistTimingStatistics } from '/@common/playlistTimingStatistics';
 
 export type PlaybackSqlValue = string | number | null;
 export type PlaybackSqlDatabase = {
@@ -33,6 +34,12 @@ CREATE TABLE IF NOT EXISTS seen_events (
   id TEXT PRIMARY KEY, at INTEGER NOT NULL,
   attempt_id TEXT NOT NULL REFERENCES attempts(id) ON DELETE CASCADE
 );
+CREATE TABLE IF NOT EXISTS playlist_timing (
+  attempt_id TEXT PRIMARY KEY REFERENCES attempts(id) ON DELETE CASCADE,
+  player_id INTEGER NOT NULL, playlist_id INTEGER NOT NULL,
+  signature TEXT NOT NULL, elapsed_ms REAL NOT NULL, at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS playlist_timing_player_at ON playlist_timing(player_id, at);
 CREATE TABLE IF NOT EXISTS segments (
   id TEXT PRIMARY KEY, attempt_id TEXT NOT NULL REFERENCES attempts(id) ON DELETE CASCADE,
   start_at INTEGER NOT NULL, end_at INTEGER NOT NULL, played_ms REAL NOT NULL,
@@ -459,6 +466,30 @@ export class PlaybackStatisticsStore {
           at,
           event.playbackId,
         ]);
+        if (event.playlistTiming && row.terminal === 'completed') {
+          await sql.run(
+            `INSERT OR IGNORE INTO playlist_timing
+            (attempt_id,player_id,playlist_id,signature,elapsed_ms,at) VALUES(?,?,?,?,?,?)`,
+            [
+              event.playbackId,
+              event.playerId,
+              event.playlistId!,
+              event.playlistTiming.signature,
+              event.playlistTiming.elapsedMs,
+              at,
+            ],
+          );
+          // The estimate uses only twenty recent passes. Keep that same bound on
+          // disk instead of accumulating a copy of the playlist on every loop.
+          await sql.run(
+            `DELETE FROM playlist_timing WHERE attempt_id IN (
+              SELECT attempt_id FROM playlist_timing
+              WHERE player_id=? AND playlist_id=? AND signature=?
+              ORDER BY at DESC,attempt_id LIMIT -1 OFFSET 20
+            )`,
+            [event.playerId, event.playlistId!, event.playlistTiming.signature],
+          );
+        }
         await this.recordOutputs(sql, event, at, terminal, completed);
         // progress хранится только как числовой сегмент + состояния его выходов.
         // Остальные события попадают в events; обе ветки уже отмечены в seen_events.
@@ -584,6 +615,41 @@ export class PlaybackStatisticsStore {
     }
   }
 
+  /** Recent observations only; old playlist variants cannot grow the response without bound. */
+  playlistTiming(playerId: number): Promise<PlaylistTimingStatistics> {
+    if (!Number.isSafeInteger(playerId) || playerId < 0)
+      return Promise.reject(new Error('Invalid playerId'));
+    const now = this.now();
+    const cutoff = Math.max(this.cutoff(now), now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    return this.read(async sql => {
+      // Limit to 200 recent variants and their latest 20 clean passes. Compute medians
+      // in SQLite so large signatures are returned only once per variant.
+      const samples = await sql.all<PlaylistTimingStatistics['samples'][number]>(
+        `WITH eligible AS (
+          SELECT * FROM playlist_timing WHERE player_id=? AND at>=? AND at<=?
+        ), variants AS (
+          SELECT playlist_id,signature FROM eligible GROUP BY playlist_id,signature
+          ORDER BY MAX(at) DESC,playlist_id,signature LIMIT 200
+        ), recent AS (
+          SELECT e.*,ROW_NUMBER() OVER (
+            PARTITION BY e.playlist_id,e.signature ORDER BY e.at DESC,e.attempt_id
+          ) AS recency FROM eligible e JOIN variants v
+          ON v.playlist_id=e.playlist_id AND v.signature=e.signature
+        ), ranked AS (
+          SELECT playlist_id,signature,elapsed_ms,
+            ROW_NUMBER() OVER (PARTITION BY playlist_id,signature ORDER BY elapsed_ms) AS position,
+            COUNT(*) OVER (PARTITION BY playlist_id,signature) AS sample_count
+          FROM recent WHERE recency<=20
+        ) SELECT playlist_id AS playlistId,signature,AVG(elapsed_ms) AS medianElapsedMs,
+          MAX(sample_count) AS sampleCount FROM ranked
+          WHERE position IN ((sample_count+1)/2,(sample_count+2)/2)
+          GROUP BY playlist_id,signature ORDER BY playlist_id,signature`,
+        [playerId, cutoff, now.getTime()],
+      );
+      return { playerId, samples };
+    });
+  }
+
   private cutoff(now: Date): number {
     const date = new Date(now);
     const configured = this.retentionDays();
@@ -604,6 +670,9 @@ export class PlaybackStatisticsStore {
     // Пересекающий границу сегмент укорачиваем пропорционально, затем пересчитываем
     // first_at/last_at по оставшимся фактам. Связанные строки удаляются каскадно.
     await this.transaction(sql, async () => {
+      await sql.run('DELETE FROM playlist_timing WHERE at < ?', [
+        Math.max(cutoff, now.getTime() - 7 * 24 * 60 * 60 * 1000),
+      ]);
       await sql.run('DELETE FROM events WHERE at < ?', [cutoff]);
       await sql.run('DELETE FROM segments WHERE end_at < ?', [cutoff]);
       await sql.run(

@@ -52,6 +52,15 @@ export const mountPlaybackStatisticsApi = (
     reader ??= new PlaybackStatisticsSqlReader(store());
     return reader;
   };
+  api.get('/playback/playlist-timing', async (req, res, next) => {
+    try {
+      res.json(await store().playlistTiming(integerParameter(req, 'playerId', true)!));
+    } catch (error) {
+      if (error instanceof PlaybackStatisticsQueryError)
+        res.status(400).json({ message: error.message });
+      else next(error);
+    }
+  });
   api.get('/playback/statistics', async (req, res, next) => {
     try {
       res.json(await getReader().statistics(queryFromRequest(req)));
