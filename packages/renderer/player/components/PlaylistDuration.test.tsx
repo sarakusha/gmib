@@ -90,9 +90,11 @@ describe('playlist duration display', () => {
     expect(getPlaylistDurationDisplay(playlist, media, player, stats(3, 89_300)).correction).toBe(
       '−0.7 с',
     );
-    expect(getPlaylistDurationDisplay(playlist, media, player, stats(3, 89_999)).correction).toBe(
-      '+0.0 с',
-    );
+    for (const elapsedMs of [89_951, 89_999, 90_000, 90_001, 90_049]) {
+      expect(
+        getPlaylistDurationDisplay(playlist, media, player, stats(3, elapsedMs)).correction,
+      ).toBeUndefined();
+    }
   });
 
   it('marks incomplete metadata instead of reporting a precise total', () => {

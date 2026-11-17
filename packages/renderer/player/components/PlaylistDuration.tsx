@@ -41,13 +41,15 @@ export const getPlaylistDurationDisplay = (
       duration: formatPlaylistDuration(mediaMs),
     };
   }
-  // Round before choosing the sign so a small negative correction never reads “−0.0”.
   // Observed elapsed time already includes fading; do not add it a second time.
   const correctionMs = sample ? sample.medianElapsedMs - mediaMs : fadeMs;
   const correction = Math.round(correctionMs / 100) / 10;
   return {
     duration: formatPlaylistDuration(mediaMs),
-    correction: `${correction < 0 ? '−' : '+'}${Math.abs(correction).toFixed(1)} с`,
+    correction:
+      correction === 0
+        ? undefined
+        : `${correction < 0 ? '−' : '+'}${Math.abs(correction).toFixed(1)} с`,
   };
 };
 
