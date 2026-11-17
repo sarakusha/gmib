@@ -1,3 +1,4 @@
+import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined';
 import { Box, Tooltip, Typography } from '@mui/material';
 import type { MediaInfo } from '/@common/mediaInfo';
 import type { Playlist } from '/@common/playlist';
@@ -73,6 +74,7 @@ const PlaylistDuration = ({ value }: { value?: PlaylistDurationDisplay }) => {
           flexShrink: 0,
         }}
       >
+        <TimerOutlinedIcon sx={{ fontSize: 14, color: 'text.secondary', alignSelf: 'center' }} />
         <Typography component="span" variant="caption" color="text.secondary">
           {value.duration}
         </Typography>
