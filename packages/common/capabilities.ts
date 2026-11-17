@@ -9,6 +9,7 @@ export type FeatureName =
   | 'playerPlaylistRepeat'
   | 'playerSeek'
   | 'playerShaders'
+  | 'playlistTimingStatistics'
   | 'playbackStatistics'
   | 'playbackStatisticsPeriodPreset'
   | 'playbackWallClockDuration'
@@ -35,6 +36,7 @@ const minimumVersions: Record<FeatureName, string> = {
   playerPlaylistRepeat: '5.7.4',
   playerSeek: '4.12.0',
   playerShaders: '5.0.0',
+  playlistTimingStatistics: '5.7.8',
   playbackStatistics: '5.6.5',
   playbackStatisticsPeriodPreset: '5.6.6',
   playbackWallClockDuration: '5.6.6',

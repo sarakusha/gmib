@@ -175,3 +175,43 @@ describe('SQLite playback statistics transport compatibility', () => {
     store.dispatch(playbackApi.util.resetApiState());
   });
 });
+
+describe('playlist timing statistics transport compatibility', () => {
+  it.each([
+    ['?host=remote.example&version=5.7.7', false],
+    ['?host=remote.example&version=5.7.8', true],
+    ['?host=remote.example&version=5.8.0', true],
+    ['?host=remote.example', true],
+    ['?version=5.7.7', true],
+  ])('gates timing requests for %s', async (search, supported) => {
+    const { playbackApi, store } = await loadStatus(search);
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockClear();
+    const request = store.dispatch(playbackApi.endpoints.getPlaylistTimingStatistics.initiate(1));
+    const result = await request;
+    expect(fetchMock).toHaveBeenCalledTimes(supported ? 1 : 0);
+    if (supported) {
+      expect((fetchMock.mock.calls[0][0] as Request).url).toContain(
+        '/api/playback/playlist-timing?playerId=1',
+      );
+    } else {
+      expect(result.error).toMatchObject({ status: 404 });
+    }
+    request.unsubscribe();
+    store.dispatch(playbackApi.util.resetApiState());
+  });
+
+  it('falls back to nominal duration when an unknown host has no endpoint', async () => {
+    const { playbackApi, store } = await loadStatus('?host=remote.example');
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ message: 'Not found' }), {
+        status: 404,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    const request = store.dispatch(playbackApi.endpoints.getPlaylistTimingStatistics.initiate(1));
+    await expect(request.unwrap()).resolves.toEqual({ playerId: 1, samples: [] });
+    request.unsubscribe();
+    store.dispatch(playbackApi.util.resetApiState());
+  });
+});

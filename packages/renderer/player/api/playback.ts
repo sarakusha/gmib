@@ -1,5 +1,6 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 
+import type { PlaylistTimingStatistics } from '/@common/playlistTimingStatistics';
 import type { PlaybackSettings, PlaybackStatusSnapshot } from '/@common/playback';
 import { supportsFeature } from '/@common/capabilities';
 import { isRemoteSession, version } from '/@common/remote';
@@ -18,6 +19,20 @@ const playbackApi = createApi({
   baseQuery,
   tagTypes: ['PlaybackStatus', 'PlaybackSettings'],
   endpoints: build => ({
+    getPlaylistTimingStatistics: build.query<PlaylistTimingStatistics, number>({
+      queryFn: async (playerId, _api, _options, query) => {
+        if (!supportsFeature('playlistTimingStatistics', version, isRemoteSession)) {
+          return { error: { status: 404, data: 'Playlist timing statistics unsupported' } };
+        }
+        const result = await query({ url: 'playback/playlist-timing', params: { playerId } });
+        // Unknown host versions may not have the endpoint. Nominal duration still works.
+        if (result.error?.status === 404) return { data: { playerId, samples: [] } };
+        return result.error
+          ? { error: result.error }
+          : { data: result.data as PlaylistTimingStatistics };
+      },
+      keepUnusedDataFor: 60,
+    }),
     getPlaybackStatus: build.query<PlaybackStatusSnapshot, void>({
       query: () => 'playback/status',
       transformResponse: (response: unknown) => {
@@ -63,6 +78,7 @@ const playbackApi = createApi({
 });
 
 export const {
+  useGetPlaylistTimingStatisticsQuery,
   useGetPlaybackSettingsQuery,
   useGetPlaybackStatusQuery,
   useGetPlaybackStatisticsQuery,

@@ -3,22 +3,29 @@ import {
   Collapse,
   Container,
   css,
+  FormLabel,
   IconButton,
   InputAdornment,
   List,
+  Stack,
   TextField,
+  Typography,
 } from '@mui/material';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import { Form, Formik } from 'formik';
 import { bindMenu, bindTrigger, usePopupState } from 'material-ui-popup-state/hooks';
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { useResizeDetector } from 'react-resize-detector';
 import { TransitionGroup } from 'react-transition-group';
+
+import { supportsFeature } from '/@common/capabilities';
+import { isRemoteSession, version } from '/@common/remote';
 
 import FixedHeadLayout from '../../common/FixedHeadLayout';
 import SubmitListener from '../../common/SubmitListener';
 import { selectMediaById, useGetMediaQuery } from '../api/media';
+import { useGetPlaylistTimingStatisticsQuery } from '../api/playback';
 import { usePlayer } from '../api/player';
 import {
   moveItem,
@@ -39,6 +46,7 @@ import { notEmpty } from '/@common/helpers';
 import CurrentPlaylist from './CurrentPlaylist';
 import MediaItem from './MediaItem';
 import Player from './Player';
+import PlaylistDuration, { getPlaylistDurationDisplay } from './PlaylistDuration';
 import PlaylistsToolbar from './PlaylistsToolbar';
 import extendStyled from './extendStyled';
 
@@ -55,6 +63,34 @@ const PlaylistsTab: React.FC = () => {
   const { data: currentPlaylist } = useGetPlaylistById(current ?? player?.playlistId);
   const [removeMedia] = useRemoveMediaMutation();
   const { data: mediaData } = useGetMediaQuery();
+  const { currentData: timingStatistics } = useGetPlaylistTimingStatisticsQuery(sourceId, {
+    skip:
+      !player ||
+      playlists.length === 0 ||
+      !supportsFeature('playlistTimingStatistics', version, isRemoteSession),
+    pollingInterval: 60_000,
+    refetchOnMountOrArgChange: 60,
+  });
+  const durations = useMemo(
+    () =>
+      new Map(
+        player
+          ? playlists.map(
+              playlist =>
+                [
+                  playlist.id,
+                  getPlaylistDurationDisplay(
+                    playlist,
+                    mediaData?.entities ?? {},
+                    player,
+                    timingStatistics,
+                  ),
+                ] as const,
+            )
+          : [],
+      ),
+    [playlists, mediaData, player, timingStatistics],
+  );
   const dispatch = useDispatch();
   const { width, ref } = useResizeDetector();
   const popupState = usePopupState({ variant: 'popover', popupId: 'playlists' });
@@ -124,12 +160,20 @@ const PlaylistsTab: React.FC = () => {
             >
               {formik => (
                 <Form>
+                  <Stack
+                    direction="row"
+                    sx={{ alignItems: 'baseline', justifyContent: 'space-between', gap: 1, mt: 1 }}
+                  >
+                    <FormLabel htmlFor="name" sx={{ fontSize: '0.75rem' }}>
+                      Название
+                    </FormLabel>
+                    <PlaylistDuration value={durations.get(formik.values.id)} />
+                  </Stack>
                   <TextField
                     ref={ref}
                     variant="standard"
                     fullWidth
                     id="name"
-                    label="Название"
                     name="name"
                     value={formik.values.name}
                     onChange={formik.handleChange}
@@ -151,12 +195,16 @@ const PlaylistsTab: React.FC = () => {
                       {playlists.map(({ id, name }) => (
                         <MenuItem
                           key={id}
+                          sx={{ gap: 2, justifyContent: 'space-between' }}
                           onClick={() => {
                             dispatch(setCurrentPlaylist(id));
                             popupState.close();
                           }}
                         >
-                          {name}
+                          <Typography component="span" noWrap sx={{ minWidth: 0 }}>
+                            {name}
+                          </Typography>
+                          <PlaylistDuration value={durations.get(id)} />
                         </MenuItem>
                       ))}
                     </Menu>
