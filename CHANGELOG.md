@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [5.7.8](https://github.com/sarakusha/gmib/compare/v5.7.7...v5.7.8) (2026-11-18)
+
+### Features
+
+* expire recurring output scheduler jobs ([418de9c](https://github.com/sarakusha/gmib/commit/418de9cc6a610e1621f8a3be91b04ffd42249c49))
+* measure playlist duration with bounded playback observations ([341a4ea](https://github.com/sarakusha/gmib/commit/341a4ea0cea6a37fa5850c34744992c58c345477))
+* protect Taurus USB networking from default routes ([91faad0](https://github.com/sarakusha/gmib/commit/91faad0afeab8e92e165cc7be44d568b87daedfc))
+* show playlist duration and observed correction ([d5d1ecd](https://github.com/sarakusha/gmib/commit/d5d1ecd78e8d13d35fc3d5b5c1b6babbe3844aaf))
+
+### Bug Fixes
+
+* add timer icon to playlist duration ([51aad2d](https://github.com/sarakusha/gmib/commit/51aad2d8f7c6e9d8688b0a62ffa6c9aacdaa0b6a))
+* attach update dialogs to prevent macOS hangs ([dae2cd3](https://github.com/sarakusha/gmib/commit/dae2cd3ff9039556fd008992c5ff2907ee10eb2f))
+* hide rounded zero playlist duration correction ([283e77e](https://github.com/sarakusha/gmib/commit/283e77ecd8bdf22ff79c2a920a4f48ef44788db6))
+* include playlist fades in duration correction ([6e087ca](https://github.com/sarakusha/gmib/commit/6e087ca353c75389ef7b5558c26abce34703d7f2))
+* remove scheduler stop-on-expiry behavior ([bc477fd](https://github.com/sarakusha/gmib/commit/bc477fdff18f6486f1842a6e87ac59a97bd3279d))
+* remove verbose playlist duration tooltip ([52747e0](https://github.com/sarakusha/gmib/commit/52747e0e3644518ec3eda663126176747c1c8002))
+* wait for output readiness and bound local preview retries ([2ed1c5e](https://github.com/sarakusha/gmib/commit/2ed1c5e1f803c70a2b54a82dbab54a109a24125a))
+
 ## [5.7.7](https://github.com/sarakusha/gmib/compare/v5.7.6...v5.7.7) (2026-11-10)
 
 ### Features
